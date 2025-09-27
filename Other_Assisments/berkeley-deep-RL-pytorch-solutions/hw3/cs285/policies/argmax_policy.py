@@ -8,8 +8,8 @@ class ArgMaxPolicy:
 
     def get_action(self, obs):
         if len(obs.shape) > 1:
-            observation = torch.tensor(obs).to(self.device)
+            observation = torch.tensor(obs, dtype=torch.float32).to(self.device)
         else:
-            observation = torch.tensor(obs[None]).to(self.device)
+            observation = torch.tensor(obs[None], dtype=torch.float32).to(self.device)
         # TODO: pass observation to critic and use argmax of the resulting Q values as the action
         return self.critic.Q_func(observation).squeeze().argmax().item()

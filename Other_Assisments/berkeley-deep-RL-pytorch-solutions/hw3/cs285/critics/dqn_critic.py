@@ -35,7 +35,11 @@ class DQNCritic:
         self.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, self.optimizer_spec.lr_schedule)
 
     def get_loss(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
-        ob, ac, rew, next_ob, done = map(lambda x: torch.from_numpy(x).to(self.device), [ob_no, ac_na, re_n, next_ob_no, terminal_n])
+        ob = torch.from_numpy(ob_no).float().to(self.device)
+        ac = torch.from_numpy(ac_na).to(self.device)
+        rew = torch.from_numpy(re_n).float().to(self.device)
+        next_ob = torch.from_numpy(next_ob_no).float().to(self.device)
+        done = torch.from_numpy(terminal_n).float().to(self.device)
 
         with torch.no_grad():
             if self.double_q:
