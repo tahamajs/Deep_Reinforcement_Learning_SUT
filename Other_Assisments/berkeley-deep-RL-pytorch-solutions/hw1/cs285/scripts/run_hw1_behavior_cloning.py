@@ -1,6 +1,8 @@
 import sys
 
-sys.path.append('/Users/tahamajs/Documents/uni/DRL/Other_Assisments/berkeley-deep-RL-pytorch-solutions/hw1')
+sys.path.append(
+    "/Users/tahamajs/Documents/uni/DRL/Other_Assisments/berkeley-deep-RL-pytorch-solutions/hw1"
+)
 
 import torch
 import os

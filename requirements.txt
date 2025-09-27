@@ -17,3 +17,4 @@ tqdm
 cvxpy
 tensorboard
 gymnasium-robotics
+protobuf<4.0
