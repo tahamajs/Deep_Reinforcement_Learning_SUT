@@ -1,5 +1,5 @@
-import gym
-from gym.envs.registration import EnvSpec
+import gymnasium as gym
+from gymnasium.envs.registration import EnvSpec
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,7 +39,7 @@ class PointMass(Env):
         plt.close()
         self.state = np.array([self.goal_padding, self.goal_padding])
         state = self.state/self.scale
-        return state
+        return state, {}
 
     def step(self, action):
         x, y = action
@@ -70,7 +70,7 @@ class PointMass(Env):
         # done
         done = False
 
-        return state, reward, done, None
+        return state, reward, done, False, {}
 
     def preprocess(self, state):
         scaled_state = self.scale * state

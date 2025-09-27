@@ -9,16 +9,20 @@ import torch
 class MPCController:
     """Model Predictive Control for RL"""
 
-    def __init__(
-        self,
-        model,
-        num_actions,
-        num_states,
-        horizon=10,
-        num_samples=1000,
-        temperature=1.0,
-        elite_ratio=0.1,
-    ):
+    def __init__(self, model, num_actions, num_states, horizon=10, num_samples=100,
+                 temperature=1.0, elite_ratio=0.1):
+        self.model = model
+        self.num_actions = num_actions
+        self.state_dim = num_states
+        self.horizon = horizon
+        self.num_samples = num_samples
+        self.temperature = temperature
+        self.elite_ratio = elite_ratio
+        self.elite_size = max(1, int(num_samples * elite_ratio))
+
+        # Statistics
+        self.optimization_costs = []
+        self.episode_rewards = []
         self.model = model
         self.num_actions = num_actions
         self.state_dim = num_states
@@ -42,7 +46,7 @@ class MPCController:
         best_actions = None
 
         # CEM iterations
-        for iteration in range(10):  # Number of CEM iterations
+        for iteration in range(5):  # Number of CEM iterations
             # Sample action sequences
             action_sequences = []
             costs = []

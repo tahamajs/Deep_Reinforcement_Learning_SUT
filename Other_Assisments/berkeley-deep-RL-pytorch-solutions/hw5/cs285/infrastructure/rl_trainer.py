@@ -4,10 +4,9 @@ from collections import OrderedDict
 import pickle
 import numpy as np
 import torch
-import gym
+import gymnasium as gym
 import os
 import sys
-from gym import wrappers
 
 import cs285.envs #register all of our envs
 from cs285.infrastructure.utils import *
@@ -44,7 +43,6 @@ class RL_Trainer(object):
             self.env = PointMass()
         else:
             self.env = gym.make(self.params['env_name'])
-        self.env.seed(seed)
         self.params['agent_params']['env_name'] = self.params['env_name']
 
         self.max_path_length = self.params['max_path_length'] or self.env.spec.max_episode_steps

@@ -1,5 +1,7 @@
-gym==0.10.5
-mujoco-py==1.50.1.56
+gymnasium
+mujoco
 numpy
 seaborn
 tqdm
+torch
+tensorboard

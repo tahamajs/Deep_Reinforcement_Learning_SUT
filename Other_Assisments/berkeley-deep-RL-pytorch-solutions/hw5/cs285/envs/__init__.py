@@ -1,4 +1,4 @@
-from gym.envs.registration import register
+from gymnasium.envs.registration import register
 register(
     id='sparse-cheetah-cs285-v1',
     entry_point='cs285.envs.sparse_half_cheetah:HalfCheetahEnv',

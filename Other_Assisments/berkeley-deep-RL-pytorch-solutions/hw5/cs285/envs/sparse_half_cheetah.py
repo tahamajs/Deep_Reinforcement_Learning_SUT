@@ -1,10 +1,10 @@
 import numpy as np
-from gym import utils
-from gym.envs.mujoco import mujoco_env
+from gymnasium import utils
+from gymnasium.envs.mujoco import MujocoEnv
 
-class HalfCheetahEnv(mujoco_env.MujocoEnv, utils.EzPickle):
+class HalfCheetahEnv(MujocoEnv, utils.EzPickle):
     def __init__(self):
-        mujoco_env.MujocoEnv.__init__(self, 'half_cheetah.xml', 5)
+        MujocoEnv.__init__(self, 'half_cheetah.xml', 5)
         utils.EzPickle.__init__(self)
 
     def step(self, action):
@@ -34,7 +34,7 @@ class HalfCheetahEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         #################################################
         reward = reward_ctrl + reward_run
         done = False
-        return ob, reward, done, dict(reward_run=reward_run, reward_ctrl=reward_ctrl)
+        return ob, reward, done, False, dict(reward_run=reward_run, reward_ctrl=reward_ctrl)
 
     def _get_obs(self):
         return np.concatenate([
