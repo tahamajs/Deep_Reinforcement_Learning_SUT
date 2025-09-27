@@ -15,7 +15,7 @@ class DQNAgent(object):
         self.agent_params = agent_params
         self.batch_size = agent_params['batch_size']
         self.device = agent_params['device']
-        self.last_obs = self.env.reset()
+        self.last_obs, _ = self.env.reset()
 
         self.num_actions = agent_params['ac_dim']
         self.learning_starts = agent_params['learning_starts']
@@ -80,8 +80,9 @@ class DQNAgent(object):
         # TODO take a step in the environment using the action from the policy
         # HINT1: remember that self.last_obs must always point to the newest/latest observation
         # HINT2: remember the following useful function that you've seen before:
-            #obs, reward, done, info = env.step(action)
-        obs, reward, done, info = self.env.step(action)
+            #obs, reward, terminated, truncated, info = env.step(action)
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        done = terminated or truncated
 
         # TODO store the result of taking this action into the replay buffer
         # HINT1: see replay buffer's store_effect function
@@ -90,7 +91,7 @@ class DQNAgent(object):
 
         # TODO if taking this step resulted in done, reset the env (and the latest observation)
         if done:
-            self.last_obs = self.env.reset()
+            self.last_obs, _ = self.env.reset()
         else:
             self.last_obs = obs
 

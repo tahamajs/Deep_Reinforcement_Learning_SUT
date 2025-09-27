@@ -19,3 +19,5 @@ tensorboard
 gymnasium-robotics
 protobuf<4.0
 tensorboardX
+gymnasium
+swig

@@ -47,7 +47,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--env_name',  default='PongNoFrameskip-v4',
                         choices=('PongNoFrameskip-v4',
-                                 'LunarLander-v2')
+                                 'LunarLander-v3')
                         )
 
     parser.add_argument('--ep_len', type=int, default=200)

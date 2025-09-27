@@ -4,10 +4,10 @@ from collections import OrderedDict
 import pickle
 import numpy as np
 import torch
-import gym
+import gymnasium as gym
 import os
 import sys
-from gym import wrappers
+from gymnasium import wrappers
 
 from cs285.infrastructure.utils import *
 from cs285.infrastructure.logger import Logger
