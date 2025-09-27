@@ -18,32 +18,32 @@ import torch
 class IQLAgent(DQNAgent):
     def __init__(self, env, agent_params, normalize_rnd=True, rnd_gamma=0.99):
         super(IQLAgent, self).__init__(env, agent_params)
-        
+
         self.replay_buffer = MemoryOptimizedReplayBuffer(100000, 1, float_obs=True)
-        self.num_exploration_steps = agent_params['num_exploration_steps']
-        self.offline_exploitation = agent_params['offline_exploitation']
+        self.num_exploration_steps = agent_params["num_exploration_steps"]
+        self.offline_exploitation = agent_params["offline_exploitation"]
 
         self.exploitation_critic = IQLCritic(agent_params, self.optimizer_spec)
         self.exploration_critic = DQNCritic(agent_params, self.optimizer_spec)
-        
+
         self.exploration_model = RNDModel(agent_params, self.optimizer_spec)
-        self.explore_weight_schedule = agent_params['explore_weight_schedule']
-        self.exploit_weight_schedule = agent_params['exploit_weight_schedule']
-        
+        self.explore_weight_schedule = agent_params["explore_weight_schedule"]
+        self.exploit_weight_schedule = agent_params["exploit_weight_schedule"]
+
         self.actor = ArgMaxPolicy(self.exploitation_critic)
         self.eval_policy = self.awac_actor = MLPPolicyAWAC(
-            self.agent_params['ac_dim'],
-            self.agent_params['ob_dim'],
-            self.agent_params['n_layers'],
-            self.agent_params['size'],
-            self.agent_params['discrete'],
-            self.agent_params['learning_rate'],
-            self.agent_params['awac_lambda'],
+            self.agent_params["ac_dim"],
+            self.agent_params["ob_dim"],
+            self.agent_params["n_layers"],
+            self.agent_params["size"],
+            self.agent_params["discrete"],
+            self.agent_params["learning_rate"],
+            self.agent_params["awac_lambda"],
         )
 
-        self.exploit_rew_shift = agent_params['exploit_rew_shift']
-        self.exploit_rew_scale = agent_params['exploit_rew_scale']
-        self.eps = agent_params['eps']
+        self.exploit_rew_shift = agent_params["exploit_rew_shift"]
+        self.exploit_rew_scale = agent_params["exploit_rew_scale"]
+        self.eps = agent_params["eps"]
 
         self.running_rnd_rew_std = 1
         self.normalize_rnd = normalize_rnd
@@ -57,7 +57,9 @@ class IQLAgent(DQNAgent):
             q_value = torch.gather(qa_values, 1, action.type(torch.int64).unsqueeze(1))
         return q_value
 
-    def estimate_advantage(self, ob_no, ac_na, re_n, next_ob_no, terminal_n, n_actions=10):
+    def estimate_advantage(
+        self, ob_no, ac_na, re_n, next_ob_no, terminal_n, n_actions=10
+    ):
         ob_no = ptu.from_numpy(ob_no)
         ac_na = ptu.from_numpy(ac_na)
         re_n = ptu.from_numpy(re_n)
@@ -72,83 +74,105 @@ class IQLAgent(DQNAgent):
 
         if self.t > self.num_exploration_steps:
             # TODO: After exploration is over, set the actor to optimize the extrinsic critic
-            #HINT: Look at method ArgMaxPolicy.set_critic
+            # HINT: Look at method ArgMaxPolicy.set_critic
+            self.actor.set_critic(self.exploitation_critic)
 
-        if (self.t > self.learning_starts
-                and self.t % self.learning_freq == 0
-                and self.replay_buffer.can_sample(self.batch_size)
+        if (
+            self.t > self.learning_starts
+            and self.t % self.learning_freq == 0
+            and self.replay_buffer.can_sample(self.batch_size)
         ):
 
             # TODO: Get Reward Weights
             # Get the current explore reward weight and exploit reward weight
-            explore_weight = None
-            exploit_weight = None 
+            explore_weight = self.explore_weight_schedule.value(self.t)
+            exploit_weight = self.exploit_weight_schedule.value(self.t)
 
             # TODO: Run Exploration Model #
             # Evaluate the exploration model on s to get the exploration bonus
             # HINT: Normalize the exploration bonus, as RND values vary highly in magnitude
-            expl_bonus = None
+            expl_bonus = self.exploration_model.forward_np(next_ob_no)
+            if self.normalize_rnd:
+                self.running_rnd_rew_std = (
+                    self.running_rnd_rew_std * self.rnd_gamma
+                    + np.mean(expl_bonus) * (1 - self.rnd_gamma)
+                )
+                expl_bonus = expl_bonus / (self.running_rnd_rew_std + 1e-8)
 
             # TODO: Reward Calculations #
             # Calculate mixed rewards, which will be passed into the exploration critic
             # HINT: See doc for definition of mixed_reward
-            mixed_reward = None
+            mixed_reward = explore_weight * expl_bonus + exploit_weight * re_n
 
             # TODO: Calculate the environment reward
             # HINT: For part 1, env_reward is just 're_n'
             #       After this, env_reward is 're_n' shifted by self.exploit_rew_shift,
             #       and scaled by self.exploit_rew_scale
-            env_reward = None
+            env_reward = (re_n + self.exploit_rew_shift) * self.exploit_rew_scale
 
             # TODO: Update Critics And Exploration Model #
             # 1): Update the exploration model (based off s')
             # 2): Update the exploration critic (based off mixed_reward)
             # 3): a) Update the exploitation critic's Value function
             # 3): b) Update the exploitation critic's Q function (based off env_reward)
-            expl_model_loss = None
-            exploration_critic_loss = None 
-            exploitation_critic_loss = None
-            exploitation_critic_loss.update(TODO)
-
-
+            expl_model_loss = self.exploration_model.update(next_ob_no)["RND Loss"]
+            exploration_critic_loss = self.exploration_critic.update(
+                ob_no, ac_na, mixed_reward, next_ob_no, terminal_n
+            )
+            exploitation_v_loss = self.exploitation_critic.update_v(ob_no, ac_na)
+            exploitation_q_loss = self.exploitation_critic.update_q(
+                ob_no, ac_na, next_ob_no, env_reward, terminal_n
+            )
+            exploitation_critic_loss = {
+                "Training V Loss": exploitation_v_loss["Training V Loss"],
+                "Training Q Loss": exploitation_q_loss["Training Q Loss"],
+            }
 
             # TODO: update actor as in AWAC
             # 1): Estimate the advantage
             # 2): Calculate the awac actor loss
-            advantage = None
-            actor_loss = None
+            advantage = self.estimate_advantage(
+                ob_no, ac_na, re_n, next_ob_no, terminal_n
+            )
+            actor_loss = self.actor.update(ob_no, ac_na, ptu.to_numpy(advantage))
 
             # TODO: Update Target Networks #
             if self.num_param_updates % self.target_update_freq == 0:
                 #  Update the exploitation and exploration target networks
-                pass
+                self.exploration_critic.update_target_network()
+                self.exploitation_critic.update_target_network()
 
             # Logging #
-            log['Exploration Critic Loss'] = exploration_critic_loss['Training Loss']
-            log['Exploitation Critic V Loss'] = exploitation_critic_loss['Training Q Loss']
-            log['Exploitation Critic Q Loss'] = exploitation_critic_loss['Training V Loss']
-            log['Exploration Model Loss'] = expl_model_loss
+            log["Exploration Critic Loss"] = exploration_critic_loss["Training Loss"]
+            log["Exploitation Critic V Loss"] = exploitation_critic_loss[
+                "Training V Loss"
+            ]
+            log["Exploitation Critic Q Loss"] = exploitation_critic_loss[
+                "Training Q Loss"
+            ]
+            log["Exploration Model Loss"] = expl_model_loss
 
             # <DONE>: Uncomment these lines after completing awac
-            # log['Actor Loss'] = actor_loss
+            log["Actor Loss"] = actor_loss
 
             self.num_param_updates += 1
 
         self.t += 1
         return log
 
-
     def step_env(self):
         """
-            Step the env and store the transition
-            At the end of this block of code, the simulator should have been
-            advanced one step, and the replay buffer should contain one more transition.
-            Note that self.last_obs must always point to the new latest observation.
+        Step the env and store the transition
+        At the end of this block of code, the simulator should have been
+        advanced one step, and the replay buffer should contain one more transition.
+        Note that self.last_obs must always point to the new latest observation.
         """
         if (not self.offline_exploitation) or (self.t <= self.num_exploration_steps):
             self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
 
-        perform_random_action = np.random.random() < self.eps or self.t < self.learning_starts
+        perform_random_action = (
+            np.random.random() < self.eps or self.t < self.learning_starts
+        )
 
         if perform_random_action:
             action = self.env.action_space.sample()
@@ -161,7 +185,9 @@ class IQLAgent(DQNAgent):
         self.last_obs = next_obs.copy()
 
         if (not self.offline_exploitation) or (self.t <= self.num_exploration_steps):
-            self.replay_buffer.store_effect(self.replay_buffer_idx, action, reward, done)
+            self.replay_buffer.store_effect(
+                self.replay_buffer_idx, action, reward, done
+            )
 
         if done:
             self.last_obs, _ = self.env.reset()
