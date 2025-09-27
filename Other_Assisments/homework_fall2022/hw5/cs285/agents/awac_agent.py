@@ -162,11 +162,12 @@ class AWACAgent(DQNAgent):
             processed = self.replay_buffer.encode_recent_observation()
             action = self.actor.get_action(processed)
 
-        next_obs, reward, done, info = self.env.step(action)
+        next_obs, reward, terminated, truncated, info = self.env.step(action)
+        done = terminated or truncated
         self.last_obs = next_obs.copy()
 
         if (not self.offline_exploitation) or (self.t <= self.num_exploration_steps):
             self.replay_buffer.store_effect(self.replay_buffer_idx, action, reward, done)
 
         if done:
-            self.last_obs = self.env.reset()
+            self.last_obs, _ = self.env.reset()

@@ -5,7 +5,7 @@ import sys
 import time
 import pdb
 
-import gym
+import gymnasium as gym
 from gym import wrappers
 import numpy as np
 import torch

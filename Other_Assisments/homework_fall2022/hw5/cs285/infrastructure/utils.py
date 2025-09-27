@@ -27,13 +27,14 @@ def calculate_mean_prediction_error(env, action_sequence, models, data_statistic
     return mpe, true_states, pred_states
 
 def perform_actions(env, actions):
-    ob = env.reset()
+    ob, _ = env.reset()
     obs, acs, rewards, next_obs, terminals, image_obs = [], [], [], [], [], []
     steps = 0
     for ac in actions:
         obs.append(ob)
         acs.append(ac)
-        ob, rew, done, _ = env.step(ac)
+        ob, rew, terminated, truncated, _ = env.step(ac)
+        done = terminated or truncated
         # add the observation after taking a step to next_obs
         next_obs.append(ob)
         rewards.append(rew)
@@ -55,7 +56,7 @@ def mean_squared_error(a, b):
 ############################################
 
 def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('rgb_array')):
-    ob = env.reset()
+    ob, _ = env.reset()
     obs, acs, rewards, next_obs, terminals, image_obs = [], [], [], [], [], []
     steps = 0
     while True:
@@ -67,15 +68,16 @@ def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('
                     else:
                         image_obs.append(env.unwrapped.sim.render(height=500, width=500)[::-1])
                 else:
-                    image_obs.append(env.render(mode=render_mode))
+                    image_obs.append(env.render(render_mode))
             if 'human' in render_mode:
-                env.render(mode=render_mode)
+                env.render(render_mode)
                 time.sleep(env.model.opt.timestep)
         obs.append(ob)
         ac = policy.get_action(ob)
         # ac = ac[0]
         acs.append(ac)
-        ob, rew, done, _ = env.step(ac)
+        ob, rew, terminated, truncated, _ = env.step(ac)
+        done = terminated or truncated
         # add the observation after taking a step to next_obs
         next_obs.append(ob)
         rewards.append(rew)

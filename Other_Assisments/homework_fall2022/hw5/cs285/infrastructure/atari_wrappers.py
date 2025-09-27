@@ -1,6 +1,6 @@
 import numpy as np
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 
 class ReturnWrapper(gym.Wrapper):
     def get_episode_rewards(self):
@@ -139,11 +139,13 @@ class ProcessFrame84(gym.Wrapper):
         self.observation_space = spaces.Box(low=0, high=255, shape=(84, 84, 1))
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        done = terminated or truncated
         return _process_frame84(obs), reward, done, info
 
     def reset(self):
-        return _process_frame84(self.env.reset())
+        obs, _ = self.env.reset()
+        return _process_frame84(obs)
 
 
 class ClipRewardEnv(gym.RewardWrapper):

@@ -4,13 +4,13 @@ import random
 from collections import namedtuple
 import pdb
 
-import gym
+import gymnasium as gym
 import numpy as np
 from torch import nn
 import torch.optim as optim
 
 from cs285.infrastructure.atari_wrappers import wrap_deepmind
-from gym.envs.registration import register
+from gymnasium.envs.registration import register
 
 import torch
 
@@ -27,7 +27,7 @@ OptimizerSpec = namedtuple(
 
 
 def register_custom_envs():
-    from gym.envs.registration import registry
+    from gymnasium.envs.registration import registry
     if 'LunarLander-v3' not in registry.env_specs:
         register(
             id='LunarLander-v3',
