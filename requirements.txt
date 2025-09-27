@@ -14,3 +14,4 @@ ipykernel>=6.0.0
 ipython>=7.30.0
 plotly
 tqdm
+cvxpy
