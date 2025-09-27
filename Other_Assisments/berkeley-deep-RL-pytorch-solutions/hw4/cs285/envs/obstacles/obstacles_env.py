@@ -1,6 +1,6 @@
-import gym
+import gymnasium as gym
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 class Obstacles(gym.Env):
     def __init__(self, start=[-0.5, 0.75], end=[0.7, -0.8], random_starts=True):

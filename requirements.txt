@@ -22,3 +22,4 @@ tensorboardX
 gymnasium
 swig
 pygame
+mujoco_py

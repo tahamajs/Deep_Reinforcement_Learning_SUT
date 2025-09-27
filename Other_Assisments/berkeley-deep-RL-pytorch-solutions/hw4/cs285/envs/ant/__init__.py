@@ -1,4 +1,4 @@
-from gym.envs.registration import register
+from gymnasium.envs.registration import register
 
 register(
     id='ant-cs285-v0',

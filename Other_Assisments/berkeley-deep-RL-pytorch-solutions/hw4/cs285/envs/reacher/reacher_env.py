@@ -1,6 +1,7 @@
 import numpy as np
-from gym import utils
-from gym.envs.mujoco import mujoco_env
+import gymnasium as gym
+from gymnasium import utils
+from gymnasium.envs.mujoco import mujoco_env
 from mujoco_py import MjViewer
 import os
 

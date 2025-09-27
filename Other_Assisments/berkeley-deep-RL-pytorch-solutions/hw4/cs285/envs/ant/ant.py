@@ -14,8 +14,9 @@
 
 import numpy as np
 import mujoco_py
-from gym import utils
-from gym.envs.mujoco import mujoco_env
+import gymnasium as gym
+from gymnasium import utils
+from gymnasium.envs.mujoco import mujoco_env
 
 _FLOAT_EPS = np.finfo(np.float64).eps
 _EPS4 = _FLOAT_EPS * 4.0
