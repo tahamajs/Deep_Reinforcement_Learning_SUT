@@ -21,7 +21,7 @@ class DQNCritic:
 
         self.optimizer_spec = optimizer_spec
 
-        if self.env_name == 'LunarLander-v2':
+        if 'LunarLander' in self.env_name:
             self.Q_func = LL_DQN(self.ac_dim, self.input_shape, self.device)
             self.target_Q_func = LL_DQN(self.ac_dim, self.input_shape, self.device)
 

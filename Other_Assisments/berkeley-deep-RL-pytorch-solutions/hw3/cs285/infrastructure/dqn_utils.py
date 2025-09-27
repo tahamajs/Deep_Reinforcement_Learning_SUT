@@ -1,5 +1,6 @@
 """This file includes a collection of utility functions that are useful for
 implementing DQN."""
+
 import random
 from collections import namedtuple
 
@@ -12,24 +13,27 @@ from cs285.infrastructure.atari_wrappers import wrap_deepmind
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedule"])
 
-def get_env_kwargs(env_name):
-    if env_name == 'PongNoFrameskip-v4':
-        kwargs = {
-            'learning_starts': 50000,
-            'target_update_freq': 10000,
-            'replay_buffer_size': int(1e6),
-            'num_timesteps': int(2e8),
-            'learning_freq': 4,
-            'grad_norm_clipping': 10,
-            'input_shape': (84, 84, 4),
-            'env_wrappers': wrap_deepmind,
-            'frame_history_len': 4,
-            'gamma': 0.99,
-        }
-        kwargs['optimizer_spec'] = atari_optimizer(kwargs['num_timesteps'])
-        kwargs['exploration_schedule'] = atari_exploration_schedule(kwargs['num_timesteps'])
 
-    elif env_name == 'LunarLander-v3':
+def get_env_kwargs(env_name):
+    if env_name == "PongNoFrameskip-v4":
+        kwargs = {
+            "learning_starts": 50000,
+            "target_update_freq": 10000,
+            "replay_buffer_size": int(1e6),
+            "num_timesteps": int(2e8),
+            "learning_freq": 4,
+            "grad_norm_clipping": 10,
+            "input_shape": (84, 84, 4),
+            "env_wrappers": wrap_deepmind,
+            "frame_history_len": 4,
+            "gamma": 0.99,
+        }
+        kwargs["optimizer_spec"] = atari_optimizer(kwargs["num_timesteps"])
+        kwargs["exploration_schedule"] = atari_exploration_schedule(
+            kwargs["num_timesteps"]
+        )
+
+    elif env_name == 'LunarLander-v2' or env_name == 'LunarLander-v3':
         def lunar_empty_wrapper(env):
             return env
         kwargs = {
@@ -53,13 +57,15 @@ def get_env_kwargs(env_name):
 
     return kwargs
 
+
 def atari_exploration_schedule(num_timesteps):
     return PiecewiseSchedule(
         [
             (0, 1.0),
             (1e6, 0.1),
             (num_timesteps / 8, 0.01),
-        ], outside_value=0.01
+        ],
+        outside_value=0.01,
     )
 
 
@@ -69,32 +75,35 @@ def atari_ram_exploration_schedule(num_timesteps):
             (0, 0.2),
             (1e6, 0.1),
             (num_timesteps / 8, 0.01),
-        ], outside_value=0.01
+        ],
+        outside_value=0.01,
     )
 
 
 def atari_optimizer(num_timesteps):
     num_iterations = num_timesteps / 4
     lr_multiplier = 1.0
-    lr_schedule = PiecewiseSchedule([
-        (0, 1e-4 * lr_multiplier),
-        (num_iterations / 10, 1e-4 * lr_multiplier),
-        (num_iterations / 2, 5e-5 * lr_multiplier),
-    ],
-        outside_value = 5e-5 * lr_multiplier)
+    lr_schedule = PiecewiseSchedule(
+        [
+            (0, 1e-4 * lr_multiplier),
+            (num_iterations / 10, 1e-4 * lr_multiplier),
+            (num_iterations / 2, 5e-5 * lr_multiplier),
+        ],
+        outside_value=5e-5 * lr_multiplier,
+    )
 
     return OptimizerSpec(
-        constructor = torch.optim.Adam,
-        kwargs = dict(eps=1e-4),
-        lr_schedule = lambda t: lr_schedule.value(t)
+        constructor=torch.optim.Adam,
+        kwargs=dict(eps=1e-4),
+        lr_schedule=lambda t: lr_schedule.value(t),
     )
 
 
 def lander_optimizer():
     return OptimizerSpec(
-        constructor = torch.optim.Adam,
-        lr_schedule = lambda t: ConstantSchedule(1e-3).value(t),
-        kwargs={}
+        constructor=torch.optim.Adam,
+        lr_schedule=lambda t: ConstantSchedule(1e-3).value(t),
+        kwargs={},
     )
 
 
@@ -103,7 +112,8 @@ def lander_exploration_schedule(num_timesteps):
         [
             (0, 1),
             (num_timesteps * 0.1, 0.02),
-        ], outside_value=0.02
+        ],
+        outside_value=0.02,
     )
 
 
@@ -145,7 +155,9 @@ def linear_interpolation(l, r, alpha):
 
 
 class PiecewiseSchedule(object):
-    def __init__(self, endpoints, interpolation=linear_interpolation, outside_value=None):
+    def __init__(
+        self, endpoints, interpolation=linear_interpolation, outside_value=None
+    ):
         """Piecewise schedule.
         endpoints: [(int, int)]
             list of pairs `(time, value)` meanining that schedule should output
@@ -167,7 +179,7 @@ class PiecewiseSchedule(object):
         assert idxes == sorted(idxes)
         self._interpolation = interpolation
         self._outside_value = outside_value
-        self._endpoints      = endpoints
+        self._endpoints = endpoints
 
     def value(self, t):
         """See Schedule.value"""
@@ -179,6 +191,7 @@ class PiecewiseSchedule(object):
         # t does not belong to any of the pieces, so doom.
         assert self._outside_value is not None
         return self._outside_value
+
 
 class LinearSchedule(object):
     def __init__(self, schedule_timesteps, final_p, initial_p=1.0):
@@ -196,13 +209,14 @@ class LinearSchedule(object):
             final output value
         """
         self.schedule_timesteps = schedule_timesteps
-        self.final_p            = final_p
-        self.initial_p          = initial_p
+        self.final_p = final_p
+        self.initial_p = initial_p
 
     def value(self, t):
         """See Schedule.value"""
-        fraction  = min(float(t) / self.schedule_timesteps, 1.0)
+        fraction = min(float(t) / self.schedule_timesteps, 1.0)
         return self.initial_p + fraction * (self.final_p - self.initial_p)
+
 
 '''
 def compute_exponential_averages(variables, decay):
@@ -247,15 +261,17 @@ def initialize_interdependent_variables(session, vars_list, feed_dict):
             vars_left = new_vars_left
 '''
 
+
 def get_wrapper_by_name(env, classname):
     currentenv = env
     while True:
         if classname in currentenv.__class__.__name__:
             return currentenv
-        elif isinstance(env, gym.Wrapper):
+        elif isinstance(currentenv, gym.Wrapper):
             currentenv = currentenv.env
         else:
-            raise ValueError("Couldn't find wrapper named %s"%classname)
+            return None
+
 
 class MemoryOptimizedReplayBuffer(object):
     def __init__(self, size, frame_history_len, lander=False):
@@ -289,27 +305,32 @@ class MemoryOptimizedReplayBuffer(object):
         self.size = size
         self.frame_history_len = frame_history_len
 
-        self.next_idx      = 0
+        self.next_idx = 0
         self.num_in_buffer = 0
 
-        self.obs      = None
-        self.action   = None
-        self.reward   = None
-        self.done     = None
+        self.obs = None
+        self.action = None
+        self.reward = None
+        self.done = None
 
     def can_sample(self, batch_size):
         """Returns true if `batch_size` different transitions can be sampled from the buffer."""
         return batch_size + 1 <= self.num_in_buffer
 
     def _encode_sample(self, idxes):
-        obs_batch      = np.concatenate([self._encode_observation(idx)[None] for idx in idxes], 0)
-        act_batch      = self.action[idxes]
-        rew_batch      = self.reward[idxes]
-        next_obs_batch = np.concatenate([self._encode_observation(idx + 1)[None] for idx in idxes], 0)
-        done_mask      = np.array([1.0 if self.done[idx] else 0.0 for idx in idxes], dtype=np.float32)
+        obs_batch = np.concatenate(
+            [self._encode_observation(idx)[None] for idx in idxes], 0
+        )
+        act_batch = self.action[idxes]
+        rew_batch = self.reward[idxes]
+        next_obs_batch = np.concatenate(
+            [self._encode_observation(idx + 1)[None] for idx in idxes], 0
+        )
+        done_mask = np.array(
+            [1.0 if self.done[idx] else 0.0 for idx in idxes], dtype=np.float32
+        )
 
         return obs_batch, act_batch, rew_batch, next_obs_batch, done_mask
-
 
     def sample(self, batch_size):
         """Sample `batch_size` different transitions.
@@ -345,7 +366,9 @@ class MemoryOptimizedReplayBuffer(object):
             Array of shape (batch_size,) and dtype np.float32
         """
         assert self.can_sample(batch_size)
-        idxes = sample_n_unique(lambda: random.randint(0, self.num_in_buffer - 2), batch_size)
+        idxes = sample_n_unique(
+            lambda: random.randint(0, self.num_in_buffer - 2), batch_size
+        )
         return self._encode_sample(idxes)
 
     def encode_recent_observation(self):
@@ -362,12 +385,12 @@ class MemoryOptimizedReplayBuffer(object):
         return self._encode_observation((self.next_idx - 1) % self.size)
 
     def _encode_observation(self, idx):
-        end_idx   = idx + 1 # make noninclusive
+        end_idx = idx + 1  # make noninclusive
         start_idx = end_idx - self.frame_history_len
         # this checks if we are using low-dimensional observations, such as RAM
         # state, in which case we just directly return the latest RAM.
         if len(self.obs.shape) == 2:
-            return self.obs[end_idx-1]
+            return self.obs[end_idx - 1]
         # if there weren't enough frames ever in the buffer for context
         if start_idx < 0 and self.num_in_buffer != self.size:
             start_idx = 0
@@ -385,7 +408,11 @@ class MemoryOptimizedReplayBuffer(object):
         else:
             # this optimization has potential to saves about 30% compute time \o/
             img_h, img_w = self.obs.shape[1], self.obs.shape[2]
-            return self.obs[start_idx:end_idx].transpose(1, 2, 0, 3).reshape(img_h, img_w, -1)
+            return (
+                self.obs[start_idx:end_idx]
+                .transpose(1, 2, 0, 3)
+                .reshape(img_h, img_w, -1)
+            )
 
     def store_frame(self, frame):
         """Store a single frame in the buffer at the next available index, overwriting
@@ -403,10 +430,13 @@ class MemoryOptimizedReplayBuffer(object):
             Index at which the frame is stored. To be used for `store_effect` later.
         """
         if self.obs is None:
-            self.obs      = np.empty([self.size] + list(frame.shape), dtype=np.float32 if self.lander else np.uint8)
-            self.action   = np.empty([self.size],                     dtype=np.int32)
-            self.reward   = np.empty([self.size],                     dtype=np.float32)
-            self.done     = np.empty([self.size],                     dtype=np.bool)
+            self.obs = np.empty(
+                [self.size] + list(frame.shape),
+                dtype=np.float32 if self.lander else np.uint8,
+            )
+            self.action = np.empty([self.size], dtype=np.int32)
+            self.reward = np.empty([self.size], dtype=np.float32)
+            self.done = np.empty([self.size], dtype=np.bool)
         self.obs[self.next_idx] = frame
 
         ret = self.next_idx
@@ -436,4 +466,4 @@ class MemoryOptimizedReplayBuffer(object):
         """
         self.action[idx] = action
         self.reward[idx] = reward
-        self.done[idx]   = done
+        self.done[idx] = done
