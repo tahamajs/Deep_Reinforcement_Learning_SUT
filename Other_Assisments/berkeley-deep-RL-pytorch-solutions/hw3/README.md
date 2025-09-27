@@ -1,12 +1,143 @@
-# Section 3 DQN and Actor-Critic
+# HW3: Q-Learning and Actor-Critic
 
-***These results do not reflect minor errors in the code that have since been fixed***
+**Created by Taha Majlesi from University of Tehran**
 
-Below is the report for HW3. All data used can be found in the results folder. For the Pong DQN runs only the most recent video for each run is kept in order to save space. To view the tensorboard for a specific part navigate to that part's folder (or subfolders) and run 
-```commandline
+## Concepts Explanation
+
+### Q-Learning
+
+Q-Learning is an off-policy temporal difference (TD) learning algorithm that learns the optimal action-value function \(Q^\*(s,a)\).
+
+**Bellman Equation**:
+\[
+Q^_(s,a) = \mathbb{E}*{s' \sim p} [r + \gamma \max*{a'} Q^_(s',a')]
+\]
+
+**Update Rule**:
+\[
+Q(s,a) \leftarrow Q(s,a) + \alpha [r + \gamma \max_{a'} Q(s',a') - Q(s,a)]
+\]
+
+**Key Properties**:
+
+- Off-policy: Learns from any policy's experience
+- Converges to optimal Q-function under infinite exploration
+- No need for policy during learning
+
+### Deep Q-Networks (DQN)
+
+Extends Q-Learning to high-dimensional state spaces using neural networks.
+
+**Architecture**: Convolutional layers for feature extraction + fully-connected layers for Q-values
+
+**Challenges Solved**:
+
+- **Experience Replay**: Stores transitions \((s,a,r,s')\) in buffer for uncorrelated training
+- **Target Networks**: Uses separate network for target Q-values to stabilize training
+- **Frame Stacking**: Concatenates multiple frames as input
+
+### Double Q-Learning
+
+Addresses Q-Learning's overestimation bias by decoupling action selection and evaluation:
+\[
+y*t = r + \gamma Q(s', \arg\max*{a'} Q(s',a'; \theta_t); \theta_t^-)
+\]
+
+**Benefit**: Reduces overestimation of Q-values, especially in environments with noisy rewards.
+
+### Actor-Critic Methods
+
+Combines policy-based (Actor) and value-based (Critic) approaches.
+
+**Actor**: Learns policy \(\pi*\theta(a|s)\)
+**Critic**: Learns value function \(V*\phi(s)\) or \(Q\_\phi(s,a)\)
+
+**Advantage Actor-Critic (A2C)**:
+
+- Actor update: \(\theta \leftarrow \theta + \alpha \nabla*\theta \log \pi*\theta(a|s) A(s,a)\)
+- Critic update: \(\phi \leftarrow \phi - \beta \nabla*\phi (V*\phi(s) - \hat{Q}(s))^2\)
+
+### Target Network Updates
+
+In actor-critic, we control how often to update target networks:
+
+- **Hard Updates**: Copy weights every N steps
+- **Soft Updates**: Exponential moving average: \(\theta^- \leftarrow \tau \theta + (1-\tau) \theta^-\)
+
+### Hyperparameter Tuning
+
+Critical hyperparameters in DQN and Actor-Critic:
+
+- **Learning Rate Schedule**: Often linearly decayed over training
+- **Batch Size**: Affects stability and sample efficiency
+- **Network Initialization**: Xavier initialization improves convergence
+- **Gradient Steps per Target Update**: Balances computation and stability
+
+### Atari-Specific Considerations
+
+- **Frame Preprocessing**: Grayscale, resize to 84x84, frame skipping
+- **Reward Clipping**: Clip rewards to [-1,1] for stability
+- **Action Repeat**: Repeat actions for multiple frames to reduce decision frequency
+
+## Setup
+
+1. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+2. Set PYTHONPATH:
+
+```bash
+export PYTHONPATH=$PWD:$PYTHONPATH
+```
+
+## Running the Code
+
+### Problem 1: Q-Learning (LunarLander)
+
+```bash
+python cs285/scripts/run_hw3_dqn.py --env_name LunarLander-v2 --exp_name q1
+```
+
+### Problem 2: Actor-Critic (CartPole)
+
+```bash
+python cs285/scripts/run_hw3_actor_critic.py --env_name CartPole-v0 --exp_name q2
+```
+
+### Problem 3: DQN (Atari Pong)
+
+```bash
+python cs285/scripts/run_hw3_dqn_atari.py --env_name PongNoFrameskip-v4 --exp_name q3_pong
+```
+
+### Problem 4: DQN (Atari Breakout)
+
+```bash
+python cs285/scripts/run_hw3_dqn_atari.py --env_name BreakoutNoFrameskip-v4 --exp_name q4_breakout
+```
+
+## Viewing Results
+
+Navigate to results folder and run:
+
+```bash
 tensorboard --logdir .
 ```
 
+---
+
+# Section 3 Q-Learning and Actor-Critic
+
+**_These results do not reflect minor errors in the code that have since been fixed_**
+
+Below is the report for HW3. All data used can be found in the results folder. For the Pong DQN runs only the most recent video for each run is kept in order to save space. To view the tensorboard for a specific part navigate to that part's folder (or subfolders) and run
+
+```commandline
+tensorboard --logdir .
+```
 
 ## Question 1
 
@@ -31,9 +162,9 @@ Now the DQN is compared with the Double DQN in a simpler environment (Lunar Land
 $ python cs285/scripts/run_hw3_dqn.py --env_name LunarLander-v2 --exp_name dqn_ll_seed1 --seed 1
 $ python cs285/scripts/run_hw3_dqn.py --env_name LunarLander-v2 --exp_name dqn_ll_seed2 --seed 2
 $ python cs285/scripts/run_hw3_dqn.py --env_name LunarLander-v2 --exp_name dqn_ll_seed3 --seed 3
-$ python cs285/scripts/run_hw3_dqn.py --env_name LunarLander-v2 --double_q --exp_name double_dqn_ll_seed1 --seed 1 
-$ python cs285/scripts/run_hw3_dqn.py --env_name LunarLander-v2 --double_q --exp_name double_dqn_ll_seed2 --seed 2 
-$ python cs285/scripts/run_hw3_dqn.py --env_name LunarLander-v2 --double_q --exp_name double_dqn_ll_seed3 --seed 3 
+$ python cs285/scripts/run_hw3_dqn.py --env_name LunarLander-v2 --double_q --exp_name double_dqn_ll_seed1 --seed 1
+$ python cs285/scripts/run_hw3_dqn.py --env_name LunarLander-v2 --double_q --exp_name double_dqn_ll_seed2 --seed 2
+$ python cs285/scripts/run_hw3_dqn.py --env_name LunarLander-v2 --double_q --exp_name double_dqn_ll_seed3 --seed 3
 ```
 
 ![Comparison](results/Q2/double_dqn_eval_ll.png)
@@ -47,16 +178,16 @@ $ python cs285/scripts/run_hw3_dqn.py --env_name PongNoFrameskip-v4 --double_q -
 
 ![Comparison](results/Q3-lrmult/lrmult_pong_comp.png)
 
-The results over the first 3 million timesteps are fairly intuitive. Twice the learning rate (Red) learns the fastest, followed by the normal learning rate (Orange), and then lastly half the learning rate (Blue). After 3 million, however, something interesting happens - the half LR DQN begins learning extremely quickly and surpasses the normal LR, and then eventually the Double LR. It seems the Half LR was able to build up a lot of knowledge and then use this solid base to quickly catch up, even with a learning rate that was still much smaller than the other two methods. Once again the difference between them seems to fade away as time goes on, but it should be noted that the half LR seems to have far fewer fluctuations the the double LR, hinting at the fact that lower learning rates generally provide more stability.  
-  
+The results over the first 3 million timesteps are fairly intuitive. Twice the learning rate (Red) learns the fastest, followed by the normal learning rate (Orange), and then lastly half the learning rate (Blue). After 3 million, however, something interesting happens - the half LR DQN begins learning extremely quickly and surpasses the normal LR, and then eventually the Double LR. It seems the Half LR was able to build up a lot of knowledge and then use this solid base to quickly catch up, even with a learning rate that was still much smaller than the other two methods. Once again the difference between them seems to fade away as time goes on, but it should be noted that the half LR seems to have far fewer fluctuations the the double LR, hinting at the fact that lower learning rates generally provide more stability.
+
 One hyperparameter that is often ignored is weight initialization. For all other experiements Pytorch's default weight initialization was used, bu this is not necesarily the best. One of the better weight initization methods for DQNs seems to be xavier initialization with all biases = 0. This method is compared with the original run below:
 
 ![Comparison](results/Q3-init/init_pong_comp.png)
 
 Using this weight initialization seems to provide a big learning advantage at first, but does not seem to lead to any long term improvements. It is however most likley still worth it to use this improved initilization in place of Pytorch's default for future DQN runs.
 
-
 ## Question 4
+
 Question 4 asks you to test actor-critic on the cart pole environment and find the best parameters for number of target updates and number of gradient updates per target update. This was done with the following commands:
 
 ```commandline
@@ -65,13 +196,14 @@ $ python cs285/scripts/run_hw3_actor_critic.py --env_name CartPole-v0 -n 100 -b 
 $ python cs285/scripts/run_hw3_actor_critic.py --env_name CartPole-v0 -n 100 -b 1000 --exp_name 1_100 -ntu 1 -ngsptu 100
 $ python cs285/scripts/run_hw3_actor_critic.py --env_name CartPole-v0 -n 100 -b 1000 --exp_name 10_10 -ntu 10 -ngsptu 10
 ```
+
 Resulting in the following chart:
 
 ![Comparison](results/Q4/q4-comp.png)
-Light Blue ---- 10 ntu  10 ngsptu  
-Red ----------- 1 ntu   100 ngsptu  
+Light Blue ---- 10 ntu 10 ngsptu  
+Red ----------- 1 ntu 100 ngsptu  
 Dark Blue ----- 100 ntu 1 ngsptu  
-Orange -------- 1 ntu   1 ngsptu  
+Orange -------- 1 ntu 1 ngsptu
 
 Clearly more gradient steps per target update are favored over more target updates. It is less clear whether doing 10 and 10 or doing all gradient steps within one target update is better. In the chart above the 10-10 method appears to be more stable once it reaches peak performance, but then it diverge towards the end. Meanwhile the 1-100 seems to be have a harder time staying at its goal, but then converges quite convinvingly at the end. It is hard to say which is more effective with only a sample size of one. In order to investigate this issue farther both the 10-10 and the 1-100 commands were run for seeds 1-5.
 
@@ -108,6 +240,4 @@ A run of VPG with the same hyper-parameters (where applicable) from HW2 is inclu
 
 ![Comparison](results/Q5-HC/hc_comp.png)
 
-In this environment with these parameters VPG (with rtg and a baseline) actually seems to perform much better than AC, achieving a higher performance in far fewer steps with less variance. 
-
-
+In this environment with these parameters VPG (with rtg and a baseline) actually seems to perform much better than AC, achieving a higher performance in far fewer steps with less variance.

@@ -1,8 +1,148 @@
-# Section 2 Policy Gradient  
+# HW2: Policy Gradient
 
-***These results do not reflect minor errors in the code that have since been fixed***
+**Created by Taha Majlesi from University of Tehran**
 
-Below is the report for HW2. All data used can be found in the results folder. To view the tensorboard for a specific part navigate to that part's folder (or subfolders) and run 
+## Concepts Explanation
+
+### Policy Gradient Methods
+
+Policy gradient methods directly optimize the policy \(\pi\_\theta(a|s)\) using gradient ascent on the expected return. Unlike value-based methods, they work with stochastic policies and can handle continuous action spaces naturally.
+
+**Core Idea**: Adjust policy parameters \(\theta\) in the direction that increases expected cumulative reward:
+\[
+\theta \leftarrow \theta + \alpha \nabla*\theta J(\theta)
+\]
+where \(J(\theta) = \mathbb{E}*{\tau \sim \pi\_\theta} [R(\tau)]\) is the expected return.
+
+### Reward-to-Go (RTG)
+
+Instead of using total return for each timestep, RTG uses the sum of rewards from that timestep onward:
+\[
+\hat{Q}_t = \sum_{k=t}^T \gamma^{k-t} r_k
+\]
+
+**Advantages**:
+
+- Reduces variance by focusing on future rewards
+- Provides more accurate credit assignment
+- Essential for discounted environments
+
+### Advantage Function
+
+The advantage function measures how much better an action is compared to the average action in that state:
+\[
+A(s,a) = Q(s,a) - V(s)
+\]
+
+**Baseline Subtraction**: Using a value function \(V(s)\) as baseline reduces variance without bias:
+\[
+\nabla*\theta J(\theta) \propto \mathbb{E} [A(s,a) \nabla*\theta \log \pi\_\theta(a|s)]
+\]
+
+### Neural Network Baseline
+
+A neural network approximates the value function \(V*\phi(s)\) to use as a baseline. Trained to minimize:
+\[
+\mathcal{L}(\phi) = \mathbb{E} [(V*\phi(s) - \hat{Q}(s))^2]
+\]
+
+**Benefits**:
+
+- Learns state-dependent baselines
+- Can capture complex value landscapes
+- Reduces variance more effectively than simple baselines
+
+### Generalized Advantage Estimation (GAE)
+
+GAE combines multiple-step returns with value function estimates:
+\[
+\hat{A}_t^{GAE(\gamma,\lambda)} = \sum_{k=0}^\infty (\gamma\lambda)^k \delta*{t+k}
+\]
+where \(\delta_t = r_t + \gamma V(s*{t+1}) - V(s_t)\)
+
+**Trade-off**:
+
+- \(\lambda = 1\): High variance, low bias (Monte Carlo)
+- \(\lambda = 0\): Low variance, high bias (TD(0))
+
+### Hyperparameter Sensitivity
+
+Policy gradient methods are sensitive to:
+
+- **Learning Rate**: Too high → instability; Too low → slow convergence
+- **Batch Size**: Larger batches reduce variance but increase computation
+- **Discount Factor \(\gamma\)**: Controls horizon of credit assignment
+- **Network Architecture**: Deeper networks can capture complex policies
+
+## Setup
+
+1. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+2. Set PYTHONPATH:
+
+```bash
+export PYTHONPATH=$PWD:$PYTHONPATH
+```
+
+## Running the Code
+
+### Problem 3: Effects of Reward-to-Go and Advantage Standardization
+
+Small batches (CartPole):
+
+```bash
+python cs285/scripts/run_hw2_policy_gradient.py --env_name CartPole-v0 -n 100 -b 1000 -dsa --exp_name sb_no_rtg_dna -l 1 -s 32
+python cs285/scripts/run_hw2_policy_gradient.py --env_name CartPole-v0 -n 100 -b 1000 -rtg -dsa --exp_name sb_rtg_dna -l 1 -s 32
+python cs285/scripts/run_hw2_policy_gradient.py --env_name CartPole-v0 -n 100 -b 1000 -rtg --exp_name sb_rtg_na -l 1 -s 32
+```
+
+Large batches (CartPole):
+
+```bash
+python cs285/scripts/run_hw2_policy_gradient.py --env_name CartPole-v0 -n 100 -b 5000 -dsa --exp_name lb_no_rtg_dna -l 1 -s 32
+python cs285/scripts/run_hw2_policy_gradient.py --env_name CartPole-v0 -n 100 -b 5000 -rtg -dsa --exp_name lb_rtg_dna -l 1 -s 32
+python cs285/scripts/run_hw2_policy_gradient.py --env_name CartPole-v0 -n 100 -b 5000 -rtg --exp_name lb_rtg_na -l 1 -s 32
+```
+
+### Problem 4: Hyperparameter Search (InvertedPendulum)
+
+```bash
+python cs285/scripts/run_hw2_policy_gradient.py --env_name InvertedPendulum-v2 --ep_len 1000 --discount 0.9 -n 100 -l 2 -s 64 -b 90 -lr 0.06 -rtg --exp_name ip_b90_lr0.06
+```
+
+### Problem 6: Neural Network Baseline (LunarLanderContinuous)
+
+```bash
+python cs285/scripts/run_hw2_policy_gradient.py --env_name LunarLanderContinuous-v2 --ep_len 1000 --discount 0.99 -n 100 -l 2 -s 64 -b 40000 -lr 0.005 -rtg --nn_baseline --exp_name ll_b40000_r0.005
+```
+
+### Problem 7: Hyperparameter Search (HalfCheetah)
+
+```bash
+# Search commands (examples)
+python cs285/scripts/run_hw2_policy_gradient.py --env_name HalfCheetah-v2 --ep_len 150 --discount 0.95 -n 100 -l 2 -s 32 -b 30000 -lr 0.02 --reward_to_go --nn_baseline --exp_name hc_b30000_lr0.02
+```
+
+## Viewing Results
+
+Navigate to results folder and run:
+
+```bash
+tensorboard --logdir .
+```
+
+---
+
+# Section 2 Policy Gradient
+
+**_These results do not reflect minor errors in the code that have since been fixed_**
+
+Below is the report for HW2. All data used can be found in the results folder. To view the tensorboard for a specific part navigate to that part's folder (or subfolders) and run
+
 ```commandline
 tensorboard --logdir .
 ```
@@ -22,8 +162,7 @@ And a comparison of the average returns with small batches is below:
 ![Small Batch Averages](results/problem-3-sb/eval-avg-cp-sb.png)
 Blue ---- rtg & dsa  
 Orange -- dsa  
-Red ----- rtg  
-
+Red ----- rtg
 
 Next we examine the same experiment with larger batches:
 
@@ -38,7 +177,7 @@ And the corresponding comparison below:
 ![Large Batch Averages](results/problem-3-lb/eval-avg-cp-lb.png)
 Blue ---- rtg & dsa  
 Orange -- dsa  
-Red ----- rtg  
+Red ----- rtg
 
 As expected, reward-to-go seems to always provide better performance. Advantage standardization's effects seem harder to discern, although with larger batches it seems to actually hinder performance. Batch size had a very clear effect, with the larger size providing both faster convergence and more stable learning/behavior once converged.
 
@@ -62,17 +201,19 @@ $ python cs285/scripts/run_hw2_policy_gradient.py --env_name InvertedPendulum-v2
 And the final comparison below, where it can be seen that further optimization will cause the learning to fail. Interestingly a slightly larger batch size of 100 also fails, suggesting that learning at batch sizes and learning rates of this magnitude is extremely unstable, and some luck is needed to reach the goal.
 
 ![Hyperparameter Search Results](results/problem-4/ideal-params-comparison.png)
-Red ---------- rtg and baseline   
+Red ---------- rtg and baseline  
 Dark Blue ---- rtg  
 Orange ------- neither  
-Light Blue --- baseline  
+Light Blue --- baseline
 
 ## Problem 6
+
 The baseline network is first tested in the continuous lunar lander environment. The suggested batch size of 40k would not fit in GPU memory so 30k was used, with similar results.
 
 ```commandline
 $ python cs285/scripts/run_hw2_policy_gradient.py --env_name LunarLanderContinuous-v2 --ep_len 1000 --discount 0.99 -n 100 -l 2 -s 64 -b 40000 -lr 0.005 -rtg --nn_baseline --exp_name ll_b40000_r0.005
 ```
+
 Average evaluation resturns can be seen below:
 
 ![Large Batch Averages](results/problem-6/eval-avg-ll.png)
@@ -101,7 +242,7 @@ Dark Blue ---- b = 10k lr = 0.02
 Pink --------- b = 30k lr = 0.01  
 Orange ------- b = 10k lr = 0.01  
 Rust --------- b = 30k lr = 0.005  
-Light Blue --- b = 10k lr = 0.005  
+Light Blue --- b = 10k lr = 0.005
 
 Both learning rate and batch size seem to have a positive correlation with performance over the space tested, with learning rate seemingly having a much stronger effect. While increasing batch size does require more c3omputational resources, it does not seem to ever hinder performance. In light of this I think it is safe to assume that the best combination within this space would be a batch size of 50k and a learning rate of 0.02. For part two of this problem, parameters of 30k and 0.02 will be tested due to the limited GPU memory.
 
@@ -120,7 +261,7 @@ We now test the effects of rtg and a baseline on the found parameters:
 Red ---------- rtg and baseline  
 Dark Blue ---- rtg  
 Orange ------- neither  
-Light Blue --- baseline  
+Light Blue --- baseline
 
 Under these settings it can be seen that using RTG is the only thing that really matters - the baseline seemed to have little effect, and even massively hurt learning in the beginning without rtg. Not using rtg is likely so terrible in this case because of the discount - it causes the no rtg calculation to only care about the actions in the beginning, with the actions coming at the end labeled completely independant of the actual actions. As seen earlier, forgoing rtg in an undiscounted environment does not have such terrible effects.
 
@@ -138,7 +279,8 @@ $ python cs285/scripts/run_hw2_policy_gradient.py --env_name HalfCheetah-v2 --ep
 $ python cs285/scripts/run_hw2_policy_gradient.py --env_name HalfCheetah-v2 --ep_len 150 --discount 0.95 -n 100 -l 2 -s 32 -b 30000 -lr 0.02 --reward_to_go --lambda 0.4 --exp_name lambda0.4
 $ python cs285/scripts/run_hw2_policy_gradient.py --env_name HalfCheetah-v2 --ep_len 150 --discount 0.95 -n 100 -l 2 -s 32 -b 30000 -lr 0.02 --reward_to_go --lambda 0 --exp_name actor-critic
 ```
- And the final comparison:
+
+And the final comparison:
 
 ![Lambda Comparison](results/bonus-gae/gae_hc_comp.png)
 
@@ -149,12 +291,8 @@ $ python cs285/scripts/run_hw2_policy_gradient.py --env_name CartPole-v0 -n 100 
 $ python cs285/scripts/run_hw2_policy_gradient.py --env_name CartPole-v0 -n 100 -b 5000 -rtg -dsa --exp_name cp_lambda0.95 -l 1 -s 32 --lambda 0.95
 $ python cs285/scripts/run_hw2_policy_gradient.py --env_name CartPole-v0 -n 100 -b 5000 -rtg --exp_name cp_lambda0.8 -l 1 -s 32 --lambda 0.8
 $ python cs285/scripts/run_hw2_policy_gradient.py --env_name CartPole-v0 -n 100 -b 5000 -rtg --exp_name cp_lambda0.4 -l 1 -s 32 --lambda 0.4
-``` 
+```
 
 ![Lambda Comparison](results/bonus-gae-cp/gae_cp_comp.png)
 
 This time GAE does not seem to provide any benefit, with lambadas lower than one producing lower performance throughout. All methods with lambda > 0.8 do seem to converge to optimal behavior though. It may be worth it to investigate across more seeds. Once again a lambda of 0.4 vastly underperformed, suggesting a suboptimal baseline. GAE would most likely perform much better with a more accurate value function, as the baseline in this implementation is really only meant to be a rough approximation.
-
-
-
-

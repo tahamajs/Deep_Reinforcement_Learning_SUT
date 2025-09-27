@@ -1,6 +1,153 @@
+# HW4: Model-Based Reinforcement Learning
+
+**Created by Taha Majlesi from University of Tehran**
+
+## Concepts Explanation
+
+### Model-Based vs Model-Free RL
+
+- **Model-Free**: Learns value functions or policies directly from experience
+- **Model-Based**: Learns a model of the environment dynamics, then plans using this model
+
+**Advantages of Model-Based**:
+
+- Sample efficient: Can simulate trajectories without real environment interaction
+- Interpretable: Learned model provides insight into environment dynamics
+- Generalizable: Model can be used for multiple tasks
+
+**Challenges**:
+
+- Model inaccuracy: Learned models are approximations
+- Computational complexity: Planning requires optimization
+- Model bias: Errors compound over long horizons
+
+### Dynamics Model Learning
+
+Learn transition function \(\hat{p}(s'|s,a)\) and reward function \(\hat{r}(s,a)\).
+
+**Supervised Learning Approach**:
+
+- Collect dataset \(\mathcal{D} = \{(s*t, a_t, r_t, s*{t+1})\}\)
+- Train neural network to predict next state and reward
+- Add noise to actions during training for robustness
+
+**Ensemble Models**: Train multiple models and average predictions to reduce uncertainty.
+
+### Model Predictive Control (MPC)
+
+Use learned model for planning by optimizing action sequences.
+
+**Basic MPC**:
+
+1. From current state \(s\), sample random action sequences
+2. Simulate trajectories using learned model
+3. Select action sequence with highest predicted return
+4. Execute first action, repeat
+
+**Horizon**: Length of action sequences to optimize (trade-off between computation and foresight)
+
+### Iterative Model Learning
+
+Alternate between model training and policy improvement:
+
+**Algorithm**:
+
+1. Initialize dataset \(\mathcal{D}\) with random exploration
+2. For iteration \(i\):
+   - Train dynamics model \(\hat{p}\_i\) on \(\mathcal{D}\)
+   - Use MPC with \(\hat{p}\_i\) to collect new trajectories
+   - Add new data to \(\mathcal{D}\)
+   - Evaluate performance
+
+**Benefits**:
+
+- Model improves with more data
+- Policy becomes more sample-efficient
+- Handles non-stationary dynamics
+
+### Hyperparameter Analysis
+
+Key hyperparameters affecting performance:
+
+**Ensemble Size**: More models reduce prediction variance but increase computation
+
+- Larger ensembles: Better uncertainty estimation, more robust planning
+
+**Planning Horizon**: Length of action sequences
+
+- Short horizon: Fast computation, myopic decisions
+- Long horizon: Better foresight, compounding model errors
+
+**Number of Action Sequences**: How many sequences to sample per planning step
+
+- More sequences: Better optimization, higher computation cost
+
+**Model Architecture**: Network size and depth
+
+- Larger models: Better expressivity, risk of overfitting
+- Training steps per iteration: Balance between model accuracy and data collection
+
+### Evaluation Metrics
+
+- **Model Accuracy**: How well learned model predicts real transitions
+- **Planning Performance**: Return achieved by MPC vs random policy
+- **Sample Efficiency**: Performance vs amount of environment interaction
+- **Computational Cost**: Time per planning step
+
+## Setup
+
+1. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+2. Set PYTHONPATH:
+
+```bash
+export PYTHONPATH=$PWD:$PYTHONPATH
+```
+
+## Running the Code
+
+### Problem 1: Model-Based RL (Obstacles)
+
+```bash
+python cs285/scripts/run_hw4_mb.py --exp_name q1_obstacles --env_name obstacles-cs285-v0 --add_sl_noise --num_agent_train_steps_per_iter 20 --batch_size_initial 5000 --batch_size 1000 --mpc_horizon 10 --n_iter 12 --video_log_freq -1
+```
+
+### Problem 2: Model-Based RL (Reacher)
+
+```bash
+python cs285/scripts/run_hw4_mb.py --exp_name q2_reacher --env_name reacher-cs285-v0 --add_sl_noise --num_agent_train_steps_per_iter 20 --batch_size_initial 5000 --batch_size 1000 --mpc_horizon 10 --n_iter 12 --video_log_freq -1
+```
+
+### Problem 3: Model-Based RL (Cheetah)
+
+```bash
+python cs285/scripts/run_hw4_mb.py --exp_name q3_cheetah --env_name cheetah-cs285-v0 --mpc_horizon 15 --add_sl_noise --num_agent_train_steps_per_iter 1500 --batch_size_initial 5000 --batch_size 5000 --n_iter 20 --video_log_freq -1
+```
+
+### Problem 4: Model-Based RL (Ant)
+
+```bash
+python cs285/scripts/run_hw4_mb.py --exp_name q4_ant --env_name ant-cs285-v0 --mpc_horizon 15 --add_sl_noise --num_agent_train_steps_per_iter 1500 --batch_size_initial 5000 --batch_size 5000 --n_iter 20 --video_log_freq -1
+```
+
+## Viewing Results
+
+Navigate to results folder and run:
+
+```bash
+tensorboard --logdir .
+```
+
+---
+
 # Section 4 Model Based RL
 
-Below is the report for HW4. All data used can be found in the results folder. To view the tensorboard for a specific part navigate to that part's folder and run 
+Below is the report for HW4. All data used can be found in the results folder. To view the tensorboard for a specific part navigate to that part's folder and run
+
 ```commandline
 tensorboard --logdir .
 ```
@@ -54,12 +201,12 @@ $ python cs285/scripts/run_hw4_mb.py --exp_name cheetah --env_name cheetah-cs285
 ```
 
 ![Comparison](results/problem-3-cheetah/cheetah_returns.png)
-  
+
 In all three environments a very large amount of the performance was gained in the initial iteration (not seen in graph since evaluation is done after). Predictions after the first iteration are quite impressive for all three environments (seen in itr_0_predictions.png in respective folder). Overall the model-based method performed quite well considering it was testing action sequences completely randomly.
 
 ## Problem 4
 
-Now the effects of various hyperparameters are tested in the reacher environment 
+Now the effects of various hyperparameters are tested in the reacher environment
 
 ### Ensemble Size
 
@@ -73,8 +220,8 @@ python cs285/scripts/run_hw4_mb.py --exp_name q5_reacher_ensemble5 --env_name re
 
 Red ----- 5  
 Blue ---- 3  
-Orange -- 1  
-  
+Orange -- 1
+
 Ensemble size does not seem to have a very large effect on performance, although larger ensembles do seem to help slightly in both performance and stability. Larger ensembles would most likely be much more helpful if they were used to estimate model accuracy instead of just averaging thier results.
 
 ### Planning Horizon
@@ -89,8 +236,8 @@ python cs285/scripts/run_hw4_mb.py --exp_name q5_reacher_horizon30 --env_name re
 
 Blue ---- 15  
 Orange -- 5  
-Red ----- 30  
-  
+Red ----- 30
+
 The effects of horizon length on performance seems to be the most significant of the three, and also the most interesting. The middle setting of 15 ended up performing the best, with the horizon of 5 being very unstable and 30 performing far worse. Short horizons seem to make the model far too short-sighted while longer horizons compound the model errors too much to be helpful. A balance between these too issues is needed in order to get the best performance.
 
 ### Number of Planning Sequences Considered
@@ -103,7 +250,6 @@ python cs285/scripts/run_hw4_mb.py --exp_name q5_reacher_numseq1000 --env_name r
 ![Comparison](results/problem-4-numseq/numseq_comp.png)
 
 Blue ---- 1000  
-Orange -- 100  
-  
-The effect of planning sequences considered is pretty straightforward - more sequences considered lead to better performance. This is a simple effect of there being less variance in larger sample sizes of sequences.
+Orange -- 100
 
+The effect of planning sequences considered is pretty straightforward - more sequences considered lead to better performance. This is a simple effect of there being less variance in larger sample sizes of sequences.

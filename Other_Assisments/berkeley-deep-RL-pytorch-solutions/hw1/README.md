@@ -1,21 +1,132 @@
+# HW1: Behavior Cloning
+
+**Created by Taha Majlesi from University of Tehran**
+
+## Concepts Explanation
+
+### Behavior Cloning (BC)
+
+Behavior Cloning is a supervised learning approach to imitation learning where an agent learns to mimic expert behavior by training on demonstrations. The core idea is to treat the problem as a supervised learning task where:
+
+- **Input**: Current state observations
+- **Output**: Expert actions
+- **Model**: A neural network (typically MLP) that maps states to actions
+
+**Mathematical Formulation**:
+Given expert trajectories \(\tau = \{s*1, a_1, s_2, a_2, ..., s_T, a_T\}\), we minimize the loss:
+\[
+\mathcal{L}(\theta) = \sum*{t=1}^T \ell(\pi*\theta(s_t), a_t)
+\]
+where \(\pi*\theta\) is the policy network and \(\ell\) is typically mean squared error for continuous actions or cross-entropy for discrete actions.
+
+**Advantages**:
+
+- Simple and straightforward to implement
+- Works well when expert data is abundant and high-quality
+- No need for environment interactions during training
+
+**Limitations**:
+
+- Distribution shift: The agent may encounter states not seen in expert demonstrations
+- Compounding errors: Small mistakes can lead to unseen states, causing cascading failures
+- Requires large amounts of expert data
+
+### Dataset Aggregation (DAgger)
+
+DAgger addresses BC's limitations by iteratively collecting new data from the current policy and retraining on a dataset aggregated from all iterations.
+
+**Algorithm**:
+
+1. Train initial policy \(\pi_1\) on expert demonstrations \(\mathcal{D}\_1\)
+2. For iteration \(i = 1\) to \(N\):
+   - Run \(\pi_i\) in environment to collect trajectories
+   - Query expert for actions on states from these trajectories
+   - Add expert-labeled data to dataset: \(\mathcal{D}_{i+1} = \mathcal{D}\_i \cup \{(s, \pi_{expert}(s)) \mid s \sim \pi_i\}\)
+   - Train \(\pi*{i+1}\) on \(\mathcal{D}*{i+1}\)
+
+**Key Insight**: By querying the expert on states actually encountered by the current policy, DAgger ensures the training distribution matches the test distribution.
+
+**Benefits over BC**:
+
+- Robust to distribution shift
+- Can learn from fewer expert demonstrations
+- Maintains performance even when deviating from expert trajectories
+
+### Evaluation Metrics
+
+- **Mean Return**: Average cumulative reward over evaluation episodes
+- **Success Rate**: Percentage of episodes achieving the task goal
+- **Performance Relative to Expert**: How close the cloned policy gets to expert performance
+
+## Setup
+
+1. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+2. Set PYTHONPATH:
+
+```bash
+export PYTHONPATH=$PWD:$PYTHONPATH
+```
+
+## Running the Code
+
+### Question 1.2: Behavioral Cloning on Multiple Environments
+
+Train BC agents on expert data:
+
+```bash
+python cs285/scripts/run_hw1_behavior_cloning.py --expert_policy_file cs285/policies/experts/Ant.pkl --env_name Ant-v2 --exp_name bc_ant --n_iter 1 --expert_data cs285/expert_data/expert_data_Ant-v2.pkl
+python cs285/scripts/run_hw1_behavior_cloning.py --expert_policy_file cs285/policies/experts/HalfCheetah.pkl --env_name HalfCheetah-v2 --exp_name bc_cheetah --n_iter 1 --expert_data cs285/expert_data/expert_data_HalfCheetah-v2.pkl
+python cs285/scripts/run_hw1_behavior_cloning.py --expert_policy_file cs285/policies/experts/Hopper.pkl --env_name Hopper-v2 --exp_name bc_hopper --n_iter 1 --expert_data cs285/expert_data/expert_data_Hopper-v2.pkl
+python cs285/scripts/run_hw1_behavior_cloning.py --expert_policy_file cs285/policies/experts/Humanoid.pkl --env_name Humanoid-v2 --exp_name bc_humanoid --n_iter 1 --expert_data cs285/expert_data/expert_data_Humanoid-v2.pkl
+python cs285/scripts/run_hw1_behavior_cloning.py --expert_policy_file cs285/policies/experts/Walker2d.pkl --env_name Walker2d-v2 --exp_name bc_walker --n_iter 1 --expert_data cs285/expert_data/expert_data_Walker2d-v2.pkl
+```
+
+### Question 1.3: BC Training Curve on Walker2d
+
+```bash
+python cs285/scripts/run_hw1_behavior_cloning.py --expert_policy_file cs285/policies/experts/Walker2d.pkl --env_name Walker2d-v2 --exp_name bc_walker_curve --n_iter 5 --expert_data cs285/expert_data/expert_data_Walker2d-v2.pkl
+```
+
+### Question 2.2: DAgger on Walker2d
+
+```bash
+python cs285/scripts/run_hw1_dagger.py --expert_policy_file cs285/policies/experts/Walker2d.pkl --env_name Walker2d-v2 --exp_name dagger_walker --n_iter 10 --do_dagger --expert_data cs285/expert_data/expert_data_Walker2d-v2.pkl
+```
+
+## Viewing Results
+
+Navigate to results folder and run:
+
+```bash
+tensorboard --logdir .
+```
+
+---
+
 # Section 1 Behavior Cloning
 
-Below is the HW1 report. All data used can be found in the results folder - videos aren't included to save space. To view the tensorboard for a specific part navigate to that part's folder (not the subfolders) and run 
+Below is the HW1 report. All data used can be found in the results folder - videos aren't included to save space. To view the tensorboard for a specific part navigate to that part's folder (not the subfolders) and run
+
 ```commandline
 tensorboard --logdir .
 ```
 
 ## Question 1.2
 
-The agent was trained on 10,000 steps of expert behavior in each environment. It was then evaluated for >10,000 steps to get an accurate mean performance. The agent itself had an MLP policy consisting of 2 hidden layers of 64 neurons each. 
+The agent was trained on 10,000 steps of expert behavior in each environment. It was then evaluated for >10,000 steps to get an accurate mean performance. The agent itself had an MLP policy consisting of 2 hidden layers of 64 neurons each.
 
 | Environment |      Expert      | Behavioral Cloning | Mean Percent Performance |
-|-------------|:----------------:|:------------------:|:------------------------:|
-| Ant         |  4713.65 ± 12.2  |   4696.46 ± 90.39  |          99.64%          |
-| HalfCheetah |  4205.78 ± 83.04 |  3521.82 ± 181.00  |          83.74%          |
+| ----------- | :--------------: | :----------------: | :----------------------: |
+| Ant         |  4713.65 ± 12.2  |  4696.46 ± 90.39   |          99.64%          |
+| HalfCheetah | 4205.78 ± 83.04  |  3521.82 ± 181.00  |          83.74%          |
 | Hopper      |  3772.67 ± 1.95  |   660.8 ± 348.67   |          17.52%          |
-| Humanoid    | 10344.52 ± 20.98 |   414.05 ± 105.71  |           4.00%          |
-| Walker2d    |  5566.84 ± 9.24  |    60.96 ± 94.77   |           1.10%          |
+| Humanoid    | 10344.52 ± 20.98 |  414.05 ± 105.71   |          4.00%           |
+| Walker2d    |  5566.84 ± 9.24  |   60.96 ± 94.77    |          1.10%           |
 
 It can be seen that the agent achieved >30% performance in both the ant and the half chettah environment. It failed to reach this benchmark in the other three environments. These environments seem to be harder for behavioral cloning, requiring more training to reach a comparable level of performance.
 

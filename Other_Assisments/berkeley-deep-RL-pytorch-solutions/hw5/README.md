@@ -1,9 +1,162 @@
+# HW5: Exploration
+
+**Created by Taha Majlesi from University of Tehran**
+
+## Concepts Explanation
+
+### Exploration vs Exploitation Dilemma
+
+In reinforcement learning, agents must balance:
+
+- **Exploration**: Trying new actions to discover better strategies
+- **Exploitation**: Using known good actions to maximize immediate reward
+
+**Challenge**: Too much exploration → slow learning; Too little exploration → suboptimal policies
+
+### Intrinsic Motivation
+
+Add exploration bonuses to reward function:
+\[
+r*{total} = r*{extrinsic} + \beta r\_{intrinsic}
+\]
+
+**Benefits**:
+
+- Encourages visiting novel states
+- Improves sample efficiency
+- Helps escape local optima
+
+### Count-Based Exploration
+
+Assign higher bonuses to less visited states.
+
+**State Visitation Count**: \(N(s)\) = number of times state \(s\) has been visited
+
+**Exploration Bonus**: \(r\_{bonus} = \frac{1}{\sqrt{N(s)}}\) or similar decreasing functions
+
+### Histogram-Based Exploration
+
+Maintain a histogram of state visitations for discrete state spaces.
+
+**Implementation**:
+
+- Discretize continuous states into bins
+- Track visit counts for each bin
+- Add bonus inversely proportional to visit count
+
+**Advantages**:
+
+- Exact counts for discrete representations
+- Computationally efficient
+- Effective in low-dimensional state spaces
+
+### Radial Basis Function (RBF) Exploration
+
+Approximate state visitation using RBF kernels for continuous spaces.
+
+**Kernel Density Estimation**:
+\[
+\hat{p}(s) = \sum\_{s' \in \mathcal{D}} K(s - s')
+\]
+where \(K\) is a radial basis function (e.g., Gaussian)
+
+**Exploration Bonus**: \(r\_{bonus} = -\log(\hat{p}(s))\) or similar
+
+**Benefits**:
+
+- Handles continuous state spaces
+- Smooth density estimation
+- Adaptable kernel bandwidth
+
+### Exemplar-Based Exploration
+
+Use a set of representative states ("exemplars") to encourage exploration.
+
+**Algorithm**:
+
+1. Maintain set of exemplars \(\mathcal{E}\)
+2. For new state \(s\), find nearest exemplar \(e^\*\)
+3. Exploration bonus: \(r\_{bonus} = \|s - e^\*\|^2\) (distance to nearest exemplar)
+4. Occasionally add new states to exemplar set
+
+**Key Insight**: Encourages exploration away from known regions while maintaining computational efficiency.
+
+### Exploration in Sparse Reward Environments
+
+Sparse rewards make exploration particularly challenging:
+
+- Rewards are rare, so random exploration may never find them
+- Intrinsic motivation helps discover reward regions
+- Once discovered, agent can focus on exploitation
+
+### Hyperparameter Tuning
+
+Critical parameters for exploration methods:
+
+- **Bonus Coefficient \(\beta\)**: Scales intrinsic vs extrinsic rewards
+- **Kernel Bandwidth**: For RBF methods, controls smoothness of density estimation
+- **Exemplar Threshold**: When to add new exemplars
+- **State Discretization**: For histogram methods, bin size affects granularity
+
+### Evaluation Considerations
+
+- **Exploration Efficiency**: How quickly novel states are discovered
+- **Final Performance**: Quality of learned policy after exploration
+- **Robustness**: Performance across different random seeds
+- **Computational Overhead**: Additional computation per timestep
+
+## Setup
+
+1. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+2. Set PYTHONPATH:
+
+```bash
+export PYTHONPATH=$PWD:$PYTHONPATH
+```
+
+## Running the Code
+
+### Problem 1: Exploration (PointMass)
+
+```bash
+python cs285/scripts/train_ac_exploration_f18.py --env_name PointMass-v0 --exp_name q1_env --n_iter 100 --video_log_freq -1
+```
+
+### Problem 2: Exploration (SparseHalfCheetah)
+
+```bash
+python cs285/scripts/train_ac_exploration_f18.py --env_name SparseHalfCheetah-v2 --exp_name q2_env --n_iter 100 --video_log_freq -1
+```
+
+### Problem 3: Exploration (HalfCheetah)
+
+```bash
+python cs285/scripts/train_ac_exploration_f18.py --env_name HalfCheetah-v2 --exp_name q3_env --n_iter 100 --video_log_freq -1
+```
+
+## Viewing Results
+
+Navigate to results folder and run:
+
+```bash
+tensorboard --logdir .
+```
+
+---
+
 # Section 5 Exploration in RL
 
-Below is the report for HW5. All data used can be found in the results folder. To view the tensorboard for a specific part navigate to that part's folder and run 
+Below is the report for HW5. All data used can be found in the results folder. To view the tensorboard for a specific part navigate to that part's folder and run
+
 ```commandline
 tensorboard --logdir .
 ```
+
 All commands used will be in the README.txt
 
 ## Problem 1
@@ -12,19 +165,19 @@ First we run our actor-critic on the pointmass environment with no extra explora
 
 ![No Exploration](results/problem-1-none/no_exploration_returns.png)
 
-It can be seen that the agent only managed to find the goal area once out of three tries (with seed 1). It is clear from these trials that the agent would benefit from an exploration bonus.  
-  
+It can be seen that the agent only managed to find the goal area once out of three tries (with seed 1). It is clear from these trials that the agent would benefit from an exploration bonus.
+
 First the the histogram method is tested across the same three seeds:
 
 ![Histogram](results/problem-1-hist/hist_returns.png)
 
-With a histogram bonus all three runs are able to find the bonus area, and sooner in the case of the 1 seed. 
+With a histogram bonus all three runs are able to find the bonus area, and sooner in the case of the 1 seed.
 
 ## Problem 2
 
 Now the Radial Basis Function algorithm is tested in the same environment:
 
-![RBF](results/problem-2/rbf_returns.png)  
+![RBF](results/problem-2/rbf_returns.png)
 
 While the RBF exploration performs better than no bonus it seems to perform worse than the histogram method. Since it is also more computationally expensive it seems that the histogram model is preferable when it is able to be used (small state spaces).
 
@@ -32,7 +185,7 @@ While the RBF exploration performs better than no bonus it seems to perform wors
 
 Finally the exemplar model is tested:
 
-![Ex2](results/problem-3/ex2_returns.png)  
+![Ex2](results/problem-3/ex2_returns.png)
 
 Once again the exemplar model provides a big boost in performance from no boost, but seems to fall short of the histogram's performance. This makes a lot of sense: the exemplar is really a sort of just an approximation of the histogram. While it is applicable to a far wider range of problems it tends to be less accurate when exact counts can be reasonably kept (when generalization doesn't make sense/is not needed). Interestingly it can be seen that with seed 21 (Red) it found the goal but then forgot about it. This seems to suggest that the exploration was a bit too strong in this case - the bonus steered the agent towards states it hadn't been to in a while instead of the known high reward of the goal.
 
@@ -40,6 +193,6 @@ Once again the exemplar model provides a big boost in performance from no boost,
 
 Now the exemplar model is tested in an environment more suited to its generalization abilities: a sparse Half-Cheetah environment:
 
-![Half Cheetah Comparison](results/problem-4/full_comp.png)  
+![Half Cheetah Comparison](results/problem-4/full_comp.png)
 
-It can be seen that most of the runs failed to develop any sort of rewarding strategies. Interestingly each set of hyperparameters developed only one decent strategy, all on seed 1 (no exploration is in orange, bc0.001 in light blue, bc0.0001 in pink). The two exemplar model runs developed these good strategies much earlier, but also seemed to forget about them. While it is hard to draw conclusions from such a small sample size in an environment with such high variance, it does seem that exploration does not provide a signifigant advantage in this case. 
+It can be seen that most of the runs failed to develop any sort of rewarding strategies. Interestingly each set of hyperparameters developed only one decent strategy, all on seed 1 (no exploration is in orange, bc0.001 in light blue, bc0.0001 in pink). The two exemplar model runs developed these good strategies much earlier, but also seemed to forget about them. While it is hard to draw conclusions from such a small sample size in an environment with such high variance, it does seem that exploration does not provide a signifigant advantage in this case.
