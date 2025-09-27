@@ -1,0 +1,338 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from models import TabularModel, NeuralModel, device
+import torch
+
+
+class ModelBasedPlanner:
+    """Classical planning algorithms using learned models"""
+
+    def __init__(self, model, num_states, num_actions, gamma=0.99):
+        self.model = model
+        self.num_states = num_states
+        self.num_actions = num_actions
+        self.gamma = gamma
+
+        # Initialize value function and policy
+        self.V = np.zeros(num_states)
+        self.policy = np.zeros(num_states, dtype=int)
+
+        # Planning history for analysis
+        self.value_history = []
+        self.policy_history = []
+
+    def value_iteration(self, max_iterations=100, tolerance=1e-6):
+        """Value Iteration using learned model"""
+
+        print(f"Running Value Iteration (max_iter={max_iterations}, tol={tolerance})")
+
+        for iteration in range(max_iterations):
+            old_V = self.V.copy()
+
+            for state in range(self.num_states):
+                # Compute Q-values for all actions
+                q_values = np.zeros(self.num_actions)
+
+                for action in range(self.num_actions):
+                    # Compute expected value using model
+                    expected_value = 0
+
+                    for next_state in range(self.num_states):
+                        transition_prob = self.model.get_transition_prob(state, action, next_state)
+                        reward = self.model.get_expected_reward(state, action)
+                        expected_value += transition_prob * (reward + self.gamma * old_V[next_state])
+
+                    q_values[action] = expected_value
+
+                # Update value and policy
+                self.V[state] = np.max(q_values)
+                self.policy[state] = np.argmax(q_values)
+
+            # Store history
+            self.value_history.append(self.V.copy())
+            self.policy_history.append(self.policy.copy())
+
+            # Check convergence
+            if np.max(np.abs(self.V - old_V)) < tolerance:
+                print(f"Converged after {iteration + 1} iterations")
+                break
+
+        return self.V, self.policy
+
+    def policy_iteration(self, max_iterations=50, eval_max_iterations=100):
+        """Policy Iteration using learned model"""
+
+        print(f"Running Policy Iteration (max_iter={max_iterations})")
+
+        # Initialize random policy
+        self.policy = np.random.randint(0, self.num_actions, self.num_states)
+
+        for iteration in range(max_iterations):
+            old_policy = self.policy.copy()
+
+            # Policy Evaluation
+            self.V = self.policy_evaluation(self.policy, max_iterations=eval_max_iterations)
+
+            # Policy Improvement
+            for state in range(self.num_states):
+                q_values = np.zeros(self.num_actions)
+
+                for action in range(self.num_actions):
+                    expected_value = 0
+
+                    for next_state in range(self.num_states):
+                        transition_prob = self.model.get_transition_prob(state, action, next_state)
+                        reward = self.model.get_expected_reward(state, action)
+                        expected_value += transition_prob * (reward + self.gamma * self.V[next_state])
+
+                    q_values[action] = expected_value
+
+                self.policy[state] = np.argmax(q_values)
+
+            # Store history
+            self.value_history.append(self.V.copy())
+            self.policy_history.append(self.policy.copy())
+
+            # Check convergence
+            if np.array_equal(self.policy, old_policy):
+                print(f"Converged after {iteration + 1} iterations")
+                break
+
+        return self.V, self.policy
+
+    def policy_evaluation(self, policy, max_iterations=100, tolerance=1e-6):
+        """Evaluate a given policy using learned model"""
+
+        V = np.zeros(self.num_states)
+
+        for iteration in range(max_iterations):
+            old_V = V.copy()
+
+            for state in range(self.num_states):
+                action = policy[state]
+                expected_value = 0
+
+                for next_state in range(self.num_states):
+                    transition_prob = self.model.get_transition_prob(state, action, next_state)
+                    reward = self.model.get_expected_reward(state, action)
+                    expected_value += transition_prob * (reward + self.gamma * old_V[next_state])
+
+                V[state] = expected_value
+
+            if np.max(np.abs(V - old_V)) < tolerance:
+                break
+
+        return V
+
+    def compute_q_function(self):
+        """Compute Q-function from current value function"""
+
+        Q = np.zeros((self.num_states, self.num_actions))
+
+        for state in range(self.num_states):
+            for action in range(self.num_actions):
+                expected_value = 0
+
+                for next_state in range(self.num_states):
+                    transition_prob = self.model.get_transition_prob(state, action, next_state)
+                    reward = self.model.get_expected_reward(state, action)
+                    expected_value += transition_prob * (reward + self.gamma * self.V[next_state])
+
+                Q[state, action] = expected_value
+
+        return Q
+
+
+class UncertaintyAwarePlanner:
+    """Planning with model uncertainty"""
+
+    def __init__(self, ensemble_model, num_states, num_actions, gamma=0.99):
+        self.ensemble_model = ensemble_model
+        self.num_states = num_states
+        self.num_actions = num_actions
+        self.gamma = gamma
+
+    def pessimistic_value_iteration(self, beta=1.0, max_iterations=100):
+        """Value iteration with pessimistic model estimates"""
+
+        V = np.zeros(self.num_states)
+        policy = np.zeros(self.num_states, dtype=int)
+
+        print(f"Running Pessimistic Value Iteration (beta={beta})")
+
+        for iteration in range(max_iterations):
+            old_V = V.copy()
+
+            for state in range(self.num_states):
+                q_values = np.zeros(self.num_actions)
+
+                for action in range(self.num_actions):
+                    # Get predictions from ensemble
+                    state_onehot = np.eye(self.num_states)[state:state+1]
+                    action_tensor = np.array([action])
+
+                    # Convert to tensors
+                    state_tensor = torch.FloatTensor(state_onehot).to(device)
+                    action_tensor = torch.LongTensor(action_tensor).to(device)
+
+                    # Get ensemble predictions
+                    next_state_mean, reward_mean, next_state_std, reward_std = \
+                        self.ensemble_model.predict_with_uncertainty(state_tensor, action_tensor)
+
+                    # Use pessimistic estimates
+                    pessimistic_reward = reward_mean.cpu().item() - beta * reward_std.cpu().item()
+
+                    # For simplicity, assume deterministic next state (can be extended)
+                    next_state_pred = next_state_mean.cpu().numpy()[0]
+                    next_state_idx = np.argmax(next_state_pred)  # Most likely next state
+
+                    q_values[action] = pessimistic_reward + self.gamma * old_V[next_state_idx]
+
+                V[state] = np.max(q_values)
+                policy[state] = np.argmax(q_values)
+
+            if np.max(np.abs(V - old_V)) < 1e-6:
+                print(f"Converged after {iteration + 1} iterations")
+                break
+
+        return V, policy
+
+    def optimistic_value_iteration(self, beta=1.0, max_iterations=100):
+        """Value iteration with optimistic model estimates"""
+
+        V = np.zeros(self.num_states)
+        policy = np.zeros(self.num_states, dtype=int)
+
+        print(f"Running Optimistic Value Iteration (beta={beta})")
+
+        for iteration in range(max_iterations):
+            old_V = V.copy()
+
+            for state in range(self.num_states):
+                q_values = np.zeros(self.num_actions)
+
+                for action in range(self.num_actions):
+                    # Get predictions from ensemble
+                    state_onehot = np.eye(self.num_states)[state:state+1]
+                    action_tensor = np.array([action])
+
+                    # Convert to tensors
+                    state_tensor = torch.FloatTensor(state_onehot).to(device)
+                    action_tensor = torch.LongTensor(action_tensor).to(device)
+
+                    # Get ensemble predictions
+                    next_state_mean, reward_mean, next_state_std, reward_std = \
+                        self.ensemble_model.predict_with_uncertainty(state_tensor, action_tensor)
+
+                    # Use optimistic estimates
+                    optimistic_reward = reward_mean.cpu().item() + beta * reward_std.cpu().item()
+
+                    # For simplicity, assume deterministic next state
+                    next_state_pred = next_state_mean.cpu().numpy()[0]
+                    next_state_idx = np.argmax(next_state_pred)
+
+                    q_values[action] = optimistic_reward + self.gamma * old_V[next_state_idx]
+
+                V[state] = np.max(q_values)
+                policy[state] = np.argmax(q_values)
+
+            if np.max(np.abs(V - old_V)) < 1e-6:
+                print(f"Converged after {iteration + 1} iterations")
+                break
+
+        return V, policy
+
+
+class ModelBasedPolicySearch:
+    """Policy search using learned models"""
+
+    def __init__(self, model, state_dim, action_dim, gamma=0.99):
+        self.model = model
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.gamma = gamma
+
+    def random_shooting(self, initial_state, horizon=10, num_sequences=1000):
+        """Random shooting with learned model"""
+        best_sequence = None
+        best_value = -np.inf
+
+        for _ in range(num_sequences):
+            # Sample random action sequence
+            action_sequence = np.random.randint(0, self.action_dim, horizon)
+
+            # Evaluate sequence using model
+            total_reward = 0
+            current_state = initial_state
+            discount = 1.0
+
+            for action in action_sequence:
+                next_state, reward = self.model.sample_transition(current_state, action)
+                total_reward += discount * reward
+                discount *= self.gamma
+                current_state = next_state
+
+            if total_reward > best_value:
+                best_value = total_reward
+                best_sequence = action_sequence
+
+        return best_sequence, best_value
+
+    def cross_entropy_method(self, initial_state, horizon=10, num_sequences=1000,
+                           num_elite=100, num_iterations=10):
+        """Cross-entropy method for policy search"""
+
+        # Initialize action probabilities (uniform)
+        action_probs = np.ones((horizon, self.action_dim)) / self.action_dim
+
+        for iteration in range(num_iterations):
+            # Sample action sequences
+            sequences = []
+            values = []
+
+            for _ in range(num_sequences):
+                sequence = []
+                for t in range(horizon):
+                    action = np.random.choice(self.action_dim, p=action_probs[t])
+                    sequence.append(action)
+
+                # Evaluate sequence
+                total_reward = 0
+                current_state = initial_state
+                discount = 1.0
+
+                for action in sequence:
+                    next_state, reward = self.model.sample_transition(current_state, action)
+                    total_reward += discount * reward
+                    discount *= self.gamma
+                    current_state = next_state
+
+                sequences.append(sequence)
+                values.append(total_reward)
+
+            # Select elite sequences
+            elite_indices = np.argsort(values)[-num_elite:]
+            elite_sequences = [sequences[i] for i in elite_indices]
+
+            # Update action probabilities
+            action_counts = np.zeros((horizon, self.action_dim))
+
+            for sequence in elite_sequences:
+                for t, action in enumerate(sequence):
+                    action_counts[t, action] += 1
+
+            # Smooth update
+            alpha = 0.7
+            new_probs = action_counts / num_elite
+            action_probs = alpha * new_probs + (1 - alpha) * action_probs
+
+            # Add small amount of noise for exploration
+            action_probs += 0.01 / self.action_dim
+            action_probs /= np.sum(action_probs, axis=1, keepdims=True)
+
+        # Return best sequence
+        best_sequence = elite_sequences[np.argmax([values[i] for i in elite_indices])]
+        best_value = max([values[i] for i in elite_indices])
+
+        return best_sequence, best_value
