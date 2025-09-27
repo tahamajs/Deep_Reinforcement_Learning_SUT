@@ -2,37 +2,43 @@ from cs285.infrastructure.models import *
 import torch
 from torch import nn
 
+
 class DQNCritic:
     def __init__(self, hparams, optimizer_spec, **kwargs):
         super().__init__(**kwargs)
-        self.env_name = hparams['env_name']
-        self.device = hparams['device']
-        self.ob_dim = hparams['ob_dim']
+        self.env_name = hparams["env_name"]
+        self.device = hparams["device"]
+        self.ob_dim = hparams["ob_dim"]
 
         if isinstance(self.ob_dim, int):
             self.input_shape = self.ob_dim
         else:
-            self.input_shape = hparams['input_shape']
+            self.input_shape = hparams["input_shape"]
 
-        self.ac_dim = hparams['ac_dim']
-        self.double_q = hparams['double_q']
-        self.grad_norm_clipping = hparams['grad_norm_clipping']
-        self.gamma = hparams['gamma']
+        self.ac_dim = hparams["ac_dim"]
+        self.double_q = hparams["double_q"]
+        self.grad_norm_clipping = hparams["grad_norm_clipping"]
+        self.gamma = hparams["gamma"]
 
         self.optimizer_spec = optimizer_spec
 
-        if 'LunarLander' in self.env_name:
+        if "LunarLander" in self.env_name:
             self.Q_func = LL_DQN(self.ac_dim, self.input_shape, self.device)
             self.target_Q_func = LL_DQN(self.ac_dim, self.input_shape, self.device)
 
-        elif self.env_name == 'PongNoFrameskip-v4':
+        elif self.env_name == "PongNoFrameskip-v4":
             self.Q_func = atari_DQN(self.ac_dim, self.input_shape, self.device)
             self.target_Q_func = atari_DQN(self.ac_dim, self.input_shape, self.device)
 
-        else: raise NotImplementedError
+        else:
+            raise NotImplementedError
 
-        self.optimizer = self.optimizer_spec.constructor(self.Q_func.parameters(), lr = 1, **self.optimizer_spec.kwargs)
-        self.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, self.optimizer_spec.lr_schedule)
+        self.optimizer = self.optimizer_spec.constructor(
+            self.Q_func.parameters(), lr=1, **self.optimizer_spec.kwargs
+        )
+        self.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
+            self.optimizer, self.optimizer_spec.lr_schedule
+        )
 
     def get_loss(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
         ob = torch.from_numpy(ob_no).float().to(self.device)
@@ -51,8 +57,7 @@ class DQNCritic:
         best_next_Q = self.target_Q_func(next_ob).gather(-1, max_ac).squeeze()
         calc_Q = rew + (self.gamma * best_next_Q * (1 - done))
 
-        return nn.functional.smooth_l1_loss(curr_Q, calc_Q) #Huber Loss
-
+        return nn.functional.smooth_l1_loss(curr_Q, calc_Q)  # Huber Loss
 
     def update(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
         self.optimizer.zero_grad()
@@ -60,8 +65,10 @@ class DQNCritic:
         loss = self.get_loss(ob_no, ac_na, re_n, next_ob_no, terminal_n)
         loss.backward()
 
-        nn.utils.clip_grad_norm_(self.Q_func.parameters(), max_norm = self.grad_norm_clipping) #perform grad clipping
-        self.optimizer.step() #take step with optimizer
-        self.lr_scheduler.step() #move forward learning rate
+        nn.utils.clip_grad_norm_(
+            self.Q_func.parameters(), max_norm=self.grad_norm_clipping
+        )  # perform grad clipping
+        self.optimizer.step()  # take step with optimizer
+        self.lr_scheduler.step()  # move forward learning rate
 
         return loss

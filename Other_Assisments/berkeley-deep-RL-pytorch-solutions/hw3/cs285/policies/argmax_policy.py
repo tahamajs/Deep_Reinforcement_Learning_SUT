@@ -1,5 +1,6 @@
 import torch
 
+
 class ArgMaxPolicy:
 
     def __init__(self, critic, device):

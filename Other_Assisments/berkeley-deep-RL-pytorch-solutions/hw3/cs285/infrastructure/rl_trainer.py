@@ -43,12 +43,12 @@ class RL_Trainer(object):
 
         # Make the gym environment
         self.env = gym.make(self.params["env_name"])
-        if 'env_wrappers' in self.params:
+        if "env_wrappers" in self.params:
             # These operations are currently only for Atari envs
             # self.env = wrappers.Monitor(self.env, os.path.join(self.params['logdir'], "gym"), force=True)
-            self.env = params['env_wrappers'](self.env)
-            self.mean_episode_reward = -float('nan')
-            self.best_mean_episode_reward = -float('inf')
+            self.env = params["env_wrappers"](self.env)
+            self.mean_episode_reward = -float("nan")
+            self.best_mean_episode_reward = -float("inf")
         # self.env.seed(seed)
 
         # Maximum length for episodes

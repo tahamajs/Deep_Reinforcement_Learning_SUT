@@ -33,24 +33,28 @@ def get_env_kwargs(env_name):
             kwargs["num_timesteps"]
         )
 
-    elif env_name == 'LunarLander-v2' or env_name == 'LunarLander-v3':
+    elif env_name == "LunarLander-v2" or env_name == "LunarLander-v3":
+
         def lunar_empty_wrapper(env):
             return env
+
         kwargs = {
-            'optimizer_spec': lander_optimizer(),
-            'replay_buffer_size': 50000,
-            'batch_size': 32,
-            'gamma': 1.00,
-            'learning_starts': 1000,
-            'learning_freq': 1,
-            'frame_history_len': 1,
-            'target_update_freq': 3000,
-            'grad_norm_clipping': 10,
-            'lander': True,
-            'num_timesteps': 500000,
-            'env_wrappers': lunar_empty_wrapper
+            "optimizer_spec": lander_optimizer(),
+            "replay_buffer_size": 50000,
+            "batch_size": 32,
+            "gamma": 1.00,
+            "learning_starts": 1000,
+            "learning_freq": 1,
+            "frame_history_len": 1,
+            "target_update_freq": 3000,
+            "grad_norm_clipping": 10,
+            "lander": True,
+            "num_timesteps": 500000,
+            "env_wrappers": lunar_empty_wrapper,
         }
-        kwargs['exploration_schedule'] = lander_exploration_schedule(kwargs['num_timesteps'])
+        kwargs["exploration_schedule"] = lander_exploration_schedule(
+            kwargs["num_timesteps"]
+        )
 
     else:
         raise NotImplementedError
