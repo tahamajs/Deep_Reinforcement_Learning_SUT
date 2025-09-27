@@ -8,13 +8,14 @@ import gymnasium as gym
 import os
 import sys
 
-import cs285.envs #register all of our envs
+import cs285.envs  # register all of our envs
 from cs285.infrastructure.utils import *
 from cs285.infrastructure.logger import Logger
 
 # how many rollouts to save as videos to tensorboard
 MAX_NVIDEO = 2
-MAX_VIDEO_LEN = 40 # we overwrite this in the code below
+MAX_VIDEO_LEN = 40  # we overwrite this in the code below
+
 
 class RL_Trainer(object):
 
@@ -26,10 +27,10 @@ class RL_Trainer(object):
 
         # Get params, create logger, create TF session
         self.params = params
-        self.logger = Logger(self.params['logdir'])
+        self.logger = Logger(self.params["logdir"])
 
         # Set random seeds
-        seed = self.params['seed']
+        seed = self.params["seed"]
         torch.manual_seed(seed)
         np.random.seed(seed)
 
@@ -38,32 +39,40 @@ class RL_Trainer(object):
         #############
 
         # Make the gym environment
-        if self.params['env_name'] == 'PointMass-v0':
+        if self.params["env_name"] == "PointMass-v0":
             from cs285.envs.pointmass import PointMass
+
             self.env = PointMass()
         else:
-            self.env = gym.make(self.params['env_name'])
-        self.params['agent_params']['env_name'] = self.params['env_name']
+            self.env = gym.make(self.params["env_name"])
+        self.params["agent_params"]["env_name"] = self.params["env_name"]
 
-        self.max_path_length = self.params['max_path_length'] or self.env.spec.max_episode_steps
+        self.max_path_length = (
+            self.params["max_path_length"] or self.env.spec.max_episode_steps
+        )
 
         # Maximum length for episodes
-        self.params['ep_len'] = self.params['ep_len'] or self.env.spec.max_episode_steps
+        self.params["ep_len"] = self.params["ep_len"] or self.env.spec.max_episode_steps
 
         # Is this env continuous, or self.discrete?
-        self.params['agent_params']['discrete'] = isinstance(self.env.action_space, gym.spaces.Discrete)
+        self.params["agent_params"]["discrete"] = isinstance(
+            self.env.action_space, gym.spaces.Discrete
+        )
 
         # Observation and action sizes
-        self.params['agent_params']['ob_dim'] = self.env.observation_space.shape[0]
-        self.params['agent_params']['ac_dim'] = self.env.action_space.n if self.params['agent_params']['discrete'] else self.env.action_space.shape[0]
+        self.params["agent_params"]["ob_dim"] = self.env.observation_space.shape[0]
+        self.params["agent_params"]["ac_dim"] = (
+            self.env.action_space.n
+            if self.params["agent_params"]["discrete"]
+            else self.env.action_space.shape[0]
+        )
 
         #############
         ## AGENT
         #############
 
-        agent_class = self.params['agent_class']
-        self.agent = agent_class(self.env, self.params['agent_params'])
-
+        agent_class = self.params["agent_class"]
+        self.agent = agent_class(self.env, self.params["agent_params"])
 
     def run_training_loop(self, n_iter, policy):
 
@@ -72,18 +81,20 @@ class RL_Trainer(object):
         self.start_time = time.time()
 
         for itr in range(n_iter):
-            print("\n\n********** Iteration %i ************"%itr)
+            print("\n\n********** Iteration %i ************" % itr)
 
             # decide if metrics should be logged
-            if self.params['scalar_log_freq'] == -1:
+            if self.params["scalar_log_freq"] == -1:
                 self.logmetrics = False
-            elif itr % self.params['scalar_log_freq'] == 0:
+            elif itr % self.params["scalar_log_freq"] == 0:
                 self.logmetrics = True
             else:
                 self.logmetrics = False
 
             # collect trajectories, to be used for training
-            paths, envsteps_this_batch = self.collect_training_trajectories(itr, policy, self.params['batch_size'])
+            paths, envsteps_this_batch = self.collect_training_trajectories(
+                itr, policy, self.params["batch_size"]
+            )
 
             self.total_envsteps += envsteps_this_batch
 
@@ -96,7 +107,7 @@ class RL_Trainer(object):
             # log/save
             if self.logmetrics:
                 # perform logging
-                print('\nBeginning logging procedure...')
+                print("\nBeginning logging procedure...")
                 self.perform_logging(itr, paths, policy, loss, ex2_vars)
 
     ####################################
@@ -104,16 +115,27 @@ class RL_Trainer(object):
 
     def collect_training_trajectories(self, itr, policy, batch_size):
         print("\nCollecting data to be used for training...")
-        paths, envsteps_this_batch = sample_trajectories(self.env, policy, batch_size, self.max_path_length, self.params['render'], itr)
+        paths, envsteps_this_batch = sample_trajectories(
+            self.env,
+            policy,
+            batch_size,
+            self.max_path_length,
+            self.params["render"],
+            itr,
+        )
 
         return paths, envsteps_this_batch
 
     def train_agent(self):
-        #print('\nTraining agent using sampled data from replay buffer...')
-        for train_step in range(self.params['num_agent_train_steps_per_iter']):
-            ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = self.agent.sample(self.params['batch_size'])
+        # print('\nTraining agent using sampled data from replay buffer...')
+        for train_step in range(self.params["num_agent_train_steps_per_iter"]):
+            ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = (
+                self.agent.sample(self.params["batch_size"])
+            )
 
-            loss, ex2_vars = self.agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
+            loss, ex2_vars = self.agent.train(
+                ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch
+            )
         return loss, ex2_vars
 
     ####################################
@@ -154,8 +176,8 @@ class RL_Trainer(object):
 
             # perform the logging
             for key, value in logs.items():
-                print('{} : {}'.format(key, value))
+                print("{} : {}".format(key, value))
                 self.logger.log_scalar(value, key, itr)
-            print('Done logging...\n\n')
+            print("Done logging...\n\n")
 
             self.logger.flush()

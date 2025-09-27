@@ -2,9 +2,10 @@ import numpy as np
 from gymnasium import utils
 from gymnasium.envs.mujoco import MujocoEnv
 
+
 class HalfCheetahEnv(MujocoEnv, utils.EzPickle):
     def __init__(self):
-        MujocoEnv.__init__(self, 'half_cheetah.xml', 5)
+        MujocoEnv.__init__(self, "half_cheetah.xml", 5)
         utils.EzPickle.__init__(self)
 
     def step(self, action):
@@ -21,30 +22,40 @@ class HalfCheetahEnv(MujocoEnv, utils.EzPickle):
         # reward_run = (xposafter - xposbefore)/self.dt
         #################################################
         if ctrl:
-            reward_ctrl = - 0.1 * np.square(action).sum()
+            reward_ctrl = -0.1 * np.square(action).sum()
         else:
             reward_ctrl = 0
         if abs(xposafter) <= threshold:
             reward_run = 0.0
         else:
             if relu:
-                reward_run = np.sign(xposafter)*(xposafter - xposbefore)/self.dt
+                reward_run = np.sign(xposafter) * (xposafter - xposbefore) / self.dt
             else:
                 reward_run = 1.0
         #################################################
         reward = reward_ctrl + reward_run
         done = False
-        return ob, reward, done, False, dict(reward_run=reward_run, reward_ctrl=reward_ctrl)
+        return (
+            ob,
+            reward,
+            done,
+            False,
+            dict(reward_run=reward_run, reward_ctrl=reward_ctrl),
+        )
 
     def _get_obs(self):
-        return np.concatenate([
-            self.sim.data.qpos.flat[1:],
-            self.sim.data.qvel.flat,
-        ])
+        return np.concatenate(
+            [
+                self.sim.data.qpos.flat[1:],
+                self.sim.data.qvel.flat,
+            ]
+        )
 
     def reset_model(self):
-        qpos = self.init_qpos + self.np_random.uniform(low=-.1, high=.1, size=self.model.nq)
-        qvel = self.init_qvel + self.np_random.randn(self.model.nv) * .1
+        qpos = self.init_qpos + self.np_random.uniform(
+            low=-0.1, high=0.1, size=self.model.nq
+        )
+        qvel = self.init_qvel + self.np_random.randn(self.model.nv) * 0.1
         self.set_state(qpos, qvel)
         return self._get_obs()
 

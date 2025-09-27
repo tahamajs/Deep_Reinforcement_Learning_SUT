@@ -9,8 +9,16 @@ import torch
 class MPCController:
     """Model Predictive Control for RL"""
 
-    def __init__(self, model, num_actions, num_states, horizon=10, num_samples=100,
-                 temperature=1.0, elite_ratio=0.1):
+    def __init__(
+        self,
+        model,
+        num_actions,
+        num_states,
+        horizon=10,
+        num_samples=100,
+        temperature=1.0,
+        elite_ratio=0.1,
+    ):
         self.model = model
         self.num_actions = num_actions
         self.state_dim = num_states
