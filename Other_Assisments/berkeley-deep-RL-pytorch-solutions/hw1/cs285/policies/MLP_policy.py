@@ -2,19 +2,22 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+
 class MLPPolicy(nn.Module):
 
-    def __init__(self,
+    def __init__(
+        self,
         ac_dim,
         ob_dim,
         n_layers,
         size,
         device,
-        lr = 1e-4,
+        lr=1e-4,
         training=True,
-        discrete=False, # unused for now
-        nn_baseline=False, # unused for now
-        **kwargs):
+        discrete=False,  # unused for now
+        nn_baseline=False,  # unused for now
+        **kwargs
+    ):
         super().__init__()
 
         # init vars
@@ -23,16 +26,16 @@ class MLPPolicy(nn.Module):
 
         # network architecture
         self.mlp = nn.ModuleList()
-        self.mlp.append(nn.Linear(ob_dim, size))#first hidden layer
+        self.mlp.append(nn.Linear(ob_dim, size))  # first hidden layer
         self.mlp.append(nn.Tanh())
 
-        for h in range(n_layers - 1): #additional hidden layers
+        for h in range(n_layers - 1):  # additional hidden layers
             self.mlp.append(nn.Linear(size, size))
             self.mlp.append(nn.Tanh())
 
-        self.mlp.append(nn.Linear(size, ac_dim)) #output layer, no activation function
+        self.mlp.append(nn.Linear(size, ac_dim))  # output layer, no activation function
 
-        #loss and optimizer
+        # loss and optimizer
         if self.training:
             self.loss_func = nn.MSELoss()
             self.optimizer = torch.optim.Adam(self.parameters(), lr)
@@ -58,7 +61,7 @@ class MLPPolicy(nn.Module):
 
     # query this policy with observation(s) to get selected action(s)
     def get_action(self, obs):
-        if len(obs.shape)>1:
+        if len(obs.shape) > 1:
             observation = obs
         else:
             observation = obs[None]
@@ -69,25 +72,28 @@ class MLPPolicy(nn.Module):
     def update(self, observations, actions):
         raise NotImplementedError
 
+
 #####################################################
 #####################################################
+
 
 class MLPPolicySL(MLPPolicy):
-
     """
-        This class is a special case of MLPPolicy,
-        which is trained using supervised learning.
-        The relevant functions to define are included below.
+    This class is a special case of MLPPolicy,
+    which is trained using supervised learning.
+    The relevant functions to define are included below.
     """
 
     def update(self, observations, actions):
-        assert self.training, 'Policy must be created with training = true in order to perform training updates...'
+        assert (
+            self.training
+        ), "Policy must be created with training = true in order to perform training updates..."
 
-        # TODO define network update
+        # network update
         self.optimizer.zero_grad()
         predicted_actions = self(torch.Tensor(observations).to(self.device))
         loss = self.loss_func(predicted_actions, torch.Tensor(actions).to(self.device))
         loss.backward()
         self.optimizer.step()
 
-        #print("loss:", loss.item())
+        # print("loss:", loss.item())

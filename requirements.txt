@@ -15,3 +15,5 @@ ipython>=7.30.0
 plotly
 tqdm
 cvxpy
+tensorboard
+gymnasium-robotics
