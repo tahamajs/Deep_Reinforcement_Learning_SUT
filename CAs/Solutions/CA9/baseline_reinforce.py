@@ -347,3 +347,142 @@ class VarianceAnalyzer:
             if hasattr(agent, "variance_history") and agent.variance_history:
                 avg_variance = np.mean(agent.variance_history[-50:])
                 print(f"  Average Advantage Variance (last 50): {avg_variance:.4f}")
+
+
+class BaselineREINFORCEAnalyzer:
+    """Analyzer for Baseline REINFORCE methods"""
+
+    def __init__(self):
+        self.variance_analyzer = VarianceAnalyzer()
+
+    def train_and_analyze(self, env_name="CartPole-v1", num_episodes=300):
+        """Train and analyze baseline REINFORCE agent"""
+
+        print("=" * 70)
+        print("Training Baseline REINFORCE Agent on", env_name)
+        print("=" * 70)
+
+        env = gym.make(env_name)
+        state_dim = env.observation_space.shape[0]
+        action_dim = env.action_space.n
+
+        # Create baseline agent with value function baseline
+        agent = BaselineREINFORCEAgent(
+            state_dim, action_dim, lr=1e-3, gamma=0.99, baseline_type="value_function"
+        )
+
+        episode_rewards = []
+        eval_episodes = []
+
+        print("Starting training...")
+
+        for episode in range(num_episodes):
+            reward, _ = agent.train_episode(env)
+            episode_rewards.append(reward)
+
+            # Periodic evaluation
+            if (episode + 1) % 50 == 0:
+                eval_results = agent.evaluate(env, num_episodes=10)
+                eval_episodes.append((episode + 1, eval_results))
+                print(
+                    f"Episode {episode+1}: Train Reward = {reward:.1f}, "
+                    f"Eval Reward = {eval_results['mean_reward']:.1f} ± {eval_results['std_reward']:.1f}"
+                )
+
+        env.close()
+
+        # Final evaluation
+        final_eval = agent.evaluate(env, num_episodes=20)
+
+        # Visualization
+        self.visualize_baseline_training(episode_rewards, eval_episodes, agent)
+
+        # Print statistics
+        print(f"\nTraining Statistics:")
+        print(f"  Total Episodes: {num_episodes}")
+        print(f"  Final Average Reward (last 50): {np.mean(episode_rewards[-50:]):.2f}")
+        print(f"  Best Episode Reward: {np.max(episode_rewards):.2f}")
+        if hasattr(agent, "policy_losses") and agent.policy_losses:
+            print(f"  Average Policy Loss: {np.mean(agent.policy_losses):.4f}")
+        if hasattr(agent, "gradient_norms") and agent.gradient_norms:
+            print(f"  Average Gradient Norm: {np.mean(agent.gradient_norms):.4f}")
+
+        return agent
+
+    def visualize_baseline_training(self, episode_rewards, eval_episodes, agent):
+        """Visualize baseline training results"""
+
+        fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+
+        # 1. Training curve
+        ax = axes[0, 0]
+        smoothed_rewards = pd.Series(episode_rewards).rolling(window=20).mean()
+        ax.plot(smoothed_rewards, color="blue", linewidth=2, label="Training")
+        ax.set_title("Baseline REINFORCE Training Curve")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Episode Reward (Smoothed)")
+        ax.grid(True, alpha=0.3)
+        ax.axhline(
+            y=195, color="red", linestyle="--", alpha=0.7, label="CartPole-v1 Target"
+        )
+        ax.legend()
+
+        # 2. Evaluation performance
+        ax = axes[0, 1]
+        eval_x = [ep[0] for ep in eval_episodes]
+        eval_y = [ep[1]["mean_reward"] for ep in eval_episodes]
+        eval_std = [ep[1]["std_reward"] for ep in eval_episodes]
+
+        ax.plot(
+            eval_x, eval_y, "o-", color="green", linewidth=2, label="Evaluation Mean"
+        )
+        ax.fill_between(
+            eval_x,
+            np.array(eval_y) - np.array(eval_std),
+            np.array(eval_y) + np.array(eval_std),
+            alpha=0.3,
+            color="green",
+        )
+        ax.set_title("Evaluation Performance")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Evaluation Reward")
+        ax.grid(True, alpha=0.3)
+        ax.axhline(
+            y=195, color="red", linestyle="--", alpha=0.7, label="CartPole-v1 Target"
+        )
+        ax.legend()
+
+        # 3. Variance reduction
+        ax = axes[1, 0]
+        if hasattr(agent, "variance_history") and agent.variance_history:
+            variance_smoothed = (
+                pd.Series(agent.variance_history).rolling(window=10).mean()
+            )
+            ax.plot(variance_smoothed, color="orange", linewidth=2)
+            ax.set_title("Advantage Variance Over Time")
+            ax.set_xlabel("Episode")
+            ax.set_ylabel("Advantage Variance")
+            ax.grid(True, alpha=0.3)
+            ax.set_yscale("log")
+
+        # 4. Baseline values
+        ax = axes[1, 1]
+        if hasattr(agent, "baseline_values") and agent.baseline_values:
+            ax.plot(agent.baseline_values, color="purple", linewidth=2)
+            ax.set_title("Baseline Values Evolution")
+            ax.set_xlabel("Episode")
+            ax.set_ylabel("Baseline Value")
+            ax.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.show()
+
+        # Save visualizations
+        plt.savefig(
+            "visualizations/baseline_reinforce_training.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+        print(
+            "Training visualizations saved to 'visualizations/baseline_reinforce_training.png'"
+        )

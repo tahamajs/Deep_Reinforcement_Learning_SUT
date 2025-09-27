@@ -114,7 +114,8 @@ class ActorCriticAgent:
             td_error = td_target - value
 
         # Critic update (value function)
-        critic_loss = F.mse_loss(value, td_target)
+        value_tensor = torch.tensor(value, device=device, dtype=torch.float32)
+        critic_loss = F.mse_loss(value_tensor, td_target)
 
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
