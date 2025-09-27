@@ -46,7 +46,7 @@ class RL_Trainer(object):
             self.env = params['env_wrappers'](self.env)
             self.mean_episode_reward = -float('nan')
             self.best_mean_episode_reward = -float('inf')
-        self.env.seed(seed)
+        # self.env.seed(seed)  # removed for gymnasium compatibility
 
         # import plotting (locally if 'obstacles' env)
         if not (self.params['env_name'] == 'obstacles-cs285-v0'):
