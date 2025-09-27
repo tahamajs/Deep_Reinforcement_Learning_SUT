@@ -5,6 +5,7 @@ from gymnasium.envs.mujoco import mujoco_env
 from mujoco_py import MjViewer
 import os
 
+
 class Reacher7DOFEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(self):
 
@@ -13,7 +14,7 @@ class Reacher7DOFEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.target_sid = -1
 
         curr_dir = os.path.dirname(os.path.abspath(__file__))
-        mujoco_env.MujocoEnv.__init__(self, curr_dir+'/assets/sawyer.xml', 2)
+        mujoco_env.MujocoEnv.__init__(self, curr_dir + "/assets/sawyer.xml", 2)
         utils.EzPickle.__init__(self)
         self.observation_dim = 26
         self.action_dim = 7
@@ -22,14 +23,15 @@ class Reacher7DOFEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.target_sid = self.model.site_name2id("target")
         self.skip = self.frame_skip
 
-
     def _get_obs(self):
-        return np.concatenate([
-            self.data.qpos.flat, #[7]
-            self.data.qvel.flatten() / 10., #[7]
-            self.data.site_xpos[self.hand_sid], #[3]
-            self.model.site_pos[self.target_sid], #[3]
-        ])
+        return np.concatenate(
+            [
+                self.data.qpos.flat,  # [7]
+                self.data.qvel.flatten() / 10.0,  # [7]
+                self.data.site_xpos[self.hand_sid],  # [3]
+                self.model.site_pos[self.target_sid],  # [3]
+            ]
+        )
 
     def step(self, a):
 
@@ -40,20 +42,17 @@ class Reacher7DOFEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         score = self.get_score(ob)
 
         # finalize step
-        env_info = {'ob': ob,
-                    'rewards': self.reward_dict,
-                    'score': score}
+        env_info = {"ob": ob, "rewards": self.reward_dict, "score": score}
 
         return ob, reward, done, env_info
 
     def get_score(self, obs):
         hand_pos = obs[-6:-3]
         target_pos = obs[-3:]
-        score = -1*np.abs(hand_pos-target_pos)
+        score = -1 * np.abs(hand_pos - target_pos)
         return score
 
     def get_reward(self, observations, actions):
-
         """get reward/s of given (observations, actions) datapoint or datapoints
 
         Args:
@@ -65,30 +64,30 @@ class Reacher7DOFEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             done: True if env reaches terminal state, dimension is (batchsize,1) or (1,)
         """
 
-        #initialize and reshape as needed, for batch mode
+        # initialize and reshape as needed, for batch mode
         self.reward_dict = {}
-        if(len(observations.shape)==1):
-            observations = np.expand_dims(observations, axis = 0)
-            actions = np.expand_dims(actions, axis = 0)
+        if len(observations.shape) == 1:
+            observations = np.expand_dims(observations, axis=0)
+            actions = np.expand_dims(actions, axis=0)
             batch_mode = False
         else:
             batch_mode = True
 
-        #get vars
+        # get vars
         hand_pos = observations[:, -6:-3]
         target_pos = observations[:, -3:]
 
-        #calc rew
+        # calc rew
         dist = np.linalg.norm(hand_pos - target_pos, axis=1)
-        self.reward_dict['r_total'] = -10*dist
+        self.reward_dict["r_total"] = -10 * dist
 
-        #done is always false for this env
+        # done is always false for this env
         dones = np.zeros((observations.shape[0],))
 
-        #return
-        if(not batch_mode):
-            return self.reward_dict['r_total'][0], dones[0]
-        return self.reward_dict['r_total'], dones
+        # return
+        if not batch_mode:
+            return self.reward_dict["r_total"][0], dones[0]
+        return self.reward_dict["r_total"], dones
 
     def reset(self):
         _ = self.reset_model()
@@ -118,10 +117,10 @@ class Reacher7DOFEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
         self.set_state(reset_pose, reset_vel)
 
-        #reset target
+        # reset target
         self.reset_goal = reset_goal.copy()
         self.model.site_pos[self.target_sid] = self.reset_goal
         self.sim.forward()
 
-        #return
+        # return
         return self._get_obs()
