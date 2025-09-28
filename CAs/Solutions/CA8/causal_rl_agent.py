@@ -10,8 +10,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Categorical
 from typing import Dict, List, Tuple, Optional, Any
-from .causal_discovery import CausalGraph
-from .causal_rl_utils import device
+from causal_discovery import CausalGraph
+from causal_rl_utils import device
 
 
 class CausalReasoningNetwork(nn.Module):
@@ -103,7 +103,7 @@ class CausalReasoningNetwork(nn.Module):
         for var, value in intervention.items():
             if var in self.causal_graph.var_to_idx:
                 idx = self.causal_graph.var_to_idx[var]
-                intervened_state[idx] = value
+                intervened_state[0, idx] = value
 
         return intervened_state
 

@@ -89,7 +89,7 @@ class CausalGraph:
     def is_dag(self) -> bool:
         """Check if the graph is a DAG"""
         try:
-            nx.DiGraph(self.adj_matrix).topological_sort()
+            nx.topological_sort(nx.DiGraph(self.adj_matrix))
             return True
         except nx.NetworkXError:
             return False
@@ -98,7 +98,7 @@ class CausalGraph:
         """Get topological ordering of variables"""
         if not self.is_dag():
             raise ValueError("Graph contains cycles")
-        order_indices = list(nx.DiGraph(self.adj_matrix).topological_sort())
+        order_indices = list(nx.topological_sort(nx.DiGraph(self.adj_matrix)))
         return [self.variables[i] for i in order_indices]
 
     def to_networkx(self) -> nx.DiGraph:

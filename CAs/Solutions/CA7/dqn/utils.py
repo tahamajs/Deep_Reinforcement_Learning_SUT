@@ -471,6 +471,19 @@ class PerformanceAnalyzer:
                 f"Range=[{np.min(q_action):.3f}, {np.max(q_action):.3f}]"
             )
 
+        # Return agent and analysis results
+        analysis_results = {
+            "q_values_all": q_values_all,
+            "mean_q_per_action": mean_q_per_action,
+            "std_q_per_action": std_q_per_action,
+            "q_ranges": q_ranges,
+            "max_q_per_state": max_q_per_state,
+            "mean_q_per_state": mean_q_per_state,
+            "num_samples": num_samples,
+        }
+
+        return agent, analysis_results
+
     @staticmethod
     def compare_policies(agents: Dict[str, Any], env, num_episodes: int = 10):
         """

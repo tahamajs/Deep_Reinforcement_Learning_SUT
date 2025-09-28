@@ -267,3 +267,18 @@ class DuelingDQNAgent(DoubleDQNAgent):
                 "value": value.item(),
                 "advantage": advantage.cpu().numpy().flatten(),
             }
+
+    def get_q_values(self, state):
+        """
+        Get Q-values for a state (overrides base class for dueling architecture)
+
+        Args:
+            state: Input state
+
+        Returns:
+            Q-values as numpy array
+        """
+        with torch.no_grad():
+            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
+            q_values, _, _ = self.q_network(state_tensor)
+            return q_values.cpu().numpy().flatten()
