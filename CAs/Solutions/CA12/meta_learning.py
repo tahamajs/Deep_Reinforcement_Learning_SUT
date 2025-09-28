@@ -481,6 +481,11 @@ def demonstrate_meta_learning():
     return maml_agent
 
 
+def demonstrate_maml():
+    """Alias for demonstrate_meta_learning - specifically demonstrates MAML."""
+    return demonstrate_meta_learning()
+
+
 def demonstrate_opponent_modeling():
     """Demonstrate opponent modeling."""
     print("\n🎭 Opponent Modeling Demo")
