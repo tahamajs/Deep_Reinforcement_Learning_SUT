@@ -1,6 +1,21 @@
-mujoco-py==1.50.1.56
-gym==0.10.5
-tensorflow==1.10.0
-numpy==1.14.5
-seaborn
-Box2D==2.3.2
+# CS294-112 HW2: Policy Gradient Requirements
+# Updated for modern Python environments
+
+# Core RL dependencies
+gym>=0.21.0
+mujoco>=2.1.0
+mujoco-py>=2.1.0
+
+# Neural networks and computation
+tensorflow>=2.8.0
+numpy>=1.21.0
+
+# Visualization and utilities
+seaborn>=0.11.0
+matplotlib>=3.5.0
+
+# Box2D for LunarLander
+Box2D>=2.3.10
+
+# Optional: for better performance
+scipy>=1.7.0

@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+"""
+Policy Gradient Training Script
+
+This script trains a policy gradient agent on gym environments.
+
+Usage:
+    python run_pg.py [options]
+
+Author: Saeed Reza Zouashkiani
+Student ID: 400206262
+"""
+
+import argparse
+import os
+import sys
+import time
+import gym
+import numpy as np
+import tensorflow as tf
+
+# Add src directory to path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+
+from src.policy_gradient import PolicyGradientAgent
+from src.utils import flatten_list_of_rollouts
+import logz
+
+
+def main():
+    """Main training function."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument('env_name', type=str)
+    parser.add_argument('--exp_name', type=str, default='vpg')
+    parser.add_argument('--render', action='store_true')
+    parser.add_argument('--discount', type=float, default=1.0)
+    parser.add_argument('--n_iter', '-n', type=int, default=100)
+    parser.add_argument('--batch_size', '-b', type=int, default=1000)
+    parser.add_argument('--ep_len', '-ep', type=float, default=-1.)
+    parser.add_argument('--learning_rate', '-lr', type=float, default=5e-3)
+    parser.add_argument('--reward_to_go', '-rtg', action='store_true')
+    parser.add_argument('--dont_normalize_advantages', '-dna', action='store_true')
+    parser.add_argument('--nn_baseline', '-bl', action='store_true')
+    parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--n_experiments', '-e', type=int, default=1)
+    parser.add_argument('--n_layers', '-l', type=int, default=2)
+    parser.add_argument('--size', '-s', type=int, default=64)
+
+    args = parser.parse_args()
+
+    # Set random seeds
+    tf.set_random_seed(args.seed)
+    np.random.seed(args.seed)
+
+    # Create environment
+    env = gym.make(args.env_name)
+
+    # Maximum length for episodes
+    max_path_length = args.ep_len if args.ep_len > 0 else env.spec.max_episode_steps
+
+    # Is this env continuous, or discrete?
+    discrete = isinstance(env.action_space, gym.spaces.Discrete)
+
+    # Observation and action dimensions
+    ob_dim = env.observation_space.shape[0]
+    ac_dim = env.action_space.n if discrete else env.action_space.shape[0]
+
+    # Run multiple experiments
+    for e in range(args.n_experiments):
+        # Set up logging
+        logdir = args.exp_name + '_' + args.env_name + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
+        logz.configure_output_dir(logdir)
+
+        # Create agent
+        agent = PolicyGradientAgent(
+            ob_dim=ob_dim,
+            ac_dim=ac_dim,
+            discrete=discrete,
+            n_layers=args.n_layers,
+            size=args.size,
+            learning_rate=args.learning_rate,
+            gamma=args.discount,
+            reward_to_go=args.reward_to_go,
+            nn_baseline=args.nn_baseline,
+            normalize_advantages=not(args.dont_normalize_advantages),
+            min_timesteps_per_batch=args.batch_size,
+            max_path_length=max_path_length,
+            animate=args.render
+        )
+
+        # Initialize TensorFlow session
+        agent.init_tf_sess()
+
+        # Training loop
+        total_timesteps = 0
+        for itr in range(args.n_iter):
+            print("********** Iteration %i ************" % itr)
+
+            # Sample trajectories
+            paths, timesteps_this_batch = agent.sample_trajectories(itr, env)
+            total_timesteps += timesteps_this_batch
+
+            # Build arrays for observations, actions, rewards
+            ob_no, ac_na, re_n = flatten_list_of_rollouts(paths)
+
+            # Estimate returns and advantages
+            q_n, adv_n = agent.estimate_return(ob_no, [path["reward"] for path in paths])
+
+            # Update parameters
+            agent.update_parameters(ob_no, ac_na, q_n, adv_n)
+
+            # Log statistics
+            returns = [path["reward"].sum() for path in paths]
+            ep_lengths = [pathlength(path) for path in paths]
+
+            logz.log_tabular("Time", time.time())
+            logz.log_tabular("Iteration", itr)
+            logz.log_tabular("AverageReturn", np.mean(returns))
+            logz.log_tabular("StdReturn", np.std(returns))
+            logz.log_tabular("MaxReturn", np.max(returns))
+            logz.log_tabular("MinReturn", np.min(returns))
+            logz.log_tabular("EpLenMean", np.mean(ep_lengths))
+            logz.log_tabular("EpLenStd", np.std(ep_lengths))
+            logz.log_tabular("TimestepsThisBatch", timesteps_this_batch)
+            logz.log_tabular("TimestepsSoFar", total_timesteps)
+            logz.dump_tabular()
+            logz.save_params()
+
+        print("Training completed!")
+
+
+if __name__ == "__main__":
+    main()
