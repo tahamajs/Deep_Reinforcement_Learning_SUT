@@ -1,6 +1,7 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 import matplotlib.pyplot as plt
 import numpy as np
-import gym
+import gymnasium as gym
 import envs
 import os.path as osp
 from datetime import datetime

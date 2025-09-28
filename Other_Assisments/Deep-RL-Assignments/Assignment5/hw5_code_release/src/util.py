@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 # Some of the code from the following sources:
 # https://github.com/joschu/modular_rl
 # https://github.com/Khrylx/PyTorch-RL

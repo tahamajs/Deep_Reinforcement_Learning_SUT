@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 import tensorflow as tf
 from keras.layers import Dense, Flatten, Input, Concatenate, Lambda, Activation
 from keras.models import Model

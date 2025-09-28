@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 #!/usr/bin/env python
 # coding: utf-8
 
@@ -5,7 +6,7 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from builtins import input
 
-import gym
+import gymnasium as gym
 import deeprl_hw2q2.lake_envs as lake_env
 import time
 

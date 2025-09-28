@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 from torch.distributions.normal import Normal
 from torch.utils.data import Dataset, DataLoader, RandomSampler
 import numpy as np

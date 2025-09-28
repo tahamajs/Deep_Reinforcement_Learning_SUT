@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 import os
 import sys
 import pdb
@@ -10,7 +11,7 @@ ROS_CV = '/opt/ros/kinetic/lib/python2.7/dist-packages'
 if ROS_CV in sys.path: sys.path.remove(ROS_CV)
 
 import cv2
-import gym
+import gymnasium as gym
 import torch
 import numpy as np
 import torch.nn as nn

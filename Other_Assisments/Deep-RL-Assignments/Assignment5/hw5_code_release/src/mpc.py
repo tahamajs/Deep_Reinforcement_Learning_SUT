@@ -1,7 +1,8 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 import os
 # import tensorflow as tf
 import numpy as np
-import gym
+import gymnasium as gym
 import copy
 import pdb
 

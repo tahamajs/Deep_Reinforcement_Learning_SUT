@@ -1,8 +1,9 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from builtins import input
 
-import gym
+import gymnasium as gym
 import time
 import argparse
 

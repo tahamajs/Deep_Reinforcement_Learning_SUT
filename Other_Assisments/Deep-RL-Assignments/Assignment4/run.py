@@ -1,5 +1,6 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 import argparse
-import gym
+import gymnasium as gym
 import envs
 from algo.ddpg import DDPG
 

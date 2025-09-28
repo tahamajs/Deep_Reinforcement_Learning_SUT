@@ -7,7 +7,7 @@ import sys
 import time
 from copy import deepcopy
 
-import gym
+import gymnasium as gym
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt

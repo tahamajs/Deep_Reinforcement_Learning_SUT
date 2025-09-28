@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 '''
 Required packages
 1) pip3 install --upgrade stable-baselines --user
@@ -9,7 +10,7 @@ from stable_baselines.common import set_global_seeds
 from stable_baselines import ACKTR
 from stable_baselines.common.policies import MlpPolicy
 
-import gym
+import gymnasium as gym
 import numpy as np
 import os
 import argparse

@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 # coding: utf-8
 from __future__ import division, absolute_import
 from __future__ import print_function, unicode_literals
@@ -7,7 +8,7 @@ import deeprl_hw2q2.lake_envs as lake_env
 import pdb
 import matplotlib.pyplot as plt
 import seaborn as sns
-import gym
+import gymnasium as gym
 
 
 def print_policy(policy, action_names):

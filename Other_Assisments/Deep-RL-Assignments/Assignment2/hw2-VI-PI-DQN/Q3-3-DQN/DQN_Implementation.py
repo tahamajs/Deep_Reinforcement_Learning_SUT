@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 #!/usr/bin/env python
 
 import os
@@ -8,7 +9,7 @@ import json
 import argparse
 from datetime import datetime
 
-import gym
+import gymnasium as gym
 import keras
 import numpy as np
 import tensorflow as tf

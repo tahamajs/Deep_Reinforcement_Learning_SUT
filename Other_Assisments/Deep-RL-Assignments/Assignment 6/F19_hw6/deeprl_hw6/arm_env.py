@@ -1,8 +1,8 @@
 """2-link Planar Arm."""
 
 import numpy as np
-import gym
-import gym.spaces
+import gymnasium as gym
+import gymnasium as gym.spaces
 
 
 class TwoLinkArmEnv(gym.core.Env):

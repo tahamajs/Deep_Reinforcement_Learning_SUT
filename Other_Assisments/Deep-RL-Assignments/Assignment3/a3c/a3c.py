@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 import os
 import sys
 import pdb
@@ -6,7 +7,7 @@ import argparse
 from datetime import datetime
 from collections import deque
 
-import gym
+import gymnasium as gym
 import torch
 import numpy as np
 import torch.nn as nn

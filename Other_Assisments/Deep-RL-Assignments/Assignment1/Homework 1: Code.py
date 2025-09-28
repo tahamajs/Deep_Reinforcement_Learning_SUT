@@ -1,3 +1,6 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
+# Homework 1: Imitation Learning Code
+
 # -*- coding: utf-8 -*-
 """RL HW1_Submission.ipynb
 
@@ -26,7 +29,7 @@ In these first few cells, you will implement some compoments that will be used f
 """
 
 from collections import OrderedDict 
-import gym
+import gymnasium as gymnasium as gym
 import keras
 from keras.models import Sequential
 from keras.layers import Dense
@@ -52,7 +55,7 @@ def make_model():
   model.add(Dense(10, activation='tanh', input_dim=4))
   model.add(Dense(2, activation='softmax'))
   model.compile(loss='categorical_crossentropy',
-                     optimizer=tf.train.AdamOptimizer(),
+                     optimizer=tf.keras.optimizers.Adam(),
                      metrics=['accuracy'])
   
   # We expect the model to have four weight variables (a kernel and bias for
@@ -109,7 +112,7 @@ def generate_episode(env, policy):
     rewards: the reward received by the agent at each step.
   """
   done = False
-  state = env.reset()
+  state, info = env.reset()
   states = []
   states.append(state)
   actions = []
@@ -117,10 +120,12 @@ def generate_episode(env, policy):
   while not done:
     action = policy.predict(state.reshape(1,-1)).argmax()
     actions.append(action_to_one_hot(env, action))
-    state, reward, done, info = env.step(action)
+    next_state, reward, terminated, truncated, info = env.step(action)
     rewards.append(reward)
+    done = terminated or truncated
     if not done:
-      states.append(state)
+      states.append(next_state)
+    state = next_state
   return np.array(states), np.array(actions), np.array(rewards)
 
 def generate_dagger_episode(env, policy, expert_policy):
@@ -141,7 +146,7 @@ def generate_dagger_episode(env, policy, expert_policy):
     rewards: the reward received by the agent at each step.
   """
   done = False
-  state = env.reset()
+  state, info = env.reset()
   states = []
   states.append(state)
   actions = []
@@ -150,10 +155,12 @@ def generate_dagger_episode(env, policy, expert_policy):
     action = policy.predict(state.reshape(1,-1)).argmax()
     expert_action = expert_policy.predict(state.reshape(1,-1)).argmax()
     actions.append(action_to_one_hot(env, expert_action))
-    state, reward, done, info = env.step(action)
+    next_state, reward, terminated, truncated, info = env.step(action)
     rewards.append(reward)
+    done = terminated or truncated
     if not done:
-      states.append(state)
+      states.append(next_state)
+    state = next_state
   return np.array(states), np.array(actions), np.array(rewards)
 
 def generate_GAIL_episode(env, policy, discriminator=None):
@@ -174,7 +181,7 @@ def generate_GAIL_episode(env, policy, discriminator=None):
     rewards: the reward received by the agent at each step.
   """
   done = False
-  state = env.reset()
+  state, info = env.reset()
   states = []
   states.append(state)
   actions = []
@@ -182,13 +189,15 @@ def generate_GAIL_episode(env, policy, discriminator=None):
   while not done:
     action = policy.predict(state.reshape(1,-1)).argmax()
     actions.append(action_to_one_hot(env, action))
-    state, reward, done, info = env.step(action)
+    next_state, reward, terminated, truncated, info = env.step(action)
+    done = terminated or truncated
     if discriminator is None:
       rewards.append(reward)
     else:
       rewards.append(discriminator(state, action))
     if not done:
-      states.append(state)
+      states.append(next_state)
+    state = next_state
   env.close()
   return np.array(states), np.array(actions), np.array(rewards)
 
@@ -197,7 +206,7 @@ Run the following cell and make sure you see "Test passed!"
 """
 
 # Create the environment.
-env = gym.make('CartPole-v0')
+env = gym.make('CartPole-v1')
 policy = make_model()
 states, actions, rewards = generate_episode(env, policy)
 assert len(states) == len(actions), 'Number of states and actions should be equal.'
@@ -268,7 +277,7 @@ class Imitation():
         """
         history = self.model.fit(self._train_states, self._train_actions, epochs=num_epochs, batch_size=64, verbose=0)
         loss = history.history['loss'][-1]
-        acc = history.history['acc'][-1]
+        acc = history.history['accuracy'][-1]
         return loss, acc
 
     def evaluate(self, policy, n_episodes=50):
@@ -296,7 +305,7 @@ num_iterations = 100  # Number of training iterations. Use a small number
                      # (e.g., 100).
 
 # Create the environment.
-env = gym.make('CartPole-v0')
+env = gym.make('CartPole-v1')
 im = Imitation(env, num_episodes)
 expert_reward = im.evaluate(im.expert)
 print('Expert reward: %.2f' % expert_reward)
@@ -381,7 +390,7 @@ for num_episodes in [1, 10, 50, 100]:
     print('\nNum_episodes: %s; Seed: %d' % (num_episodes, t))
 
     # Create the environment.
-    env = gym.make('CartPole-v0')
+    env = gym.make('CartPole-v1')
     im = Imitation(env, num_episodes)
     expert_reward = im.evaluate(im.expert)
     print('Expert reward: %.2f' % expert_reward)
@@ -545,13 +554,13 @@ class CMAES:
 iterations = 200  # Use 10 for debugging, and then try 200 once you've got it working.
 # pop_size_vec = [50]             # Start with a population size of 50. Once that
 pop_size_vec = [20, 50, 100]  # works, try varying the population size.
-tf.random.set_random_seed(1)
+tf.random.set_seed(1)
 np.random.seed(1)
 data = {pop_size: [] for pop_size in pop_size_vec}
 
 for pop_size in pop_size_vec:
   print('Population size:', pop_size)
-  env = gym.make('CartPole-v0')
+  env = gym.make('CartPole-v1')
   optimizer = CMAES(env,
                     L=1,  # number of episodes for evaluation
                     n=pop_size,  # population size
@@ -639,7 +648,7 @@ class GAIL(object):
     assert np.all(np.sum(Y, axis=1) == 1)
     history = self.discriminator.fit(X, Y, epochs=10, batch_size=256, verbose=0)
     loss = history.history['loss'][-1]
-    acc = history.history['acc'][-1]
+    acc = history.history['accuracy'][-1]
     return loss, acc
   
   def train_policy(self):
@@ -680,7 +689,7 @@ def evaluate(gail):
   return np.mean(p_expert_vec), np.mean(rewards_vec), tv_dist
 
 discriminator_update_period = 2
-env = gym.make('CartPole-v0')
+env = gym.make('CartPole-v1')
 gail = GAIL(env)
 
 loss_vec = []

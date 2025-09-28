@@ -1,0 +1,6 @@
+gymnasium
+tensorflow
+numpy
+matplotlib
+scikit-learn
+cma
