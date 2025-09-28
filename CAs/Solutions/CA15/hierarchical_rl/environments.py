@@ -84,9 +84,9 @@ class HierarchicalRLEnvironment:
             reward -= 10.0  # Penalty for timeout
 
         info = {
-            'goals_completed': self.current_goal_idx,
-            'current_goal': current_goal,
-            'agent_pos': self.agent_pos.copy()
+            "goals_completed": self.current_goal_idx,
+            "current_goal": current_goal,
+            "agent_pos": self.agent_pos.copy(),
         }
 
         return self.get_state(), reward, done, info

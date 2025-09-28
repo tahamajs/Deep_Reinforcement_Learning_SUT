@@ -10,13 +10,13 @@ from .algorithms import (
     MonteCarloTreeSearch,
     ModelBasedValueExpansion,
     LatentSpacePlanner,
-    WorldModel
+    WorldModel,
 )
 
 __all__ = [
-    'MCTSNode',
-    'MonteCarloTreeSearch',
-    'ModelBasedValueExpansion',
-    'LatentSpacePlanner',
-    'WorldModel'
+    "MCTSNode",
+    "MonteCarloTreeSearch",
+    "ModelBasedValueExpansion",
+    "LatentSpacePlanner",
+    "WorldModel",
 ]

@@ -9,14 +9,14 @@ from .algorithms import (
     Option,
     HierarchicalActorCritic,
     GoalConditionedAgent,
-    FeudalNetwork
+    FeudalNetwork,
 )
 from .environments import HierarchicalRLEnvironment
 
 __all__ = [
-    'Option',
-    'HierarchicalActorCritic',
-    'GoalConditionedAgent',
-    'FeudalNetwork',
-    'HierarchicalRLEnvironment'
+    "Option",
+    "HierarchicalActorCritic",
+    "GoalConditionedAgent",
+    "FeudalNetwork",
+    "HierarchicalRLEnvironment",
 ]

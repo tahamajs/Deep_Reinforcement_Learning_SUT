@@ -23,13 +23,17 @@ class SimpleGridWorld:
         self.agent_pos = [0, 0]
 
         # Place goal randomly
-        self.goal_pos = [np.random.randint(self.size//2, self.size),
-                        np.random.randint(self.size//2, self.size)]
+        self.goal_pos = [
+            np.random.randint(self.size // 2, self.size),
+            np.random.randint(self.size // 2, self.size),
+        ]
 
         # Ensure agent and goal are different
         while self.agent_pos == self.goal_pos:
-            self.goal_pos = [np.random.randint(1, self.size),
-                           np.random.randint(1, self.size)]
+            self.goal_pos = [
+                np.random.randint(1, self.size),
+                np.random.randint(1, self.size),
+            ]
 
         self.steps = 0
         self.max_steps = self.size * 4
@@ -43,7 +47,7 @@ class SimpleGridWorld:
         goal_idx = self.goal_pos[0] * self.size + self.goal_pos[1]
 
         state[agent_idx] = 1.0  # Agent position
-        state[goal_idx] = 0.5   # Goal position
+        state[goal_idx] = 0.5  # Goal position
 
         return state
 
@@ -55,7 +59,7 @@ class SimpleGridWorld:
         if action < len(moves):
             new_pos = [
                 self.agent_pos[0] + moves[action][0],
-                self.agent_pos[1] + moves[action][1]
+                self.agent_pos[1] + moves[action][1],
             ]
 
             # Clip to boundaries
@@ -67,7 +71,9 @@ class SimpleGridWorld:
         self.steps += 1
 
         # Calculate reward
-        distance = abs(self.agent_pos[0] - self.goal_pos[0]) + abs(self.agent_pos[1] - self.goal_pos[1])
+        distance = abs(self.agent_pos[0] - self.goal_pos[0]) + abs(
+            self.agent_pos[1] - self.goal_pos[1]
+        )
 
         if distance == 0:
             reward = 100.0  # Goal reached
@@ -82,6 +88,6 @@ class SimpleGridWorld:
             if distance > 0:
                 reward -= 50.0  # Timeout penalty
 
-        info = {'distance': distance, 'steps': self.steps}
+        info = {"distance": distance, "steps": self.steps}
 
         return self._get_state(), reward, done, info

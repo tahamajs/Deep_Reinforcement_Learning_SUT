@@ -55,12 +55,17 @@ class MCTSNode:
     def ucb_score(self, c_puct=1.4):
         """Compute UCB1 score for node selection."""
         if self.visit_count == 0:
-            return float('inf')
+            return float("inf")
 
         exploitation = self.get_value()
 
         if self.parent is not None:
-            exploration = c_puct * self.prior * math.sqrt(self.parent.visit_count) / (1 + self.visit_count)
+            exploration = (
+                c_puct
+                * self.prior
+                * math.sqrt(self.parent.visit_count)
+                / (1 + self.visit_count)
+            )
         else:
             exploration = 0
 
@@ -84,7 +89,7 @@ class MCTSNode:
                     state=None,  # State will be set during simulation
                     parent=self,
                     action=action,
-                    prior=prior
+                    prior=prior,
                 )
 
     def backup(self, value):
@@ -148,7 +153,7 @@ class MonteCarloTreeSearch:
             value = self._evaluate_leaf(current)
         else:
             # Expand leaf if visited before
-            if hasattr(self.model, 'get_possible_actions'):
+            if hasattr(self.model, "get_possible_actions"):
                 actions = self.model.get_possible_actions(current.state)
             else:
                 actions = list(range(4))  # Default actions
@@ -161,10 +166,10 @@ class MonteCarloTreeSearch:
                 child = current.children[action]
 
                 # Simulate transition
-                if hasattr(self.model, 'predict_mean'):
+                if hasattr(self.model, "predict_mean"):
                     next_state, reward = self.model.predict_mean(
                         torch.FloatTensor(current.state).to(device),
-                        torch.LongTensor([action]).to(device)
+                        torch.LongTensor([action]).to(device),
                     )
                     child.state = next_state.cpu().numpy()
                 else:
@@ -203,17 +208,17 @@ class MonteCarloTreeSearch:
             action = np.random.randint(4)
 
             # Simulate step (simplified)
-            if hasattr(self.model, 'predict_mean'):
+            if hasattr(self.model, "predict_mean"):
                 next_state, reward = self.model.predict_mean(
                     torch.FloatTensor(current_state).to(device),
-                    torch.LongTensor([action]).to(device)
+                    torch.LongTensor([action]).to(device),
                 )
-                total_reward += reward.item() * (0.99 ** i)
+                total_reward += reward.item() * (0.99**i)
                 current_state = next_state.cpu().numpy()
             else:
                 # Random reward for fallback
                 reward = np.random.randn()
-                total_reward += reward * (0.99 ** i)
+                total_reward += reward * (0.99**i)
 
         return total_reward
 
@@ -267,10 +272,10 @@ class ModelBasedValueExpansion:
 
         for action in range(num_actions):
             # Predict next state and reward
-            if hasattr(self.model, 'predict_mean'):
+            if hasattr(self.model, "predict_mean"):
                 next_state, reward = self.model.predict_mean(
                     torch.FloatTensor(state).to(device),
-                    torch.LongTensor([action]).to(device)
+                    torch.LongTensor([action]).to(device),
                 )
                 next_state = next_state.cpu().numpy()
                 reward = reward.item()
@@ -294,10 +299,10 @@ class ModelBasedValueExpansion:
 
         for action in range(num_actions):
             # Predict next state and reward
-            if hasattr(self.model, 'predict_mean'):
+            if hasattr(self.model, "predict_mean"):
                 next_state, reward = self.model.predict_mean(
                     torch.FloatTensor(state).to(device),
-                    torch.LongTensor([action]).to(device)
+                    torch.LongTensor([action]).to(device),
                 )
                 next_state = next_state.cpu().numpy()
                 reward = reward.item()
@@ -352,7 +357,7 @@ class LatentSpacePlanner:
         action_std = np.ones((horizon, action_dim))
 
         best_actions = None
-        best_reward = float('-inf')
+        best_reward = float("-inf")
 
         for iteration in range(self.num_iterations):
             # Sample action sequences
@@ -375,7 +380,9 @@ class LatentSpacePlanner:
                 rewards.append(reward)
 
             # Select elite samples
-            elite_idx = np.argsort(rewards)[-int(self.elite_fraction * self.population_size):]
+            elite_idx = np.argsort(rewards)[
+                -int(self.elite_fraction * self.population_size) :
+            ]
             elite_actions = [action_sequences[i] for i in elite_idx]
 
             # Update best sequence
@@ -406,16 +413,18 @@ class LatentSpacePlanner:
             # Predict next latent state
             action_tensor = torch.LongTensor([action]).to(device)
 
-            if hasattr(self.latent_dynamics, 'forward'):
+            if hasattr(self.latent_dynamics, "forward"):
                 with torch.no_grad():
                     # Assume latent dynamics returns next state and reward
-                    next_latent, reward = self.latent_dynamics(current_latent, action_tensor)
-                    total_reward += reward.item() * (0.99 ** t)
+                    next_latent, reward = self.latent_dynamics(
+                        current_latent, action_tensor
+                    )
+                    total_reward += reward.item() * (0.99**t)
                     current_latent = next_latent
             else:
                 # Fallback: random reward
                 reward = np.random.randn()
-                total_reward += reward * (0.99 ** t)
+                total_reward += reward * (0.99**t)
 
         return total_reward
 
@@ -435,7 +444,7 @@ class WorldModel(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, latent_dim * 2)  # Mean and log_std
+            nn.Linear(hidden_dim, latent_dim * 2),  # Mean and log_std
         )
 
         # Decoder: latent state -> observation
@@ -444,7 +453,7 @@ class WorldModel(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, obs_dim)
+            nn.Linear(hidden_dim, obs_dim),
         )
 
         # Dynamics model: (latent_state, action) -> (next_latent_state, reward)
@@ -453,7 +462,7 @@ class WorldModel(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, latent_dim + 1)  # Next latent state + reward
+            nn.Linear(hidden_dim, latent_dim + 1),  # Next latent state + reward
         )
 
         # Recurrent state space model components
@@ -480,15 +489,17 @@ class WorldModel(nn.Module):
         """Predict next latent state and reward."""
         # Handle discrete actions
         if action.dtype == torch.long:
-            action_one_hot = torch.zeros(action.size(0), self.action_dim).to(action.device)
+            action_one_hot = torch.zeros(action.size(0), self.action_dim).to(
+                action.device
+            )
             action_one_hot.scatter_(1, action.unsqueeze(1), 1)
             action = action_one_hot
 
         input_tensor = torch.cat([latent_state, action], dim=-1)
         output = self.dynamics(input_tensor)
 
-        next_latent = output[:, :self.latent_dim]
-        reward = output[:, self.latent_dim:]
+        next_latent = output[:, : self.latent_dim]
+        reward = output[:, self.latent_dim :]
 
         return next_latent, reward
 
@@ -511,8 +522,7 @@ class WorldModel(nn.Module):
 
         for t in range(seq_len - 1):
             next_latent, reward = self.predict_next(
-                latent_states[:, t],
-                action_sequence[:, t]
+                latent_states[:, t], action_sequence[:, t]
             )
             predicted_latents.append(next_latent)
             predicted_rewards.append(reward)
@@ -525,9 +535,9 @@ class WorldModel(nn.Module):
         predicted_obs = predicted_obs.view(batch_size, seq_len - 1, self.obs_dim)
 
         return {
-            'latent_mean': latent_mean,
-            'latent_log_std': latent_log_std,
-            'predicted_obs': predicted_obs,
-            'predicted_rewards': predicted_rewards,
-            'latent_states': latent_states
+            "latent_mean": latent_mean,
+            "latent_log_std": latent_log_std,
+            "predicted_obs": predicted_obs,
+            "predicted_rewards": predicted_rewards,
+            "latent_states": latent_states,
         }
