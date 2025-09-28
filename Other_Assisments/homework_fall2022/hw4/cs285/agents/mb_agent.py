@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 from .base_agent import BaseAgent
 from cs285.models.ff_model import FFModel
 from cs285.policies.MPC_policy import MPCPolicy

@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 from .base_critic import BaseCritic
 import torch
 import torch.optim as optim

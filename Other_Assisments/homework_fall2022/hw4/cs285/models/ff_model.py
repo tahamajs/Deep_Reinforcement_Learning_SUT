@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 from torch import nn
 import torch
 from torch import optim

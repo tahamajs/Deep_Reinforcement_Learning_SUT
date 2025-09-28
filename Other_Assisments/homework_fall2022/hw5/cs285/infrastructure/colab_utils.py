@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 from gym.wrappers import RecordVideo
 import glob
 import io

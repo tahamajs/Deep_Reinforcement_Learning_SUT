@@ -81,6 +81,6 @@ You will then need to implement code in the following files:
 
 The relevant sections are marked with `TODO`.
 
-You may also want to look through [scripts/run_hw4_mb.py](cs285/scripts/run_hw4_mb.py) and [scripts/run_hw4_mbpo.py](cs285/scripts/run_hw4_mbpo.py) (if running locally) or [scripts/run_hw4_mb.ipynb](cs285/scripts/run_hw4_mb.ipynb) and [scripts/run_hw4_mbpo.ipynb](cs285/scripts/run_hw4_mbpo.ipynb) (if running on Colab), though you will not need to edit this files beyond changing runtime arguments in the Colab notebook.
+You may also want to look through [scripts/run_hw4_mb.py](cs285/scripts/run_hw4_mb.py) and [scripts/run_hw4_mbpo.py](cs285/scripts/run_hw4_mbpo.py), though you will not need to edit this files beyond changing runtime arguments.
 
 See the [assignment PDF](cs285_hw4.pdf) for more details on what files to edit.

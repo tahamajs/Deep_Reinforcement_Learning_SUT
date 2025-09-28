@@ -32,23 +32,9 @@ This assignment focuses on offline reinforcement learning and advanced explorati
 
 ## Setup
 
-You can run this code on your own machine or on Google Colab.
+You can run this code on your own machine.
 
 1. **Local option:** If you choose to run locally, you will need to install MuJoCo and some Python packages; see [installation.md](../hw1/installation.md) from homework 1 for instructions. There are two new package requirements (`opencv-python` and `gym[atari]`) beyond what was used in the previous assignments; make sure to install these with `pip install -r requirements.txt` if you are running the assignment locally.
-
-2. **Colab:** The first few sections of the notebook will install all required dependencies. You can try out the Colab option by clicking the badges below:
-
-RND + CQL:
-
-[![Open In Colab RND + CQL](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berkeleydeeprlcourse/homework_fall2022/blob/master/hw5/run_hw5_expl.ipynb)
-
-AWAC:
-
-[![Open In Colab AWAC](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berkeleydeeprlcourse/homework_fall2022/blob/master/hw5/run_hw5_awac.ipynb)
-
-IQL:
-
-[![Open In Colab IQL](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berkeleydeeprlcourse/homework_fall2022/blob/master/hw5/run_hw5_iql.ipynb)
 
 ## Complete the code
 
@@ -79,7 +65,7 @@ For IQL:
 
 The relevant sections are marked with `TODO`.
 
-You may also want to look through [scripts/run_hw5_expl.py](cs285/scripts/run_hw5_expl.py) (if running locally) or [run_hw5_expl.ipynb](run_hw5_expl.ipynb) (if running on Colab), though you will not need to edit this files beyond changing runtime arguments in the Colab notebook.
+You may also want to look through [scripts/run_hw5_expl.py](cs285/scripts/run_hw5_expl.py), though you will not need to edit this files beyond changing runtime arguments.
 
 See the [assignment PDF](hw5.pdf) for more details on what files to edit.
 

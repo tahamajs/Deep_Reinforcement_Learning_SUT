@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 from collections import OrderedDict
 
 from cs285.critics.dqn_critic import DQNCritic

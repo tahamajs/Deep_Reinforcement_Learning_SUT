@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 import os
 from tensorboardX import SummaryWriter
 import numpy as np

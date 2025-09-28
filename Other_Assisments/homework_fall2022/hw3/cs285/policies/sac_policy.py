@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 from cs285.policies.MLP_policy import MLPPolicy
 import torch
 import numpy as np

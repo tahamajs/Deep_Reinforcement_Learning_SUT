@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 import numpy as np
 
 from cs285.infrastructure import pytorch_util as ptu

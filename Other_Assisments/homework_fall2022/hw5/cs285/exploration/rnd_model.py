@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 from cs285.infrastructure import pytorch_util as ptu
 from .base_exploration_model import BaseExplorationModel
 import torch.optim as optim

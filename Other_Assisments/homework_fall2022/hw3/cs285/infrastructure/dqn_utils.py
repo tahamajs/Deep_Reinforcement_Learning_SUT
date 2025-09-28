@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 """This file includes a collection of utility functions that are useful for
 implementing DQN."""
 import random

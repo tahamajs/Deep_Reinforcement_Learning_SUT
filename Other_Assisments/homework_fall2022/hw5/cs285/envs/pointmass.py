@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 import gymnasium as gym
 from gymnasium.envs.registration import EnvSpec
 import imageio

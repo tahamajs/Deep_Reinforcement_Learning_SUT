@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 import math
 from torch import distributions as dist
 import torch.nn.functional as F
