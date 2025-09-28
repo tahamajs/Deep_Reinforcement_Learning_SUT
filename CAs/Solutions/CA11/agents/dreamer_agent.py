@@ -1,5 +1,9 @@
 """
 Dreamer Agent for Planning in Latent Space
+
+This module implements the Dreamer agent, a model-based reinforcement learning
+algorithm that learns world models and plans in latent space for sample-efficient
+reinforcement learning.
 """
 
 import torch
@@ -8,26 +12,57 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Normal
 import numpy as np
+from typing import Dict, List, Tuple, Optional, Any
 from .latent_actor import LatentActor
 from .latent_critic import LatentCritic
 
 
 class DreamerAgent:
-    """Dreamer-style agent for planning in latent space"""
+    """
+    Dreamer-style agent for planning in latent space.
+
+    This agent implements the Dreamer algorithm, which consists of:
+    1. A world model that learns to predict future observations and rewards
+    2. An actor-critic that plans in the latent space of the world model
+    3. Imagination-based planning for sample-efficient learning
+
+    Attributes:
+        world_model: The learned world model for state prediction
+        actor: Policy network in latent space
+        critic: Value network in latent space
+        device: Computing device (CPU/GPU)
+        gamma: Discount factor
+        lambda_: Lambda parameter for GAE
+        imagination_horizon: Number of steps to imagine ahead
+        stats: Training statistics dictionary
+    """
 
     def __init__(
         self,
-        world_model,
-        state_dim,
-        action_dim,
-        device,
-        actor_lr=8e-5,
-        critic_lr=8e-5,
-        gamma=0.99,
-        lambda_=0.95,
-        imagination_horizon=15,
+        world_model: nn.Module,
+        state_dim: int,
+        action_dim: int,
+        device: torch.device,
+        actor_lr: float = 8e-5,
+        critic_lr: float = 8e-5,
+        gamma: float = 0.99,
+        lambda_: float = 0.95,
+        imagination_horizon: int = 15,
     ):
+        """
+        Initialize the Dreamer agent.
 
+        Args:
+            world_model: Pre-trained world model
+            state_dim: Dimension of latent state space
+            action_dim: Number of possible actions
+            device: Computing device
+            actor_lr: Learning rate for actor
+            critic_lr: Learning rate for critic
+            gamma: Discount factor
+            lambda_: GAE lambda parameter
+            imagination_horizon: Steps to imagine in planning
+        """
         self.world_model = world_model
         self.device = device
         self.gamma = gamma
@@ -47,8 +82,19 @@ class DreamerAgent:
             "policy_entropy": [],
         }
 
-    def imagine_trajectories(self, initial_states, batch_size=50):
-        """Generate imagined trajectories using world model"""
+    def imagine_trajectories(
+        self, initial_states: torch.Tensor, batch_size: int = 50
+    ) -> Dict[str, torch.Tensor]:
+        """
+        Generate imagined trajectories using the world model.
+
+        Args:
+            initial_states: Initial latent states [batch_size, state_dim]
+            batch_size: Number of trajectories to generate
+
+        Returns:
+            Dictionary containing imagined states, actions, rewards, and values
+        """
         horizon = self.imagination_horizon
 
         states = [initial_states]
