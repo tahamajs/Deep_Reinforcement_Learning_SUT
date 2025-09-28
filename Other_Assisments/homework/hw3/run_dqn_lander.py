@@ -1,116 +1,138 @@
+#!/usr/bin/env python3
+"""
+DQN Training Script for LunarLander
+
+This script trains a DQN agent on the LunarLander environment.
+
+Usage:
+    python run_dqn_lander.py [options]
+
+Author: Saeed Reza Zouashkiani
+Student ID: 400206262
+"""
+
 import argparse
+import os
+import sys
+import time
 import gym
-from gym import wrappers
-import os.path as osp
-import random
 import numpy as np
 import tensorflow as tf
-import tensorflow.contrib.layers as layers
+from collections import namedtuple
 
-import dqn
-from dqn_utils import *
+# Add src directory to path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-def lander_model(obs, num_actions, scope, reuse=False):
-    with tf.variable_scope(scope, reuse=reuse):
-        out = obs
-        with tf.variable_scope("action_value"):
-            out = layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
-            out = layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
-            out = layers.fully_connected(out, num_outputs=num_actions, activation_fn=None)
+from src.dqn import DQNAgent
+from dqn_utils import LinearSchedule, PiecewiseSchedule, ConstantSchedule
+import logz
 
-        return out
 
-def lander_optimizer():
-    return dqn.OptimizerSpec(
-        constructor=tf.train.AdamOptimizer,
-        lr_schedule=ConstantSchedule(1e-3),
-        kwargs={}
-    )
+OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedule"])
 
-def lander_stopping_criterion(num_timesteps):
-    def stopping_criterion(env, t):
-        # notice that here t is the number of steps of the wrapped env,
-        # which is different from the number of steps in the underlying env
-        return get_wrapper_by_name(env, "Monitor").get_total_steps() >= num_timesteps
-    return stopping_criterion
 
-def lander_exploration_schedule(num_timesteps):
-    return PiecewiseSchedule(
-        [
-            (0, 1),
-            (num_timesteps * 0.1, 0.02),
-        ], outside_value=0.02
-    )
+def lander_learn(env_name, num_timesteps, seed=0):
+    """Train DQN on LunarLander environment."""
+    # Set random seeds
+    tf.set_random_seed(seed)
+    np.random.seed(seed)
 
-def lander_kwargs():
-    return {
-        'optimizer_spec': lander_optimizer(),
-        'q_func': lander_model,
-        'replay_buffer_size': 50000,
-        'batch_size': 32,
-        'gamma': 1.00,
-        'learning_starts': 1000,
-        'learning_freq': 1,
-        'frame_history_len': 1,
-        'target_update_freq': 3000,
-        'grad_norm_clipping': 10,
-        'lander': True
-    }
-
-def lander_learn(env,
-                 session,
-                 num_timesteps,
-                 seed):
-
-    optimizer = lander_optimizer()
-    stopping_criterion = lander_stopping_criterion(num_timesteps)
-    exploration_schedule = lander_exploration_schedule(num_timesteps)
-
-    dqn.learn(
-        env=env,
-        session=session,
-        exploration=lander_exploration_schedule(num_timesteps),
-        stopping_criterion=lander_stopping_criterion(num_timesteps),
-        double_q=True,
-        **lander_kwargs()
-    )
-    env.close()
-
-def set_global_seeds(i):
-    tf.set_random_seed(i)
-    np.random.seed(i)
-    random.seed(i)
-
-def get_session():
-    tf.reset_default_graph()
-    tf_config = tf.ConfigProto(
-        inter_op_parallelism_threads=1,
-        intra_op_parallelism_threads=1,
-        device_count={'GPU': 0})
-    # GPUs don't significantly speed up deep Q-learning for lunar lander,
-    # since the observations are low-dimensional
-    session = tf.Session(config=tf_config)
-    return session
-
-def get_env(seed):
-    env = gym.make('LunarLander-v2')
-
-    set_global_seeds(seed)
+    # Create environment
+    env = gym.make(env_name)
     env.seed(seed)
 
-    expt_dir = '/tmp/hw3_vid_dir/'
-    env = wrappers.Monitor(env, osp.join(expt_dir, "gym"), force=True)
+    # Exploration schedule
+    exploration = PiecewiseSchedule([
+        (0, 1.0),
+        (num_timesteps * 0.1, 0.02),
+    ], outside_value=0.02)
 
-    return env
+    # Learning rate schedule
+    lr_schedule = ConstantSchedule(1e-3)
+
+    # Optimizer
+    optimizer = tf.train.AdamOptimizer
+    optimizer_spec = OptimizerSpec(
+        constructor=optimizer,
+        kwargs=dict(),
+        lr_schedule=lr_schedule
+    )
+
+    # Create agent
+    agent = DQNAgent(
+        env=env,
+        optimizer_spec=optimizer_spec,
+        session=None,  # Will be set later
+        exploration=exploration,
+        replay_buffer_size=50000,
+        batch_size=32,
+        gamma=1.0,
+        learning_starts=1000,
+        learning_freq=1,
+        frame_history_len=1,  # No frame stacking for LunarLander
+        target_update_freq=1000,
+        grad_norm_clipping=10,
+        double_q=False  # Standard Q-learning for LunarLander
+    )
+
+    # Initialize TensorFlow session
+    agent.sess = tf.Session()
+    agent.sess.run(tf.global_variables_initializer())
+
+    # Training loop
+    start_time = time.time()
+    episode_rewards = []
+    episode_lengths = []
+
+    obs = env.reset()
+    agent.replay_buffer_idx = agent.replay_buffer.store_frame(obs)
+
+    for t in range(num_timesteps):
+        # Take step in environment
+        agent.step_env()
+
+        # Update model
+        agent.update_model()
+
+        # Log progress
+        if t % 1000 == 0:
+            print(f"Timestep {t}")
+            if len(episode_rewards) > 0:
+                print(f"Mean reward (last 100): {np.mean(episode_rewards[-100:]):.2f}")
+                print(f"Episodes: {len(episode_rewards)}")
+                print(f"Exploration: {exploration.value(t):.3f}")
+                print(f"Time elapsed: {(time.time() - start_time) / 60:.1f} minutes")
+
+        # Track episode statistics
+        if hasattr(env, 'get_episode_rewards'):
+            current_rewards = env.get_episode_rewards()
+            if len(current_rewards) > len(episode_rewards):
+                episode_rewards = current_rewards
+                episode_lengths = env.get_episode_lengths()
+
+    print("Training completed!")
+    return episode_rewards, episode_lengths
+
 
 def main():
-    # Run training
-    seed = 4565 # you may want to randomize this
-    print('random seed = %d' % seed)
-    env = get_env(seed)
-    session = get_session()
-    set_global_seeds(seed)
-    lander_learn(env, session, num_timesteps=500000, seed=seed)
+    """Main function."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument('env_name', type=str, default='LunarLander-v2',
+                       help='Environment name')
+    parser.add_argument('--num_timesteps', type=int, default=50000,
+                       help='Number of timesteps to train')
+    parser.add_argument('--seed', type=int, default=0, help='Random seed')
+    args = parser.parse_args()
+
+    # Train the agent
+    rewards, lengths = lander_learn(
+        env_name=args.env_name,
+        num_timesteps=args.num_timesteps,
+        seed=args.seed
+    )
+
+    print(f"Final mean reward: {np.mean(rewards[-100:]):.2f}")
+
 
 if __name__ == "__main__":
     main()

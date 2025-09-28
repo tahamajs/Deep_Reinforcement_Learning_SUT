@@ -20,9 +20,22 @@ def pathlength(path):
 class PolicyGradientAgent:
     """Policy Gradient agent with optional neural network baseline."""
 
-    def __init__(self, ob_dim, ac_dim, discrete, n_layers, size, learning_rate,
-                 gamma, reward_to_go, nn_baseline, normalize_advantages,
-                 min_timesteps_per_batch, max_path_length, animate):
+    def __init__(
+        self,
+        ob_dim,
+        ac_dim,
+        discrete,
+        n_layers,
+        size,
+        learning_rate,
+        gamma,
+        reward_to_go,
+        nn_baseline,
+        normalize_advantages,
+        min_timesteps_per_batch,
+        max_path_length,
+        animate,
+    ):
         """Initialize the policy gradient agent.
 
         Args:
@@ -52,7 +65,9 @@ class PolicyGradientAgent:
         self.animate = animate
 
         # Create networks
-        self.policy_net = PolicyNetwork(ob_dim, ac_dim, discrete, n_layers, size, learning_rate)
+        self.policy_net = PolicyNetwork(
+            ob_dim, ac_dim, discrete, n_layers, size, learning_rate
+        )
         if nn_baseline:
             self.value_net = ValueNetwork(ob_dim, n_layers, size, learning_rate)
 
@@ -79,7 +94,7 @@ class PolicyGradientAgent:
         paths = []
 
         while True:
-            animate_this_episode = (len(paths) == 0 and (itr % 10 == 0) and self.animate)
+            animate_this_episode = len(paths) == 0 and (itr % 10 == 0) and self.animate
             path = self.sample_trajectory(env, animate_this_episode)
             paths.append(path)
             timesteps_this_batch += pathlength(path)
@@ -107,13 +122,16 @@ class PolicyGradientAgent:
             if animate_this_episode:
                 env.render()
                 import time
+
                 time.sleep(0.1)
 
             obs.append(ob)
 
             # Sample action from policy
-            ac = self.sess.run(self.policy_net.sy_sampled_ac,
-                             feed_dict={self.policy_net.sy_ob_no: [ob]})
+            ac = self.sess.run(
+                self.policy_net.sy_sampled_ac,
+                feed_dict={self.policy_net.sy_ob_no: [ob]},
+            )
             ac = ac[0] if not self.discrete else ac
             acs.append(ac)
 
@@ -127,7 +145,7 @@ class PolicyGradientAgent:
         path = {
             "observation": np.array(obs, dtype=np.float32),
             "reward": np.array(rewards, dtype=np.float32),
-            "action": np.array(acs, dtype=np.float32)
+            "action": np.array(acs, dtype=np.float32),
         }
         return path
 
@@ -154,7 +172,9 @@ class PolicyGradientAgent:
                 q_n.extend(q_path)
             else:
                 # Trajectory-based: Q_t = sum_{t'=0}^T gamma^t' * r_{t'}
-                total_return = sum(self.gamma ** t_prime * re[t_prime] for t_prime in range(len(re)))
+                total_return = sum(
+                    self.gamma**t_prime * re[t_prime] for t_prime in range(len(re))
+                )
                 q_n.extend([total_return] * len(re))
 
         return np.array(q_n)
@@ -171,8 +191,10 @@ class PolicyGradientAgent:
         """
         if self.nn_baseline:
             # Use neural network baseline
-            b_n = self.sess.run(self.value_net.baseline_prediction,
-                              feed_dict={self.value_net.sy_ob_no: ob_no})
+            b_n = self.sess.run(
+                self.value_net.baseline_prediction,
+                feed_dict={self.value_net.sy_ob_no: ob_no},
+            )
 
             # Rescale baseline to match Q-value statistics
             b_n = b_n * np.std(q_n) + np.mean(q_n)
@@ -214,12 +236,20 @@ class PolicyGradientAgent:
         # Update baseline if using neural network baseline
         if self.nn_baseline:
             target_n = (q_n - np.mean(q_n)) / (np.std(q_n) + 1e-8)  # Normalize targets
-            self.sess.run(self.value_net.baseline_update_op,
-                         feed_dict={self.value_net.sy_ob_no: ob_no,
-                                  self.value_net.sy_target_n: target_n})
+            self.sess.run(
+                self.value_net.baseline_update_op,
+                feed_dict={
+                    self.value_net.sy_ob_no: ob_no,
+                    self.value_net.sy_target_n: target_n,
+                },
+            )
 
         # Update policy
-        self.sess.run(self.policy_net.update_op,
-                     feed_dict={self.policy_net.sy_ob_no: ob_no,
-                              self.policy_net.sy_ac_na: ac_na,
-                              self.policy_net.sy_adv_n: adv_n})
+        self.sess.run(
+            self.policy_net.update_op,
+            feed_dict={
+                self.policy_net.sy_ob_no: ob_no,
+                self.policy_net.sy_ac_na: ac_na,
+                self.policy_net.sy_adv_n: adv_n,
+            },
+        )

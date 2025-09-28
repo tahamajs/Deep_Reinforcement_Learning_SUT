@@ -31,11 +31,13 @@ hw1/
 ## Features
 
 ### Modular Components
+
 - **ExpertDataCollector**: Handles expert policy loading and demonstration data collection
 - **BehavioralCloning**: Implements the behavioral cloning algorithm with neural network training
 - **Clean separation**: Data collection, training, and evaluation are separate concerns
 
 ### Functionality
+
 - Load expert policies from pickle files
 - Collect demonstration data from expert policies
 - Train behavioral cloning policies using supervised learning
@@ -45,6 +47,7 @@ hw1/
 ## Installation
 
 1. Install Python dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -59,11 +62,13 @@ pip install -r requirements.txt
 ### 1. Collect Expert Data
 
 Use the modular script:
+
 ```bash
 python run_bc.py collect --expert_policy experts/Humanoid-v2.pkl --env Humanoid-v2 --num_rollouts 20 --render
 ```
 
 Or use the original script:
+
 ```bash
 python run_expert.py experts/Humanoid-v2.pkl Humanoid-v2 --render --num_rollouts 20
 ```
@@ -91,12 +96,14 @@ This will test expert policies on all available environments.
 ## Key Components
 
 ### ExpertDataCollector
+
 - Loads expert policies using TensorFlow
 - Collects rollouts from expert demonstrations
 - Saves data in pickle format for training
 - Provides statistics on expert performance
 
 ### BehavioralCloning
+
 - Implements supervised learning on expert data
 - Uses multi-layer perceptron (MLP) architecture
 - Supports configurable hidden layer sizes
@@ -105,6 +112,7 @@ This will test expert policies on all available environments.
 ## Environments
 
 The implementation supports the following MuJoCo environments:
+
 - Ant-v2
 - HalfCheetah-v2
 - Hopper-v2

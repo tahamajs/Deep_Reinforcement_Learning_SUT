@@ -11,7 +11,15 @@ import tensorflow as tf
 import numpy as np
 
 
-def build_mlp(input_placeholder, output_size, scope, n_layers, size, activation=tf.tanh, output_activation=None):
+def build_mlp(
+    input_placeholder,
+    output_size,
+    scope,
+    n_layers,
+    size,
+    activation=tf.tanh,
+    output_activation=None,
+):
     """
     Builds a feedforward neural network
 
@@ -30,11 +38,19 @@ def build_mlp(input_placeholder, output_size, scope, n_layers, size, activation=
     with tf.variable_scope(scope):
         layer = input_placeholder
         for i in range(n_layers):
-            layer = tf.layers.dense(layer, size, activation=activation,
-                                  kernel_initializer=tf.contrib.layers.xavier_initializer())
+            layer = tf.layers.dense(
+                layer,
+                size,
+                activation=activation,
+                kernel_initializer=tf.contrib.layers.xavier_initializer(),
+            )
 
-        output = tf.layers.dense(layer, output_size, activation=output_activation,
-                               kernel_initializer=tf.contrib.layers.xavier_initializer())
+        output = tf.layers.dense(
+            layer,
+            output_size,
+            activation=output_activation,
+            kernel_initializer=tf.contrib.layers.xavier_initializer(),
+        )
         return output
 
 
@@ -64,9 +80,14 @@ class PolicyNetwork:
     def _build_network(self):
         """Build the policy network."""
         # Placeholders
-        self.sy_ob_no = tf.placeholder(shape=[None, self.ob_dim], name="ob", dtype=tf.float32)
-        self.sy_ac_na = tf.placeholder(shape=[None] if self.discrete else [None, self.ac_dim],
-                                     name="ac", dtype=tf.int32 if self.discrete else tf.float32)
+        self.sy_ob_no = tf.placeholder(
+            shape=[None, self.ob_dim], name="ob", dtype=tf.float32
+        )
+        self.sy_ac_na = tf.placeholder(
+            shape=[None] if self.discrete else [None, self.ac_dim],
+            name="ac",
+            dtype=tf.int32 if self.discrete else tf.float32,
+        )
         self.sy_adv_n = tf.placeholder(shape=[None], name="adv", dtype=tf.float32)
 
         # Policy forward pass
@@ -87,14 +108,17 @@ class PolicyNetwork:
 
     def policy_forward_pass_discrete(self, sy_ob_no):
         """Policy forward pass for discrete action spaces."""
-        sy_logits_na = build_mlp(sy_ob_no, self.ac_dim, "policy", self.n_layers, self.size)
+        sy_logits_na = build_mlp(
+            sy_ob_no, self.ac_dim, "policy", self.n_layers, self.size
+        )
         return sy_logits_na
 
     def policy_forward_pass_continuous(self, sy_ob_no):
         """Policy forward pass for continuous action spaces."""
         sy_mean = build_mlp(sy_ob_no, self.ac_dim, "policy", self.n_layers, self.size)
-        sy_logstd = tf.get_variable("logstd", shape=[self.ac_dim],
-                                  initializer=tf.zeros_initializer())
+        sy_logstd = tf.get_variable(
+            "logstd", shape=[self.ac_dim], initializer=tf.zeros_initializer()
+        )
         return (sy_mean, sy_logstd)
 
     def sample_action(self, policy_parameters):
@@ -114,14 +138,18 @@ class PolicyNetwork:
         if self.discrete:
             sy_logits_na = policy_parameters
             sy_logprob_n = -tf.nn.sparse_softmax_cross_entropy_with_logits(
-                labels=sy_ac_na, logits=sy_logits_na)
+                labels=sy_ac_na, logits=sy_logits_na
+            )
         else:
             sy_mean, sy_logstd = policy_parameters
             sy_std = tf.exp(sy_logstd)
             sy_var = tf.square(sy_std)
             sy_logprob_n = -0.5 * tf.reduce_sum(
-                tf.square(sy_ac_na - sy_mean) / sy_var + 2 * sy_logstd + np.log(2 * np.pi),
-                axis=1)
+                tf.square(sy_ac_na - sy_mean) / sy_var
+                + 2 * sy_logstd
+                + np.log(2 * np.pi),
+                axis=1,
+            )
         return sy_logprob_n
 
 
@@ -146,13 +174,20 @@ class ValueNetwork:
 
     def _build_network(self):
         """Build the value network."""
-        self.sy_ob_no = tf.placeholder(shape=[None, self.ob_dim], name="ob", dtype=tf.float32)
+        self.sy_ob_no = tf.placeholder(
+            shape=[None, self.ob_dim], name="ob", dtype=tf.float32
+        )
         self.sy_target_n = tf.placeholder(shape=[None], name="target", dtype=tf.float32)
 
         # Value prediction
         self.baseline_prediction = tf.squeeze(
-            build_mlp(self.sy_ob_no, 1, "baseline", self.n_layers, self.size))
+            build_mlp(self.sy_ob_no, 1, "baseline", self.n_layers, self.size)
+        )
 
         # Loss and optimizer
-        self.baseline_loss = tf.reduce_mean(tf.square(self.baseline_prediction - self.sy_target_n))
-        self.baseline_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.baseline_loss)
+        self.baseline_loss = tf.reduce_mean(
+            tf.square(self.baseline_prediction - self.sy_target_n)
+        )
+        self.baseline_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(
+            self.baseline_loss
+        )

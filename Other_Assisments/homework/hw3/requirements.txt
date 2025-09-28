@@ -1,8 +1,23 @@
-gym==0.10.5
+# CS294-112 HW3: Q-Learning (DQN) and Actor-Critic Requirements
+# Updated for modern Python environments
+
+# Core RL dependencies
+gym>=0.21.0
 gym[atari]
-box2d
-mujoco-py==1.50.1.56
-tensorflow
-numpy
-seaborn
-opencv-python
+box2d>=2.3.10
+mujoco>=2.1.0
+mujoco-py>=2.1.0
+
+# Neural networks and computation
+tensorflow>=1.10.5
+numpy>=1.21.0
+
+# Computer vision for Atari preprocessing
+opencv-python>=4.5.0
+
+# Visualization and utilities
+seaborn>=0.11.0
+matplotlib>=3.5.0
+
+# Optional: for better performance
+scipy>=1.7.0

@@ -1,72 +1,74 @@
+#!/usr/bin/env python3
+"""
+DQN Training Script for Atari Environments
+
+This script trains a DQN agent on Atari games.
+
+Usage:
+    python run_dqn_atari.py [options]
+
+Author: Saeed Reza Zouashkiani
+Student ID: 400206262
+"""
+
 import argparse
+import os
+import sys
+import time
 import gym
-from gym import wrappers
-import os.path as osp
-import random
 import numpy as np
 import tensorflow as tf
-import tensorflow.contrib.layers as layers
+from collections import namedtuple
 
-import dqn
-from dqn_utils import *
-from atari_wrappers import *
+# Add src directory to path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+
+from src.dqn import DQNAgent
+from dqn_utils import LinearSchedule, PiecewiseSchedule
+import logz
+from atari_wrappers import wrap_deepmind
 
 
-def atari_model(img_in, num_actions, scope, reuse=False):
-    # as described in https://storage.googleapis.com/deepmind-data/assets/papers/DeepMindNature14236Paper.pdf
-    with tf.variable_scope(scope, reuse=reuse):
-        out = img_in
-        with tf.variable_scope("convnet"):
-            # original architecture
-            out = layers.convolution2d(out, num_outputs=32, kernel_size=8, stride=4, activation_fn=tf.nn.relu)
-            out = layers.convolution2d(out, num_outputs=64, kernel_size=4, stride=2, activation_fn=tf.nn.relu)
-            out = layers.convolution2d(out, num_outputs=64, kernel_size=3, stride=1, activation_fn=tf.nn.relu)
-        out = layers.flatten(out)
-        with tf.variable_scope("action_value"):
-            out = layers.fully_connected(out, num_outputs=512,         activation_fn=tf.nn.relu)
-            out = layers.fully_connected(out, num_outputs=num_actions, activation_fn=None)
+OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedule"])
 
-        return out
 
-def atari_learn(env,
-                session,
-                num_timesteps):
-    # This is just a rough estimate
-    num_iterations = float(num_timesteps) / 4.0
+def atari_learn(env_name, num_timesteps, seed=0, double_q=True):
+    """Train DQN on Atari environment."""
+    # Set random seeds
+    tf.set_random_seed(seed)
+    np.random.seed(seed)
 
-    lr_multiplier = 1.0
+    # Create environment
+    env = gym.make(env_name)
+    env.seed(seed)
+    env = wrap_deepmind(env)
+
+    # Exploration schedule
+    exploration = PiecewiseSchedule([
+        (0, 1.0),
+        (1e6, 0.1),
+    ], outside_value=0.1)
+
+    # Learning rate schedule
     lr_schedule = PiecewiseSchedule([
-                                         (0,                   1e-4 * lr_multiplier),
-                                         (num_iterations / 10, 1e-4 * lr_multiplier),
-                                         (num_iterations / 2,  5e-5 * lr_multiplier),
-                                    ],
-                                    outside_value=5e-5 * lr_multiplier)
-    optimizer = dqn.OptimizerSpec(
-        constructor=tf.train.AdamOptimizer,
-        kwargs=dict(epsilon=1e-4),
+        (0, 1e-4),
+        (2e6, 5e-5),
+    ], outside_value=5e-5)
+
+    # Optimizer
+    optimizer = tf.train.AdamOptimizer
+    optimizer_spec = OptimizerSpec(
+        constructor=optimizer,
+        kwargs=dict(),
         lr_schedule=lr_schedule
     )
 
-    def stopping_criterion(env, t):
-        # notice that here t is the number of steps of the wrapped env,
-        # which is different from the number of steps in the underlying env
-        return get_wrapper_by_name(env, "Monitor").get_total_steps() >= num_timesteps
-
-    exploration_schedule = PiecewiseSchedule(
-        [
-            (0, 1.0),
-            (1e6, 0.1),
-            (num_iterations / 2, 0.01),
-        ], outside_value=0.01
-    )
-
-    dqn.learn(
+    # Create agent
+    agent = DQNAgent(
         env=env,
-        q_func=atari_model,
-        optimizer_spec=optimizer,
-        session=session,
-        exploration=exploration_schedule,
-        stopping_criterion=stopping_criterion,
+        optimizer_spec=optimizer_spec,
+        session=None,  # Will be set later
+        exploration=exploration,
         replay_buffer_size=1000000,
         batch_size=32,
         gamma=0.99,
@@ -75,56 +77,70 @@ def atari_learn(env,
         frame_history_len=4,
         target_update_freq=10000,
         grad_norm_clipping=10,
-        double_q=True
+        double_q=double_q
     )
-    env.close()
 
-def get_available_gpus():
-    from tensorflow.python.client import device_lib
-    local_device_protos = device_lib.list_local_devices()
-    return [x.physical_device_desc for x in local_device_protos if x.device_type == 'GPU']
+    # Initialize TensorFlow session
+    agent.sess = tf.Session()
+    agent.sess.run(tf.global_variables_initializer())
 
-def set_global_seeds(i):
-    try:
-        import tensorflow as tf
-    except ImportError:
-        pass
-    else:
-        tf.set_random_seed(i)
-    np.random.seed(i)
-    random.seed(i)
+    # Training loop
+    start_time = time.time()
+    episode_rewards = []
+    episode_lengths = []
 
-def get_session():
-    tf.reset_default_graph()
-    tf_config = tf.ConfigProto(
-        inter_op_parallelism_threads=1,
-        intra_op_parallelism_threads=1)
-    session = tf.Session(config=tf_config)
-    print("AVAILABLE GPUS: ", get_available_gpus())
-    return session
+    obs = env.reset()
+    agent.replay_buffer_idx = agent.replay_buffer.store_frame(obs)
 
-def get_env(task, seed):
-    env = gym.make('PongNoFrameskip-v4')
+    for t in range(num_timesteps):
+        # Take step in environment
+        agent.step_env()
 
-    set_global_seeds(seed)
-    env.seed(seed)
+        # Update model
+        agent.update_model()
 
-    expt_dir = '/tmp/hw3_vid_dir2/'
-    env = wrappers.Monitor(env, osp.join(expt_dir, "gym"), force=True)
-    env = wrap_deepmind(env)
+        # Log progress
+        if t % 10000 == 0:
+            print(f"Timestep {t}")
+            if len(episode_rewards) > 0:
+                print(f"Mean reward (last 100): {np.mean(episode_rewards[-100:]):.2f}")
+                print(f"Episodes: {len(episode_rewards)}")
+                print(f"Exploration: {exploration.value(t):.3f}")
+                print(f"Learning rate: {lr_schedule.value(t):.6f}")
+                print(f"Time elapsed: {(time.time() - start_time) / 60:.1f} minutes")
 
-    return env
+        # Track episode statistics
+        if hasattr(env, 'get_episode_rewards'):
+            current_rewards = env.get_episode_rewards()
+            if len(current_rewards) > len(episode_rewards):
+                episode_rewards = current_rewards
+                episode_lengths = env.get_episode_lengths()
+
+    print("Training completed!")
+    return episode_rewards, episode_lengths
+
 
 def main():
-    # Get Atari games.
-    task = gym.make('PongNoFrameskip-v4')
+    """Main function."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument('env_name', type=str, help='Atari environment name')
+    parser.add_argument('--num_timesteps', type=int, default=int(2e6),
+                       help='Number of timesteps to train')
+    parser.add_argument('--seed', type=int, default=0, help='Random seed')
+    parser.add_argument('--double_q', action='store_true', default=True,
+                       help='Use double Q-learning')
+    args = parser.parse_args()
 
-    # Run training
-    seed = random.randint(0, 9999)
-    print('random seed = %d' % seed)
-    env = get_env(task, seed)
-    session = get_session()
-    atari_learn(env, session, num_timesteps=2e8)
+    # Train the agent
+    rewards, lengths = atari_learn(
+        env_name=args.env_name,
+        num_timesteps=args.num_timesteps,
+        seed=args.seed,
+        double_q=args.double_q
+    )
+
+    print(f"Final mean reward: {np.mean(rewards[-100:]):.2f}")
+
 
 if __name__ == "__main__":
     main()

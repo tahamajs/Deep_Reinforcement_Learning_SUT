@@ -46,7 +46,7 @@ class ExpertDataCollector:
         actions = []
 
         for i in range(num_rollouts):
-            print(f'Collecting rollout {i + 1}/{num_rollouts}')
+            print(f"Collecting rollout {i + 1}/{num_rollouts}")
             obs = self.env.reset()
             done = False
             total_reward = 0.0
@@ -71,17 +71,17 @@ class ExpertDataCollector:
                     break
 
             returns.append(total_reward)
-            print(f'Rollout {i + 1} completed with return: {total_reward:.2f}')
+            print(f"Rollout {i + 1} completed with return: {total_reward:.2f}")
 
-        print(f'Mean return: {np.mean(returns):.2f}')
-        print(f'Std of return: {np.std(returns):.2f}')
+        print(f"Mean return: {np.mean(returns):.2f}")
+        print(f"Std of return: {np.std(returns):.2f}")
 
         return {
-            'observations': np.array(observations),
-            'actions': np.array(actions),
-            'returns': returns,
-            'mean_return': np.mean(returns),
-            'std_return': np.std(returns)
+            "observations": np.array(observations),
+            "actions": np.array(actions),
+            "returns": returns,
+            "mean_return": np.mean(returns),
+            "std_return": np.std(returns),
         }
 
     def save_data(self, data, filename):
@@ -91,15 +91,12 @@ class ExpertDataCollector:
             data: Dictionary containing the collected data
             filename: Path to save the data
         """
-        expert_data = {
-            'observations': data['observations'],
-            'actions': data['actions']
-        }
+        expert_data = {"observations": data["observations"], "actions": data["actions"]}
 
-        with open(filename, 'wb') as f:
+        with open(filename, "wb") as f:
             pickle.dump(expert_data, f, pickle.HIGHEST_PROTOCOL)
 
-        print(f'Data saved to {filename}')
+        print(f"Data saved to {filename}")
 
 
 def load_expert_policy(policy_file):
@@ -112,4 +109,5 @@ def load_expert_policy(policy_file):
         policy_fn: Function that takes observation and returns action
     """
     from load_policy import load_policy
+
     return load_policy(policy_file)

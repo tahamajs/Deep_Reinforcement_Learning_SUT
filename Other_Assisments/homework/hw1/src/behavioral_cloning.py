@@ -80,12 +80,13 @@ class BehavioralCloning:
 
             # Mini-batch training
             for i in range(0, len(observations), batch_size):
-                obs_batch = obs_shuffled[i:i+batch_size]
-                act_batch = act_shuffled[i:i+batch_size]
+                obs_batch = obs_shuffled[i : i + batch_size]
+                act_batch = act_shuffled[i : i + batch_size]
 
-                loss_val, _ = self.sess.run([self.loss, self.train_op],
-                                          feed_dict={self.obs_ph: obs_batch,
-                                                   self.act_ph: act_batch})
+                loss_val, _ = self.sess.run(
+                    [self.loss, self.train_op],
+                    feed_dict={self.obs_ph: obs_batch, self.act_ph: act_batch},
+                )
                 epoch_loss += loss_val
                 num_batches += 1
 
@@ -93,9 +94,9 @@ class BehavioralCloning:
             losses.append(avg_loss)
 
             if (epoch + 1) % 10 == 0:
-                print(f'Epoch {epoch + 1}/{epochs}, Loss: {avg_loss:.6f}')
+                print(f"Epoch {epoch + 1}/{epochs}, Loss: {avg_loss:.6f}")
 
-        return {'losses': losses}
+        return {"losses": losses}
 
     def get_action(self, observation):
         """Get action for given observation.
@@ -107,8 +108,7 @@ class BehavioralCloning:
             action: Predicted action
         """
         obs = observation.reshape(1, -1)
-        action = self.sess.run(self.predicted_actions,
-                              feed_dict={self.obs_ph: obs})
+        action = self.sess.run(self.predicted_actions, feed_dict={self.obs_ph: obs})
         return action[0]
 
     def evaluate(self, num_episodes=10, render=False):
@@ -142,10 +142,10 @@ class BehavioralCloning:
                     break
 
             returns.append(total_reward)
-            print(f'Episode {episode + 1}: Return = {total_reward:.2f}')
+            print(f"Episode {episode + 1}: Return = {total_reward:.2f}")
 
         return {
-            'returns': returns,
-            'mean_return': np.mean(returns),
-            'std_return': np.std(returns)
+            "returns": returns,
+            "mean_return": np.mean(returns),
+            "std_return": np.std(returns),
         }

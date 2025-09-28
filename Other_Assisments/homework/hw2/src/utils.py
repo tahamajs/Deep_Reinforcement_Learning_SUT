@@ -152,7 +152,9 @@ def compute_advantages(re_n, gamma, reward_to_go=True, normalize_advantages=True
             adv_n.extend(adv_path)
         else:
             # Trajectory-based advantages
-            total_return = sum(gamma ** t_prime * re[t_prime] for t_prime in range(len(re)))
+            total_return = sum(
+                gamma**t_prime * re[t_prime] for t_prime in range(len(re))
+            )
             adv_n.extend([total_return] * len(re))
 
     adv_n = np.array(adv_n)
@@ -189,7 +191,9 @@ def compute_qvals(re_n, gamma, reward_to_go=True):
             q_n.extend(q_path)
         else:
             # Trajectory-based Q-values
-            total_return = sum(gamma ** t_prime * re[t_prime] for t_prime in range(len(re)))
+            total_return = sum(
+                gamma**t_prime * re[t_prime] for t_prime in range(len(re))
+            )
             q_n.extend([total_return] * len(re))
 
     return np.array(q_n)
