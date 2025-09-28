@@ -34,7 +34,6 @@ class ProgressiveColumn(nn.Module):
         self.output_size = output_size
         self.prev_columns = prev_columns or []
 
-        # Main network layers
         layers = []
         prev_size = input_size
 
@@ -48,34 +47,26 @@ class ProgressiveColumn(nn.Module):
             )
             prev_size = hidden_size
 
-        # Output layer
         layers.append(nn.Linear(prev_size, output_size))
 
         self.network = nn.Sequential(*layers)
 
-        # Lateral connections from previous columns
         self.lateral_weights = nn.ModuleList()
         if self.prev_columns:
-            # Learnable weights for combining outputs from previous columns
             for prev_col in self.prev_columns:
                 self.lateral_weights.append(nn.Linear(prev_col.output_size, prev_size))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through the column."""
-        # Main network forward
         output = self.network(x)
 
-        # Add lateral connections from previous columns
         if self.prev_columns and self.lateral_weights:
             lateral_output = 0
             for i, prev_col in enumerate(self.prev_columns):
-                # Get output from previous column (assuming same input)
                 prev_output = prev_col(x)
-                # Apply lateral weight
                 lateral_contrib = self.lateral_weights[i](prev_output)
                 lateral_output += lateral_contrib
 
-            # Combine main output with lateral contributions
             output = output + lateral_output
 
         return output
@@ -103,7 +94,6 @@ class ProgressiveNetwork(nn.Module):
         self.num_tasks = num_tasks
         self.shared_representation = shared_representation
 
-        # Shared representation network (optional)
         if shared_representation:
             shared_layers = []
             prev_size = input_size
@@ -123,13 +113,10 @@ class ProgressiveNetwork(nn.Module):
             self.shared_network = None
             column_input_size = input_size
 
-        # Task-specific columns
         self.columns: nn.ModuleList = nn.ModuleList()
 
-        # Task output sizes (to be set when adding tasks)
         self.task_output_sizes: Dict[int, int] = {}
 
-        # Current number of tasks
         self.current_tasks = 0
 
     def add_task(self, task_id: int, output_size: int):
@@ -143,7 +130,6 @@ class ProgressiveNetwork(nn.Module):
         if task_id in self.task_output_sizes:
             raise ValueError(f"Task {task_id} already exists")
 
-        # Determine input size for new column
         if self.shared_representation:
             column_input_size = (
                 self.hidden_sizes[-2] if len(self.hidden_sizes) > 1 else self.input_size
@@ -151,10 +137,8 @@ class ProgressiveNetwork(nn.Module):
         else:
             column_input_size = self.input_size
 
-        # Create previous columns list (excluding current task)
         prev_columns = list(self.columns) if self.current_tasks > 0 else []
 
-        # Create new column
         new_column = ProgressiveColumn(
             input_size=column_input_size,
             hidden_sizes=(
@@ -188,16 +172,13 @@ class ProgressiveNetwork(nn.Module):
                 f"Task {task_id} not found. Available tasks: {list(self.task_output_sizes.keys())}"
             )
 
-        # Get column index for this task
         task_idx = list(self.task_output_sizes.keys()).index(task_id)
 
-        # Shared representation
         if self.shared_representation:
             shared_repr = self.shared_network(x)
         else:
             shared_repr = x
 
-        # Forward through appropriate column
         return self.columns[task_idx](shared_repr)
 
     def get_task_columns(self) -> Dict[int, ProgressiveColumn]:
@@ -272,7 +253,6 @@ class ProgressiveNetworkTrainer:
         self.task_optimizers: Dict[int, torch.optim.Optimizer] = {}
         self.task_schedulers: Dict[int, Any] = {}
 
-        # Training history
         self.training_history: Dict[int, List[Dict[str, float]]] = {}
 
     def add_task_optimizer(
@@ -294,14 +274,11 @@ class ProgressiveNetworkTrainer:
         if task_id not in self.network.task_output_sizes:
             raise ValueError(f"Task {task_id} not found in network")
 
-        # Get parameters for this task
         task_params = self.network.get_trainable_parameters(task_id)
 
-        # Create optimizer
         optimizer = optimizer_class(task_params, lr=lr, **optimizer_kwargs)
         self.task_optimizers[task_id] = optimizer
 
-        # Optional scheduler
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
         self.task_schedulers[task_id] = scheduler
 
@@ -332,14 +309,12 @@ class ProgressiveNetworkTrainer:
         optimizer = self.task_optimizers[task_id]
         scheduler = self.task_schedulers.get(task_id)
 
-        # Freeze other tasks
         self.network.freeze_previous_tasks(task_id)
 
         self.network.train()
         history = []
 
         for epoch in range(epochs):
-            # Training
             train_loss = 0.0
             train_correct = 0
             train_total = 0
@@ -351,11 +326,9 @@ class ProgressiveNetworkTrainer:
 
                 optimizer.zero_grad()
 
-                # Forward pass
                 outputs = self.network(inputs, task_id)
                 loss = criterion(outputs, targets)
 
-                # Backward pass
                 loss.backward()
                 optimizer.step()
 
@@ -367,12 +340,10 @@ class ProgressiveNetworkTrainer:
             train_acc = train_correct / train_total
             avg_train_loss = train_loss / len(train_loader)
 
-            # Validation
             val_acc = 0.0
             if val_loader is not None:
                 val_acc = self._evaluate_task(task_id, val_loader)
 
-            # Step scheduler
             if scheduler:
                 scheduler.step()
 

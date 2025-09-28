@@ -49,15 +49,12 @@ class REINFORCEAgent:
         self.lr = lr
         self.gamma = gamma
 
-        # Policy network
         self.policy_network = PolicyNetwork(state_dim, action_dim).to(device)
         self.optimizer = optim.Adam(self.policy_network.parameters(), lr=lr)
 
-        # Storage for episode
         self.episode_log_probs = []
         self.episode_rewards = []
 
-        # Training metrics
         self.episode_rewards_history = []
         self.policy_losses = []
         self.gradient_norms = []
@@ -77,15 +74,12 @@ class REINFORCEAgent:
         returns = []
         discounted_sum = 0
 
-        # Calculate returns in reverse order
         for reward in reversed(self.episode_rewards):
             discounted_sum = reward + self.gamma * discounted_sum
             returns.insert(0, discounted_sum)
 
-        # Convert to tensor and normalize
         returns = torch.FloatTensor(returns).to(device)
 
-        # Optional: normalize returns for stability
         if len(returns) > 1:
             returns = (returns - returns.mean()) / (returns.std() + 1e-8)
 
@@ -96,21 +90,17 @@ class REINFORCEAgent:
         if len(self.episode_log_probs) == 0:
             return
 
-        # Calculate returns
         returns = self.calculate_returns()
 
-        # Calculate policy loss
         policy_loss = []
         for log_prob, G_t in zip(self.episode_log_probs, returns):
             policy_loss.append(-log_prob * G_t)  # Negative for gradient ascent
 
         policy_loss = torch.stack(policy_loss).sum()
 
-        # Perform optimization step
         self.optimizer.zero_grad()
         policy_loss.backward()
 
-        # Calculate and store gradient norm
         total_norm = 0
         for param in self.policy_network.parameters():
             if param.grad is not None:
@@ -119,15 +109,12 @@ class REINFORCEAgent:
         total_norm = total_norm ** (1.0 / 2)
         self.gradient_norms.append(total_norm)
 
-        # Optional: gradient clipping
         torch.nn.utils.clip_grad_norm_(self.policy_network.parameters(), max_norm=1.0)
 
         self.optimizer.step()
 
-        # Store metrics
         self.policy_losses.append(policy_loss.item())
 
-        # Clear episode data
         self.episode_log_probs = []
         self.episode_rewards = []
 
@@ -151,10 +138,8 @@ class REINFORCEAgent:
 
             state = next_state
 
-        # Update policy at end of episode
         self.update_policy()
 
-        # Store episode reward
         self.episode_rewards_history.append(total_reward)
 
         return total_reward, steps
@@ -211,7 +196,6 @@ class REINFORCEAnalyzer:
 
         agent = REINFORCEAgent(state_dim, action_dim, lr=1e-3, gamma=0.99)
 
-        # Training
         print("Starting training...")
 
         for episode in range(num_episodes):
@@ -227,7 +211,6 @@ class REINFORCEAnalyzer:
 
         env.close()
 
-        # Analysis
         self.analyze_training_dynamics(agent, env_name)
 
         return agent
@@ -237,11 +220,9 @@ class REINFORCEAnalyzer:
 
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
-        # 1. Learning curve
         ax = axes[0, 0]
         rewards = agent.episode_rewards_history
 
-        # Smooth the rewards for better visualization
         if len(rewards) > 10:
             smoothed_rewards = pd.Series(rewards).rolling(window=20).mean()
             ax.plot(rewards, alpha=0.3, color="lightblue", label="Episode Rewards")
@@ -260,7 +241,6 @@ class REINFORCEAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 2. Policy loss
         ax = axes[0, 1]
         if agent.policy_losses:
             losses = agent.policy_losses
@@ -275,7 +255,6 @@ class REINFORCEAnalyzer:
             ax.set_ylabel("Policy Loss")
             ax.grid(True, alpha=0.3)
 
-        # 3. Gradient norms
         ax = axes[1, 0]
         if agent.gradient_norms:
             grad_norms = agent.gradient_norms
@@ -292,10 +271,8 @@ class REINFORCEAnalyzer:
             ax.set_ylabel("Gradient L2 Norm")
             ax.grid(True, alpha=0.3)
 
-        # 4. Reward distribution over time
         ax = axes[1, 1]
         if len(rewards) > 50:
-            # Divide episodes into quartiles and show distribution
             n_episodes = len(rewards)
             quartile_size = n_episodes // 4
 
@@ -317,7 +294,6 @@ class REINFORCEAnalyzer:
         plt.tight_layout()
         plt.show()
 
-        # Print statistics
         print(f"\nTraining Statistics:")
         print(f"  Total Episodes: {len(rewards)}")
         print(f"  Final Average Reward (last 50): {np.mean(rewards[-50:]):.2f}")

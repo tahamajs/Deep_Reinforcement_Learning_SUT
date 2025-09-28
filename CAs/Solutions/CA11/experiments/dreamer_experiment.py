@@ -7,7 +7,6 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-# Import modular components
 from world_models.vae import VariationalAutoencoder
 from world_models.dynamics import LatentDynamicsModel
 from world_models.reward_model import RewardModel
@@ -34,11 +33,9 @@ def run_dreamer_experiment(config):
     print(f"Training episodes: {config['train_episodes']}")
     print(f"World model pre-training steps: {config['wm_pretrain_steps']}")
 
-    # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # Create environment
     if config["env_name"] == "continuous_cartpole":
         env = ContinuousCartPole()
     elif config["env_name"] == "continuous_pendulum":
@@ -46,17 +43,14 @@ def run_dreamer_experiment(config):
     else:
         raise ValueError(f"Unknown environment: {config['env_name']}")
 
-    # Collect training data for world model
     print("\nCollecting training data for world model...")
     train_data = collect_world_model_data(
         env, config["data_collection_steps"], config["data_collection_episodes"]
     )
 
-    # Create and pre-train world model
     print("\nPre-training world model...")
     world_model = create_and_pretrain_world_model(env, train_data, config, device)
 
-    # Create Dreamer agent
     print("\nCreating Dreamer agent...")
     obs_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
@@ -76,7 +70,6 @@ def run_dreamer_experiment(config):
         device=device,
     )
 
-    # Training loop
     print("\nTraining Dreamer agent...")
     training_rewards = []
     episode_lengths = []
@@ -85,7 +78,6 @@ def run_dreamer_experiment(config):
         episode_reward = 0
         episode_length = 0
 
-        # Collect episode data
         obs, _ = env.reset()
         obs_tensor = torch.FloatTensor(obs).to(device)
 
@@ -98,17 +90,14 @@ def run_dreamer_experiment(config):
 
         done = False
         while not done and episode_length < config["max_episode_length"]:
-            # Agent selects action
             with torch.no_grad():
                 action = (
                     dreamer_agent.act(obs_tensor.unsqueeze(0)).squeeze(0).cpu().numpy()
                 )
 
-            # Environment step
             next_obs, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
 
-            # Store transition
             episode_data["observations"].append(obs)
             episode_data["actions"].append(action)
             episode_data["rewards"].append(reward)
@@ -119,7 +108,6 @@ def run_dreamer_experiment(config):
             episode_reward += reward
             episode_length += 1
 
-        # Convert to tensors
         episode_tensors = {
             "observations": torch.FloatTensor(
                 np.array(episode_data["observations"])
@@ -131,13 +119,11 @@ def run_dreamer_experiment(config):
             ).to(device),
         }
 
-        # Update agent
         dreamer_agent.update(episode_tensors)
 
         training_rewards.append(episode_reward)
         episode_lengths.append(episode_length)
 
-        # Logging
         if (episode + 1) % 50 == 0:
             avg_reward = np.mean(training_rewards[-50:])
             avg_length = np.mean(episode_lengths[-50:])
@@ -147,15 +133,12 @@ def run_dreamer_experiment(config):
 
     print("\nTraining completed!")
 
-    # Evaluation
     print("\nEvaluating trained agent...")
     eval_rewards = evaluate_agent(dreamer_agent, env, config["eval_episodes"], device)
 
-    # Comparison with random policy
     print("\nComparing with random policy...")
     random_rewards = evaluate_random_policy(env, config["eval_episodes"])
 
-    # Analysis and visualization
     print("\nGenerating analysis plots...")
     plot_dreamer_training(
         dreamer_agent, training_rewards, f"Dreamer Training - {config['env_name']}"
@@ -174,7 +157,6 @@ def create_and_pretrain_world_model(env, train_data, config, device):
     action_dim = env.action_space.shape[0]
     latent_dim = config["latent_dim"]
 
-    # Create components
     vae = VariationalAutoencoder(obs_dim, latent_dim, config["vae_hidden_dims"]).to(
         device
     )
@@ -191,7 +173,6 @@ def create_and_pretrain_world_model(env, train_data, config, device):
     world_model = WorldModel(vae, dynamics, reward_model).to(device)
     trainer = WorldModelTrainer(world_model, config["wm_learning_rate"], device)
 
-    # Pre-training
     print(f"Pre-training world model for {config['wm_pretrain_steps']} steps...")
     for step in tqdm(range(config["wm_pretrain_steps"]), desc="Pre-training"):
         batch_indices = torch.randperm(len(train_data["observations"]))[
@@ -265,7 +246,6 @@ def evaluate_random_policy(env, num_episodes):
 
 
 if __name__ == "__main__":
-    # Default configuration
     config = {
         "env_name": "continuous_cartpole",
         "latent_dim": 32,
@@ -289,12 +269,10 @@ if __name__ == "__main__":
         "eval_episodes": 20,
     }
 
-    # Run experiment
     dreamer_agent, training_rewards, eval_rewards, random_rewards = (
         run_dreamer_experiment(config)
     )
 
-    # Print final results
     print("\n=== Final Results ===")
     print(
         f"Dreamer Agent - Mean: {np.mean(eval_rewards):.2f}, Std: {np.std(eval_rewards):.2f}"

@@ -1,4 +1,3 @@
-# Actor-Critic Methods Implementation
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -18,7 +17,6 @@ class ActorCriticNet(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_dim=128):
         super(ActorCriticNet, self).__init__()
 
-        # Shared layers
         self.shared = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -26,10 +24,8 @@ class ActorCriticNet(nn.Module):
             nn.ReLU(),
         )
 
-        # Actor head
         self.actor = nn.Linear(hidden_dim, action_dim)
 
-        # Critic head
         self.critic = nn.Linear(hidden_dim, 1)
 
     def forward(self, x):
@@ -57,9 +53,8 @@ class ActorCriticAgent:
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.gamma = gamma
-        self.tau = tau  # GAE parameter
+        self.tau = tau
 
-        # Networks
         self.actor_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -76,7 +71,6 @@ class ActorCriticAgent:
             nn.Linear(hidden_dim, 1),
         ).to(device)
 
-        # Target critic for stability
         self.critic_target = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -87,11 +81,9 @@ class ActorCriticAgent:
 
         self.critic_target.load_state_dict(self.critic_net.state_dict())
 
-        # Optimizers
         self.actor_optimizer = optim.Adam(self.actor_net.parameters(), lr=actor_lr)
         self.critic_optimizer = optim.Adam(self.critic_net.parameters(), lr=critic_lr)
 
-        # Logging
         self.episode_rewards = []
         self.actor_losses = []
         self.critic_losses = []
@@ -131,7 +123,7 @@ class ActorCriticAgent:
 
         for t in reversed(range(len(rewards))):
             if t == len(rewards) - 1:
-                next_value = 0  # Terminal state
+                next_value = 0
             else:
                 next_value = next_values[t]
 
@@ -149,23 +141,18 @@ class ActorCriticAgent:
         next_states = torch.FloatTensor(next_states).to(device)
         dones = torch.FloatTensor(dones).to(device)
 
-        # Get current values
         values = self.critic_net(states).squeeze()
         next_values = self.critic_net(next_states).squeeze()
 
-        # Compute TD targets
         td_targets = rewards + self.gamma * next_values * (1 - dones)
 
-        # Critic loss (MSE)
         critic_loss = F.mse_loss(values, td_targets.detach())
 
-        # Update critic
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.critic_net.parameters(), max_norm=1.0)
         self.critic_optimizer.step()
 
-        # Actor loss (policy gradient with advantage)
         advantages = (td_targets - values).detach()
 
         logits = self.actor_net(states)
@@ -174,23 +161,19 @@ class ActorCriticAgent:
 
         actor_loss = -(log_probs * advantages).mean()
 
-        # Add entropy bonus for exploration
         entropy = dist.entropy().mean()
         actor_loss -= 0.01 * entropy
 
-        # Update actor
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.actor_net.parameters(), max_norm=1.0)
         self.actor_optimizer.step()
 
-        # Update target critic (soft update)
         for target_param, param in zip(
             self.critic_target.parameters(), self.critic_net.parameters()
         ):
             target_param.data.copy_(0.995 * target_param.data + 0.005 * param.data)
 
-        # Logging
         self.actor_losses.append(actor_loss.item())
         self.critic_losses.append(critic_loss.item())
         self.entropy_history.append(entropy.item())
@@ -220,7 +203,6 @@ class ActorCriticAgent:
             if terminated or truncated:
                 break
 
-        # Update networks
         actor_loss, critic_loss = self.update_actor_critic(
             states, actions, rewards, next_states, dones
         )
@@ -240,12 +222,10 @@ class SharedActorCriticAgent:
         self.action_dim = action_dim
         self.gamma = gamma
 
-        # Shared network
         self.shared_net = ActorCriticNet(state_dim, action_dim, hidden_dim).to(device)
 
         self.optimizer = optim.Adam(self.shared_net.parameters(), lr=lr)
 
-        # Logging
         self.episode_rewards = []
         self.actor_losses = []
         self.critic_losses = []
@@ -285,20 +265,16 @@ class SharedActorCriticAgent:
         next_states = torch.FloatTensor(next_states).to(device)
         dones = torch.FloatTensor(dones).to(device)
 
-        # Forward pass
         logits, values = self.shared_net(states)
         _, next_values = self.shared_net(next_states)
 
         values = values.squeeze()
         next_values = next_values.squeeze()
 
-        # Compute TD targets
         td_targets = rewards + self.gamma * next_values * (1 - dones)
 
-        # Critic loss
         critic_loss = F.mse_loss(values, td_targets.detach())
 
-        # Actor loss
         advantages = (td_targets - values).detach()
 
         dist = Categorical(logits=logits)
@@ -306,20 +282,16 @@ class SharedActorCriticAgent:
 
         actor_loss = -(log_probs * advantages).mean()
 
-        # Add entropy bonus
         entropy = dist.entropy().mean()
         actor_loss -= 0.01 * entropy
 
-        # Total loss
         total_loss = actor_loss + critic_loss
 
-        # Update
         self.optimizer.zero_grad()
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.shared_net.parameters(), max_norm=1.0)
         self.optimizer.step()
 
-        # Logging
         self.actor_losses.append(actor_loss.item())
         self.critic_losses.append(critic_loss.item())
         self.entropy_history.append(entropy.item())
@@ -348,7 +320,6 @@ class SharedActorCriticAgent:
             if terminated or truncated:
                 break
 
-        # Update networks
         actor_loss, critic_loss = self.update_shared(
             states, actions, rewards, next_states, dones
         )
@@ -364,7 +335,6 @@ def compare_actor_critic_agents():
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
 
-    # Initialize agents
     separate_agent = ActorCriticAgent(
         state_dim, action_dim, actor_lr=1e-3, critic_lr=1e-3
     )
@@ -379,7 +349,6 @@ def compare_actor_critic_agents():
     for name, agent in agents.items():
         print(f"\nTraining {name}...")
 
-        # Training loop
         num_episodes = 300
         log_interval = 50
 
@@ -400,11 +369,10 @@ def compare_actor_critic_agents():
             "entropy": agent.entropy_history.copy(),
         }
 
-    # Visualization
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
 
     for name, data in results.items():
-        # Learning curves
+
         axes[0, 0].plot(data["rewards"], label=name, alpha=0.7)
         axes[0, 0].plot(
             pd.Series(data["rewards"]).rolling(window=20).mean(),
@@ -412,13 +380,10 @@ def compare_actor_critic_agents():
             alpha=0.7,
         )
 
-        # Actor losses
         axes[0, 1].plot(data["actor_losses"], label=name, alpha=0.7)
 
-        # Critic losses
         axes[1, 0].plot(data["critic_losses"], label=name, alpha=0.7)
 
-        # Entropy
         axes[1, 1].plot(data["entropy"], label=name, alpha=0.7)
 
     axes[0, 0].set_title("Learning Curves")
@@ -457,7 +422,6 @@ def test_actor_critic():
     return compare_actor_critic_agents()
 
 
-# Demonstration functions
 def demonstrate_actor_critic():
     """Demonstrate Actor-Critic methods"""
     print("🎭 Actor-Critic Methods Demonstration")
@@ -465,6 +429,5 @@ def demonstrate_actor_critic():
     return results
 
 
-# Run demonstration
 if __name__ == "__main__":
     demonstrate_actor_critic()

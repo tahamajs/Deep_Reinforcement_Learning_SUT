@@ -42,7 +42,6 @@ class DoubleDQNAgent(DQNAgent):
         """
         super().__init__(state_dim, action_dim, **kwargs)
 
-        # Additional tracking for bias analysis
         self.q_value_estimates = {"main": [], "target": [], "double": []}
         self.overestimation_metrics = []
 
@@ -60,58 +59,46 @@ class DoubleDQNAgent(DQNAgent):
         if len(self.replay_buffer) < self.batch_size:
             return None
 
-        # Sample batch from replay buffer
         states, actions, rewards, next_states, dones = self.replay_buffer.sample(
             self.batch_size
         )
 
-        # Current Q-values
         current_q_values = (
             self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze(1)
         )
 
-        # Double DQN target computation
         with torch.no_grad():
-            # Use main network to select actions
+
             next_actions = self.q_network(next_states).argmax(1)
 
-            # Use target network to evaluate selected actions
             next_q_values = (
                 self.target_network(next_states)
                 .gather(1, next_actions.unsqueeze(1))
                 .squeeze(1)
             )
 
-            # Compute targets
             target_q_values = rewards + (self.gamma * next_q_values * (~dones))
 
-            # For comparison: also compute standard DQN targets
             standard_next_q_values = self.target_network(next_states).max(1)[0]
             standard_targets = rewards + (
                 self.gamma * standard_next_q_values * (~dones)
             )
 
-            # Track bias metrics
             self.track_bias_metrics(current_q_values, target_q_values, standard_targets)
 
-        # Compute loss
         loss = F.mse_loss(current_q_values, target_q_values)
 
-        # Optimize
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), max_norm=1.0)
         self.optimizer.step()
 
-        # Update target network periodically
         self.training_step += 1
         if self.training_step % self.target_update_freq == 0:
             self.update_target_network()
 
-        # Update epsilon
         self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
 
-        # Store metrics
         self.losses.append(loss.item())
         self.epsilon_history.append(self.epsilon)
 
@@ -130,11 +117,10 @@ class DoubleDQNAgent(DQNAgent):
             double_targets: Double DQN targets
             standard_targets: Standard DQN targets
         """
-        # Store average values for analysis
+
         self.q_value_estimates["main"].append(current_q.mean().item())
         self.q_value_estimates["double"].append(double_targets.mean().item())
 
-        # Compute overestimation (standard DQN targets - Double DQN targets)
         overestimation = (standard_targets - double_targets).mean().item()
         self.overestimation_metrics.append(overestimation)
 

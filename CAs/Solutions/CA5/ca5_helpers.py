@@ -1,16 +1,3 @@
-"""
-Helper implementations for CA5 TODOs.
-Provides:
-- StudentDQN (simple MLP)
-- StudentDQNAgent (basic DQN agent with replay)
-- OptimizedSumTree (batch-update wrapper around SumTree-like array)
-- RainbowAblationStudy (lightweight ablation scaffolding)
-- PortfolioEnv (minimal portfolio simulation)
-- ResourceAllocationEnv (minimal resource allocation env)
-
-These are intentionally small, well-documented, and suitable for smoke testing. If you want these inlined into the notebook cells, I can patch the notebook next.
-"""
-
 import math
 import random
 from collections import deque, namedtuple
@@ -19,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# Simple replay buffer
+
 Transition = namedtuple(
     "Transition", ("state", "action", "reward", "next_state", "done")
 )
@@ -40,7 +27,6 @@ class SimpleReplayBuffer:
         return len(self.buffer)
 
 
-# StudentDQN: small MLP for vector states
 class StudentDQN(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_sizes=(128, 128)):
         super(StudentDQN, self).__init__()
@@ -127,17 +113,16 @@ class StudentDQNAgent:
         return loss.item()
 
 
-# OptimizedSumTree: a minimal array-backed sum tree with batch update
 class OptimizedSumTree:
     def __init__(self, capacity):
-        # capacity is number of leaves
+
         self.capacity = int(capacity)
-        # next power of two for simplicity
+
         size = 1
         while size < self.capacity:
             size <<= 1
         self.leaf_count = size
-        # tree represented as array of length 2*leaf_count
+
         self.tree = np.zeros(2 * self.leaf_count, dtype=np.float32)
         self.data = [None] * self.leaf_count
         self.size = 0
@@ -159,7 +144,7 @@ class OptimizedSumTree:
         return self.leaf_count
 
     def update(self, tree_idx, priority):
-        # set value and propagate
+
         self.tree[tree_idx] = priority
         parent = tree_idx // 2
         while parent >= 1:
@@ -169,13 +154,13 @@ class OptimizedSumTree:
             parent //= 2
 
     def batch_update(self, indices, priorities):
-        # indices are leaf indices (0..leaf_count-1)
+
         for idx, p in zip(indices, priorities):
             tree_idx = self.leaf_start_index() + idx
             self.update(tree_idx, p)
 
     def get_leaf(self, s):
-        # traverse the tree to find leaf for sum s
+
         idx = 1
         while idx < self.leaf_start_index():
             left = idx * 2
@@ -206,7 +191,6 @@ class OptimizedSumTree:
         return batch, indices, priorities
 
 
-# RainbowAblationStudy: lightweight scaffolding returning random scores for combinations
 import itertools
 
 
@@ -233,7 +217,7 @@ class RainbowAblationStudy:
                 combos.append(tuple(sorted(comb)))
         random.seed(seed)
         for comb in combos:
-            # lightweight proxy score: random in [-1, 1], more components => slightly better
+
             base = random.uniform(-0.5, 0.5)
             bonus = 0.05 * len(comb)
             score = base + bonus
@@ -241,7 +225,7 @@ class RainbowAblationStudy:
         return self.results
 
     def analyze_interactions(self):
-        # Very small analysis: compute average marginal contribution
+
         comp_list = self.components
         marg = {c: [] for c in comp_list}
         for comb, score in self.results.items():
@@ -252,7 +236,6 @@ class RainbowAblationStudy:
         return avg
 
 
-# Minimal PortfolioEnv: discrete actions per asset (0=hold,1=buy,2=sell)
 class PortfolioEnv:
     def __init__(self, assets=3, lookback_window=20, init_cash=1.0, seed=0):
         self.assets = assets
@@ -262,28 +245,27 @@ class PortfolioEnv:
         self.reset()
 
     def reset(self):
-        # prices simulated as random walk starting at 1.0
+
         self.t = 0
         self.prices = np.ones(self.assets)
-        self.positions = np.zeros(self.assets, dtype=np.float32)  # fraction of wealth
+        self.positions = np.zeros(self.assets, dtype=np.float32)
         self.cash = self.init_cash
         state = np.concatenate([self.prices, self.positions, [self.cash]])
         return state.astype(np.float32)
 
     def step(self, action):
-        # action: array-like of ints in {0,1,2} per asset
-        # simple market move
+
         returns = self.rng.normal(loc=0.0, scale=0.01, size=self.assets)
         self.prices = self.prices * (1.0 + returns)
-        # apply actions
+
         for i, a in enumerate(action):
-            if a == 1:  # buy small fraction
+            if a == 1:
                 self.positions[i] += 0.01
                 self.positions[i] = min(self.positions[i], 1.0)
-            elif a == 2:  # sell small
+            elif a == 2:
                 self.positions[i] -= 0.01
                 self.positions[i] = max(self.positions[i], 0.0)
-        # portfolio value change
+
         port_val = self.cash + (self.positions * self.prices).sum()
         reward = port_val - (self.init_cash)
         self.t += 1
@@ -292,7 +274,6 @@ class PortfolioEnv:
         return state.astype(np.float32), float(reward), done, {}
 
 
-# Minimal ResourceAllocationEnv
 class ResourceAllocationEnv:
     def __init__(self, num_services=3, num_resources=5, seed=0):
         self.num_services = num_services
@@ -301,36 +282,35 @@ class ResourceAllocationEnv:
         self.reset()
 
     def reset(self):
-        # random demand per service
+
         self.demands = self.rng.randint(1, self.num_resources, size=self.num_services)
         self.alloc = np.zeros(self.num_services, dtype=int)
         self.step_count = 0
         return np.concatenate([self.demands, self.alloc]).astype(np.float32)
 
     def step(self, action):
-        # action: an integer representing which service to allocate one unit to
+
         self.step_count += 1
         if action < 0 or action >= self.num_services:
-            # invalid action
+
             reward = -1.0
         else:
             self.alloc[action] += 1
             reward = 0.0
-        # compute SLA violations
+
         violations = np.maximum(self.demands - self.alloc, 0).sum()
-        # reward: negative violations, small penalty for using resources
+
         reward = -float(violations) - 0.01 * float(self.alloc.sum())
         done = self.step_count >= 50
         state = np.concatenate([self.demands, self.alloc]).astype(np.float32)
         return state, reward, done, {}
 
 
-# Small smoke test function
 def _smoke_test():
     a = StudentDQNAgent(state_dim=4, action_dim=2)
     s = np.zeros(4, dtype=np.float32)
     a.store(s, 0, 0.0, s, False)
-    # cannot train until enough samples
+
     for _ in range(a.min_buffer):
         a.store(
             np.random.randn(4),

@@ -14,7 +14,6 @@ from typing import Dict, List, Tuple, Optional, Any, Set
 from collections import defaultdict
 import itertools
 
-# Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -26,7 +25,6 @@ class LogicalPredicate:
         self.arity = arity
         self.domain = domain or []
 
-        # Ground all possible instantiations if domain is provided
         if domain:
             self.groundings = list(itertools.product(domain, repeat=arity))
         else:
@@ -39,7 +37,6 @@ class LogicalPredicate:
                 f"Predicate {self.name} expects {self.arity} arguments, got {len(args)}"
             )
 
-        # For now, return symbolic representation
         return SymbolicAtom(self, args)
 
     def __str__(self):
@@ -100,7 +97,6 @@ class SymbolicKnowledgeBase:
         self.facts: Set[SymbolicAtom] = set()
         self.rules: List[LogicalRule] = []
 
-        # Derived facts from inference
         self.derived_facts: Set[SymbolicAtom] = set()
 
     def add_predicate(self, predicate: LogicalPredicate):
@@ -117,25 +113,19 @@ class SymbolicKnowledgeBase:
 
     def query(self, atom: SymbolicAtom) -> bool:
         """Query whether an atom is true in the knowledge base."""
-        # Check direct facts
         if atom in self.facts:
             return True
 
-        # Check derived facts
         if atom in self.derived_facts:
             return True
 
-        # Try inference
         return self._infer(atom)
 
     def _infer(self, query_atom: SymbolicAtom) -> bool:
         """Perform backward chaining inference."""
-        # Simple backward chaining for Horn clauses
         for rule in self.rules:
             if rule.head.predicate.name == query_atom.predicate.name:
-                # Try to unify
                 if self._unify_atoms(rule.head, query_atom):
-                    # Check if body is satisfied
                     if all(self.query(atom) for atom in rule.body):
                         self.derived_facts.add(query_atom)
                         return True
@@ -147,7 +137,6 @@ class SymbolicKnowledgeBase:
         if atom1.predicate.name != atom2.predicate.name:
             return False
 
-        # For now, simple equality check (no variable unification)
         return atom1.args == atom2.args
 
     def get_all_facts(self) -> Set[SymbolicAtom]:
@@ -186,7 +175,6 @@ class PrologStyleKB:
     def assert_fact(self, predicate_name: str, *args):
         """Assert a fact in Prolog style: assert_fact('parent', 'alice', 'bob')."""
         if predicate_name not in self.kb.predicates:
-            # Infer arity from arguments
             arity = len(args)
             predicate = LogicalPredicate(predicate_name, arity)
             self.kb.add_predicate(predicate)
@@ -202,7 +190,6 @@ class PrologStyleKB:
 
         Example: assert_rule('ancestor', ['X', 'Y'], [('parent', ['X', 'Y']), ('parent', ['X', 'Z'])])
         """
-        # Create head atom
         if head_pred not in self.kb.predicates:
             arity = len(head_args)
             predicate = LogicalPredicate(head_pred, arity)
@@ -211,7 +198,6 @@ class PrologStyleKB:
         head_predicate = self.kb.predicates[head_pred]
         head_atom = SymbolicAtom(head_predicate, head_args)
 
-        # Create body atoms
         body_atoms = []
         for body_pred, body_args in body:
             if body_pred not in self.kb.predicates:
@@ -228,7 +214,6 @@ class PrologStyleKB:
 
     def query(self, predicate_name: str, *args) -> List[Dict]:
         """Query the knowledge base and return variable bindings."""
-        # For now, simple implementation without full unification
         if predicate_name not in self.kb.predicates:
             return []
 
@@ -247,21 +232,17 @@ class RLKnowledgeBase(SymbolicKnowledgeBase):
     def __init__(self):
         super().__init__()
 
-        # RL-specific predicates
         self._init_rl_predicates()
 
     def _init_rl_predicates(self):
         """Initialize common RL predicates."""
-        # State predicates
         self.add_predicate(LogicalPredicate("at", 2))  # at(agent, location)
         self.add_predicate(LogicalPredicate("has", 2))  # has(agent, object)
         self.add_predicate(LogicalPredicate("adjacent", 2))  # adjacent(loc1, loc2)
 
-        # Action predicates
         self.add_predicate(LogicalPredicate("safe", 1))  # safe(action)
         self.add_predicate(LogicalPredicate("legal", 2))  # legal(action, state)
 
-        # Goal predicates
         self.add_predicate(LogicalPredicate("goal", 1))  # goal(state)
         self.add_predicate(LogicalPredicate("rewarding", 2))  # rewarding(action, state)
 
@@ -288,7 +269,6 @@ class RLKnowledgeBase(SymbolicKnowledgeBase):
         self.add_state_facts(state_dict)
 
         legal_actions = []
-        # This would need to be extended based on domain-specific actions
         possible_actions = ["move", "pickup", "drop", "use"]
 
         for action in possible_actions:

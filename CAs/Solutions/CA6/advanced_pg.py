@@ -1,4 +1,3 @@
-# Advanced Policy Gradient Methods: A2C/A3C and PPO
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -37,7 +36,6 @@ class A2CAgent:
         self.value_coef = value_coef
         self.entropy_coef = entropy_coef
 
-        # Networks
         self.actor_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -62,7 +60,6 @@ class A2CAgent:
             lr=lr,
         )
 
-        # Logging
         self.episode_rewards = []
         self.actor_losses = []
         self.critic_losses = []
@@ -102,7 +99,7 @@ class A2CAgent:
 
         for t in reversed(range(len(rewards))):
             if t == len(rewards) - 1:
-                next_value = 0  # Terminal state
+                next_value = 0
             else:
                 next_value = next_values[t]
 
@@ -120,11 +117,9 @@ class A2CAgent:
         next_states = torch.FloatTensor(next_states).to(device)
         dones = torch.FloatTensor(dones).to(device)
 
-        # Get values
         values = self.critic_net(states).squeeze()
         next_values = self.critic_net(next_states).squeeze()
 
-        # Compute GAE advantages
         advantages = torch.FloatTensor(
             self.compute_gae(
                 rewards.cpu().numpy(),
@@ -134,31 +129,24 @@ class A2CAgent:
             )
         ).to(device)
 
-        # Normalize advantages
         with torch.no_grad():
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
-        # TD targets for critic
         td_targets = advantages + values
 
-        # Critic loss
         critic_loss = F.mse_loss(values, td_targets.detach())
 
-        # Actor loss
         logits = self.actor_net(states)
         dist = Categorical(logits=logits)
         log_probs = dist.log_prob(actions)
 
         actor_loss = -(log_probs * advantages.detach()).mean()
 
-        # Entropy bonus
         entropy = dist.entropy().mean()
         actor_loss -= self.entropy_coef * entropy
 
-        # Total loss
         total_loss = actor_loss + self.value_coef * critic_loss
 
-        # Update
         self.optimizer.zero_grad()
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(
@@ -167,7 +155,6 @@ class A2CAgent:
         )
         self.optimizer.step()
 
-        # Logging
         self.actor_losses.append(actor_loss.item())
         self.critic_losses.append(critic_loss.item())
         self.entropy_history.append(entropy.item())
@@ -197,7 +184,6 @@ class A2CAgent:
             if terminated or truncated:
                 break
 
-        # Update networks
         actor_loss, critic_loss = self.update_a2c(
             states, actions, rewards, next_states, dones
         )
@@ -236,7 +222,6 @@ class PPOAgent:
         self.ppo_epochs = ppo_epochs
         self.batch_size = batch_size
 
-        # Networks
         self.actor_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -253,7 +238,6 @@ class PPOAgent:
             nn.Linear(hidden_dim, 1),
         ).to(device)
 
-        # Old policy for PPO clipping
         self.actor_net_old = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -272,7 +256,6 @@ class PPOAgent:
             lr=lr,
         )
 
-        # Logging
         self.episode_rewards = []
         self.actor_losses = []
         self.critic_losses = []
@@ -313,7 +296,7 @@ class PPOAgent:
 
         for t in reversed(range(len(rewards))):
             if t == len(rewards) - 1:
-                next_value = 0  # Terminal state
+                next_value = 0
             else:
                 next_value = next_values[t]
 
@@ -331,7 +314,6 @@ class PPOAgent:
         advantages = torch.FloatTensor(advantages).to(device)
         returns = torch.FloatTensor(returns).to(device)
 
-        # Normalize advantages
         with torch.no_grad():
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
@@ -351,22 +333,18 @@ class PPOAgent:
                 batch_advantages = advantages[batch_indices]
                 batch_returns = returns[batch_indices]
 
-                # Current policy
                 logits = self.actor_net(batch_states)
                 dist = Categorical(logits=logits)
                 log_probs = dist.log_prob(batch_actions)
                 entropy = dist.entropy().mean()
 
-                # Old policy
                 with torch.no_grad():
                     old_logits = self.actor_net_old(batch_states)
                     old_dist = Categorical(logits=old_logits)
                     old_log_probs_batch = old_dist.log_prob(batch_actions)
 
-                # Ratio
                 ratio = torch.exp(log_probs - old_log_probs_batch)
 
-                # PPO clipped objective
                 surr1 = ratio * batch_advantages
                 surr2 = (
                     torch.clamp(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio)
@@ -374,18 +352,15 @@ class PPOAgent:
                 )
                 actor_loss = -torch.min(surr1, surr2).mean()
 
-                # Value loss
                 values = self.critic_net(batch_states).squeeze()
                 critic_loss = F.mse_loss(values, batch_returns)
 
-                # Total loss
                 total_loss = (
                     actor_loss
                     + self.value_coef * critic_loss
                     - self.entropy_coef * entropy
                 )
 
-                # Update
                 self.optimizer.zero_grad()
                 total_loss.backward()
                 torch.nn.utils.clip_grad_norm_(
@@ -395,19 +370,15 @@ class PPOAgent:
                 )
                 self.optimizer.step()
 
-        # Update old policy
         self.actor_net_old.load_state_dict(self.actor_net.state_dict())
 
-        # Approximate KL divergence
         with torch.no_grad():
             approx_kl = torch.mean(batch_old_log_probs - log_probs).item()
 
-        # Clip fraction
         clip_fraction = torch.mean(
             (torch.abs(ratio - 1) > self.clip_ratio).float()
         ).item()
 
-        # Logging
         self.actor_losses.append(actor_loss.item())
         self.critic_losses.append(critic_loss.item())
         self.approx_kl_divs.append(approx_kl)
@@ -442,8 +413,7 @@ class PPOAgent:
             if terminated or truncated:
                 break
 
-        # Compute advantages and returns
-        next_values = values[1:] + [0]  # Last next_value is 0
+        next_values = values[1:] + [0]
         advantages = self.compute_gae(rewards, values, next_values, dones)
 
         returns = []
@@ -481,7 +451,6 @@ class PPOAgent:
             _,
         ) = trajectory
 
-        # Update policy
         actor_loss, critic_loss = self.update_ppo(
             states, actions, log_probs, advantages, returns
         )
@@ -491,7 +460,6 @@ class PPOAgent:
         return episode_reward, actor_loss, critic_loss
 
 
-# A3C Implementation (Asynchronous Advantage Actor-Critic)
 class A3CWorker(mp.Process):
     """A3C worker process"""
 
@@ -513,12 +481,10 @@ class A3CWorker(mp.Process):
         self.tau = tau
         self.t_max = t_max
 
-        # Global networks
         self.global_actor = global_actor
         self.global_critic = global_critic
         self.optimizer = optimizer
 
-        # Local networks
         self.local_actor = nn.Sequential(
             nn.Linear(global_actor[0].in_features, global_actor[0].out_features),
             nn.ReLU(),
@@ -615,7 +581,6 @@ class A3CWorker(mp.Process):
                 done = terminated or truncated
                 t += 1
 
-            # Compute returns
             if done:
                 R = 0
             else:
@@ -626,33 +591,25 @@ class A3CWorker(mp.Process):
                 R = r + self.gamma * R
                 returns.insert(0, R)
 
-            # Convert to tensors
             states = torch.FloatTensor(states).to(device)
             actions = torch.LongTensor(actions).to(device)
             returns = torch.FloatTensor(returns).to(device)
             log_probs = torch.FloatTensor(log_probs).to(device)
             values = torch.FloatTensor(values).to(device)
 
-            # Compute advantages
             advantages = returns - values
 
-            # Actor loss
             actor_loss = -(log_probs * advantages.detach()).mean()
 
-            # Critic loss
             critic_loss = F.mse_loss(values, returns)
 
-            # Total loss
             total_loss = actor_loss + 0.5 * critic_loss
 
-            # Compute gradients
             self.optimizer.zero_grad()
             total_loss.backward()
 
-            # Push gradients to global
             self.push_to_global()
 
-            # Update global networks
             self.optimizer.step()
 
             episode_count += 1
@@ -678,7 +635,6 @@ class A3CAgent:
         self.gamma = gamma
         self.num_workers = num_workers
 
-        # Global networks
         self.global_actor = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -708,7 +664,7 @@ class A3CAgent:
 
     def train(self, env_name, max_episodes=1000):
         """Train A3C with multiple workers"""
-        # Start workers
+
         for i in range(self.num_workers):
             worker = A3CWorker(
                 self.global_actor,
@@ -721,13 +677,11 @@ class A3CAgent:
             worker.start()
             self.workers.append(worker)
 
-        # Wait for training
         try:
-            time.sleep(60)  # Train for 60 seconds
+            time.sleep(60)
         except KeyboardInterrupt:
             pass
 
-        # Stop workers
         for worker in self.workers:
             worker.terminate()
             worker.join()
@@ -752,7 +706,6 @@ def compare_advanced_pg():
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
 
-    # Initialize agents
     a2c_agent = A2CAgent(state_dim, action_dim, lr=1e-3)
     ppo_agent = PPOAgent(state_dim, action_dim, lr=3e-4)
 
@@ -765,7 +718,6 @@ def compare_advanced_pg():
     for name, agent in agents.items():
         print(f"\nTraining {name}...")
 
-        # Training loop
         num_episodes = 200
         log_interval = 50
 
@@ -782,15 +734,13 @@ def compare_advanced_pg():
             "critic_losses": agent.critic_losses.copy(),
         }
 
-    # A3C training (skipped due to multiprocessing compatibility issues)
     print("\nSkipping A3C training due to multiprocessing environment constraints...")
     print("A3C implementation is available but requires specific environment setup.")
 
-    # Visualization
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 
     for name, data in results.items():
-        # Learning curves
+
         axes[0].plot(data["rewards"], label=name, alpha=0.7)
         axes[0].plot(
             pd.Series(data["rewards"]).rolling(window=20).mean(),
@@ -798,7 +748,6 @@ def compare_advanced_pg():
             alpha=0.7,
         )
 
-        # Actor losses
         axes[1].plot(data["actor_losses"], label=name, alpha=0.7)
 
     axes[0].set_title("Learning Curves")
@@ -825,7 +774,6 @@ def test_advanced_pg():
     return compare_advanced_pg()
 
 
-# Demonstration functions
 def demonstrate_advanced_pg():
     """Demonstrate advanced policy gradient methods"""
     print("🚀 Advanced Policy Gradient Methods Demonstration")
@@ -833,6 +781,5 @@ def demonstrate_advanced_pg():
     return results
 
 
-# Run demonstration
 if __name__ == "__main__":
     demonstrate_advanced_pg()

@@ -1,4 +1,3 @@
-# Essential Imports and Advanced Setup for Multi-Agent RL
 import numpy as np
 import torch
 import torch.nn as nn
@@ -28,7 +27,6 @@ import itertools
 
 warnings.filterwarnings("ignore")
 
-# Advanced imports for multi-agent systems
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
@@ -39,19 +37,16 @@ from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 
-# Game theory and optimization
 from scipy.optimize import minimize, linprog
 from scipy.special import softmax
 import cvxpy as cp
 
-# Set random seeds for reproducibility
 SEED = 42
 np.random.seed(SEED)
 torch.manual_seed(SEED)
 torch.cuda.manual_seed_all(SEED)
 random.seed(SEED)
 
-# Device configuration with multi-GPU support
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 n_gpus = torch.cuda.device_count()
 if torch.cuda.is_available():
@@ -66,7 +61,6 @@ print(f"CUDA available: {torch.cuda.is_available()}")
 if torch.cuda.is_available():
     print(f"CUDA device: {torch.cuda.get_device_name(0)}")
 
-# Advanced plotting configuration
 plt.style.use("seaborn-v0_8")
 plt.rcParams["figure.figsize"] = (16, 10)
 plt.rcParams["font.size"] = 12
@@ -76,13 +70,11 @@ plt.rcParams["xtick.labelsize"] = 11
 plt.rcParams["ytick.labelsize"] = 11
 plt.rcParams["legend.fontsize"] = 11
 
-# Color schemes for multi-agent visualizations
 agent_colors = sns.color_palette("Set2", 8)
 performance_colors = sns.color_palette("viridis", 6)
 sns.set_palette(agent_colors)
 
 
-# Configuration classes for advanced RL
 @dataclass
 class MultiAgentConfig:
     """Configuration for multi-agent systems."""
@@ -118,7 +110,6 @@ class PolicyConfig:
     gae_lambda: float = 0.95
 
 
-# Global configurations
 ma_config = MultiAgentConfig()
 policy_config = PolicyConfig()
 

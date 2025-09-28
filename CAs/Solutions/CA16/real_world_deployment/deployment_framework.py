@@ -31,33 +31,26 @@ class DeploymentManager:
         self.model_dir = model_dir
         self.config = config or {}
 
-        # Model versions
         self.current_version = None
         self.previous_versions = []
         self.version_history = []
 
-        # Deployment state
         self.deployment_state = "idle"  # idle, deploying, deployed, rolling_back
         self.deployment_progress = 0.0
 
-        # A/B testing
         self.ab_test_active = False
         self.ab_test_groups = {"A": [], "B": []}
         self.ab_metrics = defaultdict(dict)
 
-        # Gradual rollout
         self.rollout_percentage = 0.0
         self.rollout_increment = 0.1
 
-        # Monitoring
         self.performance_metrics = deque(maxlen=1000)
         self.error_logs = deque(maxlen=500)
 
-        # Logging
         self.logger = logging.getLogger("DeploymentManager")
         self.logger.setLevel(logging.INFO)
 
-        # Create model directory
         os.makedirs(model_dir, exist_ok=True)
 
     def deploy_model(
@@ -77,7 +70,6 @@ class DeploymentManager:
         try:
             self.logger.info(f"Starting deployment of model version {version}")
 
-            # Save model
             model_path = os.path.join(self.model_dir, f"model_{version}.pth")
             torch.save(
                 {
@@ -89,7 +81,6 @@ class DeploymentManager:
                 model_path,
             )
 
-            # Update version tracking
             if self.current_version:
                 self.previous_versions.append(self.current_version)
 
@@ -103,7 +94,6 @@ class DeploymentManager:
                 }
             )
 
-            # Start gradual rollout
             self._start_gradual_rollout()
 
             self.logger.info(f"Successfully deployed model version {version}")
@@ -121,7 +111,6 @@ class DeploymentManager:
         self.deployment_state = "deploying"
         self.rollout_percentage = 0.0
 
-        # Simulate gradual rollout (in practice, would integrate with load balancer)
         def rollout_process():
             while self.rollout_percentage < 1.0:
                 time.sleep(10)  # Rollout increment interval
@@ -157,14 +146,11 @@ class DeploymentManager:
             if target_version not in [v["version"] for v in self.version_history]:
                 raise ValueError(f"Version {target_version} not found in history")
 
-            # Update deployment state
             self.deployment_state = "rolling_back"
             self.rollout_percentage = 0.0
 
-            # Simulate rollback (in practice, would update load balancer)
             time.sleep(5)  # Simulated rollback time
 
-            # Update version tracking
             self.previous_versions.append(self.current_version)
             self.current_version = target_version
 
@@ -209,7 +195,6 @@ class DeploymentManager:
         try:
             self.logger.info("Starting A/B test")
 
-            # Deploy both models
             version_a = f"ab_test_A_{int(time.time())}"
             version_b = f"ab_test_B_{int(time.time())}"
 
@@ -219,7 +204,6 @@ class DeploymentManager:
             self.ab_test_active = True
             self.ab_test_groups = {"A": [version_a], "B": [version_b]}
 
-            # Schedule test end
             def end_ab_test():
                 time.sleep(test_duration)
                 self.end_ab_test()
@@ -241,14 +225,11 @@ class DeploymentManager:
 
         self.logger.info("Ending A/B test")
 
-        # Analyze results
         results = self._analyze_ab_test_results()
 
-        # Deploy winner or maintain current
         if results["winner"] == "A":
             self.logger.info("Model A performed better, keeping current deployment")
         elif results["winner"] == "B":
-            # Deploy B as new version
             self.logger.info("Model B performed better, deploying as new version")
         else:
             self.logger.info("No clear winner, maintaining current deployment")
@@ -258,11 +239,9 @@ class DeploymentManager:
 
     def _analyze_ab_test_results(self) -> Dict[str, Any]:
         """Analyze A/B test results."""
-        # Simplified analysis (would be more sophisticated in practice)
         metrics_a = self.ab_metrics.get("A", {})
         metrics_b = self.ab_metrics.get("B", {})
 
-        # Compare key metrics (reward, latency, etc.)
         score_a = np.mean(
             [v for v in metrics_a.values() if isinstance(v, (int, float))]
         )
@@ -307,11 +286,9 @@ class MonitoringDashboard:
     def __init__(self, update_interval: int = 60):
         self.update_interval = update_interval
 
-        # Metrics storage
         self.metrics_history = defaultdict(deque)
         self.alerts = deque(maxlen=100)
 
-        # Thresholds
         self.thresholds = {
             "cpu_usage": 80.0,
             "memory_usage": 85.0,
@@ -321,11 +298,9 @@ class MonitoringDashboard:
             "reward": -float("inf"),  # Minimum acceptable reward
         }
 
-        # Monitoring state
         self.monitoring_active = False
         self.monitoring_thread = None
 
-        # Logging
         self.logger = logging.getLogger("MonitoringDashboard")
         self.logger.setLevel(logging.INFO)
 
@@ -354,18 +329,14 @@ class MonitoringDashboard:
         """Main monitoring loop."""
         while self.monitoring_active:
             try:
-                # Collect system metrics
                 system_metrics = self._collect_system_metrics()
 
-                # Store metrics
                 timestamp = time.time()
                 for metric, value in system_metrics.items():
                     self.metrics_history[metric].append((timestamp, value))
 
-                # Check thresholds and generate alerts
                 self._check_thresholds(system_metrics)
 
-                # Clean old data (keep last 24 hours)
                 cutoff_time = timestamp - 86400
                 for metric_queue in self.metrics_history.values():
                     while metric_queue and metric_queue[0][0] < cutoff_time:
@@ -380,15 +351,12 @@ class MonitoringDashboard:
         """Collect system performance metrics."""
         metrics = {}
 
-        # CPU usage
         metrics["cpu_usage"] = psutil.cpu_percent(interval=1)
 
-        # Memory usage
         memory = psutil.virtual_memory()
         metrics["memory_usage"] = memory.percent
         metrics["memory_used_gb"] = memory.used / (1024**3)
 
-        # GPU usage (if available)
         try:
             gpus = GPUtil.getGPUs()
             if gpus:
@@ -398,11 +366,9 @@ class MonitoringDashboard:
             metrics["gpu_usage"] = 0.0
             metrics["gpu_memory_usage"] = 0.0
 
-        # Disk usage
         disk = psutil.disk_usage("/")
         metrics["disk_usage"] = disk.percent
 
-        # Network I/O
         net = psutil.net_io_counters()
         metrics["network_bytes_sent"] = net.bytes_sent
         metrics["network_bytes_recv"] = net.bytes_recv
@@ -415,13 +381,11 @@ class MonitoringDashboard:
             if metric in self.thresholds:
                 threshold = self.thresholds[metric]
                 if metric == "reward":
-                    # For reward, check if below minimum
                     if value < threshold:
                         self._generate_alert(
                             f"Low reward: {value:.3f} < {threshold}", "warning"
                         )
                 else:
-                    # For other metrics, check if above threshold
                     if value > threshold:
                         severity = "critical" if value > threshold * 1.2 else "warning"
                         self._generate_alert(
@@ -449,7 +413,6 @@ class MonitoringDashboard:
         timestamp = time.time()
         self.metrics_history[metric_name].append((timestamp, value))
 
-        # Store metadata if provided
         if metadata:
             metadata_key = f"{metric_name}_metadata"
             if metadata_key not in self.metrics_history:
@@ -458,7 +421,6 @@ class MonitoringDashboard:
 
     def get_dashboard_data(self) -> Dict[str, Any]:
         """Get dashboard data for display."""
-        # Get recent metrics (last hour)
         cutoff_time = time.time() - 3600
 
         recent_metrics = {}
@@ -467,7 +429,6 @@ class MonitoringDashboard:
             if recent_values:
                 recent_metrics[metric] = recent_values
 
-        # Get recent alerts (last 24 hours)
         recent_alerts = [
             alert for alert in self.alerts if alert["timestamp"] > time.time() - 86400
         ]
@@ -517,7 +478,6 @@ class RollbackSystem:
         self.deployment_manager = deployment_manager
         self.monitoring = monitoring_dashboard
 
-        # Rollback thresholds
         self.rollback_thresholds = rollback_thresholds or {
             "error_rate_threshold": 0.1,
             "performance_drop_threshold": 0.2,
@@ -525,21 +485,17 @@ class RollbackSystem:
             "max_rollback_attempts": 3,
         }
 
-        # Rollback state
         self.rollback_attempts = 0
         self.last_rollback_time = 0
         self.rollback_cooldown = 300  # 5 minutes
 
-        # Monitoring state
         self.failure_count = 0
         self.baseline_performance = {}
 
-        # Automated rollback
         self.auto_rollback_enabled = True
         self.rollback_thread = None
         self.monitoring_active = False
 
-        # Logging
         self.logger = logging.getLogger("RollbackSystem")
         self.logger.setLevel(logging.INFO)
 
@@ -554,7 +510,6 @@ class RollbackSystem:
         )
         self.rollback_thread.start()
 
-        # Establish baseline performance
         self._establish_baseline()
 
         self.logger.info("Automated rollback system started")
@@ -571,16 +526,13 @@ class RollbackSystem:
         """Establish baseline performance metrics."""
         self.logger.info("Establishing performance baseline...")
 
-        # Wait for some metrics to accumulate
         time.sleep(60)
 
-        # Get recent metrics for baseline
         dashboard_data = self.monitoring.get_dashboard_data()
         recent_metrics = dashboard_data.get("recent_metrics", {})
 
         for metric, values in recent_metrics.items():
             if values:
-                # Use mean of recent values as baseline
                 recent_values = [v for t, v in values[-10:]]  # Last 10 values
                 self.baseline_performance[metric] = np.mean(recent_values)
 
@@ -590,7 +542,6 @@ class RollbackSystem:
         """Main rollback monitoring loop."""
         while self.monitoring_active:
             try:
-                # Check if rollback conditions are met
                 if self._should_rollback():
                     self._perform_automated_rollback()
 
@@ -604,20 +555,16 @@ class RollbackSystem:
         if not self.auto_rollback_enabled:
             return False
 
-        # Check cooldown period
         if time.time() - self.last_rollback_time < self.rollback_cooldown:
             return False
 
-        # Check maximum rollback attempts
         if self.rollback_attempts >= self.rollback_thresholds["max_rollback_attempts"]:
             self.logger.warning("Maximum rollback attempts reached")
             return False
 
-        # Get current metrics
         dashboard_data = self.monitoring.get_dashboard_data()
         recent_metrics = dashboard_data.get("recent_metrics", {})
 
-        # Check error rate
         if "error_rate" in recent_metrics:
             error_values = [
                 v for t, v in recent_metrics["error_rate"][-5:]
@@ -630,13 +577,11 @@ class RollbackSystem:
                 )
                 return True
 
-        # Check performance drop
         performance_drop = self._check_performance_drop(recent_metrics)
         if performance_drop:
             self.logger.warning(f"Performance drop detected: {performance_drop}")
             return True
 
-        # Check consecutive failures
         recent_alerts = dashboard_data.get("recent_alerts", [])
         critical_alerts = [
             a
@@ -678,7 +623,6 @@ class RollbackSystem:
             self.last_rollback_time = time.time()
             self.failure_count = 0  # Reset failure count
 
-            # Re-establish baseline after rollback
             time.sleep(60)  # Wait for system to stabilize
             self._establish_baseline()
 

@@ -17,7 +17,6 @@ from torch.distributions import Categorical, Normal
 import random
 import copy
 
-# Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -29,7 +28,6 @@ class DynamicsModel(nn.Module):
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        # Transition model: (state, action) -> (next_state, reward)
         self.transition_net = nn.Sequential(
             nn.Linear(state_dim + action_dim, hidden_dim),
             nn.ReLU(),
@@ -40,7 +38,6 @@ class DynamicsModel(nn.Module):
             nn.Linear(hidden_dim, state_dim + 1),  # next_state + reward
         )
 
-        # Uncertainty estimation
         self.uncertainty_net = nn.Sequential(
             nn.Linear(state_dim + action_dim, hidden_dim),
             nn.ReLU(),
@@ -55,7 +52,6 @@ class DynamicsModel(nn.Module):
         if len(action.shape) == 1:
             action = action.unsqueeze(0)
 
-        # Handle discrete actions
         if action.dtype == torch.long:
             action_one_hot = torch.zeros(action.size(0), self.action_dim).to(
                 action.device
@@ -65,7 +61,6 @@ class DynamicsModel(nn.Module):
 
         input_tensor = torch.cat([state, action], dim=-1)
 
-        # Predict mean and uncertainty
         prediction = self.transition_net(input_tensor)
         uncertainty = self.uncertainty_net(input_tensor)
 
@@ -115,11 +110,9 @@ class ModelEnsemble:
 
             output = model(states, actions)
 
-            # Compute losses
             state_loss = F.mse_loss(output["next_state_mean"], next_states)
             reward_loss = F.mse_loss(output["reward_mean"], rewards.unsqueeze(-1))
 
-            # Negative log-likelihood loss for uncertainty
             state_nll = 0.5 * torch.sum(
                 ((output["next_state_mean"] - next_states) ** 2)
                 / (output["next_state_std"] ** 2)
@@ -177,15 +170,12 @@ class ModelPredictiveController:
         best_action = None
         best_value = float("-inf")
 
-        # Random shooting for action sequences
         for _ in range(self.num_samples):
-            # Generate random action sequence
             if isinstance(self.action_dim, int):  # Discrete actions
                 actions = torch.randint(0, self.action_dim, (self.horizon,)).to(device)
             else:  # Continuous actions
                 actions = torch.randn(self.horizon, self.action_dim).to(device)
 
-            # Simulate trajectory
             total_reward = 0
             current_state = state
 
@@ -194,7 +184,6 @@ class ModelPredictiveController:
                     current_state, actions[t]
                 )
 
-                # Goal-based reward if goal is provided
                 if goal_state is not None:
                     goal_state_tensor = torch.FloatTensor(goal_state).to(device)
                     goal_reward = -torch.norm(next_state - goal_state_tensor)
@@ -222,7 +211,6 @@ class DynaQAgent:
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        # Q-network for model-free learning
         self.q_network = nn.Sequential(
             nn.Linear(state_dim, 256),
             nn.ReLU(),
@@ -233,13 +221,10 @@ class DynaQAgent:
 
         self.q_optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
 
-        # Model ensemble for planning
         self.model_ensemble = ModelEnsemble(state_dim, action_dim)
 
-        # Experience buffer
         self.buffer = deque(maxlen=100000)
 
-        # Statistics
         self.training_stats = {
             "q_losses": [],
             "model_losses": [],
@@ -312,26 +297,21 @@ class DynaQAgent:
         total_planning_reward = 0
 
         for _ in range(num_planning_steps):
-            # Sample a random state from buffer
             state, _, _, _, _ = random.choice(self.buffer)
             state_tensor = torch.FloatTensor(state).to(device)
 
-            # Sample a random action
             action = np.random.randint(self.action_dim)
             action_tensor = torch.LongTensor([action]).to(device)
 
-            # Simulate next state and reward
             next_state, reward = self.model_ensemble.predict_mean(
                 state_tensor, action_tensor
             )
 
-            # Update Q-function with simulated experience
             with torch.no_grad():
                 current_q = self.q_network(state_tensor.unsqueeze(0))[0, action]
                 next_q = self.q_network(next_state.unsqueeze(0)).max()
                 target_q = reward + 0.99 * next_q
 
-            # Compute TD error and update
             td_error = target_q - current_q
             q_values = self.q_network(state_tensor.unsqueeze(0))
             q_values[0, action] = current_q + 0.1 * td_error

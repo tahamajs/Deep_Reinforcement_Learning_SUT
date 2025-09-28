@@ -11,7 +11,6 @@ from .dataset import OfflineDataset
 def generate_offline_dataset(env_name="CartPole-v1", dataset_type="mixed", size=50000):
     """Generate offline dataset with different quality levels."""
 
-    # Simple grid world environment for demonstration
     class SimpleGridWorld:
         def __init__(self, size=5):
             self.size = size
@@ -24,7 +23,6 @@ def generate_offline_dataset(env_name="CartPole-v1", dataset_type="mixed", size=
             return np.array(self.state, dtype=np.float32)
 
         def step(self, action):
-            # Actions: 0=up, 1=down, 2=left, 3=right
             if action == 0 and self.state[1] < self.size - 1:
                 self.state[1] += 1
             elif action == 1 and self.state[1] > 0:
@@ -49,9 +47,7 @@ def generate_offline_dataset(env_name="CartPole-v1", dataset_type="mixed", size=
         episode_length = 0
 
         while not episode_done and episode_length < 50:
-            # Different policies based on dataset type
             if dataset_type == "expert":
-                # Near-optimal policy (mostly towards goal)
                 if state[0] < env.goal[0]:
                     action = 3  # right
                 elif state[1] < env.goal[1]:
@@ -59,10 +55,8 @@ def generate_offline_dataset(env_name="CartPole-v1", dataset_type="mixed", size=
                 else:
                     action = np.random.randint(4)
             elif dataset_type == "random":
-                # Random policy
                 action = np.random.randint(4)
             else:  # mixed
-                # Mixed quality: 70% good, 30% random
                 if np.random.random() < 0.7:
                     if state[0] < env.goal[0]:
                         action = 3  # right

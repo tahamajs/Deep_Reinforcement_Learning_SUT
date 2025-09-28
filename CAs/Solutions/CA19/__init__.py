@@ -22,7 +22,6 @@ Usage:
         QuantumNeuromorphicComparison
     )
 
-    # Quick experiment
     config = MissionConfig()
     experiment = QuantumNeuromorphicComparison(config)
     results = experiment.run_comparison_experiment()
@@ -32,7 +31,6 @@ __version__ = "1.0.0"
 __author__ = "CA19 Research Team"
 __description__ = "Modular implementations of advanced RL systems from CA19"
 
-# Core imports for easy access
 from .hybrid_quantum_classical_rl import (
     HybridQuantumClassicalAgent,
     QuantumStateSimulator,
@@ -84,7 +82,6 @@ from .utils import (
 )
 
 
-# Package-level utilities
 def get_available_modules():
     """Get list of available modules in the package"""
     return [
@@ -174,7 +171,6 @@ def create_quick_experiment(agent_type: str = "hybrid", env_type: str = "neuromo
     """
     config = MissionConfig()
 
-    # Agent selection
     if agent_type == "hybrid":
         agent = HybridQuantumClassicalAgent(
             state_dim=config.state_dim,
@@ -198,7 +194,6 @@ def create_quick_experiment(agent_type: str = "hybrid", env_type: str = "neuromo
     else:
         raise ValueError(f"Unknown agent type: {agent_type}")
 
-    # Environment selection
     if env_type == "neuromorphic":
         env = NeuromorphicEnvironment(
             state_dim=config.state_dim, action_dim=config.action_dim
@@ -253,7 +248,6 @@ def run_demo_experiment(
             action = agent.select_action(state)
             next_state, reward, done, info = env.step(action)
 
-            # Training step (simplified)
             if hasattr(agent, "train_step"):
                 agent.train_step(state, action, reward, next_state, done)
 
@@ -261,7 +255,6 @@ def run_demo_experiment(
             episode_reward += reward
             episode_length += 1
 
-        # Track progress
         tracker.update_episode(episode_reward, episode_length, info or {})
 
         if verbose:
@@ -270,7 +263,6 @@ def run_demo_experiment(
                 f"Length = {episode_length:3d}"
             )
 
-    # Final results
     stats = tracker.get_summary_stats()
     print("\n📊 Demo Results:")
     print(f"Average Reward: {stats.get('avg_reward', 0):.2f}")
@@ -286,7 +278,6 @@ def run_demo_experiment(
     }
 
 
-# Version and compatibility info
 def check_dependencies():
     """Check if required dependencies are available"""
     required_packages = ["numpy", "torch", "matplotlib", "seaborn"]
@@ -323,7 +314,6 @@ def print_package_info():
     print(f"Description: {__description__}")
     print()
 
-    # Check dependencies
     deps = check_dependencies()
     if deps["all_available"]:
         print("✅ All required dependencies available")
@@ -345,24 +335,18 @@ def print_package_info():
     print("  results = run_demo_experiment()")
 
 
-# Make key classes available at package level for convenience
 __all__ = [
-    # Core agents
     "HybridQuantumClassicalAgent",
     "NeuromorphicActorCritic",
     "QuantumEnhancedAgent",
-    # Environments
     "NeuromorphicEnvironment",
     "HybridQuantumClassicalEnvironment",
     "SpaceStationEnvironment",
-    # Experiments
     "QuantumNeuromorphicComparison",
     "ExperimentRunner",
-    # Utilities
     "MissionConfig",
     "PerformanceTracker",
     "ExperimentManager",
-    # Helper functions
     "create_quick_experiment",
     "run_demo_experiment",
     "print_package_info",

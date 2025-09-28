@@ -32,7 +32,6 @@ from ..utils import (
     set_seed,
 )
 
-# Import from other modules
 from ..foundation_models import DecisionTransformer, MultiTaskRLFoundationModel
 from ..neurosymbolic import NeurosymbolicAgent
 from ..human_ai_collaboration import CollaborativeAgent
@@ -64,7 +63,6 @@ class BaseExperimentRunner:
         self.metrics = MetricsTracker(config["log_dir"])
         self.start_time = time.time()
 
-        # Set random seed
         set_seed(42)
 
         logger.info(f"Initialized experiment: {config['experiment_name']}")
@@ -101,7 +99,6 @@ class BaseExperimentRunner:
 
     def plot_results(self, results: Dict[str, Any]):
         """Plot experiment results."""
-        # Plot training metrics
         if hasattr(self.metrics, "metrics"):
             training_metrics = {}
             for name, history in self.metrics.metrics.items():
@@ -140,15 +137,12 @@ class FoundationModelExperiment(BaseExperimentRunner):
         from ..foundation_models.training import create_trajectory_dataset_from_env
         from ..environments import MultiModalGridWorld
 
-        # Create environment
         def env_fn():
             return MultiModalGridWorld()
 
-        # Collect trajectories
         logger.info("Collecting trajectories for Decision Transformer")
         dataset = create_trajectory_dataset_from_env(env_fn, num_trajectories=100)
 
-        # Create model
         state_dim = 10  # MultiModalGridWorld state dimension
         action_dim = 4  # Number of actions
 
@@ -160,7 +154,6 @@ class FoundationModelExperiment(BaseExperimentRunner):
             num_layers=4,
         )
 
-        # Training
         from ..foundation_models.training import FoundationModelTrainer
 
         trainer = FoundationModelTrainer(model)
@@ -169,7 +162,6 @@ class FoundationModelExperiment(BaseExperimentRunner):
 
         trainer.train(train_loader, num_epochs=10)
 
-        # Evaluation
         eval_results = self.evaluate_agent(model, env_fn, num_episodes=5)
 
         return {
@@ -180,13 +172,10 @@ class FoundationModelExperiment(BaseExperimentRunner):
 
     def _run_multi_task_foundation_experiment(self) -> Dict[str, Any]:
         """Run Multi-Task RL Foundation Model experiment."""
-        # Similar structure to Decision Transformer
-        # Implementation would follow the same pattern
         return {"status": "not_implemented_yet"}
 
     def _run_in_context_learning_experiment(self) -> Dict[str, Any]:
         """Run In-Context Learning experiment."""
-        # Implementation for in-context learning evaluation
         return {"status": "not_implemented_yet"}
 
 
@@ -214,18 +203,15 @@ class NeurosymbolicExperiment(BaseExperimentRunner):
         """Run symbolic reasoning experiment."""
         from ..environments import SymbolicGridWorld
 
-        # Create symbolic environment
         def env_fn():
             return SymbolicGridWorld()
 
-        # Create neurosymbolic agent
         agent = NeurosymbolicAgent(
             state_dim=10,
             action_dim=4,
             symbolic_rules=[],  # Would be populated with domain knowledge
         )
 
-        # Training loop (simplified)
         num_episodes = 50
         for episode in range(num_episodes):
             env = env_fn()
@@ -245,7 +231,6 @@ class NeurosymbolicExperiment(BaseExperimentRunner):
 
             self.metrics.log_metric("episode_reward", episode_reward, episode)
 
-        # Evaluation
         eval_results = self.evaluate_agent(agent, env_fn, num_episodes=10)
 
         return {"episodes_trained": num_episodes, "evaluation_results": eval_results}
@@ -281,14 +266,12 @@ class ContinualLearningExperiment(BaseExperimentRunner):
 
     def _run_ewc_experiment(self) -> Dict[str, Any]:
         """Run Elastic Weight Consolidation experiment."""
-        # Create tasks (different environments)
         tasks = [
             ("task1", lambda: MultiModalGridWorld()),
             ("task2", lambda: SymbolicGridWorld()),
             ("task3", lambda: CollaborativeGridWorld()),
         ]
 
-        # Create EWC agent
         base_model = nn.Sequential(
             nn.Linear(10, 64), nn.ReLU(), nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, 4)
         )
@@ -300,7 +283,6 @@ class ContinualLearningExperiment(BaseExperimentRunner):
         for task_name, env_fn in tasks:
             logger.info(f"Training on {task_name}")
 
-            # Train on task
             for episode in range(20):
                 env = env_fn()
                 state, _ = env.reset()
@@ -314,10 +296,8 @@ class ContinualLearningExperiment(BaseExperimentRunner):
                     ewc_agent.update(state, action, reward, next_state, done)
                     state = next_state
 
-            # Consolidate knowledge
             ewc_agent.consolidate()
 
-            # Evaluate on all tasks seen so far
             all_task_performance = {}
             for prev_task_name, prev_env_fn in tasks[
                 : tasks.index((task_name, env_fn)) + 1
@@ -366,11 +346,9 @@ class AdvancedComputationExperiment(BaseExperimentRunner):
 
     def _run_quantum_rl_experiment(self) -> Dict[str, Any]:
         """Run Quantum RL experiment."""
-        # Simplified quantum RL experiment
         try:
             agent = QuantumRLAgent(state_dim=4, action_dim=2, num_qubits=2)
 
-            # Simple training loop
             env = MultiModalGridWorld()
             num_episodes = 10
 
@@ -545,7 +523,6 @@ class ComprehensiveEvaluationSuite:
                 logger.error(f"Evaluation failed for {paradigm}: {e}")
                 self.results[paradigm] = {"error": str(e)}
 
-        # Generate comparative analysis
         self.results["comparative_analysis"] = self._generate_comparative_analysis()
 
         return self.results
@@ -562,11 +539,9 @@ class ComprehensiveEvaluationSuite:
             if paradigm == "comparative_analysis":
                 continue
 
-            # Extract key metrics
             if "error" not in results:
                 analysis["implementation_status"][paradigm] = "successful"
 
-                # Try to extract performance metrics
                 performance_metrics = {}
                 for key, value in results.items():
                     if isinstance(value, dict) and "evaluation_results" in value:
@@ -628,7 +603,6 @@ def run_experiment_suite(
     suite = ComprehensiveEvaluationSuite(paradigms)
     results = suite.run_full_evaluation()
 
-    # Save report
     report_path = os.path.join(save_dir, "comprehensive_evaluation_report.json")
     suite.save_evaluation_report(report_path)
 

@@ -25,15 +25,15 @@ from typing import List, Tuple, Optional, Dict, Any
 from dataclasses import dataclass
 import time
 
-# Set random seeds for reproducibility
+
 torch.manual_seed(42)
 np.random.seed(42)
 random.seed(42)
 
-# PyTorch settings
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Experience tuple for replay buffer
+
 Experience = namedtuple(
     "Experience", ["state", "action", "reward", "next_state", "done"]
 )
@@ -61,7 +61,6 @@ class DQN(nn.Module):
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        # Build network layers
         layers = []
         prev_dim = state_dim
 
@@ -74,7 +73,6 @@ class DQN(nn.Module):
 
         self.network = nn.Sequential(*layers)
 
-        # Initialize weights using Xavier uniform initialization
         for layer in self.network:
             if isinstance(layer, nn.Linear):
                 nn.init.xavier_uniform_(layer.weight)
@@ -156,7 +154,6 @@ class ReplayBuffer:
         """
         batch = random.sample(self.buffer, batch_size)
 
-        # Convert to tensors
         states = torch.FloatTensor([e.state for e in batch]).to(device)
         actions = torch.LongTensor([e.action for e in batch]).to(device)
         rewards = torch.FloatTensor([e.reward for e in batch]).to(device)
@@ -216,20 +213,15 @@ class DQNAgent:
         self.batch_size = batch_size
         self.target_update_freq = target_update_freq
 
-        # Networks
         self.q_network = DQN(state_dim, action_dim).to(device)
         self.target_network = DQN(state_dim, action_dim).to(device)
 
-        # Initialize target network with same weights
         self.target_network.load_state_dict(self.q_network.state_dict())
 
-        # Optimizer
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
 
-        # Replay buffer
         self.replay_buffer = ReplayBuffer(buffer_size)
 
-        # Training metrics
         self.training_step = 0
         self.episode_rewards = []
         self.losses = []
@@ -275,46 +267,36 @@ class DQNAgent:
         if len(self.replay_buffer) < self.batch_size:
             return None
 
-        # Sample batch from replay buffer
         states, actions, rewards, next_states, dones = self.replay_buffer.sample(
             self.batch_size
         )
 
-        # Current Q-values
         current_q_values = (
             self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze(1)
         )
 
-        # Next Q-values from target network
         with torch.no_grad():
             next_q_values = self.target_network(next_states).max(1)[0]
             target_q_values = rewards + (self.gamma * next_q_values * (~dones))
 
-        # Compute loss
         loss = F.mse_loss(current_q_values, target_q_values)
 
-        # Optimize
         self.optimizer.zero_grad()
         loss.backward()
 
-        # Gradient clipping for stability
         torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), max_norm=1.0)
 
         self.optimizer.step()
 
-        # Update target network periodically
         self.training_step += 1
         if self.training_step % self.target_update_freq == 0:
             self.update_target_network()
 
-        # Update epsilon
         self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
 
-        # Store metrics
         self.losses.append(loss.item())
         self.epsilon_history.append(self.epsilon)
 
-        # Store average Q-values for monitoring
         with torch.no_grad():
             avg_q_value = current_q_values.mean().item()
             self.q_values_history.append(avg_q_value)
@@ -337,15 +319,13 @@ class DQNAgent:
         step_count = 0
 
         for step in range(max_steps):
-            # Select and execute action
+
             action = self.select_action(state)
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
 
-            # Store experience
             self.store_experience(state, action, reward, next_state, done)
 
-            # Train
             loss = self.train_step()
 
             episode_reward += reward
@@ -372,7 +352,6 @@ class DQNAgent:
         """
         eval_rewards = []
 
-        # Temporarily disable exploration
         original_epsilon = self.epsilon
         self.epsilon = 0.0
 
@@ -390,7 +369,6 @@ class DQNAgent:
 
             eval_rewards.append(episode_reward)
 
-        # Restore original epsilon
         self.epsilon = original_epsilon
 
         return {

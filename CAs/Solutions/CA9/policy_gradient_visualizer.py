@@ -7,7 +7,6 @@ from matplotlib.animation import FuncAnimation
 import os
 from utils import device
 
-# Create visualizations directory
 VIS_DIR = "visualizations"
 os.makedirs(VIS_DIR, exist_ok=True)
 
@@ -22,11 +21,9 @@ class PolicyGradientVisualizer:
         print("Enhanced Policy Gradient Intuition")
         print("=" * 70)
 
-        # Create a comprehensive figure with multiple subplots
         fig = plt.figure(figsize=(20, 16))
         gs = fig.add_gridspec(4, 4, hspace=0.3, wspace=0.3)
 
-        # 1. Policy parameterization with animation-ready data
         ax1 = fig.add_subplot(gs[0, :2])
         states = np.linspace(0, 10, 100)
         theta_values = [0.5, 1.0, 1.5, 2.0]
@@ -53,7 +50,6 @@ class PolicyGradientVisualizer:
         ax1.grid(True, alpha=0.3)
         ax1.set_facecolor("#f8f9fa")
 
-        # 2. Score function with distribution
         ax2 = fig.add_subplot(gs[0, 2:])
         actions = np.array([0, 1, 0, 1, 1, 0, 1, 0])
         log_probs = np.array([-0.8, -0.2, -1.2, -0.1, -0.3, -0.9, -0.15, -1.0])
@@ -70,7 +66,6 @@ class PolicyGradientVisualizer:
             linewidth=1,
         )
 
-        # Add value distribution overlay
         ax2_twin = ax2.twinx()
         ax2_twin.plot(
             range(len(actions)),
@@ -92,7 +87,6 @@ class PolicyGradientVisualizer:
         ax2.grid(True, alpha=0.3)
         ax2.set_facecolor("#f8f9fa")
 
-        # Add return values as text with better positioning
         for i, (bar, ret) in enumerate(zip(bars, returns)):
             height = bar.get_height()
             ax2.text(
@@ -106,7 +100,6 @@ class PolicyGradientVisualizer:
                 bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.8),
             )
 
-        # 3. Gradient estimation with confidence intervals
         ax3 = fig.add_subplot(gs[1, :2])
         iterations = np.arange(200)
         true_gradient = 2.5
@@ -114,7 +107,6 @@ class PolicyGradientVisualizer:
         np.random.seed(42)
         noisy_estimates = true_gradient + np.random.normal(0, 1.0, len(iterations))
 
-        # Calculate rolling statistics
         window_size = 20
         rolling_mean = pd.Series(noisy_estimates).rolling(window=window_size).mean()
         rolling_std = pd.Series(noisy_estimates).rolling(window=window_size).std()
@@ -161,7 +153,6 @@ class PolicyGradientVisualizer:
         ax3.grid(True, alpha=0.3)
         ax3.set_facecolor("#f8f9fa")
 
-        # 4. Policy evolution with phase portrait
         ax4 = fig.add_subplot(gs[1, 2:])
         training_steps = [0, 25, 50, 100, 200, 500]
         state_range = np.linspace(0, 5, 50)
@@ -189,7 +180,6 @@ class PolicyGradientVisualizer:
         ax4.grid(True, alpha=0.3)
         ax4.set_facecolor("#f8f9fa")
 
-        # 5. Mathematical derivation visualization
         ax5 = fig.add_subplot(gs[2, :2])
         ax5.text(
             0.1,
@@ -205,7 +195,6 @@ class PolicyGradientVisualizer:
         ax5.text(0.15, 0.55, "• G_t: Return from time t", fontsize=10)
         ax5.text(0.15, 0.50, "• E[·]: Expectation over trajectories", fontsize=10)
 
-        # Add mathematical formula with LaTeX
         ax5.text(
             0.1,
             0.35,
@@ -219,7 +208,6 @@ class PolicyGradientVisualizer:
         ax5.axis("off")
         ax5.set_title("Mathematical Foundation", fontsize=14, fontweight="bold")
 
-        # 6. Variance analysis
         ax6 = fig.add_subplot(gs[2, 2:])
         variance_levels = [
             "High Variance\n(MC Returns)",
@@ -256,7 +244,6 @@ class PolicyGradientVisualizer:
         ax6.grid(True, alpha=0.3, axis="y")
         ax6.set_facecolor("#f8f9fa")
 
-        # 7. Algorithm comparison table
         ax7 = fig.add_subplot(gs[3, :2])
         ax7.axis("off")
 
@@ -279,7 +266,6 @@ class PolicyGradientVisualizer:
         table.set_fontsize(10)
         table.scale(1.2, 1.5)
 
-        # Color the header
         for i in range(len(comparison_data[0])):
             table[(0, i)].set_facecolor("#4CAF50")
             table[(0, i)].set_text_props(color="white", weight="bold")
@@ -291,14 +277,12 @@ class PolicyGradientVisualizer:
             pad=20,
         )
 
-        # 8. Convergence landscape
         ax8 = fig.add_subplot(gs[3, 2:], projection="3d")
 
         theta1 = np.linspace(-2, 2, 50)
         theta2 = np.linspace(-2, 2, 50)
         THETA1, THETA2 = np.meshgrid(theta1, theta2)
 
-        # Simulated policy gradient landscape
         Z = (
             (THETA1 - 1) ** 2
             + (THETA2 - 0.5) ** 2
@@ -309,7 +293,6 @@ class PolicyGradientVisualizer:
             THETA1, THETA2, Z, cmap="viridis", alpha=0.8, linewidth=0, antialiased=True
         )
 
-        # Add optimal point
         ax8.scatter([1], [0.5], [0], color="red", s=100, marker="*", label="Optimal θ")
 
         ax8.set_xlabel("θ₁", fontsize=10)
@@ -326,7 +309,6 @@ class PolicyGradientVisualizer:
         )
         plt.tight_layout()
 
-        # Save the figure
         plt.savefig(
             os.path.join(VIS_DIR, "policy_gradient_intuition.png"),
             dpi=300,
@@ -354,15 +336,12 @@ class PolicyGradientVisualizer:
 
         fig, axes = plt.subplots(2, 2, figsize=(16, 10))
 
-        # 1. Decision boundary comparison
         ax = axes[0, 0]
 
-        # Create a simple 2D state space
         x = np.linspace(-2, 2, 100)
         y = np.linspace(-2, 2, 100)
         X, Y = np.meshgrid(x, y)
 
-        # Value-based method: Q-values lead to deterministic policy
         Q1 = X**2 + Y**2 + 0.5 * X * Y  # Q-value for action 1
         Q2 = (X - 1) ** 2 + (Y + 0.5) ** 2  # Q-value for action 2
         value_based_policy = (Q1 > Q2).astype(int)
@@ -380,10 +359,8 @@ class PolicyGradientVisualizer:
         ax.set_xlabel("State Dimension 1")
         ax.set_ylabel("State Dimension 2")
 
-        # 2. Policy-based method: Stochastic policy
         ax = axes[0, 1]
 
-        # Policy-based: Smooth probability distribution
         logits = -0.5 * (X**2 + Y**2) + X - Y
         policy_probs = 1 / (1 + np.exp(-logits))
 
@@ -393,10 +370,8 @@ class PolicyGradientVisualizer:
         ax.set_xlabel("State Dimension 1")
         ax.set_ylabel("State Dimension 2")
 
-        # 3. Action space handling
         ax = axes[1, 0]
 
-        # Discrete actions
         discrete_actions = ["Up", "Down", "Left", "Right"]
         value_based_discrete = [0.8, 0.1, 0.05, 0.05]  # Deterministic
         policy_based_discrete = [0.4, 0.3, 0.2, 0.1]  # Stochastic
@@ -429,19 +404,16 @@ class PolicyGradientVisualizer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 4. Continuous action handling
         ax = axes[1, 1]
 
         actions = np.linspace(-3, 3, 100)
 
-        # Value-based would need discretization
         discrete_bins = np.linspace(-3, 3, 7)
         discrete_probs = np.zeros_like(actions)
         for i, bin_center in enumerate(discrete_bins):
             mask = np.abs(actions - bin_center) < 0.3
             discrete_probs[mask] = 0.3 - 0.05 * i  # Decreasing probabilities
 
-        # Policy-based: Smooth continuous distribution (e.g., Gaussian)
         continuous_mean = 0.5
         continuous_std = 0.8
         continuous_probs = (1 / np.sqrt(2 * np.pi * continuous_std**2)) * np.exp(
@@ -483,7 +455,6 @@ class PolicyGradientVisualizer:
         )
         plt.show()
 
-        # Summary table
         comparison_data = {
             "Aspect": [
                 "Action Space",
@@ -524,19 +495,15 @@ class PolicyGradientVisualizer:
         print("Advanced Policy Gradient Visualizations")
         print("=" * 70)
 
-        # 1. 3D Policy Surface with Gradient Flow
         fig = plt.figure(figsize=(18, 12))
         gs = fig.add_gridspec(3, 4, hspace=0.4, wspace=0.3)
 
-        # 3D Policy Surface
         ax1 = fig.add_subplot(gs[0, :2], projection="3d")
 
-        # Create a 2D parameter space
         theta1 = np.linspace(-3, 3, 50)
         theta2 = np.linspace(-3, 3, 50)
         THETA1, THETA2 = np.meshgrid(theta1, theta2)
 
-        # Simulate policy performance landscape
         policy_performance = np.exp(-(THETA1**2 + THETA2**2)) + 0.5 * np.sin(
             2 * THETA1
         ) * np.cos(2 * THETA2)
@@ -551,11 +518,9 @@ class PolicyGradientVisualizer:
             antialiased=True,
         )
 
-        # Add gradient vectors
         grad_theta1 = -2 * THETA1 - np.cos(2 * THETA1) * np.cos(2 * THETA2)
         grad_theta2 = -2 * THETA2 + np.sin(2 * THETA1) * np.sin(2 * THETA2)
 
-        # Sample points for gradient arrows
         sample_indices = np.random.choice(50 * 50, 20, replace=False)
         sample_i, sample_j = np.unravel_index(sample_indices, (50, 50))
 
@@ -582,14 +547,12 @@ class PolicyGradientVisualizer:
             fontweight="bold",
         )
 
-        # 2. Policy Evolution Animation Data (static representation)
         ax2 = fig.add_subplot(gs[0, 2:])
 
         states = np.linspace(0, 10, 100)
         time_steps = [0, 10, 25, 50, 100, 200]
 
         for t, step in enumerate(time_steps):
-            # Simulate policy evolution
             theta = 0.5 + 2.0 * (1 - np.exp(-step / 100))
             policy = 1 / (1 + np.exp(-(theta * (states - 5) / 5)))
 
@@ -606,29 +569,23 @@ class PolicyGradientVisualizer:
         ax2.grid(True, alpha=0.3)
         ax2.set_facecolor("#f8f9fa")
 
-        # 3. Gradient Flow Field
         ax3 = fig.add_subplot(gs[1, :2])
 
-        # Create vector field
         x = np.linspace(-2, 2, 20)
         y = np.linspace(-2, 2, 20)
         X, Y = np.meshgrid(x, y)
 
-        # Gradient field
         U = -X - 0.5 * np.sin(X) * np.cos(Y)  # ∂J/∂θ₁
         V = -Y + 0.5 * np.cos(X) * np.sin(Y)  # ∂J/∂θ₂
 
-        # Normalize for better visualization
         magnitude = np.sqrt(U**2 + V**2)
         U_norm = U / magnitude
         V_norm = V / magnitude
 
-        # Plot gradient field
         ax3.quiver(
             X, Y, U_norm, V_norm, magnitude, cmap="coolwarm", alpha=0.8, scale=20
         )
 
-        # Add trajectory
         trajectory_theta1 = []
         trajectory_theta2 = []
         theta1_traj, theta2_traj = -1.5, 1.5
@@ -680,7 +637,6 @@ class PolicyGradientVisualizer:
         ax3.grid(True, alpha=0.3)
         ax3.set_facecolor("#f8f9fa")
 
-        # 4. Variance Reduction Comparison Heatmap
         ax4 = fig.add_subplot(gs[1, 2:])
 
         methods = [
@@ -692,7 +648,6 @@ class PolicyGradientVisualizer:
         ]
         environments = ["CartPole", "MountainCar", "Pendulum", "Acrobot", "LunarLander"]
 
-        # Simulated variance reduction data
         variance_data = np.random.rand(len(environments), len(methods))
         variance_data = variance_data * np.array(
             [1.0, 0.7, 0.5, 0.3, 0.2]
@@ -716,12 +671,10 @@ class PolicyGradientVisualizer:
         )
         ax4.set_xticklabels(ax4.get_xticklabels(), rotation=45, ha="right")
 
-        # 5. Sample Efficiency Analysis
         ax5 = fig.add_subplot(gs[2, :2])
 
         episodes = np.logspace(1, 4, 50)  # 10 to 10,000 episodes
 
-        # Sample efficiency curves
         reinforce_perf = 1 - np.exp(-episodes / 2000)
         actor_critic_perf = 1 - np.exp(-episodes / 800)
         ppo_perf = 1 - np.exp(-episodes / 300)
@@ -746,16 +699,13 @@ class PolicyGradientVisualizer:
         ax5.grid(True, alpha=0.3)
         ax5.set_facecolor("#f8f9fa")
 
-        # 6. Stability Analysis
         ax6 = fig.add_subplot(gs[2, 2:])
 
         training_runs = 5
         max_episodes = 1000
         episodes_range = np.arange(max_episodes)
 
-        # Simulate training stability
         for run in range(training_runs):
-            # Base performance with noise
             base_perf = 1 - np.exp(-episodes_range / 500)
             noise = np.random.normal(0, 0.1, max_episodes)
             cumulative_noise = np.cumsum(noise) * 0.01
@@ -769,7 +719,6 @@ class PolicyGradientVisualizer:
                 label=f"Run {run+1}",
             )
 
-        # Add mean performance
         mean_perf = np.mean(
             [1 - np.exp(-episodes_range / 500) for _ in range(10)], axis=0
         )
@@ -791,7 +740,6 @@ class PolicyGradientVisualizer:
         )
         plt.tight_layout()
 
-        # Save the figure
         plt.savefig(
             os.path.join(VIS_DIR, "advanced_policy_gradient_analysis.png"),
             dpi=300,

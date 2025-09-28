@@ -146,16 +146,12 @@ class CausalDiscovery:
         n_vars = len(variable_names)
         graph = CausalGraph(variable_names)
 
-        # Start with fully connected undirected graph
         for i, j in combinations(range(n_vars), 2):
             graph.add_edge(variable_names[i], variable_names[j])
             graph.add_edge(variable_names[j], variable_names[i])
 
-        # PC algorithm implementation (simplified)
-        # In practice, would use proper conditional independence tests
         for i in range(n_vars):
             for j in range(i + 1, n_vars):
-                # Simple correlation-based test (placeholder)
                 corr = np.abs(np.corrcoef(data[:, i], data[:, j])[0, 1])
                 if corr < 0.1:  # Arbitrary threshold
                     graph.remove_edge(variable_names[i], variable_names[j])
@@ -175,14 +171,11 @@ class CausalDiscovery:
         Returns:
             Learned causal graph
         """
-        # Simplified GES implementation
         graph = CausalGraph(variable_names)
 
-        # Forward phase: add edges
         for i, j in combinations(range(len(variable_names)), 2):
             corr = np.abs(np.corrcoef(data[:, i], data[:, j])[0, 1])
             if corr > 0.3:  # Arbitrary threshold
-                # Determine direction based on correlation strength
                 if corr > 0.5:
                     graph.add_edge(variable_names[i], variable_names[j])
                 else:
@@ -207,15 +200,12 @@ class CausalDiscovery:
         n_vars = len(variable_names)
         graph = CausalGraph(variable_names)
 
-        # Fit linear models and determine causal order
         residuals = np.copy(data)
 
         for i in range(n_vars):
-            # Find the variable with most independent residuals
             residual_vars = np.var(residuals, axis=0)
             target_idx = np.argmin(residual_vars)
 
-            # Regress on remaining variables
             remaining_indices = [j for j in range(n_vars) if j != target_idx]
             if remaining_indices:
                 X = data[:, remaining_indices]
@@ -224,12 +214,10 @@ class CausalDiscovery:
                 reg = LinearRegression()
                 reg.fit(X, y)
 
-                # Add edges from predictors to target
                 for j, coef in zip(remaining_indices, reg.coef_):
                     if abs(coef) > 0.1:  # Threshold
                         graph.add_edge(variable_names[j], variable_names[target_idx])
 
-            # Remove this variable from consideration
             residuals = np.delete(residuals, target_idx, axis=1)
             data = np.delete(data, target_idx, axis=1)
             variable_names = [

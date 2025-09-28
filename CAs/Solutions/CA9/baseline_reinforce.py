@@ -21,7 +21,6 @@ class BaselineREINFORCEAgent(REINFORCEAgent):
         self.baseline_type = baseline_type
 
         if baseline_type == "value_function":
-            # Value network for baseline
             self.value_network = nn.Sequential(
                 nn.Linear(state_dim, 128),
                 nn.ReLU(),
@@ -35,10 +34,8 @@ class BaselineREINFORCEAgent(REINFORCEAgent):
             self.baseline_value = 0.0
             self.baseline_decay = 0.95
 
-        # Storage for states (needed for value function baseline)
         self.episode_states = []
 
-        # Metrics for variance analysis
         self.variance_history = []
         self.baseline_values = []
 
@@ -73,7 +70,6 @@ class BaselineREINFORCEAgent(REINFORCEAgent):
             )
 
         elif self.baseline_type == "value_function":
-            # Update value network
             states_tensor = torch.FloatTensor(self.episode_states).to(device)
             returns_tensor = torch.FloatTensor(returns).to(device)
 
@@ -89,32 +85,25 @@ class BaselineREINFORCEAgent(REINFORCEAgent):
         if len(self.episode_log_probs) == 0:
             return
 
-        # Calculate returns
         returns = self.calculate_returns()
         returns_np = returns.cpu().numpy()
 
-        # Calculate baselines
         baselines = self.calculate_baselines(self.episode_states)
 
-        # Calculate advantages (returns - baselines)
         advantages = returns_np - np.array(baselines)
 
-        # Store variance for analysis
         self.variance_history.append(np.var(advantages))
         self.baseline_values.append(np.mean(baselines))
 
-        # Calculate policy loss using advantages
         policy_loss = []
         for log_prob, advantage in zip(self.episode_log_probs, advantages):
             policy_loss.append(-log_prob * advantage)
 
         policy_loss = torch.stack(policy_loss).sum()
 
-        # Perform optimization step
         self.optimizer.zero_grad()
         policy_loss.backward()
 
-        # Calculate and store gradient norm
         total_norm = 0
         for param in self.policy_network.parameters():
             if param.grad is not None:
@@ -126,13 +115,10 @@ class BaselineREINFORCEAgent(REINFORCEAgent):
         torch.nn.utils.clip_grad_norm_(self.policy_network.parameters(), max_norm=1.0)
         self.optimizer.step()
 
-        # Update baseline
         self.update_baseline(returns_np)
 
-        # Store metrics
         self.policy_losses.append(policy_loss.item())
 
-        # Clear episode data
         self.episode_log_probs = []
         self.episode_rewards = []
         self.episode_states = []
@@ -152,7 +138,6 @@ class VarianceAnalyzer:
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.n
 
-        # Test different baseline methods
         methods = {
             "No Baseline": REINFORCEAgent(state_dim, action_dim, lr=1e-3),
             "Moving Average": BaselineREINFORCEAgent(
@@ -178,7 +163,6 @@ class VarianceAnalyzer:
                     avg_reward = np.mean(episode_rewards[-20:])
                     print(f"  Episode {episode+1}: Avg Reward = {avg_reward:.1f}")
 
-            # Final evaluation
             eval_results = agent.evaluate(env, 20)
 
             results[method_name] = {
@@ -190,7 +174,6 @@ class VarianceAnalyzer:
 
         env.close()
 
-        # Analysis
         self.visualize_variance_comparison(results)
 
         return results
@@ -202,7 +185,6 @@ class VarianceAnalyzer:
 
         colors = ["blue", "red", "green"]
 
-        # 1. Learning curves comparison
         ax = axes[0, 0]
         for i, (method, data) in enumerate(results.items()):
             rewards = data["episode_rewards"]
@@ -215,7 +197,6 @@ class VarianceAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 2. Variance evolution (only for baseline methods)
         ax = axes[0, 1]
         baseline_methods = {k: v for k, v in results.items() if "Baseline" in k}
 
@@ -233,7 +214,6 @@ class VarianceAnalyzer:
         ax.grid(True, alpha=0.3)
         ax.set_yscale("log")
 
-        # 3. Final performance comparison
         ax = axes[0, 2]
         method_names = list(results.keys())
         final_perfs = [data["final_performance"] for data in results.values()]
@@ -267,7 +247,6 @@ class VarianceAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 4. Gradient norm comparison
         ax = axes[1, 0]
         for i, (method, data) in enumerate(results.items()):
             agent = data["agent"]
@@ -284,7 +263,6 @@ class VarianceAnalyzer:
         ax.grid(True, alpha=0.3)
         ax.set_yscale("log")
 
-        # 5. Baseline values evolution
         ax = axes[1, 1]
         for i, (method, data) in enumerate(results.items()):
             agent = data["agent"]
@@ -298,10 +276,8 @@ class VarianceAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 6. Convergence analysis
         ax = axes[1, 2]
 
-        # Calculate convergence metrics
         convergence_episodes = []
         method_names_conv = []
 
@@ -309,7 +285,6 @@ class VarianceAnalyzer:
             rewards = data["episode_rewards"]
             target_reward = np.max(rewards) * 0.8  # 80% of best performance
 
-            # Find when agent consistently reaches target
             for i in range(20, len(rewards)):
                 if np.mean(rewards[i - 10 : i]) >= target_reward:
                     convergence_episodes.append(i)
@@ -328,7 +303,6 @@ class VarianceAnalyzer:
         plt.tight_layout()
         plt.show()
 
-        # Print summary
         print("\n" + "=" * 50)
         print("VARIANCE REDUCTION SUMMARY")
         print("=" * 50)
@@ -366,7 +340,6 @@ class BaselineREINFORCEAnalyzer:
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.n
 
-        # Create baseline agent with value function baseline
         agent = BaselineREINFORCEAgent(
             state_dim, action_dim, lr=1e-3, gamma=0.99, baseline_type="value_function"
         )
@@ -380,7 +353,6 @@ class BaselineREINFORCEAnalyzer:
             reward, _ = agent.train_episode(env)
             episode_rewards.append(reward)
 
-            # Periodic evaluation
             if (episode + 1) % 50 == 0:
                 eval_results = agent.evaluate(env, num_episodes=10)
                 eval_episodes.append((episode + 1, eval_results))
@@ -391,13 +363,10 @@ class BaselineREINFORCEAnalyzer:
 
         env.close()
 
-        # Final evaluation
         final_eval = agent.evaluate(env, num_episodes=20)
 
-        # Visualization
         self.visualize_baseline_training(episode_rewards, eval_episodes, agent)
 
-        # Print statistics
         print(f"\nTraining Statistics:")
         print(f"  Total Episodes: {num_episodes}")
         print(f"  Final Average Reward (last 50): {np.mean(episode_rewards[-50:]):.2f}")
@@ -414,7 +383,6 @@ class BaselineREINFORCEAnalyzer:
 
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
-        # 1. Training curve
         ax = axes[0, 0]
         smoothed_rewards = pd.Series(episode_rewards).rolling(window=20).mean()
         ax.plot(smoothed_rewards, color="blue", linewidth=2, label="Training")
@@ -427,7 +395,6 @@ class BaselineREINFORCEAnalyzer:
         )
         ax.legend()
 
-        # 2. Evaluation performance
         ax = axes[0, 1]
         eval_x = [ep[0] for ep in eval_episodes]
         eval_y = [ep[1]["mean_reward"] for ep in eval_episodes]
@@ -452,7 +419,6 @@ class BaselineREINFORCEAnalyzer:
         )
         ax.legend()
 
-        # 3. Variance reduction
         ax = axes[1, 0]
         if hasattr(agent, "variance_history") and agent.variance_history:
             variance_smoothed = (
@@ -465,7 +431,6 @@ class BaselineREINFORCEAnalyzer:
             ax.grid(True, alpha=0.3)
             ax.set_yscale("log")
 
-        # 4. Baseline values
         ax = axes[1, 1]
         if hasattr(agent, "baseline_values") and agent.baseline_values:
             ax.plot(agent.baseline_values, color="purple", linewidth=2)
@@ -477,7 +442,6 @@ class BaselineREINFORCEAnalyzer:
         plt.tight_layout()
         plt.show()
 
-        # Save visualizations
         plt.savefig(
             "visualizations/baseline_reinforce_training.png",
             dpi=300,

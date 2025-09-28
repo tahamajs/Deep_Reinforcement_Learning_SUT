@@ -21,10 +21,8 @@ class SymbolicGridWorld(gym.Env):
         self.num_symbols = num_symbols
         self.max_steps = max_steps
 
-        # Action space: move in 4 directions + interact
         self.action_space = spaces.Discrete(5)
 
-        # Observation space: symbolic state representation
         self.observation_space = spaces.Dict(
             {
                 "agent_pos": spaces.MultiDiscrete([size, size]),
@@ -33,29 +31,24 @@ class SymbolicGridWorld(gym.Env):
             }
         )
 
-        # Environment state
         self.agent_pos = None
         self.symbol_positions = {}  # symbol_id -> (x, y)
         self.step_count = 0
 
-        # Symbolic elements
         self.symbols = [f"symbol_{i}" for i in range(num_symbols)]
         self.goals = []  # Goal conditions
         self.rules = []  # Environment rules
 
-        # Initialize goals and rules
         self._init_goals_and_rules()
 
     def _init_goals_and_rules(self):
         """Initialize symbolic goals and rules."""
-        # Example goals: collect all symbols, reach specific positions
         self.goals = [
             "collected(symbol_0)",
             "collected(symbol_1)",
             "at(agent, (7,7))",  # Reach corner
         ]
 
-        # Example rules
         self.rules = [
             "adjacent(X,Y) -> can_move_to(X,Y)",
             "has_key(agent) -> can_open_door(door)",
@@ -66,10 +59,8 @@ class SymbolicGridWorld(gym.Env):
         """Reset the environment."""
         super().reset(seed=seed)
 
-        # Random agent position
         self.agent_pos = (np.random.randint(self.size), np.random.randint(self.size))
 
-        # Random symbol positions
         positions = [(i, j) for i in range(self.size) for j in range(self.size)]
         np.random.shuffle(positions)
 
@@ -77,9 +68,7 @@ class SymbolicGridWorld(gym.Env):
         for i, symbol in enumerate(self.symbols):
             self.symbol_positions[symbol] = positions[i]
 
-        # Ensure agent doesn't start on a symbol
         if self.agent_pos in self.symbol_positions.values():
-            # Move agent to empty position
             for pos in positions:
                 if pos not in self.symbol_positions.values():
                     self.agent_pos = pos
@@ -98,18 +87,15 @@ class SymbolicGridWorld(gym.Env):
         terminated = False
         truncated = self.step_count >= self.max_steps
 
-        # Execute action
         if action < 4:  # Movement
             reward += self._move_agent(action)
         else:  # Interact
             reward += self._interact()
 
-        # Check symbolic goals
         if self._check_symbolic_goals():
             reward += 10.0
             terminated = True
 
-        # Symbolic penalties
         reward -= 0.1  # Step penalty
 
         observation = self._get_observation()
@@ -127,17 +113,14 @@ class SymbolicGridWorld(gym.Env):
         dx, dy = [(0, -1), (0, 1), (-1, 0), (1, 0)][direction]
         new_pos = (self.agent_pos[0] + dx, self.agent_pos[1] + dy)
 
-        # Check bounds
         if not (0 <= new_pos[0] < self.size and 0 <= new_pos[1] < self.size):
             return -0.5  # Boundary penalty
 
-        # Check symbolic constraints
         if not self._can_move_to(new_pos):
             return -0.5  # Invalid move penalty
 
         self.agent_pos = new_pos
 
-        # Check for symbol collection
         for symbol, pos in self.symbol_positions.items():
             if pos == self.agent_pos and symbol not in self.collected_symbols:
                 self.collected_symbols.add(symbol)
@@ -147,7 +130,6 @@ class SymbolicGridWorld(gym.Env):
 
     def _interact(self) -> float:
         """Perform symbolic interaction."""
-        # Check for interactive symbols
         current_pos_symbols = [
             symbol
             for symbol, pos in self.symbol_positions.items()
@@ -164,12 +146,9 @@ class SymbolicGridWorld(gym.Env):
 
     def _can_move_to(self, position: Tuple[int, int]) -> bool:
         """Check if agent can move to position based on symbolic rules."""
-        # Basic bounds check
         if not (0 <= position[0] < self.size and 0 <= position[1] < self.size):
             return False
 
-        # Check symbolic constraints (simplified)
-        # In a full implementation, this would query a knowledge base
         return True
 
     def _check_symbolic_goals(self) -> bool:
@@ -182,13 +161,11 @@ class SymbolicGridWorld(gym.Env):
                 if symbol in self.collected_symbols:
                     satisfied_goals += 1
             elif goal.startswith("at("):
-                # Parse position goal
                 parts = goal.split("(")[1].split(")")[0].split(", ")
                 target_pos = (int(parts[1].strip("()")), int(parts[2].strip("()")))
                 if self.agent_pos == target_pos:
                     satisfied_goals += 1
 
-        # Require all goals to be satisfied
         return satisfied_goals >= len(self.goals)
 
     def _get_observation(self) -> Dict:
@@ -213,18 +190,14 @@ class SymbolicGridWorld(gym.Env):
         """Get current logical facts about the environment."""
         facts = []
 
-        # Agent position fact
         facts.append(f"at(agent, {self.agent_pos})")
 
-        # Symbol position facts
         for symbol, pos in self.symbol_positions.items():
             facts.append(f"at({symbol}, {pos})")
 
-        # Collection facts
         for symbol in self.collected_symbols:
             facts.append(f"collected({symbol})")
 
-        # Adjacency facts
         for dx in [-1, 0, 1]:
             for dy in [-1, 0, 1]:
                 if dx == 0 and dy == 0:
@@ -257,10 +230,8 @@ class SymbolicGridWorld(gym.Env):
         if mode == "rgb_array":
             return self._render_rgb()
 
-        # Text-based rendering
         grid = [["." for _ in range(self.size)] for _ in range(self.size)]
 
-        # Place symbols
         for symbol, pos in self.symbol_positions.items():
             symbol_id = int(symbol.split("_")[1])
             if symbol in self.collected_symbols:
@@ -268,15 +239,12 @@ class SymbolicGridWorld(gym.Env):
             else:
                 grid[pos[0]][pos[1]] = f"s{symbol_id}"  # Available
 
-        # Place agent
         grid[self.agent_pos[0]][self.agent_pos[1]] = "A"
 
-        # Print grid
         print("\n".join(" ".join(row) for row in grid))
         print(f"Collected: {sorted(self.collected_symbols)}")
         print(f"Step: {self.step_count}")
 
-        # Print current facts
         print("Current facts:")
         for fact in self._get_current_facts()[:5]:  # Show first 5 facts
             print(f"  {fact}")
@@ -285,16 +253,13 @@ class SymbolicGridWorld(gym.Env):
         """Render as RGB array."""
         image = np.zeros((self.size * 10, self.size * 10, 3), dtype=np.uint8)
 
-        # Simple colored squares
         for i in range(self.size):
             for j in range(self.size):
                 color = [100, 100, 100]  # Gray background
 
-                # Agent
                 if (i, j) == self.agent_pos:
                     color = [255, 255, 255]  # White
 
-                # Symbols
                 for symbol, pos in self.symbol_positions.items():
                     if pos == (i, j):
                         symbol_id = int(symbol.split("_")[1])
@@ -321,16 +286,12 @@ class SymbolicGridWorldWithReasoning(SymbolicGridWorld):
 
     def step(self, action: int) -> Tuple[Dict, float, bool, bool, Dict]:
         """Step with reasoning trace."""
-        # Pre-action reasoning
         pre_reasoning = self._reason_about_action(action)
 
-        # Execute action
         observation, reward, terminated, truncated, info = super().step(action)
 
-        # Post-action reasoning
         post_reasoning = self._reason_about_state()
 
-        # Store reasoning
         reasoning_trace = {
             "pre_action": pre_reasoning,
             "post_action": post_reasoning,
@@ -345,7 +306,6 @@ class SymbolicGridWorldWithReasoning(SymbolicGridWorld):
 
     def _reason_about_action(self, action: int) -> Dict[str, Any]:
         """Reason about the potential consequences of an action."""
-        # Simplified reasoning
         reasoning = {
             "action": action,
             "expected_outcome": "move" if action < 4 else "interact",
@@ -353,9 +313,7 @@ class SymbolicGridWorldWithReasoning(SymbolicGridWorld):
             "expected_reward": 0.0,
         }
 
-        # More sophisticated reasoning would query a knowledge base
         if action < 4:
-            # Movement reasoning
             direction = ["north", "south", "west", "east"][action]
             reasoning["direction"] = direction
             reasoning["expected_position"] = self._predict_position(action)

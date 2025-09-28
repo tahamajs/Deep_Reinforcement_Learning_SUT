@@ -23,7 +23,6 @@ import matplotlib.pyplot as plt
 from dqn import DQNAgent, PerformanceAnalyzer
 import warnings
 
-# Suppress warnings for cleaner output
 warnings.filterwarnings("ignore")
 
 
@@ -38,7 +37,6 @@ def run_basic_dqn_experiment():
     print("Basic DQN Experiment - CartPole-v1")
     print("=" * 60)
 
-    # Create environment
     env = gym.make("CartPole-v1")
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
@@ -49,7 +47,6 @@ def run_basic_dqn_experiment():
     print(f"Goal: Balance pole for as long as possible (max 500 steps)")
     print()
 
-    # Create DQN agent with optimized hyperparameters
     agent = DQNAgent(
         state_dim=state_dim,
         action_dim=action_dim,
@@ -63,7 +60,6 @@ def run_basic_dqn_experiment():
         target_update_freq=100,  # Target network update frequency
     )
 
-    # Training parameters
     num_episodes = 300
     max_steps_per_episode = 500
 
@@ -77,7 +73,6 @@ def run_basic_dqn_experiment():
     print(f"  Batch size: {agent.batch_size}")
     print()
 
-    # Training loop
     print("Starting training...")
     print("-" * 60)
 
@@ -86,22 +81,18 @@ def run_basic_dqn_experiment():
     solved_episode = None
 
     for episode in range(num_episodes):
-        # Train one episode
         reward, steps = agent.train_episode(env, max_steps=max_steps_per_episode)
         episode_rewards.append(reward)
 
-        # Track best performance
         if reward > best_reward:
             best_reward = reward
 
-        # Check if environment is solved (CartPole considers 195+ average reward as solved)
         if len(episode_rewards) >= 100:
             avg_last_100 = np.mean(episode_rewards[-100:])
             if avg_last_100 >= 195 and solved_episode is None:
                 solved_episode = episode + 1
                 print(f"🎉 Environment solved at episode {solved_episode}!")
 
-        # Progress reporting
         if (episode + 1) % 50 == 0:
             avg_reward = np.mean(episode_rewards[-50:])
             recent_avg = (
@@ -124,7 +115,6 @@ def run_basic_dqn_experiment():
     print("Training completed!")
     print()
 
-    # Final evaluation
     print("Final Evaluation:")
     print("-" * 30)
 
@@ -139,7 +129,6 @@ def run_basic_dqn_experiment():
     )
     print()
 
-    # Training summary
     print("Training Summary:")
     print("-" * 30)
     print(f"Total episodes: {num_episodes}")
@@ -151,7 +140,6 @@ def run_basic_dqn_experiment():
         print("Environment not fully solved (avg < 195)")
     print()
 
-    # Create results dictionary
     results = {
         "agent": agent,
         "rewards": episode_rewards,
@@ -180,7 +168,6 @@ def plot_training_results(results):
     epsilon_history = results["epsilon_history"]
     q_values_history = results["q_values_history"]
 
-    # 1. Learning curve
     ax = axes[0, 0]
     window = 20
     smoothed_rewards = pd.Series(rewards).rolling(window).mean()
@@ -194,7 +181,6 @@ def plot_training_results(results):
     ax.legend()
     ax.grid(True, alpha=0.3)
 
-    # 2. Training loss
     ax = axes[0, 1]
     if losses:
         loss_window = 100
@@ -212,7 +198,6 @@ def plot_training_results(results):
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-    # 3. Epsilon decay
     ax = axes[0, 2]
     ax.plot(epsilon_history)
     ax.set_title("Epsilon Decay")
@@ -220,7 +205,6 @@ def plot_training_results(results):
     ax.set_ylabel("Epsilon")
     ax.grid(True, alpha=0.3)
 
-    # 4. Q-values evolution
     ax = axes[1, 0]
     if q_values_history:
         q_window = 100
@@ -235,7 +219,6 @@ def plot_training_results(results):
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-    # 5. Reward distribution (last 50 episodes)
     ax = axes[1, 1]
     if len(rewards) >= 50:
         recent_rewards = rewards[-50:]
@@ -252,7 +235,6 @@ def plot_training_results(results):
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-    # 6. Cumulative reward
     ax = axes[1, 2]
     cumulative_reward = np.cumsum(rewards)
     ax.plot(cumulative_reward, linewidth=2)
@@ -267,14 +249,11 @@ def plot_training_results(results):
 
 def main():
     """Main experiment function"""
-    # Run the experiment
     agent, results = run_basic_dqn_experiment()
 
-    # Plot results
     print("Generating training plots...")
     plot_training_results(results)
 
-    # Additional analysis
     print("Performing Q-value analysis...")
     analyzer = PerformanceAnalyzer()
     analyzer.analyze_q_value_distributions(
@@ -288,8 +267,6 @@ def main():
 
 
 if __name__ == "__main__":
-    # Set random seeds for reproducibility
     np.random.seed(42)
 
-    # Run the experiment
     agent, results = main()

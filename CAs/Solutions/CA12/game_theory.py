@@ -27,7 +27,6 @@ import itertools
 
 warnings.filterwarnings("ignore")
 
-# Game Theory Utilities and Basic Multi-Agent Framework
 
 
 class GameTheoryUtils:
@@ -54,16 +53,13 @@ class GameTheoryUtils:
 
         for i in range(rows):
             for j in range(cols):
-                # Check if (i,j) is a Nash equilibrium
                 is_nash = True
 
-                # Check if player 1 wants to deviate
                 for i_prime in range(rows):
                     if matrix_a[i_prime, j] > matrix_a[i, j]:
                         is_nash = False
                         break
 
-                # Check if player 2 wants to deviate
                 if is_nash:
                     for j_prime in range(cols):
                         if matrix_b[i, j_prime] > matrix_b[i, j]:
@@ -80,7 +76,6 @@ class GameTheoryUtils:
         """Check if a strategy profile is Pareto optimal."""
         current_payoffs = [matrix[strategy_profile] for matrix in payoff_matrices]
 
-        # Check all other strategy profiles
         for profile in itertools.product(
             *[range(matrix.shape[i]) for i, matrix in enumerate(payoff_matrices)]
         ):
@@ -89,7 +84,6 @@ class GameTheoryUtils:
 
             candidate_payoffs = [matrix[profile] for matrix in payoff_matrices]
 
-            # Check if candidate dominates current
             dominates = True
             strictly_better = False
 
@@ -134,29 +128,23 @@ class MultiAgentEnvironment:
         """Execute joint action and return next states, rewards, dones."""
         self.step_count += 1
 
-        # Convert actions to numpy arrays
         actions_np = [
             action.detach().numpy() if hasattr(action, "detach") else np.array(action)
             for action in actions
         ]
 
-        # Simple dynamics: state evolves based on joint action
         joint_action = np.mean(actions_np, axis=0)
         noise = np.random.randn(self.state_dim) * 0.1
 
-        # Handle case where action_dim != state_dim
         if len(joint_action) >= self.state_dim:
             action_effect = joint_action[: self.state_dim]
         else:
-            # Pad with zeros if action is smaller than state
             action_effect = np.zeros(self.state_dim)
             action_effect[: len(joint_action)] = joint_action
 
         self.state = 0.9 * self.state + 0.1 * action_effect + noise
 
-        # Compute rewards
         if self.cooperative:
-            # Cooperative: shared reward based on coordination
             coordination_bonus = -np.mean(
                 [
                     np.linalg.norm(actions_np[i] - joint_action)
@@ -166,10 +154,8 @@ class MultiAgentEnvironment:
             base_reward = -np.linalg.norm(self.state)  # Drive state to origin
             rewards = [base_reward + coordination_bonus] * self.n_agents
         else:
-            # Competitive: individual rewards with competition
             rewards = []
             for i in range(self.n_agents):
-                # Handle case where action_dim != state_dim
                 if len(actions_np[i]) >= self.state_dim:
                     action_effect_i = actions_np[i][: self.state_dim]
                 else:
@@ -199,18 +185,14 @@ class MultiAgentEnvironment:
         pass
 
 
-# Demonstration of game theory concepts
 def demonstrate_game_theory():
     """Demonstrate basic game theory concepts."""
     print("🎯 Game Theory Analysis Demo")
 
-    # Prisoner's Dilemma
     print("\n1. Prisoner's Dilemma:")
-    # Player 1's payoff matrix (rows: cooperate, defect)
     prisoner_a = np.array(
         [[-1, -3], [0, -2]]
     )  # (cooperate, defect) vs (cooperate, defect)
-    # Player 2's payoff matrix
     prisoner_b = np.array([[-1, 0], [-3, -2]])
 
     print("Player 1 payoff matrix:")
@@ -225,7 +207,6 @@ def demonstrate_game_theory():
         is_pareto = GameTheoryUtils.is_pareto_optimal([prisoner_a, prisoner_b], eq)
         print(f"Strategy {eq}: Pareto optimal = {is_pareto}")
 
-    # Coordination Game
     print("\n2. Coordination Game:")
     coord_a = np.array([[2, 0], [0, 1]])
     coord_b = np.array([[2, 0], [0, 1]])
@@ -239,12 +220,10 @@ def demonstrate_game_theory():
     return prisoner_a, prisoner_b, coord_a, coord_b
 
 
-# Test multi-agent environment
 def test_multi_agent_env():
     """Test the basic multi-agent environment."""
     print("\n🤖 Multi-Agent Environment Test")
 
-    # Cooperative environment
     print("Testing cooperative environment:")
     coop_env = MultiAgentEnvironment(
         n_agents=3, state_dim=4, action_dim=4, cooperative=True
@@ -252,14 +231,12 @@ def test_multi_agent_env():
     states = coop_env.reset()
     print(f"Initial states shape: {[s.shape for s in states]}")
 
-    # Random actions
     actions = [np.random.randn(coop_env.action_dim) for _ in range(coop_env.n_agents)]
     next_states, rewards, done, _ = coop_env.step(actions)
 
     print(f"Rewards (cooperative): {rewards}")
     print(f"All agents get same reward: {len(set(rewards)) == 1}")
 
-    # Competitive environment
     print("\nTesting competitive environment:")
     comp_env = MultiAgentEnvironment(
         n_agents=3, state_dim=4, action_dim=4, cooperative=False
@@ -273,7 +250,6 @@ def test_multi_agent_env():
     return coop_env, comp_env
 
 
-# Run demonstrations
 game_matrices = demonstrate_game_theory()
 environments = test_multi_agent_env()
 

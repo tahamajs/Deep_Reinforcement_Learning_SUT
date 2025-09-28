@@ -13,14 +13,11 @@ from .feedback_collector import HumanFeedbackCollector, InteractiveFeedbackColle
 from .collaborative_agent import CollaborativeAgent, HumanAIPartnership
 
 __all__ = [
-    # Preference learning
     "PreferenceRewardModel",
     "HumanPreference",
     "HumanFeedback",
-    # Feedback collection
     "HumanFeedbackCollector",
     "InteractiveFeedbackCollector",
-    # Collaborative agents
     "CollaborativeAgent",
     "HumanAIPartnership",
 ]

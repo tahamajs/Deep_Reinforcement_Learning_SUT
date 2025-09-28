@@ -37,7 +37,6 @@ class NeuromorphicEnvironment(gym.Env):
         self.event_threshold = event_threshold
         self.sensor_noise = sensor_noise
 
-        # State space: continuous state variables
         self.observation_space = spaces.Box(
             low=-np.inf,
             high=np.inf,
@@ -45,16 +44,13 @@ class NeuromorphicEnvironment(gym.Env):
             dtype=np.float32,
         )
 
-        # Action space: discrete actions
         self.action_space = spaces.Discrete(action_dim)
 
-        # Environment dynamics
         self.state = None
         self.target_state = np.zeros(state_dim)
         self.velocity = np.zeros(state_dim)
         self.time_step = 0
 
-        # Performance tracking
         self.episode_reward = 0
         self.episode_length = 0
 
@@ -74,28 +70,23 @@ class NeuromorphicEnvironment(gym.Env):
         self.time_step += 1
         self.episode_length += 1
 
-        # Convert action to force vector
         force = np.zeros(self.state_dim)
         if action < self.state_dim:
             force[action] = 1.0
         elif action < 2 * self.state_dim:
             force[action - self.state_dim] = -1.0
 
-        # Update dynamics (simple physics)
         self.velocity += force * 0.1
         self.velocity *= 0.95  # Damping
         self.state += self.velocity
 
-        # Add sensor noise
         noisy_state = self.state + np.random.normal(
             0, self.sensor_noise, self.state_dim
         )
 
-        # Calculate reward (distance to target)
         distance = np.linalg.norm(noisy_state - self.target_state)
         reward = -distance
 
-        # Check termination
         done = self.time_step >= 200 or distance < 0.1
 
         if done and distance < 0.1:
@@ -114,14 +105,11 @@ class NeuromorphicEnvironment(gym.Env):
 
     def _get_observation(self) -> np.ndarray:
         """Get current observation with event encoding"""
-        # State variables
         state_obs = self.state.copy()
 
-        # Event encoding (detect significant changes)
         events = np.abs(self.velocity) > self.event_threshold
         event_obs = events.astype(float)
 
-        # Combine state and events
         observation = np.concatenate([state_obs, event_obs])
 
         return observation
@@ -153,21 +141,17 @@ class HybridQuantumClassicalEnvironment(gym.Env):
         self.action_dim = action_dim
         self.quantum_complexity = quantum_complexity
 
-        # Complex observation space
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(state_dim,), dtype=np.float32
         )
 
-        # Action space
         self.action_space = spaces.Discrete(action_dim)
 
-        # Environment state
         self.state = None
         self.hidden_state = None
         self.targets = []
         self.obstacles = []
 
-        # Dynamics parameters
         self.dt = 0.1
         self.friction = 0.98
         self.max_force = 2.0
@@ -177,7 +161,6 @@ class HybridQuantumClassicalEnvironment(gym.Env):
         self.state = np.random.uniform(-2, 2, self.state_dim // 2)
         self.hidden_state = np.random.uniform(-1, 1, self.state_dim // 2)
 
-        # Generate targets and obstacles
         self.targets = [
             np.random.uniform(-1.5, 1.5, self.state_dim // 2)
             for _ in range(np.random.randint(2, 5))
@@ -191,21 +174,16 @@ class HybridQuantumClassicalEnvironment(gym.Env):
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, Dict]:
         """Execute action in environment"""
-        # Decode action
         force = self._decode_action(action)
 
-        # Update visible state
         self.state += force * self.dt
         self.state *= self.friction
 
-        # Update hidden state (more complex dynamics)
         self.hidden_state += np.sin(self.state) * self.dt * self.quantum_complexity
         self.hidden_state += np.random.normal(0, 0.1, len(self.hidden_state))
 
-        # Calculate reward
         reward = self._calculate_reward()
 
-        # Check termination
         done = self._check_termination()
 
         info = {
@@ -221,7 +199,6 @@ class HybridQuantumClassicalEnvironment(gym.Env):
         """Decode discrete action to continuous force vector"""
         force = np.zeros(self.state_dim // 2)
 
-        # Binary encoding of force directions
         for i in range(len(force)):
             if action & (1 << i):
                 force[i] = self.max_force
@@ -232,12 +209,9 @@ class HybridQuantumClassicalEnvironment(gym.Env):
 
     def _get_observation(self) -> np.ndarray:
         """Get current observation"""
-        # Combine visible and hidden state
         observation = np.concatenate([self.state, self.hidden_state])
 
-        # Add quantum-inspired features (correlations, phases)
         if self.quantum_complexity > 0.5:
-            # Add phase information
             phases = np.angle(self.state + 1j * self.hidden_state)
             observation = np.concatenate([observation, phases])
 
@@ -247,7 +221,6 @@ class HybridQuantumClassicalEnvironment(gym.Env):
         """Calculate reward based on targets and obstacles"""
         reward = 0
 
-        # Target rewards
         for target in self.targets:
             distance = np.linalg.norm(self.state - target)
             if distance < 0.3:
@@ -255,13 +228,11 @@ class HybridQuantumClassicalEnvironment(gym.Env):
             else:
                 reward -= distance * 0.1
 
-        # Obstacle penalties
         for obstacle in self.obstacles:
             distance = np.linalg.norm(self.state - obstacle)
             if distance < 0.2:
                 reward -= 5.0
 
-        # Complexity bonus (reward for handling complex dynamics)
         complexity_bonus = self.quantum_complexity * np.var(self.hidden_state)
         reward += complexity_bonus * 0.1
 
@@ -269,7 +240,6 @@ class HybridQuantumClassicalEnvironment(gym.Env):
 
     def _check_termination(self) -> bool:
         """Check if episode should terminate"""
-        # Time limit
         if not hasattr(self, "step_count"):
             self.step_count = 0
         self.step_count += 1
@@ -277,12 +247,10 @@ class HybridQuantumClassicalEnvironment(gym.Env):
         if self.step_count >= 500:
             return True
 
-        # Success condition (reach all targets)
         targets_reached = self._count_targets_reached()
         if targets_reached >= len(self.targets):
             return True
 
-        # Failure condition (hit too many obstacles)
         obstacles_hit = self._count_obstacles_hit()
         if obstacles_hit >= len(self.obstacles):
             return True
@@ -307,13 +275,11 @@ class HybridQuantumClassicalEnvironment(gym.Env):
 
     def _calculate_state_complexity(self) -> float:
         """Calculate complexity measure of current state"""
-        # Measure correlations and non-linearities
         visible_complexity = np.var(self.state) * np.mean(np.abs(self.state))
         hidden_complexity = np.var(self.hidden_state) * np.mean(
             np.abs(self.hidden_state)
         )
 
-        # Cross-correlations
         correlation = (
             np.corrcoef(self.state, self.hidden_state)[0, 1]
             if len(self.state) > 1
@@ -350,7 +316,6 @@ class MetaLearningEnvironment(gym.Env):
 
         self.action_space = spaces.Discrete(8)
 
-        # Task parameters
         self.current_task = 0
         self.task_params = self._generate_task_parameters()
         self.state = None
@@ -376,11 +341,9 @@ class MetaLearningEnvironment(gym.Env):
         """Reset environment"""
         self.episode_count += 1
 
-        # Possibly change task
         if np.random.random() < self.task_change_prob:
             self.current_task = np.random.randint(self.num_tasks)
 
-        # Initialize state
         self.state = np.random.uniform(-1, 1, self.base_state_dim)
 
         return self._get_observation()
@@ -389,27 +352,21 @@ class MetaLearningEnvironment(gym.Env):
         """Execute step in current task"""
         task = self.task_params[self.current_task]
 
-        # Decode action
         action_vector = np.zeros(3)
         action_vector[action % 3] = 1 if action < 4 else -1
 
-        # Apply task dynamics
         control_effect = task["control_matrix"] @ action_vector
         dynamics_effect = task["dynamics_matrix"] @ self.state
 
-        # Update state
         self.state += (dynamics_effect + control_effect) * 0.1
         self.state += np.random.normal(0, task["noise_level"], self.base_state_dim)
 
-        # Clip state
         self.state = np.clip(self.state, -3, 3)
 
-        # Calculate reward
         target_value = task["target_function"](np.linalg.norm(self.state))
         current_value = np.mean(self.state)
         reward = -abs(current_value - target_value) * task["reward_scale"]
 
-        # Check termination
         done = (
             abs(current_value - target_value) < 0.1 or np.linalg.norm(self.state) > 2.5
         )
@@ -458,7 +415,6 @@ class ContinualLearningEnvironment(gym.Env):
 
         self.action_space = spaces.Discrete(4)
 
-        # Phase-specific parameters
         self.current_phase = 0
         self.phase_step = 0
         self.phase_params = self._generate_phase_parameters()
@@ -495,12 +451,10 @@ class ContinualLearningEnvironment(gym.Env):
         """Reset environment"""
         self.phase_step += 1
 
-        # Check for phase transition
         if self.phase_step >= self.phase_length:
             self.current_phase = (self.current_phase + 1) % self.num_phases
             self.phase_step = 0
 
-        # Initialize state for current phase
         self.state = np.random.uniform(-1, 1, self.state_dim)
 
         return self.state
@@ -509,19 +463,15 @@ class ContinualLearningEnvironment(gym.Env):
         """Execute step in current phase"""
         phase = self.phase_params[self.current_phase]
 
-        # Apply action effects
         action_effect = phase["action_effects"][:, action]
         dynamics_effect = phase["state_dynamics"] @ self.state
 
-        # Update state
         self.state += (dynamics_effect + action_effect) * 0.1
         self.state += np.random.normal(0, 0.05, self.state_dim)
         self.state = np.clip(self.state, -2, 2)
 
-        # Calculate reward
         reward = phase["reward_function"](self.state, action)
 
-        # Check termination
         done = self.phase_step >= self.phase_length - 1
 
         info = {
@@ -553,7 +503,6 @@ class HierarchicalEnvironment(gym.Env):
 
         self.action_space = spaces.Discrete(8)
 
-        # Hierarchical state
         self.level_states = [
             np.zeros(state_dim // num_levels) for _ in range(num_levels)
         ]
@@ -580,15 +529,12 @@ class HierarchicalEnvironment(gym.Env):
         """Execute hierarchical step"""
         self.step_count += 1
 
-        # Decode action for current level
         level_action = action % 4
         level_command = action // 4  # 0: stay, 1: ascend, 2: descend
 
-        # Update current level state
         current_state = self.level_states[self.current_level]
         goal = self.level_goals[self.current_level]
 
-        # Apply action to current level
         action_vector = np.zeros(len(current_state))
         if level_action < len(current_state):
             action_vector[level_action] = 1.0
@@ -596,16 +542,13 @@ class HierarchicalEnvironment(gym.Env):
         current_state += action_vector * 0.2
         current_state += (goal - current_state) * 0.1  # Goal attraction
 
-        # Level transitions
         if level_command == 1 and self.current_level < self.num_levels - 1:
             self.current_level += 1
         elif level_command == 2 and self.current_level > 0:
             self.current_level -= 1
 
-        # Calculate hierarchical reward
         reward = self._calculate_hierarchical_reward()
 
-        # Check termination
         done = self.step_count >= 300 or self._check_hierarchy_complete()
 
         info = {
@@ -622,10 +565,8 @@ class HierarchicalEnvironment(gym.Env):
 
     def _get_observation(self) -> np.ndarray:
         """Get hierarchical observation"""
-        # Concatenate all level states
         state_obs = np.concatenate(self.level_states)
 
-        # Add level indicators
         level_indicators = np.zeros(self.num_levels)
         level_indicators[self.current_level] = 1.0
 
@@ -635,17 +576,14 @@ class HierarchicalEnvironment(gym.Env):
         """Calculate reward based on hierarchical progress"""
         reward = 0
 
-        # Local level reward
         current_state = self.level_states[self.current_level]
         current_goal = self.level_goals[self.current_level]
         local_distance = np.linalg.norm(current_state - current_goal)
         reward -= local_distance
 
-        # Hierarchical bonus
         if local_distance < 0.3:
             reward += 1.0
 
-        # Global hierarchy reward
         total_progress = sum(
             np.linalg.norm(s - g) for s, g in zip(self.level_states, self.level_goals)
         )

@@ -320,7 +320,6 @@ class ActorCriticAgent:
         return float(actor_loss.item()), float(critic_loss.item())
 
 
-# Training wrappers
 def train_dqn_agent(agent: DQNAgent, env, n_episodes: int = 1000, max_t: int = 1000):
     scores = []
     scores_window = deque(maxlen=100)
@@ -455,3 +454,127 @@ def train_actor_critic_agent(
             )
             break
     return scores
+
+
+class PrioritizedReplayBuffer:
+    """A simple proportional Prioritized Experience Replay buffer.
+
+    This implementation keeps arrays of experiences and a parallel priority array
+    and samples indices with probability proportional to priority ** alpha.
+    It also returns importance-sampling (IS) weights to correct bias.
+    """
+
+    def __init__(
+        self,
+        capacity: int,
+        alpha: float = 0.6,
+        beta: float = 0.4,
+        beta_increment_per_sampling: float = 1e-4,
+        epsilon: float = 1e-6,
+    ) -> None:
+        self.capacity = capacity
+        self.alpha = alpha
+        self.beta = beta
+        self.beta_increment_per_sampling = beta_increment_per_sampling
+        self.epsilon = epsilon
+
+        self.pos = 0
+        self.size = 0
+
+        self.states = [None] * capacity
+        self.actions = [None] * capacity
+        self.rewards = [None] * capacity
+        self.next_states = [None] * capacity
+        self.dones = [None] * capacity
+
+        self.priorities = np.zeros((capacity,), dtype=np.float32)
+
+    def add(
+        self,
+        state: np.ndarray,
+        action: int,
+        reward: float,
+        next_state: np.ndarray,
+        done: bool,
+    ) -> None:
+        self.states[self.pos] = state
+        self.actions[self.pos] = action
+        self.rewards[self.pos] = reward
+        self.next_states[self.pos] = next_state
+        self.dones[self.pos] = done
+
+        max_prio = self.priorities.max() if self.size > 0 else 1.0
+        self.priorities[self.pos] = max_prio
+
+        self.pos = (self.pos + 1) % self.capacity
+        self.size = min(self.size + 1, self.capacity)
+
+    def sample(self, batch_size: int):
+        if self.size == 0:
+            raise ValueError("Cannot sample from an empty buffer")
+
+        prios = self.priorities[: self.size].astype(np.float64)
+        probs = prios ** self.alpha
+        probs_sum = probs.sum()
+        if probs_sum == 0:
+            probs = np.ones_like(probs) / len(probs)
+        else:
+            probs = probs / probs_sum
+
+        indices = np.random.choice(self.size, batch_size, p=probs)
+
+        states = np.vstack([self.states[i] for i in indices])
+        actions = np.vstack([self.actions[i] for i in indices])
+        rewards = np.vstack([self.rewards[i] for i in indices])
+        next_states = np.vstack([self.next_states[i] for i in indices])
+        dones = np.vstack([self.dones[i] for i in indices]).astype(np.uint8)
+
+        states = torch.from_numpy(states).float().to(device)
+        actions = torch.from_numpy(actions).long().to(device)
+        rewards = torch.from_numpy(rewards).float().to(device)
+        next_states = torch.from_numpy(next_states).float().to(device)
+        dones = torch.from_numpy(dones).float().to(device)
+
+        weights = (self.size * probs[indices]) ** (-self.beta)
+        weights = weights / (weights.max() + 1e-8)
+        weights = torch.from_numpy(weights).float().unsqueeze(1).to(device)
+
+        self.beta = min(1.0, self.beta + self.beta_increment_per_sampling)
+
+        return (states, actions, rewards, next_states, dones, indices, weights)
+
+    def update_priorities(self, indices, td_errors: np.ndarray) -> None:
+        """Update priorities at the given indices with absolute TD errors.
+
+        td_errors: numpy array of shape (batch_size,) or list
+        """
+        for idx, err in zip(indices, td_errors):
+            self.priorities[idx] = abs(float(err)) + self.epsilon
+
+    def __len__(self) -> int:
+        return self.size
+
+
+def evaluate_agent(agent, env, n_episodes: int = 5, max_t: int = 1000):
+    """Run the agent in the environment without learning and return average score."""
+    scores = []
+    for _ in range(n_episodes):
+        state = env.reset()
+        if isinstance(state, tuple):
+            state, _ = state
+        state = np.array(state, dtype=np.float32)
+        score = 0.0
+        for t in range(max_t):
+            action = agent.act(state)
+            result = env.step(action)
+            if len(result) == 4:
+                next_state, reward, done, _ = result
+            else:
+                next_state, reward, terminated, truncated, _ = result
+                done = terminated or truncated
+            state = np.array(next_state, dtype=np.float32)
+            score += reward
+            if done:
+                break
+        scores.append(score)
+    return float(np.mean(scores))

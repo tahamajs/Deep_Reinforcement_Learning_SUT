@@ -19,7 +19,6 @@ from collections import defaultdict
 import pickle
 import os
 
-# Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -31,7 +30,6 @@ class TrajectoryDataset(Dataset):
         self.max_length = max_length
         self.discount_factor = discount_factor
 
-        # Preprocess trajectories
         self.processed_trajectories = []
         for traj in trajectories:
             processed = self._process_trajectory(traj)
@@ -48,24 +46,19 @@ class TrajectoryDataset(Dataset):
         if len(states) == 0:
             return None
 
-        # Compute returns-to-go
         returns_to_go = self._compute_returns_to_go(rewards, dones)
 
-        # Pad or truncate to max_length
         seq_len = min(len(states), self.max_length)
 
-        # Create padded sequences
         padded_states = np.zeros((self.max_length, states[0].shape[0]))
         padded_actions = np.zeros((self.max_length, actions[0].shape[0]))
         padded_returns = np.zeros((self.max_length, 1))
         padded_timesteps = np.arange(self.max_length)
 
-        # Fill with actual data
         padded_states[:seq_len] = np.array(states[:seq_len])
         padded_actions[:seq_len] = np.array(actions[:seq_len])
         padded_returns[:seq_len] = returns_to_go[:seq_len]
 
-        # Create attention mask (1 for valid positions, 0 for padding)
         attention_mask = np.zeros(self.max_length * 3)  # 3 tokens per timestep
         attention_mask[: seq_len * 3] = 1
 
@@ -107,7 +100,6 @@ class MultiTaskTrajectoryDataset(Dataset):
         self.max_length = max_length
         self.discount_factor = discount_factor
 
-        # Flatten all trajectories with task labels
         self.processed_trajectories = []
         for task_id, trajectories in task_trajectories.items():
             for traj in trajectories:
@@ -151,7 +143,6 @@ class FoundationModelEvaluator:
             episode_return = 0
             episode_length = 0
 
-            # Initialize context if using in-context learning
             if context_trajectories is not None:
                 context_learner = InContextLearningRL(self.model)
                 for traj in context_trajectories:
@@ -166,11 +157,8 @@ class FoundationModelEvaluator:
 
             while not done and episode_length < 1000:
                 if context_trajectories is not None:
-                    # Use in-context learning
                     action = context_learner.get_action(state, desired_return or 0.0)
                 else:
-                    # Use direct model prediction
-                    # This would need to be implemented based on specific model interface
                     action = self.model.get_action_from_state(state)
 
                 if isinstance(action, torch.Tensor):
@@ -216,27 +204,22 @@ class FoundationModelTrainer:
     def train(self, train_loader, val_loader=None, num_epochs=100, eval_env_fn=None):
         """Full training loop with evaluation."""
         for epoch in range(num_epochs):
-            # Training epoch
             train_loss = self._train_epoch(train_loader)
             self.training_stats["train_loss"].append(train_loss)
 
-            # Validation
             if val_loader is not None:
                 val_loss = self._validate_epoch(val_loader)
                 self.training_stats["val_loss"].append(val_loss)
 
-            # Evaluation
             if eval_env_fn is not None and epoch % self.eval_freq == 0:
                 evaluator = FoundationModelEvaluator(self.model, eval_env_fn)
                 eval_results = evaluator.evaluate()
                 self.training_stats["eval_returns"].append(eval_results["mean_return"])
 
-                # Save best model
                 if eval_results["mean_return"] > self.best_eval_score:
                     self.best_eval_score = eval_results["mean_return"]
                     self.best_model_state = self.model.state_dict().copy()
 
-            # Logging
             if epoch % 10 == 0:
                 print(f"Epoch {epoch}: Train Loss = {train_loss:.4f}")
                 if val_loader is not None:
@@ -286,15 +269,12 @@ class FoundationModelTrainer:
         returns_to_go = batch["returns_to_go"].to(device)
         timesteps = batch["timesteps"].to(device)
 
-        # Forward pass
         outputs = self.model(states, actions, returns_to_go, timesteps)
 
-        # Compute losses
         action_loss = nn.MSELoss()(outputs["action_preds"], actions)
         value_loss = nn.MSELoss()(outputs["value_preds"], returns_to_go)
         return_loss = nn.MSELoss()(outputs["return_preds"], returns_to_go)
 
-        # Combined loss
         total_loss = action_loss + 0.5 * value_loss + 0.1 * return_loss
 
         return total_loss
@@ -346,7 +326,6 @@ def create_trajectory_dataset_from_env(env_fn, num_trajectories=1000, max_steps=
 
         steps = 0
         while not done and steps < max_steps:
-            # Random action for data collection
             action = env.action_space.sample()
 
             next_state, reward, terminated, truncated, _ = env.step(action)
@@ -370,7 +349,6 @@ def plot_training_curves(stats, save_path=None):
     """Plot training curves."""
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
 
-    # Training loss
     axes[0, 0].plot(stats["train_loss"], label="Train Loss")
     if "val_loss" in stats:
         axes[0, 0].plot(stats["val_loss"], label="Val Loss")
@@ -379,14 +357,12 @@ def plot_training_curves(stats, save_path=None):
     axes[0, 0].set_ylabel("Loss")
     axes[0, 0].legend()
 
-    # Evaluation returns
     if "eval_returns" in stats:
         axes[0, 1].plot(stats["eval_returns"])
         axes[0, 1].set_title("Evaluation Returns")
         axes[0, 1].set_xlabel("Evaluation Step")
         axes[0, 1].set_ylabel("Mean Return")
 
-    # Loss components
     if "action_losses" in stats and len(stats["action_losses"]) > 0:
         axes[1, 0].plot(stats["action_losses"], label="Action Loss")
         if "value_losses" in stats:

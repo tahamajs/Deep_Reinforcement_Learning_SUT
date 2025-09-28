@@ -16,7 +16,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-# Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -32,20 +31,17 @@ class PlanningAlgorithmsExperiment:
         print("🎯 Running Planning Algorithms Comparison...")
         print("⚡ Testing: MCTS vs Model-Based Value Expansion vs Random Shooting")
 
-        # Create a simple environment for planning
         from ..environments.grid_world import SimpleGridWorld
         from ..model_based_rl.algorithms import DynaQAgent, ModelEnsemble
         from ..planning.algorithms import MonteCarloTreeSearch, ModelBasedValueExpansion
 
         env_size = 6
 
-        # Create base components
         state_dim = env_size * env_size
         action_dim = 4
 
         results = {}
 
-        # Test different planning approaches
         planning_configs = {
             "Random Shooting": {
                 "use_mcts": False,
@@ -67,21 +63,16 @@ class PlanningAlgorithmsExperiment:
             for seed in range(num_seeds):
                 print(f"  Seed {seed + 1}/{num_seeds}")
 
-                # Set random seeds
                 np.random.seed(seed)
                 torch.manual_seed(seed)
                 random.seed(seed)
 
-                # Create environment and base agent
                 env = SimpleGridWorld(size=env_size)
                 base_agent = DynaQAgent(state_dim, action_dim)
 
-                # Create model ensemble for planning
                 model_ensemble = ModelEnsemble(state_dim, action_dim, ensemble_size=3)
 
-                # Create planning components based on config
                 if config["use_mcts"]:
-                    # Create simple value network for MCTS
                     value_net = nn.Sequential(
                         nn.Linear(state_dim, 128), nn.ReLU(), nn.Linear(128, 1)
                     ).to(device)
@@ -92,13 +83,11 @@ class PlanningAlgorithmsExperiment:
                     mve_planner = ModelBasedValueExpansion(model_ensemble, value_net)
                     planner = mve_planner
                 else:
-                    # Random shooting baseline
                     from ..model_based_rl.algorithms import ModelPredictiveController
 
                     mpc_planner = ModelPredictiveController(model_ensemble, action_dim)
                     planner = mpc_planner
 
-                # Episode tracking
                 episode_rewards = []
                 planning_times = []
                 model_accuracy = []
@@ -112,48 +101,38 @@ class PlanningAlgorithmsExperiment:
                     while not done and episode_length < 100:
                         start_time = time.time()
 
-                        # Get action using planning or base agent
                         if episode > 50:  # Start planning after some model training
                             try:
                                 if config["use_mcts"]:
-                                    # Use MCTS planning
                                     root = planner.search(state, num_simulations=20)
                                     action_probs = planner.get_action_probabilities(
                                         root
                                     )
                                     action = np.argmax(action_probs)
                                 elif config["use_mve"]:
-                                    # Use MVE planning
                                     action = planner.plan_action(state)
                                 else:
-                                    # Use MPC/random shooting
                                     action = planner.plan_action(state)
                             except:
-                                # Fallback to base agent
                                 action = base_agent.get_action(state, epsilon=0.1)
                         else:
-                            # Use base agent for initial episodes
                             action = base_agent.get_action(state, epsilon=0.3)
 
                         planning_time = time.time() - start_time
                         planning_times.append(planning_time)
 
-                        # Take step
                         next_state, reward, done, info = env.step(action)
                         episode_reward += reward
                         episode_length += 1
 
-                        # Store experience and train base agent
                         base_agent.store_experience(
                             state, action, reward, next_state, done
                         )
                         base_agent.update_q_function()
 
-                        # Train model every few steps
                         if episode_length % 5 == 0:
                             model_loss = base_agent.update_model()
 
-                            # Test model accuracy periodically
                             if episode_length % 20 == 0:
                                 accuracy = self._test_model_accuracy(
                                     model_ensemble, env
@@ -164,7 +143,6 @@ class PlanningAlgorithmsExperiment:
 
                     episode_rewards.append(episode_reward)
 
-                    # Progress reporting
                     if (episode + 1) % 50 == 0:
                         avg_reward = np.mean(episode_rewards[-20:])
                         avg_time = (
@@ -174,7 +152,6 @@ class PlanningAlgorithmsExperiment:
                             f"    Episode {episode + 1}: Reward={avg_reward:.2f}, Planning Time={avg_time:.4f}s"
                         )
 
-                # Store results
                 planner_results.append(
                     {
                         "rewards": episode_rewards,
@@ -197,27 +174,22 @@ class PlanningAlgorithmsExperiment:
         accuracies = []
 
         for _ in range(num_tests):
-            # Reset environment and take random action
             state = env.reset()
             action = np.random.randint(4)
 
-            # Get actual next state
             actual_next_state, actual_reward, _, _ = env.step(action)
 
-            # Get model prediction
             try:
                 pred_next_state, pred_reward = model_ensemble.predict_mean(
                     torch.FloatTensor(state).to(device),
                     torch.LongTensor([action]).to(device),
                 )
 
-                # Compute accuracy (inverse of prediction error)
                 state_error = torch.norm(
                     pred_next_state.cpu() - torch.FloatTensor(actual_next_state)
                 ).item()
                 reward_error = abs(pred_reward.cpu().item() - actual_reward)
 
-                # Convert to accuracy (1 means perfect, 0 means very inaccurate)
                 accuracy = 1.0 / (1.0 + state_error + reward_error)
                 accuracies.append(accuracy)
             except:
@@ -237,7 +209,6 @@ class PlanningAlgorithmsExperiment:
         fig, axes = plt.subplots(2, 2, figsize=(15, 12))
         fig.suptitle("Planning Algorithms Performance Analysis", fontsize=16)
 
-        # Plot 1: Learning curves
         ax1 = axes[0, 0]
         colors = ["blue", "red", "green"]
         for i, (planner_name, planner_results) in enumerate(self.results.items()):
@@ -266,7 +237,6 @@ class PlanningAlgorithmsExperiment:
         ax1.legend()
         ax1.grid(True, alpha=0.3)
 
-        # Plot 2: Planning time overhead
         ax2 = axes[0, 1]
         planner_names = list(self.results.keys())
         planning_times = []
@@ -276,7 +246,6 @@ class PlanningAlgorithmsExperiment:
             all_times = []
             for result in planner_results:
                 if result["planning_times"]:
-                    # Use times from later episodes when planning is active
                     relevant_times = result["planning_times"][
                         len(result["planning_times"]) // 2 :
                     ]
@@ -300,7 +269,6 @@ class PlanningAlgorithmsExperiment:
         ax2.set_title("Computational Overhead")
         ax2.tick_params(axis="x", rotation=45)
 
-        # Plot 3: Final performance comparison
         ax3 = axes[1, 0]
         final_performances = []
         perf_stds = []
@@ -321,7 +289,6 @@ class PlanningAlgorithmsExperiment:
         ax3.set_title("Final Performance")
         ax3.tick_params(axis="x", rotation=45)
 
-        # Plot 4: Model accuracy over time
         ax4 = axes[1, 1]
         for planner_name, planner_results in self.results.items():
             all_accuracies = []
@@ -330,7 +297,6 @@ class PlanningAlgorithmsExperiment:
                     all_accuracies.append(result["model_accuracy"])
 
             if all_accuracies:
-                # Pad or truncate to same length
                 min_length = (
                     min(len(acc) for acc in all_accuracies) if all_accuracies else 0
                 )
@@ -350,7 +316,6 @@ class PlanningAlgorithmsExperiment:
         plt.tight_layout()
         plt.show()
 
-        # Print summary statistics
         print("\n📈 Planning Algorithms Summary:")
         for planner_name, planner_results in self.results.items():
             performances = [result["final_performance"] for result in planner_results]

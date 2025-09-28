@@ -13,14 +13,11 @@ from .neural_components import NeuralPerceptionModule, SymbolicReasoningModule
 from .policies import NeurosymbolicPolicy, NeurosymbolicAgent
 
 __all__ = [
-    # Knowledge representation
     "SymbolicKnowledgeBase",
     "LogicalPredicate",
     "LogicalRule",
-    # Neural components
     "NeuralPerceptionModule",
     "SymbolicReasoningModule",
-    # Policy and agents
     "NeurosymbolicPolicy",
     "NeurosymbolicAgent",
 ]

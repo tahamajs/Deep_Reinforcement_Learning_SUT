@@ -24,17 +24,13 @@ class SafetyConstraints:
     """
 
     def __init__(self):
-        # State constraints
         self.state_bounds = {}  # {'state_var': (min, max)}
 
-        # Action constraints
         self.action_bounds = {}  # {'action_var': (min, max)}
         self.forbidden_actions = set()
 
-        # Safety rules
         self.safety_rules = []  # List of callable safety rules
 
-        # Risk thresholds
         self.risk_thresholds = {"high_risk": 0.8, "medium_risk": 0.5, "low_risk": 0.2}
 
     def add_state_constraint(self, variable: str, min_val: float, max_val: float):
@@ -93,11 +89,9 @@ class SafetyConstraints:
         """
         violations = []
 
-        # Check forbidden actions
         if action in self.forbidden_actions:
             violations.append(f"Action {action} is forbidden")
 
-        # Check action bounds (if applicable)
         if isinstance(action, dict):
             for var, (min_val, max_val) in self.action_bounds.items():
                 if var in action:
@@ -144,25 +138,21 @@ class SafetyConstraints:
         risk_score = 0.0
         risk_factors = []
 
-        # Check state constraints
         state_safe, state_violations = self.check_state_constraints(state)
         if not state_safe:
             risk_score += 0.4
             risk_factors.extend(state_violations)
 
-        # Check action constraints
         action_safe, action_violations = self.check_action_constraints(action)
         if not action_safe:
             risk_score += 0.4
             risk_factors.extend(action_violations)
 
-        # Check safety rules
         rules_safe, rule_violations = self.check_safety_rules(state)
         if not rules_safe:
             risk_score += 0.2
             risk_factors.extend(rule_violations)
 
-        # Determine risk level
         if risk_score >= self.risk_thresholds["high_risk"]:
             risk_level = "high"
         elif risk_score >= self.risk_thresholds["medium_risk"]:
@@ -188,7 +178,6 @@ class RiskAssessor:
     def __init__(self, input_dim: int, hidden_dim: int = 64, device: str = "cpu"):
         self.device = device
 
-        # Risk prediction model
         self.risk_model = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
@@ -272,21 +261,17 @@ class SafetyMonitor:
         self.constraints = constraints
         self.risk_assessor = risk_assessor
 
-        # Monitoring data
         self.monitoring_active = False
         self.violation_count = 0
         self.intervention_count = 0
         self.monitoring_history = deque(maxlen=10000)
 
-        # Alert system
         self.alert_threshold = 5  # Violations per minute
         self.alert_callbacks = []
 
-        # Logging
         self.logger = logging.getLogger("SafetyMonitor")
         self.logger.setLevel(logging.WARNING)
 
-        # Monitoring thread
         self.monitor_thread = None
 
     def start_monitoring(self):
@@ -313,15 +298,12 @@ class SafetyMonitor:
         Returns:
             Safety assessment
         """
-        # Rule-based safety check
         rule_assessment = self.constraints.assess_risk(state, action)
 
-        # ML-based risk assessment
         ml_risk = 0.0
         if self.risk_assessor is not None and isinstance(state, torch.Tensor):
             ml_risk = self.risk_assessor.assess_risk(state)
 
-        # Combine assessments
         combined_risk = max(rule_assessment["risk_score"], ml_risk)
         is_safe = combined_risk < self.constraints.risk_thresholds["medium_risk"]
 
@@ -334,7 +316,6 @@ class SafetyMonitor:
             "intervention_needed": not is_safe,
         }
 
-        # Record monitoring data
         self.monitoring_history.append(
             {
                 "timestamp": time.time(),
@@ -364,19 +345,13 @@ class SafetyMonitor:
         """
         self.intervention_count += 1
 
-        # Simple intervention: return safe default action
-        # This should be customized based on domain
         if isinstance(state, dict):
-            # Domain-specific safe actions
             return self._get_domain_safe_action(state)
         else:
             return 0  # Default safe action
 
     def _get_domain_safe_action(self, state: Dict[str, Any]) -> Any:
         """Get domain-specific safe action."""
-        # This should be implemented based on the specific domain
-        # For example, in autonomous driving: slow down
-        # In robotics: stop motion
         return {}  # Default safe action dict
 
     def _monitoring_loop(self):
@@ -387,7 +362,6 @@ class SafetyMonitor:
         while self.monitoring_active:
             current_time = time.time()
 
-            # Check for alert conditions every minute
             if current_time - last_check >= 60:
                 violations_per_minute = self.violation_count - last_violation_count
 
@@ -407,7 +381,6 @@ class SafetyMonitor:
 
         self.logger.critical(alert_message)
 
-        # Call alert callbacks
         for callback in self.alert_callbacks:
             try:
                 callback(alert_message, violation_rate)

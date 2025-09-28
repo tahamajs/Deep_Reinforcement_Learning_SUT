@@ -37,25 +37,20 @@ class ParameterServer:
         self.model = model
         self.global_model = copy.deepcopy(model)
 
-        # Optimizer for global model
         self.optimizer = optimizer_class(
             self.global_model.parameters(), lr=lr, **optimizer_kwargs
         )
 
-        # Communication queues
         self.gradient_queue = queue.Queue()
         self.parameter_queue = queue.Queue()
         self.request_queue = queue.Queue()
 
-        # Worker management
         self.active_workers = set()
         self.worker_updates = {}
 
-        # Statistics
         self.total_updates = 0
         self.update_times = deque(maxlen=100)
 
-        # Control flags
         self.running = False
         self.server_thread = None
 
@@ -76,12 +71,10 @@ class ParameterServer:
         """Main server loop."""
         while self.running:
             try:
-                # Process gradient updates
                 if not self.gradient_queue.empty():
                     worker_id, gradients = self.gradient_queue.get_nowait()
                     self._process_gradients(worker_id, gradients)
 
-                # Process parameter requests
                 if not self.request_queue.empty():
                     worker_id = self.request_queue.get_nowait()
                     self._send_parameters(worker_id)
@@ -95,10 +88,8 @@ class ParameterServer:
         """Process gradients from worker."""
         start_time = time.time()
 
-        # Store gradients
         self.worker_updates[worker_id] = gradients
 
-        # Check if we have enough updates for aggregation
         if len(self.worker_updates) >= len(self.active_workers):
             self._aggregate_gradients()
 
@@ -109,25 +100,21 @@ class ParameterServer:
         if not self.worker_updates:
             return
 
-        # Initialize aggregated gradients
         aggregated_grads = []
         for param in self.global_model.parameters():
             aggregated_grads.append(torch.zeros_like(param.data))
 
-        # Sum gradients from all workers
         num_workers = len(self.worker_updates)
         for worker_grads in self.worker_updates.values():
             for i, grad in enumerate(worker_grads):
                 aggregated_grads[i] += grad / num_workers
 
-        # Apply gradients
         self.optimizer.zero_grad()
         for param, grad in zip(self.global_model.parameters(), aggregated_grads):
             param.grad = grad
 
         self.optimizer.step()
 
-        # Clear worker updates
         self.worker_updates.clear()
         self.total_updates += 1
 
@@ -174,25 +161,20 @@ class WorkerNode:
         self.model = model
         self.local_model = copy.deepcopy(model)
 
-        # Local optimizer
         self.optimizer = optimizer_class(
             self.local_model.parameters(), lr=lr, **optimizer_kwargs
         )
 
-        # Communication queues (shared with parameter server)
         self.gradient_queue = None
         self.parameter_queue = None
         self.request_queue = None
 
-        # Experience buffer
         self.experience_buffer = deque(maxlen=1000)
 
-        # Statistics
         self.episodes_completed = 0
         self.total_steps = 0
         self.gradients_sent = 0
 
-        # Control flags
         self.running = False
         self.worker_thread = None
 
@@ -224,10 +206,8 @@ class WorkerNode:
         """Main worker loop."""
         while self.running:
             try:
-                # Request latest parameters
                 self.request_queue.put(self.worker_id)
 
-                # Wait for parameters
                 try:
                     worker_id, params = self.parameter_queue.get(timeout=1.0)
                     if worker_id == self.worker_id:
@@ -235,7 +215,6 @@ class WorkerNode:
                 except queue.Empty:
                     continue
 
-                # Collect experience and compute gradients
                 if len(self.experience_buffer) >= 32:  # Mini-batch size
                     gradients = self._compute_gradients()
                     if gradients:
@@ -258,14 +237,12 @@ class WorkerNode:
         if not self.experience_buffer:
             return None
 
-        # Sample mini-batch
         batch_size = min(32, len(self.experience_buffer))
         batch_indices = np.random.choice(
             len(self.experience_buffer), batch_size, replace=False
         )
         batch = [self.experience_buffer[i] for i in batch_indices]
 
-        # Unpack batch
         states, actions, rewards, next_states, dones = zip(*batch)
         states = torch.stack(states)
         actions = torch.stack(actions)
@@ -273,7 +250,6 @@ class WorkerNode:
         next_states = torch.stack(next_states)
         dones = torch.stack(dones)
 
-        # Compute gradients (simplified PPO-style)
         with torch.no_grad():
             next_values = self.local_model(next_states)[1]  # Value function
             targets = rewards + 0.99 * next_values * (1 - dones)
@@ -281,21 +257,16 @@ class WorkerNode:
         values = self.local_model(states)[1]
         advantages = targets - values
 
-        # Compute policy loss
         logits, _ = self.local_model(states)
         log_probs = torch.log_softmax(logits, dim=-1)
         action_log_probs = log_probs.gather(1, actions.unsqueeze(1)).squeeze(1)
 
-        # Simplified surrogate loss
         policy_loss = -(advantages * action_log_probs).mean()
 
-        # Value loss
         value_loss = F.mse_loss(values.squeeze(), targets.squeeze())
 
-        # Total loss
         loss = policy_loss + 0.5 * value_loss
 
-        # Compute gradients
         self.optimizer.zero_grad()
         loss.backward()
 
@@ -342,15 +313,12 @@ class DistributedRLTrainer:
         self.model_factory = model_factory
         self.num_workers = num_workers
 
-        # Create global model
         self.global_model = model_factory()
 
-        # Create parameter server
         self.param_server = ParameterServer(
             self.global_model, optimizer_class, global_lr
         )
 
-        # Create workers
         self.workers = []
         for i in range(num_workers):
             worker_model = model_factory()
@@ -362,7 +330,6 @@ class DistributedRLTrainer:
             )
             self.workers.append(worker)
 
-        # Register workers
         for worker in self.workers:
             self.param_server.register_worker(worker.worker_id)
 
@@ -370,10 +337,8 @@ class DistributedRLTrainer:
         """Start distributed training."""
         print(f"Starting distributed training with {self.num_workers} workers")
 
-        # Start parameter server
         self.param_server.start()
 
-        # Start workers
         for worker in self.workers:
             worker.start()
 
@@ -381,11 +346,9 @@ class DistributedRLTrainer:
         """Stop distributed training."""
         print("Stopping distributed training")
 
-        # Stop workers
         for worker in self.workers:
             worker.stop()
 
-        # Stop parameter server
         self.param_server.stop()
 
     def get_training_stats(self) -> Dict[str, Any]:
@@ -423,7 +386,6 @@ class DistributedRLTrainer:
             checkpoint["param_server_optimizer"]
         )
 
-        # Update worker models
         for worker in self.workers:
             worker._update_local_model(
                 [param.data for param in self.global_model.parameters()]
@@ -451,21 +413,17 @@ class DistributedRLTrainer:
                 episode_steps = 0
 
                 while not done and episode_steps < 1000:
-                    # Get action from local model
                     with torch.no_grad():
                         action, _ = worker.local_model.get_action(state.unsqueeze(0))
                         action = action.item()
 
-                    # Execute action
                     next_state, reward, terminated, truncated, _ = env.step(action)
                     done = terminated or truncated
 
-                    # Convert to tensors
                     next_state = torch.tensor(next_state, dtype=torch.float32)
                     reward = torch.tensor(reward, dtype=torch.float32)
                     done_tensor = torch.tensor(done, dtype=torch.float32)
 
-                    # Add experience
                     worker.add_experience(
                         state, torch.tensor(action), reward, next_state, done_tensor
                     )
@@ -475,7 +433,6 @@ class DistributedRLTrainer:
 
                 worker.episodes_completed += 1
 
-        # Start simulation threads
         threads = []
         for i in range(self.num_workers):
             thread = threading.Thread(target=worker_simulation, args=(i,))
@@ -483,6 +440,5 @@ class DistributedRLTrainer:
             threads.append(thread)
             thread.start()
 
-        # Wait for completion
         for thread in threads:
             thread.join()

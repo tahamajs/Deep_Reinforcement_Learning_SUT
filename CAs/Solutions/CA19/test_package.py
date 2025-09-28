@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Test script for CA19 Modular package
 
@@ -24,7 +23,6 @@ def test_imports():
         print(f"❌ Failed to import main package: {e}")
         return False
 
-    # Test individual modules
     modules_to_test = [
         "ca19_modular.hybrid_quantum_classical_rl",
         "ca19_modular.neuromorphic_rl",
@@ -97,15 +95,12 @@ def main():
 
     all_passed = True
 
-    # Test imports
     if not test_imports():
         all_passed = False
 
-    # Test basic functionality
     if not test_basic_functionality():
         all_passed = False
 
-    # Test package info
     if not test_package_info():
         all_passed = False
 

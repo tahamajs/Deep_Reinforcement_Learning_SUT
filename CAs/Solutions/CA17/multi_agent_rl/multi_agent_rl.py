@@ -10,7 +10,6 @@ from typing import List, Dict, Tuple, Optional
 import matplotlib.pyplot as plt
 import networkx as nx
 
-# Multi-Agent Experience Replay Buffer
 class MultiAgentReplayBuffer:
     """Replay buffer for multi-agent systems"""
 
@@ -20,7 +19,6 @@ class MultiAgentReplayBuffer:
         self.obs_dim = obs_dim
         self.action_dim = action_dim
 
-        # Storage
         self.observations = np.zeros((capacity, n_agents, obs_dim))
         self.actions = np.zeros((capacity, n_agents, action_dim))
         self.rewards = np.zeros((capacity, n_agents))
@@ -58,7 +56,6 @@ class MultiAgentReplayBuffer:
         return self.size
 
 
-# Actor Network for MADDPG
 class MADDPGActor(nn.Module):
     """Actor network for MADDPG - decentralized policy"""
 
@@ -78,14 +75,12 @@ class MADDPGActor(nn.Module):
         return self.network(obs)
 
 
-# Critic Network for MADDPG
 class MADDPGCritic(nn.Module):
     """Critic network for MADDPG - centralized value function"""
 
     def __init__(self, obs_dim: int, action_dim: int, n_agents: int, hidden_dim: int = 128):
         super().__init__()
 
-        # Input: all agents' observations and actions
         input_dim = (obs_dim + action_dim) * n_agents
 
         self.network = nn.Sequential(
@@ -106,17 +101,14 @@ class MADDPGCritic(nn.Module):
         Returns:
             Q-values: [batch, 1]
         """
-        # Flatten observations and actions
         obs_flat = obs.reshape(obs.shape[0], -1)
         actions_flat = actions.reshape(actions.shape[0], -1)
 
-        # Concatenate all information
         inputs = torch.cat([obs_flat, actions_flat], dim=1)
 
         return self.network(inputs)
 
 
-# MADDPG Agent
 class MADDPGAgent:
     """Multi-Agent Deep Deterministic Policy Gradient Agent"""
 
@@ -132,21 +124,17 @@ class MADDPGAgent:
         self.tau = tau
         self.noise_std = noise_std
 
-        # Networks
         self.actor = MADDPGActor(obs_dim, action_dim)
         self.critic = MADDPGCritic(obs_dim, action_dim, n_agents)
         self.target_actor = MADDPGActor(obs_dim, action_dim)
         self.target_critic = MADDPGCritic(obs_dim, action_dim, n_agents)
 
-        # Copy parameters to target networks
         self.target_actor.load_state_dict(self.actor.state_dict())
         self.target_critic.load_state_dict(self.critic.state_dict())
 
-        # Optimizers
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr_actor)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr_critic)
 
-        # Exploration noise
         self.noise = Normal(0, noise_std)
 
     def act(self, obs: torch.Tensor, add_noise: bool = True) -> torch.Tensor:
@@ -169,18 +157,14 @@ class MADDPGAgent:
         next_obs = batch['next_observations']
         dones = batch['dones'][:, self.agent_id].unsqueeze(1)
 
-        # Current Q-values
         current_q = self.critic(obs, actions)
 
-        # Target Q-values
         with torch.no_grad():
             target_q = self.target_critic(next_obs, target_actions)
             target_q = rewards + self.gamma * target_q * (1 - dones.float())
 
-        # Critic loss
         critic_loss = F.mse_loss(current_q, target_q)
 
-        # Update critic
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 1.0)
@@ -193,14 +177,11 @@ class MADDPGAgent:
         """Update actor network"""
         obs = batch['observations']
 
-        # Construct joint action with current agent's policy
         actions = torch.stack(agent_actions, dim=1)  # [batch, n_agents, action_dim]
         actions[:, self.agent_id] = self.actor(obs[:, self.agent_id])
 
-        # Actor loss (negative Q-value)
         actor_loss = -self.critic(obs, actions).mean()
 
-        # Update actor
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.actor.parameters(), 1.0)
@@ -217,7 +198,6 @@ class MADDPGAgent:
             target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
 
 
-# Communication Network
 class CommunicationNetwork(nn.Module):
     """Neural communication network for multi-agent coordination"""
 
@@ -227,7 +207,6 @@ class CommunicationNetwork(nn.Module):
         self.obs_dim = obs_dim
         self.comm_dim = comm_dim
 
-        # Message generation network
         self.msg_generator = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
             nn.ReLU(),
@@ -235,7 +214,6 @@ class CommunicationNetwork(nn.Module):
             nn.Tanh()
         )
 
-        # Message processing network
         self.msg_processor = nn.Sequential(
             nn.Linear(obs_dim + comm_dim, hidden_dim),
             nn.ReLU(),
@@ -249,16 +227,13 @@ class CommunicationNetwork(nn.Module):
 
     def process_messages(self, obs: torch.Tensor, messages: torch.Tensor) -> torch.Tensor:
         """Process received messages with observation"""
-        # Average received messages (could use attention instead)
         avg_message = messages.mean(dim=1)  # Average over senders
 
-        # Combine with observation
         combined = torch.cat([obs, avg_message], dim=-1)
 
         return self.msg_processor(combined)
 
 
-# Communicative Multi-Agent System
 class CommMADDPG(nn.Module):
     """MADDPG with learned communication"""
 
@@ -271,13 +246,11 @@ class CommMADDPG(nn.Module):
         self.action_dim = action_dim
         self.comm_dim = comm_dim
 
-        # Communication networks for each agent
         self.comm_nets = nn.ModuleList([
             CommunicationNetwork(obs_dim, comm_dim, hidden_dim)
             for _ in range(n_agents)
         ])
 
-        # Actor networks with communication input
         self.actors = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(hidden_dim, hidden_dim),
@@ -287,7 +260,6 @@ class CommMADDPG(nn.Module):
             ) for _ in range(n_agents)
         ])
 
-        # Centralized critic
         total_input_dim = (obs_dim + action_dim) * n_agents + comm_dim * n_agents
         self.critic = nn.Sequential(
             nn.Linear(total_input_dim, hidden_dim),
@@ -310,26 +282,21 @@ class CommMADDPG(nn.Module):
         """
         batch_size = observations.shape[0]
 
-        # Generate messages for each agent
         messages = []
         for i in range(self.n_agents):
             msg = self.comm_nets[i].generate_message(observations[:, i])
             messages.append(msg)
         messages = torch.stack(messages, dim=1)  # [batch, n_agents, comm_dim]
 
-        # Process messages and observations
         processed_features = []
         actions = []
 
         for i in range(self.n_agents):
-            # Get messages from other agents
             other_messages = torch.cat([messages[:, :i], messages[:, i+1:]], dim=1)
 
-            # Process observation with received messages
             features = self.comm_nets[i].process_messages(observations[:, i], other_messages)
             processed_features.append(features)
 
-            # Generate action
             action = self.actors[i](features)
             actions.append(action)
 
@@ -343,7 +310,6 @@ class CommMADDPG(nn.Module):
         }
 
 
-# Multi-Agent Environment (Predator-Prey)
 class PredatorPreyEnvironment:
     """Multi-agent predator-prey environment"""
 
@@ -355,15 +321,12 @@ class PredatorPreyEnvironment:
         self.grid_size = grid_size
         self.max_steps = max_steps
 
-        # Agent positions
         self.predator_positions = []
         self.prey_positions = []
 
-        # Environment state
         self.step_count = 0
         self.done = False
 
-        # Action mapping (0: up, 1: down, 2: left, 3: right, 4: stay)
         self.action_map = {
             0: (-1, 0),  # up
             1: (1, 0),   # down
@@ -380,7 +343,6 @@ class PredatorPreyEnvironment:
         self.step_count = 0
         self.done = False
 
-        # Random initial positions
         self.predator_positions = []
         for _ in range(self.n_predators):
             pos = (np.random.randint(0, self.grid_size), np.random.randint(0, self.grid_size))
@@ -397,7 +359,6 @@ class PredatorPreyEnvironment:
         """Take environment step"""
         self.step_count += 1
 
-        # Move predators
         for i, action in enumerate(actions[:self.n_predators]):
             dx, dy = self.action_map[action]
             x, y = self.predator_positions[i]
@@ -405,7 +366,6 @@ class PredatorPreyEnvironment:
             new_y = np.clip(y + dy, 0, self.grid_size - 1)
             self.predator_positions[i] = (new_x, new_y)
 
-        # Move prey (simple random policy)
         for i in range(self.n_prey):
             action = np.random.randint(5)
             dx, dy = self.action_map[action]
@@ -414,10 +374,8 @@ class PredatorPreyEnvironment:
             new_y = np.clip(y + dy, 0, self.grid_size - 1)
             self.prey_positions[i] = (new_x, new_y)
 
-        # Calculate rewards
         rewards = self._calculate_rewards()
 
-        # Check termination
         self.done = (self.step_count >= self.max_steps or
                     self._check_capture())
 
@@ -429,12 +387,10 @@ class PredatorPreyEnvironment:
         """Get observations for all agents"""
         observations = []
 
-        # Predator observations
         for i in range(self.n_predators):
             obs = self._get_agent_observation(i, is_predator=True)
             observations.append(obs)
 
-        # Prey observations
         for i in range(self.n_prey):
             obs = self._get_agent_observation(i, is_predator=False)
             observations.append(obs)
@@ -452,19 +408,15 @@ class PredatorPreyEnvironment:
             other_prey = [pos for i, pos in enumerate(self.prey_positions) if i != agent_idx]
             other_agents = self.predator_positions + other_prey
 
-        # Agent's position (normalized)
         obs = [agent_pos[0] / self.grid_size, agent_pos[1] / self.grid_size]
 
-        # Agent's velocity (placeholder - could track from previous positions)
         obs.extend([0.0, 0.0])
 
-        # Relative positions of other agents
         for other_pos in other_agents:
             rel_x = (other_pos[0] - agent_pos[0]) / self.grid_size
             rel_y = (other_pos[1] - agent_pos[1]) / self.grid_size
             obs.extend([rel_x, rel_y])
 
-        # Pad observation if needed
         while len(obs) < self.observation_dim:
             obs.append(0.0)
 
@@ -474,11 +426,9 @@ class PredatorPreyEnvironment:
         """Calculate rewards for all agents"""
         rewards = np.zeros(self.n_agents)
 
-        # Predator rewards
         for i in range(self.n_predators):
             pred_pos = self.predator_positions[i]
 
-            # Reward for being close to prey
             min_distance = float('inf')
             for prey_pos in self.prey_positions:
                 distance = abs(pred_pos[0] - prey_pos[0]) + abs(pred_pos[1] - prey_pos[1])
@@ -486,11 +436,9 @@ class PredatorPreyEnvironment:
 
             rewards[i] = 1.0 / (min_distance + 1)  # Closer = higher reward
 
-            # Bonus for capture
             if self._check_capture():
                 rewards[i] += 10.0
 
-        # Prey rewards (negative of average predator reward)
         prey_reward = -np.mean(rewards[:self.n_predators])
         for i in range(self.n_predators, self.n_agents):
             rewards[i] = prey_reward
@@ -509,11 +457,9 @@ class PredatorPreyEnvironment:
         """Render environment"""
         grid = np.zeros((self.grid_size, self.grid_size))
 
-        # Mark predators as 1
         for pos in self.predator_positions:
             grid[pos] = 1
 
-        # Mark prey as 2
         for pos in self.prey_positions:
             grid[pos] = 2
 

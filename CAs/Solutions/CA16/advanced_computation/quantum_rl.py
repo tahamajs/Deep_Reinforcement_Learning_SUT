@@ -101,14 +101,11 @@ class QuantumCircuit:
         self.num_qubits = num_qubits
         self.depth = depth
 
-        # Initialize qubits in |0⟩ state
         self.initial_state = torch.zeros(2**num_qubits, dtype=torch.complex64)
         self.initial_state[0] = 1.0
 
-        # Variational parameters (angles for rotation gates)
         self.parameters = nn.Parameter(torch.randn(depth * num_qubits * 3) * 0.1)
 
-        # Common gates
         self.hadamard = HadamardGate()
         self.pauli_x = PauliX()
         self.pauli_y = PauliY()
@@ -129,30 +126,24 @@ class QuantumCircuit:
         param_idx = 0
 
         for layer in range(self.depth):
-            # Variational layer
             for qubit in range(self.num_qubits):
-                # Rotation gates with learnable parameters
                 rx_angle = self.parameters[param_idx]
                 ry_angle = self.parameters[param_idx + 1]
                 rz_angle = self.parameters[param_idx + 2]
 
-                # Apply rotations
                 rx_gate = RotationGate("x", rx_angle)
                 ry_gate = RotationGate("y", ry_angle)
                 rz_gate = RotationGate("z", rz_angle)
 
-                # Apply to specific qubit (tensor product structure)
                 state = self._apply_single_qubit_gate(state, rx_gate, qubit)
                 state = self._apply_single_qubit_gate(state, ry_gate, qubit)
                 state = self._apply_single_qubit_gate(state, rz_gate, qubit)
 
                 param_idx += 3
 
-            # Entangling layer (CNOT gates)
             for qubit in range(self.num_qubits - 1):
                 state = self._apply_cnot(state, qubit, qubit + 1)
 
-        # If classical input provided, encode it
         if x is not None:
             state = self._encode_classical_input(state, x)
 
@@ -164,7 +155,6 @@ class QuantumCircuit:
         """Apply single-qubit gate to specific qubit."""
         num_states = 2**self.num_qubits
 
-        # Build full operator using tensor products
         op = torch.tensor([[1.0]], dtype=torch.complex64)
 
         for q in range(self.num_qubits):
@@ -182,18 +172,14 @@ class QuantumCircuit:
         """Apply CNOT gate between control and target qubits."""
         num_states = 2**self.num_qubits
 
-        # CNOT matrix construction
         cnot_matrix = torch.zeros((num_states, num_states), dtype=torch.complex64)
 
         for i in range(num_states):
-            # Convert to binary representation
             bits = [(i >> q) & 1 for q in range(self.num_qubits)]
 
             if bits[control] == 1:  # Control qubit is |1⟩
-                # Flip target qubit
                 bits[target] = 1 - bits[target]
 
-            # Convert back to index
             j = sum(bit << q for q, bit in enumerate(bits))
             cnot_matrix[j, i] = 1.0
 
@@ -203,22 +189,18 @@ class QuantumCircuit:
         self, state: torch.Tensor, x: torch.Tensor
     ) -> torch.Tensor:
         """Encode classical input into quantum state."""
-        # Simple amplitude encoding
         if len(x.shape) > 1:
             x = x.flatten()
 
-        # Normalize input
         x_norm = torch.norm(x)
         if x_norm > 0:
             x = x / x_norm
 
-        # Encode into amplitudes (simplified)
         num_amplitudes = min(len(state), len(x))
         state[:num_amplitudes] = state[:num_amplitudes] + x[:num_amplitudes].to(
             torch.complex64
         )
 
-        # Renormalize
         state = state / torch.norm(state)
 
         return state
@@ -250,10 +232,8 @@ class QuantumCircuit:
         state = self.forward()
         probabilities = torch.abs(state) ** 2
 
-        # Sample from probability distribution
         outcomes = torch.multinomial(probabilities.real, shots, replacement=True)
 
-        # Count occurrences
         counts = {}
         for outcome in outcomes:
             bitstring = format(outcome.item(), f"0{self.num_qubits}b")
@@ -284,24 +264,20 @@ class QuantumRLAgent(nn.Module):
         self.action_dim = action_dim
         self.num_qubits = num_qubits
 
-        # Classical encoder
         self.encoder = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, num_qubits * 2),  # Amplitude and phase encoding
         )
 
-        # Quantum circuit
         self.quantum_circuit = QuantumCircuit(num_qubits, circuit_depth)
 
-        # Classical decoder
         self.decoder = nn.Sequential(
             nn.Linear(2**num_qubits, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, action_dim),
         )
 
-        # Value network (classical)
         self.value_net = nn.Sequential(
             nn.Linear(2**num_qubits, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, 1)
         )
@@ -316,26 +292,19 @@ class QuantumRLAgent(nn.Module):
         Returns:
             Action logits and state value
         """
-        # Encode state classically
         encoded = self.encoder(state)
 
-        # Split into amplitude and phase
         amplitude = encoded[:, : self.num_qubits]
         phase = encoded[:, self.num_qubits :]
 
-        # Create quantum input
         quantum_input = torch.polar(amplitude, phase)
 
-        # Quantum processing
         quantum_output = self.quantum_circuit(quantum_input)
 
-        # Convert back to real values for classical processing
         classical_input = torch.cat([quantum_output.real, quantum_output.imag], dim=-1)
 
-        # Decode to actions
         action_logits = self.decoder(classical_input)
 
-        # Value estimation
         value = self.value_net(classical_input)
 
         return action_logits, value
@@ -391,7 +360,6 @@ class QuantumEnvironment:
         self.action_space = ["x", "y", "z", "h", "cnot", "measure"]
         self.observation_space_shape = (2**num_qubits * 2,)  # Real and imaginary parts
 
-        # Quantum state
         self.state = torch.zeros(2**num_qubits, dtype=torch.complex64)
         self.state[0] = 1.0  # Start in |00...0⟩
 
@@ -411,15 +379,12 @@ class QuantumEnvironment:
         """Execute action in quantum environment."""
         self.step_count += 1
 
-        # Apply quantum gate
         gate_name = self.action_space[action]
         self._apply_gate(gate_name)
 
-        # Compute reward (fidelity with target state)
         fidelity = self._compute_fidelity(self.state, self.target_state)
         reward = fidelity.item()
 
-        # Check termination
         terminated = fidelity > 0.95  # Close to target
         truncated = self.step_count >= self.max_steps
 
@@ -449,7 +414,6 @@ class QuantumEnvironment:
         elif gate_name == "cnot":
             self.state = self._apply_cnot(0, 1)
         elif gate_name == "measure":
-            # Measurement collapses state
             probabilities = torch.abs(self.state) ** 2
             outcome = torch.multinomial(probabilities.real, 1).item()
             self.state = torch.zeros_like(self.state)
@@ -492,7 +456,6 @@ class QuantumEnvironment:
 
     def _generate_target_state(self) -> torch.Tensor:
         """Generate a random target quantum state."""
-        # Create random state vector
         real_part = torch.randn(2**self.num_qubits)
         imag_part = torch.randn(2**self.num_qubits)
         state = torch.complex(real_part, imag_part)
@@ -510,6 +473,5 @@ class QuantumEnvironment:
         probabilities = torch.abs(self.state) ** 2
         print(f"Measurement probabilities: {probabilities}")
 
-        # Show target fidelity
         fidelity = self._compute_fidelity(self.state, self.target_state)
         print(f"Target fidelity: {fidelity:.4f}")

@@ -24,7 +24,6 @@ class LatentActor(nn.Module):
             nn.Linear(hidden_dim, action_dim * 2),  # Mean and log_std
         )
 
-        # Initialize last layer with small weights
         self.network[-1].weight.data.uniform_(-1e-3, 1e-3)
         self.network[-1].bias.data.uniform_(-1e-3, 1e-3)
 
@@ -32,7 +31,6 @@ class LatentActor(nn.Module):
         output = self.network(state)
         mean, log_std = torch.chunk(output, 2, dim=-1)
 
-        # Constrain log_std
         log_std = torch.clamp(log_std, -20, 2)
         std = torch.exp(log_std)
 
@@ -43,13 +41,10 @@ class LatentActor(nn.Module):
         mean, std = self.forward(state)
         normal = Normal(mean, std)
 
-        # Reparameterization trick
         x = normal.rsample()
         action = torch.tanh(x) * self.action_range
 
-        # Compute log probability
         log_prob = normal.log_prob(x).sum(dim=-1)
-        # Correct for tanh transformation
         log_prob -= (2 * (np.log(2) - x - F.softplus(-2 * x))).sum(dim=-1)
 
         return action, log_prob

@@ -16,7 +16,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-# Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -38,7 +37,6 @@ class HierarchicalRLExperiment:
         print("🏗️ Running Hierarchical RL Experiment...")
         print("🎯 Testing: Goal-Conditioned RL vs Standard RL vs Hierarchical AC")
 
-        # Environment setup
         env_size = 10
         num_goals = 3
 
@@ -73,16 +71,13 @@ class HierarchicalRLExperiment:
             for seed in range(num_seeds):
                 print(f"  Seed {seed + 1}/{num_seeds}")
 
-                # Set random seeds
                 np.random.seed(seed)
                 torch.manual_seed(seed)
                 random.seed(seed)
 
-                # Create environment and agent
                 env = self.create_multi_goal_environment(env_size, num_goals)
                 agent = agent_config["class"](**agent_config["params"])
 
-                # Episode tracking
                 episode_rewards = []
                 goal_achievements = []
                 episode_lengths = []
@@ -95,13 +90,11 @@ class HierarchicalRLExperiment:
                     goals_reached = 0
                     done = False
 
-                    # For goal-conditioned agents, create episode trajectory
                     if agent_name == "Goal-Conditioned Agent":
                         episode_states = [state]
                         episode_actions = []
                         episode_goals = []
 
-                        # Set goal as the position of the first target
                         current_goal = np.zeros_like(state)
                         if hasattr(env, "goals") and len(env.goals) > 0:
                             goal_pos = env.goals[env.current_goal_idx]
@@ -109,23 +102,19 @@ class HierarchicalRLExperiment:
                             current_goal[goal_idx] = 1.0
 
                     while not done and episode_length < 200:
-                        # Get action based on agent type
                         if agent_name == "Goal-Conditioned Agent":
                             action = agent.get_action(state, current_goal)
                             episode_goals.append(current_goal.copy())
                         else:
                             action = agent.get_action(state)
 
-                        # Take step
                         next_state, reward, done, info = env.step(action)
                         episode_reward += reward
                         episode_length += 1
 
-                        # Track goal achievements
                         if "goals_completed" in info:
                             goals_reached = info["goals_completed"]
 
-                        # Store experience and train
                         if agent_name == "Goal-Conditioned Agent":
                             episode_states.append(next_state)
                             episode_actions.append(action)
@@ -141,7 +130,6 @@ class HierarchicalRLExperiment:
 
                         state = next_state
 
-                        # Update goal for goal-conditioned agent
                         if agent_name == "Goal-Conditioned Agent" and hasattr(
                             env, "goals"
                         ):
@@ -151,7 +139,6 @@ class HierarchicalRLExperiment:
                                 goal_idx = goal_pos[0] * env_size + goal_pos[1]
                                 current_goal[goal_idx] = 1.0
 
-                    # Train goal-conditioned agent with HER
                     if (
                         agent_name == "Goal-Conditioned Agent"
                         and len(episode_states) > 1
@@ -164,23 +151,19 @@ class HierarchicalRLExperiment:
                             final_achieved_goal,
                         )
 
-                        # Multiple training steps
                         for _ in range(10):
                             agent.train_step(batch_size=32)
 
-                    # Record metrics
                     episode_rewards.append(episode_reward)
                     goal_achievements.append(goals_reached / num_goals)
                     episode_lengths.append(episode_length)
 
-                    # Test skill reuse every 50 episodes
                     if episode % 50 == 0 and episode > 0:
                         skill_reuse_score = self._test_skill_reuse(
                             agent, env, agent_name
                         )
                         skill_reuse_success.append(skill_reuse_score)
 
-                    # Progress reporting
                     if (episode + 1) % 100 == 0:
                         avg_reward = np.mean(episode_rewards[-50:])
                         avg_goals = np.mean(goal_achievements[-50:])
@@ -188,7 +171,6 @@ class HierarchicalRLExperiment:
                             f"    Episode {episode + 1}: Reward={avg_reward:.2f}, Goals={avg_goals:.2f}"
                         )
 
-                # Store results for this seed
                 agent_results.append(
                     {
                         "rewards": episode_rewards,
@@ -207,10 +189,8 @@ class HierarchicalRLExperiment:
 
     def _test_skill_reuse(self, agent, env, agent_name):
         """Test how well agent transfers skills to new goal configurations."""
-        # Create new environment with different goal layout
         test_env = self.create_multi_goal_environment(env.size, env.num_goals)
 
-        # Run a few test episodes
         success_count = 0
         test_episodes = 5
 
@@ -221,7 +201,6 @@ class HierarchicalRLExperiment:
             goals_reached = 0
 
             if agent_name == "Goal-Conditioned Agent":
-                # Set goal for goal-conditioned agent
                 current_goal = np.zeros_like(state)
                 if hasattr(test_env, "goals") and len(test_env.goals) > 0:
                     goal_pos = test_env.goals[0]
@@ -242,7 +221,6 @@ class HierarchicalRLExperiment:
 
                 state = next_state
 
-            # Success if reached at least one goal quickly
             if goals_reached > 0 and steps < 80:
                 success_count += 1
 
@@ -260,7 +238,6 @@ class HierarchicalRLExperiment:
         fig, axes = plt.subplots(2, 3, figsize=(18, 12))
         fig.suptitle("Hierarchical RL Performance Analysis", fontsize=16)
 
-        # Plot 1: Learning curves
         ax1 = axes[0, 0]
         for agent_name, agent_results in self.results.items():
             all_rewards = [result["rewards"] for result in agent_results]
@@ -285,7 +262,6 @@ class HierarchicalRLExperiment:
         ax1.legend()
         ax1.grid(True, alpha=0.3)
 
-        # Plot 2: Goal achievement rates
         ax2 = axes[0, 1]
         for agent_name, agent_results in self.results.items():
             all_goals = [result["goal_achievements"] for result in agent_results]
@@ -307,7 +283,6 @@ class HierarchicalRLExperiment:
         ax2.legend()
         ax2.grid(True, alpha=0.3)
 
-        # Plot 3: Skill reuse capability
         ax3 = axes[0, 2]
         agent_names = list(self.results.keys())
         skill_reuse_means = []
@@ -337,7 +312,6 @@ class HierarchicalRLExperiment:
         ax3.set_title("Skill Reuse Capability")
         ax3.tick_params(axis="x", rotation=45)
 
-        # Plot 4: Episode length comparison
         ax4 = axes[1, 0]
         length_means = []
         length_stds = []
@@ -361,7 +335,6 @@ class HierarchicalRLExperiment:
         ax4.set_title("Efficiency (Lower is Better)")
         ax4.tick_params(axis="x", rotation=45)
 
-        # Plot 5: Final performance comparison
         ax5 = axes[1, 1]
         final_rewards = []
         final_stds = []
@@ -382,7 +355,6 @@ class HierarchicalRLExperiment:
         ax5.set_title("Final Performance")
         ax5.tick_params(axis="x", rotation=45)
 
-        # Plot 6: Goal achievement rates final
         ax6 = axes[1, 2]
         final_goal_rates = []
         goal_rate_stds = []
@@ -406,7 +378,6 @@ class HierarchicalRLExperiment:
         plt.tight_layout()
         plt.show()
 
-        # Print detailed analysis
         print("\n📈 Hierarchical RL Analysis Summary:")
         for agent_name, agent_results in self.results.items():
             final_rewards = [result["final_performance"] for result in agent_results]

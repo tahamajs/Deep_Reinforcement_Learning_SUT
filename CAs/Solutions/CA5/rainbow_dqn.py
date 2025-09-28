@@ -46,13 +46,11 @@ class NoisyLinear(nn.Module):
         self.out_features = out_features
         self.sigma_init = sigma_init
 
-        # Learnable parameters
         self.weight_mu = nn.Parameter(torch.FloatTensor(out_features, in_features))
         self.weight_sigma = nn.Parameter(torch.FloatTensor(out_features, in_features))
         self.bias_mu = nn.Parameter(torch.FloatTensor(out_features))
         self.bias_sigma = nn.Parameter(torch.FloatTensor(out_features))
 
-        # Register buffers for noise
         self.register_buffer(
             "weight_epsilon", torch.FloatTensor(out_features, in_features)
         )
@@ -105,20 +103,16 @@ class RainbowDQN(nn.Module):
         self.v_min = v_min
         self.v_max = v_max
 
-        # Distributional atoms
         self.support = torch.linspace(v_min, v_max, n_atoms).to(device)
 
-        # Feature layer with noisy nets
         self.feature_layer = nn.Sequential(NoisyLinear(state_size, 128), nn.ReLU())
 
-        # Value stream (dueling architecture)
         self.value_stream = nn.Sequential(
             NoisyLinear(128, 128),
             nn.ReLU(),
             NoisyLinear(128, n_atoms),  # Distribution over values
         )
 
-        # Advantage stream
         self.advantage_stream = nn.Sequential(
             NoisyLinear(128, 128),
             nn.ReLU(),
@@ -129,21 +123,16 @@ class RainbowDQN(nn.Module):
         """Forward pass returning value distributions"""
         batch_size = x.size(0)
 
-        # Shared features
         features = self.feature_layer(x)
 
-        # Value distribution: V(x) -> P(V|x)
         value_dist = self.value_stream(features).view(batch_size, 1, self.n_atoms)
 
-        # Advantage distributions: A(x,a) -> P(A|x,a) for each action
         advantage_dist = self.advantage_stream(features).view(
             batch_size, self.action_size, self.n_atoms
         )
 
-        # Combine: Q(x,a) = V(x) + (A(x,a) - mean(A(x,a')))
         q_dist = value_dist + advantage_dist - advantage_dist.mean(dim=1, keepdim=True)
 
-        # Apply softmax to get proper distributions
         q_dist = F.softmax(q_dist, dim=2)
 
         return q_dist
@@ -171,14 +160,12 @@ class RainbowDQNAgent(DQNAgent):
         super().__init__(state_size, action_size, **kwargs)
         self.agent_type = "Rainbow DQN"
 
-        # Rainbow parameters
         self.n_step = n_step
         self.n_atoms = n_atoms
         self.v_min = v_min
         self.v_max = v_max
         self.support = torch.linspace(v_min, v_max, n_atoms).to(device)
 
-        # Override network with Rainbow architecture
         self.q_network = RainbowDQN(state_size, action_size, n_atoms, v_min, v_max).to(
             device
         )
@@ -187,7 +174,6 @@ class RainbowDQNAgent(DQNAgent):
         ).to(device)
         self.update_target_network()
 
-        # Override memory with prioritized buffer
         self.memory = PrioritizedReplayBuffer(
             capacity=10000,
             alpha=0.5,  # Lower alpha for stability
@@ -195,19 +181,15 @@ class RainbowDQNAgent(DQNAgent):
             beta_increment=1e-6,
         )
 
-        # Multi-step buffer for n-step returns
         self.n_step_buffer = []
         self.gamma_n = self.gamma**n_step
 
-        # Reinitialize optimizer
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.lr)
 
-        # Additional tracking
         self.distributions = []
 
     def act(self, state, epsilon=None):
         """Rainbow action selection with noise reset"""
-        # Reset noise for exploration
         self.q_network.reset_noise()
 
         return super().act(state, epsilon)
@@ -219,7 +201,6 @@ class RainbowDQNAgent(DQNAgent):
                 state = torch.FloatTensor(state).unsqueeze(0).to(device)
 
             dist = self.q_network(state)
-            # Expected Q-values: sum over atoms
             q_values = torch.sum(dist * self.support, dim=2)
 
         return q_values.squeeze(0).cpu().numpy()
@@ -242,7 +223,6 @@ class RainbowDQNAgent(DQNAgent):
         self.n_step_buffer.append(experience)
 
         if len(self.n_step_buffer) >= self.n_step:
-            # Create n-step experience
             n_step_experience = self._get_n_step_info()
             self.memory.add(n_step_experience)
             self.n_step_buffer.pop(0)  # Remove oldest experience
@@ -255,11 +235,9 @@ class RainbowDQNAgent(DQNAgent):
             self.n_step_buffer[-1][4],
         )
 
-        # Calculate n-step discounted reward
         for i in range(self.n_step):
             reward += (self.gamma**i) * self.n_step_buffer[i][2]
 
-        # Original state and action
         state, action = self.n_step_buffer[0][0], self.n_step_buffer[0][1]
 
         return (state, action, reward, next_state, done)
@@ -269,13 +247,11 @@ class RainbowDQNAgent(DQNAgent):
         if len(self.memory) < self.batch_size:
             return None
 
-        # Sample batch with priorities
         experiences, idxs, is_weights = self.memory.sample(self.batch_size)
         batch = self.experience_to_batch(experiences)
 
         states, actions, rewards, next_states, dones = batch
 
-        # Convert to tensors
         states = torch.FloatTensor(states).to(device)
         actions = torch.LongTensor(actions).to(device)
         rewards = torch.FloatTensor(rewards).unsqueeze(1).to(device)
@@ -283,33 +259,24 @@ class RainbowDQNAgent(DQNAgent):
         dones = torch.FloatTensor(dones).unsqueeze(1).to(device)
         is_weights = torch.FloatTensor(is_weights).unsqueeze(1).to(device)
 
-        # Reset noise for training
         self.q_network.reset_noise()
 
-        # Current distributions
         current_dist = self.q_network(states)
         current_action_dist = current_dist[range(self.batch_size), actions.squeeze()]
 
-        # Target distributions (Double Q-learning + distributional)
         with torch.no_grad():
-            # Action selection: online network
             next_q_values = self.get_q_values(next_states)
             next_actions = np.argmax(next_q_values, axis=1)
 
-            # Action evaluation: target network
             next_dist = self.target_network(next_states)
             next_action_dist = next_dist[range(self.batch_size), next_actions]
 
-            # Project distributional target
             target_dist = self._project_distribution(next_action_dist, rewards, dones)
 
-        # KL divergence loss (cross-entropy between distributions)
         loss = -(target_dist * torch.log(current_action_dist + 1e-8)).sum(dim=1).mean()
 
-        # Weighted loss for prioritized replay
         loss = (is_weights * loss.unsqueeze(1)).mean()
 
-        # Update priorities with TD errors (approximated)
         td_errors = (
             torch.sum(torch.abs(current_action_dist - target_dist), dim=1)
             .detach()
@@ -318,25 +285,20 @@ class RainbowDQNAgent(DQNAgent):
         )
         self.memory.update_priorities(idxs, td_errors)
 
-        # Optimize
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
         self.optimizer.step()
 
-        # Update target network periodically
         self.step_count += 1
         if self.step_count % self.target_update_freq == 0:
             self.update_target_network()
 
-        # Decay epsilon (though Rainbow uses noise for exploration)
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-        # Store training metrics
         self.losses.append(loss.item())
 
-        # Store distribution for analysis
         self.distributions.append(current_dist[0].detach().cpu().numpy())
 
         return loss.item()
@@ -345,50 +307,41 @@ class RainbowDQNAgent(DQNAgent):
         """Project distributional target for n-step returns"""
         batch_size = rewards.size(0)
 
-        # Create target distribution
         target_dist = torch.zeros(batch_size, self.n_atoms).to(device)
 
         for i in range(batch_size):
             if dones[i]:
-                # Terminal state: reward only
                 target_value = rewards[i].item()
             else:
-                # Non-terminal: reward + gamma^n * expected value
                 expected_next_value = torch.sum(next_dist[i] * self.support)
                 target_value = (
                     rewards[i].item() + self.gamma_n * expected_next_value.item()
                 )
 
-            # Project target value onto support
             target_dist[i] = self._categorical_projection(target_value)
 
         return target_dist
 
     def _categorical_projection(self, value):
         """Project a scalar value onto categorical distribution"""
-        # Find atoms above and below the value
         below = torch.where(self.support <= value)[0]
         above = torch.where(self.support > value)[0]
 
         if len(below) == 0:
-            # Value is below all atoms
             dist = torch.zeros(self.n_atoms).to(device)
             dist[0] = 1.0
             return dist
         elif len(above) == 0:
-            # Value is above all atoms
             dist = torch.zeros(self.n_atoms).to(device)
             dist[-1] = 1.0
             return dist
         else:
-            # Interpolate between atoms
             idx_below = below[-1]
             idx_above = above[0]
 
             atom_below = self.support[idx_below]
             atom_above = self.support[idx_above]
 
-            # Linear interpolation
             if atom_above == atom_below:
                 prob = 1.0
             else:
@@ -421,14 +374,12 @@ class RainbowAnalysis:
             episode_q_values = []
 
             while not done:
-                # Get value distribution for current state
                 dist = agent.get_value_distribution(state)
                 q_values = agent.get_q_values(state)
 
                 episode_distributions.append(dist)
                 episode_q_values.append(q_values)
 
-                # Take action
                 action = agent.act(state)
                 next_state, reward, terminated, truncated, _ = env.step(action)
                 done = terminated or truncated
@@ -448,7 +399,6 @@ class RainbowAnalysis:
 
         fig, axes = plt.subplots(2, 3, figsize=(18, 10))
 
-        # 1. Value distribution evolution
         if analysis_data["distributions"]:
             first_episode_distributions = analysis_data["distributions"][0]
             support = agent.support.cpu().numpy()
@@ -463,7 +413,6 @@ class RainbowAnalysis:
             axes[0, 0].set_ylabel("Probability")
             axes[0, 0].grid(True, alpha=0.3)
 
-        # 2. Q-value expectations
         if analysis_data["q_values"]:
             first_episode_q_values = analysis_data["q_values"][0]
             q_values_array = np.array(first_episode_q_values)
@@ -479,7 +428,6 @@ class RainbowAnalysis:
             axes[0, 1].legend()
             axes[0, 1].grid(True, alpha=0.3)
 
-        # 3. Distribution variance
         if analysis_data["distributions"]:
             variances = []
             for episode_dists in analysis_data["distributions"]:
@@ -492,12 +440,10 @@ class RainbowAnalysis:
             axes[0, 2].set_ylabel("Variance")
             axes[0, 2].grid(True, alpha=0.3)
 
-        # 4. Action selection confidence
         if analysis_data["q_values"]:
             confidences = []
             for episode_q in analysis_data["q_values"]:
                 for q_values in episode_q:
-                    # Confidence as max Q minus second max Q
                     sorted_q = np.sort(q_values)
                     confidence = sorted_q[-1] - sorted_q[-2] if len(sorted_q) > 1 else 0
                     confidences.append(confidence)
@@ -508,12 +454,10 @@ class RainbowAnalysis:
             axes[1, 0].set_ylabel("Confidence")
             axes[1, 0].grid(True, alpha=0.3)
 
-        # 5. Distribution entropy
         if analysis_data["distributions"]:
             entropies = []
             for episode_dists in analysis_data["distributions"]:
                 for dist in episode_dists:
-                    # Calculate entropy: -sum(p * log p)
                     entropy = -np.sum(dist * np.log(dist + 1e-8))
                     entropies.append(entropy)
 
@@ -523,7 +467,6 @@ class RainbowAnalysis:
             axes[1, 1].set_ylabel("Entropy")
             axes[1, 1].grid(True, alpha=0.3)
 
-        # 6. Component comparison (placeholder for multi-agent comparison)
         axes[1, 2].text(
             0.5,
             0.5,
@@ -548,7 +491,6 @@ class RainbowAnalysis:
         """Compare Rainbow DQN vs individual components"""
         print("Comparing Rainbow DQN vs Standard DQN...")
 
-        # Train both agents
         print("Training Standard DQN...")
         standard_scores, _ = standard_agent.train(
             env, num_episodes, print_every=num_episodes // 4
@@ -559,12 +501,10 @@ class RainbowAnalysis:
             env, num_episodes, print_every=num_episodes // 4
         )
 
-        # Visualize comparison
         fig, axes = plt.subplots(2, 2, figsize=(16, 10))
 
         episodes = range(len(standard_scores))
 
-        # 1. Learning curves
         axes[0, 0].plot(
             episodes, standard_scores, color="red", label="Standard DQN", linewidth=2
         )
@@ -577,7 +517,6 @@ class RainbowAnalysis:
         axes[0, 0].legend()
         axes[0, 0].grid(True, alpha=0.3)
 
-        # 2. Performance improvement
         baseline_standard = np.mean(standard_scores[:30])
         baseline_rainbow = np.mean(rainbow_scores[:30])
 
@@ -605,7 +544,6 @@ class RainbowAnalysis:
         axes[0, 1].legend()
         axes[0, 1].grid(True, alpha=0.3)
 
-        # 3. Final performance
         final_window = 50
         standard_final = standard_scores[-final_window:]
         rainbow_final = rainbow_scores[-final_window:]
@@ -617,7 +555,6 @@ class RainbowAnalysis:
         axes[1, 0].set_ylabel("Episode Reward")
         axes[1, 0].grid(True, alpha=0.3)
 
-        # 4. Stability analysis
         stability_standard = np.std(standard_scores[-100:])
         stability_rainbow = np.std(rainbow_scores[-100:])
 
@@ -634,7 +571,6 @@ class RainbowAnalysis:
         plt.tight_layout()
         plt.show()
 
-        # Print summary
         print("\\nRainbow vs Standard DQN Summary:")
         print("=" * 40)
         print(
@@ -649,16 +585,13 @@ class RainbowAnalysis:
         return standard_scores, rainbow_scores
 
 
-# Example usage and demonstration
 if __name__ == "__main__":
     print("Rainbow DQN Implementation")
     print("=" * 30)
 
-    # Test Rainbow DQN agent creation
     agent = RainbowDQNAgent(state_size=4, action_size=2)
     print(f"Rainbow DQN Agent created: {agent.agent_type}")
 
-    # Test network components
     test_input = torch.randn(1, 4)
     output_dist = agent.q_network(test_input)
     print(f"Output distribution shape: {output_dist.shape}")

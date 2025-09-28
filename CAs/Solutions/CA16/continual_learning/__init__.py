@@ -12,13 +12,10 @@ from .progressive_networks import ProgressiveNetwork, ProgressiveNetworkTrainer
 from .meta_learning import MAMLAgent, MetaLearner
 
 __all__ = [
-    # Elastic Weight Consolidation
     "ElasticWeightConsolidation",
     "EWCTrainer",
-    # Progressive Networks
     "ProgressiveNetwork",
     "ProgressiveNetworkTrainer",
-    # Meta Learning
     "MAMLAgent",
     "MetaLearner",
 ]

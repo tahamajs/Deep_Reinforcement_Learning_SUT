@@ -5,13 +5,11 @@ Setup script for CA19 Modular package
 from setuptools import setup, find_packages
 import os
 
-# Read the contents of README file
 this_directory = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 
-# Read requirements
 def read_requirements(filename):
     with open(filename, "r") as f:
         return [line.strip() for line in f if line.strip() and not line.startswith("#")]

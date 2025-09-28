@@ -24,7 +24,6 @@ class ConstrainedPolicyOptimization:
         self.action_dim = action_dim
         self.constraint_limit = constraint_limit
 
-        # Policy network
         self.policy_network = nn.Sequential(
             nn.Linear(state_dim, 128),
             nn.ReLU(),
@@ -34,7 +33,6 @@ class ConstrainedPolicyOptimization:
             nn.Softmax(dim=-1),
         ).to(device)
 
-        # Value networks for rewards and constraints
         self.value_network = nn.Sequential(
             nn.Linear(state_dim, 128),
             nn.ReLU(),
@@ -51,19 +49,16 @@ class ConstrainedPolicyOptimization:
             nn.Linear(128, 1),
         ).to(device)
 
-        # Optimizers
         self.policy_optimizer = optim.Adam(self.policy_network.parameters(), lr=lr)
         self.value_optimizer = optim.Adam(self.value_network.parameters(), lr=lr)
         self.cost_optimizer = optim.Adam(self.cost_value_network.parameters(), lr=lr)
 
-        # CPO parameters
         self.gamma = 0.99
         self.lam = 0.95  # GAE parameter
         self.clip_ratio = 0.2
         self.target_kl = 0.01
         self.damping = 0.1
 
-        # Safety tracking
         self.constraint_violations = []
         self.policy_losses = []
         self.value_losses = []
@@ -117,7 +112,6 @@ class ConstrainedPolicyOptimization:
 
         policy_loss = -torch.min(surr1, surr2).mean()
 
-        # KL divergence for early stopping
         kl_div = (old_log_probs - new_log_probs).mean()
 
         return policy_loss, kl_div
@@ -140,7 +134,6 @@ class ConstrainedPolicyOptimization:
         if not trajectories:
             return None
 
-        # Collect trajectory data
         all_states, all_actions, all_rewards, all_costs = [], [], [], []
         all_dones, all_log_probs = [], []
 
@@ -153,18 +146,15 @@ class ConstrainedPolicyOptimization:
             all_dones.extend(dones)
             all_log_probs.extend(log_probs)
 
-        # Convert to tensors
         states = torch.FloatTensor(all_states).to(device)
         actions = torch.LongTensor(all_actions).to(device)
         rewards = torch.FloatTensor(all_rewards).to(device)
         costs = torch.FloatTensor(all_costs).to(device)
         old_log_probs = torch.FloatTensor(all_log_probs).to(device)
 
-        # Compute values
         values = self.value_network(states).squeeze()
         cost_values = self.cost_value_network(states).squeeze()
 
-        # Compute advantages
         with torch.no_grad():
             next_value = self.value_network(states[-1:]).squeeze()
             next_cost_value = self.cost_value_network(states[-1:]).squeeze()
@@ -179,13 +169,11 @@ class ConstrainedPolicyOptimization:
             next_cost_value.item(),
         )
 
-        # Normalize advantages
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
         cost_advantages = (cost_advantages - cost_advantages.mean()) / (
             cost_advantages.std() + 1e-8
         )
 
-        # Update value networks
         returns = advantages + values.detach()
         cost_returns = cost_advantages + cost_values.detach()
 
@@ -200,17 +188,14 @@ class ConstrainedPolicyOptimization:
         cost_loss.backward()
         self.cost_optimizer.step()
 
-        # Check constraint violation
         constraint_violation = self.compute_constraint_violation(
             states, actions, cost_advantages, old_log_probs
         )
 
-        # Update policy with constraint satisfaction
         policy_loss, kl_div = self.compute_policy_loss(
             states, actions, advantages, old_log_probs
         )
 
-        # CPO constraint: only update if constraint is satisfied
         if constraint_violation.item() <= self.constraint_limit:
             self.policy_optimizer.zero_grad()
             policy_loss.backward()
@@ -223,7 +208,6 @@ class ConstrainedPolicyOptimization:
                 f"⚠️ Policy update skipped due to constraint violation: {constraint_violation.item():.4f}"
             )
 
-        # Store statistics
         self.policy_losses.append(policy_loss.item())
         self.value_losses.append(value_loss.item())
         self.cost_losses.append(cost_loss.item())
@@ -248,7 +232,6 @@ class LagrangianSafeRL:
         self.action_dim = action_dim
         self.constraint_limit = constraint_limit
 
-        # Networks
         self.policy_network = nn.Sequential(
             nn.Linear(state_dim, 128),
             nn.ReLU(),
@@ -266,18 +249,14 @@ class LagrangianSafeRL:
             nn.Linear(128, 1),
         ).to(device)
 
-        # Optimizers
         self.policy_optimizer = optim.Adam(self.policy_network.parameters(), lr=lr)
         self.value_optimizer = optim.Adam(self.value_network.parameters(), lr=lr)
 
-        # Lagrange multiplier (adaptive penalty)
         self.lagrange_multiplier = nn.Parameter(torch.tensor(1.0, device=device))
         self.lagrange_optimizer = optim.Adam([self.lagrange_multiplier], lr=lagrange_lr)
 
-        # Training parameters
         self.gamma = 0.99
 
-        # Statistics
         self.lagrange_history = []
         self.constraint_costs = []
         self.total_rewards = []
@@ -298,7 +277,6 @@ class LagrangianSafeRL:
         if not trajectories:
             return None
 
-        # Collect data
         all_states, all_actions, all_rewards, all_costs = [], [], [], []
         all_log_probs = []
 
@@ -310,14 +288,12 @@ class LagrangianSafeRL:
             all_costs.extend(costs)
             all_log_probs.extend(log_probs)
 
-        # Convert to tensors
         states = torch.FloatTensor(all_states).to(device)
         actions = torch.LongTensor(all_actions).to(device)
         rewards = torch.FloatTensor(all_rewards).to(device)
         costs = torch.FloatTensor(all_costs).to(device)
         old_log_probs = torch.FloatTensor(all_log_probs).to(device)
 
-        # Compute returns
         discounted_rewards = []
         discounted_costs = []
 
@@ -325,7 +301,6 @@ class LagrangianSafeRL:
             traj_rewards = [step[2] for step in trajectory]
             traj_costs = [step[3] for step in trajectory]
 
-            # Compute discounted returns
             reward_return = 0
             cost_return = 0
             for r, c in zip(reversed(traj_rewards), reversed(traj_costs)):
@@ -337,25 +312,20 @@ class LagrangianSafeRL:
         returns = torch.FloatTensor(discounted_rewards).to(device)
         cost_returns = torch.FloatTensor(discounted_costs).to(device)
 
-        # Compute baseline
         values = self.value_network(states).squeeze()
         advantages = returns - values.detach()
         cost_advantages = cost_returns
 
-        # Lagrangian objective: maximize reward - lambda * constraint_cost
         action_probs = self.policy_network(states)
         action_dist = Categorical(action_probs)
         log_probs = action_dist.log_prob(actions)
 
-        # Policy loss with Lagrangian penalty
         policy_loss = -(
             log_probs * (advantages - self.lagrange_multiplier * cost_advantages)
         ).mean()
 
-        # Value loss
         value_loss = F.mse_loss(values, returns)
 
-        # Update policy and value networks
         self.policy_optimizer.zero_grad()
         policy_loss.backward()
         self.policy_optimizer.step()
@@ -364,22 +334,18 @@ class LagrangianSafeRL:
         value_loss.backward()
         self.value_optimizer.step()
 
-        # Update Lagrange multiplier
         avg_cost = cost_returns.mean()
         constraint_violation = avg_cost - self.constraint_limit
 
-        # Lagrange multiplier update (dual ascent)
         lagrange_loss = -self.lagrange_multiplier * constraint_violation
 
         self.lagrange_optimizer.zero_grad()
         lagrange_loss.backward()
         self.lagrange_optimizer.step()
 
-        # Ensure non-negative multiplier
         with torch.no_grad():
             self.lagrange_multiplier.clamp_(min=0.0)
 
-        # Store statistics
         self.lagrange_history.append(self.lagrange_multiplier.item())
         self.constraint_costs.append(avg_cost.item())
         self.total_rewards.append(returns.mean().item())

@@ -27,7 +27,6 @@ class LIFNeuron(nn.Module):
         self.threshold = threshold
         self.reset = reset
 
-        # Neuron state
         self.v = None  # Membrane potential
         self.spike = None  # Spike output
 
@@ -47,14 +46,11 @@ class LIFNeuron(nn.Module):
         if self.v is None:
             self.v = torch.zeros_like(x)
 
-        # Leaky integration
         dv = (-self.v + x) * (dt / self.tau)
         self.v = self.v + dv
 
-        # Spike generation
         self.spike = (self.v >= self.threshold).float()
 
-        # Reset
         self.v = self.v * (1 - self.spike) + self.reset * self.spike
 
         return self.spike, self.v
@@ -84,7 +80,6 @@ class AdaptiveLIFNeuron(LIFNeuron):
         self.tau_adapt = tau_adapt  # Adaptation time constant
         self.beta = beta  # Adaptation strength
 
-        # Adaptation state
         self.adapt = None
 
     def forward(
@@ -105,21 +100,16 @@ class AdaptiveLIFNeuron(LIFNeuron):
         if self.adapt is None:
             self.adapt = torch.zeros_like(x)
 
-        # Adaptation current update
         dadapt = -self.adapt * (dt / self.tau_adapt) + self.beta * self.spike
         self.adapt = self.adapt + dadapt
 
-        # Effective input with adaptation
         effective_input = x - self.adapt
 
-        # Leaky integration
         dv = (-self.v + effective_input) * (dt / self.tau)
         self.v = self.v + dv
 
-        # Spike generation
         self.spike = (self.v >= self.threshold).float()
 
-        # Reset
         self.v = self.v * (1 - self.spike) + self.reset * self.spike
 
         return self.spike, self.v
@@ -152,10 +142,8 @@ class SpikingNeuralNetwork(nn.Module):
         self.output_size = output_size
         self.dt = dt
 
-        # Input encoding layer
         self.input_encoder = nn.Linear(input_size, hidden_sizes[0])
 
-        # Hidden layers
         self.hidden_layers = nn.ModuleList()
         prev_size = hidden_sizes[0]
 
@@ -164,10 +152,8 @@ class SpikingNeuralNetwork(nn.Module):
             self.hidden_layers.append(layer)
             prev_size = hidden_size
 
-        # Output layer
         self.output_layer = nn.Linear(prev_size, output_size)
 
-        # Spiking neurons
         self.neurons = nn.ModuleList()
         for i, hidden_size in enumerate(hidden_sizes):
             if neuron_type == "lif":
@@ -178,7 +164,6 @@ class SpikingNeuralNetwork(nn.Module):
                 raise ValueError(f"Unknown neuron type: {neuron_type}")
             self.neurons.append(neuron)
 
-        # Output neuron
         if neuron_type == "lif":
             self.output_neuron = LIFNeuron()
         else:
@@ -197,20 +182,16 @@ class SpikingNeuralNetwork(nn.Module):
         batch_size, seq_len, _ = x.shape
         spike_history = []
 
-        # Reset neuron states
         for neuron in self.neurons:
             neuron.reset_state()
         self.output_neuron.reset_state()
 
-        # Process sequence
         for t in range(seq_len):
             current_input = x[:, t, :]
 
-            # Input encoding
             hidden_input = self.input_encoder(current_input)
             hidden_input = torch.relu(hidden_input)
 
-            # Hidden layers
             for i, (layer, neuron) in enumerate(zip(self.hidden_layers, self.neurons)):
                 if i == 0:
                     spike, _ = neuron(hidden_input, self.dt)
@@ -220,12 +201,10 @@ class SpikingNeuralNetwork(nn.Module):
                 hidden_input = layer(spike)
                 spike_history.append(spike.detach())
 
-            # Output layer
             output_input = self.output_layer(hidden_input)
             output_spike, _ = self.output_neuron(output_input, self.dt)
             spike_history.append(output_spike.detach())
 
-        # Return final output and spike history
         return output_spike, spike_history
 
     def get_spike_rate(self, spike_history: List[torch.Tensor]) -> torch.Tensor:
@@ -262,10 +241,8 @@ class NeuromorphicNetwork(nn.Module):
         self.action_dim = action_dim
         self.sequence_length = sequence_length
 
-        # State buffer for temporal processing
         self.state_buffer = deque(maxlen=sequence_length)
 
-        # Spiking policy network
         self.policy_net = SpikingNeuralNetwork(
             input_size=state_dim,
             hidden_sizes=hidden_sizes,
@@ -273,7 +250,6 @@ class NeuromorphicNetwork(nn.Module):
             neuron_type=neuron_type,
         )
 
-        # Value network (non-spiking for stability)
         self.value_net = nn.Sequential(
             nn.Linear(state_dim * sequence_length, hidden_sizes[0]),
             nn.ReLU(),
@@ -295,22 +271,17 @@ class NeuromorphicNetwork(nn.Module):
         Returns:
             Action logits and value estimate
         """
-        # Update state buffer
         self.state_buffer.append(state.clone())
 
-        # Pad buffer if not full
         while len(self.state_buffer) < self.sequence_length:
             self.state_buffer.append(torch.zeros_like(state))
 
-        # Create sequence input
         sequence = torch.stack(
             list(self.state_buffer), dim=1
         )  # (batch, seq_len, state_dim)
 
-        # Policy network (spiking)
         action_logits, spike_history = self.policy_net(sequence)
 
-        # Value network (non-spiking)
         flat_sequence = sequence.view(sequence.size(0), -1)
         value = self.value_net(flat_sequence)
 
@@ -343,8 +314,6 @@ class NeuromorphicNetwork(nn.Module):
 
     def get_spike_statistics(self) -> Dict[str, float]:
         """Get spiking statistics."""
-        # This would require storing spike history during forward passes
-        # For now, return placeholder
         return {"avg_spike_rate": 0.0, "total_spikes": 0, "network_activity": 0.0}
 
 
@@ -365,12 +334,10 @@ class NeuromorphicProcessor:
         self.max_synapses = max_synapses
         self.energy_budget = energy_budget
 
-        # Current resource usage
         self.neuron_count = 0
         self.synapse_count = 0
         self.energy_used = 0.0
 
-        # Performance metrics
         self.computation_time = 0.0
         self.power_consumption = 0.0
 
@@ -417,10 +384,8 @@ class NeuromorphicProcessor:
         Returns:
             Output currents
         """
-        # Simulate synaptic processing
         current = torch.matmul(spike_train.float(), weights)
 
-        # Energy cost (simplified)
         spike_count = torch.sum(spike_train).item()
         energy_cost = spike_count * 0.01  # Energy per spike
 
@@ -456,16 +421,12 @@ class NeuromorphicProcessor:
         Returns:
             Energy-optimized network
         """
-        # Implement pruning and quantization for energy efficiency
-        # This is a simplified version
 
         optimized_network = copy.deepcopy(network)
 
-        # Prune small weights (energy-saving approximation)
         for module in optimized_network.modules():
             if isinstance(module, nn.Linear):
                 with torch.no_grad():
-                    # Prune 10% of smallest weights
                     weights = module.weight.data
                     threshold = torch.quantile(torch.abs(weights), 0.1)
                     mask = torch.abs(weights) > threshold

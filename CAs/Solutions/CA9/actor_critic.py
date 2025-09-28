@@ -70,15 +70,12 @@ class ActorCriticAgent:
         self.gamma = gamma
         self.entropy_coeff = entropy_coeff
 
-        # Networks
         self.actor = ActorNetwork(state_dim, action_dim).to(device)
         self.critic = CriticNetwork(state_dim).to(device)
 
-        # Optimizers
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr_actor)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr_critic)
 
-        # Training metrics
         self.episode_rewards = []
         self.actor_losses = []
         self.critic_losses = []
@@ -99,7 +96,6 @@ class ActorCriticAgent:
     def update(self, state, action, reward, next_state, done, log_prob, entropy, value):
         """Update actor and critic networks"""
 
-        # Convert to tensors
         if not isinstance(state, torch.Tensor):
             state = torch.FloatTensor(state).unsqueeze(0).to(device)
         if not isinstance(next_state, torch.Tensor):
@@ -107,13 +103,11 @@ class ActorCriticAgent:
         if not isinstance(value, torch.Tensor):
             value = torch.FloatTensor([value]).to(device)
 
-        # Calculate TD target and error
         with torch.no_grad():
             next_value = self.critic(next_state) if not done else 0
             td_target = reward + self.gamma * next_value
             td_error = td_target - value
 
-        # Critic update (value function)
         value_tensor = torch.tensor(value, device=device, dtype=torch.float32)
         critic_loss = F.mse_loss(value_tensor, td_target)
 
@@ -122,7 +116,6 @@ class ActorCriticAgent:
         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=1.0)
         self.critic_optimizer.step()
 
-        # Actor update (policy)
         actor_loss = -log_prob * td_error.detach() - self.entropy_coeff * entropy
 
         self.actor_optimizer.zero_grad()
@@ -130,7 +123,6 @@ class ActorCriticAgent:
         torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=1.0)
         self.actor_optimizer.step()
 
-        # Store metrics
         self.actor_losses.append(actor_loss.item())
         self.critic_losses.append(critic_loss.item())
         self.td_errors.append(td_error.item())
@@ -150,7 +142,6 @@ class ActorCriticAgent:
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
 
-            # Update networks
             td_error = self.update(
                 state, action, reward, next_state, done, log_prob, entropy, value
             )
@@ -222,7 +213,6 @@ class A2CAgent(ActorCriticAgent):
         )
         self.n_steps = n_steps
 
-        # Storage for n-step updates
         self.states = []
         self.actions = []
         self.rewards = []
@@ -246,10 +236,8 @@ class A2CAgent(ActorCriticAgent):
         returns = []
         advantages = []
 
-        # Add next_value for bootstrapping
         values = self.values + [next_value]
 
-        # Compute n-step returns
         for i in range(len(self.rewards)):
             n_step_return = 0
             for j in range(self.n_steps):
@@ -259,7 +247,6 @@ class A2CAgent(ActorCriticAgent):
                 if self.dones[i + j]:
                     break
 
-            # Add bootstrapped value if episode didn't end
             if i + self.n_steps < len(self.rewards) and not any(
                 self.dones[i : i + self.n_steps]
             ):
@@ -275,7 +262,6 @@ class A2CAgent(ActorCriticAgent):
         if len(self.states) == 0:
             return
 
-        # Get next state value for bootstrapping
         with torch.no_grad():
             if next_state is not None:
                 next_state_tensor = (
@@ -285,23 +271,19 @@ class A2CAgent(ActorCriticAgent):
             else:
                 next_value = 0
 
-        # Compute returns and advantages
         returns, advantages = self.compute_n_step_returns(next_value)
 
-        # Convert to tensors
         states_tensor = torch.FloatTensor(self.states).to(device)
         returns_tensor = torch.FloatTensor(returns).to(device)
         advantages_tensor = torch.FloatTensor(advantages).to(device)
         log_probs_tensor = torch.stack(self.log_probs)
         entropies_tensor = torch.stack(self.entropies)
 
-        # Normalize advantages
         if len(advantages) > 1:
             advantages_tensor = (advantages_tensor - advantages_tensor.mean()) / (
                 advantages_tensor.std() + 1e-8
             )
 
-        # Critic update
         values_pred = self.critic(states_tensor)
         critic_loss = F.mse_loss(values_pred, returns_tensor)
 
@@ -310,7 +292,6 @@ class A2CAgent(ActorCriticAgent):
         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=1.0)
         self.critic_optimizer.step()
 
-        # Actor update
         actor_loss = (
             -(log_probs_tensor * advantages_tensor).mean()
             - self.entropy_coeff * entropies_tensor.mean()
@@ -321,14 +302,12 @@ class A2CAgent(ActorCriticAgent):
         torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=1.0)
         self.actor_optimizer.step()
 
-        # Store metrics
         self.actor_losses.append(actor_loss.item())
         self.critic_losses.append(critic_loss.item())
         self.td_errors.extend(advantages)
         self.entropies.extend([e.item() for e in entropies_tensor])
         self.value_estimates.extend([v.item() for v in values_pred])
 
-        # Clear storage
         self.clear_storage()
 
     def clear_storage(self):
@@ -352,13 +331,11 @@ class A2CAgent(ActorCriticAgent):
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
 
-            # Store transition
             self.store_transition(state, action, reward, log_prob, value, entropy, done)
 
             total_reward += reward
             steps += 1
 
-            # Update networks every n_steps or at episode end
             if len(self.states) >= self.n_steps or done:
                 self.update_networks(next_state if not done else None)
 
@@ -367,7 +344,6 @@ class A2CAgent(ActorCriticAgent):
 
             state = next_state
 
-        # Final update if there are remaining transitions
         if len(self.states) > 0:
             self.update_networks(None)
 
@@ -389,7 +365,6 @@ class ActorCriticAnalyzer:
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.n
 
-        # Different Actor-Critic variants
         agents = {
             "One-step AC": ActorCriticAgent(
                 state_dim, action_dim, lr_actor=1e-3, lr_critic=1e-3
@@ -414,7 +389,6 @@ class ActorCriticAnalyzer:
                     avg_reward = np.mean(agent.episode_rewards[-20:])
                     print(f"  Episode {episode+1}: Avg Reward = {avg_reward:.1f}")
 
-            # Evaluation
             eval_results = agent.evaluate(env, 20)
 
             results[name] = {
@@ -425,7 +399,6 @@ class ActorCriticAnalyzer:
 
         env.close()
 
-        # Visualization
         self.visualize_actor_critic_comparison(results)
 
         return results
@@ -436,7 +409,6 @@ class ActorCriticAnalyzer:
         fig, axes = plt.subplots(2, 3, figsize=(18, 12))
         colors = ["blue", "red", "green", "purple"]
 
-        # 1. Learning curves
         ax = axes[0, 0]
         for i, (name, data) in enumerate(results.items()):
             agent = data["agent"]
@@ -450,7 +422,6 @@ class ActorCriticAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 2. Actor loss evolution
         ax = axes[0, 1]
         for i, (name, data) in enumerate(results.items()):
             agent = data["agent"]
@@ -466,7 +437,6 @@ class ActorCriticAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 3. Critic loss evolution
         ax = axes[0, 2]
         for i, (name, data) in enumerate(results.items()):
             agent = data["agent"]
@@ -483,7 +453,6 @@ class ActorCriticAnalyzer:
         ax.grid(True, alpha=0.3)
         ax.set_yscale("log")
 
-        # 4. TD errors
         ax = axes[1, 0]
         for i, (name, data) in enumerate(results.items()):
             agent = data["agent"]
@@ -500,7 +469,6 @@ class ActorCriticAnalyzer:
         ax.grid(True, alpha=0.3)
         ax.set_yscale("log")
 
-        # 5. Entropy evolution (exploration)
         ax = axes[1, 1]
         for i, (name, data) in enumerate(results.items()):
             agent = data["agent"]
@@ -516,7 +484,6 @@ class ActorCriticAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 6. Performance comparison
         ax = axes[1, 2]
         method_names = list(results.keys())
         final_perfs = [data["final_performance"] for data in results.values()]
@@ -557,7 +524,6 @@ class ActorCriticAnalyzer:
         plt.tight_layout()
         plt.show()
 
-        # Print summary
         print("\n" + "=" * 50)
         print("ACTOR-CRITIC COMPARISON SUMMARY")
         print("=" * 50)

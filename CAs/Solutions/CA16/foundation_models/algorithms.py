@@ -17,7 +17,6 @@ import math
 from collections import deque
 from typing import Dict, List, Tuple, Optional, Any
 
-# Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -63,18 +62,15 @@ class DecisionTransformer(nn.Module):
         self.model_dim = model_dim
         self.max_length = max_length
 
-        # Embedding layers for states, actions, and returns-to-go
         self.state_embedding = nn.Linear(state_dim, model_dim)
         self.action_embedding = nn.Linear(action_dim, model_dim)
         self.return_embedding = nn.Linear(1, model_dim)
         self.timestep_embedding = nn.Embedding(max_length, model_dim)
 
-        # Positional encoding
         self.pos_encoding = PositionalEncoding(
             model_dim, max_length * 3
         )  # 3x for s,a,r tokens
 
-        # Transformer layers
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=model_dim,
             nhead=num_heads,
@@ -84,17 +80,14 @@ class DecisionTransformer(nn.Module):
         )
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
 
-        # Layer normalization
         self.layer_norm = nn.LayerNorm(model_dim)
 
-        # Output heads
         self.action_head = nn.Linear(model_dim, action_dim)
         self.value_head = nn.Linear(model_dim, 1)
         self.return_head = nn.Linear(model_dim, 1)
 
         self.dropout = nn.Dropout(dropout)
 
-        # Initialize weights
         self.apply(self._init_weights)
 
     def _init_weights(self, module):
@@ -120,41 +113,33 @@ class DecisionTransformer(nn.Module):
         """
         batch_size, seq_len = states.shape[0], states.shape[1]
 
-        # Embed inputs
         state_embeddings = self.state_embedding(states)
         action_embeddings = self.action_embedding(actions)
         return_embeddings = self.return_embedding(returns_to_go)
         time_embeddings = self.timestep_embedding(timesteps)
 
-        # Add time embeddings
         state_embeddings += time_embeddings
         action_embeddings += time_embeddings
         return_embeddings += time_embeddings
 
-        # Stack embeddings: [return, state, action] * seq_len
-        # Shape: (batch_size, seq_len * 3, model_dim)
         stacked_inputs = torch.stack(
             [return_embeddings, state_embeddings, action_embeddings], dim=2
         ).reshape(batch_size, 3 * seq_len, self.model_dim)
 
-        # Apply positional encoding
         stacked_inputs = self.pos_encoding(stacked_inputs.transpose(0, 1)).transpose(
             0, 1
         )
         stacked_inputs = self.layer_norm(stacked_inputs)
         stacked_inputs = self.dropout(stacked_inputs)
 
-        # Apply transformer
         transformer_output = self.transformer(
             stacked_inputs, src_key_padding_mask=attention_mask
         )
 
-        # Reshape back to (batch_size, seq_len, 3, model_dim)
         transformer_output = transformer_output.reshape(
             batch_size, seq_len, 3, self.model_dim
         )
 
-        # Extract outputs for each token type
         return_preds = self.return_head(transformer_output[:, :, 0])  # Return tokens
         state_preds = transformer_output[:, :, 1]  # State tokens (for representation)
         action_preds = self.action_head(transformer_output[:, :, 2])  # Action tokens
@@ -176,7 +161,6 @@ class DecisionTransformer(nn.Module):
             outputs = self.forward(states, actions, returns_to_go, timesteps)
             action_logits = outputs["action_preds"][:, -1] / temperature
 
-            # For discrete actions
             if self.action_dim > 1:
                 action_probs = F.softmax(action_logits, dim=-1)
                 action = torch.multinomial(action_probs, 1)
@@ -199,20 +183,16 @@ class MultiTaskRLFoundationModel(nn.Module):
         self.task_dim = task_dim
         self.model_dim = model_dim
 
-        # Task-specific embeddings
         self.task_embedding = nn.Embedding(task_dim, model_dim)
 
-        # Core Decision Transformer
         self.decision_transformer = DecisionTransformer(
             state_dim, action_dim, model_dim, num_heads, num_layers
         )
 
-        # Task-specific output heads
         self.task_heads = nn.ModuleDict(
             {f"task_{i}": nn.Linear(model_dim, action_dim) for i in range(task_dim)}
         )
 
-        # Meta-learning components
         self.context_encoder = nn.LSTM(model_dim, model_dim, batch_first=True)
         self.adaptation_network = nn.Sequential(
             nn.Linear(model_dim, model_dim), nn.ReLU(), nn.Linear(model_dim, model_dim)
@@ -224,19 +204,15 @@ class MultiTaskRLFoundationModel(nn.Module):
         """Forward pass with task conditioning."""
         batch_size = states.shape[0]
 
-        # Get task embeddings
         task_embeds = self.task_embedding(task_ids)  # (batch_size, model_dim)
         task_embeds = task_embeds.unsqueeze(1).expand(-1, states.shape[1], -1)
 
-        # Modify states with task conditioning
         conditioned_states = states + task_embeds[:, :, : self.state_dim]
 
-        # Forward through decision transformer
         outputs = self.decision_transformer(
             conditioned_states, actions, returns_to_go, timesteps
         )
 
-        # Task-specific action prediction
         state_representations = outputs["state_representations"]
         task_specific_actions = []
 
@@ -251,11 +227,9 @@ class MultiTaskRLFoundationModel(nn.Module):
 
     def adapt_to_new_task(self, context_trajectories, num_adaptation_steps=5):
         """Few-shot adaptation to new task using in-context learning."""
-        # Encode context trajectories
         context_features = []
 
         for trajectory in context_trajectories:
-            # Extract features from demonstration trajectory
             states, actions, returns = (
                 trajectory["states"],
                 trajectory["actions"],
@@ -267,11 +241,9 @@ class MultiTaskRLFoundationModel(nn.Module):
                 outputs = self.decision_transformer(states, actions, returns, timesteps)
                 context_features.append(outputs["state_representations"].mean(dim=1))
 
-        # Aggregate context
         context_features = torch.stack(context_features)
         context_encoding, _ = self.context_encoder(context_features.unsqueeze(0))
 
-        # Compute adaptation parameters
         adaptation_params = self.adaptation_network(
             context_encoding.squeeze(0).mean(dim=0)
         )
@@ -302,16 +274,13 @@ class InContextLearningRL:
     def get_action(self, current_state, desired_return, temperature=1.0):
         """Get action using in-context learning."""
         if len(self.context_buffer) == 0:
-            # Random action if no context
             return np.random.randint(self.foundation_model.action_dim)
 
-        # Prepare context sequence
         context_states = []
         context_actions = []
         context_returns = []
         context_timesteps = []
 
-        # Build context from buffer
         cumulative_return = 0
         for i, exp in enumerate(reversed(list(self.context_buffer))):
             context_states.append(exp["state"])
@@ -320,13 +289,11 @@ class InContextLearningRL:
             context_returns.append([cumulative_return])
             context_timesteps.append(len(self.context_buffer) - i - 1)
 
-        # Reverse to get chronological order
         context_states.reverse()
         context_actions.reverse()
         context_returns.reverse()
         context_timesteps.reverse()
 
-        # Add current state
         context_states.append(current_state)
         context_actions.append(
             np.zeros(self.foundation_model.action_dim)
@@ -334,13 +301,11 @@ class InContextLearningRL:
         context_returns.append([desired_return])
         context_timesteps.append(len(self.context_buffer))
 
-        # Convert to tensors
         states = torch.FloatTensor(context_states).unsqueeze(0).to(device)
         actions = torch.FloatTensor(context_actions).unsqueeze(0).to(device)
         returns_to_go = torch.FloatTensor(context_returns).unsqueeze(0).to(device)
         timesteps = torch.LongTensor(context_timesteps).unsqueeze(0).to(device)
 
-        # Get action from foundation model
         with torch.no_grad():
             action = self.foundation_model.get_action(
                 states, actions, returns_to_go, timesteps, temperature
@@ -373,7 +338,6 @@ class FoundationModelTrainer:
         self.model.train()
         self.optimizer.zero_grad()
 
-        # Unpack batch
         states = batch["states"].to(device)
         actions = batch["actions"].to(device)
         returns_to_go = batch["returns_to_go"].to(device)
@@ -381,24 +345,19 @@ class FoundationModelTrainer:
         target_actions = batch["target_actions"].to(device)
         target_returns = batch["target_returns"].to(device)
 
-        # Forward pass
         outputs = self.model(states, actions, returns_to_go, timesteps)
 
-        # Compute losses
         action_loss = F.mse_loss(outputs["action_preds"], target_actions)
         value_loss = F.mse_loss(outputs["value_preds"], target_returns)
         return_loss = F.mse_loss(outputs["return_preds"], target_returns)
 
-        # Combined loss
         total_loss = action_loss + 0.5 * value_loss + 0.1 * return_loss
 
-        # Backward pass
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
         self.optimizer.step()
         self.scheduler.step()
 
-        # Update statistics
         self.training_stats["losses"].append(total_loss.item())
         self.training_stats["action_losses"].append(action_loss.item())
         self.training_stats["value_losses"].append(value_loss.item())

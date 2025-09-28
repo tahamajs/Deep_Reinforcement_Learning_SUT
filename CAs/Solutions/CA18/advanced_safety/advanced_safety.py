@@ -8,7 +8,6 @@ from collections import deque
 import copy
 import random
 
-# Safety Constraints
 class SafetyConstraints:
     """Safety constraints for reinforcement learning"""
 
@@ -40,7 +39,6 @@ class SafetyConstraints:
             return np.clip(action, -self.action_bounds, self.action_bounds)
         return action
 
-# Robust Policy with Quantum-Inspired Uncertainty
 class QuantumInspiredRobustPolicy:
     """Robust policy with quantum-inspired uncertainty quantification"""
 
@@ -57,7 +55,6 @@ class QuantumInspiredRobustPolicy:
         self.robustness_level = robustness_level
         self.n_quantum_states = n_quantum_states
 
-        # Main policy network
         self.policy_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -67,7 +64,6 @@ class QuantumInspiredRobustPolicy:
             nn.Tanh(),
         )
 
-        # Quantum-inspired uncertainty network
         self.uncertainty_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -75,7 +71,6 @@ class QuantumInspiredRobustPolicy:
             nn.Softmax(dim=-1),
         )
 
-        # Robust action generators (one per quantum state)
         self.quantum_policies = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(state_dim, hidden_dim),
@@ -93,10 +88,8 @@ class QuantumInspiredRobustPolicy:
         main_action = self.policy_net(state)
 
         if use_quantum:
-            # Get quantum state probabilities
             quantum_probs = self.uncertainty_net(state)  # [batch, n_quantum_states]
 
-            # Generate actions from different quantum states
             quantum_actions = []
             for i in range(self.n_quantum_states):
                 action = self.quantum_policies[i](state)
@@ -104,12 +97,10 @@ class QuantumInspiredRobustPolicy:
 
             quantum_actions = torch.stack(quantum_actions, dim=1)  # [batch, n_states, action_dim]
 
-            # Compute quantum superposition action
             superposition_action = torch.sum(
                 quantum_actions * quantum_probs.unsqueeze(-1), dim=1
             )
 
-            # Add robustness through quantum interference
             interference_term = self._compute_quantum_interference(quantum_actions, quantum_probs)
             robust_action = superposition_action + self.robustness_level * interference_term
 
@@ -128,19 +119,16 @@ class QuantumInspiredRobustPolicy:
     def _compute_quantum_interference(self, quantum_actions: torch.Tensor,
                                     quantum_probs: torch.Tensor) -> torch.Tensor:
         """Compute quantum interference term for robustness"""
-        # Simplified quantum interference calculation
         mean_action = torch.mean(quantum_actions, dim=1)  # [batch, action_dim]
         interference = torch.zeros_like(mean_action)
 
         for i in range(self.n_quantum_states):
             for j in range(i+1, self.n_quantum_states):
-                # Interference between quantum states
                 phase_diff = torch.sum(quantum_actions[:, i] * quantum_actions[:, j], dim=-1, keepdim=True)
                 interference += quantum_probs[:, i] * quantum_probs[:, j] * phase_diff * quantum_actions[:, i]
 
         return interference
 
-# Causal Safety Constraints
 class CausalSafetyConstraints:
     """Safety constraints based on causal relationships"""
 
@@ -158,18 +146,15 @@ class CausalSafetyConstraints:
 
         for var in self.safety_variables:
             if var in state_dict:
-                # Check if variable is within safe bounds
                 value = np.linalg.norm(state_dict[var])
                 safe_bound = self.intervention_bounds.get(var, 1.0)
                 safety_status[var] = value <= safe_bound
 
-        # Check causal dependencies
         causal_violations = []
         for var in self.safety_variables:
             parents = self.causal_graph.get_parents(var)
             for parent in parents:
                 if parent in action_dict and var in state_dict:
-                    # Check if action on parent causes unsafe state in child
                     action_norm = np.linalg.norm(action_dict[parent])
                     state_change = np.linalg.norm(state_dict[var])
                     if action_norm > 0.5 and state_change > 1.0:
@@ -181,7 +166,6 @@ class CausalSafetyConstraints:
             'overall_safe': all(safety_status.values()) and len(causal_violations) == 0
         }
 
-# Constrained Policy Optimization with Quantum Regularization
 class QuantumConstrainedPolicyOptimization:
     """Constrained policy optimization with quantum-inspired regularization"""
 
@@ -197,7 +181,6 @@ class QuantumConstrainedPolicyOptimization:
         self.action_dim = action_dim
         self.quantum_reg_weight = quantum_reg_weight
 
-        # Policy network with quantum layers
         self.policy = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -207,14 +190,12 @@ class QuantumConstrainedPolicyOptimization:
             nn.Tanh(),
         )
 
-        # Quantum state representation
         self.quantum_encoder = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 32),  # Quantum state dimension
         )
 
-        # Value network
         self.value_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -223,7 +204,6 @@ class QuantumConstrainedPolicyOptimization:
             nn.Linear(hidden_dim, 1),
         )
 
-        # Cost value network
         self.cost_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -232,11 +212,9 @@ class QuantumConstrainedPolicyOptimization:
             nn.Linear(hidden_dim, 1),
         )
 
-        # Lagrange multiplier
         self.lambda_param = torch.tensor(1.0, requires_grad=True)
         self.cost_limit = cost_limit
 
-        # Optimizers
         self.policy_optimizer = torch.optim.Adam(self.policy.parameters(), lr=1e-3)
         self.value_optimizer = torch.optim.Adam(self.value_net.parameters(), lr=1e-3)
         self.cost_optimizer = torch.optim.Adam(self.cost_net.parameters(), lr=1e-3)
@@ -258,7 +236,6 @@ class QuantumConstrainedPolicyOptimization:
     ):
         """Update constrained policy with quantum regularization"""
 
-        # Compute advantages
         with torch.no_grad():
             values = self.value_net(states).squeeze()
             next_values = self.value_net(next_states).squeeze()
@@ -270,34 +247,28 @@ class QuantumConstrainedPolicyOptimization:
                 costs + 0.99 * next_cost_values * (1 - dones) - cost_values
             )
 
-        # Policy loss with constraints
         log_probs = self._compute_log_probs(states, actions)
         policy_loss = -(log_probs * advantages).mean()
 
-        # Cost constraint
         cost_penalty = torch.max(
             torch.tensor(0.0),
             self.lambda_param * (cost_advantages.mean() - self.cost_limit),
         )
 
-        # Quantum regularization (encourage diverse action distributions)
         quantum_states = self.quantum_encoder(states)
         quantum_reg = self._quantum_regularization_loss(quantum_states, actions)
 
         total_policy_loss = policy_loss + cost_penalty + self.quantum_reg_weight * quantum_reg
 
-        # Update policy
         self.policy_optimizer.zero_grad()
         total_policy_loss.backward()
         self.policy_optimizer.step()
 
-        # Update value function
         value_loss = F.mse_loss(values, rewards + 0.99 * next_values * (1 - dones))
         self.value_optimizer.zero_grad()
         value_loss.backward()
         self.value_optimizer.step()
 
-        # Update cost value function
         cost_loss = F.mse_loss(
             cost_values, costs + 0.99 * next_cost_values * (1 - dones)
         )
@@ -305,13 +276,11 @@ class QuantumConstrainedPolicyOptimization:
         cost_loss.backward()
         self.cost_optimizer.step()
 
-        # Update Lagrange multiplier
         lambda_loss = -self.lambda_param * (cost_advantages.mean() - self.cost_limit)
         self.lambda_optimizer.zero_grad()
         lambda_loss.backward()
         self.lambda_optimizer.step()
 
-        # Clip lambda to be positive
         with torch.no_grad():
             self.lambda_param.data.clamp_(min=0)
 
@@ -335,17 +304,14 @@ class QuantumConstrainedPolicyOptimization:
     def _quantum_regularization_loss(self, quantum_states: torch.Tensor,
                                    actions: torch.Tensor) -> torch.Tensor:
         """Quantum-inspired regularization to encourage exploration"""
-        # Encourage quantum state diversity
         state_norms = torch.norm(quantum_states, dim=-1)
         diversity_loss = -torch.var(state_norms)
 
-        # Encourage action diversity in quantum space
         action_proj = torch.matmul(actions.unsqueeze(1), quantum_states.unsqueeze(-1)).squeeze()
         action_diversity = -torch.var(action_proj)
 
         return diversity_loss + action_diversity
 
-# Risk-Sensitive RL with Causal Awareness
 class CausalRiskSensitiveRL:
     """Risk-sensitive reinforcement learning with causal awareness"""
 
@@ -362,7 +328,6 @@ class CausalRiskSensitiveRL:
         self.causal_graph = causal_graph
         self.risk_sensitivity = risk_sensitivity
 
-        # Policy network
         self.policy = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -372,7 +337,6 @@ class CausalRiskSensitiveRL:
             nn.Tanh(),
         )
 
-        # Causal-aware value network
         self.value_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -381,7 +345,6 @@ class CausalRiskSensitiveRL:
             nn.Linear(hidden_dim, 1),
         )
 
-        # Causal intervention network
         self.intervention_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -411,34 +374,26 @@ class CausalRiskSensitiveRL:
     ):
         """Update with risk-sensitive causal objective"""
 
-        # Compute causal interventions
         intervention_probs = self.intervention_net(states)  # [batch, n_variables]
 
-        # Compute risk-adjusted returns with causal awareness
         with torch.no_grad():
             values = self.value_net(states).squeeze()
             next_values = self.value_net(next_states).squeeze()
 
-            # Causal-aware risk adjustment
             causal_factors = self._compute_causal_factors(states, intervention_probs)
 
             if self.risk_sensitivity > 0:
-                # Risk-seeking with causal awareness
                 adjusted_rewards = torch.exp(self.risk_sensitivity * rewards * causal_factors)
             else:
-                # Risk-averse with causal awareness
                 adjusted_rewards = -torch.exp(-self.risk_sensitivity * rewards / (causal_factors + 1e-6))
 
             targets = adjusted_rewards + 0.99 * next_values * (1 - dones)
 
-        # Value loss
         value_loss = F.mse_loss(values, targets)
 
-        # Policy loss (risk-sensitive with causal regularization)
         log_probs = self._compute_log_probs(states, actions)
         policy_loss = -(log_probs * (targets - values.detach())).mean()
 
-        # Causal regularization
         causal_reg = self._causal_regularization_loss(states, actions, intervention_probs)
 
         total_loss = value_loss + policy_loss + 0.1 * causal_reg
@@ -457,7 +412,6 @@ class CausalRiskSensitiveRL:
     def _compute_causal_factors(self, states: torch.Tensor,
                               intervention_probs: torch.Tensor) -> torch.Tensor:
         """Compute causal safety factors"""
-        # Simplified causal factor computation
         state_norms = torch.norm(states, dim=-1)
         causal_safety = torch.mean(intervention_probs, dim=-1)
         return causal_safety / (state_norms + 1)
@@ -473,13 +427,11 @@ class CausalRiskSensitiveRL:
     def _causal_regularization_loss(self, states: torch.Tensor, actions: torch.Tensor,
                                   intervention_probs: torch.Tensor) -> torch.Tensor:
         """Causal regularization to encourage safe interventions"""
-        # Encourage interventions on variables that are likely to be unsafe
         state_risks = torch.norm(states, dim=-1)
         intervention_loss = F.mse_loss(intervention_probs.mean(dim=-1), torch.sigmoid(state_risks))
 
         return intervention_loss
 
-# Safety Monitor with Quantum Uncertainty
 class QuantumSafetyMonitor:
     """Real-time safety monitoring with quantum uncertainty quantification"""
 
@@ -493,7 +445,6 @@ class QuantumSafetyMonitor:
         self.safety_violations = []
         self.interventions = []
 
-        # Quantum state for uncertainty tracking
         self.quantum_state = np.random.uniform(0, 2*np.pi, quantum_dim)
 
     def monitor_safety(
@@ -501,33 +452,27 @@ class QuantumSafetyMonitor:
     ) -> Dict:
         """Monitor safety with quantum uncertainty"""
 
-        # Classical safety metrics
         state_norm = np.linalg.norm(state)
         action_norm = np.linalg.norm(action)
         state_change = np.linalg.norm(next_state - state)
 
-        # Quantum uncertainty quantification
         quantum_uncertainty = self._compute_quantum_uncertainty(state, action)
 
-        # Safety violation with quantum uncertainty
         classical_violation = (
             state_norm > 5 or action_norm > 1 or state_change > 2
         )
 
-        # Quantum-enhanced violation detection
         quantum_violation = quantum_uncertainty > self.safety_threshold
 
         violation = classical_violation or quantum_violation
 
         self.safety_violations.append(violation)
 
-        # Intervention decision with quantum randomness
         quantum_random = np.random.uniform(0, 1)
         intervention = violation and quantum_random < self.intervention_probability
 
         if intervention:
             self.interventions.append(True)
-            # Quantum-inspired safe action
             safe_action = self._quantum_safe_action(state, action)
         else:
             self.interventions.append(False)
@@ -549,21 +494,17 @@ class QuantumSafetyMonitor:
 
     def _compute_quantum_uncertainty(self, state: np.ndarray, action: np.ndarray) -> float:
         """Compute quantum uncertainty measure"""
-        # Simplified quantum uncertainty using state-action correlation
         state_phase = np.angle(np.sum(state * np.exp(1j * self.quantum_state[:len(state)])))
         action_phase = np.angle(np.sum(action * np.exp(1j * self.quantum_state[len(state):len(state)+len(action)])))
 
-        # Phase difference as uncertainty measure
         uncertainty = abs(state_phase - action_phase) / np.pi
 
-        # Update quantum state
         self.quantum_state = (self.quantum_state + 0.1 * uncertainty) % (2 * np.pi)
 
         return uncertainty
 
     def _quantum_safe_action(self, state: np.ndarray, action: np.ndarray) -> np.ndarray:
         """Generate quantum-inspired safe action"""
-        # Use quantum state to generate safe intervention
         safe_direction = np.cos(self.quantum_state[:len(action)])
         safe_magnitude = 0.5 * np.exp(-np.linalg.norm(state))
         safe_action = safe_magnitude * safe_direction
@@ -576,7 +517,6 @@ class QuantumSafetyMonitor:
         violation_rate = np.mean(self.safety_violations) if total_steps > 0 else 0
         intervention_rate = np.mean(self.interventions) if total_steps > 0 else 0
 
-        # Quantum coherence measure
         coherence = 1.0 / (1.0 + np.var(self.quantum_state))
 
         return {

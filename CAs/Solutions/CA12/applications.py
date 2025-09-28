@@ -1,4 +1,3 @@
-# Comprehensive Multi-Agent Applications
 import torch
 
 
@@ -10,16 +9,13 @@ class ResourceAllocationEnvironment:
         self.n_resources = n_resources
         self.resource_capacity = resource_capacity
 
-        # Resource demands and values
         self.resource_demands = torch.randint(
             1, resource_capacity + 1, (n_agents, n_resources)
         )
         self.resource_values = torch.rand(n_agents, n_resources) * 10
 
-        # Current allocation
         self.current_allocation = torch.zeros(n_agents, n_resources, dtype=torch.int)
 
-        # Resource constraints
         self.resource_limits = torch.full(
             (n_resources,), resource_capacity, dtype=torch.int
         )
@@ -48,25 +44,20 @@ class ResourceAllocationEnvironment:
         Args:
             agent_actions: [n_agents, n_resources] - allocation requests
         """
-        # Validate actions - clamp each agent's actions to their demands
         agent_actions = torch.min(agent_actions, self.resource_demands)
 
-        # Check resource constraints
         total_requested = agent_actions.sum(dim=0)
         available_capacity = self.resource_limits - self.current_allocation.sum(dim=0)
 
-        # Allocate resources proportionally if over-subscribed
         allocation_ratios = torch.where(
             total_requested > available_capacity,
             available_capacity.float() / total_requested.float(),
             torch.ones_like(total_requested.float()),
         )
 
-        # Apply allocations
         actual_allocation = (agent_actions.float() * allocation_ratios).int()
         self.current_allocation += actual_allocation
 
-        # Compute rewards
         rewards = []
         for i in range(self.n_agents):
             agent_allocation = actual_allocation[i]
@@ -79,7 +70,6 @@ class ResourceAllocationEnvironment:
             )  # Bonus for satisfaction
             rewards.append(reward)
 
-        # Check if episode is done
         done = (self.current_allocation.sum(dim=0) >= self.resource_limits * 0.9).all()
 
         next_state = self.get_state()
@@ -106,7 +96,6 @@ class AutonomousVehicleEnvironment:
         self.road_length = road_length
         self.speed_limit = speed_limit
 
-        # Vehicle states: [position, speed, lane]
         self.vehicle_states = torch.zeros(n_vehicles, 3)
         self.vehicle_states[:, 0] = torch.linspace(
             0, road_length * 0.8, n_vehicles
@@ -118,11 +107,9 @@ class AutonomousVehicleEnvironment:
             0, 3, (n_vehicles,)
         )  # Lanes (0, 1, 2)
 
-        # Road network
         self.n_lanes = 3
         self.lane_speeds = torch.tensor([25, 30, 35])  # Different speed limits per lane
 
-        # Safety constraints
         self.min_safe_distance = 10.0
         self.collision_penalty = -100
 
@@ -139,14 +126,11 @@ class AutonomousVehicleEnvironment:
         """Get current state for all vehicles."""
         states = []
         for i in range(self.n_vehicles):
-            # Local observation: own state + nearby vehicles
             own_state = self.vehicle_states[i]
 
-            # Find vehicles in front and behind
             same_lane = self.vehicle_states[:, 2] == own_state[2]
             positions = self.vehicle_states[:, 0]
 
-            # Vehicle in front
             front_mask = (positions > own_state[0]) & same_lane
             if front_mask.any():
                 front_vehicle_idx = torch.argmin(positions[front_mask])
@@ -155,7 +139,6 @@ class AutonomousVehicleEnvironment:
             else:
                 front_distance = self.road_length - own_state[0]
 
-            # Vehicle behind
             back_mask = (positions < own_state[0]) & same_lane
             if back_mask.any():
                 back_vehicle_idx = torch.argmax(positions[back_mask])
@@ -164,7 +147,6 @@ class AutonomousVehicleEnvironment:
             else:
                 back_distance = own_state[0]
 
-            # Adjacent lane vehicles
             left_lane = (own_state[2] - 1).clamp(0, self.n_lanes - 1)
             right_lane = (own_state[2] + 1).clamp(0, self.n_lanes - 1)
 
@@ -197,14 +179,11 @@ class AutonomousVehicleEnvironment:
             action = actions[i]
             state = self.vehicle_states[i]
 
-            # Parse action: [accel_command, lane_change_command]
             accel_command = action[0] * 5 - 2.5  # Convert to [-2.5, 2.5] m/s²
             lane_change = action[1] * 2 - 1  # Convert to [-1, 1]
 
-            # Update speed
             new_speed = (state[1] + accel_command).clamp(0, self.speed_limit)
 
-            # Update lane (discrete change)
             if abs(lane_change) > 0.5:
                 new_lane = (state[2] + (1 if lane_change > 0 else -1)).clamp(
                     0, self.n_lanes - 1
@@ -212,21 +191,16 @@ class AutonomousVehicleEnvironment:
             else:
                 new_lane = state[2]
 
-            # Update position
             new_position = (state[0] + new_speed).clamp(0, self.road_length)
 
-            # Update state
             self.vehicle_states[i] = torch.tensor([new_position, new_speed, new_lane])
 
-            # Compute reward
             reward = 0
 
-            # Speed reward (prefer lane-appropriate speed)
             target_speed = self.lane_speeds[int(new_lane)]
             speed_reward = -abs(new_speed - target_speed) / self.speed_limit
             reward += speed_reward
 
-            # Safety reward (maintain safe distance)
             same_lane = self.vehicle_states[:, 2] == new_lane
             positions = self.vehicle_states[:, 0]
 
@@ -239,13 +213,11 @@ class AutonomousVehicleEnvironment:
                 else:
                     reward += min_front_distance / 20.0  # Reward for safe distance
 
-            # Progress reward
             progress_reward = (new_position - state[0]) / 10.0
             reward += progress_reward
 
             rewards.append(reward)
 
-        # Check for collisions
         for i in range(self.n_vehicles):
             for j in range(i + 1, self.n_vehicles):
                 if (
@@ -257,7 +229,6 @@ class AutonomousVehicleEnvironment:
                     rewards[j] += self.collision_penalty
                     done = True
 
-        # Check if any vehicle reached the end
         if (self.vehicle_states[:, 0] >= self.road_length).any():
             done = True
 
@@ -282,20 +253,16 @@ class SmartGridEnvironment:
         self.n_time_steps = n_time_steps
         self.max_load = max_load
 
-        # Power demand patterns (time-varying)
         self.base_demand = torch.rand(n_time_steps, n_agents) * max_load * 0.7
         self.demand_noise = torch.randn(n_time_steps, n_agents) * max_load * 0.1
 
-        # Renewable energy availability
         self.solar_generation = (
             torch.sin(torch.linspace(0, 2 * torch.pi, n_time_steps)) * max_load * 0.3
         )
         self.wind_generation = torch.rand(n_time_steps) * max_load * 0.2
 
-        # Current time step
         self.current_step = 0
 
-        # Power prices
         self.peak_price = 0.5
         self.off_peak_price = 0.1
 
@@ -314,7 +281,6 @@ class SmartGridEnvironment:
             + self.wind_generation[self.current_step]
         )
 
-        # Time of day encoding
         time_of_day = torch.tensor(
             [
                 torch.sin(
@@ -326,7 +292,6 @@ class SmartGridEnvironment:
             ]
         )
 
-        # State for each agent: [local_demand, renewable_available, time_sin, time_cos, grid_load]
         states = []
         for i in range(self.n_agents):
             state = torch.tensor(
@@ -363,21 +328,17 @@ class SmartGridEnvironment:
         for i in range(self.n_agents):
             action = actions[i]
 
-            # Parse action
             generation = action[0] * self.max_load  # Power generation decision
             consumption_adjustment = (
                 action[1] * 0.5 - 0.25
             )  # Demand response (-25% to +25%)
 
-            # Adjusted demand
             adjusted_demand = demand[i] * (1 + consumption_adjustment)
 
-            # Power balance for this agent
             net_power = (
                 generation + renewable_available / self.n_agents - adjusted_demand
             )
 
-            # Cost calculation
             price = (
                 self.peak_price
                 if self.current_step in range(8, 20)
@@ -385,7 +346,6 @@ class SmartGridEnvironment:
             )
             cost = abs(net_power) * price
 
-            # Reward: negative cost + efficiency bonus
             efficiency_bonus = 0
             if net_power >= 0:  # Surplus power
                 efficiency_bonus = net_power * 0.1
@@ -397,13 +357,11 @@ class SmartGridEnvironment:
 
             total_generation += generation
 
-        # Grid stability reward (shared among all agents)
         generation_balance = abs(total_generation + renewable_available - total_demand)
         stability_reward = -generation_balance * 0.05
 
         rewards = torch.tensor(rewards) + stability_reward
 
-        # Update time step
         self.current_step += 1
         done = self.current_step >= self.n_time_steps
 
@@ -439,14 +397,12 @@ class MultiAgentGameTheoryAnalyzer:
         self.n_agents = n_agents
         self.n_actions = n_actions
 
-        # Payoff matrices for different games
         self.payoff_matrices = self.generate_payoff_matrices()
 
     def generate_payoff_matrices(self):
         """Generate random payoff matrices for analysis."""
         matrices = {}
 
-        # Prisoner's Dilemma
         pd_matrix = torch.tensor(
             [
                 [[3, 3], [0, 5]],  # Both cooperate: (3,3), Cooperate-Defect: (0,5)
@@ -455,7 +411,6 @@ class MultiAgentGameTheoryAnalyzer:
         )
         matrices["prisoners_dilemma"] = pd_matrix
 
-        # Battle of the Sexes
         bos_matrix = torch.tensor(
             [
                 [[2, 1], [0, 0]],  # Both choose A: (2,1), A-B: (0,0)
@@ -464,7 +419,6 @@ class MultiAgentGameTheoryAnalyzer:
         )
         matrices["battle_of_sexes"] = bos_matrix
 
-        # Random game
         random_matrix = torch.rand(self.n_agents, self.n_actions, self.n_actions) * 10
         matrices["random_game"] = random_matrix
 
@@ -473,23 +427,19 @@ class MultiAgentGameTheoryAnalyzer:
     def find_nash_equilibria(self, payoff_matrix, game_type="prisoners_dilemma"):
         """Find Nash equilibria in the game."""
         if game_type in ["prisoners_dilemma", "battle_of_sexes"]:
-            # For 2-player games
             nash_equilibria = []
 
             for action1 in range(self.n_actions):
                 for action2 in range(self.n_actions):
-                    # Check if this is a Nash equilibrium
                     payoff1 = payoff_matrix[action1, action2, 0]
                     payoff2 = payoff_matrix[action1, action2, 1]
 
-                    # Check if agent 1 would deviate
                     agent1_best_response = True
                     for alt_action1 in range(self.n_actions):
                         if payoff_matrix[alt_action1, action2, 0] > payoff1:
                             agent1_best_response = False
                             break
 
-                    # Check if agent 2 would deviate
                     agent2_best_response = True
                     for alt_action2 in range(self.n_actions):
                         if payoff_matrix[action1, alt_action2, 1] > payoff2:
@@ -501,20 +451,16 @@ class MultiAgentGameTheoryAnalyzer:
 
             return nash_equilibria
         else:
-            # For general games, simplified check
             return self.find_nash_general(payoff_matrix)
 
     def find_nash_general(self, payoff_matrix):
         """Find Nash equilibria for general games."""
-        # Simplified implementation - check all action profiles
         nash_equilibria = []
 
-        # For simplicity, assume 2-player game
         for action1 in range(self.n_actions):
             for action2 in range(self.n_actions):
                 is_nash = True
 
-                # Check if any player wants to deviate
                 for player in range(2):
                     current_payoff = payoff_matrix[action1, action2, player]
 
@@ -552,11 +498,9 @@ class MultiAgentGameTheoryAnalyzer:
         print(f"Analyzing {game_type}:")
         print(f"Payoff matrix shape: {payoff_matrix.shape}")
 
-        # Find Nash equilibria
         nash_eq = self.find_nash_equilibria(payoff_matrix, game_type)
         print(f"Nash Equilibria: {nash_eq}")
 
-        # Compute social welfare for each equilibrium
         for eq in nash_eq:
             welfare = self.compute_social_welfare(eq, payoff_matrix)
             print(f"Social welfare for {eq}: {welfare}")
@@ -568,7 +512,6 @@ class MultiAgentGameTheoryAnalyzer:
         }
 
 
-# Demonstration functions
 def demonstrate_resource_allocation():
     """Demonstrate resource allocation."""
     print("📊 Resource Allocation Demo")
@@ -576,7 +519,6 @@ def demonstrate_resource_allocation():
     env = ResourceAllocationEnvironment(n_agents=3, n_resources=5)
     state = env.reset()
 
-    # Random agent actions
     actions = torch.randint(0, 6, (3, 5))  # Random allocation requests
 
     next_state, rewards, done, _ = env.step(actions)
@@ -597,7 +539,6 @@ def demonstrate_autonomous_vehicles():
     env = AutonomousVehicleEnvironment(n_vehicles=4)
     state = env.reset()
 
-    # Random actions: [accel, lane_change]
     actions = torch.rand(4, 2)
 
     next_state, rewards, done, _ = env.step(actions)
@@ -618,7 +559,6 @@ def demonstrate_smart_grid():
     env = SmartGridEnvironment(n_agents=4)
     state = env.reset()
 
-    # Random actions: [generation, consumption_adjustment]
     actions = torch.rand(4, 2)
 
     next_state, rewards, done, info = env.step(actions)
@@ -640,10 +580,8 @@ def demonstrate_game_theory():
 
     analyzer = MultiAgentGameTheoryAnalyzer(n_agents=2, n_actions=2)
 
-    # Analyze Prisoner's Dilemma
     pd_analysis = analyzer.analyze_game("prisoners_dilemma")
 
-    # Analyze Battle of the Sexes
     bos_analysis = analyzer.analyze_game("battle_of_sexes")
 
     print(f"Prisoner's Dilemma equilibria: {len(pd_analysis['nash_equilibria'])}")
@@ -652,7 +590,6 @@ def demonstrate_game_theory():
     return analyzer
 
 
-# Run demonstrations
 print("🌍 Comprehensive Multi-Agent Applications")
 resource_demo = demonstrate_resource_allocation()
 vehicle_demo = demonstrate_autonomous_vehicles()

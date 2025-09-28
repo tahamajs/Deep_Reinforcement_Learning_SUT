@@ -43,7 +43,6 @@ class SpikingNeuron:
         self.reset = reset_potential
         self.refractory = refractory_period
 
-        # Neuron state
         self.v = reset_potential  # Membrane potential
         self.last_spike_time = -np.inf
         self.refractory_timer = 0.0
@@ -59,18 +58,14 @@ class SpikingNeuron:
         Returns:
             Tuple of (spike_fired, membrane_potential)
         """
-        # Update refractory timer
         if self.refractory_timer > 0:
             self.refractory_timer -= dt
             return False, self.v
 
-        # Leaky integration
         dv = (-self.v + input_current) / self.tau * dt
         self.v += dv
 
-        # Check for spike
         if self.v >= self.threshold:
-            # Fire spike
             self.v = self.reset
             self.refractory_timer = self.refractory
             return True, self.threshold
@@ -106,7 +101,6 @@ class STDPSynapse:
         self.tau_plus = tau_plus  # LTP time constant
         self.tau_minus = tau_minus  # LTD time constant
 
-        # STDP state
         self.last_pre_spike = -np.inf
         self.last_post_spike = -np.inf
 
@@ -114,7 +108,6 @@ class STDPSynapse:
         """Handle pre-synaptic spike"""
         self.last_pre_spike = current_time
 
-        # Apply LTD if post-synaptic spike occurred recently
         if self.last_post_spike > 0:
             time_diff = current_time - self.last_post_spike
             if time_diff > 0:  # Pre after post
@@ -125,7 +118,6 @@ class STDPSynapse:
         """Handle post-synaptic spike"""
         self.last_post_spike = current_time
 
-        # Apply LTP if pre-synaptic spike occurred recently
         if self.last_pre_spike > 0:
             time_diff = current_time - self.last_pre_spike
             if time_diff > 0:  # Post after pre
@@ -162,12 +154,10 @@ class SpikingNetwork:
         self.n_output = n_output
         self.dt = dt
 
-        # Create neurons
         self.input_neurons = [SpikingNeuron() for _ in range(n_input)]
         self.hidden_neurons = [SpikingNeuron() for _ in range(n_hidden)]
         self.output_neurons = [SpikingNeuron() for _ in range(n_output)]
 
-        # Create synapses
         self.input_hidden_synapses = [
             [STDPSynapse() for _ in range(n_hidden)] for _ in range(n_input)
         ]
@@ -175,7 +165,6 @@ class SpikingNetwork:
             [STDPSynapse() for _ in range(n_output)] for _ in range(n_hidden)
         ]
 
-        # Random initialization of connectivity
         for i in range(n_input):
             for j in range(n_hidden):
                 if np.random.random() < connectivity:
@@ -204,14 +193,12 @@ class SpikingNetwork:
         Returns:
             Tuple of (output_spike_trains, hidden_spike_trains)
         """
-        # Initialize spike trains
         output_spikes = np.zeros((n_steps, self.n_output))
         hidden_spikes = np.zeros((n_steps, self.n_hidden))
 
         current_time = 0.0
 
         for t in range(n_steps):
-            # Input layer
             input_currents = np.zeros(self.n_hidden)
             for i, spike in enumerate(input_spikes):
                 if spike > 0.5:  # Input spike
@@ -220,7 +207,6 @@ class SpikingNetwork:
                             j
                         ].get_weight()
 
-            # Hidden layer
             hidden_currents = np.zeros(self.n_output)
             for j in range(self.n_hidden):
                 spike_fired, _ = self.hidden_neurons[j].step(input_currents[j], self.dt)
@@ -228,19 +214,16 @@ class SpikingNetwork:
 
                 if spike_fired:
                     self.hidden_neurons[j].last_spike_time = current_time
-                    # Update STDP for input synapses
                     for i in range(self.n_input):
                         if input_spikes[i] > 0.5:
                             self.input_hidden_synapses[i][j].post_spike(current_time)
 
-                # Accumulate currents to output layer
                 for k in range(self.n_output):
                     hidden_currents[k] += (
                         self.hidden_output_synapses[j][k].get_weight()
                         * hidden_spikes[t, j]
                     )
 
-            # Output layer
             for k in range(self.n_output):
                 spike_fired, _ = self.output_neurons[k].step(
                     hidden_currents[k], self.dt
@@ -249,7 +232,6 @@ class SpikingNetwork:
 
                 if spike_fired:
                     self.output_neurons[k].last_spike_time = current_time
-                    # Update STDP for hidden synapses
                     for j in range(self.n_hidden):
                         if hidden_spikes[t, j] > 0.5:
                             self.hidden_output_synapses[j][k].post_spike(current_time)
@@ -262,7 +244,6 @@ class SpikingNetwork:
         """Get average firing rates of output neurons"""
         rates = []
         for k in range(self.n_output):
-            # Count spikes over recent history (simplified)
             spike_count = sum(
                 1 for t in range(len(self.output_neurons[k].last_spike_time > 0))
             )
@@ -315,21 +296,17 @@ class NeuromorphicActorCritic:
         self.dt = dt
         self.dopamine_baseline = dopamine_baseline
 
-        # Spiking neural networks
         self.actor_network = SpikingNetwork(obs_dim, hidden_dim, action_dim, dt)
         self.critic_network = SpikingNetwork(
             obs_dim, hidden_dim, 1, dt
         )  # Single value output
 
-        # Dopamine system for reward modulation
         self.dopamine_level = dopamine_baseline
         self.dopamine_tau = 0.1  # Dopamine time constant
 
-        # Learning parameters
         self.td_error = 0.0
         self.learning_rate = 0.01
 
-        # Performance tracking
         self.episode_rewards = []
         self.td_errors = []
         self.dopamine_levels = []
@@ -351,19 +328,15 @@ class NeuromorphicActorCritic:
         Returns:
             Tuple of (action, action_info)
         """
-        # Convert observation to spike encoding
         spike_input = self._encode_observation(observation)
 
-        # Forward pass through actor network
         output_spikes, hidden_spikes = self.actor_network.forward(
             spike_input, n_steps=10
         )
 
-        # Decode action from output firing rates
         firing_rates = self.actor_network.get_output_rates()
         action = np.argmax(firing_rates)
 
-        # Get value estimate from critic
         critic_spikes, _ = self.critic_network.forward(spike_input, n_steps=10)
         value_estimate = self.critic_network.get_output_rates()[0]
 
@@ -383,12 +356,10 @@ class NeuromorphicActorCritic:
 
         Uses rate coding: higher values -> higher firing rates
         """
-        # Normalize observation
         obs_norm = (observation - np.min(observation)) / (
             np.max(observation) - np.min(observation) + 1e-6
         )
 
-        # Rate encoding: probability of spike proportional to value
         spike_probs = np.clip(obs_norm, 0, 1)
         spike_input = (np.random.random(len(spike_probs)) < spike_probs).astype(float)
 
@@ -403,18 +374,14 @@ class NeuromorphicActorCritic:
             next_value: Next state value estimate
             current_value: Current state value estimate
         """
-        # TD error calculation
         self.td_error = reward + 0.99 * next_value - current_value
 
-        # Dopamine release proportional to TD error
         dopamine_release = self.dopamine_baseline + self.td_error * 0.1
 
-        # Update dopamine level with temporal dynamics
         self.dopamine_level += (
             (dopamine_release - self.dopamine_level) / self.dopamine_tau * self.dt
         )
 
-        # Clip dopamine to reasonable range
         self.dopamine_level = np.clip(self.dopamine_level, 0.0, 1.0)
 
     def learn(
@@ -438,12 +405,10 @@ class NeuromorphicActorCritic:
         Returns:
             Learning metrics
         """
-        # Get current value estimate
         current_spike_input = self._encode_observation(observation)
         _, _ = self.critic_network.forward(current_spike_input, n_steps=5)
         current_value = self.critic_network.get_output_rates()[0]
 
-        # Get next value estimate
         if not done:
             next_spike_input = self._encode_observation(next_observation)
             _, _ = self.critic_network.forward(next_spike_input, n_steps=5)
@@ -451,20 +416,14 @@ class NeuromorphicActorCritic:
         else:
             next_value = 0.0
 
-        # Update dopamine system
         self.update_dopamine(reward, next_value, current_value)
 
-        # Store metrics
         self.td_errors.append(self.td_error)
         self.dopamine_levels.append(self.dopamine_level)
 
-        # Get actor firing rates for learning
         firing_rates = self.actor_network.get_output_rates()
         self.firing_rates.append(np.mean(firing_rates))
 
-        # Neuromorphic learning is primarily through STDP and dopamine modulation
-        # The spiking networks learn online through spike timing
-        # Here we could implement additional supervised learning if needed
 
         learning_info = {
             "td_error": self.td_error,

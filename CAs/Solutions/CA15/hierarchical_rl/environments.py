@@ -21,7 +21,6 @@ class HierarchicalRLEnvironment:
         self.agent_pos = np.array([0, 0])
         self.goals = []
 
-        # Generate random goal positions
         for _ in range(self.num_goals):
             goal_pos = np.random.randint(0, self.size, size=2)
             while np.array_equal(goal_pos, self.agent_pos):
@@ -39,7 +38,6 @@ class HierarchicalRLEnvironment:
         state = np.zeros((self.size, self.size))
         state[self.agent_pos[0], self.agent_pos[1]] = 1.0  # Agent position
 
-        # Add goal information
         for i, goal in enumerate(self.goals):
             if i == self.current_goal_idx:
                 state[goal[0], goal[1]] = 0.5  # Current goal
@@ -50,18 +48,15 @@ class HierarchicalRLEnvironment:
 
     def step(self, action):
         """Execute action and return next state, reward, done."""
-        # Actions: 0=up, 1=down, 2=left, 3=right
         moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
         if action < len(moves):
             new_pos = self.agent_pos + np.array(moves[action])
-            # Clip to boundaries
             new_pos = np.clip(new_pos, 0, self.size - 1)
             self.agent_pos = new_pos
 
         self.steps += 1
 
-        # Check if current goal is reached
         reward = 0
         done = False
 
@@ -74,11 +69,9 @@ class HierarchicalRLEnvironment:
                 done = True  # All goals reached
                 reward += 50.0  # Bonus for completing all goals
         else:
-            # Distance-based reward
             distance = np.linalg.norm(self.agent_pos - current_goal)
             reward = -0.1 * distance
 
-        # Episode timeout
         if self.steps >= self.max_steps:
             done = True
             reward -= 10.0  # Penalty for timeout

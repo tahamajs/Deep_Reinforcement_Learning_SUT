@@ -17,7 +17,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-# Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -40,16 +39,13 @@ class ExperimentRunner:
             for seed in range(num_seeds):
                 print(f"  Seed {seed + 1}/{num_seeds}")
 
-                # Set random seeds
                 np.random.seed(seed)
                 torch.manual_seed(seed)
                 random.seed(seed)
 
-                # Create environment and agent
                 env = self.env_class(**self.env_kwargs)
                 agent = agent_config["class"](**agent_config["params"])
 
-                # Run episodes
                 episode_rewards = []
                 episode_lengths = []
                 model_losses = []
@@ -64,7 +60,6 @@ class ExperimentRunner:
                     start_time = time.time()
 
                     while not done:
-                        # Get action from agent
                         if hasattr(agent, "get_action"):
                             action = agent.get_action(state)
                         elif hasattr(agent, "plan_action"):
@@ -76,11 +71,9 @@ class ExperimentRunner:
                                 else 4
                             )
 
-                        # Take step in environment
                         if hasattr(env, "step"):
                             next_state, reward, done, info = env.step(action)
                         else:
-                            # Fallback for custom environments
                             next_state, reward, done = (
                                 state,
                                 np.random.randn(),
@@ -91,7 +84,6 @@ class ExperimentRunner:
                         episode_reward += reward
                         episode_length += 1
 
-                        # Store experience and train
                         if hasattr(agent, "store_experience"):
                             agent.store_experience(
                                 state, action, reward, next_state, done
@@ -102,12 +94,10 @@ class ExperimentRunner:
                         elif hasattr(agent, "train_step"):
                             losses = agent.train_step()
 
-                        # Update model if applicable
                         if hasattr(agent, "update_model"):
                             model_loss = agent.update_model()
                             model_losses.append(model_loss)
 
-                        # Planning step if applicable
                         if hasattr(agent, "planning_step"):
                             agent.planning_step()
 
@@ -122,14 +112,12 @@ class ExperimentRunner:
                     episode_rewards.append(episode_reward)
                     episode_lengths.append(episode_length)
 
-                    # Progress reporting
                     if (episode + 1) % 100 == 0:
                         avg_reward = np.mean(episode_rewards[-100:])
                         print(
                             f"    Episode {episode + 1}: Avg Reward = {avg_reward:.2f}"
                         )
 
-                # Store results for this seed
                 agent_results.append(
                     {
                         "rewards": episode_rewards,
@@ -154,14 +142,11 @@ class ExperimentRunner:
         print("\n📊 Experiment Results Analysis")
         print("=" * 50)
 
-        # Create comparison plots
         fig, axes = plt.subplots(2, 2, figsize=(15, 12))
         fig.suptitle("Model-Based vs Model-Free Comparison", fontsize=16)
 
-        # Plot 1: Learning curves
         ax1 = axes[0, 0]
         for agent_name, agent_results in self.results.items():
-            # Average across seeds
             all_rewards = [result["rewards"] for result in agent_results]
             min_length = min(len(rewards) for rewards in all_rewards)
 
@@ -184,7 +169,6 @@ class ExperimentRunner:
         ax1.legend()
         ax1.grid(True, alpha=0.3)
 
-        # Plot 2: Sample efficiency (episodes to threshold)
         ax2 = axes[0, 1]
         threshold = -100  # Adjust based on environment
 
@@ -197,7 +181,6 @@ class ExperimentRunner:
 
             for result in agent_results:
                 rewards = result["rewards"]
-                # Find first episode where moving average exceeds threshold
                 moving_avg = np.convolve(rewards, np.ones(50) / 50, mode="valid")
                 threshold_idx = np.where(moving_avg >= threshold)[0]
 
@@ -221,7 +204,6 @@ class ExperimentRunner:
         ax2.set_title("Sample Efficiency")
         ax2.tick_params(axis="x", rotation=45)
 
-        # Plot 3: Final performance comparison
         ax3 = axes[1, 0]
 
         final_performances = []
@@ -243,7 +225,6 @@ class ExperimentRunner:
         ax3.set_title("Final Performance")
         ax3.tick_params(axis="x", rotation=45)
 
-        # Plot 4: Computational overhead
         ax4 = axes[1, 1]
 
         planning_times = []
@@ -276,7 +257,6 @@ class ExperimentRunner:
         plt.tight_layout()
         plt.show()
 
-        # Print summary statistics
         print("\n📈 Summary Statistics:")
         for agent_name, agent_results in self.results.items():
             performances = [result["final_performance"] for result in agent_results]
@@ -286,7 +266,6 @@ class ExperimentRunner:
             print(f"\n{agent_name}:")
             print(f"  Final Performance: {mean_perf:.2f} ± {std_perf:.2f}")
 
-            # Calculate sample efficiency
             episodes_to_threshold = []
             for result in agent_results:
                 rewards = result["rewards"]

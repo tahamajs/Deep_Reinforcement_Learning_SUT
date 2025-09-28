@@ -14,7 +14,6 @@ __version__ = "1.0.0"
 __author__ = "Advanced RL Research"
 __description__ = "Advanced Deep Reinforcement Learning Algorithms and Experiments"
 
-# Import main classes for easy access
 from .model_based_rl.algorithms import (
     DynamicsModel,
     ModelEnsemble,
@@ -60,7 +59,6 @@ from .utils import (
 )
 
 
-# Package-level utilities
 def get_version():
     """Get package version."""
     return __version__
@@ -107,34 +105,27 @@ def create_experiment(name: str, **kwargs):
     return experiments[name](**kwargs)
 
 
-# Setup device on import
 set_device()
 
 __all__ = [
-    # Model-based RL
     "DynamicsModel",
     "ModelEnsemble",
     "ModelPredictiveController",
     "DynaQAgent",
-    # Hierarchical RL
     "Option",
     "HierarchicalActorCritic",
     "GoalConditionedAgent",
     "FeudalNetwork",
     "HierarchicalRLEnvironment",
-    # Planning
     "MCTSNode",
     "MonteCarloTreeSearch",
     "ModelBasedValueExpansion",
     "LatentSpacePlanner",
     "WorldModel",
-    # Environments
     "SimpleGridWorld",
-    # Experiments
     "ExperimentRunner",
     "HierarchicalRLExperiment",
     "PlanningAlgorithmsExperiment",
-    # Utilities
     "ReplayBuffer",
     "PrioritizedReplayBuffer",
     "RunningStats",
@@ -146,7 +137,6 @@ __all__ = [
     "set_device",
     "get_device",
     "to_tensor",
-    # Package functions
     "get_version",
     "list_algorithms",
     "create_experiment",

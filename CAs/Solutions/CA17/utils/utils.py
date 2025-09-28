@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 from scipy import stats
 import time
 
-# Replay Buffer
 class ReplayBuffer:
     """Experience replay buffer for RL agents"""
 
@@ -60,7 +59,6 @@ class ReplayBuffer:
     def __len__(self) -> int:
         return self.size
 
-# Prioritized Replay Buffer
 class PrioritizedReplayBuffer:
     """Prioritized experience replay buffer"""
 
@@ -99,19 +97,15 @@ class PrioritizedReplayBuffer:
         if self.size == 0:
             return {}, np.array([]), np.array([])
 
-        # Compute sampling probabilities
         priorities = self.priorities[:self.size]
         probs = priorities ** self.alpha
         probs /= probs.sum()
 
-        # Sample indices
         indices = np.random.choice(self.size, batch_size, p=probs, replace=False)
 
-        # Compute importance sampling weights
         weights = (self.size * probs[indices]) ** (-beta)
         weights /= weights.max()
 
-        # Get batch data
         batch = {
             'states': torch.FloatTensor(self.states[indices]),
             'actions': torch.FloatTensor(self.actions[indices]),
@@ -130,7 +124,6 @@ class PrioritizedReplayBuffer:
     def __len__(self) -> int:
         return self.size
 
-# Ornstein-Uhlenbeck Noise for Exploration
 class OUNoise:
     """Ornstein-Uhlenbeck process for exploration noise"""
 
@@ -151,7 +144,6 @@ class OUNoise:
         self.state += dx
         return self.state
 
-# Gaussian Noise
 class GaussianNoise:
     """Gaussian exploration noise"""
 
@@ -167,7 +159,6 @@ class GaussianNoise:
         """No-op for Gaussian noise"""
         pass
 
-# Normalization and Scaling
 class RunningNormalizer:
     """Running statistics normalizer"""
 
@@ -202,7 +193,6 @@ class RunningNormalizer:
         """Normalize input using running statistics"""
         return (x - self.mean) / (np.sqrt(self.var) + self.eps)
 
-# Mathematical Utilities
 def soft_update(target: nn.Module, source: nn.Module, tau: float):
     """Soft update target network parameters"""
     for target_param, source_param in zip(target.parameters(), source.parameters()):
@@ -243,7 +233,6 @@ def compute_returns(rewards: torch.Tensor, dones: torch.Tensor,
 
     return torch.FloatTensor(returns)
 
-# Visualization Utilities
 def plot_learning_curve(rewards: List[float], window: int = 10,
                        title: str = "Learning Curve", save_path: Optional[str] = None):
     """Plot learning curve with smoothing"""
@@ -299,7 +288,6 @@ def plot_multiple_curves(curves: Dict[str, List[float]], window: int = 10,
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.show()
 
-# Performance Metrics
 def compute_metrics(rewards: List[float], window: int = 100) -> Dict[str, float]:
     """Compute performance metrics"""
     if len(rewards) == 0:
@@ -317,7 +305,6 @@ def compute_metrics(rewards: List[float], window: int = 100) -> Dict[str, float]
         metrics['final_avg_reward'] = np.mean(rewards[-window:])
         metrics['final_std_reward'] = np.std(rewards[-window:])
 
-        # Convergence check (last window vs previous window)
         prev_window = rewards[-(2*window):-window]
         curr_window = rewards[-window:]
         if len(prev_window) == window:
@@ -325,7 +312,6 @@ def compute_metrics(rewards: List[float], window: int = 100) -> Dict[str, float]
 
     return metrics
 
-# Timing Utilities
 class Timer:
     """Simple timer for performance measurement"""
 
@@ -355,7 +341,6 @@ class Timer:
             return time.time() - self.start_time
         return self.elapsed
 
-# Configuration Management
 class Config:
     """Configuration class for experiments"""
 
@@ -374,7 +359,6 @@ class Config:
         """Create from dictionary"""
         return cls(**config_dict)
 
-# Random Seed Management
 def set_random_seed(seed: int):
     """Set random seed for reproducibility"""
     random.seed(seed)
@@ -384,7 +368,6 @@ def set_random_seed(seed: int):
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
 
-# Device Management
 def get_device(device: Optional[str] = None) -> torch.device:
     """Get torch device"""
     if device is None:

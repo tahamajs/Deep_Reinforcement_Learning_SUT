@@ -35,7 +35,6 @@ from collections import defaultdict
 from typing import Dict, List, Any, Optional
 import time
 
-# Import our DQN implementations
 from dqn import (
     DQNAgent,
     DoubleDQNAgent,
@@ -44,11 +43,9 @@ from dqn import (
     PerformanceAnalyzer,
 )
 
-# Set random seeds for reproducibility
 torch.manual_seed(42)
 np.random.seed(42)
 
-# Matplotlib settings
 plt.style.use("seaborn-v0_8")
 plt.rcParams["figure.figsize"] = (12, 8)
 plt.rcParams["font.size"] = 12
@@ -74,7 +71,6 @@ class ComprehensiveDQNAnalyzer:
         print("EXPERIMENT 1: Basic DQN Training")
         print("=" * 70)
 
-        # Create environment
         env = gym.make("CartPole-v1")
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.n
@@ -85,7 +81,6 @@ class ComprehensiveDQNAnalyzer:
         print(f"Goal: Balance pole for as long as possible (max 500 steps)")
         print()
 
-        # Create DQN agent
         agent = DQNAgent(
             state_dim=state_dim,
             action_dim=action_dim,
@@ -99,7 +94,6 @@ class ComprehensiveDQNAnalyzer:
             target_update_freq=100,  # Target network update frequency
         )
 
-        # Training parameters
         num_episodes = 200
         max_steps_per_episode = 500
 
@@ -111,7 +105,6 @@ class ComprehensiveDQNAnalyzer:
         print(f"  Epsilon decay: {agent.epsilon_decay}")
         print()
 
-        # Training loop
         print("Starting training...")
         print("-" * 50)
 
@@ -135,7 +128,6 @@ class ComprehensiveDQNAnalyzer:
         print(f"Training completed in {training_time:.1f} seconds!")
         print()
 
-        # Final evaluation
         print("Final Evaluation:")
         eval_results = agent.evaluate(env, num_episodes=20)
         print(
@@ -165,7 +157,6 @@ class ComprehensiveDQNAnalyzer:
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.n
 
-        # Define variants to test
         variants = {
             "Standard DQN": DQNAgent(
                 state_dim=state_dim,
@@ -219,7 +210,6 @@ class ComprehensiveDQNAnalyzer:
                         f"({elapsed:.1f}s)"
                     )
 
-            # Evaluate
             eval_results = agent.evaluate(env, num_episodes=15)
             training_time = time.time() - start_time
 
@@ -231,7 +221,6 @@ class ComprehensiveDQNAnalyzer:
                 "training_time": training_time,
             }
 
-        # Create comprehensive comparison visualization
         self._plot_variant_comparison(results)
 
         env.close()
@@ -245,7 +234,6 @@ class ComprehensiveDQNAnalyzer:
 
         colors = ["blue", "red", "green", "orange"]
 
-        # 1. Learning curves
         ax = axes[0, 0]
         for i, (variant, data) in enumerate(results.items()):
             rewards = data["rewards"]
@@ -259,7 +247,6 @@ class ComprehensiveDQNAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 2. Final performance comparison
         ax = axes[0, 1]
         variant_names = list(results.keys())
         final_perfs = [results[v]["final_performance"] for v in variant_names]
@@ -298,7 +285,6 @@ class ComprehensiveDQNAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 3. Training time comparison
         ax = axes[0, 2]
         training_times = [results[v]["training_time"] for v in variant_names]
 
@@ -316,7 +302,6 @@ class ComprehensiveDQNAnalyzer:
                 va="bottom",
             )
 
-        # 4. Q-value evolution
         ax = axes[1, 0]
         for i, (variant, data) in enumerate(results.items()):
             agent = data["agent"]
@@ -335,7 +320,6 @@ class ComprehensiveDQNAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 5. Loss comparison
         ax = axes[1, 1]
         for i, (variant, data) in enumerate(results.items()):
             agent = data["agent"]
@@ -357,7 +341,6 @@ class ComprehensiveDQNAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 6. Sample Q-values comparison
         ax = axes[1, 2]
 
         sample_state = [0.1, 0.1, 0.1, 0.1]  # Example CartPole state
@@ -405,7 +388,6 @@ class ComprehensiveDQNAnalyzer:
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.n
 
-        # Test different replay strategies
         strategies = {
             "No Replay": {"buffer_size": 1, "batch_size": 1},
             "Small Buffer (1K)": {"buffer_size": 1000, "batch_size": 32},
@@ -436,7 +418,6 @@ class ComprehensiveDQNAnalyzer:
                 reward, _ = agent.train_episode(env, max_steps=500)
                 episode_rewards.append(reward)
 
-                # Collect recent losses
                 if len(agent.losses) > len(losses):
                     losses.extend(agent.losses[len(losses) :])
 
@@ -450,7 +431,6 @@ class ComprehensiveDQNAnalyzer:
                 "final_performance": np.mean(episode_rewards[-20:]),
             }
 
-        # Visualize replay strategy comparison
         self._plot_replay_analysis(results)
 
         env.close()
@@ -464,7 +444,6 @@ class ComprehensiveDQNAnalyzer:
 
         colors = ["red", "blue", "green", "orange"]
 
-        # Learning curves
         ax = axes[0]
         for i, (strategy, data) in enumerate(results.items()):
             rewards = data["rewards"]
@@ -477,7 +456,6 @@ class ComprehensiveDQNAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # Final performance
         ax = axes[1]
         strategies_list = list(results.keys())
         final_perfs = [results[s]["final_performance"] for s in strategies_list]
@@ -496,7 +474,6 @@ class ComprehensiveDQNAnalyzer:
                 va="bottom",
             )
 
-        # Loss comparison
         ax = axes[2]
         for i, (strategy, data) in enumerate(results.items()):
             if len(data["losses"]) > 10:
@@ -527,7 +504,6 @@ class ComprehensiveDQNAnalyzer:
         print("EXPERIMENT 4: Theoretical Concept Analysis")
         print("=" * 70)
 
-        # Create visualization instance
         visualizer = self.analyzers["visualization"]
 
         print("1. Visualizing Core Q-Learning Concepts...")
@@ -590,13 +566,11 @@ class ComprehensiveDQNAnalyzer:
         print("This will take several minutes to complete...")
         print()
 
-        # Run experiments
         self.run_basic_dqn_experiment()
         self.compare_dqn_variants()
         self.analyze_experience_replay()
         self.run_theoretical_analysis()
 
-        # Generate report
         self.generate_comprehensive_report()
 
         print("\nAll experiments completed!")
@@ -606,10 +580,8 @@ class ComprehensiveDQNAnalyzer:
 def main():
     """Main function to run comprehensive DQN analysis"""
 
-    # Create analyzer
     analyzer = ComprehensiveDQNAnalyzer()
 
-    # Run all experiments
     analyzer.run_all_experiments()
 
 

@@ -1,4 +1,3 @@
-# REINFORCE Algorithm Implementation
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -21,7 +20,6 @@ class REINFORCEAgent:
         self.action_dim = action_dim
         self.gamma = gamma
 
-        # Policy network
         self.policy_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -32,7 +30,6 @@ class REINFORCEAgent:
 
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
 
-        # Logging
         self.episode_rewards = []
         self.policy_losses = []
         self.gradient_norms = []
@@ -70,7 +67,6 @@ class REINFORCEAgent:
         returns = []
         G = 0
 
-        # Compute returns backwards
         for r in reversed(rewards):
             G = r + self.gamma * G
             returns.insert(0, G)
@@ -83,22 +79,17 @@ class REINFORCEAgent:
         actions = torch.LongTensor(actions).to(device)
         returns = torch.FloatTensor(returns).to(device)
 
-        # Normalize returns for stability
         returns = (returns - returns.mean()) / (returns.std() + 1e-8)
 
-        # Forward pass
         logits = self.policy_net(states)
         dist = Categorical(logits=logits)
         log_probs = dist.log_prob(actions)
 
-        # REINFORCE loss: -E[G_t * log π(a_t|s_t)]
         policy_loss = -(log_probs * returns).mean()
 
-        # Backward pass
         self.optimizer.zero_grad()
         policy_loss.backward()
 
-        # Record gradient norm
         total_norm = 0
         for p in self.policy_net.parameters():
             if p.grad is not None:
@@ -108,12 +99,10 @@ class REINFORCEAgent:
 
         self.gradient_norms.append(total_norm)
 
-        # Clip gradients
         torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), max_norm=1.0)
 
         self.optimizer.step()
 
-        # Log entropy for exploration analysis
         entropy = dist.entropy().mean()
         self.entropy_history.append(entropy.item())
         self.policy_losses.append(policy_loss.item())
@@ -140,10 +129,8 @@ class REINFORCEAgent:
             if terminated or truncated:
                 break
 
-        # Compute returns
         returns = self.compute_returns(rewards)
 
-        # Update policy
         loss = self.update_policy(states, actions, returns)
 
         self.episode_rewards.append(episode_reward)
@@ -158,7 +145,6 @@ class REINFORCEAgent:
             state, _ = env.reset()
             states, actions, rewards = [], [], []
 
-            # Collect episode
             while True:
                 action = self.select_action(state)
                 next_state, reward, terminated, truncated, _ = env.step(action)
@@ -172,17 +158,14 @@ class REINFORCEAgent:
                 if terminated or truncated:
                     break
 
-            # Compute gradient estimate for this episode
             states_tensor = torch.FloatTensor(states).to(device)
             actions_tensor = torch.LongTensor(actions).to(device)
             returns = torch.FloatTensor(self.compute_returns(rewards)).to(device)
 
-            # Compute gradients
             logits = self.policy_net(states_tensor)
             dist = Categorical(logits=logits)
             log_probs = dist.log_prob(actions_tensor)
 
-            # Individual gradient contributions
             grad_contributions = (log_probs * returns).detach().cpu().numpy()
             gradient_estimates.extend(grad_contributions)
 
@@ -199,7 +182,6 @@ def test_reinforce():
 
     print("=== REINFORCE Training ===")
 
-    # Training loop
     num_episodes = 300
     log_interval = 50
 
@@ -213,7 +195,6 @@ def test_reinforce():
 
             print(".2f" ".4f" ".4f")
 
-    # Variance analysis
     print("\n=== Variance Analysis ===")
     gradient_estimates = agent.analyze_variance(env, num_episodes=50)
 
@@ -222,10 +203,8 @@ def test_reinforce():
     print(".4f")
     print(".4f")
 
-    # Visualization
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
 
-    # Learning curve
     axes[0, 0].plot(agent.episode_rewards)
     axes[0, 0].plot(
         pd.Series(agent.episode_rewards).rolling(window=20).mean(),
@@ -238,7 +217,6 @@ def test_reinforce():
     axes[0, 0].legend()
     axes[0, 0].grid(True, alpha=0.3)
 
-    # Policy loss
     axes[0, 1].plot(agent.policy_losses)
     axes[0, 1].plot(
         pd.Series(agent.policy_losses).rolling(window=20).mean(),
@@ -251,14 +229,12 @@ def test_reinforce():
     axes[0, 1].legend()
     axes[0, 1].grid(True, alpha=0.3)
 
-    # Gradient norms
     axes[1, 0].plot(agent.gradient_norms)
     axes[1, 0].set_title("Gradient Norms")
     axes[1, 0].set_xlabel("Episode")
     axes[1, 0].set_ylabel("Gradient L2 Norm")
     axes[1, 0].grid(True, alpha=0.3)
 
-    # Gradient variance distribution
     axes[1, 1].hist(gradient_estimates, bins=30, alpha=0.7, density=True)
     axes[1, 1].axvline(
         np.mean(gradient_estimates), color="red", linestyle="--", label=".3f"
@@ -276,7 +252,6 @@ def test_reinforce():
     return agent
 
 
-# Demonstration functions
 def demonstrate_reinforce():
     """Demonstrate REINFORCE algorithm"""
     print("🧠 REINFORCE Algorithm Demonstration")
@@ -284,6 +259,5 @@ def demonstrate_reinforce():
     return agent
 
 
-# Run demonstration
 if __name__ == "__main__":
     demonstrate_reinforce()

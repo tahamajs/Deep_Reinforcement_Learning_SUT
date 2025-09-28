@@ -1,4 +1,3 @@
-# Multi-Agent Training Framework and Evaluation
 import torch
 import torch.nn as nn
 import numpy as np
@@ -14,7 +13,6 @@ class MultiAgentTrainingOrchestrator:
         self.environment = environment
         self.n_agents = len(agents)
 
-        # Default configuration
         self.config = {
             "n_episodes": 1000,
             "max_steps": 200,
@@ -31,7 +29,6 @@ class MultiAgentTrainingOrchestrator:
         if config:
             self.config.update(config)
 
-        # Training components
         self.replay_buffers = [
             ReplayBuffer(self.config["buffer_size"]) for _ in range(self.n_agents)
         ]
@@ -40,7 +37,6 @@ class MultiAgentTrainingOrchestrator:
             for agent in self.agents
         ]
 
-        # Training metrics
         self.training_metrics = {
             "episode_rewards": [],
             "episode_lengths": [],
@@ -49,21 +45,17 @@ class MultiAgentTrainingOrchestrator:
             "eval_scores": [],
         }
 
-        # Best models tracking
         self.best_models = [agent.state_dict() for agent in self.agents]
         self.best_eval_score = -float("inf")
 
     def train_episode(self, episode_idx):
         """Train for one episode."""
-        # Reset environment
         obs = self.environment.reset()
         episode_rewards = [0] * self.n_agents
         episode_steps = 0
 
-        # Episode loop
         done = False
         while not done and episode_steps < self.config["max_steps"]:
-            # Get actions from all agents
             actions = []
             action_log_probs = []
 
@@ -72,10 +64,8 @@ class MultiAgentTrainingOrchestrator:
                 actions.append(action)
                 action_log_probs.append(log_prob)
 
-            # Execute actions in environment
             next_obs, rewards, done, info = self.environment.step(actions)
 
-            # Store transitions
             for i in range(self.n_agents):
                 transition = {
                     "obs": obs[i],
@@ -88,7 +78,6 @@ class MultiAgentTrainingOrchestrator:
                 self.replay_buffers[i].push(transition)
                 episode_rewards[i] += rewards[i]
 
-            # Update agents
             if (
                 episode_idx > self.config["warmup_steps"]
                 and episode_steps % self.config["update_frequency"] == 0
@@ -100,7 +89,6 @@ class MultiAgentTrainingOrchestrator:
             obs = next_obs
             episode_steps += 1
 
-        # Record episode metrics
         self.training_metrics["episode_rewards"].append(sum(episode_rewards))
         self.training_metrics["episode_lengths"].append(episode_steps)
         for i in range(self.n_agents):
@@ -113,10 +101,8 @@ class MultiAgentTrainingOrchestrator:
         if len(self.replay_buffers[agent_idx]) < self.config["batch_size"]:
             return 0.0
 
-        # Sample batch
         batch = self.replay_buffers[agent_idx].sample(self.config["batch_size"])
 
-        # Update agent
         loss = self.agents[agent_idx].update(batch)
 
         return loss
@@ -132,7 +118,6 @@ class MultiAgentTrainingOrchestrator:
             steps = 0
 
             while not done and steps < self.config["max_steps"]:
-                # Get actions (deterministic for evaluation)
                 actions = []
                 for agent in self.agents:
                     action = agent.select_action(obs, deterministic=True)
@@ -148,7 +133,6 @@ class MultiAgentTrainingOrchestrator:
         avg_eval_score = np.mean(eval_rewards)
         self.training_metrics["eval_scores"].append(avg_eval_score)
 
-        # Save best models
         if avg_eval_score > self.best_eval_score:
             self.best_eval_score = avg_eval_score
             self.best_models = [agent.state_dict() for agent in self.agents]
@@ -165,10 +149,8 @@ class MultiAgentTrainingOrchestrator:
         print(f"Training for {n_episodes} episodes with {self.n_agents} agents")
 
         for episode in range(n_episodes):
-            # Train episode
             episode_rewards, episode_steps = self.train_episode(episode)
 
-            # Periodic evaluation
             if episode % self.config["eval_frequency"] == 0:
                 eval_score = self.evaluate_agents()
                 print(
@@ -180,7 +162,6 @@ class MultiAgentTrainingOrchestrator:
                     f"Episode {episode}: Total Reward = {sum(episode_rewards):.2f}, Steps = {episode_steps}"
                 )
 
-            # Periodic saving
             if episode % self.config["save_frequency"] == 0:
                 self.save_models(f"checkpoint_episode_{episode}")
 
@@ -245,11 +226,9 @@ class ComprehensiveEvaluator:
                     ]
                     next_obs, rewards, done, _ = env.step(actions)
 
-                    # Cooperation score based on joint reward vs individual rewards
                     joint_reward = sum(rewards)
                     individual_rewards = rewards
 
-                    # Simple cooperation metric: joint reward bonus
                     cooperation_bonus = max(
                         0, joint_reward - sum(individual_rewards) * 0.8
                     )
@@ -313,7 +292,6 @@ class ComprehensiveEvaluator:
         robustness_scores = []
 
         for noise_level in noise_levels:
-            # Add noise to environment
             noisy_env = self.add_environment_noise(self.environments[0], noise_level)
 
             scores = []
@@ -340,7 +318,6 @@ class ComprehensiveEvaluator:
             robustness_scores.append(avg_score)
             print(f"Noise level {noise_level}: Average score = {avg_score:.3f}")
 
-        # Robustness metric: performance degradation with noise
         baseline_score = robustness_scores[0]
         max_noise_score = robustness_scores[-1]
         robustness_metric = (
@@ -359,7 +336,6 @@ class ComprehensiveEvaluator:
         scalability_scores = []
 
         for n_agents in agent_counts:
-            # Create scaled environment and agents
             scaled_env = self.scale_environment(self.environments[0], n_agents)
             scaled_agents = (
                 self.agents[:n_agents]
@@ -392,7 +368,6 @@ class ComprehensiveEvaluator:
             scalability_scores.append(avg_score)
             print(f"{n_agents} agents: Average score = {avg_score:.3f}")
 
-        # Scalability metric: how performance scales with agent count
         scalability_metric = np.polyfit(agent_counts, scalability_scores, 1)[
             0
         ]  # Linear trend
@@ -415,7 +390,6 @@ class ComprehensiveEvaluator:
 
             def step(self, actions):
                 next_obs, rewards, done, info = self.base_env.step(actions)
-                # Add noise to observations
                 noisy_obs = next_obs + torch.randn_like(next_obs) * self.noise_level
                 return noisy_obs, rewards, done, info
 
@@ -424,7 +398,6 @@ class ComprehensiveEvaluator:
     def scale_environment(self, env, n_agents):
         """Scale environment to different number of agents."""
 
-        # This is a simplified scaling - in practice, you'd need environment-specific scaling
         class ScaledEnvironment:
             def __init__(self, base_env, n_agents):
                 self.base_env = base_env
@@ -432,7 +405,6 @@ class ComprehensiveEvaluator:
 
             def reset(self):
                 obs = self.base_env.reset()
-                # Repeat or truncate observations to match agent count
                 if len(obs) < self.n_agents:
                     obs = obs.repeat(self.n_agents // len(obs) + 1, 1)[: self.n_agents]
                 else:
@@ -440,11 +412,9 @@ class ComprehensiveEvaluator:
                 return obs
 
             def step(self, actions):
-                # Truncate actions if too many
                 actions = actions[: len(self.base_env.reset())]
                 next_obs, rewards, done, info = self.base_env.step(actions)
 
-                # Scale rewards and observations
                 if len(next_obs) < self.n_agents:
                     next_obs = next_obs.repeat(self.n_agents // len(next_obs) + 1, 1)[
                         : self.n_agents
@@ -491,7 +461,6 @@ class ComprehensiveEvaluator:
         return summary
 
 
-# Utility classes
 class ReplayBuffer:
     """Experience replay buffer."""
 
@@ -513,7 +482,6 @@ class ReplayBuffer:
         indices = np.random.choice(len(self.buffer), batch_size, replace=False)
         batch = [self.buffer[idx] for idx in indices]
 
-        # Convert to tensors
         obs = torch.stack([t["obs"] for t in batch])
         actions = torch.stack([t["action"] for t in batch])
         rewards = torch.stack([t["reward"] for t in batch])
@@ -532,12 +500,10 @@ class ReplayBuffer:
         return len(self.buffer)
 
 
-# Demonstration functions
 def demonstrate_training_orchestrator():
     """Demonstrate training orchestrator."""
     print("🎯 Training Orchestrator Demo")
 
-    # Create simple agents and environment
     class SimpleAgent(nn.Module):
         def __init__(self, obs_dim=10, action_dim=4):
             super().__init__()
@@ -551,12 +517,10 @@ def demonstrate_training_orchestrator():
             if deterministic:
                 return action
             else:
-                # Add noise for stochasticity
                 noise = torch.randn_like(action) * 0.1
                 return action + noise, torch.tensor(0.0)  # Dummy log_prob
 
         def update(self, batch):
-            # Simple policy gradient update
             return torch.tensor(0.1)  # Dummy loss
 
     agents = [SimpleAgent() for _ in range(3)]
@@ -564,7 +528,6 @@ def demonstrate_training_orchestrator():
 
     orchestrator = MultiAgentTrainingOrchestrator(agents, env, {"n_episodes": 10})
 
-    # Run short training
     metrics = orchestrator.train(n_episodes=5)
 
     print(f"Training completed. Episodes: {len(metrics['episode_rewards'])}")
@@ -577,7 +540,6 @@ def demonstrate_comprehensive_evaluation():
     """Demonstrate comprehensive evaluation."""
     print("\n🔬 Comprehensive Evaluation Demo")
 
-    # Create simple setup
     class SimpleAgent(nn.Module):
         def __init__(self):
             super().__init__()
@@ -590,7 +552,6 @@ def demonstrate_comprehensive_evaluation():
 
     evaluator = ComprehensiveEvaluator(agents, [env])
 
-    # Run evaluation
     results = evaluator.run_comprehensive_evaluation()
 
     print(f"Evaluation completed. Overall score: {results['overall_score']:.3f}")
@@ -598,7 +559,6 @@ def demonstrate_comprehensive_evaluation():
     return evaluator
 
 
-# Run demonstrations
 if __name__ == "__main__":
     print("🎓 Multi-Agent Training Framework and Evaluation")
     training_demo = demonstrate_training_orchestrator()

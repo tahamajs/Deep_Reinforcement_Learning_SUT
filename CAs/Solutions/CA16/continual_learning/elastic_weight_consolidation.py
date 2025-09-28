@@ -27,13 +27,10 @@ class ElasticWeightConsolidation(nn.Module):
         self.model = model
         self.device = device
 
-        # Fisher Information Matrix for each task
         self.fisher_matrices: Dict[int, Dict[str, torch.Tensor]] = {}
 
-        # Parameter values at the end of each task
         self.task_parameters: Dict[int, Dict[str, torch.Tensor]] = {}
 
-        # Current task ID
         self.current_task = 0
 
     def start_task(self, task_id: int):
@@ -52,14 +49,12 @@ class ElasticWeightConsolidation(nn.Module):
             dataloader: DataLoader for the current task's data
             criterion: Loss function for computing Fisher information
         """
-        # Store current parameters
         self.task_parameters[self.current_task] = {
             name: param.clone().detach()
             for name, param in self.model.named_parameters()
             if param.requires_grad
         }
 
-        # Compute Fisher Information Matrix
         fisher_info = self._compute_fisher_information(dataloader, criterion)
         self.fisher_matrices[self.current_task] = fisher_info
 
@@ -75,12 +70,10 @@ class ElasticWeightConsolidation(nn.Module):
         fisher_info = {}
         self.model.eval()
 
-        # Initialize Fisher information for each parameter
         for name, param in self.model.named_parameters():
             if param.requires_grad:
                 fisher_info[name] = torch.zeros_like(param)
 
-        # Accumulate Fisher information over samples
         num_samples = 0
 
         for batch in dataloader:
@@ -90,21 +83,17 @@ class ElasticWeightConsolidation(nn.Module):
 
             self.model.zero_grad()
 
-            # Forward pass
             outputs = self.model(inputs)
             loss = criterion(outputs, targets)
 
-            # Compute gradients
             loss.backward()
 
-            # Accumulate squared gradients (Fisher information)
             for name, param in self.model.named_parameters():
                 if param.requires_grad and param.grad is not None:
                     fisher_info[name] += param.grad.data**2
 
             num_samples += len(inputs)
 
-        # Average over samples
         for name in fisher_info:
             fisher_info[name] /= num_samples
 
@@ -129,7 +118,6 @@ class ElasticWeightConsolidation(nn.Module):
 
                 for name, param in self.model.named_parameters():
                     if param.requires_grad and name in fisher and name in params_old:
-                        # EWC penalty: (1/2) * λ * F_i * (θ - θ*_i)^2
                         param_diff = param - params_old[name]
                         loss += torch.sum(fisher[name] * param_diff**2)
 
@@ -148,7 +136,6 @@ class ElasticWeightConsolidation(nn.Module):
             if param.requires_grad:
                 importance[name] = torch.zeros_like(param)
 
-        # Sum importance across all tasks
         for task_id in self.fisher_matrices:
             fisher = self.fisher_matrices[task_id]
             for name in fisher:
@@ -188,20 +175,16 @@ class ElasticWeightConsolidation(nn.Module):
 
                 optimizer.zero_grad()
 
-                # Forward pass
                 outputs = self.model(inputs)
                 loss = criterion(outputs, targets)
 
-                # Add EWC regularization
                 if self.current_task > 0:
                     ewc_penalty = self.ewc_loss(lambda_ewc)
                     loss += ewc_penalty
 
-                # Backward pass
                 loss.backward()
                 optimizer.step()
 
-        # End task and compute Fisher information
         self.end_task(dataloader, criterion)
 
 
@@ -256,7 +239,6 @@ class EWCTrainer:
         val_accuracies = []
 
         for epoch in range(epochs):
-            # Training loop
             epoch_loss = 0.0
             num_batches = 0
 
@@ -267,16 +249,13 @@ class EWCTrainer:
 
                 self.optimizer.zero_grad()
 
-                # Forward pass
                 outputs = self.model(inputs)
                 loss = criterion(outputs, targets)
 
-                # Add EWC regularization for subsequent tasks
                 if task_id > 0:
                     ewc_penalty = self.ewc.ewc_loss(self.lambda_ewc)
                     loss += ewc_penalty
 
-                # Backward pass
                 loss.backward()
                 self.optimizer.step()
 
@@ -286,7 +265,6 @@ class EWCTrainer:
             avg_train_loss = epoch_loss / num_batches
             train_losses.append(avg_train_loss)
 
-            # Validation
             if val_loader is not None:
                 val_acc = self._evaluate(val_loader)
                 val_accuracies.append(val_acc)
@@ -302,10 +280,8 @@ class EWCTrainer:
                 else ""
             )
 
-        # Consolidate task knowledge
         self.ewc.end_task(train_loader, criterion)
 
-        # Store performance
         final_metrics = {
             "task_id": task_id,
             "final_train_loss": train_losses[-1],
@@ -366,14 +342,11 @@ class EWCTrainer:
         Returns:
             Dictionary with forgetting metrics
         """
-        # Evaluate current performance on all tasks
         current_performance = self.evaluate_all_tasks(task_loaders)
 
-        # Get best performance for each task (from training history)
         best_performance = {}
         for task_id in current_performance.keys():
             if task_id in self.task_performance:
-                # Best validation accuracy for this task
                 best_acc = max(
                     [
                         metrics["best_val_accuracy"]
@@ -382,7 +355,6 @@ class EWCTrainer:
                 )
                 best_performance[task_id] = best_acc
 
-        # Compute forgetting
         forgetting = {}
         for task_id in current_performance.keys():
             if task_id in best_performance:
@@ -390,7 +362,6 @@ class EWCTrainer:
                     best_performance[task_id] - current_performance[task_id]
                 )
 
-        # Average forgetting
         avg_forgetting = np.mean(list(forgetting.values())) if forgetting else 0.0
 
         return {

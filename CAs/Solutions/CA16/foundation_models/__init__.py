@@ -25,12 +25,10 @@ from .training import (
 )
 
 __all__ = [
-    # Core algorithms
     "DecisionTransformer",
     "MultiTaskRLFoundationModel",
     "InContextLearningRL",
     "BaseFoundationModelTrainer",
-    # Training utilities
     "TrajectoryDataset",
     "MultiTaskTrajectoryDataset",
     "FoundationModelEvaluator",

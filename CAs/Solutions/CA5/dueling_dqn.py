@@ -33,7 +33,6 @@ class DuelingDQN(nn.Module):
     def __init__(self, state_size, action_size, hidden_size=128):
         super(DuelingDQN, self).__init__()
 
-        # Shared feature layer
         self.feature_layer = nn.Sequential(
             nn.Linear(state_size, hidden_size),
             nn.ReLU(),
@@ -41,14 +40,12 @@ class DuelingDQN(nn.Module):
             nn.ReLU(),
         )
 
-        # Value stream: estimates state value V(s)
         self.value_stream = nn.Sequential(
             nn.Linear(hidden_size, hidden_size // 2),
             nn.ReLU(),
             nn.Linear(hidden_size // 2, 1),  # Single value output
         )
 
-        # Advantage stream: estimates action advantages A(s,a)
         self.advantage_stream = nn.Sequential(
             nn.Linear(hidden_size, hidden_size // 2),
             nn.ReLU(),
@@ -57,15 +54,11 @@ class DuelingDQN(nn.Module):
 
     def forward(self, x):
         """Forward pass with dueling combination"""
-        # Shared features
         features = self.feature_layer(x)
 
-        # Value and advantage streams
         value = self.value_stream(features)  # V(s)
         advantages = self.advantage_stream(features)  # A(s,a)
 
-        # Combine: Q(s,a) = V(s) + (A(s,a) - mean(A(s,a')))
-        # This ensures that the advantage function has zero mean
         q_values = value + (advantages - advantages.mean(dim=1, keepdim=True))
 
         return q_values
@@ -80,7 +73,6 @@ class ConvDuelingDQN(nn.Module):
         self.input_shape = input_shape
         self.action_size = action_size
 
-        # Convolutional feature extractor
         self.conv_layers = nn.Sequential(
             nn.Conv2d(input_shape[0], 32, kernel_size=8, stride=4),
             nn.ReLU(),
@@ -90,15 +82,12 @@ class ConvDuelingDQN(nn.Module):
             nn.ReLU(),
         )
 
-        # Calculate flattened size
         conv_out_size = self._get_conv_out_size(input_shape)
 
-        # Value stream
         self.value_stream = nn.Sequential(
             nn.Linear(conv_out_size, 512), nn.ReLU(), nn.Linear(512, 1)
         )
 
-        # Advantage stream
         self.advantage_stream = nn.Sequential(
             nn.Linear(conv_out_size, 512), nn.ReLU(), nn.Linear(512, action_size)
         )
@@ -112,15 +101,12 @@ class ConvDuelingDQN(nn.Module):
 
     def forward(self, x):
         """Forward pass"""
-        # Convolutional features
         conv_features = self.conv_layers(x)
         conv_features = conv_features.view(conv_features.size(0), -1)
 
-        # Value and advantage streams
         value = self.value_stream(conv_features)
         advantages = self.advantage_stream(conv_features)
 
-        # Combine streams
         q_values = value + (advantages - advantages.mean(dim=1, keepdim=True))
 
         return q_values
@@ -133,7 +119,6 @@ class DuelingDQNAgent(DQNAgent):
         super().__init__(state_size, action_size, **kwargs)
         self.agent_type = "Dueling DQN"
 
-        # Override with dueling network
         if isinstance(state_size, tuple):  # Convolutional input
             self.q_network = ConvDuelingDQN(state_size, action_size).to(device)
         else:  # Fully connected input
@@ -142,10 +127,8 @@ class DuelingDQNAgent(DQNAgent):
         self.target_network = type(self.q_network)(state_size, action_size).to(device)
         self.update_target_network()
 
-        # Reinitialize optimizer with new network
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.lr)
 
-        # Additional tracking for analysis
         self.value_estimates = []
         self.advantage_estimates = []
 
@@ -155,7 +138,6 @@ class DuelingDQNAgent(DQNAgent):
             if isinstance(state, np.ndarray):
                 state = torch.FloatTensor(state).unsqueeze(0).to(device)
 
-            # Get features
             if hasattr(self.q_network, "feature_layer"):
                 features = self.q_network.feature_layer(state)
                 value = self.q_network.value_stream(features).item()
@@ -163,7 +145,6 @@ class DuelingDQNAgent(DQNAgent):
                     self.q_network.advantage_stream(features).squeeze(0).cpu().numpy()
                 )
             else:
-                # For convolutional networks, we can't easily extract intermediate values
                 value = None
                 advantages = None
 
@@ -192,7 +173,6 @@ class DuelingAnalysis:
             episode_q_values = []
 
             while not done:
-                # Get estimates
                 value, advantages = agent.get_value_advantage_estimates(state)
 
                 if value is not None:
@@ -200,7 +180,6 @@ class DuelingAnalysis:
                     episode_advantages.append(advantages)
                     episode_q_values.append(value + (advantages - np.mean(advantages)))
 
-                # Take action
                 action = agent.act(state)
                 next_state, reward, terminated, truncated, _ = env.step(action)
                 done = terminated or truncated
@@ -222,7 +201,6 @@ class DuelingAnalysis:
 
         fig, axes = plt.subplots(2, 3, figsize=(18, 10))
 
-        # 1. Value estimates over time
         if analysis_data["value_history"]:
             all_values = [
                 v for episode in analysis_data["value_history"] for v in episode
@@ -233,7 +211,6 @@ class DuelingAnalysis:
             axes[0, 0].set_ylabel("Value V(s)")
             axes[0, 0].grid(True, alpha=0.3)
 
-        # 2. Advantage distribution
         if analysis_data["advantage_history"]:
             all_advantages = np.array(
                 [
@@ -257,9 +234,7 @@ class DuelingAnalysis:
                 axes[0, 1].legend()
                 axes[0, 1].grid(True, alpha=0.3)
 
-        # 3. Q-values vs Value + Advantages
         if analysis_data["q_value_history"] and analysis_data["value_history"]:
-            # Take first episode for detailed analysis
             q_values = analysis_data["q_value_history"][0]
             values = analysis_data["value_history"][0]
             advantages = analysis_data["advantage_history"][0]
@@ -283,7 +258,6 @@ class DuelingAnalysis:
                 axes[0, 2].legend()
                 axes[0, 2].grid(True, alpha=0.3)
 
-        # 4. Value vs Advantage correlation
         if analysis_data["value_history"] and analysis_data["advantage_history"]:
             values_flat = [
                 v for episode in analysis_data["value_history"] for v in episode
@@ -293,7 +267,6 @@ class DuelingAnalysis:
             ]
 
             if values_flat and advantages_flat:
-                # Correlation between value and max advantage
                 max_advantages = [np.max(adv) for adv in advantages_flat]
                 axes[1, 0].scatter(
                     values_flat, max_advantages, alpha=0.6, color="green"
@@ -303,7 +276,6 @@ class DuelingAnalysis:
                 axes[1, 0].set_ylabel("Max Advantage")
                 axes[1, 0].grid(True, alpha=0.3)
 
-        # 5. Advantage symmetry check
         if analysis_data["advantage_history"]:
             advantages_flat = [
                 adv for episode in analysis_data["advantage_history"] for adv in episode
@@ -318,7 +290,6 @@ class DuelingAnalysis:
                 axes[1, 1].legend()
                 axes[1, 1].grid(True, alpha=0.3)
 
-        # 6. Learning dynamics
         if hasattr(agent, "q_values") and hasattr(agent, "value_estimates"):
             if agent.value_estimates:
                 axes[1, 2].plot(
@@ -341,7 +312,6 @@ class DuelingAnalysis:
         """Compare standard DQN vs Dueling DQN performance"""
         print("Comparing Standard DQN vs Dueling DQN...")
 
-        # Train both agents
         print("Training Standard DQN...")
         standard_scores, _ = standard_agent.train(
             env, num_episodes, print_every=num_episodes // 4
@@ -352,12 +322,10 @@ class DuelingAnalysis:
             env, num_episodes, print_every=num_episodes // 4
         )
 
-        # Visualize comparison
         fig, axes = plt.subplots(2, 2, figsize=(16, 10))
 
         episodes = range(len(standard_scores))
 
-        # 1. Learning curves
         axes[0, 0].plot(
             episodes, standard_scores, color="red", label="Standard DQN", linewidth=2
         )
@@ -370,7 +338,6 @@ class DuelingAnalysis:
         axes[0, 0].legend()
         axes[0, 0].grid(True, alpha=0.3)
 
-        # 2. Rolling average performance
         window = 20
         standard_rolling = np.convolve(
             standard_scores, np.ones(window) / window, mode="valid"
@@ -399,7 +366,6 @@ class DuelingAnalysis:
         axes[0, 1].legend()
         axes[0, 1].grid(True, alpha=0.3)
 
-        # 3. Final performance distribution
         final_window = 50
         standard_final = standard_scores[-final_window:]
         dueling_final = dueling_scores[-final_window:]
@@ -411,7 +377,6 @@ class DuelingAnalysis:
         axes[1, 0].set_ylabel("Episode Reward")
         axes[1, 0].grid(True, alpha=0.3)
 
-        # 4. Performance improvement
         baseline_standard = np.mean(standard_scores[:50])
         baseline_dueling = np.mean(dueling_scores[:50])
 
@@ -442,7 +407,6 @@ class DuelingAnalysis:
         plt.tight_layout()
         plt.show()
 
-        # Print summary statistics
         print("\\nPerformance Comparison Summary:")
         print("=" * 40)
         print(
@@ -456,21 +420,17 @@ class DuelingAnalysis:
         return standard_scores, dueling_scores
 
 
-# Example usage and demonstration
 if __name__ == "__main__":
     print("Dueling DQN Implementation")
     print("=" * 40)
 
-    # Test Dueling DQN agent creation
     agent = DuelingDQNAgent(state_size=4, action_size=2)
     print(f"Dueling DQN Agent created: {agent.agent_type}")
 
-    # Test network architecture
     test_input = torch.randn(1, 4)
     output = agent.q_network(test_input)
     print(f"Network output shape: {output.shape}")
 
-    # Test value-advantage extraction
     value, advantages = agent.get_value_advantage_estimates(
         test_input.squeeze(0).numpy()
     )

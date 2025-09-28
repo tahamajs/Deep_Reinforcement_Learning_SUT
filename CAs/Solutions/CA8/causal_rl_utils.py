@@ -19,5 +19,4 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-# Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

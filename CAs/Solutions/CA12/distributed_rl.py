@@ -1,4 +1,3 @@
-# Distributed Reinforcement Learning Implementation
 
 import multiprocessing as mp
 from multiprocessing import Process, Queue, Value, Array
@@ -37,7 +36,6 @@ from advanced_policy import PPONetwork, PPOAgent
 
 warnings.filterwarnings("ignore")
 
-# Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -99,7 +97,6 @@ class A3CWorker:
 
     def train_step(self):
         """Single training step for A3C worker."""
-        # Sync local model with global model
         self.local_model.load_state_dict(self.global_model.state_dict())
 
         states, actions, rewards, values, log_probs, dones = [], [], [], [], [], []
@@ -129,7 +126,6 @@ class A3CWorker:
             if done:
                 break
 
-        # Compute returns
         with torch.no_grad():
             if done:
                 next_value = 0
@@ -140,37 +136,29 @@ class A3CWorker:
 
         returns = self.compute_n_step_returns(rewards, values, next_value, dones)
 
-        # Convert to tensors
         states = torch.FloatTensor(states)
         actions = torch.LongTensor(actions)
         returns = torch.FloatTensor(returns)
         values = torch.FloatTensor(values)
         log_probs = torch.stack(log_probs)
 
-        # Compute losses
         advantages = returns - values
 
-        # Actor loss
         actor_loss = -(log_probs * advantages.detach()).mean()
 
-        # Critic loss
         critic_loss = F.mse_loss(values, returns)
 
-        # Entropy bonus
         logits, _ = self.local_model(states)
         probs = F.softmax(logits, dim=-1)
         entropy = -(probs * torch.log(probs + 1e-8)).sum(-1).mean()
 
         total_loss = actor_loss + 0.5 * critic_loss - 0.01 * entropy
 
-        # Compute gradients
         self.optimizer.zero_grad()
         total_loss.backward()
 
-        # Clip gradients
         torch.nn.utils.clip_grad_norm_(self.local_model.parameters(), 40)
 
-        # Update global model
         for global_param, local_param in zip(
             self.global_model.parameters(), self.local_model.parameters()
         ):
@@ -208,16 +196,13 @@ class IMPALALearner:
         gamma=0.99,
     ):
         """Compute V-trace targets."""
-        # Importance sampling ratios
         rhos = torch.exp(target_log_probs - behavior_log_probs)
         clipped_rhos = torch.clamp(rhos, max=self.rho_bar)
         clipped_cs = torch.clamp(rhos, max=self.c_bar)
 
-        # V-trace computation
         values_t_plus_1 = torch.cat([values[1:], bootstrap_value.unsqueeze(0)])
         deltas = clipped_rhos * (rewards + gamma * values_t_plus_1 - values)
 
-        # Compute V-trace targets
         vs = []
         v_s = values[-1] + deltas[-1]
         vs.append(v_s)
@@ -237,15 +222,12 @@ class IMPALALearner:
         """Update IMPALA learner."""
         states, actions, rewards, behavior_log_probs, bootstrap_value = batch
 
-        # Forward pass
         logits, values = self.model(states)
 
-        # Current policy log probabilities
         target_log_probs = (
             F.log_softmax(logits, dim=-1).gather(1, actions.unsqueeze(-1)).squeeze(-1)
         )
 
-        # V-trace targets
         vtrace_targets = self.vtrace(
             rewards,
             values.squeeze(),
@@ -254,21 +236,17 @@ class IMPALALearner:
             bootstrap_value,
         )
 
-        # Advantages for policy gradient
         advantages = vtrace_targets - values.squeeze()
 
-        # Losses
         policy_loss = -(target_log_probs * advantages.detach()).mean()
         value_loss = F.mse_loss(values.squeeze(), vtrace_targets.detach())
 
-        # Entropy regularization
         entropy = (
             -(F.softmax(logits, dim=-1) * F.log_softmax(logits, dim=-1)).sum(-1).mean()
         )
 
         total_loss = policy_loss + 0.5 * value_loss - 0.01 * entropy
 
-        # Update
         self.optimizer.zero_grad()
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), 40)
@@ -290,25 +268,20 @@ class DistributedPPOCoordinator:
         self.obs_dim = obs_dim
         self.action_dim = action_dim
 
-        # Global model
         self.global_model = PPONetwork(obs_dim, action_dim, discrete=True)
         self.optimizer = optim.Adam(self.global_model.parameters(), lr=lr)
 
-        # Communication queues
         self.task_queues = [Queue() for _ in range(n_workers)]
         self.result_queue = Queue()
 
-        # Training statistics
         self.episode_rewards = []
         self.losses = []
 
     def collect_rollouts(self, n_steps=128):
         """Coordinate rollout collection across workers."""
-        # Send collection tasks to workers
         for i in range(self.n_workers):
             self.task_queues[i].put(("collect", n_steps))
 
-        # Collect results
         all_rollouts = []
         for _ in range(self.n_workers):
             rollouts = self.result_queue.get()
@@ -332,7 +305,6 @@ class DistributedPPOCoordinator:
             for key in aggregated:
                 aggregated[key].extend(rollouts[key])
 
-        # Convert to tensors
         for key in aggregated:
             aggregated[key] = torch.FloatTensor(aggregated[key])
 
@@ -344,7 +316,6 @@ class DistributedPPOCoordinator:
         ppo_agent.network = self.global_model
         ppo_agent.optimizer = self.optimizer
 
-        # Prepare rollouts for PPO update
         obs = rollouts["obs"]
         actions = rollouts["actions"]
         log_probs = rollouts["log_probs"]
@@ -373,7 +344,6 @@ class EvolutionaryStrategy:
         self.sigma = sigma
         self.lr = lr
 
-        # Get parameter shapes
         self.param_shapes = []
         self.param_sizes = []
         for param in model.parameters():
@@ -406,11 +376,9 @@ class EvolutionaryStrategy:
 
     def update(self, rewards, perturbations):
         """Update parameters using ES."""
-        # Normalize rewards
         rewards = np.array(rewards)
         rewards = (rewards - np.mean(rewards)) / (np.std(rewards) + 1e-8)
 
-        # Compute parameter update
         current_params = self.get_parameters()
         param_update = np.zeros_like(current_params)
 
@@ -419,27 +387,22 @@ class EvolutionaryStrategy:
 
         param_update = self.lr * param_update / (self.population_size * self.sigma)
 
-        # Update parameters
         new_params = current_params + param_update
         self.set_parameters(new_params)
 
         return param_update
 
 
-# Demonstration functions
 def demonstrate_parameter_server():
     """Demonstrate parameter server functionality."""
     print("🖥️  Parameter Server Demo")
 
-    # Create dummy model
     model = nn.Sequential(nn.Linear(4, 32), nn.ReLU(), nn.Linear(32, 2))
 
-    # Initialize parameter server
     param_server = ParameterServer(model.state_dict())
 
     print(f"Initial version: {param_server.get_stats()['version']}")
 
-    # Simulate gradient update
     dummy_gradients = {
         name: torch.randn_like(param) for name, param in model.named_parameters()
     }
@@ -454,16 +417,13 @@ def demonstrate_evolutionary_strategy():
     """Demonstrate evolutionary strategy."""
     print("\n🧬 Evolutionary Strategy Demo")
 
-    # Create simple model
     model = nn.Sequential(nn.Linear(4, 8), nn.ReLU(), nn.Linear(8, 2))
     es = EvolutionaryStrategy(model, population_size=10, sigma=0.1)
 
-    # Generate population
     population = es.generate_population()
     print(f"Generated population of size: {len(population)}")
     print(f"Parameter dimensionality: {es.total_params}")
 
-    # Simulate fitness evaluation
     rewards = np.random.randn(len(population))
     es.update(rewards, population)
 
@@ -472,7 +432,6 @@ def demonstrate_evolutionary_strategy():
     return es
 
 
-# Run demonstrations
 print("🌐 Distributed Reinforcement Learning Systems")
 param_server_demo = demonstrate_parameter_server()
 es_demo = demonstrate_evolutionary_strategy()

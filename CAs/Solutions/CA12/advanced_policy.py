@@ -27,10 +27,8 @@ import itertools
 
 warnings.filterwarnings("ignore")
 
-# Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Advanced Policy Gradient Methods Implementation
 
 
 class PPONetwork(nn.Module):
@@ -40,7 +38,6 @@ class PPONetwork(nn.Module):
         super(PPONetwork, self).__init__()
         self.discrete = discrete
 
-        # Shared layers
         self.shared = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
             nn.ReLU(),
@@ -48,14 +45,12 @@ class PPONetwork(nn.Module):
             nn.ReLU(),
         )
 
-        # Actor head
         if discrete:
             self.actor = nn.Linear(hidden_dim, action_dim)
         else:
             self.actor_mean = nn.Linear(hidden_dim, action_dim)
             self.actor_logstd = nn.Parameter(torch.zeros(1, action_dim))
 
-        # Critic head
         self.critic = nn.Linear(hidden_dim, 1)
 
     def forward(self, obs):
@@ -98,7 +93,6 @@ class PPOAgent:
         self.optimizer = optim.Adam(self.network.parameters(), lr=lr, eps=1e-5)
         self.discrete = discrete
 
-        # PPO hyperparameters
         self.clip_coef = 0.2
         self.ent_coef = 0.01
         self.vf_coef = 0.5
@@ -112,14 +106,12 @@ class PPOAgent:
         """Update PPO using clipped objective."""
         obs, actions, logprobs, returns, values, advantages = rollouts
 
-        # Normalize advantages
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         clipfracs = []
         total_losses = []
 
         for epoch in range(n_epochs):
-            # Random minibatches
             indices = torch.randperm(len(obs))
 
             for start in range(0, len(obs), minibatch_size):
@@ -133,36 +125,29 @@ class PPOAgent:
                 mb_values = values[mb_indices]
                 mb_advantages = advantages[mb_indices]
 
-                # Forward pass
                 _, newlogprob, entropy, newvalue = self.get_action_and_value(
                     mb_obs, mb_actions
                 )
 
-                # Policy loss
                 logratio = newlogprob - mb_logprobs
                 ratio = logratio.exp()
 
                 with torch.no_grad():
-                    # Calculate approximate KL divergence
                     approx_kl = ((ratio - 1) - logratio).mean()
                     clipfracs.append(
                         ((ratio - 1.0).abs() > self.clip_coef).float().mean().item()
                     )
 
-                # Clipped surrogate objective
                 pg_loss1 = -mb_advantages * ratio
                 pg_loss2 = -mb_advantages * torch.clamp(
                     ratio, 1 - self.clip_coef, 1 + self.clip_coef
                 )
                 pg_loss = torch.max(pg_loss1, pg_loss2).mean()
 
-                # Value loss
                 v_loss = F.mse_loss(newvalue.squeeze(), mb_returns)
 
-                # Entropy loss
                 entropy_loss = entropy.mean()
 
-                # Total loss
                 loss = pg_loss - self.ent_coef * entropy_loss + v_loss * self.vf_coef
 
                 self.optimizer.zero_grad()
@@ -174,7 +159,6 @@ class PPOAgent:
 
                 total_losses.append(loss.item())
 
-            # Early stopping based on KL divergence
             if approx_kl > self.target_kl:
                 break
 
@@ -192,7 +176,6 @@ class SACAgent:
     """Soft Actor-Critic agent."""
 
     def __init__(self, obs_dim, action_dim, lr=3e-4, alpha=0.2, tau=0.005):
-        # Actor network
         self.actor = nn.Sequential(
             nn.Linear(obs_dim, 256),
             nn.ReLU(),
@@ -205,7 +188,6 @@ class SACAgent:
         self.actor_mean = nn.Linear(256, action_dim).to(device)
         self.actor_logstd = nn.Linear(256, action_dim).to(device)
 
-        # Q networks
         self.q1 = nn.Sequential(
             nn.Linear(obs_dim + action_dim, 256),
             nn.ReLU(),
@@ -222,11 +204,9 @@ class SACAgent:
             nn.Linear(256, 1),
         ).to(device)
 
-        # Target Q networks
         self.target_q1 = copy.deepcopy(self.q1)
         self.target_q2 = copy.deepcopy(self.q2)
 
-        # Optimizers
         self.actor_optimizer = optim.Adam(
             list(self.actor.parameters())
             + list(self.actor_mean.parameters())
@@ -236,12 +216,10 @@ class SACAgent:
         self.q1_optimizer = optim.Adam(self.q1.parameters(), lr=lr)
         self.q2_optimizer = optim.Adam(self.q2.parameters(), lr=lr)
 
-        # Hyperparameters
         self.alpha = alpha
         self.tau = tau
         self.gamma = 0.99
 
-        # Automatic entropy tuning
         self.target_entropy = -action_dim
         self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=lr)
@@ -249,11 +227,9 @@ class SACAgent:
     def get_action(self, obs, deterministic=False):
         """Sample action from policy."""
         obs = torch.FloatTensor(obs).to(device)
-        # Ensure obs is batched: if single observation provided, add batch dim
         if obs.dim() == 1:
             obs = obs.unsqueeze(0)
 
-        # Forward pass through actor
         features = self.actor(obs)
         mean = self.actor_mean(features)
         log_std = self.actor_logstd(features)
@@ -264,16 +240,12 @@ class SACAgent:
             action = torch.tanh(mean)
             log_prob = None
         else:
-            # Sample from Normal distribution
             normal = Normal(mean, std)
             x = normal.rsample()  # Reparameterization trick
             action = torch.tanh(x)
 
-            # Compute log probability
             log_prob = normal.log_prob(x)
-            # Enforcing action bounds (change of variables)
             log_prob -= torch.log(1 - action.pow(2) + 1e-6)
-            # Sum over action dimensions (last dimension)
             log_prob = log_prob.sum(-1, keepdim=True)
 
         return action.cpu().data.numpy(), log_prob if not deterministic else None
@@ -289,25 +261,20 @@ class SACAgent:
         dones = torch.BoolTensor(dones).to(device)
 
         with torch.no_grad():
-            # Get next actions and log probabilities
             next_actions, next_log_probs = self.get_action(next_states)
             next_actions = torch.FloatTensor(next_actions).to(device)
 
-            # Target Q-values
             target_q1 = self.target_q1(torch.cat([next_states, next_actions], dim=1))
             target_q2 = self.target_q2(torch.cat([next_states, next_actions], dim=1))
             target_q = torch.min(target_q1, target_q2) - self.alpha * next_log_probs
             target_q = rewards + self.gamma * (1 - dones.float()) * target_q
 
-        # Current Q-values
         current_q1 = self.q1(torch.cat([states, actions], dim=1))
         current_q2 = self.q2(torch.cat([states, actions], dim=1))
 
-        # Q-function losses
         q1_loss = F.mse_loss(current_q1, target_q)
         q2_loss = F.mse_loss(current_q2, target_q)
 
-        # Update Q-functions
         self.q1_optimizer.zero_grad()
         q1_loss.backward()
         self.q1_optimizer.step()
@@ -316,7 +283,6 @@ class SACAgent:
         q2_loss.backward()
         self.q2_optimizer.step()
 
-        # Update policy
         new_actions, log_probs = self.get_action(states)
         new_actions = torch.FloatTensor(new_actions).to(device)
 
@@ -330,7 +296,6 @@ class SACAgent:
         actor_loss.backward()
         self.actor_optimizer.step()
 
-        # Update alpha (temperature parameter)
         alpha_loss = (
             -self.log_alpha * (log_probs + self.target_entropy).detach()
         ).mean()
@@ -341,7 +306,6 @@ class SACAgent:
 
         self.alpha = self.log_alpha.exp().item()
 
-        # Soft update target networks
         self.soft_update()
 
         return {

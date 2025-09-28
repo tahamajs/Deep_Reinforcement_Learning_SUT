@@ -9,7 +9,6 @@ import copy
 import random
 
 
-# Safety Constraints
 class SafetyConstraints:
     """Safety constraints for reinforcement learning"""
 
@@ -42,7 +41,6 @@ class SafetyConstraints:
         return action
 
 
-# Robust Policy
 class RobustPolicy:
     """Robust policy that handles adversarial perturbations"""
 
@@ -57,7 +55,6 @@ class RobustPolicy:
         self.action_dim = action_dim
         self.robustness_level = robustness_level
 
-        # Main policy network
         self.policy_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -67,7 +64,6 @@ class RobustPolicy:
             nn.Tanh(),
         )
 
-        # Robustness network (adversarial training)
         self.robust_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -84,7 +80,6 @@ class RobustPolicy:
         main_action = self.policy_net(state)
 
         if adversarial:
-            # Add adversarial perturbation
             perturbation = self.robust_net(state) * self.robustness_level
             robust_action = main_action + perturbation
         else:
@@ -96,18 +91,15 @@ class RobustPolicy:
         self, states: torch.Tensor, actions: torch.Tensor, perturbations: torch.Tensor
     ):
         """Train robustness against perturbations"""
-        # Adversarial training objective
         perturbed_states = states + perturbations
         robust_actions = self.robust_net(perturbed_states)
 
-        # Minimize difference between main and robust policies
         main_actions = self.policy_net(states)
         robustness_loss = F.mse_loss(robust_actions, main_actions.detach())
 
         return robustness_loss
 
 
-# Constrained Policy Optimization
 class ConstrainedPolicyOptimization:
     """Constrained policy optimization with safety constraints"""
 
@@ -122,7 +114,6 @@ class ConstrainedPolicyOptimization:
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        # Policy network
         self.policy = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -132,7 +123,6 @@ class ConstrainedPolicyOptimization:
             nn.Tanh(),
         )
 
-        # Value network
         self.value_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -141,7 +131,6 @@ class ConstrainedPolicyOptimization:
             nn.Linear(hidden_dim, 1),
         )
 
-        # Cost value network (for safety constraints)
         self.cost_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -150,12 +139,10 @@ class ConstrainedPolicyOptimization:
             nn.Linear(hidden_dim, 1),
         )
 
-        # Lagrange multiplier for constraint
         self.lambda_param = torch.tensor(1.0, requires_grad=True)
         self.cost_limit = cost_limit
         self.lambda_lr = lambda_lr
 
-        # Optimizers
         self.policy_optimizer = torch.optim.Adam(self.policy.parameters(), lr=1e-3)
         self.value_optimizer = torch.optim.Adam(self.value_net.parameters(), lr=1e-3)
         self.cost_optimizer = torch.optim.Adam(self.cost_net.parameters(), lr=1e-3)
@@ -177,7 +164,6 @@ class ConstrainedPolicyOptimization:
     ):
         """Update constrained policy"""
 
-        # Compute advantages
         with torch.no_grad():
             values = self.value_net(states).squeeze()
             next_values = self.value_net(next_states).squeeze()
@@ -189,11 +175,9 @@ class ConstrainedPolicyOptimization:
                 costs + 0.99 * next_cost_values * (1 - dones) - cost_values
             )
 
-        # Policy loss with constraints
         log_probs = self._compute_log_probs(states, actions)
         policy_loss = -(log_probs * advantages).mean()
 
-        # Cost constraint
         cost_penalty = torch.max(
             torch.tensor(0.0),
             self.lambda_param * (cost_advantages.mean() - self.cost_limit),
@@ -201,18 +185,15 @@ class ConstrainedPolicyOptimization:
 
         total_policy_loss = policy_loss + cost_penalty
 
-        # Update policy
         self.policy_optimizer.zero_grad()
         total_policy_loss.backward()
         self.policy_optimizer.step()
 
-        # Update value function
         value_loss = F.mse_loss(values, rewards + 0.99 * next_values * (1 - dones))
         self.value_optimizer.zero_grad()
         value_loss.backward()
         self.value_optimizer.step()
 
-        # Update cost value function
         cost_loss = F.mse_loss(
             cost_values, costs + 0.99 * next_cost_values * (1 - dones)
         )
@@ -220,13 +201,11 @@ class ConstrainedPolicyOptimization:
         cost_loss.backward()
         self.cost_optimizer.step()
 
-        # Update Lagrange multiplier
         lambda_loss = -self.lambda_param * (cost_advantages.mean() - self.cost_limit)
         self.lambda_optimizer.zero_grad()
         lambda_loss.backward()
         self.lambda_optimizer.step()
 
-        # Clip lambda to be positive
         with torch.no_grad():
             self.lambda_param.data.clamp_(min=0)
 
@@ -247,7 +226,6 @@ class ConstrainedPolicyOptimization:
         return dist.log_prob(actions).sum(dim=-1)
 
 
-# Risk-Sensitive RL
 class RiskSensitiveRL:
     """Risk-sensitive reinforcement learning"""
 
@@ -262,7 +240,6 @@ class RiskSensitiveRL:
         self.action_dim = action_dim
         self.risk_sensitivity = risk_sensitivity
 
-        # Policy network
         self.policy = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -272,7 +249,6 @@ class RiskSensitiveRL:
             nn.Tanh(),
         )
 
-        # Value network (risk-adjusted)
         self.value_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -300,25 +276,19 @@ class RiskSensitiveRL:
     ):
         """Update with risk-sensitive objective"""
 
-        # Compute risk-adjusted returns
         with torch.no_grad():
             values = self.value_net(states).squeeze()
             next_values = self.value_net(next_states).squeeze()
 
-            # Exponential utility for risk sensitivity
             if self.risk_sensitivity > 0:
-                # Risk-seeking (higher moments)
                 adjusted_rewards = torch.exp(self.risk_sensitivity * rewards)
             else:
-                # Risk-averse (lower moments)
                 adjusted_rewards = -torch.exp(-self.risk_sensitivity * rewards)
 
             targets = adjusted_rewards + 0.99 * next_values * (1 - dones)
 
-        # Value loss
         value_loss = F.mse_loss(values, targets)
 
-        # Policy loss (risk-sensitive)
         log_probs = self._compute_log_probs(states, actions)
         policy_loss = -(log_probs * (targets - values.detach())).mean()
 
@@ -343,7 +313,6 @@ class RiskSensitiveRL:
         return dist.log_prob(actions).sum(dim=-1)
 
 
-# Adversarial Training
 class AdversarialTraining:
     """Adversarial training for robustness"""
 
@@ -358,7 +327,6 @@ class AdversarialTraining:
         self.action_dim = action_dim
         self.adversarial_budget = adversarial_budget
 
-        # Main policy
         self.policy = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -368,7 +336,6 @@ class AdversarialTraining:
             nn.Tanh(),
         )
 
-        # Adversarial perturbation generator
         self.adversary = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -386,11 +353,9 @@ class AdversarialTraining:
     def get_action(self, state: torch.Tensor, robust: bool = True) -> torch.Tensor:
         """Get action with adversarial robustness"""
         if robust:
-            # Generate adversarial perturbation
             perturbation = self.adversary(state) * self.adversarial_budget
             perturbed_state = state + perturbation
 
-            # Get action for perturbed state
             action = self.policy(perturbed_state)
         else:
             action = self.policy(state)
@@ -402,25 +367,20 @@ class AdversarialTraining:
     ):
         """Adversarial training update"""
 
-        # Generate adversarial perturbations
         perturbations = self.adversary(states) * self.adversarial_budget
         perturbed_states = states + perturbations
 
-        # Policy should perform well on perturbed states
         perturbed_actions = self.policy(perturbed_states)
         policy_loss = F.mse_loss(perturbed_actions, actions)
 
-        # Adversary should make policy perform worse
         original_actions = self.policy(states)
         perturbed_actions = self.policy(perturbed_states)
         adversary_loss = -F.mse_loss(perturbed_actions, original_actions)
 
-        # Update policy
         self.optimizer.zero_grad()
         policy_loss.backward()
         self.optimizer.step()
 
-        # Update adversary
         self.adversary_optimizer.zero_grad()
         adversary_loss.backward()
         self.adversary_optimizer.step()
@@ -431,7 +391,6 @@ class AdversarialTraining:
         }
 
 
-# Safety Monitor
 class SafetyMonitor:
     """Real-time safety monitoring and intervention"""
 
@@ -448,12 +407,10 @@ class SafetyMonitor:
     ) -> Dict:
         """Monitor safety of state-action transitions"""
 
-        # Simple safety metrics
         state_norm = np.linalg.norm(state)
         action_norm = np.linalg.norm(action)
         state_change = np.linalg.norm(next_state - state)
 
-        # Safety violation detection
         violation = (
             state_norm > 5  # State too extreme
             or action_norm > 1  # Action too extreme
@@ -462,12 +419,10 @@ class SafetyMonitor:
 
         self.safety_violations.append(violation)
 
-        # Intervention decision
         intervention = violation and np.random.random() < self.intervention_probability
 
         if intervention:
             self.interventions.append(True)
-            # Safe intervention: go to origin
             safe_action = -0.5 * state[: len(action)]
         else:
             self.interventions.append(False)

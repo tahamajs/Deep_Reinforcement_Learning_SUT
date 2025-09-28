@@ -35,7 +35,6 @@ class PromptTemplate:
 
     def tokenize_prompt(self, prompt: str) -> Dict[str, Any]:
         """Tokenize prompt (simplified implementation)"""
-        # Simplified tokenization - in practice would use proper tokenizer
         tokens = prompt.lower().split()
         token_ids = [hash(token) % 1000 for token in tokens]  # Simplified
 
@@ -52,16 +51,12 @@ class MultiModalGridWorld:
         self.render_size = render_size
         self.max_steps = max_steps
 
-        # Initialize prompt template
         self.prompt_template = PromptTemplate()
 
-        # Reset environment
         self.reset()
 
-        # Action space: Up, Down, Left, Right
         self.action_space = spaces.Discrete(4)
 
-        # Observation space: Multi-modal (visual + text + state)
         self.observation_space = spaces.Dict(
             {
                 "visual": spaces.Box(
@@ -80,15 +75,12 @@ class MultiModalGridWorld:
 
     def reset(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Reset the environment"""
-        # Random agent position
         self.agent_pos = np.random.randint(0, self.size, size=2)
 
-        # Random goal position
         self.goal_pos = np.random.randint(0, self.size, size=2)
         while np.array_equal(self.agent_pos, self.goal_pos):
             self.goal_pos = np.random.randint(0, self.size, size=2)
 
-        # Random obstacles
         self.obstacles = []
         for _ in range(self.size // 2):
             obstacle = np.random.randint(0, self.size, size=2)
@@ -109,7 +101,6 @@ class MultiModalGridWorld:
         self, action: int
     ) -> Tuple[Dict[str, Any], float, bool, bool, Dict[str, Any]]:
         """Take a step in the environment"""
-        # Action mapping: 0=Up, 1=Down, 2=Left, 3=Right
         action_map = {
             0: np.array([-1, 0]),  # Up
             1: np.array([1, 0]),  # Down
@@ -117,29 +108,22 @@ class MultiModalGridWorld:
             3: np.array([0, 1]),  # Right
         }
 
-        # Update position
         new_pos = self.agent_pos + action_map[action]
 
-        # Check bounds
         if (new_pos >= 0).all() and (new_pos < self.size).all():
-            # Check obstacles
             if not any(np.array_equal(new_pos, obs) for obs in self.obstacles):
                 self.agent_pos = new_pos
 
         self.steps += 1
 
-        # Compute reward
         reward = -0.01  # Step penalty
 
-        # Goal reached
         if np.array_equal(self.agent_pos, self.goal_pos):
             reward += 1.0
 
-        # Obstacle collision
         if any(np.array_equal(self.agent_pos, obs) for obs in self.obstacles):
             reward -= 0.5
 
-        # Termination conditions
         terminated = np.array_equal(self.agent_pos, self.goal_pos)
         truncated = self.steps >= self.max_steps
 
@@ -147,55 +131,43 @@ class MultiModalGridWorld:
 
     def _get_observation(self) -> Dict[str, Any]:
         """Get multi-modal observation"""
-        # Visual observation
         visual_obs = self._render_visual()
 
-        # Textual observation
         text_obs = self._generate_instruction()
 
-        # State observation
         state_obs = self.agent_pos.copy()
 
         return {"visual": visual_obs, "text": text_obs, "state": state_obs}
 
     def _render_visual(self) -> np.ndarray:
         """Render visual observation"""
-        # Create RGB image
         img = Image.new("RGB", (self.render_size, self.render_size), color="white")
         draw = ImageDraw.Draw(img)
 
-        # Cell size
         cell_size = self.render_size // self.size
 
-        # Draw grid
         for i in range(self.size + 1):
-            # Horizontal lines
             draw.line(
                 [0, i * cell_size, self.render_size, i * cell_size],
                 fill="black",
                 width=1,
             )
-            # Vertical lines
             draw.line(
                 [i * cell_size, 0, i * cell_size, self.render_size],
                 fill="black",
                 width=1,
             )
 
-        # Draw obstacles
         for obs in self.obstacles:
             x, y = obs[1] * cell_size, obs[0] * cell_size
             draw.rectangle([x, y, x + cell_size, y + cell_size], fill="red")
 
-        # Draw goal
         x, y = self.goal_pos[1] * cell_size, self.goal_pos[0] * cell_size
         draw.rectangle([x, y, x + cell_size, y + cell_size], fill="green")
 
-        # Draw agent
         x, y = self.agent_pos[1] * cell_size, self.agent_pos[0] * cell_size
         draw.rectangle([x, y, x + cell_size, y + cell_size], fill="blue")
 
-        # Convert to numpy array
         img_array = np.array(img)
 
         return img_array
@@ -257,7 +229,6 @@ class MultiModalWrapper:
     def __init__(self, env: MultiModalGridWorld):
         self.env = env
 
-        # Feature dimensions
         self.visual_dim = 64  # After CNN processing
         self.text_dim = 32  # After transformer processing
         self.state_dim = 2  # Raw state
@@ -274,34 +245,27 @@ class MultiModalWrapper:
         Returns:
             Processed feature vector
         """
-        # Process visual (simplified - would use CNN in practice)
         visual_features = self._process_visual(obs["visual"])
 
-        # Process text (simplified - would use transformer in practice)
         text_features = self._process_text(obs["text"])
 
-        # State features (normalized)
         state_features = obs["state"].astype(np.float32) / self.env.size
 
-        # Concatenate
         features = np.concatenate([visual_features, text_features, state_features])
 
         return features
 
     def _process_visual(self, visual_obs: np.ndarray) -> np.ndarray:
         """Process visual observation (simplified)"""
-        # Simple downsampling and flattening
         resized = visual_obs[::4, ::4, :]  # Downsample
         features = resized.mean(axis=(0, 1))  # Average pooling
         return features / 255.0  # Normalize
 
     def _process_text(self, text_obs: Dict[str, Any]) -> np.ndarray:
         """Process textual observation (simplified)"""
-        # Simple averaging of token embeddings
         tokens = np.array(text_obs["tokens"])
         mask = np.array(text_obs["mask"])
 
-        # Masked average
         masked_tokens = tokens * mask
         features = masked_tokens.sum(axis=0, keepdims=True) / mask.sum()
         features = np.tile(features, (32, 1))[:32].flatten()  # Pad/truncate to 32 dims

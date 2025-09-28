@@ -28,7 +28,6 @@ class MPCController:
         self.elite_ratio = elite_ratio
         self.elite_size = max(1, int(num_samples * elite_ratio))
 
-        # Statistics
         self.optimization_costs = []
         self.episode_rewards = []
         self.model = model
@@ -40,56 +39,44 @@ class MPCController:
         self.elite_ratio = elite_ratio
         self.elite_size = max(1, int(num_samples * elite_ratio))
 
-        # Statistics
         self.optimization_costs = []
         self.episode_rewards = []
 
     def cross_entropy_optimization(self, initial_state):
         """Cross-Entropy Method for action sequence optimization"""
-        # Initialize action distribution parameters
         action_means = np.zeros((self.horizon, self.num_actions))
         action_stds = np.ones((self.horizon, self.num_actions))
 
         best_cost = float("inf")
         best_actions = None
 
-        # CEM iterations
         for iteration in range(5):  # Number of CEM iterations
-            # Sample action sequences
             action_sequences = []
             costs = []
 
             for _ in range(self.num_samples):
-                # Sample action sequence
                 actions = []
                 for h in range(self.horizon):
-                    # Sample from categorical distribution (softmax of means)
                     probs = np.exp(action_means[h] / self.temperature)
                     probs = probs / np.sum(probs)
                     action = np.random.choice(self.num_actions, p=probs)
                     actions.append(action)
 
                 action_sequences.append(actions)
-                # Evaluate cost of this sequence
                 cost = self.evaluate_sequence(initial_state, actions)
                 costs.append(cost)
 
-            # Select elite samples
             elite_indices = np.argsort(costs)[: self.elite_size]
             elite_actions = [action_sequences[i] for i in elite_indices]
 
-            # Update distribution parameters
             for h in range(self.horizon):
                 elite_actions_h = [seq[h] for seq in elite_actions]
-                # Update means based on elite actions
                 for a in range(self.num_actions):
                     count = elite_actions_h.count(a)
                     action_means[h, a] = count / len(elite_actions_h)
 
-                # Convert to log probabilities for numerical stability
                 action_means[h] = np.log(action_means[h] + 1e-8)
 
-            # Track best solution
             min_cost = min(costs)
             if min_cost < best_cost:
                 best_cost = min_cost
@@ -104,10 +91,8 @@ class MPCController:
         best_actions = None
 
         for _ in range(self.num_samples):
-            # Generate random action sequence
             actions = [np.random.randint(self.num_actions) for _ in range(self.horizon)]
 
-            # Evaluate sequence
             cost = self.evaluate_sequence(initial_state, actions)
 
             if cost < best_cost:
@@ -123,12 +108,10 @@ class MPCController:
         total_cost = 0.0
         discount = 1.0
 
-        # Convert initial state to one-hot
         state_onehot = np.zeros(self.state_dim)
         state_onehot[state] = 1
 
         for action in actions:
-            # Predict next state and reward using neural model
             state_tensor = torch.FloatTensor(state_onehot).unsqueeze(0).to(device)
             action_tensor = torch.LongTensor([action]).to(device)
 
@@ -136,19 +119,15 @@ class MPCController:
                 state_tensor, action_tensor
             )
 
-            # Get predicted next state (argmax for discrete states)
             next_state_logits = next_state_pred.squeeze()
             next_state = torch.argmax(next_state_logits).item()
 
-            # Get predicted reward
             reward = reward_pred.squeeze().item()
 
-            # Convert reward to cost (negative reward)
             cost = -reward
             total_cost += discount * cost
             discount *= 0.95  # Discount factor
 
-            # Update state
             state = next_state
             state_onehot = np.zeros(self.state_dim)
             state_onehot[state] = 1
@@ -162,7 +141,6 @@ class MPCController:
         else:
             action_sequence = self.random_shooting(state)
 
-        # Return first action in optimal sequence
         return (
             action_sequence[0]
             if action_sequence
@@ -182,7 +160,6 @@ class MPCAgent:
         self.controller = MPCController(model, num_actions, num_states, horizon=horizon)
         self.method = method
 
-        # Statistics
         self.episode_rewards = []
         self.planning_costs = []
 
@@ -229,11 +206,9 @@ def demonstrate_mpc():
     print("Model Predictive Control (MPC) Demonstration")
     print("=" * 50)
 
-    # Collect training data first
     print("\n1. Setting up MPC with learned model...")
     env = SimpleGridWorld(size=5)
 
-    # Collect experience for model training
     n_episodes = 1000
     experience_data = []
 
@@ -245,36 +220,30 @@ def demonstrate_mpc():
             action = np.random.randint(env.num_actions)  # Random policy
             next_state, reward, done = env.step(action)
 
-            # Store for neural model
             experience_data.append((state, action, next_state, reward))
 
             state = next_state
 
     print(f"Collected {len(experience_data)} transitions")
 
-    # Prepare data for neural model
     states = np.array([exp[0] for exp in experience_data])
     actions = np.array([exp[1] for exp in experience_data])
     next_states = np.array([exp[2] for exp in experience_data])
     rewards = np.array([exp[3] for exp in experience_data])
 
-    # Convert states to one-hot for neural model
     states_onehot = np.eye(env.num_states)[states]
     next_states_onehot = np.eye(env.num_states)[next_states]
 
-    # Use previously trained neural model
     neural_model = NeuralModel(env.num_states, env.num_actions, hidden_dim=64).to(
         device
     )
 
-    # Quick training for demonstration
     trainer = ModelTrainer(neural_model, lr=1e-3)
     print("Training neural model for MPC...")
     trainer.train_batch(
         (states_onehot, actions, next_states_onehot, rewards), epochs=50, batch_size=64
     )
 
-    # Create MPC agents with different methods
     agents = {
         "MPC-CEM": MPCAgent(
             neural_model,
@@ -292,7 +261,6 @@ def demonstrate_mpc():
         ),
     }
 
-    # Test MPC performance
     print("\n2. Testing MPC performance...")
     n_episodes = 15
     results = {}
@@ -319,10 +287,8 @@ def demonstrate_mpc():
             "statistics": agent.get_statistics(),
         }
 
-    # Visualization
     plt.figure(figsize=(15, 10))
 
-    # Performance comparison
     plt.subplot(2, 3, 1)
     for name, data in results.items():
         rewards = data["episode_rewards"]
@@ -334,7 +300,6 @@ def demonstrate_mpc():
     plt.legend()
     plt.grid(True, alpha=0.3)
 
-    # Episode lengths
     plt.subplot(2, 3, 2)
     for name, data in results.items():
         lengths = data["episode_lengths"]
@@ -346,7 +311,6 @@ def demonstrate_mpc():
     plt.legend()
     plt.grid(True, alpha=0.3)
 
-    # Performance distribution
     plt.subplot(2, 3, 3)
     reward_data = [results[name]["episode_rewards"] for name in results.keys()]
     labels = list(results.keys())
@@ -356,7 +320,6 @@ def demonstrate_mpc():
     plt.xticks(rotation=45)
     plt.grid(True, alpha=0.3)
 
-    # Planning cost analysis for CEM agent
     plt.subplot(2, 3, 4)
     if "MPC-CEM" in results:
         agent = agents["MPC-CEM"]
@@ -375,7 +338,6 @@ def demonstrate_mpc():
             plt.legend()
             plt.grid(True, alpha=0.3)
 
-    # Horizon analysis
     plt.subplot(2, 3, 5)
     print("\n3. Analyzing effect of planning horizon...")
     horizon_results = {}
@@ -407,7 +369,6 @@ def demonstrate_mpc():
     plt.ylabel("Average Episode Reward")
     plt.grid(True, alpha=0.3)
 
-    # Method comparison summary
     plt.subplot(2, 3, 6)
     method_names = list(results.keys())
     avg_rewards = [np.mean(results[name]["episode_rewards"]) for name in method_names]
@@ -436,7 +397,6 @@ def demonstrate_mpc():
     plt.savefig("visualizations/mpc_analysis.png", dpi=300, bbox_inches="tight")
     plt.show()
 
-    # Analysis summary
     print(f"\n4. MPC Analysis Summary:")
     for name, data in results.items():
         stats = data["statistics"]

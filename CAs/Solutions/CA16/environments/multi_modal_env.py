@@ -22,10 +22,8 @@ class MultiModalGridWorld(gym.Env):
         self.num_objects = num_objects
         self.max_steps = max_steps
 
-        # Action space: up, down, left, right, pickup, drop, use
         self.action_space = spaces.Discrete(7)
 
-        # Observation space: multi-modal
         self.observation_space = spaces.Dict(
             {
                 "visual": spaces.Box(
@@ -38,13 +36,11 @@ class MultiModalGridWorld(gym.Env):
             }
         )
 
-        # Environment state
         self.agent_pos = None
         self.objects = {}  # position -> object_type
         self.inventory = []  # held objects
         self.step_count = 0
 
-        # Object types
         self.object_types = ["key", "door", "treasure", "obstacle", "powerup"]
         self.object_colors = {
             "key": [255, 215, 0],  # gold
@@ -54,7 +50,6 @@ class MultiModalGridWorld(gym.Env):
             "powerup": [0, 255, 255],  # cyan
         }
 
-        # Rewards
         self.rewards = {
             "move": -0.01,
             "pickup_key": 1.0,
@@ -69,10 +64,8 @@ class MultiModalGridWorld(gym.Env):
         """Reset the environment."""
         super().reset(seed=seed)
 
-        # Random agent position
         self.agent_pos = (np.random.randint(self.size), np.random.randint(self.size))
 
-        # Random object positions
         self.objects = {}
         positions = [(i, j) for i in range(self.size) for j in range(self.size)]
         np.random.shuffle(positions)
@@ -95,7 +88,6 @@ class MultiModalGridWorld(gym.Env):
         terminated = False
         truncated = self.step_count >= self.max_steps
 
-        # Decode action
         if action < 4:  # Movement actions
             reward += self._move_agent(action)
         elif action == 4:  # Pickup
@@ -105,7 +97,6 @@ class MultiModalGridWorld(gym.Env):
         elif action == 6:  # Use
             reward += self._use_object()
 
-        # Check win/lose conditions
         if self._check_win_condition():
             reward += 20.0
             terminated = True
@@ -113,7 +104,6 @@ class MultiModalGridWorld(gym.Env):
             reward += self.rewards["timeout"]
             terminated = True
 
-        # Add step penalty
         reward += self.rewards["move"]
 
         observation = self._get_observation()
@@ -130,11 +120,9 @@ class MultiModalGridWorld(gym.Env):
         dx, dy = [(0, -1), (0, 1), (-1, 0), (1, 0)][direction]  # up, down, left, right
         new_pos = (self.agent_pos[0] + dx, self.agent_pos[1] + dy)
 
-        # Check bounds
         if not (0 <= new_pos[0] < self.size and 0 <= new_pos[1] < self.size):
             return self.rewards["hit_obstacle"]  # Hit wall
 
-        # Check for obstacle
         if new_pos in self.objects and self.objects[new_pos] == "obstacle":
             return self.rewards["hit_obstacle"]
 
@@ -170,13 +158,11 @@ class MultiModalGridWorld(gym.Env):
         """Use held object."""
         if "key" in self.inventory and self.agent_pos in self.objects:
             if self.objects[self.agent_pos] == "door":
-                # Use key to open door
                 self.inventory.remove("key")
                 del self.objects[self.agent_pos]
                 return self.rewards["use_key"]
 
         if "powerup" in self.inventory:
-            # Use powerup (temporary effect)
             self.inventory.remove("powerup")
             return 1.0
 
@@ -184,7 +170,6 @@ class MultiModalGridWorld(gym.Env):
 
     def _check_win_condition(self) -> bool:
         """Check if agent has won."""
-        # Win by collecting all treasure
         return len([obj for obj in self.objects.values() if obj == "treasure"]) == 0
 
     def _check_lose_condition(self) -> bool:
@@ -201,25 +186,20 @@ class MultiModalGridWorld(gym.Env):
 
     def _get_visual_observation(self) -> np.ndarray:
         """Get visual observation as RGB image."""
-        # Create RGB image
         image = np.zeros((self.size, self.size, 3), dtype=np.uint8)
 
-        # Draw objects
         for pos, obj_type in self.objects.items():
             color = self.object_colors[obj_type]
             image[pos[0], pos[1]] = color
 
-        # Draw agent (white)
         image[self.agent_pos[0], self.agent_pos[1]] = [255, 255, 255]
 
         return image
 
     def _get_symbolic_observation(self) -> np.ndarray:
         """Get symbolic observation as discrete values."""
-        # Agent position
         agent_x, agent_y = self.agent_pos
 
-        # Object at current position
         current_obj = 0  # 0 = empty
         if self.agent_pos in self.objects:
             obj_type = self.objects[self.agent_pos]
@@ -231,12 +211,10 @@ class MultiModalGridWorld(gym.Env):
         """Get natural language description of the state."""
         descriptions = []
 
-        # Agent position
         descriptions.append(
             f"You are at position ({self.agent_pos[0]}, {self.agent_pos[1]})."
         )
 
-        # Nearby objects
         nearby_objects = []
         for dx in [-1, 0, 1]:
             for dy in [-1, 0, 1]:
@@ -258,7 +236,6 @@ class MultiModalGridWorld(gym.Env):
         else:
             descriptions.append("You see no objects nearby.")
 
-        # Inventory
         if self.inventory:
             descriptions.append(f"You are carrying: {', '.join(self.inventory)}.")
         else:
@@ -292,18 +269,14 @@ class MultiModalGridWorld(gym.Env):
         if mode == "rgb_array":
             return self._get_visual_observation()
 
-        # Text-based rendering
         grid = [["." for _ in range(self.size)] for _ in range(self.size)]
 
-        # Place objects
         for pos, obj_type in self.objects.items():
             symbol = obj_type[0].upper()  # First letter
             grid[pos[0]][pos[1]] = symbol
 
-        # Place agent
         grid[self.agent_pos[0]][self.agent_pos[1]] = "A"
 
-        # Print grid
         print("\n".join(" ".join(row) for row in grid))
         print(f"Inventory: {self.inventory}")
         print(f"Step: {self.step_count}")
@@ -324,13 +297,10 @@ class MultiModalGridWorldWithMemory(MultiModalGridWorld):
 
     def step(self, action: int) -> Tuple[Dict, float, bool, bool, Dict]:
         """Step with memory tracking."""
-        # Get current state before action
         current_state = self._get_observation()
 
-        # Execute action
         observation, reward, terminated, truncated, info = super().step(action)
 
-        # Store in memory
         self.episode_memory.append(
             {
                 "state": current_state,
@@ -340,11 +310,9 @@ class MultiModalGridWorldWithMemory(MultiModalGridWorld):
             }
         )
 
-        # Maintain memory size
         if len(self.episode_memory) > self.memory_size:
             self.episode_memory.pop(0)
 
-        # Update info with memory
         info["memory"] = self.episode_memory.copy()
         info["memory_size"] = len(self.episode_memory)
 
@@ -354,14 +322,11 @@ class MultiModalGridWorldWithMemory(MultiModalGridWorld):
         """Reset with memory clearing."""
         observation, info = super().reset(seed, options)
 
-        # Store completed episode in long-term memory
         if self.episode_memory:
             self.state_memory.append(self.episode_memory.copy())
 
-        # Clear episode memory
         self.episode_memory = []
 
-        # Maintain memory size
         if len(self.state_memory) > 100:  # Keep last 100 episodes
             self.state_memory.pop(0)
 

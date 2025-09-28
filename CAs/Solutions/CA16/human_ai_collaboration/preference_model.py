@@ -15,7 +15,6 @@ from typing import Dict, List, Tuple, Optional, Any, Union
 from collections import defaultdict
 import itertools
 
-# Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -46,7 +45,6 @@ class HumanPreference:
         self.confidence = confidence
         self.context = context or {}
 
-        # Validate preference
         if preferred not in ["A", "B", "equal"]:
             raise ValueError("Preferred must be 'A', 'B', or 'equal'")
 
@@ -87,7 +85,6 @@ class HumanFeedback:
         self.timestamp = timestamp or torch.tensor(0.0)
         self.user_id = user_id
 
-        # Validate feedback type
         valid_types = ["preference", "correction", "demonstration", "rating", "comment"]
         if feedback_type not in valid_types:
             raise ValueError(f"Invalid feedback type. Must be one of {valid_types}")
@@ -112,7 +109,6 @@ class PreferenceRewardModel(nn.Module):
         self.action_dim = action_dim
         self.preference_dim = preference_dim
 
-        # Trajectory encoder (for comparing full trajectories)
         self.trajectory_encoder = nn.LSTM(
             state_dim + action_dim + 1,  # state + action + reward
             hidden_dim,
@@ -120,7 +116,6 @@ class PreferenceRewardModel(nn.Module):
             bidirectional=True,
         )
 
-        # Preference comparison network
         self.preference_network = nn.Sequential(
             nn.Linear(
                 hidden_dim * 2 * 2, hidden_dim
@@ -131,7 +126,6 @@ class PreferenceRewardModel(nn.Module):
             nn.Linear(hidden_dim, preference_dim),
         )
 
-        # Bradley-Terry model for preference prediction
         self.bt_model = nn.Sequential(
             nn.Linear(preference_dim, hidden_dim),
             nn.ReLU(),
@@ -139,7 +133,6 @@ class PreferenceRewardModel(nn.Module):
             nn.Sigmoid(),
         )
 
-        # Reward predictor from preferences
         self.reward_predictor = nn.Sequential(
             nn.Linear(state_dim + action_dim, hidden_dim),
             nn.ReLU(),
@@ -148,7 +141,6 @@ class PreferenceRewardModel(nn.Module):
             nn.Linear(hidden_dim, 1),
         )
 
-        # Uncertainty estimation
         self.uncertainty_head = nn.Sequential(
             nn.Linear(preference_dim, hidden_dim),
             nn.ReLU(),
@@ -162,13 +154,10 @@ class PreferenceRewardModel(nn.Module):
         actions = trajectory["actions"]  # (seq_len, action_dim)
         rewards = trajectory["rewards"]  # (seq_len, 1)
 
-        # Concatenate inputs
         traj_input = torch.cat([states, actions, rewards], dim=-1)
 
-        # Encode with LSTM
         outputs, (h_n, c_n) = self.trajectory_encoder(traj_input)
 
-        # Use final hidden state (concatenate forward and backward)
         final_hidden = torch.cat(
             [h_n[-2], h_n[-1]], dim=-1
         )  # Last layer, both directions
@@ -179,17 +168,13 @@ class PreferenceRewardModel(nn.Module):
         self, traj_a: Dict[str, torch.Tensor], traj_b: Dict[str, torch.Tensor]
     ) -> torch.Tensor:
         """Compare two trajectories and predict preference."""
-        # Encode both trajectories
         encoding_a = self.encode_trajectory(traj_a)
         encoding_b = self.encode_trajectory(traj_b)
 
-        # Concatenate encodings
         combined = torch.cat([encoding_a, encoding_b], dim=-1)
 
-        # Predict preference features
         preference_features = self.preference_network(combined)
 
-        # Predict preference probability (P(A > B))
         preference_prob = self.bt_model(preference_features)
 
         return preference_prob.squeeze(), preference_features
@@ -211,7 +196,6 @@ class PreferenceRewardModel(nn.Module):
         """Forward pass for batch of trajectory pairs."""
         batch_size = len(batch_trajectories_a)
 
-        # Encode all trajectories
         encodings_a = []
         encodings_b = []
 
@@ -224,12 +208,10 @@ class PreferenceRewardModel(nn.Module):
         encodings_a = torch.stack(encodings_a)
         encodings_b = torch.stack(encodings_b)
 
-        # Compare trajectories
         combined = torch.cat([encodings_a, encodings_b], dim=-1)
         preference_features = self.preference_network(combined)
         preference_logits = self.bt_model(preference_features)
 
-        # Estimate uncertainty
         uncertainties = self.uncertainty_head(preference_features)
 
         return {
@@ -246,7 +228,6 @@ class PreferenceRewardModel(nn.Module):
         """Compute loss for preference learning."""
         preference_logits = predictions["preference_logits"]
 
-        # Convert preferences to targets
         targets = []
         weights = []
 
@@ -263,11 +244,9 @@ class PreferenceRewardModel(nn.Module):
         targets = torch.tensor(targets, device=device)
         weights = torch.tensor(weights, device=device)
 
-        # Binary cross-entropy loss with weights
         bce_loss = F.binary_cross_entropy(preference_logits, targets, reduction="none")
         weighted_loss = (bce_loss * weights).mean()
 
-        # Add regularization for uncertainty
         uncertainty_loss = predictions["uncertainties"].mean() * 0.1
 
         total_loss = weighted_loss + uncertainty_loss
@@ -284,7 +263,6 @@ class ActivePreferenceLearner:
         self.reward_model = reward_model
         self.uncertainty_threshold = uncertainty_threshold
 
-        # Track queried pairs
         self.queried_pairs = set()
 
     def select_query_pair(
@@ -294,14 +272,12 @@ class ActivePreferenceLearner:
         max_uncertainty = -float("inf")
         best_pair = None
 
-        # Try all pairs
         for traj_a, traj_b in itertools.combinations(candidate_trajectories, 2):
             pair_key = (id(traj_a), id(traj_b))
 
             if pair_key in self.queried_pairs:
                 continue
 
-            # Compute uncertainty for this pair
             with torch.no_grad():
                 pred_a_b, _ = self.reward_model.compare_trajectories(traj_a, traj_b)
                 uncertainty = self._compute_uncertainty(pred_a_b)
@@ -317,11 +293,9 @@ class ActivePreferenceLearner:
 
     def _compute_uncertainty(self, preference_prob: torch.Tensor) -> float:
         """Compute uncertainty from preference probability."""
-        # Use entropy as uncertainty measure
         if preference_prob.dim() == 0:
             preference_prob = preference_prob.unsqueeze(0)
 
-        # For binary preference, entropy is -p*log(p) - (1-p)*log(1-p)
         entropy = -(
             preference_prob * torch.log(preference_prob + 1e-8)
             + (1 - preference_prob) * torch.log(1 - preference_prob + 1e-8)
@@ -352,7 +326,6 @@ class PreferenceDataset:
     def __getitem__(self, idx):
         pref = self.preferences[idx]
 
-        # Convert trajectories to tensors if needed
         traj_a = self._trajectory_to_tensor(pref.option_a)
         traj_b = self._trajectory_to_tensor(pref.option_b)
 

@@ -16,7 +16,6 @@ class DataAugmentationDQN(nn.Module):
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        # Main Q-network
         self.q_network = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -25,7 +24,6 @@ class DataAugmentationDQN(nn.Module):
             nn.Linear(hidden_dim, action_dim),
         )
 
-        # Auxiliary networks for sample efficiency
         self.reward_predictor = nn.Sequential(
             nn.Linear(state_dim + action_dim, hidden_dim // 2),
             nn.ReLU(),
@@ -43,13 +41,11 @@ class DataAugmentationDQN(nn.Module):
         q_values = self.q_network(state)
 
         if action is not None:
-            # One-hot encode action if discrete
             if len(action.shape) == 1:
                 action_one_hot = F.one_hot(action.long(), self.action_dim).float()
             else:
                 action_one_hot = action
 
-            # Auxiliary predictions
             aux_input = torch.cat([state, action_one_hot], dim=-1)
             reward_pred = self.reward_predictor(aux_input)
             next_state_pred = self.next_state_predictor(aux_input)
@@ -61,17 +57,14 @@ class DataAugmentationDQN(nn.Module):
     def apply_augmentation(self, state, augmentation_type="noise"):
         """Apply data augmentation to state."""
         if augmentation_type == "noise":
-            # Add Gaussian noise
             noise = torch.randn_like(state) * 0.1
             return state + noise
 
         elif augmentation_type == "dropout":
-            # Random feature dropout
             dropout_mask = torch.rand_like(state) > 0.1
             return state * dropout_mask.float()
 
         elif augmentation_type == "scaling":
-            # Random scaling
             scale = torch.rand(1).item() * 0.4 + 0.8  # Scale between 0.8 and 1.2
             return state * scale
 
@@ -85,24 +78,19 @@ class SampleEfficientAgent:
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        # Network with auxiliary tasks
         self.network = DataAugmentationDQN(state_dim, action_dim)
         self.target_network = copy.deepcopy(self.network)
         self.optimizer = optim.Adam(self.network.parameters(), lr=lr)
 
-        # Prioritized replay buffer
         self.replay_buffer = PrioritizedReplayBuffer(capacity=10000)
 
-        # Training parameters
         self.gamma = 0.99
         self.target_update_freq = 100
         self.update_count = 0
 
-        # Auxiliary task weights
         self.aux_reward_weight = 0.1
         self.aux_dynamics_weight = 0.1
 
-        # Training stats
         self.losses = []
         self.td_errors = []
 
@@ -125,7 +113,6 @@ class SampleEfficientAgent:
         experiences, indices, weights = sample_result
         states, actions, rewards, next_states, dones = experiences
 
-        # Convert to tensors
         states = torch.FloatTensor(states)
         actions = torch.LongTensor(actions)
         rewards = torch.FloatTensor(rewards)
@@ -133,23 +120,19 @@ class SampleEfficientAgent:
         dones = torch.BoolTensor(dones)
         weights = torch.FloatTensor(weights)
 
-        # Apply data augmentation
         if augmentation:
             aug_type = np.random.choice(["noise", "dropout", "scaling"])
             states = self.network.apply_augmentation(states, aug_type)
             next_states = self.network.apply_augmentation(next_states, aug_type)
 
-        # Main Q-learning loss
         current_q_values = self.network(states).gather(1, actions.unsqueeze(1))
 
         with torch.no_grad():
             next_q_values = self.target_network(next_states).max(1)[0]
             target_q_values = rewards + (self.gamma * next_q_values * (~dones))
 
-        # TD errors for priority updates
         td_errors = (current_q_values.squeeze() - target_q_values).detach().numpy()
 
-        # Weighted MSE loss (importance sampling)
         q_loss = (
             weights
             * F.mse_loss(current_q_values.squeeze(), target_q_values, reduction="none")
@@ -157,9 +140,7 @@ class SampleEfficientAgent:
 
         total_loss = q_loss
 
-        # Auxiliary tasks for sample efficiency
         if use_aux_tasks:
-            # Reward prediction auxiliary task
             q_values, reward_pred, next_state_pred = self.network(states, actions)
 
             aux_reward_loss = F.mse_loss(reward_pred.squeeze(), rewards)
@@ -168,21 +149,17 @@ class SampleEfficientAgent:
             total_loss += self.aux_reward_weight * aux_reward_loss
             total_loss += self.aux_dynamics_weight * aux_dynamics_loss
 
-        # Optimization step
         self.optimizer.zero_grad()
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=1.0)
         self.optimizer.step()
 
-        # Update priorities
         self.replay_buffer.update_priorities(indices, td_errors)
 
-        # Update target network
         self.update_count += 1
         if self.update_count % self.target_update_freq == 0:
             self.target_network.load_state_dict(self.network.state_dict())
 
-        # Store statistics
         self.losses.append(total_loss.item())
         self.td_errors.extend(td_errors.tolist())
 

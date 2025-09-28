@@ -60,7 +60,6 @@ def evaluate_robustness(agent, env, num_episodes=10, adversarial_strength=0.1):
     perturbation_norms = []
 
     for _ in range(num_episodes):
-        # Original evaluation
         obs = env.reset()
         episode_reward = 0
         done = False
@@ -72,13 +71,11 @@ def evaluate_robustness(agent, env, num_episodes=10, adversarial_strength=0.1):
 
         original_rewards.append(episode_reward)
 
-        # Adversarial evaluation
         obs = env.reset()
         episode_reward = 0
         done = False
 
         while not done:
-            # Generate adversarial observation
             adv_obs = agent.generate_adversarial_observation(obs)
             perturbation_norms.append(np.linalg.norm(adv_obs - obs))
 
@@ -141,10 +138,8 @@ def create_ensemble_policies(base_agent, num_policies=5, noise_std=0.1):
     ensemble = []
 
     for _ in range(num_policies):
-        # Create copy of base policy
         policy_copy = copy.deepcopy(base_agent.policy_network)
 
-        # Add noise to parameters
         with torch.no_grad():
             for param in policy_copy.parameters():
                 noise = torch.randn_like(param) * noise_std
@@ -169,7 +164,6 @@ def evaluate_ensemble_uncertainty(ensemble, observation):
     with torch.no_grad():
         obs_tensor = torch.FloatTensor(observation).unsqueeze(0).to(device)
 
-        # Get predictions from all policies
         predictions = []
         for policy in ensemble:
             probs = policy(obs_tensor).squeeze().cpu().numpy()
@@ -177,12 +171,10 @@ def evaluate_ensemble_uncertainty(ensemble, observation):
 
         predictions = np.array(predictions)
 
-        # Compute uncertainty metrics
         mean_prediction = np.mean(predictions, axis=0)
         std_prediction = np.std(predictions, axis=0)
         entropy = -np.sum(mean_prediction * np.log(mean_prediction + 1e-8))
 
-        # Variance in action selection
         action_variances = np.var(predictions, axis=0)
 
     return {
@@ -207,12 +199,10 @@ def generate_diverse_environments(base_env_class, num_variations=10):
     environments = []
 
     for i in range(num_variations):
-        # Vary environment parameters
         size_variation = np.random.uniform(0.8, 1.2)
         noise_variation = np.random.uniform(0.0, 0.2)
         reward_scale = np.random.uniform(0.8, 1.2)
 
-        # Create environment with varied parameters
         env = base_env_class(
             size=int(10 * size_variation),
             noise_level=noise_variation,
@@ -259,7 +249,6 @@ def compute_robustness_metrics(trajectories):
     if not trajectories:
         return {}
 
-    # Extract environment parameters
     env_sizes = []
     noise_levels = []
     rewards = []

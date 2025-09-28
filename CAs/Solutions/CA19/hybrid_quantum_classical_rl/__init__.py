@@ -22,7 +22,6 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-# Quantum computing simulation (representing real quantum hardware)
 try:
     from qiskit import QuantumCircuit, execute, Aer
     from qiskit.circuit import Parameter
@@ -51,7 +50,6 @@ class QuantumStateSimulator:
         if not QISKIT_AVAILABLE:
             raise ImportError("Qiskit required for quantum state simulation")
 
-        # Initialize quantum circuit for state encoding
         self.state_circuit = QuantumCircuit(n_qubits)
         self.parameters = [Parameter(f"θ_{i}") for i in range(n_qubits * state_dim)]
 
@@ -65,24 +63,19 @@ class QuantumStateSimulator:
         Returns:
             Quantum statevector representing the encoded state
         """
-        # Reset circuit
         self.state_circuit = QuantumCircuit(self.n_qubits)
 
-        # Encode classical state through rotation gates
         param_idx = 0
         for i in range(min(self.n_qubits, len(classical_state))):
             if param_idx < len(self.parameters):
-                # RY rotation based on state value
                 angle = np.pi * classical_state[i % len(classical_state)]
                 self.state_circuit.ry(angle, i)
 
-                # Add entanglement between qubits
                 if i > 0:
                     self.state_circuit.cx(i - 1, i)
 
                 param_idx += 1
 
-        # Execute circuit to get quantum state
         backend = Aer.get_backend("statevector_simulator")
         job = execute(self.state_circuit, backend)
         self.quantum_state = job.result().get_statevector()
@@ -108,25 +101,20 @@ class QuantumStateSimulator:
         if self.quantum_state is None:
             return {"00": 1.0}
 
-        # Create measurement circuit
         measure_circuit = self.state_circuit.copy()
 
         if basis == "x":
-            # Measure in X basis (Hadamard before measurement)
             for i in range(self.n_qubits):
                 measure_circuit.h(i)
         elif basis == "y":
-            # Measure in Y basis (rotation before measurement)
             for i in range(self.n_qubits):
                 measure_circuit.rx(np.pi / 2, i)
 
-        # Add measurement
         measure_circuit.add_register(
             measure_circuit.classical_register(self.n_qubits, "c")
         )
         measure_circuit.measure_all()
 
-        # Execute measurement
         backend = Aer.get_backend("qasm_simulator")
         job = execute(measure_circuit, backend, shots=1024)
         result = job.result()
@@ -140,11 +128,9 @@ class QuantumStateSimulator:
             return 0.0
 
         try:
-            # Calculate reduced density matrix for first qubit
             rho = DensityMatrix(self.quantum_state)
             rho_A = partial_trace(rho, list(range(1, self.n_qubits)))
 
-            # Calculate von Neumann entropy
             eigenvals = np.real(np.linalg.eigvals(rho_A.data))
             eigenvals = eigenvals[eigenvals > 1e-10]  # Remove numerical zeros
 
@@ -173,7 +159,6 @@ class QuantumFeatureMap:
         if not QISKIT_AVAILABLE:
             raise ImportError("Qiskit required for quantum feature mapping")
 
-        # Initialize parameters for variational encoding
         self.parameters = [Parameter(f"φ_{i}") for i in range(n_qubits * 2)]
 
     def map_features(
@@ -189,7 +174,6 @@ class QuantumFeatureMap:
         Returns:
             Quantum feature representation or kernel value
         """
-        # Create feature map circuit
         qc = QuantumCircuit(self.n_qubits)
 
         if self.encoding_type == "ZZFeatureMap":
@@ -197,14 +181,11 @@ class QuantumFeatureMap:
         elif self.encoding_type == "PauliFeatureMap":
             self._apply_pauli_feature_map(qc, x)
         else:
-            # Default to simple rotation encoding
             self._apply_rotation_encoding(qc, x)
 
         if y is not None:
-            # Compute quantum kernel between x and y
             return self._compute_quantum_kernel(qc, x, y)
         else:
-            # Return quantum state representation
             backend = Aer.get_backend("statevector_simulator")
             job = execute(qc, backend)
             statevector = job.result().get_statevector()
@@ -213,10 +194,8 @@ class QuantumFeatureMap:
     def _apply_zz_feature_map(self, qc: QuantumCircuit, x: np.ndarray):
         """Apply ZZ feature map encoding"""
         for i in range(min(self.n_qubits, len(x))):
-            # Single qubit rotations
             qc.ry(2 * np.arcsin(np.sqrt(abs(x[i]))), i)
 
-        # Two-qubit entangling gates
         for i in range(self.n_qubits):
             for j in range(i + 1, self.n_qubits):
                 if i < len(x) and j < len(x):
@@ -245,18 +224,13 @@ class QuantumFeatureMap:
 
         K(x,y) = |⟨ψ(x)|ψ(y)⟩|²
         """
-        # Create circuit for x
         qc_x = qc.copy()
         self._apply_zz_feature_map(qc_x, x)
 
-        # Create circuit for y
         qc_y = QuantumCircuit(self.n_qubits)
         self._apply_zz_feature_map(qc_y, y)
 
-        # Compute inner product ⟨ψ(x)|ψ(y)⟩
         try:
-            # This is a simplified computation - in practice would need
-            # more sophisticated quantum kernel estimation
             similarity = np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
             return abs(similarity) ** 2
         except:
@@ -279,7 +253,6 @@ class VariationalQuantumCircuit:
         if not QISKIT_AVAILABLE:
             raise ImportError("Qiskit required for variational quantum circuits")
 
-        # Initialize variational parameters
         self.theta = [
             [Parameter(f"θ_{l}_{q}") for q in range(n_qubits)] for l in range(n_layers)
         ]
@@ -287,7 +260,6 @@ class VariationalQuantumCircuit:
             [Parameter(f"φ_{l}_{q}") for q in range(n_qubits)] for l in range(n_layers)
         ]
 
-        # Flatten parameters for optimization
         self.all_parameters = [p for layer in self.theta + self.phi for p in layer]
 
     def construct_circuit(
@@ -304,19 +276,15 @@ class VariationalQuantumCircuit:
         """
         qc = QuantumCircuit(self.n_qubits)
 
-        # Input encoding layer (if input provided)
         if input_data is not None:
             for i in range(min(self.n_qubits, len(input_data))):
                 qc.ry(np.pi * input_data[i], i)
 
-        # Variational layers
         for layer in range(self.n_layers):
-            # Rotation layer
             for qubit in range(self.n_qubits):
                 qc.ry(self.theta[layer][qubit], qubit)
                 qc.rz(self.phi[layer][qubit], qubit)
 
-            # Entangling layer
             for qubit in range(self.n_qubits - 1):
                 qc.cx(qubit, qubit + 1)
 
@@ -339,22 +307,18 @@ class VariationalQuantumCircuit:
         Returns:
             Execution results
         """
-        # Construct circuit
         qc = self.construct_circuit(input_data)
 
-        # Bind parameters
         param_dict = {
             self.all_parameters[i]: parameters[i] for i in range(len(parameters))
         }
         qc_bound = qc.bind_parameters(param_dict)
 
-        # Execute circuit
         backend = Aer.get_backend("qasm_simulator")
         job = execute(qc_bound, backend, shots=shots)
         result = job.result()
         counts = result.get_counts()
 
-        # Also get statevector for analysis
         sv_backend = Aer.get_backend("statevector_simulator")
         sv_job = execute(qc_bound, sv_backend)
         statevector = sv_job.result().get_statevector()
@@ -399,32 +363,27 @@ class HybridQuantumClassicalAgent:
         self.action_dim = action_dim
         self.quantum_qubits = quantum_qubits
 
-        # Quantum components
         self.quantum_simulator = QuantumStateSimulator(quantum_qubits, state_dim)
         self.quantum_feature_map = QuantumFeatureMap(quantum_qubits)
         self.quantum_circuit = VariationalQuantumCircuit(
             quantum_qubits, quantum_layers, action_dim
         )
 
-        # Classical neural network
         self.classical_network = self._build_classical_network()
         self.target_network = self._build_classical_network()
         self.optimizer = optim.Adam(
             self.classical_network.parameters(), lr=learning_rate
         )
 
-        # Quantum parameter optimization
         quantum_params = self.quantum_circuit.get_parameter_count()
         self.quantum_params = nn.Parameter(torch.randn(quantum_params) * 0.1)
         self.quantum_optimizer = optim.Adam(
             [self.quantum_params], lr=learning_rate * 0.1
         )
 
-        # Experience replay
         self.memory = deque(maxlen=10000)
         self.batch_size = 32
 
-        # Hybrid control parameters
         self.quantum_weight = 0.6  # Balance between quantum and classical
         self.adaptive_hybrid = True
 
@@ -453,32 +412,24 @@ class HybridQuantumClassicalAgent:
         Returns:
             Selected action and decision info
         """
-        # Classical network prediction
         state_tensor = torch.FloatTensor(state).unsqueeze(0)
         with torch.no_grad():
             classical_q = self.classical_network(state_tensor).squeeze()
 
-        # Quantum-enhanced prediction
         try:
-            # Encode state in quantum simulator
             quantum_state = self.quantum_simulator.encode_state(state)
 
-            # Execute variational quantum circuit
             quantum_result = self.quantum_circuit.execute_circuit(
                 self.quantum_params.detach().numpy(), state
             )
 
-            # Convert quantum output to Q-values
             quantum_probs = quantum_result["probabilities"]
-            # Map quantum probabilities to action values (simplified)
             quantum_q = torch.FloatTensor(quantum_probs[: self.action_dim] * 10 - 5)
 
-            # Adaptive quantum-classical fusion
             if self.adaptive_hybrid:
                 entanglement = self.quantum_simulator.calculate_entanglement()
                 self.quantum_weight = 0.3 + 0.7 * entanglement
 
-            # Fuse predictions
             fused_q = (
                 self.quantum_weight * quantum_q
                 + (1 - self.quantum_weight) * classical_q
@@ -493,11 +444,9 @@ class HybridQuantumClassicalAgent:
             }
 
         except Exception as e:
-            # Fallback to classical only
             fused_q = classical_q
             decision_info = {"method": "classical_fallback", "error": str(e)}
 
-        # Epsilon-greedy action selection
         if np.random.random() < epsilon:
             action = np.random.randint(self.action_dim)
             decision_info["exploration"] = True
@@ -528,7 +477,6 @@ class HybridQuantumClassicalAgent:
         if len(self.memory) < self.batch_size:
             return {"loss": 0.0}
 
-        # Sample batch
         batch = random.sample(self.memory, self.batch_size)
         states = torch.FloatTensor([e[0] for e in batch])
         actions = torch.LongTensor([e[1] for e in batch])
@@ -536,29 +484,23 @@ class HybridQuantumClassicalAgent:
         next_states = torch.FloatTensor([e[3] for e in batch])
         dones = torch.BoolTensor([e[4] for e in batch])
 
-        # Classical Q-learning update
         current_q = self.classical_network(states).gather(1, actions.unsqueeze(1))
         next_q = self.target_network(next_states).max(1)[0].detach()
         target_q = rewards + 0.99 * next_q * ~dones
 
         classical_loss = nn.MSELoss()(current_q.squeeze(), target_q)
 
-        # Update classical network
         self.optimizer.zero_grad()
         classical_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.classical_network.parameters(), 1.0)
         self.optimizer.step()
 
-        # Quantum parameter update (simplified)
         quantum_loss = 0.0
         try:
-            # Simple quantum update based on classical gradients
             if len(self.memory) > self.batch_size * 2:
-                # Update quantum parameters occasionally
                 if np.random.random() < 0.1:  # 10% of updates
                     grad_scale = classical_loss.item()
                     self.quantum_optimizer.zero_grad()
-                    # Simplified quantum gradient (in practice would use parameter-shift rule)
                     self.quantum_params.grad = (
                         torch.randn_like(self.quantum_params) * grad_scale * 0.01
                     )
@@ -567,7 +509,6 @@ class HybridQuantumClassicalAgent:
         except:
             pass
 
-        # Update target network
         if hasattr(self, "update_counter"):
             self.update_counter += 1
         else:

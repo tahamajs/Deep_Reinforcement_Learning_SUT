@@ -15,7 +15,6 @@ class CausalGraph:
         self.n_vars = len(variables)
         self.var_to_idx = {var: i for i, var in enumerate(variables)}
 
-        # Adjacency matrix: adj_matrix[i][j] = 1 if i -> j
         self.adj_matrix = np.zeros((self.n_vars, self.n_vars), dtype=int)
 
     def add_edge(self, from_var: str, to_var: str):
@@ -38,14 +37,10 @@ class CausalGraph:
 
     def is_d_separated(self, x: str, y: str, z: List[str]) -> bool:
         """Check if x and y are d-separated given z (simplified)"""
-        # Simplified d-separation check
-        # In practice, this would use a proper d-separation algorithm
         x_idx = self.var_to_idx[x]
         y_idx = self.var_to_idx[y]
         z_indices = [self.var_to_idx[var] for var in z]
 
-        # Check if there's a direct path from x to y not blocked by z
-        # This is a simplified version
         return not self._has_unblocked_path(x_idx, y_idx, z_indices)
 
     def _has_unblocked_path(self, start: int, end: int, blocking: List[int]) -> bool:
@@ -63,7 +58,6 @@ class CausalGraph:
 
             visited.add(current)
 
-            # Check all connected nodes
             for next_node in range(self.n_vars):
                 if (self.adj_matrix[current][next_node] == 1 or
                     self.adj_matrix[next_node][current] == 1):
@@ -92,29 +86,24 @@ class CausalDiscovery:
         """PC Algorithm for causal discovery"""
         n_vars = len(var_names)
 
-        # Initialize complete undirected graph
         skeleton = np.ones((n_vars, n_vars)) - np.eye(n_vars)
 
-        # Phase 1: Skeleton discovery
         for order in range(n_vars - 2):
             for i in range(n_vars):
                 for j in range(i + 1, n_vars):
                     if skeleton[i][j] == 0:
                         continue
 
-                    # Find all possible conditioning sets of size 'order'
                     neighbors = [k for k in range(n_vars)
                                 if k != i and k != j and skeleton[i][k] == 1]
 
                     if len(neighbors) >= order:
                         from itertools import combinations
                         for cond_set in combinations(neighbors, order):
-                            # Test conditional independence
                             if self._test_independence(data, i, j, list(cond_set)):
                                 skeleton[i][j] = skeleton[j][i] = 0
                                 break
 
-        # Phase 2: Orient edges (simplified)
         graph = CausalGraph(var_names)
         oriented = self._orient_edges(skeleton, data)
 
@@ -128,23 +117,17 @@ class CausalDiscovery:
     def _test_independence(self, data: np.ndarray, i: int, j: int,
                           cond_set: List[int]) -> bool:
         """Test conditional independence using correlation (simplified)"""
-        # This is a simplified test - in practice, use proper statistical tests
 
         if len(cond_set) == 0:
-            # Unconditional independence
             corr = np.corrcoef(data[:, i], data[:, j])[0, 1]
             return abs(corr) < 0.1  # Simplified threshold
 
-        # Conditional independence using partial correlation
         from scipy.stats import pearsonr
 
-        # Regress out conditioning variables
         X = data[:, [i] + cond_set]
         Y = data[:, j]
 
-        # Simplified partial correlation
         if len(cond_set) == 1:
-            # Partial correlation formula for one conditioning variable
             r_ij = np.corrcoef(data[:, i], data[:, j])[0, 1]
             r_ik = np.corrcoef(data[:, i], data[:, cond_set[0]])[0, 1]
             r_jk = np.corrcoef(data[:, j], data[:, cond_set[0]])[0, 1]
@@ -159,12 +142,9 @@ class CausalDiscovery:
         n_vars = skeleton.shape[0]
         oriented = np.zeros_like(skeleton)
 
-        # Simplified orientation: use temporal ordering if available
-        # Or use variance-based heuristics
         for i in range(n_vars):
             for j in range(n_vars):
                 if skeleton[i][j] == 1:
-                    # Simple heuristic: variable with higher variance causes lower variance
                     var_i = np.var(data[:, i])
                     var_j = np.var(data[:, j])
 
@@ -206,14 +186,12 @@ class CausalWorldModel(nn.Module):
         self.action_dim = action_dim
         self.variables = causal_graph.variables
 
-        # Create prediction networks for each variable
         self.predictors = nn.ModuleDict()
 
         for var in self.variables:
             parents = causal_graph.get_parents(var)
             parent_dim = sum(state_dims[p] for p in parents)
 
-            # Include action in input if relevant
             input_dim = parent_dim + action_dim
             output_dim = state_dims[var]
 
@@ -234,19 +212,16 @@ class CausalWorldModel(nn.Module):
         for var in self.variables:
             parents = self.causal_graph.get_parents(var)
 
-            # Collect parent values
             parent_values = []
             for parent in parents:
                 parent_values.append(states[parent])
 
-            # Combine inputs
             if parent_values:
                 parent_input = torch.cat(parent_values, dim=-1)
                 model_input = torch.cat([parent_input, actions], dim=-1)
             else:
                 model_input = actions
 
-            # Predict
             predictions[var] = self.predictors[var](model_input)
 
         return predictions
@@ -255,20 +230,16 @@ class CausalWorldModel(nn.Module):
                   interventions: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Predict under interventions"""
 
-        # Copy states and apply interventions
         modified_states = {k: v.clone() for k, v in states.items()}
         for var, value in interventions.items():
             modified_states[var] = value
 
-        # Predict following causal structure
         predictions = {}
 
         for var in self.variables:
             if var in interventions:
-                # Interventions fix variables
                 predictions[var] = interventions[var]
             else:
-                # Predict from causal parents
                 parents = self.causal_graph.get_parents(var)
                 parent_values = [modified_states[p] for p in parents]
 
@@ -298,19 +269,15 @@ class CausalPolicyGradient:
                rewards: torch.Tensor, causal_world_model: CausalWorldModel):
         """Update policy with causal regularization"""
 
-        # Standard policy gradient loss
         log_probs = self.policy.get_log_prob(states, actions)
         policy_loss = -(log_probs * rewards).mean()
 
-        # Causal regularization
         causal_loss = self._compute_causal_regularization(
             states, actions, causal_world_model
         )
 
-        # Total loss
         total_loss = policy_loss + self.causal_weight * causal_loss
 
-        # Update
         self.optimizer.zero_grad()
         total_loss.backward()
         self.optimizer.step()
@@ -326,24 +293,19 @@ class CausalPolicyGradient:
                                      causal_world_model: CausalWorldModel) -> torch.Tensor:
         """Compute causal regularization term"""
 
-        # Interventional consistency loss
         consistency_loss = 0
         n_interventions = 0
 
         for var in self.causal_graph.variables:
-            # Create intervention
             intervention_value = torch.randn_like(states[var])
             interventions = {var: intervention_value}
 
-            # Predict under intervention
             pred_intervened = causal_world_model.intervene(states, actions, interventions)
 
-            # Predict with modified state
             modified_states = {k: v.clone() for k, v in states.items()}
             modified_states[var] = intervention_value
             pred_modified = causal_world_model(modified_states, actions)
 
-            # Consistency loss for non-descendants
             for other_var in self.causal_graph.variables:
                 if other_var != var and not self._is_descendant(var, other_var):
                     consistency_loss += F.mse_loss(
@@ -356,7 +318,6 @@ class CausalPolicyGradient:
 
     def _is_descendant(self, ancestor: str, var: str) -> bool:
         """Check if var is a descendant of ancestor"""
-        # Simple DFS to check descendancy
         visited = set()
         stack = self.causal_graph.get_children(ancestor)
 
@@ -375,18 +336,14 @@ class CausalPolicyGradient:
 def create_synthetic_causal_data(n_samples: int = 1000):
     """Create synthetic data with known causal structure"""
 
-    # True causal structure: X1 -> X2 -> X3, X1 -> X3, Action -> X2
     data = {}
 
-    # Exogenous noise
     e1 = np.random.normal(0, 0.5, n_samples)
     e2 = np.random.normal(0, 0.3, n_samples)
     e3 = np.random.normal(0, 0.4, n_samples)
 
-    # Actions
     actions = np.random.uniform(-1, 1, (n_samples, 2))
 
-    # Causal mechanisms
     X1 = e1
     X2 = 0.7 * X1 + 0.5 * actions[:, 0] + e2
     X3 = 0.8 * X2 + 0.3 * X1 + e3

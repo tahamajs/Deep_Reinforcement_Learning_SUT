@@ -33,16 +33,13 @@ class SimpleGridWorld:
         Returns:
             tuple: (next_state, reward, done, info)
         """
-        # Action mapping: 0=up, 1=down, 2=left, 3=right
         moves = [(-1, 0), (0, 1), (1, 0), (0, -1)]
 
-        # Apply action with boundary checking
         new_row = max(0, min(self.size - 1, self.state[0] + moves[action][0]))
         new_col = max(0, min(self.size - 1, self.state[1] + moves[action][1]))
 
         self.state = [new_row, new_col]
 
-        # Reward structure
         if self.state == self.goal:
             reward = 10.0
             done = True

@@ -39,7 +39,6 @@ class ContinuousPendulum:
         cos_theta, sin_theta, theta_dot = self.state
         theta = np.arctan2(sin_theta, cos_theta)
 
-        # Dynamics
         theta_dot_dot = (
             3 * self.g / (2 * self.l) * np.sin(theta)
             + 3 / (self.m * self.l**2) * action
@@ -48,12 +47,10 @@ class ContinuousPendulum:
         theta_dot = np.clip(theta_dot, -self.max_speed, self.max_speed)
         theta = theta + theta_dot * self.dt
 
-        # Normalize angle
         theta = ((theta + np.pi) % (2 * np.pi)) - np.pi
 
         self.state = np.array([np.cos(theta), np.sin(theta), theta_dot])
 
-        # Reward: keep pendulum upright
         reward = -(theta**2 + 0.1 * theta_dot**2 + 0.001 * action**2)
 
         self.step_count += 1

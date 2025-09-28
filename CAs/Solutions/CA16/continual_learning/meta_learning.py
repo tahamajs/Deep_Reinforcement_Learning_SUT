@@ -37,13 +37,10 @@ class MAMLAgent(nn.Module):
         self.meta_lr = meta_lr
         self.adaptation_steps = adaptation_steps
 
-        # Meta optimizer
         self.meta_optimizer = torch.optim.Adam(self.model.parameters(), lr=meta_lr)
 
-        # Task-specific adapted models
         self.adapted_models: Dict[int, nn.Module] = {}
 
-        # Meta-learning statistics
         self.task_adaptation_history: Dict[int, List[Dict[str, float]]] = {}
 
     def adapt_to_task(
@@ -66,27 +63,22 @@ class MAMLAgent(nn.Module):
         if adaptation_steps is None:
             adaptation_steps = self.adaptation_steps
 
-        # Start with current meta-model parameters
         adapted_model = copy.deepcopy(self.model)
         adapted_model.train()
 
-        # Create inner optimizer
         inner_optimizer = torch.optim.SGD(adapted_model.parameters(), lr=self.inner_lr)
 
         adaptation_history = []
 
         for step in range(adaptation_steps):
-            # Sample batch from support data
             try:
                 batch = next(iter(support_data))
                 inputs, targets = batch
             except StopIteration:
-                # Reset iterator if exhausted
                 support_iter = iter(support_data)
                 batch = next(support_iter)
                 inputs, targets = batch
 
-            # Inner adaptation step
             inner_optimizer.zero_grad()
 
             outputs = adapted_model(inputs)
@@ -96,7 +88,6 @@ class MAMLAgent(nn.Module):
 
             adaptation_history.append({"step": step + 1, "loss": loss.item()})
 
-        # Store adapted model
         self.adapted_models[task_id] = adapted_model
         self.task_adaptation_history[task_id] = adaptation_history
 
@@ -111,10 +102,8 @@ class MAMLAgent(nn.Module):
         """
         self.meta_optimizer.zero_grad()
 
-        # Compute meta-loss as sum of task losses
         meta_loss = sum(task_losses.values())
 
-        # Backward pass through meta-model
         meta_loss.backward()
         self.meta_optimizer.step()
 
@@ -173,10 +162,8 @@ class MetaLearner:
         self.maml_agent = MAMLAgent(base_model, inner_lr, meta_lr, adaptation_steps)
         self.maml_agent.to(device)
 
-        # Task data management
         self.task_data: Dict[int, Dict[str, torch.utils.data.DataLoader]] = {}
 
-        # Meta-training history
         self.meta_training_history: List[Dict[str, Any]] = []
 
     def add_task(
@@ -214,7 +201,6 @@ class MetaLearner:
         Returns:
             Meta-training metrics
         """
-        # Sample tasks for this meta-batch
         available_tasks = list(self.task_data.keys())
         if len(available_tasks) < tasks_per_batch:
             tasks_per_batch = len(available_tasks)
@@ -227,12 +213,10 @@ class MetaLearner:
         total_meta_loss = 0.0
 
         for task_id in sampled_tasks:
-            # Adapt to task
             adapted_model = self.maml_agent.adapt_to_task(
                 task_id, self.task_data[task_id]["train"], adaptation_steps
             )
 
-            # Evaluate on validation set
             if self.task_data[task_id]["val"] is not None:
                 val_loss = self._compute_loss(
                     adapted_model, self.task_data[task_id]["val"]
@@ -240,7 +224,6 @@ class MetaLearner:
                 task_losses[task_id] = val_loss
                 total_meta_loss += val_loss.item()
 
-        # Meta-update
         self.maml_agent.meta_update(task_losses)
 
         epoch_metrics = {
@@ -292,22 +275,18 @@ class MetaLearner:
         """
         print(f"Starting continual learning for task {new_task_id}")
 
-        # Adapt to new task
         adapted_model = self.maml_agent.adapt_to_task(
             new_task_id, self.task_data[new_task_id]["train"], adaptation_steps
         )
 
-        # Fine-tune meta-parameters on new task
         for epoch in range(epochs):
             metrics = self.meta_train_epoch(tasks_per_batch=len(self.task_data))
             print(
                 f"Meta-training epoch {epoch+1}/{epochs}, Loss: {metrics['meta_loss']:.4f}"
             )
 
-        # Evaluate on all tasks
         all_task_performance = self.evaluate_all_tasks()
 
-        # Get adaptation statistics
         adaptation_stats = self.maml_agent.get_adaptation_stats(new_task_id)
 
         return {
@@ -330,10 +309,8 @@ class MetaLearner:
         for task_id, loaders in self.task_data.items():
             task_results = {}
 
-            # Use adapted model if available, otherwise base model
             model = self.maml_agent.adapted_models.get(task_id) or self.maml_agent.model
 
-            # Evaluate on all available splits
             for split_name, loader in loaders.items():
                 if loader is not None:
                     loss = self._compute_loss(model, loader)
@@ -407,7 +384,6 @@ class MetaLearner:
         self.maml_agent.load_state_dict(checkpoint["maml_agent"])
         self.maml_agent.meta_optimizer.load_state_dict(checkpoint["meta_optimizer"])
 
-        # Restore adapted models
         for task_id, state_dict in checkpoint.get("adapted_models", {}).items():
             adapted_model = copy.deepcopy(self.maml_agent.model)
             adapted_model.load_state_dict(state_dict)

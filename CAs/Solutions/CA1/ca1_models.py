@@ -34,12 +34,10 @@ class DuelingDQN(nn.Module):
             nn.Linear(state_size, hidden_size), nn.ReLU()
         )
 
-        # Value stream
         self.value_stream = nn.Sequential(
             nn.Linear(hidden_size, hidden_size), nn.ReLU(), nn.Linear(hidden_size, 1)
         )
 
-        # Advantage stream
         self.advantage_stream = nn.Sequential(
             nn.Linear(hidden_size, hidden_size),
             nn.ReLU(),

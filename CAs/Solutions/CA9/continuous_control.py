@@ -17,7 +17,6 @@ class ContinuousActorNetwork(nn.Module):
         super(ContinuousActorNetwork, self).__init__()
         self.action_bound = action_bound
 
-        # Shared network
         self.shared_network = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -25,18 +24,15 @@ class ContinuousActorNetwork(nn.Module):
             nn.ReLU(),
         )
 
-        # Mean head
         self.mean_head = nn.Sequential(
             nn.Linear(hidden_dim, action_dim),
             nn.Tanh(),  # Bound mean between -1 and 1
         )
 
-        # Standard deviation head (log std for numerical stability)
         self.log_std_head = nn.Sequential(
             nn.Linear(hidden_dim, action_dim),
         )
 
-        # Initialize log_std to reasonable values
         nn.init.constant_(self.log_std_head[0].bias, -0.5)  # exp(-0.5) ≈ 0.6
 
     def forward(self, state):
@@ -46,7 +42,6 @@ class ContinuousActorNetwork(nn.Module):
         mean = self.mean_head(shared_features) * self.action_bound
         log_std = self.log_std_head(shared_features)
 
-        # Clamp log_std for numerical stability
         log_std = torch.clamp(log_std, min=-20, max=2)
         std = torch.exp(log_std)
 
@@ -56,22 +51,15 @@ class ContinuousActorNetwork(nn.Module):
         """Sample action and compute log probability"""
         mean, std = self.forward(state)
 
-        # Create normal distribution
         normal_dist = Normal(mean, std)
 
-        # Sample action
         action = normal_dist.rsample()  # Use rsample for reparameterization
 
-        # Compute log probability
         log_prob = normal_dist.log_prob(action).sum(dim=-1, keepdim=True)
 
-        # Apply tanh squashing for bounded actions
         action_tanh = torch.tanh(action)
 
-        # Correct log probability for tanh squashing
-        # log_prob = log_prob - torch.log(1 - action_tanh.pow(2) + 1e-6).sum(dim=-1, keepdim=True)
 
-        # Scale action to environment bounds
         scaled_action = action_tanh * self.action_bound
 
         return scaled_action, log_prob
@@ -92,17 +80,14 @@ class ContinuousREINFORCEAgent:
         self.lr = lr
         self.gamma = gamma
 
-        # Policy network
         self.policy_network = ContinuousActorNetwork(
             state_dim, action_dim, action_bound
         ).to(device)
         self.optimizer = optim.Adam(self.policy_network.parameters(), lr=lr)
 
-        # Storage for episode
         self.episode_log_probs = []
         self.episode_rewards = []
 
-        # Training metrics
         self.episode_rewards_history = []
         self.policy_losses = []
         self.gradient_norms = []
@@ -126,15 +111,12 @@ class ContinuousREINFORCEAgent:
         returns = []
         discounted_sum = 0
 
-        # Calculate returns in reverse order
         for reward in reversed(self.episode_rewards):
             discounted_sum = reward + self.gamma * discounted_sum
             returns.insert(0, discounted_sum)
 
-        # Convert to tensor and normalize
         returns = torch.FloatTensor(returns).to(device)
 
-        # Optional: normalize returns for stability
         if len(returns) > 1:
             returns = (returns - returns.mean()) / (returns.std() + 1e-8)
 
@@ -145,21 +127,17 @@ class ContinuousREINFORCEAgent:
         if len(self.episode_log_probs) == 0:
             return
 
-        # Calculate returns
         returns = self.calculate_returns()
 
-        # Calculate policy loss
         policy_loss = []
         for log_prob, G_t in zip(self.episode_log_probs, returns):
             policy_loss.append(-log_prob * G_t)  # Negative for gradient ascent
 
         policy_loss = torch.stack(policy_loss).sum()
 
-        # Perform optimization step
         self.optimizer.zero_grad()
         policy_loss.backward()
 
-        # Calculate and store gradient norm
         total_norm = 0
         for param in self.policy_network.parameters():
             if param.grad is not None:
@@ -168,15 +146,12 @@ class ContinuousREINFORCEAgent:
         total_norm = total_norm ** (1.0 / 2)
         self.gradient_norms.append(total_norm)
 
-        # Optional: gradient clipping
         torch.nn.utils.clip_grad_norm_(self.policy_network.parameters(), max_norm=1.0)
 
         self.optimizer.step()
 
-        # Store metrics
         self.policy_losses.append(policy_loss.item())
 
-        # Clear episode data
         self.episode_log_probs = []
         self.episode_rewards = []
 
@@ -200,10 +175,8 @@ class ContinuousREINFORCEAgent:
 
             state = next_state
 
-        # Update policy at end of episode
         self.update_policy()
 
-        # Store episode reward
         self.episode_rewards_history.append(total_reward)
 
         return total_reward, steps
@@ -257,7 +230,6 @@ class ContinuousControlAnalyzer:
         print("Continuous Policy Network Demonstration")
         print("=" * 70)
 
-        # Create network for Pendulum environment
         state_dim = 3  # Pendulum state: [cos(theta), sin(theta), theta_dot]
         action_dim = 1  # Pendulum action: torque
         action_bound = 2.0  # Pendulum action bound
@@ -270,12 +242,10 @@ class ContinuousControlAnalyzer:
         print(f"  Action bound: ±{action_bound}")
         print(f"  Total parameters: {sum(p.numel() for p in network.parameters())}")
 
-        # Demonstrate sampling
         print(f"\nSampling Demonstration:")
         network.eval()
 
         with torch.no_grad():
-            # Sample different states
             sample_states = [
                 torch.randn(1, state_dim),  # Random state
                 torch.FloatTensor([[1.0, 0.0, 0.0]]),  # Upright pendulum
@@ -329,10 +299,8 @@ class ContinuousControlAnalyzer:
 
         env.close()
 
-        # Store trained agent
         self.continuous_agents["reinforce"] = agent
 
-        # Analysis
         self.analyze_continuous_training(agent, env_name)
 
         return agent
@@ -342,7 +310,6 @@ class ContinuousControlAnalyzer:
 
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
-        # 1. Learning curve
         ax = axes[0, 0]
         rewards = agent.episode_rewards_history
 
@@ -364,7 +331,6 @@ class ContinuousControlAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 2. Policy loss
         ax = axes[0, 1]
         if agent.policy_losses:
             losses = agent.policy_losses
@@ -379,7 +345,6 @@ class ContinuousControlAnalyzer:
             ax.set_ylabel("Policy Loss")
             ax.grid(True, alpha=0.3)
 
-        # 3. Gradient norms
         ax = axes[1, 0]
         if agent.gradient_norms:
             grad_norms = agent.gradient_norms
@@ -396,9 +361,7 @@ class ContinuousControlAnalyzer:
             ax.set_ylabel("Gradient L2 Norm")
             ax.grid(True, alpha=0.3)
 
-        # 4. Action distribution evolution (if available)
         ax = axes[1, 1]
-        # This would require storing action samples during training
         ax.text(
             0.5,
             0.5,
@@ -415,7 +378,6 @@ class ContinuousControlAnalyzer:
         plt.tight_layout()
         plt.show()
 
-        # Print statistics
         print(f"\nContinuous Control Training Statistics:")
         print(f"  Total Episodes: {len(rewards)}")
         print(f"  Final Average Reward (last 20): {np.mean(rewards[-20:]):.2f}")
@@ -434,8 +396,6 @@ class ContinuousControlAnalyzer:
         print("Discrete vs Continuous Control Comparison")
         print("=" * 70)
 
-        # This would compare trained agents on their respective environments
-        # For now, just show conceptual comparison
 
         comparison_data = {
             "Discrete Control (CartPole)": {
@@ -473,19 +433,16 @@ class ContinuousControlAnalyzer:
         print("Action Scaling and Bounds Handling")
         print("=" * 70)
 
-        # Create a simple continuous actor
         state_dim, action_dim, action_bound = 2, 1, 2.0
         actor = ContinuousActorNetwork(state_dim, action_dim, action_bound)
 
         print(f"Action bound: ±{action_bound}")
         print(f"Network outputs mean in range [-{action_bound}, {action_bound}]")
 
-        # Demonstrate scaling
         actor.eval()
         with torch.no_grad():
             state = torch.randn(1, state_dim)
 
-            # Get raw network outputs
             mean_raw, std_raw = actor.shared_network(state), actor.log_std_head(
                 actor.shared_network(state)
             )
@@ -494,7 +451,6 @@ class ContinuousControlAnalyzer:
                 torch.clamp(actor.log_std_head(actor.shared_network(state)), -20, 2)
             )
 
-            # Get final action
             action, _ = actor.get_action_and_log_prob(state)
 
             print(f"\nRaw mean output: {mean_raw.item():.4f}")

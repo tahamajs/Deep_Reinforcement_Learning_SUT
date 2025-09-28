@@ -7,7 +7,6 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-# Import modular components
 from world_models.rssm import RecurrentStateSpaceModel
 from world_models.trainers import RSSMTrainer
 from environments.sequence_environment import SequenceEnvironment
@@ -24,23 +23,19 @@ def run_rssm_experiment(config):
     print(f"Batch size: {config['batch_size']}")
     print(f"Sequence length: {config['sequence_length']}")
 
-    # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # Create environment
     if config["env_name"] == "sequence":
         env = SequenceEnvironment(memory_size=config["memory_size"])
     else:
         raise ValueError(f"Unknown environment: {config['env_name']}")
 
-    # Collect training data
     print("\nCollecting sequence training data...")
     train_data = collect_sequence_data(
         env, config["data_collection_episodes"], config["episode_length"]
     )
 
-    # Create RSSM
     obs_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
     state_dim = config["state_dim"]
@@ -50,27 +45,21 @@ def run_rssm_experiment(config):
         device
     )
 
-    # Create trainer
     trainer = RSSMTrainer(rssm, config["learning_rate"], device)
 
-    # Training loop
     print("\nTraining RSSM...")
     pbar = tqdm(range(config["train_steps"]), desc="Training")
 
     for step in pbar:
-        # Sample batch of sequences
         batch = prepare_rssm_batch(
             train_data, config["batch_size"], config["sequence_length"]
         )
 
-        # Move to device
         for key in batch:
             batch[key] = batch[key].to(device)
 
-        # Training step
         losses = trainer.train_step(batch)
 
-        # Update progress bar
         if step % 100 == 0:
             pbar.set_postfix(
                 {
@@ -83,11 +72,9 @@ def run_rssm_experiment(config):
 
     print("\nTraining completed!")
 
-    # Analysis and visualization
     print("\nGenerating analysis plots...")
     plot_rssm_training(trainer, f"RSSM Training - {config['env_name']}")
 
-    # Test imagination capability
     print("\nTesting imagination capability...")
     test_imagination(rssm, env, device, config["imagination_steps"])
 
@@ -99,13 +86,11 @@ def test_imagination(rssm, env, device, imagination_steps):
 
     rssm.eval()
 
-    # Start from random state
     obs, _ = env.reset()
     obs_tensor = (
         torch.FloatTensor(obs).unsqueeze(0).unsqueeze(0).to(device)
     )  # [1, 1, obs_dim]
 
-    # Initialize hidden state
     hidden = torch.zeros(1, rssm.hidden_dim).to(device)
 
     imagined_states = [obs]
@@ -115,11 +100,9 @@ def test_imagination(rssm, env, device, imagination_steps):
     print(f"Imagining {imagination_steps} steps...")
 
     for step in range(imagination_steps):
-        # Sample random action
         action = env.sample_action()
         action_tensor = torch.FloatTensor(action).unsqueeze(0).unsqueeze(0).to(device)
 
-        # Imagine next state and reward
         with torch.no_grad():
             next_obs_pred, reward_pred, next_hidden = rssm.imagine(
                 obs_tensor, action_tensor, hidden
@@ -129,11 +112,9 @@ def test_imagination(rssm, env, device, imagination_steps):
         imagined_rewards.append(reward_pred.squeeze(0).squeeze(0).cpu().numpy())
         imagined_actions.append(action)
 
-        # Update for next step
         obs_tensor = next_obs_pred
         hidden = next_hidden
 
-    # Plot imagination
     plt.figure(figsize=(15, 5))
 
     plt.subplot(1, 3, 1)
@@ -177,7 +158,6 @@ def compare_real_vs_imagined(rssm, env, device, steps=50):
 
     rssm.eval()
 
-    # Collect real trajectory
     real_obs_list = []
     real_actions = []
     real_rewards = []
@@ -197,7 +177,6 @@ def compare_real_vs_imagined(rssm, env, device, steps=50):
         if terminated or truncated:
             break
 
-    # Imagine trajectory with same actions
     imagined_obs_list = []
     imagined_rewards = []
 
@@ -221,13 +200,11 @@ def compare_real_vs_imagined(rssm, env, device, steps=50):
         obs_tensor = next_obs_pred
         hidden = next_hidden
 
-    # Plot comparison
     plt.figure(figsize=(15, 10))
 
     real_obs_array = np.array(real_obs_list)
     imagined_obs_array = np.array(imagined_obs_list)
 
-    # State comparison
     plt.subplot(2, 2, 1)
     for i in range(min(4, real_obs_array.shape[1])):
         plt.plot(
@@ -248,7 +225,6 @@ def compare_real_vs_imagined(rssm, env, device, steps=50):
     plt.legend()
     plt.grid(True, alpha=0.3)
 
-    # Reward comparison
     plt.subplot(2, 2, 2)
     plt.plot(real_rewards, "b-", linewidth=2, label="Real Reward")
     plt.plot(imagined_rewards, "r--", linewidth=2, label="Imagined Reward")
@@ -258,7 +234,6 @@ def compare_real_vs_imagined(rssm, env, device, steps=50):
     plt.legend()
     plt.grid(True, alpha=0.3)
 
-    # Prediction error
     plt.subplot(2, 2, 3)
     min_len = min(len(real_obs_array), len(imagined_obs_array))
     prediction_errors = np.mean(
@@ -270,7 +245,6 @@ def compare_real_vs_imagined(rssm, env, device, steps=50):
     plt.ylabel("MSE")
     plt.grid(True, alpha=0.3)
 
-    # Reward error
     plt.subplot(2, 2, 4)
     min_reward_len = min(len(real_rewards), len(imagined_rewards))
     reward_errors = (
@@ -293,7 +267,6 @@ def compare_real_vs_imagined(rssm, env, device, steps=50):
 
 
 if __name__ == "__main__":
-    # Default configuration
     config = {
         "env_name": "sequence",
         "state_dim": 32,
@@ -308,10 +281,8 @@ if __name__ == "__main__":
         "imagination_steps": 50,
     }
 
-    # Run experiment
     rssm, trainer = run_rssm_experiment(config)
 
-    # Additional comparison
     print("\nRunning real vs imagined comparison...")
     env = SequenceEnvironment(memory_size=config["memory_size"])
     compare_real_vs_imagined(

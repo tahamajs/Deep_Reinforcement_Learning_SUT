@@ -22,7 +22,6 @@ class RecurrentStateSpaceModel(nn.Module):
         self.deter_dim = deter_dim  # Deterministic state dimension
         self.hidden_dim = hidden_dim
 
-        # Observation encoder
         self.obs_encoder = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
             nn.ReLU(),
@@ -31,24 +30,20 @@ class RecurrentStateSpaceModel(nn.Module):
             nn.Linear(hidden_dim, stoch_dim * 2),  # Mean and std
         )
 
-        # Recurrent model (deterministic state)
         self.rnn = nn.GRUCell(stoch_dim + action_dim, deter_dim)
 
-        # Transition model (prior)
         self.transition_model = nn.Sequential(
             nn.Linear(deter_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, stoch_dim * 2),  # Mean and std
         )
 
-        # Representation model (posterior)
         self.representation_model = nn.Sequential(
             nn.Linear(deter_dim + stoch_dim * 2, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, stoch_dim * 2),  # Mean and std
         )
 
-        # Observation decoder
         self.obs_decoder = nn.Sequential(
             nn.Linear(deter_dim + stoch_dim, hidden_dim),
             nn.ReLU(),
@@ -57,14 +52,12 @@ class RecurrentStateSpaceModel(nn.Module):
             nn.Linear(hidden_dim, obs_dim),
         )
 
-        # Reward model
         self.reward_model = nn.Sequential(
             nn.Linear(deter_dim + stoch_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 1),
         )
 
-        # Value model for planning
         self.value_model = nn.Sequential(
             nn.Linear(deter_dim + stoch_dim, hidden_dim),
             nn.ReLU(),
@@ -118,30 +111,23 @@ class RecurrentStateSpaceModel(nn.Module):
 
     def observe(self, obs, prev_h, prev_z, action):
         """Observation step: encode observation and update state"""
-        # Recurrent step
         h = self.recurrent_step(prev_h, prev_z, action)
 
-        # Encode observation
         obs_encoded = self.obs_encoder(obs)
 
-        # Prior and posterior
         prior_mean, prior_std = self.transition_prior(h)
         post_mean, post_std = self.representation_posterior(h, obs_encoded)
 
-        # Sample stochastic state
         z = self.reparameterize(post_mean, post_std)
 
         return h, z, (prior_mean, prior_std), (post_mean, post_std)
 
     def imagine(self, prev_h, prev_z, action):
         """Imagination step: predict next state without observation"""
-        # Recurrent step
         h = self.recurrent_step(prev_h, prev_z, action)
 
-        # Prior transition
         prior_mean, prior_std = self.transition_prior(h)
 
-        # Sample stochastic state
         z = self.reparameterize(prior_mean, prior_std)
 
         return h, z, (prior_mean, prior_std)

@@ -34,7 +34,6 @@ class DoubleDQNAgent(DQNAgent):
         super().__init__(state_size, action_size, **kwargs)
         self.agent_type = "Double DQN"
 
-        # Additional tracking for bias analysis
         self.q_value_estimates = []
         self.target_values = []
 
@@ -43,42 +42,32 @@ class DoubleDQNAgent(DQNAgent):
         if len(self.memory) < self.batch_size:
             return None
 
-        # Sample batch of experiences
         experiences = self.memory.sample(self.batch_size)
         batch = self.experience_to_batch(experiences)
 
         states, actions, rewards, next_states, dones = batch
 
-        # Current Q values
         current_q_values = self.q_network(states).gather(1, actions)
 
-        # Double DQN target computation
         with torch.no_grad():
-            # Action selection: use online network
             next_actions = self.q_network(next_states).argmax(1, keepdim=True)
-            # Action evaluation: use target network
             next_q_values = self.target_network(next_states).gather(1, next_actions)
             target_q_values = rewards + (self.gamma * next_q_values * (1 - dones))
 
-        # Compute loss
         loss = F.mse_loss(current_q_values, target_q_values)
 
-        # Optimize
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
         self.optimizer.step()
 
-        # Update target network periodically
         self.step_count += 1
         if self.step_count % self.target_update_freq == 0:
             self.update_target_network()
 
-        # Decay epsilon
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-        # Store training metrics
         self.losses.append(loss.item())
         avg_q_value = current_q_values.mean().item()
         avg_target = target_q_values.mean().item()
@@ -98,10 +87,8 @@ class OverestimationAnalysis:
 
     def create_synthetic_environment(self, n_states=10, n_actions=5, noise_level=0.1):
         """Create synthetic environment to study overestimation"""
-        # True Q-values (ground truth)
         true_q_values = np.random.uniform(0, 1, (n_states, n_actions))
 
-        # Add structure: make some actions consistently better
         for s in range(n_states):
             best_action = np.argmax(true_q_values[s])
             true_q_values[s, best_action] += 0.2  # Boost best action
@@ -112,12 +99,10 @@ class OverestimationAnalysis:
         """Simulate Q-value estimation with noise"""
         n_states, n_actions = true_q_values.shape
 
-        # Standard Q-learning estimates (with max operation)
         standard_estimates = []
         double_estimates = []
 
         for _ in range(n_estimates):
-            # Add noise to Q-value estimates
             noisy_q1 = true_q_values + np.random.normal(
                 0, noise_level, true_q_values.shape
             )
@@ -125,11 +110,9 @@ class OverestimationAnalysis:
                 0, noise_level, true_q_values.shape
             )
 
-            # Standard Q-learning: max of noisy estimates
             standard_max = np.max(noisy_q1, axis=1)
             standard_estimates.append(standard_max)
 
-            # Double Q-learning: select action with Q1, evaluate with Q2
             selected_actions = np.argmax(noisy_q1, axis=1)
             double_values = noisy_q2[np.arange(n_states), selected_actions]
             double_estimates.append(double_values)
@@ -137,7 +120,6 @@ class OverestimationAnalysis:
         standard_estimates = np.array(standard_estimates)
         double_estimates = np.array(double_estimates)
 
-        # True optimal values for comparison
         true_optimal = np.max(true_q_values, axis=1)
 
         return {
@@ -150,13 +132,11 @@ class OverestimationAnalysis:
 
     def visualize_bias_analysis(self):
         """Visualize overestimation bias comparison"""
-        # Create synthetic environment
         true_q_values, noise_level = self.create_synthetic_environment()
         bias_results = self.simulate_estimation_bias(true_q_values, noise_level)
 
         fig, axes = plt.subplots(2, 2, figsize=(16, 12))
 
-        # 1. Bias comparison across states
         states = range(len(bias_results["true_optimal"]))
 
         axes[0, 0].bar(
@@ -182,7 +162,6 @@ class OverestimationAnalysis:
         axes[0, 0].legend()
         axes[0, 0].grid(True, alpha=0.3)
 
-        # 2. Distribution of estimates for first state
         state_0_standard = bias_results["standard_estimates"][:, 0]
         state_0_double = bias_results["double_estimates"][:, 0]
         true_value_0 = bias_results["true_optimal"][0]
@@ -215,7 +194,6 @@ class OverestimationAnalysis:
         axes[0, 1].legend()
         axes[0, 1].grid(True, alpha=0.3)
 
-        # 3. Bias vs noise level
         noise_levels = np.linspace(0.01, 0.3, 20)
         standard_biases = []
         double_biases = []
@@ -248,7 +226,6 @@ class OverestimationAnalysis:
         axes[1, 0].legend()
         axes[1, 0].grid(True, alpha=0.3)
 
-        # 4. Variance comparison
         standard_vars = np.var(bias_results["standard_estimates"], axis=0)
         double_vars = np.var(bias_results["double_estimates"], axis=0)
 
@@ -277,7 +254,6 @@ class OverestimationAnalysis:
         plt.tight_layout()
         plt.show()
 
-        # Print summary statistics
         print("Overestimation Bias Analysis Summary:")
         print("=" * 50)
         print(
@@ -312,7 +288,6 @@ class DQNComparison:
         for run in range(num_runs):
             print(f"\\nRun {run + 1}/{num_runs}")
 
-            # Standard DQN
             print("Training Standard DQN...")
             standard_agent = DQNAgent(
                 self.state_size, self.action_size, lr=0.0005, target_update_freq=1000
@@ -322,7 +297,6 @@ class DQNComparison:
             )
             standard_results.append(standard_scores)
 
-            # Double DQN
             print("Training Double DQN...")
             double_agent = DoubleDQNAgent(
                 self.state_size, self.action_size, lr=0.0005, target_update_freq=1000
@@ -338,7 +312,6 @@ class DQNComparison:
         """Visualize comparison results"""
         fig, axes = plt.subplots(2, 2, figsize=(16, 10))
 
-        # Average over runs
         standard_mean = np.mean(standard_results, axis=0)
         double_mean = np.mean(double_results, axis=0)
         standard_std = np.std(standard_results, axis=0)
@@ -346,7 +319,6 @@ class DQNComparison:
 
         episodes = range(len(standard_mean))
 
-        # 1. Learning curves with confidence intervals
         axes[0, 0].plot(
             episodes, standard_mean, color="red", label="Standard DQN", linewidth=2
         )
@@ -375,7 +347,6 @@ class DQNComparison:
         axes[0, 0].legend()
         axes[0, 0].grid(True, alpha=0.3)
 
-        # 2. Final performance comparison
         final_standard = [scores[-50:] for scores in standard_results]
         final_double = [scores[-50:] for scores in double_results]
 
@@ -390,7 +361,6 @@ class DQNComparison:
         axes[0, 1].set_ylabel("Episode Reward")
         axes[0, 1].grid(True, alpha=0.3)
 
-        # 3. Convergence speed
         convergence_threshold = (
             np.mean(double_mean[-100:]) * 0.9
         )  # 90% of final performance
@@ -430,7 +400,6 @@ class DQNComparison:
         axes[1, 0].set_ylabel("Episodes to Convergence")
         axes[1, 0].grid(True, alpha=0.3)
 
-        # 4. Improvement over episodes
         improvement_window = 50
         standard_improvement = []
         double_improvement = []
@@ -470,16 +439,13 @@ class DQNComparison:
         plt.show()
 
 
-# Example usage and demonstration
 if __name__ == "__main__":
     print("Double DQN Implementation")
     print("=" * 40)
 
-    # Test Double DQN agent creation
     agent = DoubleDQNAgent(state_size=4, action_size=2)
     print(f"Double DQN Agent created: {agent.agent_type}")
 
-    # Run overestimation bias analysis
     print("\\nRunning Overestimation Bias Analysis...")
     bias_analysis = OverestimationAnalysis()
     bias_results = bias_analysis.visualize_bias_analysis()

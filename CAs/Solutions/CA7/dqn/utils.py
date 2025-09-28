@@ -16,7 +16,7 @@ import torch
 from typing import Dict, List, Any, Optional
 import warnings
 
-# Set plotting style
+
 plt.style.use("seaborn-v0_8")
 plt.rcParams["figure.figsize"] = (12, 8)
 plt.rcParams["font.size"] = 12
@@ -36,19 +36,15 @@ class QNetworkVisualization:
 
         fig, axes = plt.subplots(2, 2, figsize=(16, 12))
 
-        # 1. Q-learning Update Mechanism
         ax = axes[0, 0]
 
-        # Simulate Q-values for a simple grid world
         states = ["S1", "S2", "S3", "S4"]
         actions = ["Up", "Down", "Left", "Right"]
 
-        # Sample Q-values before and after update
         q_before = np.random.rand(4, 4) * 10
         q_after = q_before.copy()
-        q_after[1, 2] += 2  # Simulate an update
+        q_after[1, 2] += 2
 
-        # Create heatmap comparison
         im1 = ax.imshow(q_before, cmap="viridis", aspect="auto")
         ax.set_title("Q-Values Before Update")
         ax.set_xticks(range(4))
@@ -56,7 +52,6 @@ class QNetworkVisualization:
         ax.set_yticks(range(4))
         ax.set_yticklabels(states)
 
-        # Add values as text
         for i in range(4):
             for j in range(4):
                 ax.text(
@@ -70,10 +65,8 @@ class QNetworkVisualization:
 
         plt.colorbar(im1, ax=ax)
 
-        # 2. Experience Replay Concept
         ax = axes[0, 1]
 
-        # Simulate sequential vs random sampling
         episodes = np.arange(1, 101)
         sequential_loss = 10 * np.exp(-episodes / 30) + np.random.normal(0, 0.5, 100)
         replay_loss = 8 * np.exp(-episodes / 20) + np.random.normal(0, 0.3, 100)
@@ -97,13 +90,12 @@ class QNetworkVisualization:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 3. Target Network Stability
         ax = axes[1, 0]
 
         steps = np.arange(0, 1000)
-        # Main network updates frequently
+
         main_q = 10 + np.cumsum(np.random.normal(0, 0.1, 1000))
-        # Target network updates every 100 steps
+
         target_q = []
         current_target = 10
 
@@ -128,7 +120,6 @@ class QNetworkVisualization:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 4. Epsilon-Greedy Exploration
         ax = axes[1, 1]
 
         episodes = np.arange(0, 1000)
@@ -156,13 +147,11 @@ class QNetworkVisualization:
     def demonstrate_overestimation_bias(self):
         """Demonstrate the overestimation bias problem"""
 
-        # Simulate true Q-values and noisy estimates
         np.random.seed(42)
         true_q_values = np.array([1.0, 2.0, 1.5, 0.8, 2.2])
         noise_std = 0.5
         num_estimates = 1000
 
-        # Generate noisy estimates
         estimates = []
         max_estimates = []
 
@@ -173,10 +162,8 @@ class QNetworkVisualization:
 
         estimates = np.array(estimates)
 
-        # Plot results
         fig, axes = plt.subplots(1, 2, figsize=(15, 6))
 
-        # Distribution of max Q-values
         ax = axes[0]
         ax.hist(max_estimates, bins=30, alpha=0.7, color="skyblue", edgecolor="black")
         ax.axvline(
@@ -200,7 +187,6 @@ class QNetworkVisualization:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # Q-value distributions for each action
         ax = axes[1]
         positions = np.arange(len(true_q_values))
 
@@ -211,7 +197,6 @@ class QNetworkVisualization:
             showmedians=True,
         )
 
-        # Plot true values
         ax.scatter(
             positions,
             true_q_values,
@@ -233,7 +218,6 @@ class QNetworkVisualization:
         plt.tight_layout()
         plt.show()
 
-        # Calculate and print bias
         bias = np.mean(max_estimates) - np.max(true_q_values)
         print(f"Overestimation Bias: {bias:.3f}")
         print(f"True Maximum Q-Value: {np.max(true_q_values):.3f}")
@@ -258,7 +242,6 @@ class PerformanceAnalyzer:
 
         colors = ["blue", "red", "green", "orange", "purple"]
 
-        # Learning curves
         ax = axes[0, 0]
         for i, (agent_name, results) in enumerate(agents_results.items()):
             rewards = results.get("rewards", [])
@@ -277,7 +260,6 @@ class PerformanceAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # Final performance comparison
         ax = axes[0, 1]
         agent_names = list(agents_results.keys())
         final_perfs = []
@@ -285,7 +267,7 @@ class PerformanceAnalyzer:
         for agent_name in agent_names:
             rewards = agents_results[agent_name].get("rewards", [])
             if rewards:
-                final_perf = np.mean(rewards[-20:])  # Last 20 episodes
+                final_perf = np.mean(rewards[-20:])
                 final_perfs.append(final_perf)
             else:
                 final_perfs.append(0)
@@ -297,7 +279,6 @@ class PerformanceAnalyzer:
         ax.set_ylabel("Average Reward (Last 20 Episodes)")
         ax.set_xticklabels(agent_names, rotation=45)
 
-        # Add value labels on bars
         for bar, perf in zip(bars, final_perfs):
             ax.text(
                 bar.get_x() + bar.get_width() / 2,
@@ -309,7 +290,6 @@ class PerformanceAnalyzer:
 
         ax.grid(True, alpha=0.3)
 
-        # Loss curves
         ax = axes[1, 0]
         for i, (agent_name, results) in enumerate(agents_results.items()):
             losses = results.get("losses", [])
@@ -329,7 +309,6 @@ class PerformanceAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # Epsilon decay
         ax = axes[1, 1]
         for i, (agent_name, results) in enumerate(agents_results.items()):
             epsilon_history = results.get("epsilon_history", [])
@@ -364,13 +343,11 @@ class PerformanceAnalyzer:
         print("Q-Value Distribution Analysis")
         print("=" * 60)
 
-        # Collect states by sampling from environment
         states = []
         for _ in range(num_samples):
             state, _ = env.reset()
             states.append(state)
 
-            # Take a few random steps to get diverse states
             for _ in range(np.random.randint(1, 10)):
                 action = env.action_space.sample()
                 state, _, terminated, truncated, _ = env.step(action)
@@ -380,7 +357,6 @@ class PerformanceAnalyzer:
 
         states = np.array(states[:num_samples])
 
-        # Get Q-values for all states
         q_values_all = []
         for state in states:
             q_vals = agent.get_q_values(state)
@@ -388,10 +364,8 @@ class PerformanceAnalyzer:
 
         q_values_all = np.array(q_values_all)
 
-        # Analysis
         fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
-        # Q-value distributions for each action
         ax = axes[0, 0]
         for i in range(agent.action_dim):
             ax.hist(
@@ -408,7 +382,6 @@ class PerformanceAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # Average Q-values per action
         ax = axes[0, 1]
         mean_q_per_action = np.mean(q_values_all, axis=0)
         std_q_per_action = np.std(q_values_all, axis=0)
@@ -426,9 +399,8 @@ class PerformanceAnalyzer:
         ax.set_xticks(range(agent.action_dim))
         ax.grid(True, alpha=0.3)
 
-        # Q-value ranges
         ax = axes[1, 0]
-        q_ranges = np.ptp(q_values_all, axis=0)  # Peak-to-peak (max - min)
+        q_ranges = np.ptp(q_values_all, axis=0)
         ax.bar(range(agent.action_dim), q_ranges, alpha=0.7)
         ax.set_title("Q-Value Ranges by Action")
         ax.set_xlabel("Action")
@@ -436,7 +408,6 @@ class PerformanceAnalyzer:
         ax.set_xticks(range(agent.action_dim))
         ax.grid(True, alpha=0.3)
 
-        # State-wise Q-value statistics
         ax = axes[1, 1]
         max_q_per_state = np.max(q_values_all, axis=1)
         mean_q_per_state = np.mean(q_values_all, axis=1)
@@ -447,7 +418,6 @@ class PerformanceAnalyzer:
         ax.set_ylabel("Max Q-Value")
         ax.grid(True, alpha=0.3)
 
-        # Add diagonal line
         min_val = min(ax.get_xlim()[0], ax.get_ylim()[0])
         max_val = max(ax.get_xlim()[1], ax.get_ylim()[1])
         ax.plot([min_val, max_val], [min_val, max_val], "r--", alpha=0.5, label="y=x")
@@ -455,7 +425,6 @@ class PerformanceAnalyzer:
         plt.tight_layout()
         plt.show()
 
-        # Print statistics
         print(f"\nQ-Value Statistics (across {num_samples} states):")
         print(
             f"Overall Q-value range: [{np.min(q_values_all):.3f}, {np.max(q_values_all):.3f}]"
@@ -471,7 +440,6 @@ class PerformanceAnalyzer:
                 f"Range=[{np.min(q_action):.3f}, {np.max(q_action):.3f}]"
             )
 
-        # Return agent and analysis results
         analysis_results = {
             "q_values_all": q_values_all,
             "mean_q_per_action": mean_q_per_action,
@@ -503,7 +471,6 @@ class PerformanceAnalyzer:
         for agent_name, agent in agents.items():
             print(f"\nEvaluating {agent_name}...")
 
-            # Temporarily disable exploration
             original_epsilon = getattr(agent, "epsilon", 0.0)
             agent.epsilon = 0.0
 
@@ -527,7 +494,6 @@ class PerformanceAnalyzer:
                 episode_rewards.append(episode_reward)
                 episode_lengths.append(episode_length)
 
-            # Restore original epsilon
             if hasattr(agent, "epsilon"):
                 agent.epsilon = original_epsilon
 
@@ -547,10 +513,8 @@ class PerformanceAnalyzer:
                 f"  Mean Length: {results[agent_name]['mean_length']:.1f} ± {results[agent_name]['std_length']:.1f}"
             )
 
-        # Visualization
         fig, axes = plt.subplots(1, 2, figsize=(15, 6))
 
-        # Performance comparison
         ax = axes[0]
         agent_names = list(results.keys())
         means = [results[name]["mean_reward"] for name in agent_names]
@@ -561,7 +525,6 @@ class PerformanceAnalyzer:
         ax.set_ylabel("Average Episode Reward")
         ax.set_xticklabels(agent_names, rotation=45)
 
-        # Add value labels
         for bar, mean in zip(bars, means):
             ax.text(
                 bar.get_x() + bar.get_width() / 2,
@@ -573,7 +536,6 @@ class PerformanceAnalyzer:
 
         ax.grid(True, alpha=0.3)
 
-        # Episode length comparison
         ax = axes[1]
         lengths = [results[name]["mean_length"] for name in agent_names]
         length_stds = [results[name]["std_length"] for name in agent_names]
@@ -583,7 +545,6 @@ class PerformanceAnalyzer:
         ax.set_ylabel("Average Episode Length")
         ax.set_xticklabels(agent_names, rotation=45)
 
-        # Add value labels
         for bar, length in zip(bars, lengths):
             ax.text(
                 bar.get_x() + bar.get_width() / 2,

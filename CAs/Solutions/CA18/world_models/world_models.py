@@ -29,17 +29,14 @@ class RSSMCore(nn.Module):
         self.action_dim = action_dim
         self.embed_dim = embed_dim
 
-        # Recurrent network (GRU)
         self.rnn = nn.GRUCell(embed_dim + state_dim + action_dim, hidden_dim)
 
-        # Prior network (predicts next stochastic state)
         self.prior_net = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 2 * state_dim)  # mean and log_std
         )
 
-        # Posterior network (infers stochastic state from observation)
         self.posterior_net = nn.Sequential(
             nn.Linear(hidden_dim + embed_dim, hidden_dim),
             nn.ReLU(),
@@ -59,22 +56,18 @@ class RSSMCore(nn.Module):
         """
         Update state using observation (posterior update)
         """
-        # Update deterministic state
         hidden = self.rnn(
             torch.cat([state['stoch'], action], dim=1),
             state['hidden']
         )
 
-        # Compute posterior distribution
         posterior_input = torch.cat([hidden, embed], dim=1)
         posterior_params = self.posterior_net(posterior_input)
         posterior_mean, posterior_logstd = posterior_params.chunk(2, dim=1)
         posterior_std = torch.exp(posterior_logstd)
 
-        # Sample stochastic state
         stoch = posterior_mean + posterior_std * torch.randn_like(posterior_std)
 
-        # Compute prior for KL loss
         prior_params = self.prior_net(hidden)
         prior_mean, prior_logstd = prior_params.chunk(2, dim=1)
         prior_std = torch.exp(prior_logstd)
@@ -93,18 +86,15 @@ class RSSMCore(nn.Module):
         """
         Predict next state using action (prior update)
         """
-        # Update deterministic state
         hidden = self.rnn(
             torch.cat([state['stoch'], action], dim=1),
             state['hidden']
         )
 
-        # Compute prior distribution
         prior_params = self.prior_net(hidden)
         prior_mean, prior_logstd = prior_params.chunk(2, dim=1)
         prior_std = torch.exp(prior_logstd)
 
-        # Sample stochastic state from prior
         stoch = prior_mean + prior_std * torch.randn_like(prior_std)
 
         return {
@@ -130,7 +120,6 @@ class WorldModel(nn.Module):
         self.hidden_dim = hidden_dim
         self.embed_dim = embed_dim
 
-        # Observation encoder
         self.encoder = nn.Sequential(
             nn.Linear(obs_dim, 256),
             nn.ReLU(),
@@ -139,10 +128,8 @@ class WorldModel(nn.Module):
             nn.Linear(512, embed_dim),
         )
 
-        # RSSM core
         self.rssm = RSSMCore(state_dim, hidden_dim, action_dim, embed_dim)
 
-        # Observation decoder
         self.decoder = nn.Sequential(
             nn.Linear(state_dim + hidden_dim, 512),
             nn.ReLU(),
@@ -151,7 +138,6 @@ class WorldModel(nn.Module):
             nn.Linear(256, obs_dim),
         )
 
-        # Reward predictor
         self.reward_model = nn.Sequential(
             nn.Linear(state_dim + hidden_dim, 256),
             nn.ReLU(),
@@ -160,7 +146,6 @@ class WorldModel(nn.Module):
             nn.Linear(128, 1),
         )
 
-        # Continue predictor (episode termination)
         self.continue_model = nn.Sequential(
             nn.Linear(state_dim + hidden_dim, 128),
             nn.ReLU(),
@@ -197,10 +182,8 @@ class WorldModel(nn.Module):
         """
         batch_size, seq_len = obs_seq.shape[:2]
 
-        # Initialize state
         state = self.rssm.initial_state(batch_size)
 
-        # Storage
         states = []
         reconstructions = []
         rewards = []
@@ -208,10 +191,8 @@ class WorldModel(nn.Module):
         kl_losses = []
 
         for t in range(seq_len):
-            # Encode observation
             embed = self.encode(obs_seq[:, t])
 
-            # Update state with observation
             if t == 0:
                 action = torch.zeros(batch_size, self.action_dim, device=obs_seq.device)
             else:
@@ -220,7 +201,6 @@ class WorldModel(nn.Module):
             state = self.rssm.observe(embed, action, state)
             states.append(state)
 
-            # Generate predictions
             reconstruction = self.decode(state)
             reward = self.predict_reward(state)
             continue_prob = self.predict_continue(state)
@@ -229,7 +209,6 @@ class WorldModel(nn.Module):
             rewards.append(reward)
             continues.append(continue_prob)
 
-            # Compute KL loss
             if 'posterior_mean' in state:
                 kl = self._kl_divergence(
                     state['posterior_mean'], state['posterior_std'],
@@ -252,20 +231,16 @@ class WorldModel(nn.Module):
         """
         batch_size, seq_len = actions.shape[:2]
 
-        # Initialize with given state
         state = {k: v.clone() for k, v in initial_state.items()}
 
-        # Storage
         states = [state]
         rewards = []
         continues = []
 
         for t in range(seq_len):
-            # Predict next state
             state = self.rssm.imagine(actions[:, t], state)
             states.append(state)
 
-            # Predict reward and continuation
             reward = self.predict_reward(state)
             continue_prob = self.predict_continue(state)
 
@@ -306,7 +281,6 @@ class MPCPlanner:
         self.n_iterations = n_iterations
         self.n_elite = n_elite
 
-        # Action bounds
         self.action_min = -1.0
         self.action_max = 1.0
 
@@ -316,36 +290,28 @@ class MPCPlanner:
         """
         batch_size = initial_state['hidden'].shape[0]
 
-        # Initialize action distribution
         mean = torch.zeros(batch_size, self.horizon, self.action_dim, device=initial_state['hidden'].device)
         std = torch.ones(batch_size, self.horizon, self.action_dim, device=initial_state['hidden'].device)
 
         for iteration in range(self.n_iterations):
-            # Sample action candidates
             noise = torch.randn(batch_size, self.n_candidates, self.horizon,
                               self.action_dim, device=initial_state['hidden'].device)
 
-            # Expand mean and std for broadcasting
             mean_expanded = mean.unsqueeze(1).expand(-1, self.n_candidates, -1, -1)
             std_expanded = std.unsqueeze(1).expand(-1, self.n_candidates, -1, -1)
 
-            # Generate action sequences
             actions = mean_expanded + std_expanded * noise
             actions = torch.clamp(actions, self.action_min, self.action_max)
 
-            # Evaluate action sequences
             returns = self._evaluate_sequences(initial_state, actions)
 
-            # Select elite sequences
             _, elite_indices = torch.topk(returns, self.n_elite, dim=1)
 
-            # Update distribution
             for b in range(batch_size):
                 elite_actions = actions[b, elite_indices[b]]
                 mean[b] = elite_actions.mean(dim=0)
                 std[b] = elite_actions.std(dim=0) + 1e-6
 
-        # Return first action of best sequence
         final_noise = torch.randn(batch_size, 1, self.horizon,
                                 self.action_dim, device=initial_state['hidden'].device)
         final_actions = mean.unsqueeze(1) + std.unsqueeze(1) * final_noise
@@ -360,25 +326,20 @@ class MPCPlanner:
         """
         batch_size, n_candidates = actions.shape[:2]
 
-        # Expand initial state for all candidates
         expanded_state = {}
         for key, value in initial_state.items():
             expanded_state[key] = value.unsqueeze(1).expand(
                 -1, n_candidates, -1
             ).reshape(batch_size * n_candidates, -1)
 
-        # Reshape actions
         actions_flat = actions.reshape(batch_size * n_candidates, self.horizon, -1)
 
-        # Imagine sequence
         with torch.no_grad():
             imagined = self.world_model.imagine_sequence(expanded_state, actions_flat)
 
-        # Calculate returns
         rewards = imagined['rewards']  # [batch*candidates, horizon, 1]
         continues = imagined['continues']  # [batch*candidates, horizon, 1]
 
-        # Compute discounted returns with continuation
         gamma = 0.99
         returns = torch.zeros(batch_size * n_candidates, device=initial_state['hidden'].device)
 
@@ -387,7 +348,6 @@ class MPCPlanner:
             continue_discount = torch.prod(continues[:, :t+1], dim=1) if t > 0 else continues[:, 0]
             returns += discount * continue_discount.squeeze() * rewards[:, t].squeeze()
 
-        # Reshape back to [batch_size, n_candidates]
         returns = returns.reshape(batch_size, n_candidates)
 
         return returns
@@ -407,7 +367,6 @@ class ImaginationAugmentedAgent(nn.Module):
         self.world_model = world_model
         self.planner = planner
 
-        # Model-free policy (baseline)
         self.model_free_policy = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
             nn.ReLU(),
@@ -417,7 +376,6 @@ class ImaginationAugmentedAgent(nn.Module):
             nn.Tanh()
         )
 
-        # Value function
         self.value_function = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
             nn.ReLU(),
@@ -426,7 +384,6 @@ class ImaginationAugmentedAgent(nn.Module):
             nn.Linear(hidden_dim, 1)
         )
 
-        # Imagination encoder (processes imagined rollouts)
         self.imagination_encoder = nn.Sequential(
             nn.Linear(world_model.state_dim + world_model.hidden_dim + 1, 128), # state + reward
             nn.ReLU(),
@@ -434,7 +391,6 @@ class ImaginationAugmentedAgent(nn.Module):
             nn.ReLU()
         )
 
-        # Combined policy (model-free + imagination)
         self.combined_policy = nn.Sequential(
             nn.Linear(action_dim + 64, hidden_dim),  # MF action + imagination features
             nn.ReLU(),
@@ -448,10 +404,8 @@ class ImaginationAugmentedAgent(nn.Module):
         """
         batch_size = obs.shape[0]
 
-        # Model-free baseline action
         mf_action = self.model_free_policy(obs)
 
-        # Value estimate
         value = self.value_function(obs)
 
         if not use_imagination:
@@ -461,18 +415,14 @@ class ImaginationAugmentedAgent(nn.Module):
                 'imagination_features': None
             }
 
-        # Get current state from world model
         with torch.no_grad():
             embed = self.world_model.encode(obs)
             initial_state = self.world_model.rssm.initial_state(batch_size)
-            # Simple state update (in practice, would maintain state across steps)
             dummy_action = torch.zeros(batch_size, self.action_dim, device=obs.device)
             current_state = self.world_model.rssm.observe(embed, dummy_action, initial_state)
 
-        # Generate imagination rollouts
         imagination_features = self._generate_imagination_features(current_state)
 
-        # Combine model-free action with imagination
         combined_input = torch.cat([mf_action, imagination_features], dim=1)
         final_action = self.combined_policy(combined_input)
 
@@ -490,28 +440,22 @@ class ImaginationAugmentedAgent(nn.Module):
         batch_size = state['hidden'].shape[0]
         horizon = 5  # Short imagination horizon
 
-        # Generate random action sequences for imagination
         imagination_actions = torch.randn(batch_size, horizon, self.action_dim, device=state['hidden'].device)
         imagination_actions = torch.clamp(imagination_actions, -1, 1)
 
-        # Imagine rollouts
         with torch.no_grad():
             imagined = self.world_model.imagine_sequence(state, imagination_actions)
 
-        # Extract features from imagined states and rewards
         features = []
         for t in range(horizon):
             state_t = imagined['states'][t]
             reward_t = imagined['rewards'][:, t]
 
-            # Concatenate state and reward
             state_concat = torch.cat([state_t['stoch'], state_t['hidden'], reward_t], dim=1)
 
-            # Encode imagination step
             step_features = self.imagination_encoder(state_concat)
             features.append(step_features)
 
-        # Aggregate imagination features (mean pooling)
         imagination_features = torch.stack(features, dim=1).mean(dim=1)
 
         return imagination_features

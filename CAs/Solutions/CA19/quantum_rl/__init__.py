@@ -24,7 +24,6 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-# Quantum computing simulation
 try:
     from qiskit import QuantumCircuit, execute, Aer
     from qiskit.circuit import Parameter
@@ -52,7 +51,6 @@ class QuantumRLCircuit:
         if not QISKIT_AVAILABLE:
             raise ImportError("Qiskit required for quantum RL circuits")
 
-        # Initialize quantum parameters
         self.theta = [
             Parameter(f"θ_{l}_{q}") for l in range(n_layers) for q in range(n_qubits)
         ]
@@ -75,12 +73,10 @@ class QuantumRLCircuit:
         qc = QuantumCircuit(self.n_qubits)
 
         if self.feature_map == "ZZFeatureMap":
-            # First-order encoding
             for i in range(self.n_qubits):
                 if i < len(state_data):
                     qc.ry(2 * np.arcsin(np.sqrt(abs(state_data[i]))), i)
 
-            # Second-order entangling encoding
             for i in range(self.n_qubits):
                 for j in range(i + 1, self.n_qubits):
                     if i < len(state_data) and j < len(state_data):
@@ -106,7 +102,6 @@ class QuantumRLCircuit:
         param_idx = 0
 
         for layer in range(self.n_layers):
-            # Rotation layer
             for qubit in range(self.n_qubits):
                 if param_idx < len(parameters):
                     qc.ry(parameters[param_idx], qubit)
@@ -115,14 +110,12 @@ class QuantumRLCircuit:
                     qc.rz(parameters[param_idx], qubit)
                     param_idx += 1
 
-            # Entangling layer
             for qubit in range(self.n_qubits - 1):
                 qc.cx(qubit, qubit + 1)
                 if param_idx < len(parameters):
                     qc.ry(parameters[param_idx], qubit + 1)
                     param_idx += 1
 
-            # Ring closure for full connectivity
             if self.n_qubits > 2:
                 qc.cx(self.n_qubits - 1, 0)
 
@@ -134,26 +127,21 @@ class QuantumRLCircuit:
         """
         Execute the quantum circuit and extract RL-relevant information
         """
-        # Create complete circuit
         feature_circuit = self.create_feature_map(state)
         ansatz_circuit = self.create_ansatz(parameters)
 
         full_circuit = feature_circuit.compose(ansatz_circuit)
 
-        # Add measurement
         full_circuit.add_register(full_circuit.classical_register(self.n_qubits, "c"))
         full_circuit.measure_all()
 
-        # Execute
         backend = Aer.get_backend("qasm_simulator")
         job = execute(full_circuit, backend, shots=shots)
         result = job.result()
         counts = result.get_counts()
 
-        # Convert to action probabilities
         action_probs = self._counts_to_action_probs(counts, shots)
 
-        # Get statevector
         sv_circuit = feature_circuit.compose(ansatz_circuit)
         sv_backend = Aer.get_backend("statevector_simulator")
         sv_job = execute(sv_circuit, sv_backend)
@@ -234,14 +222,12 @@ class QuantumEnhancedAgent:
         self.lr = learning_rate
         self.gamma = gamma
 
-        # Classical components
         self.classical_network = self._build_classical_network()
         self.target_network = self._build_classical_network()
         self.optimizer = optim.Adam(
             self.classical_network.parameters(), lr=learning_rate
         )
 
-        # Quantum parameters
         self.quantum_params = nn.Parameter(
             torch.randn(quantum_circuit.n_qubits * quantum_circuit.n_layers * 3) * np.pi
         )
@@ -249,16 +235,13 @@ class QuantumEnhancedAgent:
             [self.quantum_params], lr=learning_rate * 0.1
         )
 
-        # Experience replay
         self.memory = deque(maxlen=10000)
         self.batch_size = 32
 
-        # Performance tracking
         self.episode_rewards = []
         self.quantum_fidelity_history = []
         self.loss_history = []
 
-        # Hybrid control
         self.quantum_weight = 0.7
         self.adaptive_fusion = True
 
@@ -286,7 +269,6 @@ class QuantumEnhancedAgent:
         """
         state_tensor = torch.FloatTensor(state).unsqueeze(0)
 
-        # Classical prediction
         with torch.no_grad():
             classical_q_values = self.classical_network(state_tensor).squeeze()
 
@@ -361,7 +343,6 @@ class QuantumEnhancedAgent:
         if len(self.memory) < self.batch_size:
             return {"loss": 0.0, "quantum_update": False}
 
-        # Sample batch
         batch = random.sample(self.memory, self.batch_size)
         states = torch.FloatTensor([e[0] for e in batch])
         actions = torch.LongTensor([e[1] for e in batch])
@@ -369,7 +350,6 @@ class QuantumEnhancedAgent:
         next_states = torch.FloatTensor([e[3] for e in batch])
         dones = torch.BoolTensor([e[4] for e in batch])
 
-        # Classical Q-learning
         current_q_values = self.classical_network(states).gather(
             1, actions.unsqueeze(1)
         )
@@ -378,13 +358,11 @@ class QuantumEnhancedAgent:
 
         classical_loss = nn.MSELoss()(current_q_values.squeeze(), target_q_values)
 
-        # Update classical network
         self.optimizer.zero_grad()
         classical_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.classical_network.parameters(), 1.0)
         self.optimizer.step()
 
-        # Quantum parameter update
         quantum_loss = 0.0
         quantum_updated = False
 
@@ -412,7 +390,6 @@ class QuantumEnhancedAgent:
             except:
                 pass
 
-        # Update target network
         if hasattr(self, "update_counter"):
             self.update_counter += 1
         else:
@@ -536,7 +513,6 @@ class SpaceStationEnvironment:
         self.crew_safety_score = 100.0
         self.system_reliability = 1.0
 
-        # Space station subsystems
         self.subsystems = {
             "life_support": {"status": 1.0, "power_req": 25, "criticality": 10},
             "attitude_control": {"status": 1.0, "power_req": 15, "criticality": 8},
@@ -546,18 +522,15 @@ class SpaceStationEnvironment:
             "navigation": {"status": 1.0, "power_req": 12, "criticality": 7},
         }
 
-        # State and action spaces
         self.observation_space = spaces.Box(
             low=0.0, high=1.0, shape=(20,), dtype=np.float32
         )
         self.action_space = spaces.Discrete(64)
 
-        # Mission parameters
         self.total_power = 100.0
         self.emergency_threshold = 0.3
         self.mission_duration = 1000
 
-        # Crisis scenarios
         self.crisis_events = self._initialize_crisis_scenarios()
 
     def _initialize_crisis_scenarios(self) -> List[Dict]:
@@ -615,13 +588,10 @@ class SpaceStationEnvironment:
         """Execute one time step"""
         self.mission_time += 1
 
-        # Decode action
         action_decoded = self._decode_quantum_action(action)
 
-        # Check for crises
         active_crisis = self._check_crisis_events()
 
-        # Update systems
         reward = self._update_systems(
             action_decoded["power_allocation"],
             action_decoded["emergency_response"],
@@ -629,11 +599,9 @@ class SpaceStationEnvironment:
             active_crisis,
         )
 
-        # Update safety
         safety_impact = self._calculate_safety_impact(active_crisis)
         self.crew_safety_score = max(0.0, self.crew_safety_score + safety_impact)
 
-        # Check termination
         done = (
             self.crew_safety_score < 20.0
             or self.mission_time >= self.mission_duration
@@ -704,7 +672,6 @@ class SpaceStationEnvironment:
         """Update all space station systems"""
         total_reward = 0.0
 
-        # Apply crisis effects
         if active_crisis:
             if active_crisis["affected_systems"] == ["all"]:
                 self.total_power *= 1.0 - active_crisis["severity"] * 0.5
@@ -714,7 +681,6 @@ class SpaceStationEnvironment:
                         failure_amount = active_crisis["severity"] * 0.3
                         self.subsystems[system]["status"] -= failure_amount
 
-        # Calculate power distribution
         total_power_demand = sum(
             self.subsystems[s]["power_req"]
             * power_allocation[s]
@@ -728,7 +694,6 @@ class SpaceStationEnvironment:
             else 1.0
         )
 
-        # Update each subsystem
         for system in self.subsystems:
             allocated_power_ratio = power_allocation[system] * power_efficiency
 
@@ -743,14 +708,12 @@ class SpaceStationEnvironment:
                 )
                 total_reward -= self.subsystems[system]["criticality"] * 0.5
 
-            # Critical system penalties
             if (
                 self.subsystems[system]["status"] < 0.5
                 and self.subsystems[system]["criticality"] > 8
             ):
                 total_reward -= 100
 
-        # Emergency response bonus
         if active_crisis and emergency_response >= 2:
             total_reward += 50
 
@@ -795,21 +758,17 @@ class SpaceStationEnvironment:
         """Generate observation vector"""
         obs = []
 
-        # Power and system statuses
         obs.append(self.total_power / 100.0)
         for system in self.subsystems:
             obs.append(self.subsystems[system]["status"])
 
-        # Criticalities
         for system in self.subsystems:
             obs.append(self.subsystems[system]["criticality"] / 10.0)
 
-        # Mission progress and safety
         obs.append(self.mission_time / self.mission_duration)
         obs.append(self.crew_safety_score / 100.0)
         obs.append(self.system_reliability)
 
-        # Crisis indicators
         remaining_crises = [
             c for c in self.crisis_events if c["trigger_step"] > self.mission_time
         ]
@@ -836,12 +795,10 @@ class MissionTrainer:
         self.max_episodes = 500
         self.current_episode = 0
 
-        # Performance tracking
         self.classical_baseline_scores = []
         self.quantum_enhanced_scores = []
         self.crisis_survival_rate = 0.0
 
-        # Training parameters
         self.difficulty_progression = True
         self.crisis_injection_rate = 0.2
 

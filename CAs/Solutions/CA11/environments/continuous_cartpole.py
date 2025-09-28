@@ -15,7 +15,6 @@ class ContinuousCartPole:
         self.max_steps = 200
         self.current_step = 0
 
-        # Physics parameters
         self.gravity = 9.8
         self.masscart = 1.0
         self.masspole = 0.1
@@ -25,7 +24,6 @@ class ContinuousCartPole:
         self.force_mag = 10.0
         self.tau = 0.02  # seconds between state updates
 
-        # State bounds
         self.x_threshold = 2.4
         self.theta_threshold_radians = 12 * 2 * math.pi / 360
 
@@ -43,7 +41,6 @@ class ContinuousCartPole:
         if isinstance(action, np.ndarray):
             action = action.item()
 
-        # Clip action to valid range
         action = np.clip(action, -1.0, 1.0)
         force = action * self.force_mag
 
@@ -52,7 +49,6 @@ class ContinuousCartPole:
         costheta = math.cos(theta)
         sintheta = math.sin(theta)
 
-        # Physics calculations
         temp = (
             force + self.polemass_length * theta_dot**2 * sintheta
         ) / self.total_mass
@@ -61,7 +57,6 @@ class ContinuousCartPole:
         )
         xacc = temp - self.polemass_length * thetaacc * costheta / self.total_mass
 
-        # Update state
         x = x + self.tau * x_dot
         x_dot = x_dot + self.tau * xacc
         theta = theta + self.tau * theta_dot
@@ -70,7 +65,6 @@ class ContinuousCartPole:
         self.state = np.array([x, x_dot, theta, theta_dot])
         self.current_step += 1
 
-        # Calculate reward and done
         done = (
             x < -self.x_threshold
             or x > self.x_threshold

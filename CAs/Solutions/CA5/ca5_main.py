@@ -85,7 +85,6 @@ class CA5Demonstrator:
         agent = DoubleDQNAgent(self.state_size, self.action_size)
         scores, _ = agent.train(self.env, num_episodes=100, print_every=25)
 
-        # Run overestimation analysis
         bias_analysis = OverestimationAnalysis()
         bias_results = bias_analysis.visualize_bias_analysis()
 
@@ -102,7 +101,6 @@ class CA5Demonstrator:
         agent = DuelingDQNAgent(self.state_size, self.action_size)
         scores, _ = agent.train(self.env, num_episodes=100, print_every=25)
 
-        # Analyze dueling architecture
         dueling_analysis = DuelingAnalysis()
         dueling_analysis.visualize_dueling_architecture(agent, self.env)
 
@@ -119,7 +117,6 @@ class CA5Demonstrator:
         agent = PrioritizedDQNAgent(self.state_size, self.action_size)
         scores, _ = agent.train(self.env, num_episodes=100, print_every=25)
 
-        # Analyze PER behavior
         per_analysis = PERAnalysis()
         per_analysis.visualize_per_behavior(agent)
 
@@ -136,7 +133,6 @@ class CA5Demonstrator:
         agent = RainbowDQNAgent(self.state_size, self.action_size)
         scores, _ = agent.train(self.env, num_episodes=100, print_every=25)
 
-        # Analyze Rainbow components
         rainbow_analysis = RainbowAnalysis()
         rainbow_analysis.visualize_rainbow_components(agent, self.env)
 
@@ -152,20 +148,16 @@ class CA5Demonstrator:
 
         comparator = DQNComparator(self.env, self.state_size, self.action_size)
 
-        # Add all agent variants
         comparator.add_agent("DQN", DQNAgent, lr=0.001)
         comparator.add_agent("Double DQN", DoubleDQNAgent, lr=0.001)
         comparator.add_agent("Dueling DQN", DuelingDQNAgent, lr=0.001)
         comparator.add_agent("Prioritized DQN", PrioritizedDQNAgent, lr=0.001)
         comparator.add_agent("Rainbow DQN", RainbowDQNAgent, lr=0.001)
 
-        # Run comparison
         results = comparator.run_comparison(num_episodes=200, num_runs=2)
 
-        # Visualize results
         comparator.visualize_comparison()
 
-        # Statistical analysis
         comparator.statistical_analysis()
 
         return results
@@ -179,12 +171,10 @@ class CA5Demonstrator:
             self.env, self.state_size, self.action_size, DQNAgent
         )
 
-        # Analyze learning rate sensitivity
         lr_results = analyzer.analyze_learning_rate(
             learning_rates=[0.0001, 0.001, 0.01], num_episodes=100, num_runs=1
         )
 
-        # Analyze batch size sensitivity
         batch_results = analyzer.analyze_batch_size(
             batch_sizes=[16, 64, 128], num_episodes=100, num_runs=1
         )
@@ -201,7 +191,6 @@ class CA5Demonstrator:
 
         profiler = PerformanceProfiler()
 
-        # Profile different agents
         agent_configs = {
             DQNAgent: {"lr": 0.001},
             DoubleDQNAgent: {"lr": 0.001},
@@ -221,14 +210,12 @@ class CA5Demonstrator:
         print("=" * 50)
         print()
 
-        # Run all demonstrations
         basic_agent, basic_scores = self.demonstrate_basic_dqn()
         double_agent, double_scores, bias_results = self.demonstrate_double_dqn()
         dueling_agent, dueling_scores = self.demonstrate_dueling_dqn()
         per_agent, per_scores = self.demonstrate_prioritized_replay()
         rainbow_agent, rainbow_scores = self.demonstrate_rainbow_dqn()
 
-        # Comparison summary
         print("9. Summary Comparison")
         print("=" * 23)
 
@@ -258,7 +245,7 @@ def create_usage_examples():
 
     examples = {
         "basic_training": """
-# Basic DQN Training Example
+
 from dqn_base import DQNAgent
 import gymnasium as gym
 
@@ -268,7 +255,7 @@ scores, info = agent.train(env, num_episodes=500)
 print(f"Training completed. Final score: {np.mean(scores[-50:]):.2f}")
         """,
         "comparison_study": """
-# Comparative Study Example
+
 from analysis_tools import DQNComparator
 from dqn_base import DQNAgent
 from double_dqn import DoubleDQNAgent
@@ -284,48 +271,42 @@ comparator.visualize_comparison()
 comparator.statistical_analysis()
         """,
         "hyperparameter_tuning": """
-# Hyperparameter Analysis Example
+
 from analysis_tools import HyperparameterAnalyzer
 from dueling_dqn import DuelingDQNAgent
 
 env = gym.make("CartPole-v1")
 analyzer = HyperparameterAnalyzer(env, 4, 2, DuelingDQNAgent)
 
-# Test different learning rates
+
 lr_results = analyzer.analyze_learning_rate([0.0001, 0.001, 0.01])
         """,
         "advanced_analysis": """
-# Advanced Analysis Example
+
 from double_dqn import OverestimationAnalysis
 from dueling_dqn import DuelingAnalysis
 
-# Analyze overestimation bias
+
 bias_analyzer = OverestimationAnalysis()
 bias_results = bias_analyzer.visualize_bias_analysis()
 
-# Analyze dueling architecture
+
 dueling_analyzer = DuelingAnalysis()
-# (Requires trained agent)
-# dueling_analyzer.visualize_dueling_architecture(agent, env)
+
+
         """,
     }
 
     return examples
 
 
-# Main demonstration
 if __name__ == "__main__":
     print("CA5 Deep Q-Networks Implementation")
     print("=" * 40)
     print()
 
-    # Create demonstrator
     demo = CA5Demonstrator()
 
-    # Run basic demonstrations (commented out for quick testing)
-    # demo.run_full_demonstration()
-
-    # Show usage examples
     examples = create_usage_examples()
     print("Usage Examples:")
     print("=" * 16)

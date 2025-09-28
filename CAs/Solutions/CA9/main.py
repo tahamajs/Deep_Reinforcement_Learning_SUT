@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Policy Gradient Methods Demonstration
 =====================================
@@ -27,41 +26,34 @@ def main():
     print("🎓 Policy Gradient Methods in Reinforcement Learning")
     print("=" * 60)
 
-    # Test environment setup
     print("\n1. Testing Environment Setup...")
     test_environment_setup()
 
-    # Policy gradient intuition
     print("\n2. Policy Gradient Intuition...")
     pg_visualizer = PolicyGradientVisualizer()
     intuition_results = pg_visualizer.demonstrate_policy_gradient_intuition()
 
-    # Value-based vs Policy-based comparison
     print("\n3. Value-based vs Policy-based Methods Comparison...")
     pg_visualizer.compare_value_vs_policy_methods()
 
-    # REINFORCE algorithm
     print("\n4. REINFORCE Algorithm Training...")
     reinforce_analyzer = REINFORCEAnalyzer()
     reinforce_agent = reinforce_analyzer.train_and_analyze(
         "CartPole-v1", num_episodes=300
     )
 
-    # Variance reduction techniques
     print("\n5. Variance Reduction Techniques...")
     variance_analyzer = VarianceAnalyzer()
     variance_results = variance_analyzer.compare_baseline_methods(
         "CartPole-v1", num_episodes=250
     )
 
-    # Actor-Critic methods
     print("\n6. Actor-Critic Methods Comparison...")
     ac_analyzer = ActorCriticAnalyzer()
     ac_results = ac_analyzer.compare_actor_critic_variants(
         "CartPole-v1", num_episodes=250
     )
 
-    # Comprehensive comparison
     print("\n7. Comprehensive Policy Gradient Methods Comparison...")
     advanced_analyzer = AdvancedPolicyGradientAnalyzer()
     comprehensive_results = advanced_analyzer.compare_all_methods(

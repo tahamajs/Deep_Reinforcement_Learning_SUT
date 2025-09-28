@@ -18,7 +18,6 @@ class ModelBasedAgent:
         self.lr = lr
         self.planning_horizon = planning_horizon
 
-        # Dynamics model: s_{t+1} = f(s_t, a_t)
         self.dynamics_model = nn.Sequential(
             nn.Linear(state_dim + action_dim, 128),
             nn.ReLU(),
@@ -27,7 +26,6 @@ class ModelBasedAgent:
             nn.Linear(128, state_dim),
         )
 
-        # Reward model: r = R(s_t, a_t)
         self.reward_model = nn.Sequential(
             nn.Linear(state_dim + action_dim, 128),
             nn.ReLU(),
@@ -36,7 +34,6 @@ class ModelBasedAgent:
             nn.Linear(64, 1),
         )
 
-        # Value function for planning
         self.value_network = nn.Sequential(
             nn.Linear(state_dim, 128),
             nn.ReLU(),
@@ -45,16 +42,13 @@ class ModelBasedAgent:
             nn.Linear(64, 1),
         )
 
-        # Optimizers
         self.dynamics_optimizer = optim.Adam(self.dynamics_model.parameters(), lr=lr)
         self.reward_optimizer = optim.Adam(self.reward_model.parameters(), lr=lr)
         self.value_optimizer = optim.Adam(self.value_network.parameters(), lr=lr)
 
-        # Data storage
         self.model_buffer = None  # Will be set to ReplayBuffer
         self.planning_buffer = None  # Will be set to ReplayBuffer
 
-        # Training stats
         self.model_losses = []
         self.value_losses = []
 
@@ -70,7 +64,6 @@ class ModelBasedAgent:
         best_action = 0
         best_value = float("-inf")
 
-        # Try each action and simulate forward
         for action in range(self.action_dim):
             value = self.simulate_trajectory(state, action)
             if value > best_value:
@@ -86,13 +79,11 @@ class ModelBasedAgent:
         gamma = 0.99
 
         for step in range(self.planning_horizon):
-            # Get action (initial action for first step, then greedy)
             if step == 0:
                 action = initial_action
             else:
                 action = self.get_greedy_action(state)
 
-            # Predict next state and reward
             action_tensor = torch.FloatTensor([action])
             action_one_hot = F.one_hot(action_tensor.long(), self.action_dim).float()
 
@@ -105,7 +96,6 @@ class ModelBasedAgent:
             total_reward += (gamma**step) * reward
             state = next_state
 
-        # Add terminal value estimate
         with torch.no_grad():
             terminal_value = self.value_network(state).item()
             total_reward += (gamma**self.planning_horizon) * terminal_value
@@ -135,17 +125,14 @@ class ModelBasedAgent:
         """Update dynamics and reward models."""
         states, actions, rewards, next_states, dones = batch
 
-        # Convert to tensors
         states = torch.FloatTensor(states)
         actions = torch.LongTensor(actions)
         rewards = torch.FloatTensor(rewards)
         next_states = torch.FloatTensor(next_states)
 
-        # One-hot encode actions
         actions_one_hot = F.one_hot(actions, self.action_dim).float()
         model_input = torch.cat([states, actions_one_hot], dim=-1)
 
-        # Dynamics model loss
         pred_next_states = self.dynamics_model(model_input)
         dynamics_loss = F.mse_loss(pred_next_states, next_states)
 
@@ -153,7 +140,6 @@ class ModelBasedAgent:
         dynamics_loss.backward()
         self.dynamics_optimizer.step()
 
-        # Reward model loss
         pred_rewards = self.reward_model(model_input).squeeze()
         reward_loss = F.mse_loss(pred_rewards, rewards)
 
@@ -175,7 +161,6 @@ class ModelBasedAgent:
         next_states = torch.FloatTensor(next_states)
         dones = torch.BoolTensor(dones)
 
-        # Value function updates
         current_values = self.value_network(states).squeeze()
 
         with torch.no_grad():
@@ -201,15 +186,12 @@ class HybridDynaAgent:
         self.action_dim = action_dim
         self.planning_steps = planning_steps
 
-        # Model-free component (Q-learning)
         self.q_table = defaultdict(lambda: np.zeros(action_dim))
         self.lr = lr
         self.gamma = 0.99
 
-        # Model-based component (simple tabular model)
         self.model = {}  # (s,a) -> (r, s', done)
         self.visited_states = set()
-        # Experience for planning
         self.experience_buffer = deque(maxlen=10000)
 
     def act(self, state, epsilon=0.1):
@@ -227,7 +209,6 @@ class HybridDynaAgent:
             tuple(next_state) if isinstance(next_state, np.ndarray) else next_state
         )
 
-        # 1. Direct RL update (model-free)
         if done:
             target = reward
         else:
@@ -237,12 +218,10 @@ class HybridDynaAgent:
             target - self.q_table[state_key][action]
         )
 
-        # 2. Model learning
         self.model[(state_key, action)] = (reward, next_state_key, done)
         self.visited_states.add(state_key)
         self.experience_buffer.append((state_key, action, reward, next_state_key, done))
 
-        # 3. Planning with learned model
         self.planning_updates()
 
     def planning_updates(self):
@@ -251,13 +230,11 @@ class HybridDynaAgent:
             return
 
         for _ in range(self.planning_steps):
-            # Sample random experience
             if len(self.experience_buffer) > 0:
                 state_key, action, reward, next_state_key, done = random.choice(
                     self.experience_buffer
                 )
 
-                # Planning update (same as direct RL update)
                 if done:
                     target = reward
                 else:

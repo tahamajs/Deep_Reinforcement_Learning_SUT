@@ -27,14 +27,12 @@ class WorldModel(nn.Module):
         self.action_dim = action_dim
         self.latent_dim = latent_dim
 
-        # Component models
         self.vae = VariationalAutoencoder(obs_dim, latent_dim, hidden_dim, beta)
         self.dynamics = LatentDynamicsModel(
             latent_dim, action_dim, hidden_dim, stochastic_dynamics
         )
         self.reward_model = RewardModel(latent_dim, action_dim, hidden_dim)
 
-        # Training statistics
         self.training_stats = {
             "vae_loss": [],
             "dynamics_loss": [],
@@ -67,7 +65,6 @@ class WorldModel(nn.Module):
         batch_size = initial_obs.shape[0]
         horizon = actions.shape[1]
 
-        # Encode initial observation
         z = self.encode_observations(initial_obs)
 
         states = [z]
@@ -75,11 +72,9 @@ class WorldModel(nn.Module):
         observations = []
 
         for t in range(horizon):
-            # Predict reward
             r = self.predict_reward(z, actions[:, t])
             rewards.append(r)
 
-            # Predict next state
             if self.dynamics.stochastic:
                 z, _, _ = self.predict_next_state(z, actions[:, t])
             else:

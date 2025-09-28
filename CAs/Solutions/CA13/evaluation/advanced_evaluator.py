@@ -6,7 +6,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 import copy
 
-# Import required classes from other modules
 from ..environments.grid_world import SimpleGridWorld
 from ..agents.model_free import DQNAgent
 from ..agents.sample_efficient import SampleEfficientAgent, DataAugmentationDQN
@@ -29,7 +28,6 @@ class AdvancedRLEvaluator:
         self.metrics = metrics
         self.results = {}
 
-        # Evaluation parameters
         self.num_trials = 5
         self.num_episodes = 300
         self.evaluation_interval = 50
@@ -42,7 +40,6 @@ class AdvancedRLEvaluator:
         for trial in range(self.num_trials):
             episode_rewards = []
 
-            # Reset agent for fresh trial
             if hasattr(agent, "reset"):
                 agent.reset()
 
@@ -62,7 +59,6 @@ class AdvancedRLEvaluator:
                     next_state, reward, done, _ = env.step(action)
                     episode_reward += reward
 
-                    # Update agent if possible
                     if hasattr(agent, "replay_buffer"):
                         agent.replay_buffer.push(
                             state, action, reward, next_state, done
@@ -78,7 +74,6 @@ class AdvancedRLEvaluator:
 
                 episode_rewards.append(episode_reward)
 
-                # Check convergence
                 if len(episode_rewards) >= 20:
                     recent_performance = np.mean(episode_rewards[-20:])
                     if recent_performance >= convergence_threshold * np.max(
@@ -100,7 +95,6 @@ class AdvancedRLEvaluator:
 
     def evaluate_transfer_capability(self, agent, source_env, target_envs):
         """Evaluate transfer learning capability."""
-        # Train on source environment
         source_performance = []
         state = source_env.reset()
 
@@ -126,7 +120,6 @@ class AdvancedRLEvaluator:
 
             source_performance.append(episode_reward)
 
-        # Evaluate on target environments
         transfer_results = {}
         for target_name, target_env in target_envs.items():
             target_rewards = []
@@ -168,7 +161,6 @@ class AdvancedRLEvaluator:
             print(f"\n📊 Evaluating {agent_name}...")
             self.results[agent_name] = {}
 
-            # Sample efficiency evaluation
             if "sample_efficiency" in self.metrics:
                 env = (
                     self.environments[0]
@@ -181,7 +173,6 @@ class AdvancedRLEvaluator:
                     f"  Sample Efficiency: {efficiency_results['convergence_episodes']:.1f} ± {efficiency_results['convergence_std']:.1f} episodes"
                 )
 
-            # Transfer capability evaluation
             if "transfer" in self.metrics and len(self.environments) > 1:
                 source_env = self.environments[0]
                 target_envs = {
@@ -206,7 +197,6 @@ class AdvancedRLEvaluator:
         print("🏆 COMPREHENSIVE EVALUATION REPORT")
         print("=" * 60)
 
-        # Sample efficiency ranking
         if any("sample_efficiency" in results for results in self.results.values()):
             print("\n📈 Sample Efficiency Ranking:")
             efficiency_scores = []
@@ -219,7 +209,6 @@ class AdvancedRLEvaluator:
             for rank, (agent_name, score) in enumerate(efficiency_scores, 1):
                 print(f"  {rank}. {agent_name}: {score:.1f} episodes to convergence")
 
-        # Performance comparison
         print("\n🎯 Final Performance Comparison:")
         performance_scores = []
         for agent_name, results in self.results.items():
@@ -231,7 +220,6 @@ class AdvancedRLEvaluator:
         for rank, (agent_name, score) in enumerate(performance_scores, 1):
             print(f"  {rank}. {agent_name}: {score:.2f} max reward")
 
-        # Method recommendations
         print("\n💡 Method Recommendations:")
 
         if efficiency_scores:
@@ -257,7 +245,6 @@ class IntegratedAdvancedAgent:
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        # Default configuration
         default_config = {
             "use_prioritized_replay": True,
             "use_auxiliary_tasks": True,
@@ -269,10 +256,8 @@ class IntegratedAdvancedAgent:
         }
         self.config = {**default_config, **(config or {})}
 
-        # Initialize components based on configuration
         self._initialize_components()
 
-        # Statistics
         self.training_stats = {
             "episode_rewards": [],
             "losses": [],
@@ -282,7 +267,6 @@ class IntegratedAdvancedAgent:
 
     def _initialize_components(self):
         """Initialize RL components based on configuration."""
-        # Base network
         if self.config["use_auxiliary_tasks"]:
             self.network = DataAugmentationDQN(self.state_dim, self.action_dim)
         else:
@@ -291,23 +275,19 @@ class IntegratedAdvancedAgent:
         self.target_network = copy.deepcopy(self.network)
         self.optimizer = optim.Adam(self.network.parameters(), lr=self.config["lr"])
 
-        # Replay buffer
         if self.config["use_prioritized_replay"]:
             self.replay_buffer = PrioritizedReplayBuffer(self.config["buffer_size"])
         else:
             self.replay_buffer = ReplayBuffer(self.config["buffer_size"])
 
-        # World model
         if self.config["use_world_model"]:
             self.world_model = VariationalWorldModel(self.state_dim, self.action_dim)
 
-        # Hierarchical components
         if self.config["use_hierarchical"]:
             self.hierarchical_agent = OptionsCriticAgent(
                 self.state_dim, self.action_dim
             )
 
-        # Training parameters
         self.gamma = 0.99
         self.update_count = 0
         self.target_update_freq = 100
@@ -321,14 +301,12 @@ class IntegratedAdvancedAgent:
             )
             return action
 
-        # Standard epsilon-greedy
         if np.random.random() < epsilon:
             return np.random.randint(self.action_dim)
 
         with torch.no_grad():
             state_tensor = torch.FloatTensor(state).unsqueeze(0)
 
-            # Apply data augmentation during inference (optional)
             if self.config["use_data_augmentation"] and np.random.random() < 0.1:
                 state_tensor = self.network.apply_augmentation(state_tensor, "noise")
 
@@ -365,7 +343,6 @@ class IntegratedAdvancedAgent:
             else weights
         )
 
-        # Apply data augmentation
         if self.config["use_data_augmentation"]:
             aug_type = np.random.choice(["noise", "dropout", "scaling"])
             states = self.network.apply_augmentation(states, aug_type)
@@ -374,7 +351,6 @@ class IntegratedAdvancedAgent:
                 self.training_stats["component_usage"].get("augmentation", 0) + 1
             )
 
-        # Forward pass
         if self.config["use_auxiliary_tasks"]:
             current_q_values, reward_pred, next_state_pred = self.network(
                 states, actions
@@ -387,7 +363,6 @@ class IntegratedAdvancedAgent:
                 self.network(states).gather(1, actions.unsqueeze(1)).squeeze()
             )
 
-        # Target computation
         with torch.no_grad():
             if self.config["use_auxiliary_tasks"] and hasattr(
                 self.target_network, "forward"
@@ -401,7 +376,6 @@ class IntegratedAdvancedAgent:
             max_next_q_values = next_q_values.max(1)[0]
             target_q_values = rewards + (self.gamma * max_next_q_values * (~dones))
 
-        # Loss computation
         td_errors = (current_q_values - target_q_values).detach()
         q_loss = (
             weights * F.mse_loss(current_q_values, target_q_values, reduction="none")
@@ -409,7 +383,6 @@ class IntegratedAdvancedAgent:
 
         total_loss = q_loss
 
-        # Auxiliary losses
         if self.config["use_auxiliary_tasks"]:
             aux_reward_loss = F.mse_loss(reward_pred.squeeze(), rewards)
             aux_dynamics_loss = F.mse_loss(next_state_pred, next_states)
@@ -418,7 +391,6 @@ class IntegratedAdvancedAgent:
                 self.training_stats["component_usage"].get("auxiliary", 0) + 1
             )
 
-        # World model update
         if self.config["use_world_model"]:
             world_model_loss = self.world_model.compute_loss(
                 states, actions, next_states
@@ -428,22 +400,18 @@ class IntegratedAdvancedAgent:
                 self.training_stats["component_usage"].get("world_model", 0) + 1
             )
 
-        # Optimization
         self.optimizer.zero_grad()
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=1.0)
         self.optimizer.step()
 
-        # Update priorities
         if indices is not None:
             self.replay_buffer.update_priorities(indices, td_errors.numpy())
 
-        # Update target network
         self.update_count += 1
         if self.update_count % self.target_update_freq == 0:
             self.target_network.load_state_dict(self.network.state_dict())
 
-        # Store statistics
         self.training_stats["losses"].append(total_loss.item())
 
         return {"total_loss": total_loss.item(), "q_loss": q_loss.item()}

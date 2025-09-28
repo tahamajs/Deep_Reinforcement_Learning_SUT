@@ -24,7 +24,6 @@ class ConservativeQNetwork(nn.Module):
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        # Q-network architecture
         self.q_network = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -35,7 +34,6 @@ class ConservativeQNetwork(nn.Module):
             nn.Linear(hidden_dim, action_dim),
         )
 
-        # Value network for advantage computation
         self.value_network = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -64,17 +62,14 @@ class ConservativeQLearning:
         self.action_dim = action_dim
         self.conservative_weight = conservative_weight
 
-        # Networks
         self.q_network = ConservativeQNetwork(state_dim, action_dim).to(device)
         self.target_q_network = copy.deepcopy(self.q_network).to(device)
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
 
-        # Training parameters
         self.gamma = 0.99
         self.tau = 0.005  # Target network update rate
         self.update_count = 0
 
-        # Statistics
         self.losses = []
         self.conservative_losses = []
         self.bellman_losses = []
@@ -83,13 +78,10 @@ class ConservativeQLearning:
         """Compute CQL conservative loss."""
         q_values, _ = self.q_network(states)
 
-        # Log-sum-exp of Q-values (conservative term)
         logsumexp_q = torch.logsumexp(q_values, dim=1)
 
-        # Q-values for behavior policy actions
         behavior_q_values = q_values.gather(1, actions.unsqueeze(1)).squeeze()
 
-        # Conservative loss: penalize high Q-values for unseen actions
         conservative_loss = (logsumexp_q - behavior_q_values).mean()
 
         return conservative_loss
@@ -111,27 +103,22 @@ class ConservativeQLearning:
         """Update CQL agent."""
         states, actions, rewards, next_states, dones = batch
 
-        # Compute losses
         conservative_loss = self.compute_conservative_loss(states, actions)
         bellman_loss = self.compute_bellman_loss(
             states, actions, rewards, next_states, dones
         )
 
-        # Total loss
         total_loss = self.conservative_weight * conservative_loss + bellman_loss
 
-        # Optimization step
         self.optimizer.zero_grad()
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), max_norm=1.0)
         self.optimizer.step()
 
-        # Update target network
         self.update_count += 1
         if self.update_count % 100 == 0:
             self.soft_update_target()
 
-        # Store statistics
         self.losses.append(total_loss.item())
         self.conservative_losses.append(conservative_loss.item())
         self.bellman_losses.append(bellman_loss.item())
@@ -170,7 +157,6 @@ class ImplicitQLearning:
         self.action_dim = action_dim
         self.expectile = expectile  # Expectile for advantage estimation
 
-        # Networks
         self.q_network = ConservativeQNetwork(state_dim, action_dim).to(device)
         self.target_q_network = copy.deepcopy(self.q_network).to(device)
         self.policy_network = nn.Sequential(
@@ -182,15 +168,12 @@ class ImplicitQLearning:
             nn.Softmax(dim=-1),
         ).to(device)
 
-        # Optimizers
         self.q_optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
         self.policy_optimizer = optim.Adam(self.policy_network.parameters(), lr=lr)
 
-        # Training parameters
         self.gamma = 0.99
         self.tau = 0.005
 
-        # Statistics
         self.q_losses = []
         self.policy_losses = []
         self.advantages = []
@@ -211,13 +194,11 @@ class ImplicitQLearning:
                 self.gamma * next_state_values.squeeze() * (~dones)
             )
 
-        # Q-function loss using expectile regression
         q_errors = target_q_values - current_q_values
         q_loss = self.compute_expectile_loss(
             q_errors, 0.5
         )  # Standard MSE for Q-function
 
-        # Value function loss using expectile for advantage estimation
         advantages = current_q_values.detach() - state_values.squeeze()
         value_loss = self.compute_expectile_loss(advantages, self.expectile)
 
@@ -254,15 +235,12 @@ class ImplicitQLearning:
         """Update IQL agent."""
         states, actions, rewards, next_states, dones = batch
 
-        # Update Q-function and value function
         q_loss, avg_advantage = self.update_q_function(
             states, actions, rewards, next_states, dones
         )
 
-        # Update policy
         policy_loss = self.update_policy(states, actions)
 
-        # Soft update target networks
         for target_param, param in zip(
             self.target_q_network.parameters(), self.q_network.parameters()
         ):
@@ -270,7 +248,6 @@ class ImplicitQLearning:
                 self.tau * param.data + (1 - self.tau) * target_param.data
             )
 
-        # Store statistics
         self.q_losses.append(q_loss)
         self.policy_losses.append(policy_loss)
         self.advantages.append(avg_advantage)

@@ -21,7 +21,6 @@ from sklearn.metrics import confusion_matrix, classification_report
 import warnings
 warnings.filterwarnings('ignore')
 
-# Import local modules
 from ..world_models import WorldModel, ImaginationAugmentedAgent
 from ..multi_agent_rl import MADDPGAgent, PredatorPreyEnvironment
 from ..causal_rl import CausalRLAgent, CausalBanditEnvironment
@@ -40,7 +39,6 @@ class ExperimentRunner:
         self.results = defaultdict(list)
         self.timer = Timer()
 
-        # Create save directory
         os.makedirs(save_dir, exist_ok=True)
 
     def run_experiment(self) -> Dict[str, Any]:
@@ -55,7 +53,6 @@ class ExperimentRunner:
 
         filepath = os.path.join(self.save_dir, filename)
 
-        # Convert results to serializable format
         serializable_results = {}
         for key, value in self.results.items():
             if isinstance(value, (list, tuple)):
@@ -89,12 +86,10 @@ class WorldModelExperiment(ExperimentRunner):
     def __init__(self, config: Config, save_dir: str = "experiments"):
         super().__init__(config, save_dir)
 
-        # Environment setup
         self.env = ContinuousMountainCar(goal_velocity=config.goal_velocity)
         self.state_dim = self.env.observation_space.shape[0]
         self.action_dim = self.env.action_space.shape[0]
 
-        # Agent setup
         self.agent = ImaginationAugmentedAgent(
             state_dim=self.state_dim,
             action_dim=self.action_dim,
@@ -121,10 +116,8 @@ class WorldModelExperiment(ExperimentRunner):
                 action = self.agent.select_action(state)
                 next_state, reward, done, _, _ = self.env.step(action)
 
-                # Store experience
                 self.agent.store_transition(state, action, reward, next_state, done)
 
-                # Train agent
                 if len(self.agent.replay_buffer) > self.config.batch_size:
                     metrics = self.agent.train_step()
                     if metrics:
@@ -142,7 +135,6 @@ class WorldModelExperiment(ExperimentRunner):
 
         self.timer.stop()
 
-        # Store results
         self.results['episode_rewards'] = episode_rewards
         self.results['imagination_errors'] = imagination_errors
         self.results['prediction_errors'] = prediction_errors
@@ -155,14 +147,12 @@ class WorldModelExperiment(ExperimentRunner):
         """Plot world model experiment results"""
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
-        # Learning curve
         axes[0, 0].plot(self.results['episode_rewards'])
         axes[0, 0].set_title('Learning Curve')
         axes[0, 0].set_xlabel('Episode')
         axes[0, 0].set_ylabel('Reward')
         axes[0, 0].grid(True, alpha=0.3)
 
-        # Imagination errors
         if self.results['imagination_errors']:
             axes[0, 1].plot(self.results['imagination_errors'])
             axes[0, 1].set_title('Imagination Error')
@@ -170,7 +160,6 @@ class WorldModelExperiment(ExperimentRunner):
             axes[0, 1].set_ylabel('Error')
             axes[0, 1].grid(True, alpha=0.3)
 
-        # Prediction errors
         if self.results['prediction_errors']:
             axes[1, 0].plot(self.results['prediction_errors'])
             axes[1, 0].set_title('Prediction Error')
@@ -178,7 +167,6 @@ class WorldModelExperiment(ExperimentRunner):
             axes[1, 0].set_ylabel('Error')
             axes[1, 0].grid(True, alpha=0.3)
 
-        # Rolling average reward
         if len(self.results['episode_rewards']) > 10:
             rolling_avg = pd.Series(self.results['episode_rewards']).rolling(10).mean()
             axes[1, 1].plot(rolling_avg)
@@ -197,7 +185,6 @@ class MultiAgentExperiment(ExperimentRunner):
     def __init__(self, config: Config, save_dir: str = "experiments"):
         super().__init__(config, save_dir)
 
-        # Environment setup
         self.env = PredatorPreyEnvironment(
             n_predators=config.n_predators,
             n_prey=config.n_prey,
@@ -205,7 +192,6 @@ class MultiAgentExperiment(ExperimentRunner):
             max_steps=config.max_steps
         )
 
-        # Agent setup
         obs_dim = self.env.observation_space.shape[0]
         self.agent = MADDPGAgent(
             n_predators=config.n_predators,
@@ -232,16 +218,12 @@ class MultiAgentExperiment(ExperimentRunner):
             captures = 0
 
             for step in range(self.config.max_steps):
-                # Get actions for all agents
                 actions = self.agent.select_actions(obs)
 
-                # Execute actions
                 next_obs, rewards, done, _, _ = self.env.step(actions)
 
-                # Store transitions
                 self.agent.store_transition(obs, actions, rewards, next_obs, done)
 
-                # Train agents
                 if len(self.agent.replay_buffer) > self.config.batch_size:
                     self.agent.train_step()
 
@@ -252,7 +234,6 @@ class MultiAgentExperiment(ExperimentRunner):
                 if done:
                     break
 
-            # Calculate capture rate
             initial_prey = self.config.n_prey
             final_prey = len(self.env.prey_positions)
             capture_rate = (initial_prey - final_prey) / initial_prey
@@ -269,7 +250,6 @@ class MultiAgentExperiment(ExperimentRunner):
 
         self.timer.stop()
 
-        # Store results
         self.results['predator_rewards'] = predator_rewards_history
         self.results['prey_rewards'] = prey_rewards_history
         self.results['capture_rates'] = capture_rates
@@ -282,7 +262,6 @@ class MultiAgentExperiment(ExperimentRunner):
         """Plot multi-agent experiment results"""
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
-        # Predator rewards
         axes[0, 0].plot(self.results['predator_rewards'], label='Predators', color='red')
         axes[0, 0].set_title('Predator Rewards')
         axes[0, 0].set_xlabel('Episode')
@@ -290,7 +269,6 @@ class MultiAgentExperiment(ExperimentRunner):
         axes[0, 0].grid(True, alpha=0.3)
         axes[0, 0].legend()
 
-        # Prey rewards
         axes[0, 1].plot(self.results['prey_rewards'], label='Prey', color='blue')
         axes[0, 1].set_title('Prey Rewards')
         axes[0, 1].set_xlabel('Episode')
@@ -298,14 +276,12 @@ class MultiAgentExperiment(ExperimentRunner):
         axes[0, 1].grid(True, alpha=0.3)
         axes[0, 1].legend()
 
-        # Capture rates
         axes[1, 0].plot(self.results['capture_rates'], color='green')
         axes[1, 0].set_title('Capture Rate')
         axes[1, 0].set_xlabel('Episode')
         axes[1, 0].set_ylabel('Capture Rate')
         axes[1, 0].grid(True, alpha=0.3)
 
-        # Combined rewards
         axes[1, 1].plot(self.results['predator_rewards'], label='Predators', color='red', alpha=0.7)
         axes[1, 1].plot(self.results['prey_rewards'], label='Prey', color='blue', alpha=0.7)
         axes[1, 1].set_title('Combined Rewards')
@@ -324,13 +300,11 @@ class CausalRLExperiment(ExperimentRunner):
     def __init__(self, config: Config, save_dir: str = "experiments"):
         super().__init__(config, save_dir)
 
-        # Environment setup
         self.env = CausalBanditEnvironment(
             n_arms=config.n_arms,
             n_contexts=config.n_contexts
         )
 
-        # Agent setup
         self.agent = CausalRLAgent(
             n_arms=config.n_arms,
             n_contexts=config.n_contexts,
@@ -357,10 +331,8 @@ class CausalRLExperiment(ExperimentRunner):
                 action = self.agent.select_action(obs)
                 next_obs, reward, done, _, info = self.env.step(action)
 
-                # Store experience
                 self.agent.store_transition(obs, action, reward, next_obs, done)
 
-                # Train agent
                 if len(self.agent.replay_buffer) > self.config.batch_size:
                     metrics = self.agent.train_step()
                     if metrics:
@@ -379,7 +351,6 @@ class CausalRLExperiment(ExperimentRunner):
 
         self.timer.stop()
 
-        # Store results
         self.results['episode_rewards'] = episode_rewards
         self.results['causal_discoveries'] = causal_discoveries
         self.results['counterfactual_regrets'] = counterfactual_regrets
@@ -392,14 +363,12 @@ class CausalRLExperiment(ExperimentRunner):
         """Plot causal RL experiment results"""
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
-        # Learning curve
         axes[0, 0].plot(self.results['episode_rewards'])
         axes[0, 0].set_title('Learning Curve')
         axes[0, 0].set_xlabel('Episode')
         axes[0, 0].set_ylabel('Reward')
         axes[0, 0].grid(True, alpha=0.3)
 
-        # Causal discoveries
         if self.results['causal_discoveries']:
             axes[0, 1].plot(self.results['causal_discoveries'])
             axes[0, 1].set_title('Causal Discovery Strength')
@@ -407,7 +376,6 @@ class CausalRLExperiment(ExperimentRunner):
             axes[0, 1].set_ylabel('Causal Strength')
             axes[0, 1].grid(True, alpha=0.3)
 
-        # Counterfactual regrets
         if self.results['counterfactual_regrets']:
             axes[1, 0].plot(self.results['counterfactual_regrets'])
             axes[1, 0].set_title('Counterfactual Regret')
@@ -415,7 +383,6 @@ class CausalRLExperiment(ExperimentRunner):
             axes[1, 0].set_ylabel('Regret')
             axes[1, 0].grid(True, alpha=0.3)
 
-        # Rolling average reward
         if len(self.results['episode_rewards']) > 10:
             rolling_avg = pd.Series(self.results['episode_rewards']).rolling(10).mean()
             axes[1, 1].plot(rolling_avg)
@@ -434,13 +401,11 @@ class QuantumRLExperiment(ExperimentRunner):
     def __init__(self, config: Config, save_dir: str = "experiments"):
         super().__init__(config, save_dir)
 
-        # Environment setup
         self.env = QuantumControlEnvironment(
             n_qubits=config.n_qubits,
             max_steps=config.max_steps
         )
 
-        # Agent setup
         state_dim = self.env.observation_space.shape[0]
         action_dim = self.env.action_space.shape[0]
         self.agent = QuantumRLAgent(
@@ -469,10 +434,8 @@ class QuantumRLExperiment(ExperimentRunner):
                 action = self.agent.select_action(obs)
                 next_obs, reward, done, _, info = self.env.step(action)
 
-                # Store experience
                 self.agent.store_transition(obs, action, reward, next_obs, done)
 
-                # Train agent
                 if len(self.agent.replay_buffer) > self.config.batch_size:
                     metrics = self.agent.train_step()
                     if metrics:
@@ -492,7 +455,6 @@ class QuantumRLExperiment(ExperimentRunner):
 
         self.timer.stop()
 
-        # Store results
         self.results['episode_rewards'] = episode_rewards
         self.results['fidelities'] = fidelities
         self.results['quantum_entropies'] = quantum_entropies
@@ -505,14 +467,12 @@ class QuantumRLExperiment(ExperimentRunner):
         """Plot quantum RL experiment results"""
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
-        # Learning curve
         axes[0, 0].plot(self.results['episode_rewards'])
         axes[0, 0].set_title('Learning Curve')
         axes[0, 0].set_xlabel('Episode')
         axes[0, 0].set_ylabel('Reward')
         axes[0, 0].grid(True, alpha=0.3)
 
-        # Final fidelities per episode
         final_fidelities = [self.results['fidelities'][i] for i in range(len(self.results['episode_rewards']))]
         axes[0, 1].plot(final_fidelities)
         axes[0, 1].set_title('Final Fidelity per Episode')
@@ -520,7 +480,6 @@ class QuantumRLExperiment(ExperimentRunner):
         axes[0, 1].set_ylabel('Fidelity')
         axes[0, 1].grid(True, alpha=0.3)
 
-        # Quantum entropy
         if self.results['quantum_entropies']:
             axes[1, 0].plot(self.results['quantum_entropies'])
             axes[1, 0].set_title('Quantum Entropy')
@@ -528,7 +487,6 @@ class QuantumRLExperiment(ExperimentRunner):
             axes[1, 0].set_ylabel('Entropy')
             axes[1, 0].grid(True, alpha=0.3)
 
-        # Reward vs Fidelity correlation
         axes[1, 1].scatter(final_fidelities, self.results['episode_rewards'], alpha=0.6)
         axes[1, 1].set_xlabel('Final Fidelity')
         axes[1, 1].set_ylabel('Episode Reward')
@@ -545,14 +503,12 @@ class FederatedRLExperiment(ExperimentRunner):
     def __init__(self, config: Config, save_dir: str = "experiments"):
         super().__init__(config, save_dir)
 
-        # Environment setup
         self.env = FederatedLearningEnvironment(
             n_clients=config.n_clients,
             data_size=config.data_size,
             heterogeneity=config.heterogeneity
         )
 
-        # Server setup
         self.server = FederatedRLServer(
             n_clients=config.n_clients,
             model_dim=1,  # Simple linear model
@@ -571,16 +527,13 @@ class FederatedRLExperiment(ExperimentRunner):
         for round_num in range(self.config.n_rounds):
             obs, _ = self.env.reset()
 
-            # Select clients to participate (simple strategy: random selection)
             n_selected = max(1, int(self.config.participation_rate * self.config.n_clients))
             selected_clients = np.random.choice(self.config.n_clients, n_selected, replace=False)
             action = np.zeros(self.config.n_clients)
             action[selected_clients] = 1
 
-            # Execute federated round
             next_obs, reward, done, _, info = self.env.step(action)
 
-            # Store and aggregate updates
             self.server.aggregate_updates(selected_clients, reward)
 
             global_losses.append(info['global_loss'])
@@ -594,7 +547,6 @@ class FederatedRLExperiment(ExperimentRunner):
 
         self.timer.stop()
 
-        # Store results
         self.results['global_losses'] = global_losses
         self.results['participation_rates'] = participation_rates
         self.results['communication_costs'] = communication_costs
@@ -607,28 +559,24 @@ class FederatedRLExperiment(ExperimentRunner):
         """Plot federated RL experiment results"""
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
-        # Global loss
         axes[0, 0].plot(self.results['global_losses'])
         axes[0, 0].set_title('Global Loss')
         axes[0, 0].set_xlabel('Round')
         axes[0, 0].set_ylabel('Loss')
         axes[0, 0].grid(True, alpha=0.3)
 
-        # Participation rates
         axes[0, 1].plot(self.results['participation_rates'])
         axes[0, 1].set_title('Participation Rate')
         axes[0, 1].set_xlabel('Round')
         axes[0, 1].set_ylabel('Participation Rate')
         axes[0, 1].grid(True, alpha=0.3)
 
-        # Communication costs
         axes[1, 0].plot(self.results['communication_costs'])
         axes[1, 0].set_title('Communication Cost')
         axes[1, 0].set_xlabel('Round')
         axes[1, 0].set_ylabel('Cost')
         axes[1, 0].grid(True, alpha=0.3)
 
-        # Loss vs Participation correlation
         axes[1, 1].scatter(self.results['participation_rates'], self.results['global_losses'], alpha=0.6)
         axes[1, 1].set_xlabel('Participation Rate')
         axes[1, 1].set_ylabel('Global Loss')
@@ -645,12 +593,10 @@ class SafetyExperiment(ExperimentRunner):
     def __init__(self, config: Config, save_dir: str = "experiments"):
         super().__init__(config, save_dir)
 
-        # Environment setup (using a simple continuous control task)
         self.env = ContinuousMountainCar()
         self.state_dim = self.env.observation_space.shape[0]
         self.action_dim = self.env.action_space.shape[0]
 
-        # Agent setup with safety constraints
         self.agent = ConstrainedPolicyOptimization(
             state_dim=self.state_dim,
             action_dim=self.action_dim,
@@ -659,7 +605,6 @@ class SafetyExperiment(ExperimentRunner):
             cost_limit=config.cost_limit
         )
 
-        # Safety monitor
         self.safety_monitor = SafetyMonitor(
             state_dim=self.state_dim,
             action_dim=self.action_dim,
@@ -686,19 +631,15 @@ class SafetyExperiment(ExperimentRunner):
             while not done:
                 action = self.agent.select_action(state)
 
-                # Check safety constraints
                 is_safe, cost = self.safety_monitor.check_safety(state, action)
                 if not is_safe:
                     violations += 1
-                    # Apply safety intervention
                     action = self.safety_monitor.intervene(state)
 
                 next_state, reward, done, _, _ = self.env.step(action)
 
-                # Store experience
                 self.agent.store_transition(state, action, reward, next_state, done, cost)
 
-                # Train agent
                 if len(self.agent.replay_buffer) > self.config.batch_size:
                     metrics = self.agent.train_step()
                     if metrics:
@@ -720,7 +661,6 @@ class SafetyExperiment(ExperimentRunner):
 
         self.timer.stop()
 
-        # Store results
         self.results['episode_rewards'] = episode_rewards
         self.results['episode_costs'] = episode_costs
         self.results['safety_violations'] = safety_violations
@@ -734,28 +674,24 @@ class SafetyExperiment(ExperimentRunner):
         """Plot safety experiment results"""
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
-        # Learning curve
         axes[0, 0].plot(self.results['episode_rewards'])
         axes[0, 0].set_title('Learning Curve')
         axes[0, 0].set_xlabel('Episode')
         axes[0, 0].set_ylabel('Reward')
         axes[0, 0].grid(True, alpha=0.3)
 
-        # Safety costs
         axes[0, 1].plot(self.results['episode_costs'])
         axes[0, 1].set_title('Safety Costs')
         axes[0, 1].set_xlabel('Episode')
         axes[0, 1].set_ylabel('Cost')
         axes[0, 1].grid(True, alpha=0.3)
 
-        # Safety violations
         axes[1, 0].plot(self.results['safety_violations'])
         axes[1, 0].set_title('Safety Violations')
         axes[1, 0].set_xlabel('Episode')
         axes[1, 0].set_ylabel('Number of Violations')
         axes[1, 0].grid(True, alpha=0.3)
 
-        # Constraint values
         if self.results['constraint_values']:
             axes[1, 1].plot(self.results['constraint_values'])
             axes[1, 1].set_title('Constraint Values')
@@ -792,7 +728,6 @@ class ComparativeExperiment(ExperimentRunner):
 
         self.timer.stop()
 
-        # Store comparative results
         self.results['comparative_results'] = all_results
         self.results['total_time'] = self.timer.get_elapsed()
         self.results['config'] = self.config.to_dict()
@@ -806,7 +741,6 @@ class ComparativeExperiment(ExperimentRunner):
 
         results = self.results['comparative_results']
 
-        # Extract rewards for comparison
         reward_curves = {}
         for name, exp_results in results.items():
             if 'episode_rewards' in exp_results:
@@ -822,7 +756,6 @@ def create_default_configs() -> Dict[str, Config]:
 
     configs = {}
 
-    # World Model Experiment
     configs['world_model'] = Config(
         n_episodes=100,
         batch_size=64,
@@ -832,7 +765,6 @@ def create_default_configs() -> Dict[str, Config]:
         goal_velocity=0.0
     )
 
-    # Multi-Agent Experiment
     configs['multi_agent'] = Config(
         n_episodes=100,
         batch_size=64,
@@ -844,7 +776,6 @@ def create_default_configs() -> Dict[str, Config]:
         max_steps=100
     )
 
-    # Causal RL Experiment
     configs['causal_rl'] = Config(
         n_episodes=100,
         batch_size=64,
@@ -855,7 +786,6 @@ def create_default_configs() -> Dict[str, Config]:
         max_steps=50
     )
 
-    # Quantum RL Experiment
     configs['quantum_rl'] = Config(
         n_episodes=50,
         batch_size=32,
@@ -865,7 +795,6 @@ def create_default_configs() -> Dict[str, Config]:
         max_steps=20
     )
 
-    # Federated RL Experiment
     configs['federated_rl'] = Config(
         n_rounds=100,
         n_clients=10,
@@ -875,7 +804,6 @@ def create_default_configs() -> Dict[str, Config]:
         participation_rate=0.5
     )
 
-    # Safety Experiment
     configs['safety'] = Config(
         n_episodes=100,
         batch_size=64,

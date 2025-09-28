@@ -26,11 +26,9 @@ import warnings
 from pathlib import Path
 
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Set plotting style
 plt.style.use("default")
 sns.set_palette("husl")
 
@@ -46,11 +44,9 @@ class TrajectoryBuffer:
         self.max_size = max_size
         self.device = device
 
-        # Storage
         self.trajectories: List[Dict[str, Any]] = []
         self.current_trajectory: Dict[str, Any] = self._new_trajectory()
 
-        # Statistics
         self.total_transitions = 0
         self.episode_count = 0
 
@@ -100,7 +96,6 @@ class TrajectoryBuffer:
     def _finish_trajectory(self):
         """Finish the current trajectory and store it."""
         if self.current_trajectory["states"]:  # Only if not empty
-            # Convert lists to numpy arrays for efficiency
             trajectory = {
                 "states": np.array(self.current_trajectory["states"]),
                 "actions": np.array(self.current_trajectory["actions"]),
@@ -115,11 +110,9 @@ class TrajectoryBuffer:
             self.trajectories.append(trajectory)
             self.episode_count += 1
 
-            # Maintain buffer size
             if len(self.trajectories) > self.max_size:
                 self.trajectories.pop(0)
 
-        # Start new trajectory
         self.current_trajectory = self._new_trajectory()
 
     def sample_trajectory(self) -> Optional[Dict[str, Any]]:
@@ -230,7 +223,6 @@ class MetricsTracker:
 
         values = [entry["value"] for entry in self.metrics[name]]
 
-        # Handle different value types
         if isinstance(values[0], (int, float)):
             return {
                 "mean": np.mean(values),
@@ -252,11 +244,9 @@ class MetricsTracker:
         if not history:
             return
 
-        # Extract data
         steps = [entry.get("step", i) for i, entry in enumerate(history)]
         values = [entry["value"] for entry in history]
 
-        # Only plot numeric values
         if not isinstance(values[0], (int, float)):
             logger.warning(f"Cannot plot non-numeric metric {name}")
             return
@@ -306,40 +296,30 @@ class ExperimentConfig:
     """
 
     def __init__(self, **kwargs):
-        # Default configurations
         self.config = {
-            # Environment
             "env_name": "CartPole-v1",
             "max_episode_steps": 1000,
-            # Agent
             "agent_type": "dqn",
             "learning_rate": 1e-3,
             "batch_size": 64,
             "gamma": 0.99,
-            # Training
             "num_episodes": 1000,
             "max_steps_per_episode": 1000,
             "eval_freq": 100,
             "save_freq": 500,
-            # Neural network
             "hidden_dims": [128, 128],
             "activation": "relu",
-            # Exploration
             "epsilon_start": 1.0,
             "epsilon_end": 0.01,
             "epsilon_decay": 0.995,
-            # Device
             "device": "cuda" if torch.cuda.is_available() else "cpu",
-            # Logging
             "log_dir": "./logs",
             "save_dir": "./checkpoints",
             "experiment_name": f"experiment_{int(time.time())}",
         }
 
-        # Update with provided kwargs
         self.config.update(kwargs)
 
-        # Create directories
         os.makedirs(self.config["log_dir"], exist_ok=True)
         os.makedirs(self.config["save_dir"], exist_ok=True)
 
@@ -458,16 +438,13 @@ def create_mlp_network(
     """
     layers = []
 
-    # Input layer
     layers.extend([nn.Linear(input_dim, hidden_dims[0]), get_activation(activation)])
 
-    # Hidden layers
     for i in range(len(hidden_dims) - 1):
         layers.extend(
             [nn.Linear(hidden_dims[i], hidden_dims[i + 1]), get_activation(activation)]
         )
 
-    # Output layer
     layers.append(nn.Linear(hidden_dims[-1], output_dim))
     if output_activation:
         layers.append(get_activation(output_activation))

@@ -130,14 +130,12 @@ class PrioritizedReplayBuffer:
             idxs.append(idx)
             priorities.append(priority)
 
-        # Calculate importance sampling weights
         sampling_probabilities = np.array(priorities) / self.tree.total()
         is_weights = np.power(
             self.experience_count * sampling_probabilities, -self.beta
         )
         is_weights /= is_weights.max()  # Normalize
 
-        # Increase beta towards 1
         self.beta = min(1.0, self.beta + self.beta_increment)
 
         return batch, idxs, is_weights
@@ -160,7 +158,6 @@ class PrioritizedDQNAgent(DQNAgent):
         super().__init__(state_size, action_size, **kwargs)
         self.agent_type = "Prioritized DQN"
 
-        # Override memory with prioritized buffer
         self.memory = PrioritizedReplayBuffer(
             capacity=(
                 self.memory.capacity if hasattr(self.memory, "capacity") else 10000
@@ -170,7 +167,6 @@ class PrioritizedDQNAgent(DQNAgent):
             beta_increment=1e-6,
         )
 
-        # Additional tracking for analysis
         self.priorities = []
         self.is_weights = []
         self.td_errors = []
@@ -180,52 +176,41 @@ class PrioritizedDQNAgent(DQNAgent):
         if len(self.memory) < self.batch_size:
             return None
 
-        # Sample batch with priorities
         experiences, idxs, is_weights = self.memory.sample(self.batch_size)
         batch = self.experience_to_batch(experiences)
 
         states, actions, rewards, next_states, dones = batch
 
-        # Convert importance sampling weights to tensor
         is_weights = torch.FloatTensor(is_weights).unsqueeze(1).to(device)
 
-        # Current Q values
         current_q_values = self.q_network(states).gather(1, actions)
 
-        # Target Q values
         with torch.no_grad():
             next_q_values = self.target_network(next_states)
             max_next_q_values = next_q_values.max(1)[0].unsqueeze(1)
             target_q_values = rewards + (self.gamma * max_next_q_values * (1 - dones))
 
-        # Compute TD errors
         td_errors = target_q_values - current_q_values
         td_errors_np = td_errors.detach().cpu().numpy().flatten()
 
-        # Update priorities
         self.memory.update_priorities(idxs, td_errors_np)
 
-        # Compute weighted loss
         loss = (
             is_weights * F.mse_loss(current_q_values, target_q_values, reduction="none")
         ).mean()
 
-        # Optimize
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
         self.optimizer.step()
 
-        # Update target network periodically
         self.step_count += 1
         if self.step_count % self.target_update_freq == 0:
             self.update_target_network()
 
-        # Decay epsilon
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-        # Store training metrics
         self.losses.append(loss.item())
         avg_q_value = current_q_values.mean().item()
         avg_target = target_q_values.mean().item()
@@ -251,7 +236,6 @@ class PERAnalysis:
         priorities_over_time = []
         td_errors_over_time = []
 
-        # Sample priorities at different training stages
         for i in range(0, len(agent.priorities), len(agent.priorities) // 10):
             if i + num_samples < len(agent.priorities):
                 priorities_over_time.append(agent.priorities[i : i + num_samples])
@@ -278,7 +262,6 @@ class PERAnalysis:
 
         fig, axes = plt.subplots(2, 3, figsize=(18, 10))
 
-        # 1. Priority distribution over time
         if analysis_data["priorities_over_time"]:
             for i, priorities in enumerate(analysis_data["priorities_over_time"]):
                 axes[0, 0].hist(
@@ -290,7 +273,6 @@ class PERAnalysis:
             axes[0, 0].legend()
             axes[0, 0].grid(True, alpha=0.3)
 
-        # 2. TD error vs Priority correlation
         if analysis_data["final_priorities"] and analysis_data["final_td_errors"]:
             axes[0, 1].scatter(
                 analysis_data["final_td_errors"],
@@ -304,7 +286,6 @@ class PERAnalysis:
             axes[0, 1].set_ylabel("Priority")
             axes[0, 1].grid(True, alpha=0.3)
 
-        # 3. Importance sampling weights distribution
         if hasattr(agent, "is_weights") and agent.is_weights:
             axes[0, 2].hist(agent.is_weights[-1000:], bins=30, alpha=0.7, color="green")
             axes[0, 2].set_title("Importance Sampling Weights Distribution")
@@ -312,7 +293,6 @@ class PERAnalysis:
             axes[0, 2].set_ylabel("Frequency")
             axes[0, 2].grid(True, alpha=0.3)
 
-        # 4. Priority evolution
         if agent.priorities:
             window = 100
             rolling_priorities = []
@@ -325,7 +305,6 @@ class PERAnalysis:
             axes[1, 0].set_ylabel("Average Priority")
             axes[1, 0].grid(True, alpha=0.3)
 
-        # 5. TD error evolution
         if agent.td_errors:
             window = 100
             rolling_td_errors = []
@@ -340,9 +319,7 @@ class PERAnalysis:
             axes[1, 1].set_ylabel("Average |TD Error|")
             axes[1, 1].grid(True, alpha=0.3)
 
-        # 6. Sampling efficiency
         if hasattr(agent, "memory") and hasattr(agent.memory, "tree"):
-            # Show how the tree evolves (simplified view)
             tree_values = agent.memory.tree.tree[:100]  # First 100 nodes
             axes[1, 2].bar(
                 range(len(tree_values)), tree_values, alpha=0.7, color="orange"
@@ -359,7 +336,6 @@ class PERAnalysis:
         """Compare Prioritized vs Uniform Experience Replay"""
         print("Comparing Prioritized vs Uniform Experience Replay...")
 
-        # Train both agents
         print("Training Uniform Replay DQN...")
         uniform_scores, _ = uniform_agent.train(
             env, num_episodes, print_every=num_episodes // 5
@@ -370,12 +346,10 @@ class PERAnalysis:
             env, num_episodes, print_every=num_episodes // 5
         )
 
-        # Visualize comparison
         fig, axes = plt.subplots(2, 2, figsize=(16, 10))
 
         episodes = range(len(uniform_scores))
 
-        # 1. Learning curves
         axes[0, 0].plot(
             episodes, uniform_scores, color="red", label="Uniform Replay", linewidth=2
         )
@@ -388,8 +362,6 @@ class PERAnalysis:
         axes[0, 0].legend()
         axes[0, 0].grid(True, alpha=0.3)
 
-        # 2. Sample efficiency (reward per training step)
-        # Approximate training steps (assuming similar batch sizes)
         training_steps = np.arange(len(uniform_scores)) * 100  # Rough estimate
 
         axes[0, 1].plot(
@@ -412,7 +384,6 @@ class PERAnalysis:
         axes[0, 1].legend()
         axes[0, 1].grid(True, alpha=0.3)
 
-        # 3. Final performance comparison
         final_window = 50
         uniform_final = uniform_scores[-final_window:]
         per_final = per_scores[-final_window:]
@@ -424,7 +395,6 @@ class PERAnalysis:
         axes[1, 0].set_ylabel("Episode Reward")
         axes[1, 0].grid(True, alpha=0.3)
 
-        # 4. Convergence analysis
         convergence_threshold = np.mean(per_scores[-50:]) * 0.9
 
         uniform_convergence = next(
@@ -453,7 +423,6 @@ class PERAnalysis:
         plt.tight_layout()
         plt.show()
 
-        # Print summary statistics
         print("\\nPER vs Uniform Replay Summary:")
         print("=" * 40)
         print(
@@ -466,18 +435,15 @@ class PERAnalysis:
         return uniform_scores, per_scores
 
 
-# Example usage and demonstration
 if __name__ == "__main__":
     print("Prioritized Experience Replay Implementation")
     print("=" * 50)
 
-    # Test SumTree
     tree = SumTree(10)
     for i in range(10):
         tree.add(i + 1, f"data_{i}")
     print(f"SumTree total: {tree.total()}")
 
-    # Test Prioritized Replay Buffer
     buffer = PrioritizedReplayBuffer(1000)
     for i in range(100):
         buffer.add((i, i + 1, i + 2, i + 3, i + 4))  # Dummy experience
@@ -487,7 +453,6 @@ if __name__ == "__main__":
     print(f"Sample indices: {idxs[:5]}...")
     print(f"IS weights shape: {weights.shape}")
 
-    # Test Prioritized DQN Agent
     agent = PrioritizedDQNAgent(state_size=4, action_size=2)
     print(f"Prioritized DQN Agent created: {agent.agent_type}")
 

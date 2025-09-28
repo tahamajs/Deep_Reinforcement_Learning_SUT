@@ -25,14 +25,11 @@ class DynaQAgent:
         self.epsilon = epsilon
         self.planning_steps = planning_steps
 
-        # Q-function
         self.Q = np.zeros((num_states, num_actions))
 
-        # Model components
         self.model = {}  # Dictionary to store (s,a) -> (r, s') mappings
         self.visited_state_actions = set()  # Track visited (s,a) pairs
 
-        # Learning statistics
         self.episode_rewards = []
         self.episode_lengths = []
         self.planning_updates = 0
@@ -63,14 +60,11 @@ class DynaQAgent:
             return
 
         for _ in range(self.planning_steps):
-            # Randomly sample a previously visited state-action pair
             state, action = random.choice(list(self.visited_state_actions))
 
-            # Get model prediction
             if (state, action) in self.model:
                 reward, next_state = self.model[(state, action)]
 
-                # Update Q-function with simulated experience
                 self.update_q_function(state, action, reward, next_state)
                 self.planning_updates += 1
 
@@ -81,18 +75,14 @@ class DynaQAgent:
         steps = 0
 
         for step in range(max_steps):
-            # Select and take action
             action = self.select_action(state)
             next_state, reward, done = env.step(action)
 
-            # Direct learning: update Q-function with real experience
             self.update_q_function(state, action, reward, next_state)
             self.direct_updates += 1
 
-            # Model learning: update model with real experience
             self.update_model(state, action, reward, next_state)
 
-            # Planning: perform planning updates
             self.planning_update()
 
             total_reward += reward
@@ -145,11 +135,9 @@ class DynaQPlusAgent(DynaQAgent):
         """Enhanced Q-learning update with exploration bonus"""
 
         if is_real_experience:
-            # Update visit time for real experiences
             self.last_visit_time[(state, action)] = self.current_time
             self.current_time += 1
 
-        # Add exploration bonus for planning updates
         exploration_bonus = 0
         if not is_real_experience and (state, action) in self.last_visit_time:
             time_since_visit = self.current_time - self.last_visit_time[(state, action)]
@@ -172,7 +160,6 @@ class DynaQPlusAgent(DynaQAgent):
             if (state, action) in self.model:
                 reward, next_state = self.model[(state, action)]
 
-                # Planning update with exploration bonus
                 self.update_q_function(
                     state, action, reward, next_state, is_real_experience=False
                 )
@@ -188,7 +175,6 @@ class DynaQPlusAgent(DynaQAgent):
             action = self.select_action(state)
             next_state, reward, done = env.step(action)
 
-            # Direct learning with real experience flag
             self.update_q_function(
                 state, action, reward, next_state, is_real_experience=True
             )
@@ -217,7 +203,6 @@ def demonstrate_dyna_q():
     print("Dyna-Q Algorithm Demonstration")
     print("=" * 50)
 
-    # Compare different agents
     agents = {
         "Q-Learning": DynaQAgent(25, 4, planning_steps=0),  # No planning
         "Dyna-Q (n=5)": DynaQAgent(25, 4, planning_steps=5),
@@ -225,7 +210,6 @@ def demonstrate_dyna_q():
         "Dyna-Q+ (n=5)": DynaQPlusAgent(25, 4, planning_steps=5, kappa=0.001),
     }
 
-    # Training on simple gridworld first
     print("\n1. Training on Simple GridWorld:")
     simple_env = SimpleGridWorld(size=5)
 
@@ -254,14 +238,12 @@ def demonstrate_dyna_q():
             "statistics": agent.get_statistics(),
         }
 
-    # Visualize learning curves
     plt.figure(figsize=(15, 10))
 
     plt.subplot(2, 2, 1)
     colors = ["blue", "red", "green", "orange"]
     for i, (name, data) in enumerate(results.items()):
         rewards = data["episode_rewards"]
-        # Smooth the rewards
         smoothed = pd.Series(rewards).rolling(window=10).mean()
         plt.plot(smoothed, label=name, color=colors[i], linewidth=2)
 
@@ -271,7 +253,6 @@ def demonstrate_dyna_q():
     plt.legend()
     plt.grid(True, alpha=0.3)
 
-    # Show update statistics
     plt.subplot(2, 2, 2)
     agent_names = list(results.keys())
     direct_updates = [
@@ -294,11 +275,9 @@ def demonstrate_dyna_q():
     plt.legend()
     plt.grid(True, alpha=0.3)
 
-    # Test on blocking maze
     print("\n2. Testing on Blocking Maze (Environment Change):")
     maze_env = BlockingMaze(change_episode=100)
 
-    # Create fresh agents for maze test
     maze_agents = {
         "Dyna-Q": DynaQAgent(
             maze_env.num_states, maze_env.num_actions, planning_steps=50
@@ -313,7 +292,6 @@ def demonstrate_dyna_q():
 
     for name, agent in maze_agents.items():
         print(f"\nTraining {name} on Blocking Maze...")
-        # Reset environment episode counter
         maze_env.episode_count = 0
 
         for episode in range(n_episodes):
@@ -327,7 +305,6 @@ def demonstrate_dyna_q():
             "episode_lengths": agent.episode_lengths.copy(),
         }
 
-    # Plot maze results
     plt.subplot(2, 2, 3)
     for name, data in maze_results.items():
         rewards = data["episode_rewards"]
@@ -362,7 +339,6 @@ def demonstrate_dyna_q():
     plt.savefig("visualizations/dyna_q_comparison.png", dpi=300, bbox_inches="tight")
     plt.show()
 
-    # Analysis and insights
     print("\n3. Key Insights from Dyna-Q Experiments:")
     print("\nSimple GridWorld Results:")
     for name, data in results.items():
@@ -376,7 +352,6 @@ def demonstrate_dyna_q():
 
     print("\nBlocking Maze Results (Adaptability):")
     for name, data in maze_results.items():
-        # Performance before and after change
         before_change = np.mean(data["episode_rewards"][80:100])
         after_change = np.mean(data["episode_rewards"][120:140])
         adaptation_speed = after_change - min(data["episode_rewards"][100:120])

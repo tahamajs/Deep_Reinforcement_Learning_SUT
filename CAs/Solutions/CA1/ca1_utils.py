@@ -13,11 +13,9 @@ def set_seed(seed: int = 42) -> None:
     random.seed(seed)
 
 
-# Device selection
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-# Configure plotting style (nice for notebooks)
 plt.style.use("seaborn-v0_8")
 sns.set_palette("husl")
 
@@ -46,7 +44,7 @@ def gym_step(env, action: Any) -> Tuple[np.ndarray, float, bool, dict]:
 
     Returns: next_state, reward, done, info
     """
-    # Handle case where agent returns a tuple (e.g., Actor-Critic returns action and log_prob)
+
     if isinstance(action, tuple):
         action_to_env = action[0]
     else:
@@ -55,7 +53,7 @@ def gym_step(env, action: Any) -> Tuple[np.ndarray, float, bool, dict]:
     result = env.step(action_to_env)
     if len(result) == 4:
         next_state, reward, done, info = result
-    else:  # new API: (obs, reward, terminated, truncated, info)
+    else:
         next_state, reward, terminated, truncated, info = result
         done = terminated or truncated
     return np.array(next_state, dtype=np.float32), float(reward), bool(done), info

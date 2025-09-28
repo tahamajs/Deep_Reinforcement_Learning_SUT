@@ -27,11 +27,9 @@ class BiasDetector:
         self.protected_attributes = protected_attributes
         self.device = device
 
-        # Bias tracking
         self.decision_history = defaultdict(list)
         self.bias_metrics = {}
 
-        # Statistical tests
         self.significance_threshold = 0.05
 
     def record_decision(
@@ -75,7 +73,6 @@ class BiasDetector:
         """Compute bias metrics for a specific attribute."""
         attr_data = {}
 
-        # Group decisions by attribute value
         for key, decisions in self.decision_history.items():
             attr_name, attr_value = key
             if attr_name == attribute:
@@ -84,12 +81,10 @@ class BiasDetector:
         if len(attr_data) < 2:
             return {"insufficient_data": True}
 
-        # Compute decision distribution differences
         decision_distributions = {}
         outcome_distributions = {}
 
         for attr_value, decisions in attr_data.items():
-            # Decision distribution
             decision_counts = defaultdict(int)
             outcome_counts = defaultdict(int)
 
@@ -109,7 +104,6 @@ class BiasDetector:
                     k: v / total_outcomes for k, v in outcome_counts.items()
                 }
 
-        # Statistical tests for bias
         bias_indicators = self._statistical_bias_tests(
             decision_distributions, outcome_distributions
         )
@@ -125,8 +119,6 @@ class BiasDetector:
         self, decision_dist: Dict, outcome_dist: Dict
     ) -> Dict[str, Any]:
         """Perform statistical tests for bias detection."""
-        # Simplified bias detection
-        # In practice, would use proper statistical tests (chi-square, etc.)
 
         indicators = {
             "decision_disparity": self._compute_distribution_disparity(decision_dist),
@@ -145,7 +137,6 @@ class BiasDetector:
         if len(distributions) < 2:
             return 0.0
 
-        # Simple disparity measure (max difference in decision rates)
         all_decisions = set()
         for dist in distributions.values():
             all_decisions.update(dist.keys())
@@ -160,7 +151,6 @@ class BiasDetector:
 
     def _compute_representation_bias(self, distributions: Dict) -> float:
         """Compute representation bias."""
-        # Check if decisions are equally distributed across groups
         group_sizes = [sum(dist.values()) for dist in distributions.values()]
 
         if not group_sizes:
@@ -270,7 +260,6 @@ class FairnessEvaluator:
                     predictions, sensitive_attributes
                 )
 
-        # Record evaluation
         self.evaluation_history.append(
             {
                 "timestamp": time.time(),
@@ -285,7 +274,6 @@ class FairnessEvaluator:
         self, predictions: torch.Tensor, sensitive_attrs: torch.Tensor
     ) -> float:
         """Compute demographic parity difference."""
-        # P(Y=1 | A=0) - P(Y=1 | A=1)
         groups = torch.unique(sensitive_attrs)
 
         if len(groups) < 2:
@@ -310,7 +298,6 @@ class FairnessEvaluator:
         sensitive_attrs: torch.Tensor,
     ) -> float:
         """Compute equal opportunity difference."""
-        # P(Y=1 | A=0, Y_true=1) - P(Y=1 | A=1, Y_true=1)
         groups = torch.unique(sensitive_attrs)
 
         if len(groups) < 2:
@@ -332,10 +319,7 @@ class FairnessEvaluator:
         self, predictions: torch.Tensor, sensitive_attrs: torch.Tensor
     ) -> float:
         """Simplified fairness through awareness metric."""
-        # This is a complex metric - simplified implementation
-        # In practice, would require access to all relevant attributes
 
-        # Simple proxy: correlation between predictions and sensitive attributes
         pred_mean = predictions.mean()
         attr_mean = sensitive_attrs.float().mean()
 
@@ -378,7 +362,6 @@ class FairnessEvaluator:
             scores = [eval_data["scores"].get(metric, 0) for eval_data in evaluations]
 
             if len(scores) >= 2:
-                # Simple trend analysis
                 first_half = np.mean(scores[: len(scores) // 2])
                 second_half = np.mean(scores[len(scores) // 2 :])
 
@@ -434,7 +417,6 @@ class EthicsChecker:
         )
         self.fairness_evaluator = FairnessEvaluator()
 
-        # Ethical guidelines
         if ethical_guidelines is None:
             ethical_guidelines = [
                 "beneficence",
@@ -450,11 +432,9 @@ class EthicsChecker:
         self.ethical_guidelines = ethical_guidelines
         self.guideline_scores = {guideline: 0.0 for guideline in ethical_guidelines}
 
-        # Ethics monitoring
         self.ethics_violations = []
         self.monitoring_active = False
 
-        # Logging
         self.logger = logging.getLogger("EthicsChecker")
         self.logger.setLevel(logging.INFO)
 
@@ -486,14 +466,12 @@ class EthicsChecker:
             "recommendations": [],
         }
 
-        # Bias evaluation
         if sensitive_attrs is not None and predictions is not None:
             fairness_scores = self.fairness_evaluator.evaluate_fairness(
                 predictions, sensitive_attrs, labels
             )
             results["fairness_scores"] = fairness_scores
 
-            # Check for fairness violations
             for metric, score in fairness_scores.items():
                 if score > 0.15:  # Threshold for concern
                     results["violations"].append(
@@ -501,7 +479,6 @@ class EthicsChecker:
                     )
                     results["ethical_score"] -= 0.2
 
-        # Guideline compliance
         guideline_compliance = self._check_guideline_compliance(state, action)
         results["guideline_compliance"] = guideline_compliance
 
@@ -510,13 +487,10 @@ class EthicsChecker:
                 results["violations"].append(f"Guideline violation: {guideline}")
                 results["ethical_score"] -= 0.1
 
-        # Overall ethical score (0-1 scale, higher is better)
         results["ethical_score"] = max(0.0, min(1.0, 0.5 - results["ethical_score"]))
 
-        # Generate recommendations
         results["recommendations"] = self._generate_ethics_recommendations(results)
 
-        # Record violations
         if results["violations"]:
             self.ethics_violations.append(results)
 
@@ -528,24 +502,17 @@ class EthicsChecker:
         """Check compliance with ethical guidelines."""
         compliance = {}
 
-        # Simplified guideline checks (would be more sophisticated in practice)
 
-        # Beneficence: Does the action provide benefit?
         compliance["beneficence"] = self._check_beneficence(state, action)
 
-        # Non-maleficence: Does the action avoid harm?
         compliance["non_maleficence"] = self._check_non_maleficence(state, action)
 
-        # Autonomy: Does the action respect user autonomy?
         compliance["autonomy"] = self._check_autonomy(state, action)
 
-        # Justice: Is the action fair?
         compliance["justice"] = self._check_justice(state, action)
 
-        # Safety: Is the action safe?
         compliance["safety"] = self._check_safety(state, action)
 
-        # Other guidelines (simplified)
         compliance["explicability"] = True  # Assume explainable by default
         compliance["fairness"] = True  # Checked separately
         compliance["privacy"] = True  # Assume private by default
@@ -554,31 +521,25 @@ class EthicsChecker:
 
     def _check_beneficence(self, state: Dict[str, Any], action: Any) -> bool:
         """Check if action provides benefit."""
-        # Domain-specific logic would go here
         return True  # Simplified
 
     def _check_non_maleficence(self, state: Dict[str, Any], action: Any) -> bool:
         """Check if action avoids harm."""
-        # Check for obviously harmful actions
         if isinstance(action, dict):
-            # Example: check for dangerous speed in autonomous driving
             if "speed" in action and action["speed"] > 50:
                 return False
         return True
 
     def _check_autonomy(self, state: Dict[str, Any], action: Any) -> bool:
         """Check if action respects autonomy."""
-        # Check if overriding user preferences
         return True  # Simplified
 
     def _check_justice(self, state: Dict[str, Any], action: Any) -> bool:
         """Check if action is fair."""
-        # Would integrate with fairness evaluator
         return True  # Simplified
 
     def _check_safety(self, state: Dict[str, Any], action: Any) -> bool:
         """Check if action is safe."""
-        # Basic safety checks
         return True  # Simplified
 
     def _generate_ethics_recommendations(self, evaluation: Dict[str, Any]) -> List[str]:

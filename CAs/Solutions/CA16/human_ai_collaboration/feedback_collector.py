@@ -16,7 +16,6 @@ import threading
 import time
 from .preference_model import HumanFeedback, HumanPreference
 
-# Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -32,7 +31,6 @@ class HumanFeedbackCollector:
         self.feedback_buffer = defaultdict(list)
         self.feedback_stats = defaultdict(int)
 
-        # Quality assessment
         self.feedback_quality_scores = []
 
     def collect_feedback(self, feedback: HumanFeedback) -> bool:
@@ -44,7 +42,6 @@ class HumanFeedbackCollector:
         self.feedback_buffer[feedback.feedback_type].append(feedback)
         self.feedback_stats[feedback.feedback_type] += 1
 
-        # Assess feedback quality
         quality_score = self._assess_feedback_quality(feedback)
         self.feedback_quality_scores.append(quality_score)
 
@@ -52,17 +49,13 @@ class HumanFeedbackCollector:
 
     def _assess_feedback_quality(self, feedback: HumanFeedback) -> float:
         """Assess the quality of feedback (to be overridden by subclasses)."""
-        # Basic quality assessment based on feedback type and content
         if feedback.feedback_type == "preference":
-            # Preferences should have clear A/B distinction
             if hasattr(feedback.content, "preferred"):
                 return 1.0 if feedback.content.preferred in ["A", "B"] else 0.5
         elif feedback.feedback_type == "demonstration":
-            # Demonstrations should have trajectory data
             if isinstance(feedback.content, dict) and "states" in feedback.content:
                 return 1.0
         elif feedback.feedback_type == "correction":
-            # Corrections should specify what was wrong
             return 0.8  # Assume reasonable quality
 
         return 0.5  # Default quality
@@ -75,7 +68,6 @@ class HumanFeedbackCollector:
         if len(feedback_list) < batch_size:
             return feedback_list.copy()
 
-        # Return random sample
         indices = np.random.choice(len(feedback_list), batch_size, replace=False)
         return [feedback_list[i] for i in indices]
 
@@ -119,7 +111,6 @@ class InteractiveFeedbackCollector(HumanFeedbackCollector):
         self.is_collecting = False
         self.collection_thread = None
 
-        # Interactive settings
         self.query_frequency = 10  # Query every N steps
         self.max_wait_time = 30  # Maximum wait time for feedback in seconds
 
@@ -148,10 +139,8 @@ class InteractiveFeedbackCollector(HumanFeedbackCollector):
         while self.is_collecting:
             step_count += 1
 
-            # Get current state from environment
             current_state = environment_interface.get_current_state()
 
-            # Decide whether to query for feedback
             if step_count % self.query_frequency == 0:
                 self._query_feedback(current_state, environment_interface)
 
@@ -159,16 +148,13 @@ class InteractiveFeedbackCollector(HumanFeedbackCollector):
 
     def _query_feedback(self, state, environment_interface):
         """Query human for feedback on current state."""
-        # Generate feedback query
         query = self._generate_feedback_query(state)
 
-        # Send query to human (through callback or interface)
         if self.feedback_callback:
             feedback = self.feedback_callback(query)
             if feedback:
                 self.collect_feedback(feedback)
         else:
-            # Default behavior: simulate feedback for demonstration
             self._simulate_feedback(state)
 
     def _generate_feedback_query(self, state) -> Dict[str, Any]:
@@ -183,12 +169,10 @@ class InteractiveFeedbackCollector(HumanFeedbackCollector):
 
     def _simulate_feedback(self, state):
         """Simulate human feedback for demonstration purposes."""
-        # Random feedback simulation
         feedback_types = ["preference", "correction", "demonstration"]
         feedback_type = np.random.choice(feedback_types)
 
         if feedback_type == "preference":
-            # Simulate preference between current and random trajectory
             preference = HumanPreference(
                 option_a={"states": [state], "actions": [0], "rewards": [0.0]},
                 option_b={
@@ -231,7 +215,6 @@ class FeedbackAggregator:
         self.aggregation_method = aggregation_method
         self.feedback_sources = {}
 
-        # Aggregation statistics
         self.agreement_scores = []
         self.confidence_scores = []
 
@@ -248,13 +231,11 @@ class FeedbackAggregator:
         for traj_a, traj_b in trajectory_pairs:
             preferences = []
 
-            # Collect preferences from all sources
             for source_id, collector in self.feedback_sources.items():
                 source_preferences = collector.get_feedback_batch(
                     "preference", batch_size=100
                 )
 
-                # Find relevant preferences for this pair
                 for pref_feedback in source_preferences:
                     pref = pref_feedback.content
                     if self._trajectories_match(
@@ -290,7 +271,6 @@ class FeedbackAggregator:
         elif self.aggregation_method == "confidence_weighted":
             return self._confidence_weighted_aggregation(preferences)
         else:
-            # Default to first preference
             return preferences[0][0]
 
     def _majority_vote_aggregation(
@@ -302,13 +282,10 @@ class FeedbackAggregator:
         for pref, _ in preferences:
             votes[pref.preferred] += 1
 
-        # Find majority
         majority_preferred = max(votes, key=votes.get)
 
-        # Average confidence
         avg_confidence = np.mean([pref.confidence for pref, _ in preferences])
 
-        # Create aggregated preference
         aggregated = HumanPreference(
             option_a=preferences[0][0].option_a,
             option_b=preferences[0][0].option_b,
@@ -317,7 +294,6 @@ class FeedbackAggregator:
             context={"num_sources": len(preferences), "votes": votes},
         )
 
-        # Store agreement score
         total_votes = sum(votes.values())
         agreement = votes[majority_preferred] / total_votes if total_votes > 0 else 0
         self.agreement_scores.append(agreement)
@@ -336,13 +312,11 @@ class FeedbackAggregator:
             weighted_votes[pref.preferred] += weight
             total_weight += weight
 
-        # Find weighted majority
         if total_weight > 0:
             majority_preferred = max(weighted_votes, key=weighted_votes.get)
         else:
             majority_preferred = "equal"
 
-        # Average confidence
         avg_confidence = np.mean([pref.confidence for pref, _ in preferences])
 
         aggregated = HumanPreference(
@@ -401,14 +375,12 @@ class FeedbackQualityAssessor:
         """Extract features for quality assessment."""
         features = []
 
-        # Feedback type (one-hot encoded)
         type_features = [
             1.0 if feedback.feedback_type == t else 0.0
             for t in ["preference", "correction", "demonstration", "rating", "comment"]
         ]
         features.extend(type_features)
 
-        # Content complexity (length-based)
         if hasattr(feedback.content, "__len__"):
             content_length = (
                 len(feedback.content)
@@ -419,10 +391,8 @@ class FeedbackQualityAssessor:
         else:
             features.append(0.5)
 
-        # Has timestamp
         features.append(1.0 if feedback.timestamp > 0 else 0.0)
 
-        # Has user ID
         features.append(1.0 if feedback.user_id is not None else 0.0)
 
         return features

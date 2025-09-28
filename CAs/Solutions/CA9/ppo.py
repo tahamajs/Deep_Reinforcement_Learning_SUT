@@ -108,19 +108,15 @@ class PPOAgent:
         self.value_coeff = value_coeff
         self.gae_lambda = gae_lambda
 
-        # Networks
         self.actor = ActorNetwork(state_dim, action_dim).to(device)
         self.critic = CriticNetwork(state_dim).to(device)
 
-        # Optimizer
         self.optimizer = optim.Adam(
             list(self.actor.parameters()) + list(self.critic.parameters()), lr=lr
         )
 
-        # Experience buffer
         self.buffer = PPOBuffer(buffer_size)
 
-        # Training metrics
         self.episode_rewards = []
         self.policy_losses = []
         self.value_losses = []
@@ -145,26 +141,20 @@ class PPOAgent:
         if len(self.buffer) < self.batch_size:
             return
 
-        # Get the last state value for GAE computation
         last_state = torch.FloatTensor(self.buffer.states[-1]).unsqueeze(0).to(device)
         with torch.no_grad():
             last_value = (
                 self.critic(last_state).item() if not self.buffer.dones[-1] else 0
             )
 
-        # Compute advantages using GAE
         self.buffer.compute_gae_advantages(last_value, self.gamma, self.gae_lambda)
 
-        # Get batch data
         states, actions, advantages, returns, old_log_probs = self.buffer.get_batch()
 
-        # Normalize advantages
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
-        # Update for k epochs
         for epoch in range(self.k_epochs):
 
-            # Create mini-batches
             batch_indices = torch.randperm(len(states))
 
             for start in range(0, len(states), self.batch_size):
@@ -177,42 +167,33 @@ class PPOAgent:
                 batch_returns = returns[batch_idx]
                 batch_old_log_probs = old_log_probs[batch_idx]
 
-                # Current policy evaluation
                 action_probs = self.actor(batch_states)
                 dist = Categorical(action_probs)
                 new_log_probs = dist.log_prob(batch_actions)
                 entropy = dist.entropy().mean()
 
-                # Current value estimates
                 values = self.critic(batch_states).squeeze()
 
-                # Probability ratio
                 ratio = torch.exp(new_log_probs - batch_old_log_probs)
 
-                # Surrogate losses
                 surr1 = ratio * batch_advantages
                 surr2 = (
                     torch.clamp(ratio, 1 - self.eps_clip, 1 + self.eps_clip)
                     * batch_advantages
                 )
 
-                # Policy loss (negative because we want to maximize)
                 policy_loss = -torch.min(surr1, surr2).mean()
 
-                # Value loss
                 value_loss = F.mse_loss(values, batch_returns)
 
-                # Entropy loss (negative because we want to maximize entropy)
                 entropy_loss = -entropy
 
-                # Combined loss
                 total_loss = (
                     policy_loss
                     + self.value_coeff * value_loss
                     + self.entropy_coeff * entropy_loss
                 )
 
-                # Optimization step
                 self.optimizer.zero_grad()
                 total_loss.backward()
                 torch.nn.utils.clip_grad_norm_(
@@ -221,23 +202,18 @@ class PPOAgent:
                 )
                 self.optimizer.step()
 
-                # Store metrics
                 with torch.no_grad():
-                    # Clipping statistics
                     clip_fraction = ((ratio - 1.0).abs() > self.eps_clip).float().mean()
                     self.clip_fractions.append(clip_fraction.item())
 
-                    # KL divergence (approximation)
                     kl_div = (batch_old_log_probs - new_log_probs).mean()
                     self.kl_divergences.append(kl_div.item())
 
-        # Store epoch metrics
         self.policy_losses.append(policy_loss.item())
         self.value_losses.append(value_loss.item())
         self.entropy_losses.append(entropy_loss.item())
         self.total_losses.append(total_loss.item())
 
-        # Clear buffer
         self.buffer.clear()
 
     def train_episode(self, env, max_steps=1000):
@@ -251,13 +227,11 @@ class PPOAgent:
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
 
-            # Store experience
             self.buffer.store(state, action, reward, value, log_prob, done)
 
             total_reward += reward
             steps += 1
 
-            # Update if buffer is full
             if len(self.buffer) >= self.buffer.capacity or done:
                 self.update()
                 if done:
@@ -320,7 +294,6 @@ class AdvancedPolicyGradientAnalyzer:
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.n
 
-        # All methods
         methods = {
             "REINFORCE": REINFORCEAgent(state_dim, action_dim, lr=1e-3),
             "REINFORCE + Baseline": BaselineREINFORCEAgent(
@@ -347,7 +320,6 @@ class AdvancedPolicyGradientAnalyzer:
                     avg_reward = np.mean(agent.episode_rewards[-10:])
                     print(f"  Episode {episode+1}: Avg Reward = {avg_reward:.1f}")
 
-            # Evaluation
             eval_results = agent.evaluate(env, 15)
 
             results[name] = {
@@ -363,7 +335,6 @@ class AdvancedPolicyGradientAnalyzer:
 
         env.close()
 
-        # Comprehensive visualization
         self.visualize_comprehensive_comparison(results)
 
         return results
@@ -374,7 +345,6 @@ class AdvancedPolicyGradientAnalyzer:
         fig, axes = plt.subplots(3, 3, figsize=(20, 15))
         colors = ["blue", "red", "green", "orange", "purple"]
 
-        # 1. Learning curves
         ax = axes[0, 0]
         for i, (name, data) in enumerate(results.items()):
             agent = data["agent"]
@@ -389,7 +359,6 @@ class AdvancedPolicyGradientAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 2. Sample efficiency (episodes to reach threshold)
         ax = axes[0, 1]
         threshold = 450  # CartPole threshold
         convergence_episodes = []
@@ -399,7 +368,6 @@ class AdvancedPolicyGradientAnalyzer:
             agent = data["agent"]
             rewards = agent.episode_rewards
 
-            # Find first episode where agent consistently reaches threshold
             for i in range(10, len(rewards)):
                 if np.mean(rewards[i - 5 : i]) >= threshold:
                     convergence_episodes.append(i)
@@ -415,7 +383,6 @@ class AdvancedPolicyGradientAnalyzer:
         ax.tick_params(axis="x", rotation=45)
         ax.grid(True, alpha=0.3)
 
-        # 3. Final performance
         ax = axes[0, 2]
         final_perfs = [data["final_performance"] for data in results.values()]
         eval_means = [
@@ -447,7 +414,6 @@ class AdvancedPolicyGradientAnalyzer:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 4. Training stability
         ax = axes[1, 0]
         stabilities = [data["training_stability"] for data in results.values()]
         bars = ax.bar(method_names, stabilities, color=colors, alpha=0.7)
@@ -456,7 +422,6 @@ class AdvancedPolicyGradientAnalyzer:
         ax.tick_params(axis="x", rotation=45)
         ax.grid(True, alpha=0.3)
 
-        # 5. Loss evolution (for methods that have it)
         ax = axes[1, 1]
         loss_methods = {}
 
@@ -479,7 +444,6 @@ class AdvancedPolicyGradientAnalyzer:
         ax.grid(True, alpha=0.3)
         ax.set_yscale("log")
 
-        # 6. PPO specific metrics (if available)
         ax = axes[1, 2]
         ppo_agent = None
         for name, data in results.items():
@@ -507,14 +471,12 @@ class AdvancedPolicyGradientAnalyzer:
             ax2.set_ylabel("KL Divergence", color="red")
             ax.set_title("PPO Training Metrics")
 
-            # Combine legends
             lines = line1 + line2
             labels = [l.get_label() for l in lines]
             ax.legend(lines, labels, loc="upper right")
 
         ax.grid(True, alpha=0.3)
 
-        # 7. Method characteristics heatmap
         ax = axes[2, 0]
 
         characteristics = [
@@ -525,7 +487,6 @@ class AdvancedPolicyGradientAnalyzer:
             "Final Performance",
         ]
 
-        # Scores (1-5, higher is better)
         scores = {
             "REINFORCE": [2, 2, 5, 2, 3],
             "REINFORCE + Baseline": [3, 3, 4, 3, 3],
@@ -534,7 +495,6 @@ class AdvancedPolicyGradientAnalyzer:
             "PPO": [5, 5, 2, 4, 5],
         }
 
-        # Create heatmap data
         heatmap_data = np.array([scores[method] for method in method_names])
         im = ax.imshow(heatmap_data.T, cmap="RdYlGn", aspect="auto", vmin=1, vmax=5)
 
@@ -543,7 +503,6 @@ class AdvancedPolicyGradientAnalyzer:
         ax.set_yticks(np.arange(len(characteristics)))
         ax.set_yticklabels(characteristics)
 
-        # Add text annotations
         for i in range(len(method_names)):
             for j in range(len(characteristics)):
                 text = ax.text(
@@ -558,7 +517,6 @@ class AdvancedPolicyGradientAnalyzer:
 
         ax.set_title("Method Characteristics (1-5 Scale)")
 
-        # 8. Performance vs Complexity
         ax = axes[2, 1]
         complexities = [5, 4, 3, 3, 2]  # Lower is better
         performances = final_perfs
@@ -580,7 +538,6 @@ class AdvancedPolicyGradientAnalyzer:
         ax.set_title("Performance vs Implementation Complexity")
         ax.grid(True, alpha=0.3)
 
-        # 9. Summary statistics
         ax = axes[2, 2]
         ax.axis("off")
 
@@ -621,7 +578,6 @@ Key Insights:
         plt.tight_layout()
         plt.show()
 
-        # Print detailed summary
         print("\n" + "=" * 60)
         print("COMPREHENSIVE POLICY GRADIENT ANALYSIS")
         print("=" * 60)

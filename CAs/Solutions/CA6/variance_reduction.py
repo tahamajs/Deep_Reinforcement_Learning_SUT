@@ -1,4 +1,3 @@
-# Variance Reduction Techniques for Policy Gradients
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -20,7 +19,6 @@ class VarianceReductionAgent:
         self.action_dim = action_dim
         self.gamma = gamma
 
-        # Policy network
         self.policy_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -29,7 +27,6 @@ class VarianceReductionAgent:
             nn.Linear(hidden_dim, action_dim),
         ).to(device)
 
-        # Value network for baseline
         self.value_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -41,7 +38,6 @@ class VarianceReductionAgent:
         self.policy_optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
         self.value_optimizer = optim.Adam(self.value_net.parameters(), lr=lr)
 
-        # Logging
         self.episode_rewards = []
         self.policy_losses = []
         self.value_losses = []
@@ -92,7 +88,7 @@ class VarianceReductionAgent:
 
         for t in reversed(range(len(rewards))):
             if t == len(rewards) - 1:
-                next_value = 0  # Terminal state
+                next_value = 0
             else:
                 next_value = next_values[t]
 
@@ -106,7 +102,6 @@ class VarianceReductionAgent:
         """Update policy using baseline for variance reduction"""
         returns = self.compute_returns(rewards)
 
-        # Update baseline (value function)
         states_tensor = torch.FloatTensor(states).to(device)
         returns_tensor = torch.FloatTensor(returns).to(device)
 
@@ -117,14 +112,12 @@ class VarianceReductionAgent:
         value_loss.backward()
         self.value_optimizer.step()
 
-        # Compute advantages using baseline
         advantages = []
         for i, state in enumerate(states):
             baseline = self.get_baseline(state)
             advantage = returns[i] - baseline
             advantages.append(advantage)
 
-        # Update policy using advantages
         advantages_tensor = torch.FloatTensor(advantages).to(device)
         actions_tensor = torch.LongTensor(actions).to(device)
         states_tensor = torch.FloatTensor(states).to(device)
@@ -139,7 +132,6 @@ class VarianceReductionAgent:
         policy_loss.backward()
         self.policy_optimizer.step()
 
-        # Logging
         self.policy_losses.append(policy_loss.item())
         self.value_losses.append(value_loss.item())
         self.baseline_values.extend([self.get_baseline(s) for s in states])
@@ -148,16 +140,12 @@ class VarianceReductionAgent:
 
     def update_with_gae(self, states, actions, rewards, next_states, dones, tau=0.95):
         """Update policy using Generalized Advantage Estimation (GAE)"""
-        # Get values for GAE
-        values = [self.get_baseline(s) for s in states]
-        next_values = [self.get_baseline(s) for s in next_states] + [
-            0
-        ]  # Terminal value = 0
 
-        # Compute GAE advantages
+        values = [self.get_baseline(s) for s in states]
+        next_values = [self.get_baseline(s) for s in next_states] + [0]
+
         advantages = self.compute_gae(rewards, values, next_values[:-1], dones, tau)
 
-        # Update value function
         returns = [adv + val for adv, val in zip(advantages, values)]
 
         states_tensor = torch.FloatTensor(states).to(device)
@@ -170,7 +158,6 @@ class VarianceReductionAgent:
         value_loss.backward()
         self.value_optimizer.step()
 
-        # Update policy using GAE advantages
         advantages_tensor = torch.FloatTensor(advantages).to(device)
         actions_tensor = torch.LongTensor(actions).to(device)
         states_tensor = torch.FloatTensor(states).to(device)
@@ -185,7 +172,6 @@ class VarianceReductionAgent:
         policy_loss.backward()
         self.policy_optimizer.step()
 
-        # Logging
         self.policy_losses.append(policy_loss.item())
         self.value_losses.append(value_loss.item())
 
@@ -211,7 +197,6 @@ class VarianceReductionAgent:
             if terminated or truncated:
                 break
 
-        # Update with baseline
         policy_loss, value_loss = self.update_with_baseline(states, actions, rewards)
 
         self.episode_rewards.append(episode_reward)
@@ -240,7 +225,6 @@ class VarianceReductionAgent:
             if terminated or truncated:
                 break
 
-        # Update with GAE
         policy_loss, value_loss = self.update_with_gae(
             states, actions, rewards, next_states, dones, tau
         )
@@ -260,7 +244,6 @@ class ControlVariatesAgent:
         self.action_dim = action_dim
         self.gamma = gamma
 
-        # Policy network
         self.policy_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -269,7 +252,6 @@ class ControlVariatesAgent:
             nn.Linear(hidden_dim, action_dim),
         ).to(device)
 
-        # Control variate networks
         self.control_variates = nn.ModuleList(
             [
                 nn.Sequential(
@@ -277,7 +259,7 @@ class ControlVariatesAgent:
                     nn.ReLU(),
                     nn.Linear(hidden_dim, 1),
                 ).to(device)
-                for _ in range(3)  # Multiple control variates
+                for _ in range(3)
             ]
         )
 
@@ -286,7 +268,6 @@ class ControlVariatesAgent:
             optim.Adam(cv.parameters(), lr=lr) for cv in self.control_variates
         ]
 
-        # Logging
         self.episode_rewards = []
         self.policy_losses = []
         self.cv_losses = []
@@ -326,7 +307,6 @@ class ControlVariatesAgent:
             G = r + self.gamma * G
             returns.insert(0, G)
 
-        # Update control variates
         cv_losses = []
         for i, cv in enumerate(self.control_variates):
             cv_values = []
@@ -335,7 +315,6 @@ class ControlVariatesAgent:
                 cv_val = cv(state_tensor).item()
                 cv_values.append(cv_val)
 
-            # Control variate should approximate returns
             cv_tensor = torch.FloatTensor(cv_values).to(device)
             returns_tensor = torch.FloatTensor(returns).to(device)
 
@@ -346,16 +325,14 @@ class ControlVariatesAgent:
             cv_loss.backward()
             self.cv_optimizers[i].step()
 
-        # Compute advantages using control variates
         advantages = []
         for j, (state, ret) in enumerate(zip(states, returns)):
             cv_vals = self.get_control_variates(state)
-            # Use average of control variates as baseline
+
             baseline = np.mean(cv_vals)
             advantage = ret - baseline
             advantages.append(advantage)
 
-        # Update policy
         advantages_tensor = torch.FloatTensor(advantages).to(device)
         actions_tensor = torch.LongTensor(actions).to(device)
         states_tensor = torch.FloatTensor(states).to(device)
@@ -370,7 +347,6 @@ class ControlVariatesAgent:
         policy_loss.backward()
         self.policy_optimizer.step()
 
-        # Logging
         self.policy_losses.append(policy_loss.item())
         self.cv_losses.append(np.mean(cv_losses))
 
@@ -396,7 +372,6 @@ class ControlVariatesAgent:
             if terminated or truncated:
                 break
 
-        # Update with control variates
         policy_loss, cv_loss = self.update_with_control_variates(
             states, actions, rewards
         )
@@ -412,7 +387,6 @@ def compare_variance_reduction():
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
 
-    # Initialize agents
     baseline_agent = VarianceReductionAgent(state_dim, action_dim, lr=1e-3)
     gae_agent = VarianceReductionAgent(state_dim, action_dim, lr=1e-3)
     cv_agent = ControlVariatesAgent(state_dim, action_dim, lr=1e-3)
@@ -436,7 +410,6 @@ def compare_variance_reduction():
     for name, agent in agents.items():
         print(f"\nTraining {name}...")
 
-        # Training loop
         num_episodes = 200
         log_interval = 50
 
@@ -464,24 +437,21 @@ def compare_variance_reduction():
             ),
         }
 
-    # Variance analysis
     print("\n=== Variance Analysis ===")
 
-    # Collect gradient variances for each method
     variances = {}
     for name, agent in agents.items():
-        # Simple variance estimation from policy losses
+
         variances[name] = np.var(agent.policy_losses)
 
     print("Gradient variance estimates:")
     for name, var in variances.items():
         print(".6f")
 
-    # Visualization
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
 
     for name, data in results.items():
-        # Learning curves
+
         axes[0, 0].plot(data["rewards"], label=name, alpha=0.7)
         axes[0, 0].plot(
             pd.Series(data["rewards"]).rolling(window=20).mean(),
@@ -489,13 +459,10 @@ def compare_variance_reduction():
             alpha=0.7,
         )
 
-        # Policy losses
         axes[0, 1].plot(data["policy_losses"], label=name, alpha=0.7)
 
-        # Auxiliary losses (value or CV losses)
         axes[1, 0].plot(data["aux_losses"], label=name, alpha=0.7)
 
-    # Variance comparison
     names = list(variances.keys())
     vars_values = list(variances.values())
     axes[1, 1].bar(names, vars_values, alpha=0.7)
@@ -533,7 +500,6 @@ def test_variance_reduction():
     return compare_variance_reduction()
 
 
-# Demonstration functions
 def demonstrate_variance_reduction():
     """Demonstrate variance reduction techniques"""
     print("📊 Variance Reduction Techniques Demonstration")
@@ -541,6 +507,5 @@ def demonstrate_variance_reduction():
     return results, variances
 
 
-# Run demonstration
 if __name__ == "__main__":
     demonstrate_variance_reduction()

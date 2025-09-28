@@ -35,7 +35,6 @@ class PrioritizedReplayBuffer:
         self.beta = beta  # Importance sampling exponent
         self.beta_increment = beta_increment
 
-        # Storage
         self.buffer = []
         self.priorities = np.zeros(capacity, dtype=np.float32)
         self.position = 0
@@ -56,24 +55,19 @@ class PrioritizedReplayBuffer:
         if len(self.buffer) < batch_size:
             return None
 
-        # Calculate sampling probabilities
         valid_priorities = self.priorities[: len(self.buffer)]
         probs = valid_priorities**self.alpha
         probs /= probs.sum()
 
-        # Sample indices
         indices = np.random.choice(len(self.buffer), batch_size, p=probs)
 
-        # Extract experiences
         experiences = [self.buffer[idx] for idx in indices]
         states, actions, rewards, next_states, dones = zip(*experiences)
 
-        # Calculate importance sampling weights
         total = len(self.buffer)
         weights = (total * probs[indices]) ** (-self.beta)
         weights /= weights.max()
 
-        # Increment beta
         self.beta = min(1.0, self.beta + self.beta_increment)
 
         return (states, actions, rewards, next_states, dones), indices, weights

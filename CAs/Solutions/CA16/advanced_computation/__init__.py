@@ -16,15 +16,12 @@ from .neuromorphic_networks import (
 from .distributed_rl import DistributedRLTrainer, ParameterServer, WorkerNode
 
 __all__ = [
-    # Quantum RL
     "QuantumRLAgent",
     "QuantumCircuit",
     "QuantumEnvironment",
-    # Neuromorphic Networks
     "NeuromorphicNetwork",
     "SpikingNeuralNetwork",
     "NeuromorphicProcessor",
-    # Distributed RL
     "DistributedRLTrainer",
     "ParameterServer",
     "WorkerNode",

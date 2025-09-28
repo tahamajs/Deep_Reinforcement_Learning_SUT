@@ -17,7 +17,6 @@ class VariationalAutoencoder(nn.Module):
         self.latent_dim = latent_dim
         self.beta = beta
 
-        # Encoder
         self.encoder = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
             nn.ReLU(),
@@ -27,11 +26,9 @@ class VariationalAutoencoder(nn.Module):
             nn.ReLU(),
         )
 
-        # Latent space parameters
         self.fc_mu = nn.Linear(hidden_dim, latent_dim)
         self.fc_logvar = nn.Linear(hidden_dim, latent_dim)
 
-        # Decoder
         self.decoder = nn.Sequential(
             nn.Linear(latent_dim, hidden_dim),
             nn.ReLU(),
@@ -71,13 +68,10 @@ class VariationalAutoencoder(nn.Module):
 
     def loss_function(self, x, recon_x, mu, logvar):
         """VAE loss computation"""
-        # Reconstruction loss (MSE)
         recon_loss = F.mse_loss(recon_x, x, reduction="sum")
 
-        # KL divergence loss
         kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-        # Total VAE loss
         total_loss = recon_loss + self.beta * kl_loss
 
         return total_loss, recon_loss, kl_loss

@@ -22,13 +22,11 @@ class SimpleGridWorld:
         """Reset environment to initial state."""
         self.agent_pos = [0, 0]
 
-        # Place goal randomly
         self.goal_pos = [
             np.random.randint(self.size // 2, self.size),
             np.random.randint(self.size // 2, self.size),
         ]
 
-        # Ensure agent and goal are different
         while self.agent_pos == self.goal_pos:
             self.goal_pos = [
                 np.random.randint(1, self.size),
@@ -53,7 +51,6 @@ class SimpleGridWorld:
 
     def step(self, action):
         """Execute action and return next state, reward, done."""
-        # Actions: 0=up, 1=down, 2=left, 3=right
         moves = [[-1, 0], [1, 0], [0, -1], [0, 1]]
 
         if action < len(moves):
@@ -62,7 +59,6 @@ class SimpleGridWorld:
                 self.agent_pos[1] + moves[action][1],
             ]
 
-            # Clip to boundaries
             new_pos[0] = max(0, min(self.size - 1, new_pos[0]))
             new_pos[1] = max(0, min(self.size - 1, new_pos[1]))
 
@@ -70,7 +66,6 @@ class SimpleGridWorld:
 
         self.steps += 1
 
-        # Calculate reward
         distance = abs(self.agent_pos[0] - self.goal_pos[0]) + abs(
             self.agent_pos[1] - self.goal_pos[1]
         )
@@ -82,7 +77,6 @@ class SimpleGridWorld:
             reward = -1.0 - 0.1 * distance  # Step penalty + distance penalty
             done = False
 
-        # Episode timeout
         if self.steps >= self.max_steps:
             done = True
             if distance > 0:

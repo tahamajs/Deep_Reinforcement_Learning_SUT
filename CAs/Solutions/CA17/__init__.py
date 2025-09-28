@@ -17,14 +17,11 @@ Modules:
 - experiments: Comprehensive evaluation suites
 
 Usage:
-    # Import specific modules
     from ca17 import world_models, multi_agent_rl
 
-    # Import specific classes
     from ca17.world_models import ImaginationAugmentedAgent
     from ca17.environments import ContinuousMountainCar
 
-    # Run experiments
     from ca17.experiments import WorldModelExperiment, create_default_configs
 """
 
@@ -32,7 +29,6 @@ __version__ = "1.0.0"
 __author__ = "CA17 Modular RL Package"
 __description__ = "Next-Generation Deep Reinforcement Learning Implementations"
 
-# Import main classes for convenient access
 from .world_models import (
     RSSMCore,
     WorldModel,
@@ -91,52 +87,42 @@ from .experiments import (
     create_default_configs
 )
 
-# Define what's available when importing *
 __all__ = [
-    # World Models
     'RSSMCore',
     'WorldModel',
     'MPCPlanner',
     'ImaginationAugmentedAgent',
 
-    # Multi-Agent RL
     'MADDPGAgent',
     'CommunicationNetwork',
     'PredatorPreyEnvironment',
 
-    # Causal RL
     'CausalGraph',
     'PCCausalDiscovery',
     'CausalRLAgent',
     'CausalBanditEnvironment',
 
-    # Quantum RL
     'QuantumGate',
     'QuantumCircuit',
     'QuantumRLAgent',
     'QuantumControlEnvironment',
 
-    # Federated RL
     'DifferentialPrivacy',
     'FederatedRLClient',
     'FederatedRLServer',
 
-    # Advanced Safety
     'SafetyConstraints',
     'ConstrainedPolicyOptimization',
     'SafetyMonitor',
 
-    # Utilities
     'ReplayBuffer',
     'Config',
     'plot_learning_curve',
     'set_random_seed',
 
-    # Environments
     'ContinuousMountainCar',
     'BaseEnvironment',
 
-    # Experiments
     'WorldModelExperiment',
     'MultiAgentExperiment',
     'ComparativeExperiment',
@@ -148,13 +134,10 @@ def run_quick_demo():
     print("🚀 CA17 Next-Generation RL Package Demo")
     print("=" * 50)
 
-    # Set random seed for reproducibility
     set_random_seed(42)
 
-    # Create default configurations
     configs = create_default_configs()
 
-    # Run a simple world model experiment (reduced episodes for demo)
     print("\n📊 Running World Model Demo...")
     config = configs['world_model']
     config.n_episodes = 10  # Reduced for demo
@@ -163,7 +146,6 @@ def run_quick_demo():
     results = experiment.run_experiment()
 
     print(".2f"    print(".2f"
-    # Plot results
     experiment.plot_results()
 
     print("\n✅ Demo completed! Check 'demo_results' directory for outputs.")

@@ -27,7 +27,6 @@ def collect_world_model_data(env, n_episodes=100):
             if done:
                 break
 
-    # Convert to tensors
     for key in data:
         data[key] = torch.FloatTensor(data[key])
 
@@ -46,7 +45,6 @@ def collect_sequence_data(env, n_episodes=100, seq_length=20):
         obs = env.reset()
 
         for t in range(seq_length):
-            # Random policy
             action = np.random.randint(0, 2)
             next_obs, reward, done = env.step(action)
 
@@ -73,7 +71,6 @@ def collect_sequence_data(env, n_episodes=100, seq_length=20):
 
 def prepare_rssm_batch(sequences, batch_size=32):
     """Prepare batch for RSSM training"""
-    # Randomly sample sequences
     batch_sequences = random.sample(sequences, min(batch_size, len(sequences)))
 
     observations = []
@@ -85,7 +82,6 @@ def prepare_rssm_batch(sequences, batch_size=32):
         actions.append(seq["actions"])
         rewards.append(seq["rewards"])
 
-    # Convert to tensors
     observations = torch.FloatTensor(observations)
     actions = torch.FloatTensor(actions)
     rewards = torch.FloatTensor(rewards)

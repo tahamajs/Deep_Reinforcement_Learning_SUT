@@ -19,7 +19,6 @@ from .neural_components import (
     NeuralSymbolicInterface,
 )
 
-# Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -40,14 +39,12 @@ class NeurosymbolicPolicy(nn.Module):
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        # Neural-symbolic components
         self.perception = perception_module
         self.reasoning = reasoning_module
         self.interface = NeuralSymbolicInterface(
             perception_module, reasoning_module, knowledge_base
         )
 
-        # Policy networks
         self.neural_policy = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -62,21 +59,18 @@ class NeurosymbolicPolicy(nn.Module):
             nn.Linear(hidden_dim, action_dim),
         )
 
-        # Fusion network
         self.fusion_network = nn.Sequential(
             nn.Linear(action_dim * 2, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, action_dim),
         )
 
-        # Value network
         self.value_network = nn.Sequential(
             nn.Linear(state_dim + reasoning_module.symbol_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 1),
         )
 
-        # Symbolic constraints
         self.symbolic_constraints = self._init_symbolic_constraints()
 
     def _init_symbolic_constraints(self) -> Dict[str, List[SymbolicAtom]]:
@@ -92,7 +86,6 @@ class NeurosymbolicPolicy(nn.Module):
         self, state: torch.Tensor, symbolic_queries: Optional[List[SymbolicAtom]] = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Forward pass through neurosymbolic policy."""
-        # Neural perception and reasoning
         if symbolic_queries:
             reasoning_results = self.interface.perceive_and_reason(
                 state, symbolic_queries
@@ -101,24 +94,19 @@ class NeurosymbolicPolicy(nn.Module):
         else:
             symbolic_features = self.perception(state)
 
-        # Neural policy
         neural_action_logits = self.neural_policy(state)
 
-        # Symbolic policy
         symbolic_action_logits = self.symbolic_policy(symbolic_features)
 
-        # Fuse policies
         combined_logits = torch.cat(
             [neural_action_logits, symbolic_action_logits], dim=-1
         )
         fused_action_logits = self.fusion_network(combined_logits)
 
-        # Apply symbolic constraints
         constrained_logits = self._apply_symbolic_constraints(
             fused_action_logits, symbolic_queries
         )
 
-        # Value estimation
         value_input = torch.cat([state, symbolic_features], dim=-1)
         value = self.value_network(value_input)
 
@@ -135,17 +123,14 @@ class NeurosymbolicPolicy(nn.Module):
         if symbolic_queries is None:
             return constrained_logits
 
-        # Check for forbidden actions
         for i, query in enumerate(symbolic_queries):
             if str(query).startswith("forbidden("):
-                # Extract action from query
                 action_name = str(query).split("(")[1].split(")")[0]
                 if action_name.isdigit():
                     action_idx = int(action_name)
                     if action_idx < self.action_dim:
                         constrained_logits[0, action_idx] = -float("inf")
 
-        # Could add more sophisticated constraint checking here
         return constrained_logits
 
     def get_action(
@@ -205,7 +190,6 @@ class NeurosymbolicAgent:
         self.gamma = gamma
         self.gae_lambda = gae_lambda
 
-        # Experience buffer
         self.states = []
         self.actions = []
         self.rewards = []
@@ -226,7 +210,6 @@ class NeurosymbolicAgent:
         log_prob = info["log_prob"].item()
         value_scalar = value.item()
 
-        # Store experience
         self.states.append(state)
         self.actions.append(action_scalar)
         self.values.append(value_scalar)
@@ -245,7 +228,6 @@ class NeurosymbolicAgent:
         if len(self.states) == 0:
             return
 
-        # Convert to tensors
         states = torch.FloatTensor(self.states).to(device)
         actions = torch.LongTensor(self.actions).to(device)
         old_log_probs = torch.FloatTensor(self.log_probs).to(device)
@@ -253,41 +235,32 @@ class NeurosymbolicAgent:
         dones = torch.FloatTensor(self.dones).to(device)
         values = torch.FloatTensor(self.values).to(device)
 
-        # Compute advantages and returns
         advantages, returns = self._compute_advantages(
             rewards, values, dones, next_value
         )
 
-        # Update policy
         for _ in range(4):  # PPO epochs
-            # Get current policy outputs
             action_logits, current_values = self.policy(states)
 
-            # Compute ratios
             current_log_probs = torch.log_softmax(action_logits, dim=-1)
             current_log_probs = current_log_probs.gather(
                 1, actions.unsqueeze(1)
             ).squeeze(1)
             ratios = torch.exp(current_log_probs - old_log_probs)
 
-            # Compute surrogate losses
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 0.8, 1.2) * advantages
             policy_loss = -torch.min(surr1, surr2).mean()
 
-            # Value loss
             value_loss = F.mse_loss(current_values.squeeze(), returns)
 
-            # Total loss
             total_loss = policy_loss + 0.5 * value_loss
 
-            # Update
             self.optimizer.zero_grad()
             total_loss.backward()
             torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=0.5)
             self.optimizer.step()
 
-        # Clear experience buffer
         self._clear_buffer()
 
         return {
@@ -307,10 +280,8 @@ class NeurosymbolicAgent:
         advantages = torch.zeros_like(rewards)
         returns = torch.zeros_like(rewards)
 
-        # Bootstrap next value
         next_value_tensor = torch.tensor(next_value).to(device)
 
-        # Compute advantages and returns backwards
         gae = 0
         for t in reversed(range(len(rewards))):
             if t == len(rewards) - 1:
@@ -351,7 +322,6 @@ class NeurosymbolicAgent:
         checkpoint = torch.load(path)
         self.policy.load_state_dict(checkpoint["policy_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        # KB loading would need to be handled separately
 
 
 class SafeNeurosymbolicAgent(NeurosymbolicAgent):
@@ -370,16 +340,13 @@ class SafeNeurosymbolicAgent(NeurosymbolicAgent):
         self, state: np.ndarray, symbolic_queries: Optional[List[SymbolicAtom]] = None
     ) -> Tuple[int, Dict]:
         """Select safe action."""
-        # Get action probabilities
         state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
         action_probs = self.policy.get_action_probabilities(
             state_tensor, symbolic_queries
         )
 
-        # Check safety of each action
         safe_actions = []
         for action_idx in range(self.policy.action_dim):
-            # Create safety query
             safety_query = SymbolicAtom(
                 self.kb.predicates.get(
                     "safe", self.kb.predicates["at"]
@@ -387,24 +354,19 @@ class SafeNeurosymbolicAgent(NeurosymbolicAgent):
                 (f"action_{action_idx}", "current_state"),
             )
 
-            # Check if action is safe
             if self.kb.query(safety_query):
                 safe_actions.append(action_idx)
 
         if safe_actions:
-            # Filter probabilities to safe actions only
             safe_probs = action_probs[0, safe_actions]
             safe_probs = safe_probs / safe_probs.sum()  # Renormalize
 
-            # Sample from safe actions
             safe_action_idx = torch.multinomial(safe_probs, 1).item()
             action = safe_actions[safe_action_idx]
         else:
-            # No safe actions, fall back to regular policy
             action, info = super().act(state, symbolic_queries)
             return action, info
 
-        # Get log prob for the selected action
         log_prob = torch.log(action_probs[0, action])
 
         info = {
@@ -413,7 +375,6 @@ class SafeNeurosymbolicAgent(NeurosymbolicAgent):
             "action_probs": action_probs,
         }
 
-        # Store experience
         self.states.append(state)
         self.actions.append(action)
         self.log_probs.append(log_prob.item())

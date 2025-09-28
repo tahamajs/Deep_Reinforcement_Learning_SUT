@@ -34,7 +34,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-# Set style for better plots
+
 plt.style.use("seaborn-v0_8")
 sns.set_palette("husl")
 
@@ -69,20 +69,17 @@ class DQNComparator:
             for run in range(num_runs):
                 print(f"  Run {run + 1}/{num_runs}")
 
-                # Create fresh agent
                 agent = agent_config["class"](
                     self.state_size, self.action_size, **agent_config["kwargs"]
                 )
 
-                # Train agent
                 scores, training_info = agent.train(
                     self.env, num_episodes, print_every=num_episodes // 5
                 )
 
                 agent_scores.append(scores)
 
-                # Store additional metrics
-                if run == 0:  # Store detailed info from first run
+                if run == 0:
                     training_info["agent"] = agent
 
             all_results[agent_name] = {
@@ -101,7 +98,7 @@ class DQNComparator:
 
     def save_comparison_results(self, filename="dqn_comparison_results.npy"):
         """Save comparison results to file"""
-        # Convert to serializable format
+
         serializable_results = {}
         for agent_name, data in self.results.items():
             serializable_results[agent_name] = {
@@ -129,7 +126,6 @@ class DQNComparator:
         agent_names = list(self.results.keys())
         colors = plt.cm.tab10(np.linspace(0, 1, len(agent_names)))
 
-        # 1. Learning Curves
         if "learning_curves" in metrics:
             ax = axes[0]
             for i, agent_name in enumerate(agent_names):
@@ -157,7 +153,6 @@ class DQNComparator:
             ax.legend()
             ax.grid(True, alpha=0.3)
 
-        # 2. Final Performance
         if "final_performance" in metrics:
             ax = axes[1]
             final_scores = []
@@ -177,7 +172,6 @@ class DQNComparator:
             ax.set_ylabel("Episode Reward", fontsize=12)
             ax.grid(True, alpha=0.3)
 
-        # 3. Convergence Analysis
         if "convergence" in metrics:
             ax = axes[2]
             convergence_episodes = []
@@ -186,7 +180,6 @@ class DQNComparator:
                 data = self.results[agent_name]
                 scores = data["mean_scores"]
 
-                # Find convergence (90% of final performance)
                 final_avg = np.mean(scores[-50:])
                 threshold = final_avg * 0.9
 
@@ -201,7 +194,6 @@ class DQNComparator:
             ax.set_ylabel("Episodes to Convergence", fontsize=12)
             ax.grid(True, alpha=0.3)
 
-            # Add value labels on bars
             for bar, value in zip(bars, convergence_episodes):
                 ax.text(
                     bar.get_x() + bar.get_width() / 2,
@@ -211,14 +203,13 @@ class DQNComparator:
                     va="bottom",
                 )
 
-        # 4. Stability Analysis
         if "stability" in metrics:
             ax = axes[3]
             stability_scores = []
 
             for agent_name in agent_names:
                 data = self.results[agent_name]
-                # Use coefficient of variation as stability metric
+
                 final_scores = data["mean_scores"][-50:]
                 cv = (
                     np.std(final_scores) / np.mean(final_scores)
@@ -246,7 +237,6 @@ class DQNComparator:
 
         agent_names = list(self.results.keys())
 
-        # Final performance comparison
         final_scores = {}
         for agent_name in agent_names:
             data = self.results[agent_name]
@@ -254,7 +244,6 @@ class DQNComparator:
             final_score = data["mean_scores"][-final_window:]
             final_scores[agent_name] = final_score
 
-        # ANOVA test
         all_final_scores = [final_scores[name] for name in agent_names]
         f_stat, p_value = stats.f_oneway(*all_final_scores)
 
@@ -267,7 +256,6 @@ class DQNComparator:
         else:
             print("✗ No significant differences found between agents")
 
-        # Pairwise t-tests
         print("\\nPairwise Comparisons:")
         for i in range(len(agent_names)):
             for j in range(i + 1, len(agent_names)):
@@ -288,7 +276,6 @@ class DQNComparator:
                 else:
                     print("  - No significant difference")
 
-        # Summary statistics
         print("\\nSummary Statistics:")
         print("-" * 30)
         for agent_name in agent_names:
@@ -375,7 +362,6 @@ class HyperparameterAnalyzer:
         """Visualize hyperparameter sensitivity results"""
         fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
-        # 1. Final performance vs hyperparameter
         means = [results[val]["mean_final"] for val in param_values]
         stds = [results[val]["std_final"] for val in param_values]
 
@@ -387,7 +373,6 @@ class HyperparameterAnalyzer:
         axes[0].set_ylabel("Final Episode Reward")
         axes[0].grid(True, alpha=0.3)
 
-        # 2. Learning curves for different values
         for val in param_values:
             scores = results[val]["scores"]
             mean_scores = np.mean(scores, axis=0)
@@ -403,10 +388,7 @@ class HyperparameterAnalyzer:
         axes[1].legend()
         axes[1].grid(True, alpha=0.3)
 
-        # 3. Performance distribution
-        final_scores = [
-            results[val]["scores"][0][-50:] for val in param_values
-        ]  # First run only
+        final_scores = [results[val]["scores"][0][-50:] for val in param_values]
 
         axes[2].boxplot(final_scores, labels=[str(val) for val in param_values])
         axes[2].set_title(f"Performance Distribution vs {param_name}")
@@ -438,21 +420,19 @@ class LearningDynamicsAnalyzer:
             episode_td_errors = []
 
             while not done:
-                # Get current Q-values
+
                 if hasattr(agent, "get_q_values"):
                     q_values = agent.get_q_values(state)
                 else:
-                    # For agents without direct Q-value access
+
                     q_values = np.zeros(self.action_size)
 
                 episode_q_values.append(q_values.copy())
 
-                # Take action and observe
                 action = agent.act(state)
                 next_state, reward, terminated, truncated, _ = env.step(action)
                 done = terminated or truncated
 
-                # Calculate TD error (approximate)
                 if hasattr(agent, "q_network"):
                     with torch.no_grad():
                         state_tensor = (
@@ -482,7 +462,6 @@ class LearningDynamicsAnalyzer:
 
         fig, axes = plt.subplots(2, 2, figsize=(16, 10))
 
-        # 1. Q-value evolution
         if dynamics_data["q_values"]:
             first_episode_q = np.array(dynamics_data["q_values"][0])
             time_steps = range(len(first_episode_q))
@@ -501,7 +480,6 @@ class LearningDynamicsAnalyzer:
             axes[0, 0].legend()
             axes[0, 0].grid(True, alpha=0.3)
 
-        # 2. TD error distribution
         if dynamics_data["td_errors"]:
             all_td_errors = [
                 td for episode in dynamics_data["td_errors"] for td in episode
@@ -514,7 +492,6 @@ class LearningDynamicsAnalyzer:
             axes[0, 1].set_ylabel("Frequency")
             axes[0, 1].grid(True, alpha=0.3)
 
-        # 3. Q-value variance over time
         if dynamics_data["q_values"]:
             variances = []
             for episode_q in dynamics_data["q_values"]:
@@ -527,9 +504,8 @@ class LearningDynamicsAnalyzer:
             axes[1, 0].set_ylabel("Q-Value Variance")
             axes[1, 0].grid(True, alpha=0.3)
 
-        # 4. Learning progress indicators
         if hasattr(agent, "losses") and agent.losses:
-            # Smooth losses for better visualization
+
             smoothed_losses = uniform_filter1d(agent.losses, size=100)
 
             axes[1, 1].plot(smoothed_losses, color="green", linewidth=2)
@@ -554,21 +530,17 @@ class PerformanceProfiler:
 
         print(f"Profiling {agent_class.__name__}...")
 
-        # Create agent
         agent = agent_class(state_size, action_size, **kwargs)
 
-        # Profile training step
         state = np.random.randn(state_size)
         action = np.random.randint(action_size)
         reward = np.random.randn()
         next_state = np.random.randn(state_size)
         done = False
 
-        # Add some experiences
         for _ in range(100):
             agent.memory.add((state, action, reward, next_state, done))
 
-        # Time training step
         start_time = time.time()
         num_steps = 100
 
@@ -577,7 +549,6 @@ class PerformanceProfiler:
 
         training_time = time.time() - start_time
 
-        # Profile inference
         start_time = time.time()
         num_inferences = 1000
 
@@ -608,12 +579,10 @@ class PerformanceProfiler:
                 agent_class, 4, 2, **kwargs
             )
 
-        # Visualize results
         fig, axes = plt.subplots(2, 2, figsize=(16, 10))
 
         agent_names = list(results.keys())
 
-        # 1. Training time
         training_times = [
             results[name]["training_time_per_step"] * 1000 for name in agent_names
         ]
@@ -622,7 +591,6 @@ class PerformanceProfiler:
         axes[0, 0].set_ylabel("Time (ms)")
         axes[0, 0].tick_params(axis="x", rotation=45)
 
-        # 2. Inference time
         inference_times = [
             results[name]["inference_time_per_action"] * 1000 for name in agent_names
         ]
@@ -631,15 +599,12 @@ class PerformanceProfiler:
         axes[0, 1].set_ylabel("Time (ms)")
         axes[0, 1].tick_params(axis="x", rotation=45)
 
-        # 3. Network parameters
         param_counts = [results[name]["network_params"] for name in agent_names]
         axes[1, 0].bar(agent_names, param_counts, alpha=0.7, color="green")
         axes[1, 0].set_title("Network Parameters")
         axes[1, 0].set_ylabel("Parameter Count")
         axes[1, 0].tick_params(axis="x", rotation=45)
 
-        # 4. Memory efficiency (params vs performance proxy)
-        # Using training time as performance proxy
         efficiency = [
             results[name]["network_params"]
             / (1.0 / results[name]["training_time_per_step"])
@@ -653,7 +618,6 @@ class PerformanceProfiler:
         plt.tight_layout()
         plt.show()
 
-        # Print summary table
         print("\\nPerformance Profile Summary:")
         print("-" * 60)
         print(
@@ -667,23 +631,18 @@ class PerformanceProfiler:
             )
 
 
-# Example usage and demonstration
 if __name__ == "__main__":
     print("DQN Analysis and Visualization Tools")
     print("=" * 45)
 
-    # Test individual components
     print("Testing analysis components...")
 
-    # Test hyperparameter analyzer
     analyzer = HyperparameterAnalyzer(None, 4, 2, DQNAgent)
     print("✓ Hyperparameter analyzer created")
 
-    # Test learning dynamics analyzer
     dynamics_analyzer = LearningDynamicsAnalyzer()
     print("✓ Learning dynamics analyzer created")
 
-    # Test performance profiler
     profiler = PerformanceProfiler()
     print("✓ Performance profiler created")
 

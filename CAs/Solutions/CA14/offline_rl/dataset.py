@@ -42,14 +42,12 @@ class OfflineDataset:
         self.dones = np.array(dones, dtype=bool)
         self.dataset_type = dataset_type
 
-        # Compute statistics
         self.size = len(self.states)
         self.reward_mean = np.mean(self.rewards)
         self.reward_std = np.std(self.rewards)
         self.state_dim = self.states.shape[1] if len(self.states.shape) > 1 else 1
         self.action_dim = int(np.max(self.actions)) + 1
 
-        # Convert to tensors for efficient batching
         self._tensor_data = None
 
     def get_tensor_data(self) -> Tuple[torch.Tensor, ...]:

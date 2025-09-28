@@ -33,14 +33,12 @@ class CausalReasoningNetwork(nn.Module):
         self.causal_graph = causal_graph
         self.hidden_dim = hidden_dim
 
-        # Feature extraction for each variable
         self.variable_encoders = nn.ModuleDict()
         for var in causal_graph.variables:
             self.variable_encoders[var] = nn.Sequential(
                 nn.Linear(1, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, hidden_dim)
             )
 
-        # Causal reasoning layers
         self.causal_reasoning = nn.Sequential(
             nn.Linear(hidden_dim * len(causal_graph.variables), hidden_dim),
             nn.ReLU(),
@@ -48,10 +46,8 @@ class CausalReasoningNetwork(nn.Module):
             nn.ReLU(),
         )
 
-        # Policy head
         self.policy_head = nn.Linear(hidden_dim, action_dim)
 
-        # Value head
         self.value_head = nn.Linear(hidden_dim, 1)
 
     def forward(self, state: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -64,7 +60,6 @@ class CausalReasoningNetwork(nn.Module):
         Returns:
             Tuple of (policy_logits, value_estimate)
         """
-        # Encode each variable
         variable_features = []
         for i, var in enumerate(self.causal_graph.variables):
             var_value = (
@@ -73,13 +68,10 @@ class CausalReasoningNetwork(nn.Module):
             var_feature = self.variable_encoders[var](var_value)
             variable_features.append(var_feature)
 
-        # Concatenate features
         combined_features = torch.cat(variable_features, dim=-1)
 
-        # Causal reasoning
         reasoned_features = self.causal_reasoning(combined_features)
 
-        # Policy and value outputs
         policy_logits = self.policy_head(reasoned_features)
         value = self.value_head(reasoned_features)
 
@@ -127,13 +119,11 @@ class CausalRLAgent:
         self.gamma = gamma
         self.causal_graph = causal_graph
 
-        # Create causal reasoning network
         self.network = CausalReasoningNetwork(
             state_dim, action_dim, causal_graph, hidden_dim
         )
         self.optimizer = optim.Adam(self.network.parameters(), lr=lr)
 
-        # Logging
         self.episode_rewards = []
         self.policy_losses = []
         self.value_losses = []
@@ -189,39 +179,31 @@ class CausalRLAgent:
         Returns:
             Dictionary of loss values
         """
-        # Convert to tensors
         states_tensor = torch.FloatTensor(states).to(device)
         actions_tensor = torch.LongTensor(actions).to(device)
         rewards_tensor = torch.FloatTensor(rewards).to(device)
         next_states_tensor = torch.FloatTensor(next_states).to(device)
         dones_tensor = torch.FloatTensor(dones).to(device)
 
-        # Get current policy and values
         logits, values = self.network(states_tensor)
 
-        # Compute advantages using causal reasoning
         advantages = self._compute_causal_advantages(
             states_tensor, rewards_tensor, next_states_tensor, dones_tensor, values
         )
 
-        # Policy loss
         dist = Categorical(logits=logits)
         log_probs = dist.log_prob(actions_tensor)
         policy_loss = -(log_probs * advantages.detach()).mean()
 
-        # Value loss
         returns = advantages + values.squeeze().detach()
         value_loss = F.mse_loss(values.squeeze(), returns)
 
-        # Total loss
         total_loss = policy_loss + 0.5 * value_loss
 
-        # Update
         self.optimizer.zero_grad()
         total_loss.backward()
         self.optimizer.step()
 
-        # Logging
         self.policy_losses.append(policy_loss.item())
         self.value_losses.append(value_loss.item())
 
@@ -252,15 +234,12 @@ class CausalRLAgent:
         Returns:
             Advantage estimates
         """
-        # Bootstrap next values
         with torch.no_grad():
             _, next_values = self.network(next_states)
             next_values = next_values.squeeze()
 
-        # Compute TD targets
         targets = rewards + self.gamma * next_values * (1 - dones)
 
-        # Advantages
         advantages = targets - values.squeeze()
 
         return advantages
@@ -302,15 +281,12 @@ class CausalRLAgent:
         counterfactual_rewards = []
 
         for state, action, reward, next_state, done in trajectory:
-            # Intervene on state
             intervened_state = self.perform_intervention(state, intervention)
 
-            # Get action under intervention
             intervened_action, _ = self.select_action(
                 intervened_state, deterministic=True
             )
 
-            # Simulate reward (simplified - would need environment model)
             counterfactual_reward = reward * 0.8  # Placeholder
             counterfactual_rewards.append(counterfactual_reward)
 
@@ -338,7 +314,6 @@ class CausalRLAgent:
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
 
-            # Store transition
             states.append(state)
             actions.append(action)
             rewards.append(reward)
@@ -352,7 +327,6 @@ class CausalRLAgent:
             if done:
                 break
 
-        # Update agent
         if len(states) > 0:
             self.update(states, actions, rewards, next_states, dones)
 
@@ -386,15 +360,12 @@ class CounterfactualRLAgent(CausalRLAgent):
         counterfactual_losses = []
 
         for intervention in interventions:
-            # Generate counterfactual trajectory
             cf_rewards = self.counterfactual_reasoning(trajectory, intervention)
 
-            # Compute counterfactual loss
             cf_loss = torch.tensor(cf_rewards).mean()
             counterfactual_losses.append(cf_loss.item())
             total_loss += cf_loss
 
-        # Combine with standard update
         standard_losses = super().update(
             [t[0] for t in trajectory],
             [t[1] for t in trajectory],

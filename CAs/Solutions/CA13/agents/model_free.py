@@ -34,7 +34,6 @@ class DQNAgent(ModelFreeAgent):
         super().__init__(state_dim, action_dim, lr)
         self.gamma = gamma
 
-        # Q-network
         self.q_network = nn.Sequential(
             nn.Linear(state_dim, 128),
             nn.ReLU(),
@@ -43,12 +42,10 @@ class DQNAgent(ModelFreeAgent):
             nn.Linear(128, action_dim),
         )
 
-        # Target network
         self.target_network = self.q_network.__class__(*self.q_network.parameters())
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
 
-        # Training stats
         self.update_count = 0
         self.losses = []
 
@@ -63,22 +60,18 @@ class DQNAgent(ModelFreeAgent):
         """Update Q-network using DQN loss."""
         states, actions, rewards, next_states, dones = batch
 
-        # Convert to tensors
         states = torch.FloatTensor(states)
         actions = torch.LongTensor(actions)
         rewards = torch.FloatTensor(rewards)
         next_states = torch.FloatTensor(next_states)
         dones = torch.BoolTensor(dones)
 
-        # Current Q-values
         current_q = self.q_network(states).gather(1, actions.unsqueeze(1))
 
-        # Target Q-values
         with torch.no_grad():
             next_q = self.target_network(next_states).max(1)[0]
             target_q = rewards + (self.gamma * next_q * (~dones))
 
-        # Loss and optimization
         loss = F.mse_loss(current_q.squeeze(), target_q)
 
         self.optimizer.zero_grad()
@@ -88,7 +81,6 @@ class DQNAgent(ModelFreeAgent):
         self.losses.append(loss.item())
         self.update_count += 1
 
-        # Update target network periodically
         if self.update_count % 100 == 0:
             self.target_network.load_state_dict(self.q_network.state_dict())
 

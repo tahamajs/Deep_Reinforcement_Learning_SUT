@@ -27,7 +27,6 @@ class ComprehensiveEvaluator:
                 efficiency_scores[method_name] = float("inf")
                 continue
 
-            # Find convergence point
             max_reward = max(rewards)
             target_reward = convergence_threshold * max_reward
 
@@ -84,7 +83,6 @@ class ComprehensiveEvaluator:
 
                 environment_performances.append(np.mean(episode_rewards))
 
-            # Robustness = minimum performance / maximum performance
             if environment_performances:
                 min_perf = min(environment_performances)
                 max_perf = max(environment_performances)
@@ -120,7 +118,6 @@ class ComprehensiveEvaluator:
                     obs, reward, done, info = safe_environment.step(action)
                     total_steps += 1
 
-                    # Check for constraint violations
                     if hasattr(safe_environment, "constraint_violation"):
                         if safe_environment.constraint_violation:
                             violations += 1
@@ -144,7 +141,6 @@ class ComprehensiveEvaluator:
 
         for method_name, results in multi_agent_results.items():
             if "coordination_rewards" in results:
-                # Compare individual vs coordinated performance
                 individual_perf = results.get("individual_performance", 0)
                 coordinated_perf = np.mean(results["coordination_rewards"][-50:])
 
@@ -158,7 +154,6 @@ class ComprehensiveEvaluator:
         """Compute overall score combining all metrics."""
         comprehensive_scores = {}
 
-        # Normalize all metrics to [0, 1] range
         metrics = [
             "sample_efficiency",
             "asymptotic_performance",
@@ -203,7 +198,6 @@ class ComprehensiveEvaluator:
                             for method, score in method_results[metric].items()
                         }
 
-        # Compute weighted comprehensive score
         weights = {
             "sample_efficiency": 0.2,
             "asymptotic_performance": 0.25,

@@ -1,4 +1,3 @@
-# Performance Analysis and Evaluation Frameworks
 import torch
 import torch.nn as nn
 import numpy as np
@@ -40,7 +39,7 @@ class PolicyEvaluator:
                 if hasattr(agent, "select_action"):
                     action = agent.select_action(state)
                 else:
-                    # Assume it's a function
+
                     action = agent(state)
 
                 next_state, reward, terminated, truncated, _ = self.env.step(action)
@@ -56,13 +55,12 @@ class PolicyEvaluator:
             episode_rewards.append(episode_reward)
             episode_lengths.append(episode_length)
 
-            # Success criteria (environment-specific)
             if self.env_name == "CartPole-v1":
-                success = episode_reward >= 195  # Near-optimal performance
+                success = episode_reward >= 195
             elif self.env_name == "Pendulum-v1":
-                success = episode_reward >= -200  # Reasonable performance
+                success = episode_reward >= -200
             else:
-                success = episode_length >= 100  # General criterion
+                success = episode_length >= 100
 
             successes.append(success)
 
@@ -120,10 +118,8 @@ class PerformanceAnalyzer:
         for name, data in training_data.items():
             rewards = np.array(data["rewards"])
 
-            # Smooth the curve
             smoothed = pd.Series(rewards).rolling(window=window).mean().dropna()
 
-            # Learning metrics
             final_performance = np.mean(rewards[-window:])
             peak_performance = np.max(smoothed)
             convergence_episode = np.where(smoothed >= 0.9 * peak_performance)[0]
@@ -133,11 +129,9 @@ class PerformanceAnalyzer:
             else:
                 convergence_episode = len(rewards)
 
-            # Stability metrics
             final_std = np.std(rewards[-window:])
             variability = np.std(smoothed)
 
-            # Learning rate metrics
             early_performance = np.mean(rewards[:window])
             improvement_rate = (final_performance - early_performance) / len(rewards)
 
@@ -158,7 +152,6 @@ class PerformanceAnalyzer:
         methods = list(results_dict.keys())
         values = [results_dict[method][metric] for method in methods]
 
-        # Basic statistics
         stats = {
             "best_method": methods[np.argmax(values)],
             "best_score": np.max(values),
@@ -167,14 +160,12 @@ class PerformanceAnalyzer:
             ),
         }
 
-        # Confidence intervals (assuming normal distribution)
         for method in methods:
             data = results_dict[method]["rewards"]
             mean = np.mean(data)
             std = np.std(data)
             n = len(data)
 
-            # 95% confidence interval
             ci_lower = mean - 1.96 * std / np.sqrt(n)
             ci_upper = mean + 1.96 * std / np.sqrt(n)
 
@@ -189,7 +180,6 @@ class PerformanceAnalyzer:
         for name, data in training_data.items():
             rewards = np.array(data["rewards"])
 
-            # Episodes to reach certain performance thresholds
             thresholds = [0.5, 0.7, 0.9]
             threshold_episodes = {}
 
@@ -225,18 +215,15 @@ class AblationStudy:
         for value in values:
             print(f"\nTesting {parameter} = {value}")
 
-            # Create config with modified parameter
             config = self.base_config.copy()
             config[parameter] = value
 
-            # Train agent
             env = gym.make(env_name)
             state_dim = env.observation_space.shape[0]
             action_dim = env.action_space.n
 
             agent = agent_class(state_dim, action_dim, **config)
 
-            # Quick training
             rewards = []
             for episode in range(100):
                 episode_reward, _ = agent.train_episode(env)
@@ -273,7 +260,6 @@ class RobustnessTester:
         for param_value in param_values:
             print(f"Testing {param_name} = {param_value}")
 
-            # Create modified environment
             if param_name == "gravity":
                 env = gym.make(self.env_name, g=param_value)
             elif param_name == "mass":
@@ -297,19 +283,18 @@ class RobustnessTester:
         for noise in noise_levels:
             print(f"Testing noise level = {noise}")
 
-            # Create noisy environment wrapper
             class NoisyEnv(gym.Wrapper):
                 def __init__(self, env, noise_level):
                     super().__init__(env)
                     self.noise_level = noise_level
 
                 def step(self, action):
-                    # Add noise to action
+
                     if isinstance(action, np.ndarray):
                         noisy_action = action + np.random.normal(
                             0, self.noise_level, size=action.shape
                         )
-                        # Clip to action space
+
                         noisy_action = np.clip(
                             noisy_action, self.action_space.low, self.action_space.high
                         )
@@ -336,7 +321,6 @@ def create_comprehensive_report(training_results, evaluation_results):
     print("COMPREHENSIVE PERFORMANCE REPORT")
     print("=" * 60)
 
-    # Training analysis
     analyzer = PerformanceAnalyzer()
     learning_analysis = analyzer.analyze_learning_curves(training_results)
     stats_comparison = analyzer.statistical_comparison(evaluation_results)
@@ -359,7 +343,6 @@ def create_comprehensive_report(training_results, evaluation_results):
         ci_lower, ci_upper = stats_comparison[f"{method}_ci"]
         print(".2f")
 
-    # Sample efficiency
     efficiency = analyzer.sample_efficiency_analysis(training_results)
     print("\n⚡ SAMPLE EFFICIENCY:")
     for method, thresholds in efficiency.items():
@@ -381,14 +364,12 @@ def visualize_performance_comparison(results_dict, title="Performance Comparison
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
     fig.suptitle(title, fontsize=16)
 
-    # Colors for consistency
     colors = plt.cm.tab10(np.linspace(0, 1, len(methods)))
 
     for i, method in enumerate(methods):
         data = results_dict[method]
         color = colors[i]
 
-        # Learning curves
         axes[0, 0].plot(data["rewards"], color=color, alpha=0.7, label=method)
         axes[0, 0].plot(
             pd.Series(data["rewards"]).rolling(window=20).mean(),
@@ -397,13 +378,10 @@ def visualize_performance_comparison(results_dict, title="Performance Comparison
             alpha=0.9,
         )
 
-        # Reward distributions
         axes[0, 1].hist(data["rewards"], bins=20, alpha=0.7, color=color, label=method)
 
-        # Cumulative rewards
         axes[0, 2].plot(np.cumsum(data["rewards"]), color=color, label=method)
 
-        # Performance metrics
         metrics = ["mean_reward", "std_reward", "success_rate"]
         metric_names = ["Mean Reward", "Std Reward", "Success Rate"]
 
@@ -411,7 +389,6 @@ def visualize_performance_comparison(results_dict, title="Performance Comparison
             if metric in data:
                 axes[1, j].bar(method, data[metric], color=color, alpha=0.7)
 
-    # Formatting
     axes[0, 0].set_title("Learning Curves")
     axes[0, 0].set_xlabel("Episode")
     axes[0, 0].set_ylabel("Episode Reward")
@@ -437,12 +414,10 @@ def visualize_performance_comparison(results_dict, title="Performance Comparison
     plt.show()
 
 
-# Demonstration functions
 def demonstrate_performance_analysis():
     """Demonstrate performance analysis tools"""
     print("📊 Performance Analysis Demonstration")
 
-    # Create mock training data for demonstration
     np.random.seed(42)
 
     mock_training_data = {
@@ -481,15 +456,12 @@ def demonstrate_performance_analysis():
         },
     }
 
-    # Run analysis
     report = create_comprehensive_report(mock_training_data, mock_evaluation_data)
 
-    # Visualization
     visualize_performance_comparison(mock_evaluation_data)
 
     return report
 
 
-# Run demonstration
 if __name__ == "__main__":
     demonstrate_performance_analysis()

@@ -18,7 +18,6 @@ class MultiAgentReplayBuffer:
         self.obs_dim = obs_dim
         self.action_dim = action_dim
 
-        # Initialize buffers
         self.observations = np.zeros((capacity, n_agents, obs_dim))
         self.actions = np.zeros((capacity, n_agents, action_dim))
         self.rewards = np.zeros((capacity, n_agents, 1))
@@ -92,7 +91,6 @@ class Critic(nn.Module):
     def __init__(self, obs_dim: int, action_dim: int, hidden_dim: int = 128):
         super().__init__()
 
-        # Input: all observations + all actions
         input_dim = obs_dim + action_dim
 
         self.network = nn.Sequential(
@@ -104,7 +102,6 @@ class Critic(nn.Module):
         )
 
     def forward(self, obs: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
-        # obs: [batch, obs_dim], actions: [batch, action_dim]
         x = torch.cat([obs, actions], dim=-1)
         return self.network(x)
 
@@ -122,7 +119,6 @@ class AttentionCritic(nn.Module):
         self.n_agents = n_agents
         self.hidden_dim = hidden_dim
 
-        # Individual agent encoders
         self.agent_encoders = nn.ModuleList(
             [
                 nn.Sequential(
@@ -134,12 +130,10 @@ class AttentionCritic(nn.Module):
             ]
         )
 
-        # Attention mechanism
         self.attention = nn.MultiheadAttention(
             hidden_dim, num_heads=4, batch_first=True
         )
 
-        # Final critic network
         self.critic_network = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, 1)
         )
@@ -155,7 +149,6 @@ class AttentionCritic(nn.Module):
 
         batch_size = obs.shape[0]
 
-        # Encode each agent's observation-action pair
         agent_embeddings = []
         for i in range(self.n_agents):
             agent_obs = obs[:, i]  # [batch, obs_dim]
@@ -168,11 +161,9 @@ class AttentionCritic(nn.Module):
             agent_embeddings, dim=1
         )  # [batch, n_agents, hidden_dim]
 
-        # Apply attention (query is the target agent's embedding)
         query = agent_embeddings[:, agent_idx : agent_idx + 1]  # [batch, 1, hidden_dim]
         attended_features, _ = self.attention(query, agent_embeddings, agent_embeddings)
 
-        # Final Q-value prediction
         q_value = self.critic_network(attended_features.squeeze(1))  # [batch, 1]
 
         return q_value
@@ -187,14 +178,12 @@ class CommunicationNetwork(nn.Module):
         self.obs_dim = obs_dim
         self.message_dim = message_dim
 
-        # Message generation
         self.message_encoder = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, message_dim),
         )
 
-        # Message processing
         self.message_processor = nn.Sequential(
             nn.Linear(obs_dim + message_dim, hidden_dim),
             nn.ReLU(),
@@ -209,13 +198,10 @@ class CommunicationNetwork(nn.Module):
         self, obs: torch.Tensor, messages: torch.Tensor
     ) -> torch.Tensor:
         """Process received messages with observation"""
-        # Average messages from other agents
         avg_message = messages.mean(dim=1)
 
-        # Combine with observation
         combined = torch.cat([obs, avg_message], dim=-1)
 
-        # Process to get enhanced observation
         enhanced_obs = self.message_processor(combined)
 
         return enhanced_obs
@@ -243,7 +229,6 @@ class MADDPGAgent:
         self.use_attention = use_attention
         self.use_communication = use_communication
 
-        # Networks
         self.actor = Actor(obs_dim, action_dim).to(device)
         self.actor_target = Actor(obs_dim, action_dim).to(device)
 
@@ -258,11 +243,9 @@ class MADDPGAgent:
             self.critic = Critic(total_obs_dim, total_action_dim).to(device)
             self.critic_target = Critic(total_obs_dim, total_action_dim).to(device)
 
-        # Communication network
         if use_communication:
             self.comm_network = CommunicationNetwork(obs_dim, message_dim=32).to(device)
 
-        # Optimizers
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr_actor)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=lr_critic)
 
@@ -271,11 +254,9 @@ class MADDPGAgent:
                 self.comm_network.parameters(), lr=lr_actor
             )
 
-        # Initialize targets
         self.hard_update(self.actor_target, self.actor)
         self.hard_update(self.critic_target, self.critic)
 
-        # Exploration noise
         self.noise_std = 0.2
         self.noise_decay = 0.995
         self.min_noise = 0.01
@@ -285,19 +266,15 @@ class MADDPGAgent:
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Select action and generate message"""
 
-        # Process messages if communication is enabled
         if self.use_communication and messages is not None:
             obs = self.comm_network.process_messages(obs, messages)
 
-        # Generate action
         action = self.actor(obs)
 
-        # Add exploration noise
         if explore:
             noise = torch.randn_like(action) * self.noise_std
             action = torch.clamp(action + noise, -1, 1)
 
-        # Generate message
         message = None
         if self.use_communication:
             message = self.comm_network.generate_message(obs)
@@ -321,9 +298,7 @@ class MADDPGAgent:
 
         batch_size = obs.shape[0]
 
-        # --- Critic Update ---
         with torch.no_grad():
-            # Get next actions from target actors
             next_actions = torch.zeros_like(actions)
             for i, actor in enumerate(other_actors):
                 if i == self.agent_idx:
@@ -331,7 +306,6 @@ class MADDPGAgent:
                 else:
                     next_actions[:, i] = actor(next_obs[:, i])
 
-            # Compute target Q-value
             if self.use_attention:
                 target_q = self.critic_target(next_obs, next_actions, self.agent_idx)
             else:
@@ -344,7 +318,6 @@ class MADDPGAgent:
                 + gamma * (1 - dones[:, self.agent_idx]) * target_q
             )
 
-        # Current Q-value
         if self.use_attention:
             current_q = self.critic(obs, actions, self.agent_idx)
         else:
@@ -352,21 +325,16 @@ class MADDPGAgent:
             actions_flat = actions.view(batch_size, -1)
             current_q = self.critic(obs_flat, actions_flat)
 
-        # Critic loss
         critic_loss = F.mse_loss(current_q, target_q)
 
-        # Update critic
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 1.0)
         self.critic_optimizer.step()
 
-        # --- Actor Update ---
-        # Get current actions with own actor
         current_actions = actions.clone()
         current_actions[:, self.agent_idx] = self.actor(obs[:, self.agent_idx])
 
-        # Actor loss
         if self.use_attention:
             actor_loss = -self.critic(obs, current_actions, self.agent_idx).mean()
         else:
@@ -374,17 +342,14 @@ class MADDPGAgent:
             current_actions_flat = current_actions.view(batch_size, -1)
             actor_loss = -self.critic(obs_flat, current_actions_flat).mean()
 
-        # Update actor
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.actor.parameters(), 1.0)
         self.actor_optimizer.step()
 
-        # --- Soft Update Target Networks ---
         self.soft_update(self.actor_target, self.actor, tau)
         self.soft_update(self.critic_target, self.critic, tau)
 
-        # Decay exploration noise
         self.noise_std = max(self.noise_std * self.noise_decay, self.min_noise)
 
         return {
@@ -425,7 +390,6 @@ class MultiAgentEnvironment:
 
     def reset(self) -> np.ndarray:
         """Reset environment"""
-        # Initialize agent positions and velocities
         self.agent_states = np.random.uniform(-2, 2, (self.n_agents, self.obs_dim))
         self.steps = 0
 
@@ -436,10 +400,8 @@ class MultiAgentEnvironment:
         observations = np.zeros((self.n_agents, self.obs_dim))
 
         for i in range(self.n_agents):
-            # Each agent observes its own state and relative positions to others
             obs = self.agent_states[i].copy()
 
-            # Add some partial observability by adding noise
             obs += np.random.normal(0, 0.1, self.obs_dim)
             observations[i] = obs
 
@@ -451,31 +413,22 @@ class MultiAgentEnvironment:
         """Environment step"""
         actions = np.clip(actions, -1, 1)
 
-        # Update agent states based on actions
         for i in range(self.n_agents):
-            # Simple dynamics: first 2 dims are position, next 2 are velocity
             if self.obs_dim >= 4:
-                # Update velocity
                 self.agent_states[i, 2:4] += 0.1 * actions[i, :2]
                 self.agent_states[i, 2:4] *= 0.9  # Friction
 
-                # Update position
                 self.agent_states[i, :2] += 0.1 * self.agent_states[i, 2:4]
             else:
-                # Direct position control
                 self.agent_states[i, :2] += 0.1 * actions[i, :2]
 
-            # Add noise
             self.agent_states[i] += np.random.normal(0, 0.02, self.obs_dim)
 
-        # Compute rewards
         rewards = self.compute_rewards()
 
-        # Check termination
         self.steps += 1
         dones = np.array([self.steps >= self.max_steps] * self.n_agents)
 
-        # Check if any agent is too far
         for i in range(self.n_agents):
             if np.linalg.norm(self.agent_states[i, :2]) > 5:
                 dones[i] = True
@@ -489,14 +442,11 @@ class MultiAgentEnvironment:
         rewards = np.zeros(self.n_agents)
 
         if self.env_type == "cooperative":
-            # Cooperative task: agents should stay close to each other and center
             center = np.mean(self.agent_states[:, :2], axis=0)
 
             for i in range(self.n_agents):
-                # Reward for staying near center
                 center_reward = -np.linalg.norm(self.agent_states[i, :2])
 
-                # Reward for staying close to other agents
                 cohesion_reward = 0
                 for j in range(self.n_agents):
                     if i != j:
@@ -508,7 +458,6 @@ class MultiAgentEnvironment:
                 rewards[i] = center_reward + 0.5 * cohesion_reward
 
         elif self.env_type == "competitive":
-            # Competitive task: agents compete for resources
             target = np.array([0, 0])  # Shared resource at origin
 
             distances = [
@@ -524,14 +473,11 @@ class MultiAgentEnvironment:
                     rewards[i] = -0.1  # Others get penalty
 
         elif self.env_type == "mixed":
-            # Mixed task: some cooperation, some competition
-            # Agents form teams and compete against each other
             team_size = self.n_agents // 2
 
             for i in range(self.n_agents):
                 team_id = i // team_size
 
-                # Intra-team cooperation
                 team_reward = 0
                 for j in range(self.n_agents):
                     if j // team_size == team_id and i != j:
@@ -540,7 +486,6 @@ class MultiAgentEnvironment:
                         )
                         team_reward += -0.1 * dist
 
-                # Inter-team competition
                 comp_reward = 0
                 for j in range(self.n_agents):
                     if j // team_size != team_id:

@@ -23,12 +23,10 @@ class CollaborativeGridWorld(gym.Env):
         self.num_agents = num_agents  # AI agents
         self.max_steps = max_steps
 
-        # Action space: movement + interaction + communication
         self.action_space = spaces.Discrete(
             6
         )  # up, down, left, right, interact, communicate
 
-        # Observation space
         self.observation_space = spaces.Dict(
             {
                 "ai_state": spaces.Dict(
@@ -61,22 +59,18 @@ class CollaborativeGridWorld(gym.Env):
             }
         )
 
-        # Environment state
         self.ai_positions = []
         self.ai_inventories = []
         self.human_available = True
         self.human_last_action = 0
         self.step_count = 0
 
-        # Shared state
         self.grid_objects = {}  # position -> object_type
         self.task_progress = np.zeros(3)  # Progress on 3 subtasks
         self.communication_history = []
 
-        # Object types
         self.object_types = ["resource_a", "resource_b", "tool", "obstacle"]
 
-        # Human-AI interaction
         self.communication_queue = queue.Queue()
         self.human_response_queue = queue.Queue()
         self.communication_thread = None
@@ -86,27 +80,23 @@ class CollaborativeGridWorld(gym.Env):
         """Reset the collaborative environment."""
         super().reset(seed=seed)
 
-        # Initialize AI agents
         positions = [(i, j) for i in range(self.size) for j in range(self.size)]
         np.random.shuffle(positions)
 
         self.ai_positions = positions[: self.num_agents]
         self.ai_inventories = [[] for _ in range(self.num_agents)]
 
-        # Initialize grid objects
         self.grid_objects = {}
         for i in range(self.num_agents * 2):  # Some objects per agent
             obj_type = np.random.choice(self.object_types)
             self.grid_objects[positions[self.num_agents + i]] = obj_type
 
-        # Reset other state
         self.human_available = True
         self.human_last_action = 0
         self.step_count = 0
         self.task_progress = np.zeros(3)
         self.communication_history = []
 
-        # Start communication thread
         self._start_communication()
 
         return self._get_observation(), {}
@@ -119,23 +109,18 @@ class CollaborativeGridWorld(gym.Env):
         terminated = False
         truncated = self.step_count >= self.max_steps
 
-        # Execute AI action
         ai_reward = self._execute_ai_action(action)
         reward += ai_reward
 
-        # Check human availability and get human action
         human_action = self._get_human_action()
         if human_action is not None:
             human_reward = self._execute_human_action(human_action)
             reward += human_reward
 
-        # Update task progress
         self._update_task_progress()
 
-        # Communication processing
         self._process_communication()
 
-        # Check termination conditions
         if self._check_task_completion():
             reward += 20.0
             terminated = True
@@ -170,7 +155,6 @@ class CollaborativeGridWorld(gym.Env):
         current_pos = self.ai_positions[agent_id]
         new_pos = (current_pos[0] + dx, current_pos[1] + dy)
 
-        # Check bounds and obstacles
         if not (0 <= new_pos[0] < self.size and 0 <= new_pos[1] < self.size):
             return -0.1
 
@@ -179,7 +163,6 @@ class CollaborativeGridWorld(gym.Env):
 
         self.ai_positions[agent_id] = new_pos
 
-        # Check for resource collection
         if new_pos in self.grid_objects:
             obj_type = self.grid_objects[new_pos]
             if obj_type in ["resource_a", "resource_b"]:
@@ -204,10 +187,8 @@ class CollaborativeGridWorld(gym.Env):
 
     def _ai_communicate(self, agent_id: int) -> float:
         """AI agent communication."""
-        # Generate communication message
         message = self._generate_ai_message(agent_id)
 
-        # Send to communication channel
         self.communication_queue.put(
             {
                 "sender": "ai",
@@ -249,7 +230,6 @@ class CollaborativeGridWorld(gym.Env):
         if not self.human_available:
             return None
 
-        # Check for human response
         try:
             human_input = self.human_response_queue.get_nowait()
             self.human_last_action = human_input.get("action", 0)
@@ -259,17 +239,13 @@ class CollaborativeGridWorld(gym.Env):
 
     def _execute_human_action(self, action: int) -> float:
         """Execute human action (simplified - humans can teleport and collect)."""
-        # Humans have god-like abilities for collaboration
         if action < 4:
-            # Human movement (teleport)
             new_pos = (np.random.randint(self.size), np.random.randint(self.size))
-            # Find nearest resource
             nearest_resource = self._find_nearest_resource(new_pos)
             if nearest_resource:
                 self.ai_positions[0] = nearest_resource  # Help AI agent
                 return 2.0
         elif action == 4:
-            # Human collection help
             collected = 0
             for pos, obj in list(self.grid_objects.items()):
                 if obj in ["resource_a", "resource_b"]:
@@ -280,7 +256,6 @@ class CollaborativeGridWorld(gym.Env):
                         break
             return collected * 1.5
         elif action == 5:
-            # Human communication
             return 0.5
 
         return 0.0
@@ -303,19 +278,16 @@ class CollaborativeGridWorld(gym.Env):
 
     def _update_task_progress(self):
         """Update task progress based on current state."""
-        # Task 1: Collect resource_a
         resource_a_count = sum(
             1 for inv in self.ai_inventories for item in inv if item == "resource_a"
         )
         self.task_progress[0] = min(resource_a_count / 5.0, 1.0)  # Need 5 resource_a
 
-        # Task 2: Collect resource_b
         resource_b_count = sum(
             1 for inv in self.ai_inventories for item in inv if item == "resource_b"
         )
         self.task_progress[1] = min(resource_b_count / 3.0, 1.0)  # Need 3 resource_b
 
-        # Task 3: Have tools
         tool_count = sum(
             1 for inv in self.ai_inventories for item in inv if item == "tool"
         )
@@ -332,7 +304,6 @@ class CollaborativeGridWorld(gym.Env):
                 message = self.communication_queue.get_nowait()
                 self.communication_history.append(message)
 
-                # Limit history size
                 if len(self.communication_history) > 10:
                     self.communication_history.pop(0)
 
@@ -341,7 +312,6 @@ class CollaborativeGridWorld(gym.Env):
 
     def _calculate_collaboration_score(self) -> float:
         """Calculate collaboration effectiveness score."""
-        # Based on communication frequency, task progress, and human involvement
         comm_score = min(len(self.communication_history) / 10.0, 1.0)
         progress_score = np.mean(self.task_progress)
         human_score = 1.0 if self.human_available else 0.0
@@ -387,7 +357,6 @@ class CollaborativeGridWorld(gym.Env):
             obj_id = self.object_types.index(obj_type) + 1
             obj_array[pos[0], pos[1]] = obj_id
 
-        # Add AI agent positions
         for i, pos in enumerate(self.ai_positions):
             obj_array[pos[0], pos[1]] = -1 - i  # Negative values for agents
 
@@ -418,7 +387,6 @@ class CollaborativeGridWorld(gym.Env):
     def _communication_handler(self):
         """Handle communication processing."""
         while self.is_communicating:
-            # Process any pending communications
             self._process_communication()
             time.sleep(0.1)
 
@@ -427,20 +395,16 @@ class CollaborativeGridWorld(gym.Env):
         if mode == "rgb_array":
             return self._render_rgb()
 
-        # Text-based rendering
         grid = [["." for _ in range(self.size)] for _ in range(self.size)]
 
-        # Place objects
         for pos, obj_type in self.grid_objects.items():
             symbol = obj_type[0].upper()
             grid[pos[0]][pos[1]] = symbol
 
-        # Place AI agents
         for i, pos in enumerate(self.ai_positions):
             if grid[pos[0]][pos[1]] == ".":
                 grid[pos[0]][pos[1]] = f"A{i}"
 
-        # Print grid
         print("\n".join(" ".join(row) for row in grid))
         print(f"AI Inventories: {self.ai_inventories}")
         print(f"Task Progress: {self.task_progress}")
@@ -451,7 +415,6 @@ class CollaborativeGridWorld(gym.Env):
         """Render as RGB array."""
         image = np.zeros((self.size * 10, self.size * 10, 3), dtype=np.uint8)
 
-        # Colors for different elements
         colors = {
             "resource_a": [255, 0, 0],  # Red
             "resource_b": [0, 255, 0],  # Green
@@ -464,13 +427,11 @@ class CollaborativeGridWorld(gym.Env):
             for j in range(self.size):
                 color = [255, 255, 255]  # White background
 
-                # Objects
                 pos = (i, j)
                 if pos in self.grid_objects:
                     obj_type = self.grid_objects[pos]
                     color = colors.get(obj_type, [128, 128, 128])
 
-                # AI agents
                 for agent_id, agent_pos in enumerate(self.ai_positions):
                     if agent_pos == pos:
                         color = colors["ai_agent"]

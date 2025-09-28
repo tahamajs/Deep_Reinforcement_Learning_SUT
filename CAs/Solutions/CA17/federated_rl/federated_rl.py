@@ -11,7 +11,6 @@ from sklearn.cluster import KMeans
 from scipy import stats
 import hashlib
 
-# Privacy Utilities
 class DifferentialPrivacy:
     """Differential privacy mechanisms for federated learning"""
 
@@ -39,7 +38,6 @@ class DifferentialPrivacy:
         private_grads = self.add_gaussian_noise(clipped_grads)
         return private_grads
 
-# Communication Compression
 class GradientCompression:
     """Compression techniques for efficient communication"""
 
@@ -53,10 +51,8 @@ class GradientCompression:
         flat_grads = gradients.flatten()
         k = int(len(flat_grads) * self.compression_ratio)
 
-        # Get top-k indices
         top_k_values, top_k_indices = torch.topk(torch.abs(flat_grads), k)
 
-        # Create sparse representation
         sparse_grads = torch.zeros_like(flat_grads)
         sparse_grads[top_k_indices] = flat_grads[top_k_indices]
 
@@ -64,17 +60,14 @@ class GradientCompression:
 
     def quantize(self, gradients: torch.Tensor) -> torch.Tensor:
         """Quantize gradients to reduce precision"""
-        # Min-max quantization
         grad_min = gradients.min()
         grad_max = gradients.max()
         grad_range = grad_max - grad_min
 
         if grad_range > 0:
-            # Quantize to discrete levels
             quantized = torch.round(
                 (gradients - grad_min) / grad_range * (self.quantization_levels - 1)
             )
-            # Dequantize
             quantized = quantized / (self.quantization_levels - 1) * grad_range + grad_min
         else:
             quantized = gradients
@@ -87,7 +80,6 @@ class GradientCompression:
         compressed_grads = self.quantize(sparse_grads)
         return compressed_grads
 
-# Federated Client
 class FederatedRLClient:
     """Individual client in federated reinforcement learning"""
 
@@ -100,7 +92,6 @@ class FederatedRLClient:
         self.action_dim = action_dim
         self.local_epochs = local_epochs
 
-        # Local policy and value networks
         self.actor = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -118,18 +109,14 @@ class FederatedRLClient:
             nn.Linear(hidden_dim, 1)
         )
 
-        # Optimizers
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=lr)
 
-        # Privacy and compression
         self.privacy_engine = DifferentialPrivacy(epsilon=privacy_epsilon)
         self.compression = GradientCompression(compression_ratio=0.2)
 
-        # Local data buffer
         self.replay_buffer = deque(maxlen=10000)
 
-        # Training statistics
         self.local_rewards = []
         self.communication_costs = []
 
@@ -143,21 +130,17 @@ class FederatedRLClient:
             episode_data = []
 
             for step in range(200):  # Max episode length
-                # Get action from current policy
                 state_tensor = torch.FloatTensor(state).unsqueeze(0)
 
                 with torch.no_grad():
                     action = self.actor(state_tensor).squeeze().numpy()
                     value = self.critic(state_tensor).squeeze().item()
 
-                # Add exploration noise
                 action += np.random.normal(0, 0.1, action.shape)
                 action = np.clip(action, -1, 1)
 
-                # Environment step
                 next_state, reward, done, _ = env.step(action)
 
-                # Store transition
                 episode_data.append({
                     'state': state,
                     'action': action,
@@ -173,10 +156,8 @@ class FederatedRLClient:
                 if done:
                     break
 
-            # Compute advantages for this episode
             episode_data = self._compute_advantages(episode_data)
 
-            # Add to replay buffer
             self.replay_buffer.extend(episode_data)
             episode_rewards.append(episode_reward)
 
@@ -202,7 +183,6 @@ class FederatedRLClient:
             gae = delta + gamma * lambda_gae * (1 - episode_data[t]['done']) * gae
             advantages.insert(0, gae)
 
-        # Add advantages to episode data
         for i, advantage in enumerate(advantages):
             episode_data[i]['advantage'] = advantage
 
@@ -213,7 +193,6 @@ class FederatedRLClient:
         """Perform local training updates"""
 
         if global_actor is not None:
-            # Update local model with global parameters
             self.actor.load_state_dict(global_actor.state_dict())
         if global_critic is not None:
             self.critic.load_state_dict(global_critic.state_dict())
@@ -225,7 +204,6 @@ class FederatedRLClient:
         total_critic_loss = 0
 
         for epoch in range(self.local_epochs):
-            # Sample batch from replay buffer
             batch_size = min(32, len(self.replay_buffer))
             batch = random.sample(self.replay_buffer, batch_size)
 
@@ -236,10 +214,8 @@ class FederatedRLClient:
             advantages = torch.FloatTensor([t['advantage'] for t in batch])
             values = torch.FloatTensor([t['value'] for t in batch])
 
-            # Compute returns
             returns = advantages + values
 
-            # Critic update
             predicted_values = self.critic(states).squeeze()
             critic_loss = F.mse_loss(predicted_values, returns.detach())
 
@@ -247,10 +223,8 @@ class FederatedRLClient:
             critic_loss.backward()
             self.critic_optimizer.step()
 
-            # Actor update
             predicted_actions = self.actor(states)
 
-            # Policy gradient loss (simplified)
             action_loss = F.mse_loss(predicted_actions, actions)
             actor_loss = (action_loss * advantages.detach()).mean()
 
@@ -270,7 +244,6 @@ class FederatedRLClient:
                          global_critic: nn.Module) -> Dict:
         """Get privatized and compressed model updates"""
 
-        # Compute gradients (difference from global model)
         actor_updates = {}
         critic_updates = {}
 
@@ -279,10 +252,8 @@ class FederatedRLClient:
         ):
             update = local_param.data - global_param.data
 
-            # Apply privacy
             private_update = self.privacy_engine.privatize_gradients(update)
 
-            # Apply compression
             compressed_update = self.compression.compress(private_update)
 
             actor_updates[name] = compressed_update
@@ -295,7 +266,6 @@ class FederatedRLClient:
             compressed_update = self.compression.compress(private_update)
             critic_updates[name] = compressed_update
 
-        # Estimate communication cost
         comm_cost = sum(u.numel() for u in actor_updates.values())
         comm_cost += sum(u.numel() for u in critic_updates.values())
         self.communication_costs.append(comm_cost)
@@ -307,7 +277,6 @@ class FederatedRLClient:
             'client_id': self.client_id
         }
 
-# Federated Server
 class FederatedRLServer:
     """Central server for federated reinforcement learning"""
 
@@ -319,7 +288,6 @@ class FederatedRLServer:
         self.aggregation_method = aggregation_method
         self.byzantine_tolerance = byzantine_tolerance
 
-        # Global models
         self.global_actor = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -337,7 +305,6 @@ class FederatedRLServer:
             nn.Linear(hidden_dim, 1)
         )
 
-        # Server statistics
         self.round_statistics = []
         self.client_contributions = defaultdict(list)
 
@@ -359,11 +326,9 @@ class FederatedRLServer:
     def _fedavg_aggregation(self, client_updates: List[Dict]) -> Dict:
         """FedAvg aggregation with weighted averaging"""
 
-        # Calculate weights based on number of samples
         total_samples = sum(update['num_samples'] for update in client_updates)
         weights = [update['num_samples'] / total_samples for update in client_updates]
 
-        # Aggregate actor parameters
         aggregated_actor_updates = {}
         for name, param in self.global_actor.named_parameters():
             weighted_updates = []
@@ -374,7 +339,6 @@ class FederatedRLServer:
             if weighted_updates:
                 aggregated_actor_updates[name] = torch.stack(weighted_updates).sum(dim=0)
 
-        # Aggregate critic parameters
         aggregated_critic_updates = {}
         for name, param in self.global_critic.named_parameters():
             weighted_updates = []
@@ -385,7 +349,6 @@ class FederatedRLServer:
             if weighted_updates:
                 aggregated_critic_updates[name] = torch.stack(weighted_updates).sum(dim=0)
 
-        # Apply aggregated updates to global models
         with torch.no_grad():
             for name, param in self.global_actor.named_parameters():
                 if name in aggregated_actor_updates:
@@ -407,7 +370,6 @@ class FederatedRLServer:
 
         trim_ratio = 0.1  # Trim 10% from each side
 
-        # Aggregate actor parameters
         for name, param in self.global_actor.named_parameters():
             param_updates = []
             for update in client_updates:
@@ -415,12 +377,10 @@ class FederatedRLServer:
                     param_updates.append(update['actor_updates'][name])
 
             if param_updates:
-                # Stack updates and compute trimmed mean
                 stacked_updates = torch.stack(param_updates)
                 trimmed_mean = self._compute_trimmed_mean(stacked_updates, trim_ratio)
                 param.data += trimmed_mean
 
-        # Aggregate critic parameters
         for name, param in self.global_critic.named_parameters():
             param_updates = []
             for update in client_updates:
@@ -447,17 +407,13 @@ class FederatedRLServer:
         if n_trim == 0:
             return tensor_stack.mean(dim=0)
 
-        # Sort along client dimension
         sorted_tensor, _ = torch.sort(tensor_stack, dim=0)
 
-        # Trim and compute mean
         trimmed_tensor = sorted_tensor[n_trim:-n_trim] if n_trim > 0 else sorted_tensor
         return trimmed_tensor.mean(dim=0)
 
     def _fedprox_aggregation(self, client_updates: List[Dict]) -> Dict:
         """FedProx aggregation (simplified version)"""
-        # For now, implement as FedAvg with regularization term
-        # In practice, FedProx modifies the local client objective
         return self._fedavg_aggregation(client_updates)
 
     def evaluate_global_model(self, test_env) -> float:

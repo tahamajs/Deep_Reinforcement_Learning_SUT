@@ -14,5 +14,3 @@ Experiments:
 Author: CA7 Implementation
 """
 
-# This package contains standalone experiment scripts
-# Import them as needed for specific experiments

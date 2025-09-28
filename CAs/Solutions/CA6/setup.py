@@ -1,4 +1,3 @@
-# Policy Gradient Methods Setup and Utilities
 import numpy as np
 import torch
 import torch.nn as nn
@@ -19,16 +18,16 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-# Set random seeds for reproducibility
+
 torch.manual_seed(42)
 np.random.seed(42)
 random.seed(42)
 
-# Device configuration
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-# Plotting configuration
+
 plt.style.use("seaborn-v0_8")
 sns.set_palette("husl")
 plt.rcParams["figure.figsize"] = (12, 8)
@@ -40,26 +39,24 @@ print(f"Gymnasium version: {gym.__version__}")
 print(f"NumPy version: {np.__version__}")
 
 
-# Numerical-stability wrapper for torch.distributions.Categorical
-# This replaces the Categorical symbol with a safe wrapper that sanitizes logits/probs
 import importlib
 import torch.distributions as _torch_distributions
 
-# Try to fetch a clean original Categorical by reloading the module to avoid notebook-time monkey-patches
+
 try:
     _orig_module = importlib.reload(importlib.import_module("torch.distributions"))
     _OrigCategorical = getattr(_orig_module, "Categorical")
 except Exception:
-    # Fallback: use current attribute if reload fails
+
     _OrigCategorical = getattr(_torch_distributions, "Categorical", None)
 
 
 def _sanitize_logits(logits: torch.Tensor) -> torch.Tensor:
     if not torch.is_tensor(logits):
         return logits
-    # Replace NaN/inf and clamp extremes
+
     logits = torch.nan_to_num(logits, nan=0.0, posinf=1e6, neginf=-1e6)
-    # Stabilize by subtracting max per-row before softmax (helps avoid large exponentials)
+
     try:
         max_val = logits.max(dim=-1, keepdim=True)[0]
         logits = logits - max_val
@@ -69,7 +66,7 @@ def _sanitize_logits(logits: torch.Tensor) -> torch.Tensor:
 
 
 def Categorical(*args, **kwargs):
-    # Support usage with logits=... or probs=... or positional single-tensor logits
+
     if "logits" in kwargs:
         kwargs["logits"] = _sanitize_logits(kwargs["logits"])
         return _OrigCategorical(**kwargs)
@@ -91,7 +88,6 @@ def Categorical(*args, **kwargs):
     return _OrigCategorical(*args, **kwargs)
 
 
-# Monkey-patch the torch.distributions module so qualified calls are routed through our wrapper
 try:
     _torch_distributions.Categorical = Categorical
     torch.distributions.Categorical = Categorical
@@ -99,7 +95,7 @@ try:
 except Exception as e:
     print("[stability wrapper] Warning: could not monkey-patch torch.distributions:", e)
 
-# Quick sanity tests for the wrapper
+
 print("\n[stability wrapper] Running quick sanity checks for Categorical wrapper...")
 with torch.no_grad():
     t1 = torch.tensor([[1e9, -1e9]], dtype=torch.float32)

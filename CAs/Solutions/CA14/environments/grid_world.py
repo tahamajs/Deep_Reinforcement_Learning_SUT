@@ -15,7 +15,6 @@ class SimpleGridWorld:
         return np.array(self.state, dtype=np.float32)
 
     def step(self, action):
-        # Actions: 0=up, 1=down, 2=left, 3=right
         if action == 0 and self.state[1] < self.size - 1:
             self.state[1] += 1
         elif action == 1 and self.state[1] > 0:

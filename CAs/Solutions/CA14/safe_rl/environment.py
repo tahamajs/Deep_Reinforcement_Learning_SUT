@@ -16,7 +16,6 @@ class SafeEnvironment:
         self.goal = [size - 1, size - 1]
         self.constraint_threshold = constraint_threshold
 
-        # Define hazardous areas
         if hazard_positions is None:
             self.hazards = [[2, 2], [3, 1], [1, 3], [4, 3]]
         else:
@@ -26,7 +25,6 @@ class SafeEnvironment:
         self.max_episode_steps = 50
         self.current_step = 0
 
-        # Safety statistics
         self.constraint_violations = 0
         self.total_constraint_cost = 0
 
@@ -42,7 +40,6 @@ class SafeEnvironment:
         """Take action in environment with safety constraints."""
         self.current_step += 1
 
-        # Execute action
         prev_state = self.state.copy()
         if action == 0 and self.state[1] < self.size - 1:  # up
             self.state[1] += 1
@@ -53,14 +50,11 @@ class SafeEnvironment:
         elif action == 3 and self.state[0] < self.size - 1:  # right
             self.state[0] += 1
 
-        # Compute reward
         done = self.state == self.goal
         reward = 10.0 if done else -0.1
 
-        # Compute constraint cost (safety violations)
         constraint_cost = self._compute_constraint_cost(self.state)
 
-        # Check if episode should terminate
         episode_done = done or self.current_step >= self.max_episode_steps
 
         info = {
@@ -76,12 +70,10 @@ class SafeEnvironment:
         """Compute constraint violation cost."""
         cost = 0.0
 
-        # Hazard penalty
         if state in self.hazards:
             cost += 1.0  # High cost for being in hazardous areas
             self.constraint_violations += 1
 
-        # Boundary penalty (soft constraints)
         if (
             state[0] == 0
             or state[0] == self.size - 1

@@ -34,13 +34,9 @@ class ModelBasedComparisonFramework:
             print(f"\n🌍 Environment: {env_name}")
             self.results[env_name] = {}
 
-            # First train a model for model-based methods
             if hasattr(env, "num_states"):
-                # Create and train models
                 tabular_model = TabularModel(env.num_states, env.num_actions)
-                # neural_model = NeuralModel(env.num_states, env.num_actions, hidden_dim=32).to(device)
 
-                # Quick model training
                 self._train_models(env, tabular_model)  # , neural_model)
 
             for method_name, method_info in self.methods.items():
@@ -49,10 +45,8 @@ class ModelBasedComparisonFramework:
                 method_results = []
 
                 for run in range(n_runs):
-                    # Create agent instance
                     kwargs = method_info["kwargs"].copy()
 
-                    # Inject models if needed
                     if "model" in kwargs:
                         if kwargs["model"] == "tabular":
                             kwargs["model"] = tabular_model
@@ -62,7 +56,6 @@ class ModelBasedComparisonFramework:
                     try:
                         agent = method_info["class"](**kwargs)
 
-                        # Run episodes
                         episode_rewards = []
                         episode_lengths = []
 
@@ -94,7 +87,6 @@ class ModelBasedComparisonFramework:
                         continue
 
                 if method_results:
-                    # Aggregate results across runs
                     self.results[env_name][method_name] = self._aggregate_results(
                         method_results
                     )
@@ -113,7 +105,6 @@ class ModelBasedComparisonFramework:
         """Quick model training"""
         trainer = ModelTrainer(neural_model, lr=1e-3)
 
-        # Train neural model
         experience_data = []
         for episode in range(episodes):
             state = env.reset()
@@ -126,14 +117,12 @@ class ModelBasedComparisonFramework:
                     break
                 state = next_state
 
-        # Train neural model
         if experience_data:
             states = np.array([exp[0] for exp in experience_data])
             actions = np.array([exp[1] for exp in experience_data])
             next_states = np.array([exp[2] for exp in experience_data])
             rewards = np.array([exp[3] for exp in experience_data])
 
-            # Convert to one-hot for neural model
             states_onehot = np.eye(env.num_states)[states]
             next_states_onehot = np.eye(env.num_states)[next_states]
 
@@ -169,7 +158,6 @@ class ModelBasedComparisonFramework:
         fig, axes = plt.subplots(2, 2, figsize=(15, 12))
         fig.suptitle("Model-Based RL Comprehensive Comparison", fontsize=16)
 
-        # Performance comparison
         ax1 = axes[0, 0]
         for env_name, env_results in self.results.items():
             methods = list(env_results.keys())
@@ -186,7 +174,6 @@ class ModelBasedComparisonFramework:
         ax1.legend()
         ax1.grid(True, alpha=0.3)
 
-        # Learning efficiency
         ax2 = axes[0, 1]
         for env_name, env_results in self.results.items():
             methods = list(env_results.keys())
@@ -203,7 +190,6 @@ class ModelBasedComparisonFramework:
         ax2.legend()
         ax2.grid(True, alpha=0.3)
 
-        # Learning curves for one environment
         ax3 = axes[1, 0]
         if self.results:
             env_name = list(self.results.keys())[0]
@@ -211,7 +197,6 @@ class ModelBasedComparisonFramework:
 
             for method_name, method_data in env_results.items():
                 if method_data["all_results"]:
-                    # Average learning curve
                     all_rewards = [
                         r["episode_rewards"] for r in method_data["all_results"]
                     ]
@@ -226,7 +211,6 @@ class ModelBasedComparisonFramework:
             ax3.legend()
             ax3.grid(True, alpha=0.3)
 
-        # Method characteristics radar chart
         ax4 = axes[1, 1]
         ax4.text(
             0.5,
@@ -251,7 +235,6 @@ class ModelBasedComparisonFramework:
         )
         plt.show()
 
-        # Save individual method comparison plots
         self._save_individual_plots(save_path)
 
     def _save_individual_plots(self, save_path):
@@ -262,7 +245,6 @@ class ModelBasedComparisonFramework:
         env_name = list(self.results.keys())[0]
         env_results = self.results[env_name]
 
-        # Performance comparison
         plt.figure(figsize=(12, 8))
         methods = list(env_results.keys())
         performances = [env_results[m]["avg_final_performance"] for m in methods]
@@ -280,7 +262,6 @@ class ModelBasedComparisonFramework:
         plt.xticks(rotation=45, ha="right")
         plt.grid(True, alpha=0.3)
 
-        # Add value labels on bars
         for bar, perf in zip(bars, performances):
             plt.text(
                 bar.get_x() + bar.get_width() / 2,
@@ -297,7 +278,6 @@ class ModelBasedComparisonFramework:
         )
         plt.show()
 
-        # Learning efficiency comparison
         plt.figure(figsize=(12, 8))
         efficiencies = [env_results[m]["avg_learning_efficiency"] for m in methods]
         errors = [env_results[m]["std_learning_efficiency"] for m in methods]
@@ -314,7 +294,6 @@ class ModelBasedComparisonFramework:
         plt.xticks(rotation=45, ha="right")
         plt.grid(True, alpha=0.3)
 
-        # Add value labels on bars
         for bar, eff in zip(bars, efficiencies):
             plt.text(
                 bar.get_x() + bar.get_width() / 2,
@@ -331,7 +310,6 @@ class ModelBasedComparisonFramework:
         )
         plt.show()
 
-        # Learning curves
         plt.figure(figsize=(14, 8))
         for method_name, method_data in env_results.items():
             if method_data["all_results"]:
@@ -359,7 +337,6 @@ class ModelBasedComparisonFramework:
             print(f"\n🌍 Environment: {env_name}")
             print("-" * 40)
 
-            # Sort methods by performance
             sorted_methods = sorted(
                 env_results.items(),
                 key=lambda x: x[1]["avg_final_performance"],
@@ -383,13 +360,10 @@ def demonstrate_comparison():
     print("Comprehensive Model-Based Reinforcement Learning Analysis")
     print("=" * 60)
 
-    # Initialize comparison framework
     framework = ModelBasedComparisonFramework()
 
-    # Add environments
     framework.add_environment("GridWorld-5x5", SimpleGridWorld(size=5))
 
-    # Add methods for comparison
     framework.add_method(
         "Q-Learning",
         lambda **kwargs: DynaQAgent(25, 4, planning_steps=0),
@@ -417,19 +391,9 @@ def demonstrate_comparison():
         model="tabular",
     )
 
-    # Skip MPC for now due to neural model issues
-    # framework.add_method(
-    #     "MPC-CEM",
-    #     lambda **kwargs: MPCAgent(
-    #         kwargs["model"], 25, 4, horizon=5, method="cross_entropy"
-    #     ),
-    #     model="neural",
-    # )
 
-    # Run comprehensive comparison
     framework.run_comparison(n_episodes=30, n_runs=2)
 
-    # Visualize and analyze results
     framework.visualize_results(save_path="visualizations")
     framework.print_summary()
 

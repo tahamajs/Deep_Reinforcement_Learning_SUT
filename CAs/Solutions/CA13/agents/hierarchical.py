@@ -18,7 +18,6 @@ class OptionsCriticNetwork(nn.Module):
         self.action_dim = action_dim
         self.num_options = num_options
 
-        # Shared feature extractor
         self.feature_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -26,7 +25,6 @@ class OptionsCriticNetwork(nn.Module):
             nn.ReLU(),
         )
 
-        # Option selection network (high-level policy)
         self.option_net = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
@@ -34,7 +32,6 @@ class OptionsCriticNetwork(nn.Module):
             nn.Softmax(dim=-1),
         )
 
-        # Intra-option policies (low-level policies for each option)
         self.intra_option_nets = nn.ModuleList(
             [
                 nn.Sequential(
@@ -47,7 +44,6 @@ class OptionsCriticNetwork(nn.Module):
             ]
         )
 
-        # Termination functions for each option
         self.termination_nets = nn.ModuleList(
             [
                 nn.Sequential(
@@ -60,7 +56,6 @@ class OptionsCriticNetwork(nn.Module):
             ]
         )
 
-        # Value function over options
         self.value_net = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
@@ -71,20 +66,16 @@ class OptionsCriticNetwork(nn.Module):
         """Forward pass through the Options-Critic architecture."""
         features = self.feature_net(state)
 
-        # Option probabilities (high-level policy)
         option_probs = self.option_net(features)
 
-        # Intra-option policies
         action_probs = torch.stack(
             [net(features) for net in self.intra_option_nets], dim=1
         )
 
-        # Termination probabilities
         termination_probs = torch.stack(
             [net(features) for net in self.termination_nets], dim=1
         ).squeeze(-1)
 
-        # Value function
         option_values = self.value_net(features)
 
         return option_probs, action_probs, termination_probs, option_values
@@ -101,16 +92,13 @@ class OptionsCriticAgent:
         self.network = OptionsCriticNetwork(state_dim, action_dim, num_options)
         self.optimizer = optim.Adam(self.network.parameters(), lr=lr)
 
-        # Current option and episode memory
         self.current_option = None
         self.option_length = 0
         self.max_option_length = 10
 
-        # Training parameters
         self.gamma = 0.99
         self.beta_reg = 0.01  # Regularization for termination
 
-        # Statistics
         self.option_usage = np.zeros(num_options)
         self.option_lengths = []
         self.losses = []
@@ -138,7 +126,6 @@ class OptionsCriticAgent:
 
     def act(self, state):
         """Full action selection with option management."""
-        # Initialize or check option termination
         if (
             self.current_option is None
             or self.should_terminate(state, self.current_option)
@@ -150,7 +137,6 @@ class OptionsCriticAgent:
                 self.option_lengths.append(self.option_length)
             self.option_length = 0
 
-        # Select action with current option
         action = self.select_action(state, self.current_option)
         self.option_length += 1
 
@@ -167,26 +153,21 @@ class OptionsCriticAgent:
         rewards = torch.FloatTensor(rewards)
         options = torch.LongTensor(options)
 
-        # Forward pass
         option_probs, action_probs, termination_probs, option_values = self.network(
             states
         )
 
-        # Compute returns
         returns = torch.zeros_like(rewards)
         G = 0
         for t in reversed(range(len(rewards))):
             G = rewards[t] + self.gamma * G
             returns[t] = G
 
-        # Option-value loss (critic)
         current_option_values = option_values.gather(1, options.unsqueeze(1)).squeeze()
         value_loss = F.mse_loss(current_option_values, returns.detach())
 
-        # Intra-option policy loss (actor)
         advantages = returns - current_option_values.detach()
 
-        # Get action probabilities for current options
         selected_action_probs = []
         for i in range(len(actions)):
             selected_action_probs.append(action_probs[i, options[i], actions[i]])
@@ -194,12 +175,10 @@ class OptionsCriticAgent:
 
         policy_loss = -(torch.log(selected_action_probs) * advantages).mean()
 
-        # Termination regularization
         termination_reg = self.beta_reg * termination_probs.mean()
 
         total_loss = value_loss + policy_loss + termination_reg
 
-        # Optimization
         self.optimizer.zero_grad()
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=1.0)
@@ -227,7 +206,6 @@ class FeudalNetwork(nn.Module):
         self.goal_dim = goal_dim
         self.temporal_horizon = temporal_horizon
 
-        # Manager network (sets goals)
         self.manager_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -235,7 +213,6 @@ class FeudalNetwork(nn.Module):
         )
         self.manager_goal_net = nn.Linear(hidden_dim, goal_dim)
 
-        # Worker network (executes actions conditioned on goals)
         self.worker_net = nn.Sequential(
             nn.Linear(state_dim + goal_dim, hidden_dim),
             nn.ReLU(),
@@ -245,7 +222,6 @@ class FeudalNetwork(nn.Module):
             nn.Softmax(dim=-1),
         )
 
-        # Value networks
         self.manager_value_net = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, 1)
         )
@@ -256,7 +232,6 @@ class FeudalNetwork(nn.Module):
             nn.Linear(hidden_dim, 1),
         )
 
-        # Initialize LSTM hidden state
         self.manager_hidden = None
 
     def forward(self, state, goal=None):
@@ -265,11 +240,9 @@ class FeudalNetwork(nn.Module):
         if len(state.shape) == 1:
             state = state.unsqueeze(0)
 
-        # Manager forward pass
         manager_features = self.manager_net[0](state)  # First layer
         manager_features = self.manager_net[1](manager_features)  # ReLU
 
-        # LSTM for temporal abstraction
         if self.manager_hidden is None or self.manager_hidden[0].size(1) != batch_size:
             self.manager_hidden = (
                 torch.zeros(1, batch_size, self.manager_net[2].hidden_size),
@@ -281,14 +254,11 @@ class FeudalNetwork(nn.Module):
         )
         manager_features = lstm_out.squeeze(0)
 
-        # Generate goals
         goals = self.manager_goal_net(manager_features)
         goals = F.normalize(goals, p=2, dim=-1)  # Unit normalize goals
 
-        # Manager value
         manager_value = self.manager_value_net(manager_features)
 
-        # Worker forward pass
         if goal is None:
             goal = goals
 
@@ -317,26 +287,21 @@ class FeudalAgent:
         )
         self.optimizer = optim.Adam(self.network.parameters(), lr=lr)
 
-        # Current goal and step counter
         self.current_goal = None
         self.goal_step_count = 0
 
-        # Training parameters
         self.gamma = 0.99
         self.intrinsic_reward_scale = 0.5
 
-        # Statistics
         self.manager_losses = []
         self.worker_losses = []
         self.goal_changes = []
 
     def compute_intrinsic_reward(self, state, next_state, goal):
         """Compute intrinsic reward based on goal achievement."""
-        # Direction of state change
         state_diff = next_state - state
         state_diff_norm = np.linalg.norm(state_diff)
 
-        # Goal direction similarity
         if state_diff_norm > 1e-6:
             cosine_sim = np.dot(state_diff, goal) / (
                 state_diff_norm * np.linalg.norm(goal)
@@ -349,7 +314,6 @@ class FeudalAgent:
         with torch.no_grad():
             state_tensor = torch.FloatTensor(state).unsqueeze(0)
 
-            # Get new goal if needed
             if (
                 self.current_goal is None
                 or self.goal_step_count >= self.temporal_horizon
@@ -359,7 +323,6 @@ class FeudalAgent:
                 self.goal_step_count = 0
                 self.goal_changes.append(len(self.goal_changes))
 
-            # Get action from worker
             goal_tensor = torch.FloatTensor(self.current_goal).unsqueeze(0)
             _, action_probs, _, _ = self.network(state_tensor, goal_tensor)
             action = Categorical(action_probs).sample().item()
@@ -387,13 +350,10 @@ class FeudalAgent:
             rewards = torch.FloatTensor(rewards)
             next_states = torch.FloatTensor(next_states)
 
-            # Reset manager state for new trajectory
             self.network.reset_manager_state()
 
-            # Forward pass
             goals, action_probs, manager_values, worker_values = self.network(states)
 
-            # Compute intrinsic rewards
             intrinsic_rewards = []
             for i in range(len(states) - 1):
                 intrinsic_reward = self.compute_intrinsic_reward(
@@ -402,7 +362,6 @@ class FeudalAgent:
                 intrinsic_rewards.append(intrinsic_reward)
             intrinsic_rewards = torch.FloatTensor(intrinsic_rewards)
 
-            # Manager loss (external rewards with temporal horizon)
             manager_returns = torch.zeros_like(rewards)
             G = 0
             for t in reversed(range(len(rewards))):
@@ -412,7 +371,6 @@ class FeudalAgent:
             manager_advantages = manager_returns - manager_values.squeeze()
             manager_loss = (manager_advantages**2).mean()
 
-            # Worker loss (intrinsic + external rewards)
             total_rewards = rewards[:-1] + intrinsic_rewards
             worker_returns = torch.zeros_like(total_rewards)
             G = 0
@@ -422,7 +380,6 @@ class FeudalAgent:
 
             worker_advantages = worker_returns - worker_values[:-1].squeeze()
 
-            # Policy loss for worker
             selected_action_probs = (
                 action_probs[:-1].gather(1, actions[:-1].unsqueeze(1)).squeeze()
             )
@@ -439,12 +396,10 @@ class FeudalAgent:
         if num_updates == 0:
             return None
 
-        # Average losses
         avg_manager_loss = total_manager_loss / num_updates
         avg_worker_loss = total_worker_loss / num_updates
         total_loss = avg_manager_loss + avg_worker_loss
 
-        # Optimization
         self.optimizer.zero_grad()
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=1.0)

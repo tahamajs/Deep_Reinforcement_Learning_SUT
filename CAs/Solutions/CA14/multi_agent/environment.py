@@ -16,10 +16,8 @@ class MultiAgentEnvironment:
         self.num_targets = num_targets
         self.max_episode_steps = 100
 
-        # Initialize agent and target positions
         self.reset()
 
-        # Action space: 0=stay, 1=up, 2=down, 3=left, 4=right
         self.action_space = 5
         self.observation_space = (
             2 + 2 * num_agents + 2 * num_targets
@@ -29,7 +27,6 @@ class MultiAgentEnvironment:
         """Reset environment to initial state."""
         self.current_step = 0
 
-        # Random agent positions
         self.agent_positions = []
         for _ in range(self.num_agents):
             while True:
@@ -41,7 +38,6 @@ class MultiAgentEnvironment:
                     self.agent_positions.append(pos)
                     break
 
-        # Random target positions
         self.target_positions = []
         for _ in range(self.num_targets):
             while True:
@@ -63,7 +59,6 @@ class MultiAgentEnvironment:
         for i in range(self.num_agents):
             obs = []
 
-            # Agent's own position (normalized)
             obs.extend(
                 [
                     self.agent_positions[i][0] / self.grid_size,
@@ -71,7 +66,6 @@ class MultiAgentEnvironment:
                 ]
             )
 
-            # Other agents' positions (relative)
             for j in range(self.num_agents):
                 if i != j:
                     rel_pos = [
@@ -82,7 +76,6 @@ class MultiAgentEnvironment:
                     ]
                     obs.extend(rel_pos)
 
-            # Target positions (relative) and collection status
             for k, target_pos in enumerate(self.target_positions):
                 if not self.targets_collected[k]:
                     rel_pos = [
@@ -102,7 +95,6 @@ class MultiAgentEnvironment:
         self.current_step += 1
         rewards = [0.0] * self.num_agents
 
-        # Execute actions
         new_positions = []
         for i, action in enumerate(actions):
             pos = self.agent_positions[i].copy()
@@ -115,11 +107,9 @@ class MultiAgentEnvironment:
                 pos[0] -= 1
             elif action == 4 and pos[0] < self.grid_size - 1:  # right
                 pos[0] += 1
-            # action == 0: stay
 
             new_positions.append(pos)
 
-        # Check for collisions (agents can't occupy same cell)
         collision_agents = set()
         for i in range(self.num_agents):
             for j in range(i + 1, self.num_agents):
@@ -127,14 +117,12 @@ class MultiAgentEnvironment:
                     collision_agents.add(i)
                     collision_agents.add(j)
 
-        # Apply movements (collision agents stay in place)
         for i in range(self.num_agents):
             if i not in collision_agents:
                 self.agent_positions[i] = new_positions[i]
             else:
                 rewards[i] -= 0.5  # Collision penalty
 
-        # Check target collection
         targets_collected_this_step = []
         for i in range(self.num_agents):
             for j, target_pos in enumerate(self.target_positions):
@@ -146,17 +134,14 @@ class MultiAgentEnvironment:
                     rewards[i] += 10.0  # Target collection reward
                     targets_collected_this_step.append(j)
 
-        # Team collaboration bonus
         if targets_collected_this_step:
             team_bonus = 2.0 * len(targets_collected_this_step)
             for i in range(self.num_agents):
                 rewards[i] += team_bonus / self.num_agents
 
-        # Small step penalty to encourage efficiency
         for i in range(self.num_agents):
             rewards[i] -= 0.1
 
-        # Check termination
         done = (
             all(self.targets_collected) or self.current_step >= self.max_episode_steps
         )

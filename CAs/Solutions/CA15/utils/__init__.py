@@ -19,7 +19,6 @@ import os
 from collections import defaultdict, deque
 import warnings
 
-# Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -86,7 +85,6 @@ class PrioritizedReplayBuffer:
 
         indices = np.random.choice(len(self.buffer), batch_size, p=probabilities)
 
-        # Importance sampling weights
         weights = (len(self.buffer) * probabilities[indices]) ** (-beta)
         weights /= weights.max()
 
@@ -427,10 +425,8 @@ class ExperimentUtils:
             for seed in range(num_seeds):
                 ExperimentUtils.set_random_seeds(seed)
 
-                # Create agent with parameters
                 agent = agent_class(**params)
 
-                # Train agent
                 rewards = []
                 for episode in range(num_episodes):
                     state = env.reset()
@@ -462,7 +458,6 @@ class ExperimentUtils:
         return pd.DataFrame(results)
 
 
-# Convenience functions
 def set_device(gpu_id: int = None):
     """Set the device for PyTorch computations."""
     global device

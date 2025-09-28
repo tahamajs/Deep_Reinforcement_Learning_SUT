@@ -86,10 +86,8 @@ class MCTS:
         root.untried_actions = list(range(self.num_actions))
 
         for _ in range(num_simulations):
-            # 1. Selection: traverse tree to leaf
             leaf = self._select_leaf(root)
 
-            # 2. Expansion: add child if not terminal
             if leaf.untried_actions and len(leaf.untried_actions) > 0:
                 action = np.random.choice(leaf.untried_actions)
                 next_state, reward, done = self._simulate_step(leaf.state, action)
@@ -99,10 +97,8 @@ class MCTS:
                 )
                 leaf = child
 
-            # 3. Simulation: random rollout
             simulation_reward = self._simulate_rollout(leaf.state)
 
-            # 4. Backpropagation: update path to root
             self._backpropagate(leaf, simulation_reward)
 
         return root.get_best_action(), root
@@ -116,12 +112,9 @@ class MCTS:
     def _simulate_step(self, state, action):
         """Simulate one step using the model"""
         if hasattr(self.model, "predict"):
-            # Neural network model
             next_state, reward = self.model.predict(state, action)
-            # Simple done condition (can be made more sophisticated)
             done = False
         else:
-            # Tabular model - use sample_transition method
             next_state, reward = self.model.sample_transition(state, action)
             done = False  # Assume not done for simulation
 
@@ -175,7 +168,6 @@ class MCTSAgent:
         self.mcts = MCTS(model, num_actions, exploration_weight)
         self.num_simulations = num_simulations
 
-        # Statistics
         self.search_times = []
         self.tree_sizes = []
         self.episode_rewards = []
@@ -243,12 +235,10 @@ def demonstrate_mcts():
     print("Monte Carlo Tree Search (MCTS) Demonstration")
     print("=" * 50)
 
-    # Create environment and model
     print("\n1. Setting up environment and learned model...")
     env = SimpleGridWorld(size=6)
     tabular_model = TabularModel(env.num_states, env.num_actions)
 
-    # Train a simple model first
     print("Training tabular model...")
     for episode in range(100):
         state = env.reset()
@@ -260,7 +250,6 @@ def demonstrate_mcts():
                 break
             state = next_state
 
-    # Create MCTS agent
     mcts_agent = MCTSAgent(
         model=tabular_model,
         num_states=env.num_states,
@@ -271,7 +260,6 @@ def demonstrate_mcts():
 
     print(f"Model trained with {np.sum(tabular_model.sa_counts)} transitions")
 
-    # Test MCTS performance
     print("\n2. Testing MCTS performance...")
     n_test_episodes = 20
     episode_rewards = []
@@ -291,10 +279,8 @@ def demonstrate_mcts():
                 f"Avg Length = {avg_length:.1f}, Avg Search Time = {stats['avg_search_time']:.4f}s"
             )
 
-    # Visualization
     plt.figure(figsize=(15, 10))
 
-    # Performance over episodes
     plt.subplot(2, 3, 1)
     plt.plot(episode_rewards, "b-", linewidth=2, label="Episode Reward")
     plt.axhline(
@@ -310,7 +296,6 @@ def demonstrate_mcts():
     plt.legend()
     plt.grid(True, alpha=0.3)
 
-    # Episode lengths
     plt.subplot(2, 3, 2)
     plt.plot(episode_lengths, "g-", linewidth=2, label="Episode Length")
     plt.axhline(
@@ -326,7 +311,6 @@ def demonstrate_mcts():
     plt.legend()
     plt.grid(True, alpha=0.3)
 
-    # Search statistics
     plt.subplot(2, 3, 3)
     search_times = mcts_agent.search_times
     plt.plot(search_times, "purple", linewidth=2, label="Search Time")
@@ -339,7 +323,6 @@ def demonstrate_mcts():
     plt.legend()
     plt.grid(True, alpha=0.3)
 
-    # Tree sizes
     plt.subplot(2, 3, 4)
     tree_sizes = mcts_agent.tree_sizes
     plt.plot(tree_sizes, "orange", linewidth=2, label="Tree Size")
@@ -352,11 +335,9 @@ def demonstrate_mcts():
     plt.legend()
     plt.grid(True, alpha=0.3)
 
-    # Search time vs tree size correlation
     plt.subplot(2, 3, 5)
     if len(search_times) > 0 and len(tree_sizes) > 0:
         plt.scatter(tree_sizes, search_times, alpha=0.6, c="red", s=30)
-        # Add trend line
         if len(tree_sizes) > 1:
             z = np.polyfit(tree_sizes, search_times, 1)
             p = np.poly1d(z)
@@ -368,9 +349,7 @@ def demonstrate_mcts():
     plt.ylabel("Search Time (seconds)")
     plt.grid(True, alpha=0.3)
 
-    # Performance comparison
     plt.subplot(2, 3, 6)
-    # Compare with random policy
     random_rewards = []
     for _ in range(n_test_episodes):
         state = env.reset()
@@ -395,7 +374,6 @@ def demonstrate_mcts():
     plt.savefig("visualizations/mcts_analysis.png", dpi=300, bbox_inches="tight")
     plt.show()
 
-    # Detailed analysis
     print(f"\n3. MCTS Performance Analysis:")
     final_stats = mcts_agent.get_statistics()
     print(

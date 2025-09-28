@@ -1,4 +1,3 @@
-# Practical Applications and Advanced Topics
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -22,10 +21,9 @@ class CuriosityDrivenAgent:
     ):
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.beta = beta  # Intrinsic reward weight
+        self.beta = beta
         self.gamma = gamma
 
-        # Policy network
         self.policy_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -34,7 +32,6 @@ class CuriosityDrivenAgent:
             nn.Linear(hidden_dim, action_dim),
         ).to(device)
 
-        # Forward model (predicts next state)
         self.forward_model = nn.Sequential(
             nn.Linear(state_dim + action_dim, hidden_dim),
             nn.ReLU(),
@@ -43,7 +40,6 @@ class CuriosityDrivenAgent:
             nn.Linear(hidden_dim, state_dim),
         ).to(device)
 
-        # Inverse model (predicts action from state transition)
         self.inverse_model = nn.Sequential(
             nn.Linear(state_dim * 2, hidden_dim),
             nn.ReLU(),
@@ -56,10 +52,8 @@ class CuriosityDrivenAgent:
         self.forward_optimizer = optim.Adam(self.forward_model.parameters(), lr=lr)
         self.inverse_optimizer = optim.Adam(self.inverse_model.parameters(), lr=lr)
 
-        # Experience buffer
         self.buffer = deque(maxlen=10000)
 
-        # Logging
         self.episode_rewards = []
         self.intrinsic_rewards = []
         self.extrinsic_rewards = []
@@ -83,7 +77,7 @@ class CuriosityDrivenAgent:
 
     def compute_intrinsic_reward(self, state, action, next_state):
         """Compute intrinsic curiosity reward"""
-        # Forward model prediction
+
         state_action = torch.cat(
             [torch.FloatTensor(state), torch.FloatTensor([action])]
         ).to(device)
@@ -93,7 +87,6 @@ class CuriosityDrivenAgent:
 
         actual_next_state = torch.FloatTensor(next_state).to(device)
 
-        # Prediction error as intrinsic reward
         intrinsic_reward = F.mse_loss(predicted_next_state, actual_next_state).item()
 
         return intrinsic_reward
@@ -103,7 +96,6 @@ class CuriosityDrivenAgent:
         if len(self.buffer) < batch_size:
             return
 
-        # Sample batch
         batch = random.sample(self.buffer, batch_size)
         states, actions, next_states = zip(*batch)
 
@@ -111,22 +103,18 @@ class CuriosityDrivenAgent:
         actions = torch.LongTensor(actions).to(device)
         next_states = torch.FloatTensor(next_states).to(device)
 
-        # Forward model loss
         state_action = torch.cat([states, actions.unsqueeze(-1).float()], dim=1)
         predicted_next_states = self.forward_model(state_action)
         forward_loss = F.mse_loss(predicted_next_states, next_states)
 
-        # Inverse model loss
         state_transitions = torch.cat([states, next_states], dim=1)
         predicted_actions = self.inverse_model(state_transitions)
         inverse_loss = F.cross_entropy(predicted_actions, actions)
 
-        # Update forward model
         self.forward_optimizer.zero_grad()
         forward_loss.backward()
         self.forward_optimizer.step()
 
-        # Update inverse model
         self.inverse_optimizer.zero_grad()
         inverse_loss.backward()
         self.inverse_optimizer.step()
@@ -171,13 +159,10 @@ class CuriosityDrivenAgent:
             action = self.select_action(state)
             next_state, extrinsic_reward, terminated, truncated, _ = env.step(action)
 
-            # Compute intrinsic reward
             intrinsic_reward = self.compute_intrinsic_reward(state, action, next_state)
 
-            # Combined reward
             total_reward = extrinsic_reward + self.beta * intrinsic_reward
 
-            # Store experience
             self.buffer.append((state, action, next_state))
 
             states.append(state)
@@ -193,10 +178,8 @@ class CuriosityDrivenAgent:
             if terminated or truncated:
                 break
 
-        # Update models
         self.update_curiosity_models()
 
-        # Update policy with combined rewards
         combined_rewards = [
             e + self.beta * i for e, i in zip(extrinsic_rewards, intrinsic_rewards)
         ]
@@ -221,7 +204,6 @@ class MetaLearningAgent:
         self.action_dim = action_dim
         self.gamma = gamma
 
-        # Base policy network
         self.base_policy = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -230,22 +212,19 @@ class MetaLearningAgent:
             nn.Linear(hidden_dim, action_dim),
         ).to(device)
 
-        # Adaptation network (learns how to adapt)
         self.adaptation_net = nn.Sequential(
             nn.Linear(state_dim + action_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),  # Adaptation parameters
+            nn.Linear(hidden_dim, hidden_dim),
         ).to(device)
 
         self.policy_optimizer = optim.Adam(self.base_policy.parameters(), lr=lr)
         self.meta_optimizer = optim.Adam(self.adaptation_net.parameters(), lr=meta_lr)
 
-        # Adaptation memory
         self.adaptation_memory = []
 
-        # Logging
         self.episode_rewards = []
         self.adaptation_losses = []
 
@@ -253,36 +232,30 @@ class MetaLearningAgent:
         """Adapt policy to new task using few samples"""
         adapted_params = {}
 
-        # Initial adaptation
         for param_name, param in self.base_policy.named_parameters():
             adapted_params[param_name] = param.clone()
 
         for _ in range(adaptation_steps):
-            # Sample from task
+
             states, actions, rewards = zip(
                 *random.sample(task_samples, min(10, len(task_samples)))
             )
 
-            # Compute adaptation gradient
             states = torch.FloatTensor(states).to(device)
             actions = torch.LongTensor(actions).to(device)
             rewards = torch.FloatTensor(rewards).to(device)
 
-            # Forward pass with adapted parameters
             adapted_logits = self.base_policy(states)
             adapted_dist = Categorical(logits=adapted_logits)
             adapted_log_probs = adapted_dist.log_prob(actions)
 
-            # Adaptation loss (negative reward)
             adaptation_loss = -(adapted_log_probs * rewards).mean()
 
-            # Compute adaptation
             adaptation_input = torch.cat(
                 [states.mean(dim=0), actions.float().mean(dim=0)]
             ).unsqueeze(0)
             adaptation_params = self.adaptation_net(adaptation_input)
 
-            # Apply adaptation (simplified)
             for i, (param_name, param) in enumerate(
                 self.base_policy.named_parameters()
             ):
@@ -297,7 +270,6 @@ class MetaLearningAgent:
         """Select action using adapted parameters"""
         state = torch.FloatTensor(state).unsqueeze(0).to(device)
 
-        # Temporarily set adapted parameters
         original_params = {}
         for param_name, param in self.base_policy.named_parameters():
             original_params[param_name] = param.clone()
@@ -307,7 +279,6 @@ class MetaLearningAgent:
             logits = self.base_policy(state)
             probs = F.softmax(logits, dim=1)
 
-        # Restore original parameters
         for param_name, param in self.base_policy.named_parameters():
             param.data = original_params[param_name].data
 
@@ -337,20 +308,18 @@ class HierarchicalAgent:
         self.action_dim = action_dim
         self.gamma = gamma
 
-        # High-level policy (goal selection)
         self.high_level_policy = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 4),  # 4 possible goals
+            nn.Linear(hidden_dim, 4),
         ).to(device)
 
-        # Low-level policies (one for each goal)
         self.low_level_policies = nn.ModuleList(
             [
                 nn.Sequential(
-                    nn.Linear(state_dim + 1, hidden_dim),  # +1 for goal
+                    nn.Linear(state_dim + 1, hidden_dim),
                     nn.ReLU(),
                     nn.Linear(hidden_dim, hidden_dim),
                     nn.ReLU(),
@@ -368,7 +337,6 @@ class HierarchicalAgent:
             lr=lr,
         )
 
-        # Logging
         self.episode_rewards = []
         self.goal_successes = []
 
@@ -408,7 +376,6 @@ class HierarchicalAgent:
         for trajectory in trajectories:
             states, goals, actions, rewards = trajectory
 
-            # High-level updates
             for t, (state, goal, reward) in enumerate(zip(states, goals, rewards)):
                 state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
                 goal_tensor = torch.LongTensor([goal]).to(device)
@@ -417,11 +384,9 @@ class HierarchicalAgent:
                 high_dist = Categorical(logits=high_logits)
                 high_log_prob = high_dist.log_prob(goal_tensor)
 
-                # Reward for goal completion
                 high_loss = -high_log_prob * reward
                 total_loss += high_loss
 
-            # Low-level updates
             for t, (state, goal, action, reward) in enumerate(
                 zip(states, goals, actions, rewards)
             ):
@@ -437,7 +402,6 @@ class HierarchicalAgent:
                 low_loss = -low_log_prob * reward
                 total_loss += low_loss
 
-        # Update
         self.optimizer.zero_grad()
         total_loss.backward()
         self.optimizer.step()
@@ -464,7 +428,6 @@ class SafeRLAgent:
         self.gamma = gamma
         self.cost_limit = cost_limit
 
-        # Policy network
         self.policy_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -473,7 +436,6 @@ class SafeRLAgent:
             nn.Linear(hidden_dim, action_dim),
         ).to(device)
 
-        # Value network
         self.value_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -482,7 +444,6 @@ class SafeRLAgent:
             nn.Linear(hidden_dim, 1),
         ).to(device)
 
-        # Cost value network
         self.cost_net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
@@ -495,7 +456,6 @@ class SafeRLAgent:
         self.value_optimizer = optim.Adam(self.value_net.parameters(), lr=lr)
         self.cost_optimizer = optim.Adam(self.cost_net.parameters(), lr=lr)
 
-        # Logging
         self.episode_rewards = []
         self.episode_costs = []
         self.constraint_violations = []
@@ -519,10 +479,10 @@ class SafeRLAgent:
 
     def compute_cost(self, state, action, next_state):
         """Compute safety cost (placeholder - domain specific)"""
-        # Example: cost based on pole angle deviation
-        if len(state) >= 3:  # CartPole-like state
+
+        if len(state) >= 3:
             pole_angle = abs(state[2])
-            cost = 1.0 if pole_angle > 0.2 else 0.0  # Binary cost
+            cost = 1.0 if pole_angle > 0.2 else 0.0
         else:
             cost = 0.0
 
@@ -537,23 +497,18 @@ class SafeRLAgent:
         next_states = torch.FloatTensor(next_states).to(device)
         dones = torch.FloatTensor(dones).to(device)
 
-        # Value estimates
         values = self.value_net(states).squeeze()
         next_values = self.value_net(next_states).squeeze()
 
-        # Cost estimates
         cost_values = self.cost_net(states).squeeze()
         next_cost_values = self.cost_net(next_states).squeeze()
 
-        # TD targets
         td_targets = rewards + self.gamma * next_values * (1 - dones)
         cost_td_targets = costs + self.gamma * next_cost_values * (1 - dones)
 
-        # Value losses
         value_loss = F.mse_loss(values, td_targets.detach())
         cost_loss = F.mse_loss(cost_values, cost_td_targets.detach())
 
-        # Policy loss with cost penalty
         advantages = (td_targets - values).detach()
         cost_advantages = (cost_td_targets - cost_values).detach()
 
@@ -561,11 +516,9 @@ class SafeRLAgent:
         dist = Categorical(logits=logits)
         log_probs = dist.log_prob(actions)
 
-        # Lagrangian for constrained optimization
-        lambda_cost = 1.0  # Cost multiplier
+        lambda_cost = 1.0
         policy_loss = -(log_probs * (advantages - lambda_cost * cost_advantages)).mean()
 
-        # Update value networks
         self.value_optimizer.zero_grad()
         value_loss.backward()
         self.value_optimizer.step()
@@ -574,7 +527,6 @@ class SafeRLAgent:
         cost_loss.backward()
         self.cost_optimizer.step()
 
-        # Update policy
         self.policy_optimizer.zero_grad()
         policy_loss.backward()
         self.policy_optimizer.step()
@@ -592,7 +544,6 @@ class SafeRLAgent:
             action = self.select_action(state)
             next_state, reward, terminated, truncated, _ = env.step(action)
 
-            # Compute cost
             cost = self.compute_cost(state, action, next_state)
 
             states.append(state)
@@ -610,7 +561,6 @@ class SafeRLAgent:
             if terminated or truncated:
                 break
 
-        # Update networks
         policy_loss, value_loss, cost_loss = self.update_safe_policy(
             states, actions, rewards, costs, next_states, dones
         )
@@ -626,7 +576,6 @@ def demonstrate_advanced_applications():
     """Demonstrate advanced applications"""
     print("🚀 Advanced Applications Demonstration")
 
-    # Curiosity-driven exploration
     print("\n🧠 Curiosity-Driven Exploration")
     env = gym.make("CartPole-v1")
     state_dim = env.observation_space.shape[0]
@@ -640,7 +589,6 @@ def demonstrate_advanced_applications():
         if (episode + 1) % 10 == 0:
             print(".2f" ".2f")
 
-    # Safe RL
     print("\n🛡️ Safe Reinforcement Learning")
     safe_agent = SafeRLAgent(state_dim, action_dim, cost_limit=5.0)
 
@@ -650,10 +598,8 @@ def demonstrate_advanced_applications():
         if (episode + 1) % 10 == 0:
             print(".2f" ".2f")
 
-    # Visualization
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
 
-    # Curiosity rewards
     axes[0, 0].plot(curiosity_agent.extrinsic_rewards, label="Extrinsic", alpha=0.7)
     axes[0, 0].plot(curiosity_agent.intrinsic_rewards, label="Intrinsic", alpha=0.7)
     axes[0, 0].set_title("Curiosity-Driven Rewards")
@@ -662,7 +608,6 @@ def demonstrate_advanced_applications():
     axes[0, 0].legend()
     axes[0, 0].grid(True, alpha=0.3)
 
-    # Safe RL costs
     axes[0, 1].plot(safe_agent.episode_rewards, label="Reward", alpha=0.7)
     axes[0, 1].plot(safe_agent.episode_costs, label="Cost", alpha=0.7)
     axes[0, 1].axhline(
@@ -674,7 +619,6 @@ def demonstrate_advanced_applications():
     axes[0, 1].legend()
     axes[0, 1].grid(True, alpha=0.3)
 
-    # Constraint violations
     violations = np.cumsum(safe_agent.constraint_violations)
     axes[1, 0].plot(violations, label="Cumulative Violations", alpha=0.7)
     axes[1, 0].set_title("Safety Constraint Violations")
@@ -683,7 +627,6 @@ def demonstrate_advanced_applications():
     axes[1, 0].legend()
     axes[1, 0].grid(True, alpha=0.3)
 
-    # Placeholder for hierarchical RL
     axes[1, 1].text(
         0.5,
         0.5,
@@ -706,6 +649,5 @@ def demonstrate_advanced_applications():
     return {"curiosity_agent": curiosity_agent, "safe_agent": safe_agent}
 
 
-# Run demonstration
 if __name__ == "__main__":
     demonstrate_advanced_applications()

@@ -40,21 +40,17 @@ class ProductionRLAgent(nn.Module):
         self.device = device
         self.safety_threshold = safety_threshold
 
-        # Move to device
         self.to(device)
         self.eval()  # Production mode
 
-        # Performance tracking
         self.request_count = 0
         self.inference_times = deque(maxlen=1000)
         self.action_distribution = {}
         self.error_count = 0
 
-        # Safety monitoring
         self.safety_violations = 0
         self.last_safety_check = time.time()
 
-        # Logging
         self.logger = logging.getLogger("ProductionRLAgent")
         self.logger.setLevel(logging.INFO)
 
@@ -74,23 +70,19 @@ class ProductionRLAgent(nn.Module):
             with torch.no_grad():
                 state = state.to(self.device)
 
-                # Policy network
                 if hasattr(self.policy_net, "forward"):
                     policy_output = self.policy_net(state)
                 else:
                     policy_output = self.policy_net(state)
 
-                # Value network
                 if self.value_net != self.policy_net:
                     value_output = self.value_net(state)
                 else:
-                    # Assume policy net returns both
                     if isinstance(policy_output, tuple):
                         policy_output, value_output = policy_output
                     else:
                         value_output = torch.zeros(state.size(0), 1, device=self.device)
 
-                # Ensure proper shapes
                 if policy_output.dim() == 1:
                     policy_output = policy_output.unsqueeze(0)
                 if value_output.dim() == 1:
@@ -99,14 +91,12 @@ class ProductionRLAgent(nn.Module):
         except Exception as e:
             self.error_count += 1
             self.logger.error(f"Inference error: {e}")
-            # Return safe default
             batch_size = state.size(0) if state.dim() > 1 else 1
             policy_output = torch.zeros(
                 batch_size, self.get_action_dim(), device=self.device
             )
             value_output = torch.zeros(batch_size, 1, device=self.device)
 
-        # Track performance
         inference_time = time.time() - start_time
         self.inference_times.append(inference_time)
         self.request_count += 1
@@ -129,13 +119,11 @@ class ProductionRLAgent(nn.Module):
         """
         logits, value = self.forward(state)
 
-        # Safety check
         if safety_check:
             is_safe, safety_info = self._check_safety(state, logits)
             if not is_safe:
                 self.safety_violations += 1
                 self.logger.warning(f"Safety violation: {safety_info}")
-                # Return safe action
                 safe_action = self._get_safe_action(state)
                 return safe_action, {
                     "safety_violation": True,
@@ -143,14 +131,12 @@ class ProductionRLAgent(nn.Module):
                     "safety_info": safety_info,
                 }
 
-        # Select action
         if deterministic:
             action = torch.argmax(logits, dim=-1)
         else:
             dist = torch.distributions.Categorical(logits=logits)
             action = dist.sample()
 
-        # Track action distribution
         action_idx = action.item() if action.dim() == 0 else action[0].item()
         self.action_distribution[action_idx] = (
             self.action_distribution.get(action_idx, 0) + 1
@@ -178,26 +164,20 @@ class ProductionRLAgent(nn.Module):
         Returns:
             (is_safe, violation_reason)
         """
-        # Simple safety checks (customize based on domain)
         max_prob = torch.softmax(logits, dim=-1).max().item()
 
         if max_prob < self.safety_threshold:
             return False, f"Low confidence action (prob={max_prob:.3f})"
 
-        # Domain-specific safety checks would go here
-        # For example: check if action leads to unsafe states
 
         return True, ""
 
     def _get_safe_action(self, state: torch.Tensor) -> torch.Tensor:
         """Get a safe fallback action."""
-        # Return action with highest safety score
-        # This is domain-specific and should be customized
         return torch.tensor(0, device=self.device)  # Default safe action
 
     def get_action_dim(self) -> int:
         """Get action dimension."""
-        # Try to infer from policy network
         try:
             dummy_input = torch.zeros(1, self.get_state_dim(), device=self.device)
             logits, _ = self.forward(dummy_input)
@@ -207,7 +187,6 @@ class ProductionRLAgent(nn.Module):
 
     def get_state_dim(self) -> int:
         """Get state dimension."""
-        # This should be set during initialization
         return getattr(self, "_state_dim", 1)
 
     def set_state_dim(self, dim: int):
@@ -253,10 +232,8 @@ class ModelServing:
         self.current_model = None
         self.model_version = None
 
-        # Model registry
         self.model_versions = {}
 
-        # Serving statistics
         self.total_requests = 0
         self.active_models = 0
 
@@ -278,13 +255,10 @@ class ModelServing:
         try:
             checkpoint = torch.load(model_path, map_location=self.device)
 
-            # Reconstruct model architecture (this needs to be customized)
-            # For now, assume the checkpoint contains the full model
             model = checkpoint.get("model")
             if model is None:
                 raise ValueError("Model not found in checkpoint")
 
-            # Wrap in production agent
             agent = ProductionRLAgent(model, device=self.device)
             agent.model_version = version
 
@@ -349,22 +323,18 @@ class LoadBalancer:
         self.num_instances = num_instances
         self.device = device
 
-        # Model instances
         self.instances = []
         self.instance_loads = []
 
-        # Initialize instances
         for i in range(num_instances):
             serving = ModelServing(model_paths[i % len(model_paths)], device)
             model = serving.load_model()
             self.instances.append(model)
             self.instance_loads.append(0)
 
-        # Request queue
         self.request_queue = queue.Queue()
         self.response_queues = {}
 
-        # Worker threads
         self.workers = []
         self.running = False
 
@@ -428,15 +398,12 @@ class LoadBalancer:
 
         while self.running:
             try:
-                # Get request
                 request_id, state, kwargs = self.request_queue.get(timeout=1.0)
 
-                # Process request
                 self.instance_loads[instance_id] += 1
                 response = instance.get_action(state, **kwargs)
                 self.instance_loads[instance_id] -= 1
 
-                # Send response
                 if request_id in self.response_queues:
                     self.response_queues[request_id].put(
                         {

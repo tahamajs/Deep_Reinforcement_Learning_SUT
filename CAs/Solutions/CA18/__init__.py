@@ -22,10 +22,8 @@ Modules:
 Usage:
     from CA18 import quantum_rl, causal_rl, experiments
 
-    # Create a quantum RL agent
     agent = quantum_rl.QuantumQLearning(...)
 
-    # Run experiments
     experiment = experiments.QuantumRLExperiment(agent, environment)
     results = experiment.run_experiment()
 """
@@ -33,7 +31,6 @@ Usage:
 __version__ = "1.0.0"
 __author__ = "CA18 Modular RL Package"
 
-# Import main modules for easy access
 from . import quantum_rl
 from . import world_models
 from . import multi_agent_rl
@@ -44,7 +41,6 @@ from . import utils
 from . import environments
 from . import experiments
 
-# Make key classes easily accessible at package level
 from .quantum_rl import QuantumQLearning, QuantumActorCritic, QuantumEnvironment
 from .world_models import RSSMCore, WorldModel, ImaginationAugmentedAgent
 from .multi_agent_rl import MADDPGAgent, MultiAgentEnvironment
@@ -56,7 +52,6 @@ from .environments import QuantumEnvironment as QuantumEnv, CausalBanditEnvironm
 from .experiments import ComparativeExperimentRunner
 
 __all__ = [
-    # Modules
     "quantum_rl",
     "world_models",
     "multi_agent_rl",
@@ -66,7 +61,6 @@ __all__ = [
     "utils",
     "environments",
     "experiments",
-    # Key classes
     "QuantumQLearning",
     "QuantumActorCritic",
     "QuantumEnvironment",
@@ -143,7 +137,6 @@ def run_quick_test(module_name: str = "quantum_rl"):
         if module_name == "quantum_rl":
             from .quantum_rl import QuantumState
 
-            # Test basic quantum state creation
             state = QuantumState(n_qubits=2)
             print(
                 f"✅ {module_name} test passed: Created quantum state with {state.n_qubits} qubits"
@@ -152,7 +145,6 @@ def run_quick_test(module_name: str = "quantum_rl"):
         elif module_name == "causal_rl":
             from .causal_rl import CausalGraph
 
-            # Test basic causal graph creation
             graph = CausalGraph(n_variables=3)
             print(
                 f"✅ {module_name} test passed: Created causal graph with {graph.n_variables} variables"
@@ -161,14 +153,12 @@ def run_quick_test(module_name: str = "quantum_rl"):
         elif module_name == "world_models":
             from .world_models import RSSMCore
 
-            # Test RSSM core creation
             rssm = RSSMCore(state_dim=10, action_dim=4, hidden_dim=32)
             print(f"✅ {module_name} test passed: Created RSSM core")
 
         elif module_name == "utils":
             from .utils import QuantumRNG
 
-            # Test quantum RNG
             rng = QuantumRNG()
             random_val = rng.quantum_random()
             print(
@@ -200,7 +190,6 @@ def print_package_info():
     print("=" * 60)
 
 
-# Run package info on import
 if __name__ != "__main__":
     print("🎯 CA18 Advanced RL Package loaded successfully!")
     print("   Use print_package_info() for detailed information")

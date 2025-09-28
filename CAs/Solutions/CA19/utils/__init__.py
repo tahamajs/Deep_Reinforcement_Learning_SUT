@@ -18,7 +18,6 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-# Set plotting style
 plt.style.use("default")
 sns.set_palette("husl")
 
@@ -27,31 +26,26 @@ sns.set_palette("husl")
 class MissionConfig:
     """Configuration class for quantum RL missions"""
 
-    # Quantum circuit parameters
     n_qubits: int = 6
     n_layers: int = 3
     quantum_shots: int = 1024
 
-    # Agent parameters
     state_dim: int = 20
     action_dim: int = 64
     learning_rate: float = 1e-3
     gamma: float = 0.99
     batch_size: int = 32
 
-    # Training parameters
     max_episodes: int = 500
     max_steps_per_episode: int = 1000
     epsilon_start: float = 0.3
     epsilon_decay: float = 0.995
     epsilon_min: float = 0.01
 
-    # Mission parameters
     difficulty_level: str = "EXTREME"
     crisis_injection_rate: float = 0.2
     quantum_weight_adaptive: bool = True
 
-    # Hardware parameters
     device: str = "auto"  # 'cpu', 'cuda', or 'auto'
     quantum_backend: str = "simulator"  # 'simulator' or 'hardware'
 
@@ -88,19 +82,16 @@ class PerformanceTracker:
         self.episode_rewards.append(episode_reward)
         self.episode_lengths.append(episode_length)
 
-        # Extract quantum metrics
         if "quantum_fidelity" in metrics:
             self.quantum_fidelity_history.append(metrics["quantum_fidelity"])
         if "entanglement" in metrics:
             self.entanglement_measures.append(metrics["entanglement"])
 
-        # Extract learning metrics
         if "classical_loss" in metrics:
             self.classical_loss_history.append(metrics["classical_loss"])
         if "quantum_loss" in metrics:
             self.quantum_loss_history.append(metrics["quantum_loss"])
 
-        # Extract neuromorphic metrics
         if "td_error" in metrics:
             self.td_errors.append(metrics["td_error"])
         if "dopamine_level" in metrics:
@@ -124,7 +115,6 @@ class PerformanceTracker:
                 }
             )
 
-            # Learning progress (first 10% vs last 10%)
             if len(self.episode_rewards) >= 20:
                 early_idx = len(self.episode_rewards) // 10
                 late_idx = -early_idx if early_idx > 0 else None
@@ -136,7 +126,6 @@ class PerformanceTracker:
                     abs(early_performance) + 1e-6
                 )
 
-        # Quantum metrics
         if self.quantum_fidelity_history:
             stats.update(
                 {
@@ -149,7 +138,6 @@ class PerformanceTracker:
         if self.entanglement_measures:
             stats["avg_entanglement"] = np.mean(self.entanglement_measures)
 
-        # Learning metrics
         if self.classical_loss_history:
             stats.update(
                 {
@@ -161,7 +149,6 @@ class PerformanceTracker:
         if self.quantum_loss_history:
             stats["avg_quantum_loss"] = np.mean(self.quantum_loss_history[-50:])
 
-        # Neuromorphic metrics
         if self.td_errors:
             stats.update(
                 {
@@ -199,7 +186,6 @@ class PerformanceTracker:
         fig, axes = plt.subplots(2, 3, figsize=(18, 12))
         fig.suptitle("CA19 Advanced RL Training Progress", fontsize=16)
 
-        # Episode rewards
         axes[0, 0].plot(self.episode_rewards, alpha=0.7, color="blue")
         if len(self.episode_rewards) >= 20:
             axes[0, 0].plot(
@@ -214,7 +200,6 @@ class PerformanceTracker:
         axes[0, 0].legend()
         axes[0, 0].grid(True)
 
-        # Quantum fidelity
         if self.quantum_fidelity_history:
             axes[0, 1].plot(self.quantum_fidelity_history, alpha=0.7, color="purple")
             axes[0, 1].set_title("Quantum Fidelity")
@@ -222,7 +207,6 @@ class PerformanceTracker:
             axes[0, 1].set_ylabel("Fidelity")
             axes[0, 1].grid(True)
 
-        # Learning losses
         if self.classical_loss_history:
             axes[0, 2].plot(
                 self.classical_loss_history, alpha=0.7, color="red", label="Classical"
@@ -240,7 +224,6 @@ class PerformanceTracker:
             axes[0, 2].legend()
             axes[0, 2].grid(True)
 
-        # Neuromorphic signals
         if self.td_errors:
             axes[1, 0].plot(self.td_errors, alpha=0.7, color="green", label="TD Error")
             axes[1, 0].set_title("Neuromorphic Learning Signals")
@@ -254,7 +237,6 @@ class PerformanceTracker:
             ax2.set_ylabel("Dopamine Level", color="cyan")
             ax2.tick_params(axis="y", labelcolor="cyan")
 
-        # Firing rates and entanglement
         if self.firing_rates:
             axes[1, 1].plot(
                 self.firing_rates, alpha=0.7, color="orange", label="Firing Rate"
@@ -275,7 +257,6 @@ class PerformanceTracker:
             ax2.set_ylabel("Entanglement", color="purple")
             ax2.tick_params(axis="y", labelcolor="purple")
 
-        # Episode lengths
         axes[1, 2].plot(self.episode_lengths, alpha=0.7, color="brown")
         axes[1, 2].set_title("Episode Lengths")
         axes[1, 2].set_xlabel("Episode")
@@ -372,7 +353,6 @@ class ExperimentManager:
         print(f"🚀 Running Experiment: {experiment['name']}")
         print(f"Configuration: {config}")
 
-        # Initialize agent and environment
         agent = experiment["agent_class"](
             state_dim=config["state_dim"],
             action_dim=config["action_dim"],
@@ -383,7 +363,6 @@ class ExperimentManager:
             difficulty_level=config["difficulty_level"]
         )
 
-        # Training loop
         for episode in range(num_episodes):
             state = environment.reset()
             episode_reward = 0
@@ -406,7 +385,6 @@ class ExperimentManager:
                 episode_length += 1
                 state = next_state
 
-            # Update tracking
             combined_metrics = {**action_info, **learning_metrics, **info}
             tracker.update_episode(episode_reward, episode_length, combined_metrics)
 
@@ -445,7 +423,6 @@ class ExperimentManager:
         for exp_name, result in self.results.items():
             comparison[exp_name] = result["summary_stats"].get(metric, 0)
 
-        # Sort by performance
         sorted_experiments = sorted(
             comparison.items(), key=lambda x: x[1], reverse=True
         )
@@ -466,13 +443,11 @@ class ExperimentManager:
         report.append("🎯 CA19 Advanced RL Experiment Comparison Report")
         report.append("=" * 60)
 
-        # Summary statistics
         comparison = self.compare_experiments()
         report.append(f"Best Performing Experiment: {comparison['best_experiment']}")
         report.append(f"Best {comparison['metric']}: {comparison['best_score']:.4f}")
         report.append("")
 
-        # Detailed results
         report.append("Detailed Results:")
         report.append("-" * 30)
 
@@ -540,7 +515,6 @@ def benchmark_quantum_vs_classical(
     """
     print("🏁 Starting Quantum vs Classical Benchmark")
 
-    # Test quantum agent
     print("⚛️  Testing Quantum-Enhanced Agent...")
     quantum_rewards = []
     quantum_metrics = []
@@ -561,7 +535,6 @@ def benchmark_quantum_vs_classical(
         quantum_rewards.append(episode_reward)
         quantum_metrics.append(action_info)
 
-    # Test classical agent
     print("🧠 Testing Classical Agent...")
     classical_rewards = []
     classical_metrics = []
@@ -582,20 +555,17 @@ def benchmark_quantum_vs_classical(
         classical_rewards.append(episode_reward)
         classical_metrics.append(action_info)
 
-    # Statistical analysis
     quantum_avg = np.mean(quantum_rewards)
     classical_avg = np.mean(classical_rewards)
     quantum_std = np.std(quantum_rewards)
     classical_std = np.std(classical_rewards)
 
-    # Statistical significance test
     try:
         from scipy import stats
 
         t_stat, p_value = stats.ttest_ind(quantum_rewards, classical_rewards)
         significant = p_value < 0.05
     except ImportError:
-        # Simple difference test
         diff = abs(quantum_avg - classical_avg)
         pooled_std = np.sqrt((quantum_std**2 + classical_std**2) / 2)
         t_stat = diff / (pooled_std / np.sqrt(len(quantum_rewards)))

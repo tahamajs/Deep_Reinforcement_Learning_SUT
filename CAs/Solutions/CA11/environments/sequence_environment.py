@@ -27,7 +27,6 @@ class SequenceEnvironment:
         self.memory = deque(maxlen=self.memory_length)
         self.step_count = 0
 
-        # Initialize with random values
         for _ in range(self.memory_length):
             self.memory.append(np.random.rand())
 
@@ -35,7 +34,6 @@ class SequenceEnvironment:
 
     def _get_observation(self):
         """Get partial observation (doesn't include full memory)"""
-        # Only return current state + partial memory information
         recent_memory = list(self.memory)[-2:]  # Only last 2 memory items
 
         obs = np.concatenate(
@@ -49,10 +47,8 @@ class SequenceEnvironment:
         if isinstance(action, np.ndarray) and action.ndim > 0:
             action = action.item()
 
-        # Discrete action: 0 = left, 1 = right
         action = int(action > 0.5) if isinstance(action, float) else int(action)
 
-        # Update memory based on action
         if action == 0:  # Left
             new_memory_val = max(0.0, list(self.memory)[-1] - 0.1)
         else:  # Right
@@ -60,16 +56,13 @@ class SequenceEnvironment:
 
         self.memory.append(new_memory_val)
 
-        # Update state (simple dynamics)
         self.state[0] = new_memory_val
         self.state[1] = np.mean(list(self.memory))
         self.state[2] = action
         self.state[3] = self.step_count / self.max_steps
 
-        # Reward based on memory sequence
         memory_sequence = list(self.memory)
         if len(memory_sequence) >= 3:
-            # Reward for maintaining values in middle range
             recent_avg = np.mean(memory_sequence[-3:])
             reward = 1.0 - abs(recent_avg - 0.5) * 2  # Max reward when avg = 0.5
         else:

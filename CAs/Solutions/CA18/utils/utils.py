@@ -11,7 +11,6 @@ import json
 import os
 from pathlib import Path
 
-# Advanced Replay Buffer with Prioritization and Quantum States
 class QuantumPrioritizedReplayBuffer:
     """Prioritized replay buffer with quantum-inspired state representation"""
 
@@ -34,7 +33,6 @@ class QuantumPrioritizedReplayBuffer:
         self.position = 0
         self.size = 0
 
-        # Quantum state tracking for importance sampling
         self.quantum_states = np.zeros((capacity, quantum_dim), dtype=np.complex64)
 
     def push(
@@ -49,7 +47,6 @@ class QuantumPrioritizedReplayBuffer:
         """Add experience to buffer with quantum state"""
 
         if quantum_state is None:
-            # Generate quantum state from classical state
             quantum_state = self._classical_to_quantum(state)
 
         experience = (state, action, reward, next_state, done, quantum_state)
@@ -72,22 +69,17 @@ class QuantumPrioritizedReplayBuffer:
         if self.size < batch_size:
             return None
 
-        # Compute sampling probabilities
         priorities = self.priorities[:self.size]
         probs = priorities ** self.alpha
         probs /= probs.sum()
 
-        # Sample indices
         indices = np.random.choice(self.size, batch_size, p=probs, replace=False)
 
-        # Compute importance sampling weights
         weights = (self.size * probs[indices]) ** (-self.beta)
         weights /= weights.max()
 
-        # Update beta
         self.beta = min(1.0, self.beta + self.beta_increment)
 
-        # Extract batch
         batch = [self.buffer[i] for i in indices]
         states, actions, rewards, next_states, dones, quantum_states = zip(*batch)
 
@@ -109,15 +101,12 @@ class QuantumPrioritizedReplayBuffer:
 
     def _classical_to_quantum(self, state: np.ndarray) -> np.ndarray:
         """Convert classical state to quantum representation"""
-        # Simple amplitude encoding
         normalized_state = state / (np.linalg.norm(state) + 1e-6)
         quantum_state = np.zeros(self.quantum_dim, dtype=np.complex64)
 
-        # Map to quantum amplitudes
         for i in range(min(len(normalized_state), self.quantum_dim)):
             quantum_state[i] = normalized_state[i] + 1j * normalized_state[i] * 0.1
 
-        # Normalize quantum state
         quantum_state /= np.linalg.norm(quantum_state)
 
         return quantum_state
@@ -125,7 +114,6 @@ class QuantumPrioritizedReplayBuffer:
     def __len__(self):
         return self.size
 
-# Quantum-Inspired Metrics Tracker
 class QuantumMetricsTracker:
     """Advanced metrics tracking with quantum uncertainty quantification"""
 
@@ -134,7 +122,6 @@ class QuantumMetricsTracker:
         self.metrics = defaultdict(lambda: deque(maxlen=window_size))
         self.quantum_uncertainty = defaultdict(float)
 
-        # Quantum state for uncertainty tracking
         self.quantum_dim = 16
         self.quantum_state = np.random.uniform(0, 2*np.pi, self.quantum_dim)
 
@@ -143,13 +130,11 @@ class QuantumMetricsTracker:
 
         self.metrics[metric_name].append(value)
 
-        # Compute quantum uncertainty if not provided
         if uncertainty is None:
             uncertainty = self._compute_quantum_uncertainty(value)
 
         self.quantum_uncertainty[metric_name] = uncertainty
 
-        # Update quantum state based on metric
         phase_shift = value * 0.1 + uncertainty * 0.05
         self.quantum_state = (self.quantum_state + phase_shift) % (2 * np.pi)
 
@@ -175,14 +160,12 @@ class QuantumMetricsTracker:
 
     def _compute_quantum_uncertainty(self, value: float) -> float:
         """Compute quantum-inspired uncertainty measure"""
-        # Use quantum state phase differences
         phase_diffs = np.diff(self.quantum_state)
         uncertainty = np.mean(np.abs(phase_diffs)) / np.pi
         return min(uncertainty + abs(value) * 0.01, 1.0)
 
     def _compute_coherence(self) -> float:
         """Compute quantum coherence measure"""
-        # Measure how coherent the quantum state is
         coherence = 1.0 / (1.0 + np.var(self.quantum_state))
         return coherence
 
@@ -218,7 +201,6 @@ class QuantumMetricsTracker:
 
         plt.close()
 
-# Advanced Logger with Quantum State Persistence
 class QuantumLogger:
     """Advanced logging with quantum state persistence and uncertainty tracking"""
 
@@ -233,25 +215,21 @@ class QuantumLogger:
         self.current_episode = 0
         self.quantum_state_history = []
 
-        # Quantum state for logging coherence
         self.quantum_dim = 8
         self.quantum_state = np.random.uniform(0, 2*np.pi, self.quantum_dim)
 
     def log_episode(self, episode_data: Dict[str, Any]):
         """Log episode data with quantum state"""
 
-        # Add quantum coherence to episode data
         coherence = self._compute_coherence()
         episode_data['quantum_coherence'] = coherence
         episode_data['episode'] = self.current_episode
         episode_data['timestamp'] = time.time()
 
-        # Save to JSONL file
         with open(self.metrics_file, 'a') as f:
             json.dump(episode_data, f)
             f.write('\n')
 
-        # Update quantum state
         reward = episode_data.get('total_reward', 0)
         length = episode_data.get('episode_length', 1)
         phase_shift = (reward / length) * 0.1
@@ -311,7 +289,6 @@ class QuantumLogger:
         if not episodes:
             return {}
 
-        # Compute statistics
         rewards = [ep.get('total_reward', 0) for ep in episodes]
         lengths = [ep.get('episode_length', 1) for ep in episodes]
         coherences = [ep.get('quantum_coherence', 0) for ep in episodes]
@@ -327,7 +304,6 @@ class QuantumLogger:
             'experiment_duration': episodes[-1]['timestamp'] - episodes[0]['timestamp'],
         }
 
-# Quantum-Inspired Random Number Generator
 class QuantumRNG:
     """Quantum-inspired random number generator for exploration"""
 
@@ -343,20 +319,16 @@ class QuantumRNG:
     def quantum_random(self, shape: Tuple = ()) -> np.ndarray:
         """Generate quantum-inspired random numbers"""
 
-        # Evolve quantum state
         self.quantum_state += np.random.normal(0, 0.1, self.quantum_dim)
         self.quantum_state %= 2 * np.pi
 
-        # Generate random numbers from quantum amplitudes
         amplitudes = np.exp(1j * self.quantum_state)
         probabilities = np.abs(amplitudes) ** 2
         probabilities /= np.sum(probabilities)
 
         if shape == ():
-            # Single random number
             return np.random.choice(self.quantum_dim, p=probabilities) / self.quantum_dim
         else:
-            # Array of random numbers
             indices = np.random.choice(self.quantum_dim, size=shape, p=probabilities)
             return indices.astype(float) / self.quantum_dim
 
@@ -378,7 +350,6 @@ class QuantumRNG:
         """Get quantum coherence measure"""
         return 1.0 / (1.0 + np.var(self.quantum_state))
 
-# Utility Functions
 def soft_update(target_net: nn.Module, source_net: nn.Module, tau: float):
     """Soft update target network parameters"""
     for target_param, source_param in zip(target_net.parameters(), source_net.parameters()):
