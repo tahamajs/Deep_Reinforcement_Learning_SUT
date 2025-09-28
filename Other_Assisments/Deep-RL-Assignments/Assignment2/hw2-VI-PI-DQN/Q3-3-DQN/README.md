@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 # 10-703 HW2 Problem 3
 
 ### DQN Implementation

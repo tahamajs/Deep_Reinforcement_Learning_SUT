@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 # 10-703 HW2 Problem 2
 
 Run the following command with the required method (from the list below).

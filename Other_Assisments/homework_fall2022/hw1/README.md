@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 # Homework 1: Imitation Learning - Behavior Cloning and DAgger
 
 **Author:** Taha Majlesi - 810101504, University of Tehran

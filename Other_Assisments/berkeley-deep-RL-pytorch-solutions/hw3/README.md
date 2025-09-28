@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 # HW3: Q-Learning and Actor-Critic
 
 **Created by Taha Majlesi from University of Tehran**

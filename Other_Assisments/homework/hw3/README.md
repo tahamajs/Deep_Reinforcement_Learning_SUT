@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 # CS294-112 HW 3: Q-Learning
 
 Dependencies:

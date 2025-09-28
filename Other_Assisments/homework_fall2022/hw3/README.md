@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 # Homework 3: Q-Learning and Actor-Critic Methods
 
 **Author:** Taha Majlesi - 810101504, University of Tehran

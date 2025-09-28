@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 # HW4: Model-Based Reinforcement Learning
 
 **Created by Taha Majlesi from University of Tehran**

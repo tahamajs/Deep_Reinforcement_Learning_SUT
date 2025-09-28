@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 # Homework 2: Policy Gradient Methods
 
 **Author:** Taha Majlesi - 810101504, University of Tehran

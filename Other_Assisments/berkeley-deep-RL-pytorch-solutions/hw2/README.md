@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 # HW2: Policy Gradient
 
 **Created by Taha Majlesi from University of Tehran**

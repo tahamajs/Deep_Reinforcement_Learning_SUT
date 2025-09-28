@@ -1,3 +1,4 @@
+# Author: Taha Majlesi - 810101504, University of Tehran
 # Assignemnt 2
 
 This assignment uses multi-layer neural networks
