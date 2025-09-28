@@ -18,5 +18,10 @@ pandas>=1.3.0
 pytest>=6.2.0
 matplotlib>=3.5.0
 
-# Logging
+# Logging and experiment tracking
 colorlog>=6.6.0
+wandb>=0.12.0
+tqdm>=4.62.0
+
+# Additional utilities
+seaborn>=0.11.0  # Enhanced plotting
