@@ -2,4 +2,4 @@
 
 from .world_model import VariationalWorldModel, WorldModelLoss
 
-__all__ = ['VariationalWorldModel', 'WorldModelLoss']
+__all__ = ["VariationalWorldModel", "WorldModelLoss"]

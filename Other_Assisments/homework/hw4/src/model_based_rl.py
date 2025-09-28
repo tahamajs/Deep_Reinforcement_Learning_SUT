@@ -37,11 +37,11 @@ class Dataset:
     def get_all(self):
         """Get all transitions as numpy arrays."""
         return {
-            'states': np.array(self._states),
-            'actions': np.array(self._actions),
-            'next_states': np.array(self._next_states),
-            'rewards': np.array(self._rewards),
-            'dones': np.array(self._dones)
+            "states": np.array(self._states),
+            "actions": np.array(self._actions),
+            "next_states": np.array(self._next_states),
+            "rewards": np.array(self._rewards),
+            "dones": np.array(self._dones),
         }
 
     def random_iterator(self, batch_size):
@@ -49,13 +49,13 @@ class Dataset:
         indices = np.random.permutation(self.size())
 
         for i in range(0, self.size(), batch_size):
-            batch_indices = indices[i:i + batch_size]
+            batch_indices = indices[i : i + batch_size]
             yield {
-                'states': np.array(self._states)[batch_indices],
-                'actions': np.array(self._actions)[batch_indices],
-                'next_states': np.array(self._next_states)[batch_indices],
-                'rewards': np.array(self._rewards)[batch_indices],
-                'dones': np.array(self._dones)[batch_indices]
+                "states": np.array(self._states)[batch_indices],
+                "actions": np.array(self._actions)[batch_indices],
+                "next_states": np.array(self._next_states)[batch_indices],
+                "rewards": np.array(self._rewards)[batch_indices],
+                "dones": np.array(self._dones)[batch_indices],
             }
 
 
@@ -93,7 +93,11 @@ class DynamicsModel:
         self.predicted_delta = tf.layers.dense(x, self.state_dim, activation=None)
 
         # Loss
-        self.loss = tf.reduce_mean(tf.square(self.predicted_delta - (self.target_next_state - self.input_state)))
+        self.loss = tf.reduce_mean(
+            tf.square(
+                self.predicted_delta - (self.target_next_state - self.input_state)
+            )
+        )
 
         # Training
         self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
@@ -110,10 +114,7 @@ class DynamicsModel:
         Returns:
             Predicted next states
         """
-        feed_dict = {
-            self.input_state: states,
-            self.input_action: actions
-        }
+        feed_dict = {self.input_state: states, self.input_action: actions}
         deltas = sess.run(self.predicted_delta, feed_dict=feed_dict)
         return states + deltas
 
@@ -139,12 +140,12 @@ class DynamicsModel:
             epoch_losses = []
 
             for i in range(0, len(states), batch_size):
-                batch_indices = indices[i:i + batch_size]
+                batch_indices = indices[i : i + batch_size]
 
                 feed_dict = {
                     self.input_state: states[batch_indices],
                     self.input_action: actions[batch_indices],
-                    self.target_next_state: next_states[batch_indices]
+                    self.target_next_state: next_states[batch_indices],
                 }
 
                 _, loss = sess.run([self.train_op, self.loss], feed_dict=feed_dict)
@@ -182,7 +183,9 @@ class MPCPolicy:
         """
         # Sample random action sequences
         action_dim = self.dynamics_model.action_dim
-        action_sequences = np.random.uniform(-1, 1, (self.num_random_actions, self.horizon, action_dim))
+        action_sequences = np.random.uniform(
+            -1, 1, (self.num_random_actions, self.horizon, action_dim)
+        )
 
         # Evaluate each action sequence
         best_reward = -np.inf
@@ -195,9 +198,7 @@ class MPCPolicy:
             for action in action_seq:
                 # Predict next state
                 next_state = self.dynamics_model.predict(
-                    current_state.reshape(1, -1),
-                    action.reshape(1, -1),
-                    sess
+                    current_state.reshape(1, -1), action.reshape(1, -1), sess
                 )[0]
 
                 # Simple reward function (can be customized)
@@ -215,10 +216,19 @@ class MPCPolicy:
 class ModelBasedRLAgent:
     """Model-Based Reinforcement Learning Agent."""
 
-    def __init__(self, env, num_init_random_rollouts=10, max_rollout_length=500,
-                 num_onpolicy_iters=10, num_onpolicy_rollouts=10, training_epochs=60,
-                 training_batch_size=512, mpc_horizon=15, num_random_action_selection=4096,
-                 nn_layers=1):
+    def __init__(
+        self,
+        env,
+        num_init_random_rollouts=10,
+        max_rollout_length=500,
+        num_onpolicy_iters=10,
+        num_onpolicy_rollouts=10,
+        training_epochs=60,
+        training_batch_size=512,
+        mpc_horizon=15,
+        num_random_action_selection=4096,
+        nn_layers=1,
+    ):
         """Initialize MBRL agent.
 
         Args:
@@ -299,12 +309,18 @@ class ModelBasedRLAgent:
 
         # Create dynamics model
         hidden_dims = [256] * self.nn_layers
-        self.dynamics_model = DynamicsModel(self.state_dim, self.action_dim, hidden_dims)
+        self.dynamics_model = DynamicsModel(
+            self.state_dim, self.action_dim, hidden_dims
+        )
 
         # Train model
         losses = self.dynamics_model.train(
-            data['states'], data['actions'], data['next_states'],
-            self.sess, self.training_epochs, self.training_batch_size
+            data["states"],
+            data["actions"],
+            data["next_states"],
+            self.sess,
+            self.training_epochs,
+            self.training_batch_size,
         )
 
         return losses
@@ -314,7 +330,7 @@ class ModelBasedRLAgent:
         self.policy = MPCPolicy(
             self.dynamics_model,
             horizon=self.mpc_horizon,
-            num_random_actions=self.num_random_action_selection
+            num_random_actions=self.num_random_action_selection,
         )
 
     def run_q1(self):
@@ -323,7 +339,9 @@ class ModelBasedRLAgent:
 
         # Gather initial random data
         random_policy = RandomPolicy(self.env)
-        random_dataset = self.gather_rollouts(random_policy, self.num_init_random_rollouts)
+        random_dataset = self.gather_rollouts(
+            random_policy, self.num_init_random_rollouts
+        )
         self.dataset = random_dataset
 
         # Train dynamics model
@@ -364,20 +382,24 @@ class ModelBasedRLAgent:
             self.create_mpc_policy()
 
             # Gather on-policy data
-            onpolicy_dataset = self.gather_rollouts(self.policy, self.num_onpolicy_rollouts)
+            onpolicy_dataset = self.gather_rollouts(
+                self.policy, self.num_onpolicy_rollouts
+            )
 
             # Add to dataset
             onpolicy_data = onpolicy_dataset.get_all()
             for i in range(onpolicy_dataset.size()):
                 self.dataset.add(
-                    onpolicy_data['states'][i],
-                    onpolicy_data['actions'][i],
-                    onpolicy_data['next_states'][i],
-                    onpolicy_data['rewards'][i],
-                    onpolicy_data['dones'][i]
+                    onpolicy_data["states"][i],
+                    onpolicy_data["actions"][i],
+                    onpolicy_data["next_states"][i],
+                    onpolicy_data["rewards"][i],
+                    onpolicy_data["dones"][i],
                 )
 
-            print(f"Iteration {iteration + 1} completed. Dataset size: {self.dataset.size()}")
+            print(
+                f"Iteration {iteration + 1} completed. Dataset size: {self.dataset.size()}"
+            )
 
 
 class RandomPolicy:

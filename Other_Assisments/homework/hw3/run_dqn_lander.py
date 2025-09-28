@@ -21,7 +21,7 @@ import tensorflow as tf
 from collections import namedtuple
 
 # Add src directory to path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 from src.dqn import DQNAgent
 from dqn_utils import LinearSchedule, PiecewiseSchedule, ConstantSchedule
@@ -42,10 +42,13 @@ def lander_learn(env_name, num_timesteps, seed=0):
     env.seed(seed)
 
     # Exploration schedule
-    exploration = PiecewiseSchedule([
-        (0, 1.0),
-        (num_timesteps * 0.1, 0.02),
-    ], outside_value=0.02)
+    exploration = PiecewiseSchedule(
+        [
+            (0, 1.0),
+            (num_timesteps * 0.1, 0.02),
+        ],
+        outside_value=0.02,
+    )
 
     # Learning rate schedule
     lr_schedule = ConstantSchedule(1e-3)
@@ -53,9 +56,7 @@ def lander_learn(env_name, num_timesteps, seed=0):
     # Optimizer
     optimizer = tf.train.AdamOptimizer
     optimizer_spec = OptimizerSpec(
-        constructor=optimizer,
-        kwargs=dict(),
-        lr_schedule=lr_schedule
+        constructor=optimizer, kwargs=dict(), lr_schedule=lr_schedule
     )
 
     # Create agent
@@ -72,7 +73,7 @@ def lander_learn(env_name, num_timesteps, seed=0):
         frame_history_len=1,  # No frame stacking for LunarLander
         target_update_freq=1000,
         grad_norm_clipping=10,
-        double_q=False  # Standard Q-learning for LunarLander
+        double_q=False,  # Standard Q-learning for LunarLander
     )
 
     # Initialize TensorFlow session
@@ -104,7 +105,7 @@ def lander_learn(env_name, num_timesteps, seed=0):
                 print(f"Time elapsed: {(time.time() - start_time) / 60:.1f} minutes")
 
         # Track episode statistics
-        if hasattr(env, 'get_episode_rewards'):
+        if hasattr(env, "get_episode_rewards"):
             current_rewards = env.get_episode_rewards()
             if len(current_rewards) > len(episode_rewards):
                 episode_rewards = current_rewards
@@ -117,18 +118,18 @@ def lander_learn(env_name, num_timesteps, seed=0):
 def main():
     """Main function."""
     parser = argparse.ArgumentParser()
-    parser.add_argument('env_name', type=str, default='LunarLander-v2',
-                       help='Environment name')
-    parser.add_argument('--num_timesteps', type=int, default=50000,
-                       help='Number of timesteps to train')
-    parser.add_argument('--seed', type=int, default=0, help='Random seed')
+    parser.add_argument(
+        "env_name", type=str, default="LunarLander-v2", help="Environment name"
+    )
+    parser.add_argument(
+        "--num_timesteps", type=int, default=50000, help="Number of timesteps to train"
+    )
+    parser.add_argument("--seed", type=int, default=0, help="Random seed")
     args = parser.parse_args()
 
     # Train the agent
     rewards, lengths = lander_learn(
-        env_name=args.env_name,
-        num_timesteps=args.num_timesteps,
-        seed=args.seed
+        env_name=args.env_name, num_timesteps=args.num_timesteps, seed=args.seed
     )
 
     print(f"Final mean reward: {np.mean(rewards[-100:]):.2f}")

@@ -20,7 +20,7 @@ class VariationalWorldModel(nn.Module):
             nn.Linear(obs_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU()
+            nn.ReLU(),
         )
         self.encoder_mu = nn.Linear(hidden_dim, latent_dim)
         self.encoder_logvar = nn.Linear(hidden_dim, latent_dim)
@@ -30,7 +30,7 @@ class VariationalWorldModel(nn.Module):
             nn.Linear(latent_dim + action_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU()
+            nn.ReLU(),
         )
 
         # Dynamics outputs (mean and log variance)
@@ -43,7 +43,7 @@ class VariationalWorldModel(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
-            nn.Linear(hidden_dim // 2, 1)
+            nn.Linear(hidden_dim // 2, 1),
         )
 
         # Decoder (latent state -> observation)
@@ -52,7 +52,7 @@ class VariationalWorldModel(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, obs_dim)
+            nn.Linear(hidden_dim, obs_dim),
         )
 
     def encode(self, obs):
@@ -111,10 +111,10 @@ class VariationalWorldModel(nn.Module):
         recon_obs = self.decode(latent_state)
 
         results = {
-            'latent_state': latent_state,
-            'mu_enc': mu_enc,
-            'logvar_enc': logvar_enc,
-            'recon_obs': recon_obs
+            "latent_state": latent_state,
+            "mu_enc": mu_enc,
+            "logvar_enc": logvar_enc,
+            "recon_obs": recon_obs,
         }
 
         # If action provided, predict dynamics and reward
@@ -123,12 +123,14 @@ class VariationalWorldModel(nn.Module):
             next_latent = self.reparameterize(mu_dyn, logvar_dyn)
             pred_reward = self.predict_reward(latent_state, action)
 
-            results.update({
-                'mu_dyn': mu_dyn,
-                'logvar_dyn': logvar_dyn,
-                'next_latent': next_latent,
-                'pred_reward': pred_reward
-            })
+            results.update(
+                {
+                    "mu_dyn": mu_dyn,
+                    "logvar_dyn": logvar_dyn,
+                    "next_latent": next_latent,
+                    "pred_reward": pred_reward,
+                }
+            )
 
         return results
 
@@ -143,20 +145,20 @@ class VariationalWorldModel(nn.Module):
 
         # Store trajectory
         trajectory = {
-            'latent_states': [current_latent],
-            'observations': [self.decode(current_latent)],
-            'rewards': [],
-            'actions': []
+            "latent_states": [current_latent],
+            "observations": [self.decode(current_latent)],
+            "rewards": [],
+            "actions": [],
         }
 
         # Roll out trajectory
         for t in range(sequence_length):
             action = actions[t]
-            trajectory['actions'].append(action)
+            trajectory["actions"].append(action)
 
             # Predict reward
             pred_reward = self.predict_reward(current_latent, action)
-            trajectory['rewards'].append(pred_reward)
+            trajectory["rewards"].append(pred_reward)
 
             # Predict next latent state
             mu_dyn, logvar_dyn = self.dynamics_forward(current_latent, action)
@@ -164,8 +166,8 @@ class VariationalWorldModel(nn.Module):
 
             # Update current state
             current_latent = next_latent
-            trajectory['latent_states'].append(current_latent)
-            trajectory['observations'].append(self.decode(current_latent))
+            trajectory["latent_states"].append(current_latent)
+            trajectory["observations"].append(self.decode(current_latent))
 
         return trajectory
 
@@ -173,7 +175,9 @@ class VariationalWorldModel(nn.Module):
 class WorldModelLoss:
     """Loss functions for training world models."""
 
-    def __init__(self, recon_weight=1.0, kl_weight=1.0, reward_weight=1.0, dynamics_weight=1.0):
+    def __init__(
+        self, recon_weight=1.0, kl_weight=1.0, reward_weight=1.0, dynamics_weight=1.0
+    ):
         self.recon_weight = recon_weight
         self.kl_weight = kl_weight
         self.reward_weight = reward_weight
@@ -195,36 +199,45 @@ class WorldModelLoss:
         """Dynamics prediction loss in latent space."""
         return F.mse_loss(pred_next_latent, target_next_latent)
 
-    def compute_total_loss(self, model_output, target_obs, target_reward=None, target_next_obs=None):
+    def compute_total_loss(
+        self, model_output, target_obs, target_reward=None, target_next_obs=None
+    ):
         """Compute total loss for world model training."""
         losses = {}
 
         # Reconstruction loss
-        recon_loss = self.reconstruction_loss(model_output['recon_obs'], target_obs)
-        losses['reconstruction'] = recon_loss
+        recon_loss = self.reconstruction_loss(model_output["recon_obs"], target_obs)
+        losses["reconstruction"] = recon_loss
 
         # KL divergence loss
-        kl_loss = self.kl_divergence_loss(model_output['mu_enc'], model_output['logvar_enc'])
-        losses['kl_divergence'] = kl_loss
+        kl_loss = self.kl_divergence_loss(
+            model_output["mu_enc"], model_output["logvar_enc"]
+        )
+        losses["kl_divergence"] = kl_loss
 
         # Total loss starts with reconstruction and KL
         total_loss = self.recon_weight * recon_loss + self.kl_weight * kl_loss
 
         # Reward loss (if target reward provided)
-        if target_reward is not None and 'pred_reward' in model_output:
-            reward_loss = self.reward_loss(model_output['pred_reward'], target_reward)
-            losses['reward'] = reward_loss
+        if target_reward is not None and "pred_reward" in model_output:
+            reward_loss = self.reward_loss(model_output["pred_reward"], target_reward)
+            losses["reward"] = reward_loss
             total_loss += self.reward_weight * reward_loss
 
         # Dynamics loss (if target next observation provided)
-        if target_next_obs is not None and 'mu_dyn' in model_output:
+        if target_next_obs is not None and "mu_dyn" in model_output:
             # Encode target next observation to latent space
             with torch.no_grad():
-                target_mu, _ = model_output['mu_enc'], model_output['logvar_enc']  # Placeholder - need next obs encoding
+                target_mu, _ = (
+                    model_output["mu_enc"],
+                    model_output["logvar_enc"],
+                )  # Placeholder - need next obs encoding
 
-            dynamics_loss = F.mse_loss(model_output['mu_dyn'], model_output['next_latent'])
-            losses['dynamics'] = dynamics_loss
+            dynamics_loss = F.mse_loss(
+                model_output["mu_dyn"], model_output["next_latent"]
+            )
+            losses["dynamics"] = dynamics_loss
             total_loss += self.dynamics_weight * dynamics_loss
 
-        losses['total'] = total_loss
+        losses["total"] = total_loss
         return losses

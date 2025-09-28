@@ -12,8 +12,15 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 
-def build_mlp(input_placeholder, output_size, scope, n_layers, size,
-              activation=tf.tanh, output_activation=None):
+def build_mlp(
+    input_placeholder,
+    output_size,
+    scope,
+    n_layers,
+    size,
+    activation=tf.tanh,
+    output_activation=None,
+):
     """Build a multi-layer perceptron.
 
     Args:
@@ -31,10 +38,10 @@ def build_mlp(input_placeholder, output_size, scope, n_layers, size,
     with tf.variable_scope(scope):
         out = input_placeholder
         for i in range(n_layers):
-            out = tf.layers.dense(out, size, activation=activation,
-                                name=f"layer_{i}")
-        out = tf.layers.dense(out, output_size, activation=output_activation,
-                            name="output")
+            out = tf.layers.dense(out, size, activation=activation, name=f"layer_{i}")
+        out = tf.layers.dense(
+            out, output_size, activation=output_activation, name="output"
+        )
         return out
 
 
@@ -46,10 +53,22 @@ def pathlength(path):
 class ActorCriticAgent:
     """Actor-Critic agent with separate policy and value networks."""
 
-    def __init__(self, ob_dim, ac_dim, discrete, n_layers, size, learning_rate,
-                 num_target_updates, num_grad_steps_per_target_update,
-                 gamma, normalize_advantages, max_path_length,
-                 min_timesteps_per_batch, animate):
+    def __init__(
+        self,
+        ob_dim,
+        ac_dim,
+        discrete,
+        n_layers,
+        size,
+        learning_rate,
+        num_target_updates,
+        num_grad_steps_per_target_update,
+        gamma,
+        normalize_advantages,
+        max_path_length,
+        min_timesteps_per_batch,
+        animate,
+    ):
         """Initialize Actor-Critic agent.
 
         Args:
@@ -83,8 +102,9 @@ class ActorCriticAgent:
 
     def init_tf_sess(self):
         """Initialize TensorFlow session."""
-        tf_config = tf.ConfigProto(inter_op_parallelism_threads=1,
-                                 intra_op_parallelism_threads=1)
+        tf_config = tf.ConfigProto(
+            inter_op_parallelism_threads=1, intra_op_parallelism_threads=1
+        )
         tf_config.gpu_options.allow_growth = True
         self.sess = tf.Session(config=tf_config)
         self.sess.__enter__()
@@ -92,15 +112,21 @@ class ActorCriticAgent:
 
     def define_placeholders(self):
         """Define placeholders for training."""
-        self.sy_ob_no = tf.placeholder(shape=[None, self.ob_dim], name="ob", dtype=tf.float32)
+        self.sy_ob_no = tf.placeholder(
+            shape=[None, self.ob_dim], name="ob", dtype=tf.float32
+        )
 
         if self.discrete:
             self.sy_ac_na = tf.placeholder(shape=[None], name="ac", dtype=tf.int32)
         else:
-            self.sy_ac_na = tf.placeholder(shape=[None, self.ac_dim], name="ac", dtype=tf.float32)
+            self.sy_ac_na = tf.placeholder(
+                shape=[None, self.ac_dim], name="ac", dtype=tf.float32
+            )
 
         self.sy_adv_n = tf.placeholder(shape=[None], name="adv", dtype=tf.float32)
-        self.sy_target_n = tf.placeholder(shape=[None], name="critic_target", dtype=tf.float32)
+        self.sy_target_n = tf.placeholder(
+            shape=[None], name="critic_target", dtype=tf.float32
+        )
 
         return self.sy_ob_no, self.sy_ac_na, self.sy_adv_n
 
@@ -114,14 +140,17 @@ class ActorCriticAgent:
             Policy parameters (logits for discrete, mean/log_std for continuous)
         """
         if self.discrete:
-            sy_logits_na = build_mlp(sy_ob_no, self.ac_dim, "policy",
-                                   self.n_layers, self.size)
+            sy_logits_na = build_mlp(
+                sy_ob_no, self.ac_dim, "policy", self.n_layers, self.size
+            )
             return sy_logits_na
         else:
-            sy_mean = build_mlp(sy_ob_no, self.ac_dim, "policy",
-                              self.n_layers, self.size)
-            sy_logstd = tf.get_variable("logstd", shape=[self.ac_dim],
-                                      initializer=tf.zeros_initializer())
+            sy_mean = build_mlp(
+                sy_ob_no, self.ac_dim, "policy", self.n_layers, self.size
+            )
+            sy_logstd = tf.get_variable(
+                "logstd", shape=[self.ac_dim], initializer=tf.zeros_initializer()
+            )
             return (sy_mean, sy_logstd)
 
     def sample_action(self, policy_parameters):
@@ -157,7 +186,8 @@ class ActorCriticAgent:
         if self.discrete:
             sy_logits_na = policy_parameters
             sy_logprob_n = tf.nn.sparse_softmax_cross_entropy_with_logits(
-                labels=sy_ac_na, logits=sy_logits_na)
+                labels=sy_ac_na, logits=sy_logits_na
+            )
         else:
             sy_mean, sy_logstd = policy_parameters
             sy_std = tf.exp(sy_logstd)
@@ -167,7 +197,9 @@ class ActorCriticAgent:
             sy_diff = sy_ac_na - sy_mean
             sy_quad_form = tf.reduce_sum(tf.square(sy_diff) / sy_var, axis=1)
             sy_log_det = tf.reduce_sum(sy_logstd, axis=1)
-            sy_logprob_n = -0.5 * (self.ac_dim * tf.log(2 * np.pi) + sy_quad_form) - sy_log_det
+            sy_logprob_n = (
+                -0.5 * (self.ac_dim * tf.log(2 * np.pi) + sy_quad_form) - sy_log_det
+            )
 
         return sy_logprob_n
 
@@ -182,13 +214,20 @@ class ActorCriticAgent:
 
         # Actor loss and update
         actor_loss = tf.reduce_sum(-self.sy_logprob_n * self.sy_adv_n)
-        self.actor_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(actor_loss)
+        self.actor_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(
+            actor_loss
+        )
 
         # Critic network
-        self.critic_prediction = tf.squeeze(build_mlp(
-            self.sy_ob_no, 1, "critic", self.n_layers, self.size))
-        self.critic_loss = tf.losses.mean_squared_error(self.sy_target_n, self.critic_prediction)
-        self.critic_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.critic_loss)
+        self.critic_prediction = tf.squeeze(
+            build_mlp(self.sy_ob_no, 1, "critic", self.n_layers, self.size)
+        )
+        self.critic_loss = tf.losses.mean_squared_error(
+            self.sy_target_n, self.critic_prediction
+        )
+        self.critic_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(
+            self.critic_loss
+        )
 
     def sample_trajectories(self, itr, env):
         """Sample trajectories until we have enough timesteps."""
@@ -196,7 +235,7 @@ class ActorCriticAgent:
         paths = []
 
         while True:
-            animate_this_episode = (len(paths) == 0 and (itr % 10 == 0) and self.animate)
+            animate_this_episode = len(paths) == 0 and (itr % 10 == 0) and self.animate
             path = self.sample_trajectory(env, animate_this_episode)
             paths.append(path)
             timesteps_this_batch += pathlength(path)
@@ -216,6 +255,7 @@ class ActorCriticAgent:
             if animate_this_episode:
                 env.render()
                 import time
+
                 time.sleep(0.1)
 
             obs.append(ob)
@@ -240,7 +280,7 @@ class ActorCriticAgent:
             "reward": np.array(rewards, dtype=np.float32),
             "action": np.array(acs, dtype=np.float32),
             "next_observation": np.array(next_obs, dtype=np.float32),
-            "terminal": np.array(terminals, dtype=np.float32)
+            "terminal": np.array(terminals, dtype=np.float32),
         }
 
         return path
@@ -248,11 +288,15 @@ class ActorCriticAgent:
     def estimate_advantage(self, ob_no, next_ob_no, re_n, terminal_n):
         """Estimate advantages using critic network."""
         # Compute Q(s,a) = r(s,a) + gamma * V(s') * (1 - terminal)
-        v_next = self.sess.run(self.critic_prediction, feed_dict={self.sy_ob_no: next_ob_no})
+        v_next = self.sess.run(
+            self.critic_prediction, feed_dict={self.sy_ob_no: next_ob_no}
+        )
         q_n = re_n + self.gamma * v_next * (1 - terminal_n)
 
         # Compute V(s) for baseline
-        v_current = self.sess.run(self.critic_prediction, feed_dict={self.sy_ob_no: ob_no})
+        v_current = self.sess.run(
+            self.critic_prediction, feed_dict={self.sy_ob_no: ob_no}
+        )
 
         # Advantage = Q - V
         adv_n = q_n - v_current
@@ -265,21 +309,26 @@ class ActorCriticAgent:
     def update_critic(self, ob_no, next_ob_no, re_n, terminal_n):
         """Update critic network."""
         # Target values: r + gamma * V(s') * (1 - terminal)
-        v_next = self.sess.run(self.critic_prediction, feed_dict={self.sy_ob_no: next_ob_no})
+        v_next = self.sess.run(
+            self.critic_prediction, feed_dict={self.sy_ob_no: next_ob_no}
+        )
         target_n = re_n + self.gamma * v_next * (1 - terminal_n)
 
         # Update critic for multiple steps
         for _ in range(self.num_target_updates):
             for _ in range(self.num_grad_steps_per_target_update):
-                self.sess.run(self.critic_update_op, feed_dict={
-                    self.sy_ob_no: ob_no,
-                    self.sy_target_n: target_n
-                })
+                self.sess.run(
+                    self.critic_update_op,
+                    feed_dict={self.sy_ob_no: ob_no, self.sy_target_n: target_n},
+                )
 
     def update_actor(self, ob_no, ac_na, adv_n):
         """Update actor network."""
-        self.sess.run(self.actor_update_op, feed_dict={
-            self.sy_ob_no: ob_no,
-            self.sy_ac_na: ac_na,
-            self.sy_adv_n: adv_n
-        })
+        self.sess.run(
+            self.actor_update_op,
+            feed_dict={
+                self.sy_ob_no: ob_no,
+                self.sy_ac_na: ac_na,
+                self.sy_adv_n: adv_n,
+            },
+        )

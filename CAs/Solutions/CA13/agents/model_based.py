@@ -24,7 +24,7 @@ class ModelBasedAgent:
             nn.ReLU(),
             nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(128, state_dim)
+            nn.Linear(128, state_dim),
         )
 
         # Reward model: r = R(s_t, a_t)
@@ -33,7 +33,7 @@ class ModelBasedAgent:
             nn.ReLU(),
             nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Linear(64, 1)
+            nn.Linear(64, 1),
         )
 
         # Value function for planning
@@ -42,7 +42,7 @@ class ModelBasedAgent:
             nn.ReLU(),
             nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Linear(64, 1)
+            nn.Linear(64, 1),
         )
 
         # Optimizers
@@ -68,7 +68,7 @@ class ModelBasedAgent:
     def plan_action(self, state):
         """Plan best action using learned model."""
         best_action = 0
-        best_value = float('-inf')
+        best_value = float("-inf")
 
         # Try each action and simulate forward
         for action in range(self.action_dim):
@@ -102,20 +102,20 @@ class ModelBasedAgent:
                 next_state = self.dynamics_model(model_input)
                 reward = self.reward_model(model_input).item()
 
-            total_reward += (gamma ** step) * reward
+            total_reward += (gamma**step) * reward
             state = next_state
 
         # Add terminal value estimate
         with torch.no_grad():
             terminal_value = self.value_network(state).item()
-            total_reward += (gamma ** self.planning_horizon) * terminal_value
+            total_reward += (gamma**self.planning_horizon) * terminal_value
 
         return total_reward
 
     def get_greedy_action(self, state):
         """Get greedy action for planning."""
         best_action = 0
-        best_q = float('-inf')
+        best_q = float("-inf")
 
         for action in range(self.action_dim):
             action_tensor = torch.FloatTensor([action])
@@ -223,7 +223,9 @@ class HybridDynaAgent:
     def update(self, state, action, reward, next_state, done):
         """Dyna-Q update: direct RL + model learning + planning."""
         state_key = tuple(state) if isinstance(state, np.ndarray) else state
-        next_state_key = tuple(next_state) if isinstance(next_state, np.ndarray) else next_state
+        next_state_key = (
+            tuple(next_state) if isinstance(next_state, np.ndarray) else next_state
+        )
 
         # 1. Direct RL update (model-free)
         if done:
@@ -231,7 +233,9 @@ class HybridDynaAgent:
         else:
             target = reward + self.gamma * np.max(self.q_table[next_state_key])
 
-        self.q_table[state_key][action] += self.lr * (target - self.q_table[state_key][action])
+        self.q_table[state_key][action] += self.lr * (
+            target - self.q_table[state_key][action]
+        )
 
         # 2. Model learning
         self.model[(state_key, action)] = (reward, next_state_key, done)
@@ -249,7 +253,9 @@ class HybridDynaAgent:
         for _ in range(self.planning_steps):
             # Sample random experience
             if len(self.experience_buffer) > 0:
-                state_key, action, reward, next_state_key, done = random.choice(self.experience_buffer)
+                state_key, action, reward, next_state_key, done = random.choice(
+                    self.experience_buffer
+                )
 
                 # Planning update (same as direct RL update)
                 if done:
@@ -257,4 +263,6 @@ class HybridDynaAgent:
                 else:
                     target = reward + self.gamma * np.max(self.q_table[next_state_key])
 
-                self.q_table[state_key][action] += self.lr * (target - self.q_table[state_key][action])
+                self.q_table[state_key][action] += self.lr * (
+                    target - self.q_table[state_key][action]
+                )

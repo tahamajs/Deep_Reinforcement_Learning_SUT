@@ -32,7 +32,7 @@ class PrioritizedReplayBuffer:
     def __init__(self, capacity, alpha=0.6, beta=0.4, beta_increment=1e-4):
         self.capacity = capacity
         self.alpha = alpha  # Priority exponent
-        self.beta = beta    # Importance sampling exponent
+        self.beta = beta  # Importance sampling exponent
         self.beta_increment = beta_increment
 
         # Storage
@@ -57,8 +57,8 @@ class PrioritizedReplayBuffer:
             return None
 
         # Calculate sampling probabilities
-        valid_priorities = self.priorities[:len(self.buffer)]
-        probs = valid_priorities ** self.alpha
+        valid_priorities = self.priorities[: len(self.buffer)]
+        probs = valid_priorities**self.alpha
         probs /= probs.sum()
 
         # Sample indices

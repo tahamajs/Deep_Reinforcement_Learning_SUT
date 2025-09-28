@@ -13,8 +13,16 @@ from .feudal import FeudalNetwork, FeudalAgent
 from .integrated import IntegratedAdvancedAgent
 
 __all__ = [
-    'ModelFreeAgent', 'DQNAgent', 'ModelBasedAgent', 'HybridDynaAgent',
-    'ImaginationBasedAgent', 'SampleEfficientAgent', 'TransferLearningAgent',
-    'OptionsCriticNetwork', 'OptionsCriticAgent', 'FeudalNetwork', 'FeudalAgent',
-    'IntegratedAdvancedAgent'
+    "ModelFreeAgent",
+    "DQNAgent",
+    "ModelBasedAgent",
+    "HybridDynaAgent",
+    "ImaginationBasedAgent",
+    "SampleEfficientAgent",
+    "TransferLearningAgent",
+    "OptionsCriticNetwork",
+    "OptionsCriticAgent",
+    "FeudalNetwork",
+    "FeudalAgent",
+    "IntegratedAdvancedAgent",
 ]

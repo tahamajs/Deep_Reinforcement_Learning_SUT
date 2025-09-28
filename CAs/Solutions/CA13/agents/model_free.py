@@ -40,7 +40,7 @@ class DQNAgent(ModelFreeAgent):
             nn.ReLU(),
             nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(128, action_dim)
+            nn.Linear(128, action_dim),
         )
 
         # Target network
