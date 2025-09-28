@@ -1,4 +1,3 @@
-```markdown
 # Assignment 3 — Question 1
 
 Author: Mohammad taha majlesi - 810101504
@@ -20,5 +19,3 @@ How to run
 Notes
 -----
 - Standard convolutional dropout is often less effective than structured variants (e.g., BlockDropout) for conv layers due to spatial correlation in activations. The notebook demonstrates this empirically.
-
-```
