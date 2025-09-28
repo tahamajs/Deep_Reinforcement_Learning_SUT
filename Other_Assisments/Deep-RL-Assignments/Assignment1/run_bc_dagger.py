@@ -6,9 +6,10 @@ import gymnasium as gym
 from src.bc_dagger import Imitation
 from src.utils import generate_episode
 
+
 def main():
-    env = gym.make('CartPole-v1')
-    expert_policy = tf.keras.models.load_model('expert.h5')
+    env = gym.make("CartPole-v1")
+    expert_policy = tf.keras.models.load_model("expert.h5")
 
     # Train BC
     bc = Imitation(env, expert_policy)
@@ -33,6 +34,7 @@ def main():
     dagger_convergence = dagger.evaluate_convergence(expert_states)
     print(f"BC TV Distance: {bc_convergence}")
     print(f"DAgger TV Distance: {dagger_convergence}")
+
 
 if __name__ == "__main__":
     main()

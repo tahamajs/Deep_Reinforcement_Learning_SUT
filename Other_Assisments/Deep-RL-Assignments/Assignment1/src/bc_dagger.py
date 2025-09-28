@@ -6,6 +6,7 @@ from sklearn.utils import shuffle
 from src.models import make_model
 from src.utils import generate_episode, generate_dagger_episode, TV_distance
 
+
 class Imitation:
     def __init__(self, env, expert_policy, lr=1e-3):
         self.env = env
@@ -30,20 +31,32 @@ class Imitation:
             expert_states, expert_actions = shuffle(expert_states, expert_actions)
             with tf.GradientTape() as tape:
                 predictions = self.policy(expert_states)
-                loss = tf.reduce_mean(tf.keras.losses.categorical_crossentropy(expert_actions, predictions))
+                loss = tf.reduce_mean(
+                    tf.keras.losses.categorical_crossentropy(
+                        expert_actions, predictions
+                    )
+                )
             gradients = tape.gradient(loss, self.policy.trainable_variables)
-            self.optimizer.apply_gradients(zip(gradients, self.policy.trainable_variables))
+            self.optimizer.apply_gradients(
+                zip(gradients, self.policy.trainable_variables)
+            )
 
             if dagger:
                 # Collect more data with current policy
                 student_states = []
                 student_actions = []
                 for _ in range(num_rollouts):
-                    states, actions, _ = generate_dagger_episode(self.env, self.policy, self.expert_policy)
+                    states, actions, _ = generate_dagger_episode(
+                        self.env, self.policy, self.expert_policy
+                    )
                     student_states.extend(states)
                     student_actions.extend(actions)
-                expert_states = np.concatenate([expert_states, np.array(student_states)])
-                expert_actions = np.concatenate([expert_actions, np.array(student_actions)])
+                expert_states = np.concatenate(
+                    [expert_states, np.array(student_states)]
+                )
+                expert_actions = np.concatenate(
+                    [expert_actions, np.array(student_actions)]
+                )
 
         return self.policy
 

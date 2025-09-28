@@ -26,16 +26,19 @@ pip install -r requirements.txt
 ## Usage
 
 ### Behavioral Cloning and DAgger
+
 ```bash
 python run_bc_dagger.py
 ```
 
 ### CMA-ES
+
 ```bash
 python run_cmaes.py
 ```
 
 ### GAIL
+
 ```bash
 python run_gail.py
 ```

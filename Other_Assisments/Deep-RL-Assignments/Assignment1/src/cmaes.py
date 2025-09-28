@@ -4,6 +4,7 @@ import numpy as np
 import cma
 from src.utils import generate_episode
 
+
 class CMAES:
     def __init__(self, env, num_params, sigma=0.1):
         self.env = env
@@ -12,7 +13,19 @@ class CMAES:
 
     def train(self, num_rollouts, num_epochs=100):
         def evaluate_policy(params):
-            policy = lambda state: np.dot(params[:self.env.observation_space.shape[0] * self.env.action_space.n].reshape(self.env.action_space.n, self.env.observation_space.shape[0]), state) + params[self.env.observation_space.shape[0] * self.env.action_space.n:]
+            policy = (
+                lambda state: np.dot(
+                    params[
+                        : self.env.observation_space.shape[0] * self.env.action_space.n
+                    ].reshape(
+                        self.env.action_space.n, self.env.observation_space.shape[0]
+                    ),
+                    state,
+                )
+                + params[
+                    self.env.observation_space.shape[0] * self.env.action_space.n :
+                ]
+            )
             total_reward = 0
             for _ in range(num_rollouts):
                 _, _, rewards = generate_episode(self.env, policy)
@@ -24,7 +37,15 @@ class CMAES:
         return es.result.xbest
 
     def evaluate(self, params, num_rollouts=50):
-        policy = lambda state: np.dot(params[:self.env.observation_space.shape[0] * self.env.action_space.n].reshape(self.env.action_space.n, self.env.observation_space.shape[0]), state) + params[self.env.observation_space.shape[0] * self.env.action_space.n:]
+        policy = (
+            lambda state: np.dot(
+                params[
+                    : self.env.observation_space.shape[0] * self.env.action_space.n
+                ].reshape(self.env.action_space.n, self.env.observation_space.shape[0]),
+                state,
+            )
+            + params[self.env.observation_space.shape[0] * self.env.action_space.n :]
+        )
         total_rewards = []
         for _ in range(num_rollouts):
             _, _, rewards = generate_episode(self.env, policy)

@@ -6,6 +6,7 @@ from sklearn.utils import shuffle
 from src.models import make_model
 from src.utils import generate_episode, generate_GAIL_episode
 
+
 class GAIL:
     def __init__(self, env, expert_policy, lr=1e-3):
         self.env = env
@@ -45,19 +46,29 @@ class GAIL:
             all_actions = np.concatenate([expert_actions, student_actions])
             all_labels = np.concatenate([expert_labels, student_labels])
 
-            all_states, all_actions, all_labels = shuffle(all_states, all_actions, all_labels)
+            all_states, all_actions, all_labels = shuffle(
+                all_states, all_actions, all_labels
+            )
 
             with tf.GradientTape() as tape:
-                predictions = self.discriminator(tf.concat([all_states, all_actions], axis=1))
-                loss = tf.reduce_mean(tf.keras.losses.binary_crossentropy(all_labels, predictions))
+                predictions = self.discriminator(
+                    tf.concat([all_states, all_actions], axis=1)
+                )
+                loss = tf.reduce_mean(
+                    tf.keras.losses.binary_crossentropy(all_labels, predictions)
+                )
             gradients = tape.gradient(loss, self.discriminator.trainable_variables)
-            self.discriminator_optimizer.apply_gradients(zip(gradients, self.discriminator.trainable_variables))
+            self.discriminator_optimizer.apply_gradients(
+                zip(gradients, self.discriminator.trainable_variables)
+            )
 
             # Train policy
             policy_states = []
             policy_actions = []
             for _ in range(num_rollouts):
-                states, actions, _ = generate_GAIL_episode(self.env, self.policy, self.discriminator)
+                states, actions, _ = generate_GAIL_episode(
+                    self.env, self.policy, self.discriminator
+                )
                 policy_states.extend(states)
                 policy_actions.extend(actions)
             policy_states = np.array(policy_states)
@@ -65,9 +76,15 @@ class GAIL:
 
             with tf.GradientTape() as tape:
                 predictions = self.policy(policy_states)
-                loss = tf.reduce_mean(tf.keras.losses.categorical_crossentropy(policy_actions, predictions))
+                loss = tf.reduce_mean(
+                    tf.keras.losses.categorical_crossentropy(
+                        policy_actions, predictions
+                    )
+                )
             gradients = tape.gradient(loss, self.policy.trainable_variables)
-            self.policy_optimizer.apply_gradients(zip(gradients, self.policy.trainable_variables))
+            self.policy_optimizer.apply_gradients(
+                zip(gradients, self.policy.trainable_variables)
+            )
 
         return self.policy
 
