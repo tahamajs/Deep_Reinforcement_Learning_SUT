@@ -10,11 +10,11 @@ from .rssm import RecurrentStateSpaceModel
 from .trainers import WorldModelTrainer, RSSMTrainer
 
 __all__ = [
-    'VariationalAutoencoder',
-    'LatentDynamicsModel',
-    'RewardModel',
-    'WorldModel',
-    'RecurrentStateSpaceModel',
-    'WorldModelTrainer',
-    'RSSMTrainer'
+    "VariationalAutoencoder",
+    "LatentDynamicsModel",
+    "RewardModel",
+    "WorldModel",
+    "RecurrentStateSpaceModel",
+    "WorldModelTrainer",
+    "RSSMTrainer",
 ]

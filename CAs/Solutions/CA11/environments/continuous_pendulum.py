@@ -40,7 +40,10 @@ class ContinuousPendulum:
         theta = np.arctan2(sin_theta, cos_theta)
 
         # Dynamics
-        theta_dot_dot = (3 * self.g / (2 * self.l) * np.sin(theta) + 3 / (self.m * self.l**2) * action)
+        theta_dot_dot = (
+            3 * self.g / (2 * self.l) * np.sin(theta)
+            + 3 / (self.m * self.l**2) * action
+        )
         theta_dot = theta_dot + theta_dot_dot * self.dt
         theta_dot = np.clip(theta_dot, -self.max_speed, self.max_speed)
         theta = theta + theta_dot * self.dt

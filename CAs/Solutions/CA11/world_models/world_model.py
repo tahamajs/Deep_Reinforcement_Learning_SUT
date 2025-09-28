@@ -12,8 +12,15 @@ from .reward_model import RewardModel
 class WorldModel(nn.Module):
     """Complete World Model combining VAE, dynamics, and reward models"""
 
-    def __init__(self, obs_dim, action_dim, latent_dim=64, hidden_dim=256,
-                 stochastic_dynamics=True, beta=1.0):
+    def __init__(
+        self,
+        obs_dim,
+        action_dim,
+        latent_dim=64,
+        hidden_dim=256,
+        stochastic_dynamics=True,
+        beta=1.0,
+    ):
         super().__init__()
 
         self.obs_dim = obs_dim
@@ -22,15 +29,17 @@ class WorldModel(nn.Module):
 
         # Component models
         self.vae = VariationalAutoencoder(obs_dim, latent_dim, hidden_dim, beta)
-        self.dynamics = LatentDynamicsModel(latent_dim, action_dim, hidden_dim, stochastic_dynamics)
+        self.dynamics = LatentDynamicsModel(
+            latent_dim, action_dim, hidden_dim, stochastic_dynamics
+        )
         self.reward_model = RewardModel(latent_dim, action_dim, hidden_dim)
 
         # Training statistics
         self.training_stats = {
-            'vae_loss': [],
-            'dynamics_loss': [],
-            'reward_loss': [],
-            'total_loss': []
+            "vae_loss": [],
+            "dynamics_loss": [],
+            "reward_loss": [],
+            "total_loss": [],
         }
 
     def encode_observations(self, obs):
@@ -83,11 +92,11 @@ class WorldModel(nn.Module):
                 observations.append(obs)
 
         results = {
-            'states': torch.stack(states, dim=1),
-            'rewards': torch.stack(rewards, dim=1)
+            "states": torch.stack(states, dim=1),
+            "rewards": torch.stack(rewards, dim=1),
         }
 
         if return_observations:
-            results['observations'] = torch.stack(observations, dim=1)
+            results["observations"] = torch.stack(observations, dim=1)
 
         return results

@@ -53,9 +53,11 @@ class ContinuousCartPole:
         sintheta = math.sin(theta)
 
         # Physics calculations
-        temp = (force + self.polemass_length * theta_dot ** 2 * sintheta) / self.total_mass
+        temp = (
+            force + self.polemass_length * theta_dot**2 * sintheta
+        ) / self.total_mass
         thetaacc = (self.gravity * sintheta - costheta * temp) / (
-            self.length * (4.0 / 3.0 - self.masspole * costheta ** 2 / self.total_mass)
+            self.length * (4.0 / 3.0 - self.masspole * costheta**2 / self.total_mass)
         )
         xacc = temp - self.polemass_length * thetaacc * costheta / self.total_mass
 
@@ -70,9 +72,11 @@ class ContinuousCartPole:
 
         # Calculate reward and done
         done = (
-            x < -self.x_threshold or x > self.x_threshold or
-            theta < -self.theta_threshold_radians or theta > self.theta_threshold_radians or
-            self.current_step >= self.max_steps
+            x < -self.x_threshold
+            or x > self.x_threshold
+            or theta < -self.theta_threshold_radians
+            or theta > self.theta_threshold_radians
+            or self.current_step >= self.max_steps
         )
 
         reward = 1.0 if not done else 0.0

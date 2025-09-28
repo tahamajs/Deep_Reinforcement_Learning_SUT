@@ -15,9 +15,18 @@ from .latent_critic import LatentCritic
 class DreamerAgent:
     """Dreamer-style agent for planning in latent space"""
 
-    def __init__(self, world_model, state_dim, action_dim, device,
-                 actor_lr=8e-5, critic_lr=8e-5, gamma=0.99, lambda_=0.95,
-                 imagination_horizon=15):
+    def __init__(
+        self,
+        world_model,
+        state_dim,
+        action_dim,
+        device,
+        actor_lr=8e-5,
+        critic_lr=8e-5,
+        gamma=0.99,
+        lambda_=0.95,
+        imagination_horizon=15,
+    ):
 
         self.world_model = world_model
         self.device = device
@@ -35,10 +44,10 @@ class DreamerAgent:
 
         # Training statistics
         self.stats = {
-            'actor_loss': [],
-            'critic_loss': [],
-            'imagination_reward': [],
-            'policy_entropy': []
+            "actor_loss": [],
+            "critic_loss": [],
+            "imagination_reward": [],
+            "policy_entropy": [],
         }
 
     def imagine_trajectories(self, initial_states, batch_size=50):
@@ -65,7 +74,7 @@ class DreamerAgent:
             values.append(value)
 
             # Predict next state and reward using world model
-            if hasattr(self.world_model, 'dynamics'):
+            if hasattr(self.world_model, "dynamics"):
                 # Simple world model
                 if self.world_model.dynamics.stochastic:
                     next_state, _, _ = self.world_model.dynamics(current_state, action)
@@ -80,7 +89,7 @@ class DreamerAgent:
 
                 # Split state into h and z components
                 h = current_state[:, :h_dim]
-                z = current_state[:, h_dim:h_dim+z_dim]
+                z = current_state[:, h_dim : h_dim + z_dim]
 
                 # Imagination step
                 h, z, _ = self.world_model.imagine(h, z, action)
@@ -102,19 +111,19 @@ class DreamerAgent:
         final_value = self.critic(states[-1])
 
         return {
-            'states': states,
-            'actions': actions,
-            'rewards': rewards,
-            'log_probs': log_probs,
-            'values': values,
-            'final_value': final_value
+            "states": states,
+            "actions": actions,
+            "rewards": rewards,
+            "log_probs": log_probs,
+            "values": values,
+            "final_value": final_value,
         }
 
     def compute_returns_and_advantages(self, trajectory):
         """Compute returns and advantages using GAE"""
-        rewards = trajectory['rewards']
-        values = trajectory['values']
-        final_value = trajectory['final_value']
+        rewards = trajectory["rewards"]
+        values = trajectory["values"]
+        final_value = trajectory["final_value"]
 
         # Compute returns
         returns = torch.zeros_like(rewards)
@@ -126,7 +135,11 @@ class DreamerAgent:
         for t in reversed(range(len(rewards))):
             returns[t] = rewards[t] + self.gamma * last_return
 
-            delta = rewards[t] + self.gamma * (final_value if t == len(rewards)-1 else values[t+1]) - values[t]
+            delta = (
+                rewards[t]
+                + self.gamma * (final_value if t == len(rewards) - 1 else values[t + 1])
+                - values[t]
+            )
             advantages[t] = delta + self.gamma * self.lambda_ * last_advantage
 
             last_return = returns[t]
@@ -136,9 +149,9 @@ class DreamerAgent:
 
     def update_actor_critic(self, trajectory):
         """Update actor and critic networks"""
-        states = trajectory['states']
-        actions = trajectory['actions']
-        log_probs = trajectory['log_probs']
+        states = trajectory["states"]
+        actions = trajectory["actions"]
+        log_probs = trajectory["log_probs"]
 
         # Reshape for processing
         states = states.view(-1, states.shape[-1])
@@ -169,9 +182,13 @@ class DreamerAgent:
         dist = Normal(action_mean, action_std)
 
         # Handle tanh transformation
-        raw_actions = torch.atanh(torch.clamp(actions / self.actor.action_range, -0.999, 0.999))
+        raw_actions = torch.atanh(
+            torch.clamp(actions / self.actor.action_range, -0.999, 0.999)
+        )
         new_log_probs = dist.log_prob(raw_actions).sum(dim=-1)
-        new_log_probs -= (2 * (np.log(2) - raw_actions - F.softplus(-2 * raw_actions))).sum(dim=-1)
+        new_log_probs -= (
+            2 * (np.log(2) - raw_actions - F.softplus(-2 * raw_actions))
+        ).sum(dim=-1)
 
         # Actor loss (policy gradient with advantages)
         actor_loss = -(new_log_probs * advantages.detach()).mean()
@@ -185,16 +202,16 @@ class DreamerAgent:
         self.actor_optimizer.step()
 
         # Record statistics
-        self.stats['actor_loss'].append(actor_loss.item())
-        self.stats['critic_loss'].append(critic_loss.item())
-        self.stats['imagination_reward'].append(trajectory['rewards'].mean().item())
-        self.stats['policy_entropy'].append(entropy.item())
+        self.stats["actor_loss"].append(actor_loss.item())
+        self.stats["critic_loss"].append(critic_loss.item())
+        self.stats["imagination_reward"].append(trajectory["rewards"].mean().item())
+        self.stats["policy_entropy"].append(entropy.item())
 
         return {
-            'actor_loss': actor_loss.item(),
-            'critic_loss': critic_loss.item(),
-            'entropy': entropy.item(),
-            'mean_advantage': advantages.mean().item()
+            "actor_loss": actor_loss.item(),
+            "critic_loss": critic_loss.item(),
+            "entropy": entropy.item(),
+            "mean_advantage": advantages.mean().item(),
         }
 
     def train_step(self, initial_states):

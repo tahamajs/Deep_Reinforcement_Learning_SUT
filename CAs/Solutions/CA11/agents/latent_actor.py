@@ -21,7 +21,7 @@ class LatentActor(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, action_dim * 2)  # Mean and log_std
+            nn.Linear(hidden_dim, action_dim * 2),  # Mean and log_std
         )
 
         # Initialize last layer with small weights

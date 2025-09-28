@@ -38,12 +38,11 @@ class SequenceEnvironment:
         # Only return current state + partial memory information
         recent_memory = list(self.memory)[-2:]  # Only last 2 memory items
 
-        obs = np.concatenate([
-            self.state,
-            recent_memory + [0.0] * (2 - len(recent_memory))
-        ])
+        obs = np.concatenate(
+            [self.state, recent_memory + [0.0] * (2 - len(recent_memory))]
+        )
 
-        return obs[:self.obs_dim]
+        return obs[: self.obs_dim]
 
     def step(self, action):
         """Take environment step"""

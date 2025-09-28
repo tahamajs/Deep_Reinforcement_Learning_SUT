@@ -9,12 +9,7 @@ from typing import List, Dict, Any
 
 def collect_world_model_data(env, n_episodes=100):
     """Collect data for world model training"""
-    data = {
-        'observations': [],
-        'actions': [],
-        'rewards': [],
-        'next_observations': []
-    }
+    data = {"observations": [], "actions": [], "rewards": [], "next_observations": []}
 
     for episode in range(n_episodes):
         obs = env.reset()
@@ -23,10 +18,10 @@ def collect_world_model_data(env, n_episodes=100):
             action = env.sample_action()
             next_obs, reward, done = env.step(action)
 
-            data['observations'].append(obs)
-            data['actions'].append([action])
-            data['rewards'].append(reward)
-            data['next_observations'].append(next_obs)
+            data["observations"].append(obs)
+            data["actions"].append([action])
+            data["rewards"].append(reward)
+            data["next_observations"].append(next_obs)
 
             obs = next_obs
             if done:
@@ -65,11 +60,13 @@ def collect_sequence_data(env, n_episodes=100, seq_length=20):
                 break
 
         if len(obs_sequence) >= seq_length:
-            sequences.append({
-                'observations': obs_sequence[:seq_length],
-                'actions': action_sequence[:seq_length],
-                'rewards': reward_sequence[:seq_length]
-            })
+            sequences.append(
+                {
+                    "observations": obs_sequence[:seq_length],
+                    "actions": action_sequence[:seq_length],
+                    "rewards": reward_sequence[:seq_length],
+                }
+            )
 
     return sequences
 
@@ -84,9 +81,9 @@ def prepare_rssm_batch(sequences, batch_size=32):
     rewards = []
 
     for seq in batch_sequences:
-        observations.append(seq['observations'])
-        actions.append(seq['actions'])
-        rewards.append(seq['rewards'])
+        observations.append(seq["observations"])
+        actions.append(seq["actions"])
+        rewards.append(seq["rewards"])
 
     # Convert to tensors
     observations = torch.FloatTensor(observations)

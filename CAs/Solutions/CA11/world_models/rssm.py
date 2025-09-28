@@ -11,7 +11,9 @@ from torch.distributions import Normal, kl_divergence
 class RecurrentStateSpaceModel(nn.Module):
     """Recurrent State Space Model (RSSM) for temporal world modeling"""
 
-    def __init__(self, obs_dim, action_dim, stoch_dim=30, deter_dim=200, hidden_dim=400):
+    def __init__(
+        self, obs_dim, action_dim, stoch_dim=30, deter_dim=200, hidden_dim=400
+    ):
         super().__init__()
 
         self.obs_dim = obs_dim
@@ -26,7 +28,7 @@ class RecurrentStateSpaceModel(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, stoch_dim * 2)  # Mean and std
+            nn.Linear(hidden_dim, stoch_dim * 2),  # Mean and std
         )
 
         # Recurrent model (deterministic state)
@@ -36,14 +38,14 @@ class RecurrentStateSpaceModel(nn.Module):
         self.transition_model = nn.Sequential(
             nn.Linear(deter_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, stoch_dim * 2)  # Mean and std
+            nn.Linear(hidden_dim, stoch_dim * 2),  # Mean and std
         )
 
         # Representation model (posterior)
         self.representation_model = nn.Sequential(
             nn.Linear(deter_dim + stoch_dim * 2, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, stoch_dim * 2)  # Mean and std
+            nn.Linear(hidden_dim, stoch_dim * 2),  # Mean and std
         )
 
         # Observation decoder
@@ -52,27 +54,31 @@ class RecurrentStateSpaceModel(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, obs_dim)
+            nn.Linear(hidden_dim, obs_dim),
         )
 
         # Reward model
         self.reward_model = nn.Sequential(
             nn.Linear(deter_dim + stoch_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, 1),
         )
 
         # Value model for planning
         self.value_model = nn.Sequential(
             nn.Linear(deter_dim + stoch_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, 1),
         )
 
     def initial_state(self, batch_size):
         """Initialize hidden state"""
-        h = torch.zeros(batch_size, self.deter_dim, device=next(self.parameters()).device)
-        z = torch.zeros(batch_size, self.stoch_dim, device=next(self.parameters()).device)
+        h = torch.zeros(
+            batch_size, self.deter_dim, device=next(self.parameters()).device
+        )
+        z = torch.zeros(
+            batch_size, self.stoch_dim, device=next(self.parameters()).device
+        )
         return h, z
 
     def encode_obs(self, obs):

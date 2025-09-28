@@ -23,11 +23,11 @@ class WorldModelTrainer:
 
         # Training statistics
         self.losses = {
-            'vae_total': [],
-            'vae_recon': [],
-            'vae_kl': [],
-            'dynamics': [],
-            'reward': []
+            "vae_total": [],
+            "vae_recon": [],
+            "vae_kl": [],
+            "dynamics": [],
+            "reward": [],
         }
 
     def train_step(self, batch):
@@ -42,12 +42,18 @@ class WorldModelTrainer:
         # Train VAE on observations
         self.vae_optimizer.zero_grad()
         recon_obs, mu_obs, logvar_obs, z_obs = self.world_model.vae(obs)
-        recon_next_obs, mu_next_obs, logvar_next_obs, z_next_obs = self.world_model.vae(next_obs)
+        recon_next_obs, mu_next_obs, logvar_next_obs, z_next_obs = self.world_model.vae(
+            next_obs
+        )
 
         vae_loss_obs, recon_loss_obs, kl_loss_obs = self.world_model.vae.loss_function(
-            obs, recon_obs, mu_obs, logvar_obs)
-        vae_loss_next_obs, recon_loss_next_obs, kl_loss_next_obs = self.world_model.vae.loss_function(
-            next_obs, recon_next_obs, mu_next_obs, logvar_next_obs)
+            obs, recon_obs, mu_obs, logvar_obs
+        )
+        vae_loss_next_obs, recon_loss_next_obs, kl_loss_next_obs = (
+            self.world_model.vae.loss_function(
+                next_obs, recon_next_obs, mu_next_obs, logvar_next_obs
+            )
+        )
 
         vae_total_loss = vae_loss_obs + vae_loss_next_obs
         vae_total_loss.backward()
@@ -59,12 +65,17 @@ class WorldModelTrainer:
         z_next_obs_detached = z_next_obs.detach()
 
         if self.world_model.dynamics.stochastic:
-            z_pred, mu_pred, logvar_pred = self.world_model.dynamics(z_obs_detached, actions)
+            z_pred, mu_pred, logvar_pred = self.world_model.dynamics(
+                z_obs_detached, actions
+            )
             dynamics_loss = self.world_model.dynamics.loss_function(
-                z_pred, z_next_obs_detached, mu_pred, logvar_pred)
+                z_pred, z_next_obs_detached, mu_pred, logvar_pred
+            )
         else:
             z_pred = self.world_model.dynamics(z_obs_detached, actions)
-            dynamics_loss = self.world_model.dynamics.loss_function(z_pred, z_next_obs_detached)
+            dynamics_loss = self.world_model.dynamics.loss_function(
+                z_pred, z_next_obs_detached
+            )
 
         dynamics_loss.backward()
         self.dynamics_optimizer.step()
@@ -77,16 +88,16 @@ class WorldModelTrainer:
         self.reward_optimizer.step()
 
         # Record losses
-        self.losses['vae_total'].append(vae_total_loss.item())
-        self.losses['vae_recon'].append((recon_loss_obs + recon_loss_next_obs).item())
-        self.losses['vae_kl'].append((kl_loss_obs + kl_loss_next_obs).item())
-        self.losses['dynamics'].append(dynamics_loss.item())
-        self.losses['reward'].append(reward_loss.item())
+        self.losses["vae_total"].append(vae_total_loss.item())
+        self.losses["vae_recon"].append((recon_loss_obs + recon_loss_next_obs).item())
+        self.losses["vae_kl"].append((kl_loss_obs + kl_loss_next_obs).item())
+        self.losses["dynamics"].append(dynamics_loss.item())
+        self.losses["reward"].append(reward_loss.item())
 
         return {
-            'vae_loss': vae_total_loss.item(),
-            'dynamics_loss': dynamics_loss.item(),
-            'reward_loss': reward_loss.item()
+            "vae_loss": vae_total_loss.item(),
+            "dynamics_loss": dynamics_loss.item(),
+            "reward_loss": reward_loss.item(),
         }
 
 
@@ -103,10 +114,10 @@ class RSSMTrainer:
 
         # Training statistics
         self.losses = {
-            'total': [],
-            'reconstruction': [],
-            'kl_divergence': [],
-            'reward': []
+            "total": [],
+            "reconstruction": [],
+            "kl_divergence": [],
+            "reward": [],
         }
 
     def kl_divergence(self, post_mean, post_std, prior_mean, prior_std):
@@ -140,8 +151,9 @@ class RSSMTrainer:
         # Forward pass through sequence
         for t in range(seq_len):
             # Observe step
-            h, z, (prior_mean, prior_std), (post_mean, post_std) = self.rssm_model.observe(
-                observations[:, t], h, z, actions[:, t])
+            h, z, (prior_mean, prior_std), (post_mean, post_std) = (
+                self.rssm_model.observe(observations[:, t], h, z, actions[:, t])
+            )
 
             # Reconstruction loss
             pred_obs = self.rssm_model.decode_obs(h, z)
@@ -172,14 +184,14 @@ class RSSMTrainer:
         self.optimizer.step()
 
         # Record losses
-        self.losses['total'].append(total_loss.item())
-        self.losses['reconstruction'].append(reconstruction_loss.item())
-        self.losses['kl_divergence'].append(kl_loss.item())
-        self.losses['reward'].append(reward_loss.item())
+        self.losses["total"].append(total_loss.item())
+        self.losses["reconstruction"].append(reconstruction_loss.item())
+        self.losses["kl_divergence"].append(kl_loss.item())
+        self.losses["reward"].append(reward_loss.item())
 
         return {
-            'total_loss': total_loss.item(),
-            'recon_loss': reconstruction_loss.item(),
-            'kl_loss': kl_loss.item(),
-            'reward_loss': reward_loss.item()
+            "total_loss": total_loss.item(),
+            "recon_loss": reconstruction_loss.item(),
+            "kl_loss": kl_loss.item(),
+            "reward_loss": reward_loss.item(),
         }
