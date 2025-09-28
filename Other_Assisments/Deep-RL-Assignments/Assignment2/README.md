@@ -23,16 +23,19 @@ This assignment implements various reinforcement learning algorithms: Value Iter
 ## Algorithms
 
 ### Value Iteration (VI)
+
 - **Synchronous VI**: Updates all states simultaneously
 - **Async Ordered VI**: Updates states in 1-N order
 - **Async Random Permutation VI**: Updates states in random order
 
 ### Policy Iteration (PI)
+
 - **Synchronous PI**: Alternates between policy evaluation and improvement
 - **Async Ordered PI**: Uses async policy evaluation with ordered updates
 - **Async Random Permutation PI**: Uses async policy evaluation with random permutation updates
 
 ### Deep Q-Networks (DQN)
+
 - Experience replay memory
 - Target network for stable training
 - Epsilon-greedy exploration
@@ -53,11 +56,13 @@ pip install -r requirements.txt
 ## Usage
 
 ### Value Iteration and Policy Iteration
+
 ```bash
 python run_vi_pi.py
 ```
 
 ### Deep Q-Networks
+
 ```bash
 # Train DQN on CartPole
 python run_dqn.py --env CartPole-v0

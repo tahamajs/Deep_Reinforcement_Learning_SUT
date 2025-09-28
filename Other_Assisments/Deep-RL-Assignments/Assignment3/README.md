@@ -36,16 +36,19 @@ pip install -r requirements.txt
 ## Usage
 
 ### Training
+
 ```bash
 python run_a3c.py --num-episodes 50000 --policy_lr 5e-4 --critic_lr 1e-4
 ```
 
 ### Testing with Rendering
+
 ```bash
 python run_a3c.py --render --weights_path path/to/model.h5
 ```
 
 ### Custom Parameters
+
 ```bash
 python run_a3c.py \
     --num-episodes 100000 \

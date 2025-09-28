@@ -14,7 +14,9 @@ from torch.optim import Adam
 class ActorNetwork(nn.Module):
     """Actor network for DDPG/TD3 algorithms."""
 
-    def __init__(self, state_dim, action_dim, batch_size, tau, lr, device, custom_init=False):
+    def __init__(
+        self, state_dim, action_dim, batch_size, tau, lr, device, custom_init=False
+    ):
         """Initialize the Actor network.
 
         Args:
@@ -42,7 +44,7 @@ class ActorNetwork(nn.Module):
             nn.Linear(400, 300),
             nn.ReLU(),
             nn.Linear(300, action_dim),
-            nn.Tanh()
+            nn.Tanh(),
         )
 
         # Create the target policy network
@@ -52,7 +54,7 @@ class ActorNetwork(nn.Module):
             nn.Linear(400, 300),
             nn.ReLU(),
             nn.Linear(300, action_dim),
-            nn.Tanh()
+            nn.Tanh(),
         )
 
         # Copy weights to target network
@@ -94,5 +96,9 @@ class ActorNetwork(nn.Module):
 
     def update_target(self):
         """Soft update the target network."""
-        for target_param, param in zip(self.policy_target.parameters(), self.policy.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+        for target_param, param in zip(
+            self.policy_target.parameters(), self.policy.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )

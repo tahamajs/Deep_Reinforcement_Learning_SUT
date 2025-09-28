@@ -7,6 +7,7 @@ import torch.nn.functional as F
 
 class ActorCritic(nn.Module):
     """Actor-Critic network for A3C algorithm."""
+
     def __init__(self, input_channels, action_space):
         super(ActorCritic, self).__init__()
         self.feat_size = 64 * 7 * 7
