@@ -14,10 +14,10 @@ from .logger import Logger
 from .normalization import Normalizer, RewardNormalizer
 
 __all__ = [
-    'ReplayBuffer',
-    'Trajectory',
-    'Dataset',
-    'Logger',
-    'Normalizer',
-    'RewardNormalizer'
+    "ReplayBuffer",
+    "Trajectory",
+    "Dataset",
+    "Logger",
+    "Normalizer",
+    "RewardNormalizer",
 ]

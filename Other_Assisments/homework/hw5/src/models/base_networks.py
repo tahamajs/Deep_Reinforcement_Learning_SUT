@@ -11,8 +11,16 @@ import tensorflow as tf
 import numpy as np
 
 
-def build_mlp(input_tensor, output_dim, scope, n_layers=2, hidden_dim=256,
-              activation=tf.nn.relu, output_activation=None, reuse=False):
+def build_mlp(
+    input_tensor,
+    output_dim,
+    scope,
+    n_layers=2,
+    hidden_dim=256,
+    activation=tf.nn.relu,
+    output_activation=None,
+    reuse=False,
+):
     """
     Build a multi-layer perceptron.
 
@@ -34,18 +42,24 @@ def build_mlp(input_tensor, output_dim, scope, n_layers=2, hidden_dim=256,
 
         # Hidden layers
         for i in range(n_layers):
-            x = tf.layers.dense(x, hidden_dim, activation=activation,
-                              name=f'hidden_{i}')
+            x = tf.layers.dense(
+                x, hidden_dim, activation=activation, name=f"hidden_{i}"
+            )
 
         # Output layer
-        x = tf.layers.dense(x, output_dim, activation=output_activation,
-                          name='output')
+        x = tf.layers.dense(x, output_dim, activation=output_activation, name="output")
 
         return x
 
 
-def build_policy_network(state_tensor, action_dim, scope, hidden_sizes=[256, 256],
-                        activation=tf.nn.relu, reuse=False):
+def build_policy_network(
+    state_tensor,
+    action_dim,
+    scope,
+    hidden_sizes=[256, 256],
+    activation=tf.nn.relu,
+    reuse=False,
+):
     """
     Build a policy network (stochastic policy).
 
@@ -65,20 +79,21 @@ def build_policy_network(state_tensor, action_dim, scope, hidden_sizes=[256, 256
 
         # Hidden layers
         for i, size in enumerate(hidden_sizes):
-            x = tf.layers.dense(x, size, activation=activation, name=f'hidden_{i}')
+            x = tf.layers.dense(x, size, activation=activation, name=f"hidden_{i}")
 
         # Output mean
-        mean = tf.layers.dense(x, action_dim, name='mean')
+        mean = tf.layers.dense(x, action_dim, name="mean")
 
         # Output log standard deviation (clipped for numerical stability)
-        log_std = tf.layers.dense(x, action_dim, name='log_std')
+        log_std = tf.layers.dense(x, action_dim, name="log_std")
         log_std = tf.clip_by_value(log_std, -20, 2)
 
         return mean, log_std
 
 
-def build_value_network(state_tensor, scope, hidden_sizes=[256, 256],
-                       activation=tf.nn.relu, reuse=False):
+def build_value_network(
+    state_tensor, scope, hidden_sizes=[256, 256], activation=tf.nn.relu, reuse=False
+):
     """
     Build a value network.
 
@@ -97,16 +112,22 @@ def build_value_network(state_tensor, scope, hidden_sizes=[256, 256],
 
         # Hidden layers
         for i, size in enumerate(hidden_sizes):
-            x = tf.layers.dense(x, size, activation=activation, name=f'hidden_{i}')
+            x = tf.layers.dense(x, size, activation=activation, name=f"hidden_{i}")
 
         # Output value
-        value = tf.layers.dense(x, 1, name='value')
+        value = tf.layers.dense(x, 1, name="value")
 
         return tf.squeeze(value)
 
 
-def build_q_network(state_tensor, action_tensor, scope, hidden_sizes=[256, 256],
-                   activation=tf.nn.relu, reuse=False):
+def build_q_network(
+    state_tensor,
+    action_tensor,
+    scope,
+    hidden_sizes=[256, 256],
+    activation=tf.nn.relu,
+    reuse=False,
+):
     """
     Build a Q-network (state-action value function).
 
@@ -127,10 +148,10 @@ def build_q_network(state_tensor, action_tensor, scope, hidden_sizes=[256, 256],
 
         # Hidden layers
         for i, size in enumerate(hidden_sizes):
-            x = tf.layers.dense(x, size, activation=activation, name=f'hidden_{i}')
+            x = tf.layers.dense(x, size, activation=activation, name=f"hidden_{i}")
 
         # Output Q-value
-        q_value = tf.layers.dense(x, 1, name='q_value')
+        q_value = tf.layers.dense(x, 1, name="q_value")
 
         return tf.squeeze(q_value)
 

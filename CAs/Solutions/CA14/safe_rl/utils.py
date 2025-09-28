@@ -14,11 +14,11 @@ def collect_safe_trajectory(env, agent, max_steps=50):
         action, log_prob = agent.get_action(state)
         next_state, reward, done, info = env.step(action)
 
-        constraint_cost = info['constraint_cost']
+        constraint_cost = info["constraint_cost"]
 
-        trajectory.append((
-            state.copy(), action, reward, constraint_cost, done, log_prob
-        ))
+        trajectory.append(
+            (state.copy(), action, reward, constraint_cost, done, log_prob)
+        )
 
         if done:
             break

@@ -12,12 +12,12 @@ from .exploration_agent import ExplorationAgent, DiscreteExplorationAgent, Densi
 from .meta_agent import MetaLearningAgent, MAMLAgent, ReplayBuffer as MetaReplayBuffer
 
 __all__ = [
-    'SACAgent',
-    'SACReplayBuffer',
-    'ExplorationAgent',
-    'DiscreteExplorationAgent',
-    'DensityModel',
-    'MetaLearningAgent',
-    'MAMLAgent',
-    'MetaReplayBuffer'
+    "SACAgent",
+    "SACReplayBuffer",
+    "ExplorationAgent",
+    "DiscreteExplorationAgent",
+    "DensityModel",
+    "MetaLearningAgent",
+    "MAMLAgent",
+    "MetaReplayBuffer",
 ]

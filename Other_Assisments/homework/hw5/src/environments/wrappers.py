@@ -38,7 +38,7 @@ class TimeLimitWrapper(gym.Wrapper):
 
         if self.elapsed_steps >= self.max_episode_steps:
             done = True
-            info['TimeLimit.truncated'] = True
+            info["TimeLimit.truncated"] = True
 
         return obs, reward, done, info
 
@@ -91,7 +91,9 @@ class FrameStackWrapper(gym.Wrapper):
 
         low = np.repeat(env.observation_space.low, num_stack, axis=-1)
         high = np.repeat(env.observation_space.high, num_stack, axis=-1)
-        self.observation_space = gym.spaces.Box(low=low, high=high, dtype=env.observation_space.dtype)
+        self.observation_space = gym.spaces.Box(
+            low=low, high=high, dtype=env.observation_space.dtype
+        )
 
     def reset(self, **kwargs):
         """Reset environment and frame buffer."""
@@ -154,9 +156,7 @@ class GrayscaleWrapper(ObservationWrapper):
         # Update observation space for grayscale
         old_shape = env.observation_space.shape
         self.observation_space = gym.spaces.Box(
-            low=0, high=255,
-            shape=(old_shape[0], old_shape[1], 1),
-            dtype=np.uint8
+            low=0, high=255, shape=(old_shape[0], old_shape[1], 1), dtype=np.uint8
         )
 
     def observation(self, obs):
@@ -184,13 +184,14 @@ class ResizeWrapper(ObservationWrapper):
             low=env.observation_space.low.min(),
             high=env.observation_space.high.max(),
             shape=size + (old_shape[-1],),
-            dtype=env.observation_space.dtype
+            dtype=env.observation_space.dtype,
         )
 
     def observation(self, obs):
         """Resize observation."""
         try:
             from PIL import Image
+
             img = Image.fromarray(obs)
             img = img.resize(self.size)
             return np.array(img)

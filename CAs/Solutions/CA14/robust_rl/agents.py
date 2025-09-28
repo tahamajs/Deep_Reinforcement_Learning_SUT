@@ -34,7 +34,7 @@ class DomainRandomizationAgent:
             nn.ReLU(),
             nn.Dropout(0.1),
             nn.Linear(256, action_dim),
-            nn.Softmax(dim=-1)
+            nn.Softmax(dim=-1),
         ).to(device)
 
         # Value network
@@ -47,7 +47,7 @@ class DomainRandomizationAgent:
             nn.LayerNorm(256),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Linear(256, 1)
+            nn.Linear(256, 1),
         ).to(device)
 
         # Optimizers
@@ -81,7 +81,13 @@ class DomainRandomizationAgent:
             return None
 
         # Collect data from multiple diverse environments
-        all_obs, all_actions, all_rewards, all_log_probs, all_values = [], [], [], [], []
+        all_obs, all_actions, all_rewards, all_log_probs, all_values = (
+            [],
+            [],
+            [],
+            [],
+            [],
+        )
         environment_params = []
 
         for trajectory in trajectories:
@@ -112,13 +118,18 @@ class DomainRandomizationAgent:
 
             ratio = torch.exp(new_log_probs - old_log_probs)
             surr1 = ratio * advantages
-            surr2 = torch.clamp(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio) * advantages
+            surr2 = (
+                torch.clamp(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio)
+                * advantages
+            )
 
             policy_loss = -torch.min(surr1, surr2).mean()
 
             self.policy_optimizer.zero_grad()
             policy_loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.policy_network.parameters(), max_norm=0.5)
+            torch.nn.utils.clip_grad_norm_(
+                self.policy_network.parameters(), max_norm=0.5
+            )
             self.policy_optimizer.step()
 
             # Value update
@@ -127,7 +138,9 @@ class DomainRandomizationAgent:
 
             self.value_optimizer.zero_grad()
             value_loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.value_network.parameters(), max_norm=0.5)
+            torch.nn.utils.clip_grad_norm_(
+                self.value_network.parameters(), max_norm=0.5
+            )
             self.value_optimizer.step()
 
         # Store statistics
@@ -135,14 +148,18 @@ class DomainRandomizationAgent:
         self.value_losses.append(value_loss.item())
 
         # Measure environment diversity
-        unique_sizes = len(set([params['environment_size'] for params in environment_params]))
-        avg_noise = np.mean([params['noise_level'] for params in environment_params])
-        self.environment_diversity.append({'unique_sizes': unique_sizes, 'avg_noise': avg_noise})
+        unique_sizes = len(
+            set([params["environment_size"] for params in environment_params])
+        )
+        avg_noise = np.mean([params["noise_level"] for params in environment_params])
+        self.environment_diversity.append(
+            {"unique_sizes": unique_sizes, "avg_noise": avg_noise}
+        )
 
         return {
-            'policy_loss': policy_loss.item(),
-            'value_loss': value_loss.item(),
-            'environment_diversity': unique_sizes
+            "policy_loss": policy_loss.item(),
+            "value_loss": value_loss.item(),
+            "environment_diversity": unique_sizes,
         }
 
     def compute_returns(self, trajectories):
@@ -178,7 +195,7 @@ class AdversarialRobustAgent:
             nn.Linear(256, 256),
             nn.ReLU(),
             nn.Linear(256, action_dim),
-            nn.Softmax(dim=-1)
+            nn.Softmax(dim=-1),
         ).to(device)
 
         # Value network
@@ -187,7 +204,7 @@ class AdversarialRobustAgent:
             nn.ReLU(),
             nn.Linear(256, 256),
             nn.ReLU(),
-            nn.Linear(256, 1)
+            nn.Linear(256, 1),
         ).to(device)
 
         # Optimizers
@@ -247,7 +264,9 @@ class AdversarialRobustAgent:
         if use_adversarial:
             adversarial_obs = self.generate_adversarial_observation(observation)
             with torch.no_grad():
-                adv_obs_tensor = torch.FloatTensor(adversarial_obs).unsqueeze(0).to(device)
+                adv_obs_tensor = (
+                    torch.FloatTensor(adversarial_obs).unsqueeze(0).to(device)
+                )
                 adv_action_probs = self.policy_network(adv_obs_tensor)
                 adv_action_dist = Categorical(adv_action_probs)
                 adv_action = adv_action_dist.sample()
@@ -263,7 +282,13 @@ class AdversarialRobustAgent:
             return None
 
         # Collect data
-        all_obs, all_actions, all_rewards, all_log_probs, all_values = [], [], [], [], []
+        all_obs, all_actions, all_rewards, all_log_probs, all_values = (
+            [],
+            [],
+            [],
+            [],
+            [],
+        )
 
         for trajectory in trajectories:
             obs, actions, rewards, log_probs, values, _ = zip(*trajectory)
@@ -324,7 +349,7 @@ class AdversarialRobustAgent:
             kl_loss = F.kl_div(
                 torch.log(action_probs_adversarial + 1e-8),
                 action_probs_original,
-                reduction='batchmean'
+                reduction="batchmean",
             )
             adversarial_loss += kl_loss
 
@@ -349,8 +374,8 @@ class AdversarialRobustAgent:
         self.adversarial_losses.append(adversarial_loss.item())
 
         return {
-            'policy_loss': policy_loss.item(),
-            'value_loss': value_loss.item(),
-            'adversarial_loss': adversarial_loss.item(),
-            'total_loss': total_policy_loss.item()
+            "policy_loss": policy_loss.item(),
+            "value_loss": value_loss.item(),
+            "adversarial_loss": adversarial_loss.item(),
+            "total_loss": total_policy_loss.item(),
         }

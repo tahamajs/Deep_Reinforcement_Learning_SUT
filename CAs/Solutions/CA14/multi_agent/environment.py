@@ -21,7 +21,9 @@ class MultiAgentEnvironment:
 
         # Action space: 0=stay, 1=up, 2=down, 3=left, 4=right
         self.action_space = 5
-        self.observation_space = 2 + 2 * num_agents + 2 * num_targets  # pos + other_agents + targets
+        self.observation_space = (
+            2 + 2 * num_agents + 2 * num_targets
+        )  # pos + other_agents + targets
 
     def reset(self):
         """Reset environment to initial state."""
@@ -31,7 +33,10 @@ class MultiAgentEnvironment:
         self.agent_positions = []
         for _ in range(self.num_agents):
             while True:
-                pos = [np.random.randint(0, self.grid_size), np.random.randint(0, self.grid_size)]
+                pos = [
+                    np.random.randint(0, self.grid_size),
+                    np.random.randint(0, self.grid_size),
+                ]
                 if pos not in self.agent_positions:
                     self.agent_positions.append(pos)
                     break
@@ -40,7 +45,10 @@ class MultiAgentEnvironment:
         self.target_positions = []
         for _ in range(self.num_targets):
             while True:
-                pos = [np.random.randint(0, self.grid_size), np.random.randint(0, self.grid_size)]
+                pos = [
+                    np.random.randint(0, self.grid_size),
+                    np.random.randint(0, self.grid_size),
+                ]
                 if pos not in self.agent_positions and pos not in self.target_positions:
                     self.target_positions.append(pos)
                     break
@@ -56,21 +64,31 @@ class MultiAgentEnvironment:
             obs = []
 
             # Agent's own position (normalized)
-            obs.extend([self.agent_positions[i][0] / self.grid_size,
-                       self.agent_positions[i][1] / self.grid_size])
+            obs.extend(
+                [
+                    self.agent_positions[i][0] / self.grid_size,
+                    self.agent_positions[i][1] / self.grid_size,
+                ]
+            )
 
             # Other agents' positions (relative)
             for j in range(self.num_agents):
                 if i != j:
-                    rel_pos = [(self.agent_positions[j][0] - self.agent_positions[i][0]) / self.grid_size,
-                              (self.agent_positions[j][1] - self.agent_positions[i][1]) / self.grid_size]
+                    rel_pos = [
+                        (self.agent_positions[j][0] - self.agent_positions[i][0])
+                        / self.grid_size,
+                        (self.agent_positions[j][1] - self.agent_positions[i][1])
+                        / self.grid_size,
+                    ]
                     obs.extend(rel_pos)
 
             # Target positions (relative) and collection status
             for k, target_pos in enumerate(self.target_positions):
                 if not self.targets_collected[k]:
-                    rel_pos = [(target_pos[0] - self.agent_positions[i][0]) / self.grid_size,
-                              (target_pos[1] - self.agent_positions[i][1]) / self.grid_size]
+                    rel_pos = [
+                        (target_pos[0] - self.agent_positions[i][0]) / self.grid_size,
+                        (target_pos[1] - self.agent_positions[i][1]) / self.grid_size,
+                    ]
                     obs.extend(rel_pos)
                 else:
                     obs.extend([0.0, 0.0])  # Target collected
@@ -120,8 +138,10 @@ class MultiAgentEnvironment:
         targets_collected_this_step = []
         for i in range(self.num_agents):
             for j, target_pos in enumerate(self.target_positions):
-                if (not self.targets_collected[j] and
-                    self.agent_positions[i] == target_pos):
+                if (
+                    not self.targets_collected[j]
+                    and self.agent_positions[i] == target_pos
+                ):
                     self.targets_collected[j] = True
                     rewards[i] += 10.0  # Target collection reward
                     targets_collected_this_step.append(j)
@@ -137,14 +157,15 @@ class MultiAgentEnvironment:
             rewards[i] -= 0.1
 
         # Check termination
-        done = (all(self.targets_collected) or
-                self.current_step >= self.max_episode_steps)
+        done = (
+            all(self.targets_collected) or self.current_step >= self.max_episode_steps
+        )
 
         observations = self.get_observations()
         info = {
-            'targets_collected': sum(self.targets_collected),
-            'total_targets': self.num_targets,
-            'collisions': len(collision_agents) // 2
+            "targets_collected": sum(self.targets_collected),
+            "total_targets": self.num_targets,
+            "collisions": len(collision_agents) // 2,
         }
 
         return observations, rewards, done, info

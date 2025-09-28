@@ -89,13 +89,13 @@ def evaluate_robustness(agent, env, num_episodes=10, adversarial_strength=0.1):
         adversarial_rewards.append(episode_reward)
 
     return {
-        'original_mean_reward': np.mean(original_rewards),
-        'original_std_reward': np.std(original_rewards),
-        'adversarial_mean_reward': np.mean(adversarial_rewards),
-        'adversarial_std_reward': np.std(adversarial_rewards),
-        'robustness_drop': np.mean(original_rewards) - np.mean(adversarial_rewards),
-        'mean_perturbation_norm': np.mean(perturbation_norms),
-        'std_perturbation_norm': np.std(perturbation_norms)
+        "original_mean_reward": np.mean(original_rewards),
+        "original_std_reward": np.std(original_rewards),
+        "adversarial_mean_reward": np.mean(adversarial_rewards),
+        "adversarial_std_reward": np.std(adversarial_rewards),
+        "robustness_drop": np.mean(original_rewards) - np.mean(adversarial_rewards),
+        "mean_perturbation_norm": np.mean(perturbation_norms),
+        "std_perturbation_norm": np.std(perturbation_norms),
     }
 
 
@@ -117,11 +117,11 @@ def compute_policy_divergence(policy1, policy2, observations):
         probs1 = policy1(obs_tensor)
         probs2 = policy2(obs_tensor)
 
-        kl_div = F.kl_div(
-            torch.log(probs2 + 1e-8),
-            probs1,
-            reduction='none'
-        ).sum(dim=-1).mean()
+        kl_div = (
+            F.kl_div(torch.log(probs2 + 1e-8), probs1, reduction="none")
+            .sum(dim=-1)
+            .mean()
+        )
 
     return kl_div.item()
 
@@ -186,10 +186,10 @@ def evaluate_ensemble_uncertainty(ensemble, observation):
         action_variances = np.var(predictions, axis=0)
 
     return {
-        'mean_entropy': entropy,
-        'max_action_variance': np.max(action_variances),
-        'mean_action_variance': np.mean(action_variances),
-        'prediction_std': np.mean(std_prediction)
+        "mean_entropy": entropy,
+        "max_action_variance": np.max(action_variances),
+        "mean_action_variance": np.mean(action_variances),
+        "prediction_std": np.mean(std_prediction),
     }
 
 
@@ -216,7 +216,7 @@ def generate_diverse_environments(base_env_class, num_variations=10):
         env = base_env_class(
             size=int(10 * size_variation),
             noise_level=noise_variation,
-            reward_scale=reward_scale
+            reward_scale=reward_scale,
         )
 
         environments.append(env)
@@ -267,15 +267,15 @@ def compute_robustness_metrics(trajectories):
     for trajectory in trajectories:
         for step in trajectory:
             obs, action, reward, log_prob, value, env_params = step
-            env_sizes.append(env_params['environment_size'])
-            noise_levels.append(env_params['noise_level'])
+            env_sizes.append(env_params["environment_size"])
+            noise_levels.append(env_params["noise_level"])
             rewards.append(reward)
 
     return {
-        'environment_size_diversity': len(set(env_sizes)),
-        'noise_level_range': np.ptp(noise_levels),
-        'mean_reward': np.mean(rewards),
-        'reward_std': np.std(rewards),
-        'total_trajectories': len(trajectories),
-        'total_steps': sum(len(traj) for traj in trajectories)
+        "environment_size_diversity": len(set(env_sizes)),
+        "noise_level_range": np.ptp(noise_levels),
+        "mean_reward": np.mean(rewards),
+        "reward_std": np.std(rewards),
+        "total_trajectories": len(trajectories),
+        "total_steps": sum(len(traj) for traj in trajectories),
     }

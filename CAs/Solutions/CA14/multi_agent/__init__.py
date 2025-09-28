@@ -10,8 +10,8 @@ from .agents import MADDPGAgent, QMIXAgent
 from .buffers import MultiAgentReplayBuffer
 
 __all__ = [
-    'MultiAgentEnvironment',
-    'MADDPGAgent',
-    'QMIXAgent',
-    'MultiAgentReplayBuffer'
+    "MultiAgentEnvironment",
+    "MADDPGAgent",
+    "QMIXAgent",
+    "MultiAgentReplayBuffer",
 ]

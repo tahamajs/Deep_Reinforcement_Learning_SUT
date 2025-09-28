@@ -12,8 +12,10 @@ from collections import namedtuple
 
 
 # Named tuples for better code readability
-Transition = namedtuple('Transition', ['state', 'action', 'reward', 'next_state', 'done'])
-Trajectory = namedtuple('Trajectory', ['states', 'actions', 'rewards', 'dones'])
+Transition = namedtuple(
+    "Transition", ["state", "action", "reward", "next_state", "done"]
+)
+Trajectory = namedtuple("Trajectory", ["states", "actions", "rewards", "dones"])
 
 
 class Dataset:
@@ -63,10 +65,10 @@ class Dataset:
             rewards = trajectory.rewards
             dones = trajectory.dones
         else:
-            states = trajectory['states']
-            actions = trajectory['actions']
-            rewards = trajectory['rewards']
-            dones = trajectory['dones']
+            states = trajectory["states"]
+            actions = trajectory["actions"]
+            rewards = trajectory["rewards"]
+            dones = trajectory["dones"]
 
         # Convert to transitions
         for i in range(len(states)):
@@ -85,11 +87,11 @@ class Dataset:
     def get_all(self):
         """Get all data as numpy arrays."""
         return {
-            'states': np.array(self.states),
-            'actions': np.array(self.actions),
-            'rewards': np.array(self.rewards),
-            'next_states': np.array(self.next_states),
-            'dones': np.array(self.dones)
+            "states": np.array(self.states),
+            "actions": np.array(self.actions),
+            "rewards": np.array(self.rewards),
+            "next_states": np.array(self.next_states),
+            "dones": np.array(self.dones),
         }
 
     def sample(self, batch_size, replace=True):
@@ -112,11 +114,11 @@ class Dataset:
             indices = np.random.choice(self.size(), n_samples, replace=False)
 
         return {
-            'states': np.array(self.states)[indices],
-            'actions': np.array(self.actions)[indices],
-            'rewards': np.array(self.rewards)[indices],
-            'next_states': np.array(self.next_states)[indices],
-            'dones': np.array(self.dones)[indices]
+            "states": np.array(self.states)[indices],
+            "actions": np.array(self.actions)[indices],
+            "rewards": np.array(self.rewards)[indices],
+            "next_states": np.array(self.next_states)[indices],
+            "dones": np.array(self.dones)[indices],
         }
 
     def clear(self):
@@ -133,14 +135,14 @@ class Dataset:
             return {}
 
         return {
-            'size': self.size(),
-            'state_mean': np.mean(self.states, axis=0),
-            'state_std': np.std(self.states, axis=0),
-            'action_mean': np.mean(self.actions, axis=0),
-            'action_std': np.std(self.actions, axis=0),
-            'reward_mean': np.mean(self.rewards),
-            'reward_std': np.std(self.rewards),
-            'episode_count': np.sum(self.dones)
+            "size": self.size(),
+            "state_mean": np.mean(self.states, axis=0),
+            "state_std": np.std(self.states, axis=0),
+            "action_mean": np.mean(self.actions, axis=0),
+            "action_std": np.std(self.actions, axis=0),
+            "reward_mean": np.mean(self.rewards),
+            "reward_std": np.std(self.rewards),
+            "episode_count": np.sum(self.dones),
         }
 
 

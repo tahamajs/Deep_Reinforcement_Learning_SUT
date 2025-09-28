@@ -87,10 +87,10 @@ class Normalizer:
     def get_stats(self):
         """Get current statistics."""
         return {
-            'mean': self.mean.copy(),
-            'std': self.std.copy(),
-            'var': self.var.copy(),
-            'count': self.count
+            "mean": self.mean.copy(),
+            "std": self.std.copy(),
+            "var": self.var.copy(),
+            "count": self.count,
         }
 
     def reset(self):

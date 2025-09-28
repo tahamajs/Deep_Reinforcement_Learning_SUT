@@ -47,11 +47,11 @@ class ReplayBuffer:
         batch_arrays = list(zip(*batch))
 
         return {
-            'states': np.array(batch_arrays[0]),
-            'actions': np.array(batch_arrays[1]),
-            'rewards': np.array(batch_arrays[2]),
-            'next_states': np.array(batch_arrays[3]),
-            'dones': np.array(batch_arrays[4])
+            "states": np.array(batch_arrays[0]),
+            "actions": np.array(batch_arrays[1]),
+            "rewards": np.array(batch_arrays[2]),
+            "next_states": np.array(batch_arrays[3]),
+            "dones": np.array(batch_arrays[4]),
         }
 
     def size(self):
@@ -105,7 +105,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 
         # Compute sampling probabilities
         priorities = np.array(self.priorities)
-        probs = priorities ** self.alpha
+        probs = priorities**self.alpha
         probs /= probs.sum()
 
         # Sample indices
@@ -120,13 +120,13 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         batch_arrays = list(zip(*batch))
 
         return {
-            'states': np.array(batch_arrays[0]),
-            'actions': np.array(batch_arrays[1]),
-            'rewards': np.array(batch_arrays[2]),
-            'next_states': np.array(batch_arrays[3]),
-            'dones': np.array(batch_arrays[4]),
-            'weights': weights,
-            'indices': indices
+            "states": np.array(batch_arrays[0]),
+            "actions": np.array(batch_arrays[1]),
+            "rewards": np.array(batch_arrays[2]),
+            "next_states": np.array(batch_arrays[3]),
+            "dones": np.array(batch_arrays[4]),
+            "weights": weights,
+            "indices": indices,
         }
 
     def update_priorities(self, indices, priorities):

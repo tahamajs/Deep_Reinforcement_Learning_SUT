@@ -8,8 +8,4 @@ including domain randomization and adversarial training.
 from .environment import RobustEnvironment
 from .agents import DomainRandomizationAgent, AdversarialRobustAgent
 
-__all__ = [
-    'RobustEnvironment',
-    'DomainRandomizationAgent',
-    'AdversarialRobustAgent'
-]
+__all__ = ["RobustEnvironment", "DomainRandomizationAgent", "AdversarialRobustAgent"]

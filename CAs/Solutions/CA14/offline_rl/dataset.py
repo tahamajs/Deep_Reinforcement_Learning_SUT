@@ -15,9 +15,15 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class OfflineDataset:
     """Dataset class for offline reinforcement learning."""
 
-    def __init__(self, states: List[np.ndarray], actions: List[int],
-                 rewards: List[float], next_states: List[np.ndarray],
-                 dones: List[bool], dataset_type: str = 'mixed'):
+    def __init__(
+        self,
+        states: List[np.ndarray],
+        actions: List[int],
+        rewards: List[float],
+        next_states: List[np.ndarray],
+        dones: List[bool],
+        dataset_type: str = "mixed",
+    ):
         """
         Initialize offline dataset.
 
@@ -54,7 +60,7 @@ class OfflineDataset:
                 torch.LongTensor(self.actions).to(device),
                 torch.FloatTensor(self.rewards).to(device),
                 torch.FloatTensor(self.next_states).to(device),
-                torch.BoolTensor(self.dones).to(device)
+                torch.BoolTensor(self.dones).to(device),
             )
         return self._tensor_data
 
@@ -68,7 +74,7 @@ class OfflineDataset:
             actions[indices],
             rewards[indices],
             next_states[indices],
-            dones[indices]
+            dones[indices],
         )
 
     def get_action_distribution(self) -> np.ndarray:
@@ -79,7 +85,7 @@ class OfflineDataset:
         else:  # Continuous actions
             return np.mean(self.actions, axis=0), np.std(self.actions, axis=0)
 
-    def filter_by_quality(self, quality_threshold: float) -> 'OfflineDataset':
+    def filter_by_quality(self, quality_threshold: float) -> "OfflineDataset":
         """Filter dataset by reward quality."""
         high_quality_indices = self.rewards >= quality_threshold
         return OfflineDataset(
@@ -88,13 +94,15 @@ class OfflineDataset:
             self.rewards[high_quality_indices],
             self.next_states[high_quality_indices],
             self.dones[high_quality_indices],
-            f"{self.dataset_type}_filtered_{quality_threshold}"
+            f"{self.dataset_type}_filtered_{quality_threshold}",
         )
 
     def __len__(self) -> int:
         return self.size
 
     def __repr__(self) -> str:
-        return (f"OfflineDataset(type={self.dataset_type}, size={self.size}, "
-                f"state_dim={self.state_dim}, action_dim={self.action_dim}, "
-                f"reward_mean={self.reward_mean:.3f})")
+        return (
+            f"OfflineDataset(type={self.dataset_type}, size={self.size}, "
+            f"state_dim={self.state_dim}, action_dim={self.action_dim}, "
+            f"reward_mean={self.reward_mean:.3f})"
+        )

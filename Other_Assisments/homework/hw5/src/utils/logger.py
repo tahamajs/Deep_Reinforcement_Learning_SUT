@@ -24,16 +24,16 @@ class Logger:
             output_dir: Output directory for logs
             exp_name: Experiment name
         """
-        self.output_dir = output_dir or 'logs'
-        self.exp_name = exp_name or f'exp_{int(time.time())}'
+        self.output_dir = output_dir or "logs"
+        self.exp_name = exp_name or f"exp_{int(time.time())}"
 
         # Create output directory
         self.log_dir = os.path.join(self.output_dir, self.exp_name)
         os.makedirs(self.log_dir, exist_ok=True)
 
         # Initialize log files
-        self.scalar_file = os.path.join(self.log_dir, 'scalars.jsonl')
-        self.config_file = os.path.join(self.log_dir, 'config.json')
+        self.scalar_file = os.path.join(self.log_dir, "scalars.jsonl")
+        self.config_file = os.path.join(self.log_dir, "config.json")
 
         # In-memory storage
         self.scalars = defaultdict(list)
@@ -49,7 +49,7 @@ class Logger:
             config_dict: Dictionary of configuration parameters
         """
         self.config.update(config_dict)
-        with open(self.config_file, 'w') as f:
+        with open(self.config_file, "w") as f:
             json.dump(self.config, f, indent=2)
 
     def log_scalar(self, key, value, step=None):
@@ -68,16 +68,11 @@ class Logger:
         self.scalars[key].append((step, value))
 
         # Write to file
-        log_entry = {
-            'step': step,
-            'key': key,
-            'value': value,
-            'timestamp': time.time()
-        }
+        log_entry = {"step": step, "key": key, "value": value, "timestamp": time.time()}
 
-        with open(self.scalar_file, 'a') as f:
+        with open(self.scalar_file, "a") as f:
             json.dump(log_entry, f)
-            f.write('\n')
+            f.write("\n")
 
     def log_scalars(self, scalar_dict, step=None):
         """Log multiple scalars.
@@ -116,11 +111,11 @@ class Logger:
 
         recent_values = [v for _, v in history[-window:]]
         return {
-            'mean': np.mean(recent_values),
-            'std': np.std(recent_values),
-            'min': np.min(recent_values),
-            'max': np.max(recent_values),
-            'count': len(recent_values)
+            "mean": np.mean(recent_values),
+            "std": np.std(recent_values),
+            "min": np.min(recent_values),
+            "max": np.max(recent_values),
+            "count": len(recent_values),
         }
 
     def save_checkpoint(self, data, filename):
@@ -175,12 +170,13 @@ class WandBLogger(Logger):
 
         try:
             import wandb
+
             self.wandb = wandb
             self.run = wandb.init(
                 project=project_name,
                 name=self.exp_name,
                 dir=self.log_dir,
-                **wandb_kwargs
+                **wandb_kwargs,
             )
         except ImportError:
             print("WandB not installed. Using base logger.")

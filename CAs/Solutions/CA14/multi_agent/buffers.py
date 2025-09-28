@@ -55,4 +55,10 @@ class MultiAgentReplayBuffer:
         batch_next_states = [self.next_states[i] for i in indices]
         batch_dones = [self.dones[i] for i in indices]
 
-        return (batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones)
+        return (
+            batch_states,
+            batch_actions,
+            batch_rewards,
+            batch_next_states,
+            batch_dones,
+        )

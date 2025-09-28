@@ -32,8 +32,7 @@ class RobustEnvironment:
         # Randomize grid size
         size_variation = max(1, int(self.base_size * self.uncertainty_level))
         self.current_size = np.random.randint(
-            max(3, self.base_size - size_variation),
-            self.base_size + size_variation + 1
+            max(3, self.base_size - size_variation), self.base_size + size_variation + 1
         )
 
         # Randomize noise levels
@@ -46,8 +45,10 @@ class RobustEnvironment:
             num_obstacles = np.random.randint(0, max(1, self.current_size // 2))
             self.obstacles = []
             for _ in range(num_obstacles):
-                obs_pos = [np.random.randint(1, self.current_size-1),
-                          np.random.randint(1, self.current_size-1)]
+                obs_pos = [
+                    np.random.randint(1, self.current_size - 1),
+                    np.random.randint(1, self.current_size - 1),
+                ]
                 if obs_pos not in self.obstacles:
                     self.obstacles.append(obs_pos)
 
@@ -58,25 +59,28 @@ class RobustEnvironment:
 
         # Reset agent position
         self.agent_pos = [0, 0]
-        self.goal_pos = [self.current_size-1, self.current_size-1]
+        self.goal_pos = [self.current_size - 1, self.current_size - 1]
         self.current_step = 0
 
         # Initialize obstacles if not already set
-        if not hasattr(self, 'obstacles'):
+        if not hasattr(self, "obstacles"):
             self.obstacles = []
 
         return self.get_observation()
 
     def get_observation(self):
         """Get observation with potential noise."""
-        obs = np.array([
-            self.agent_pos[0] / self.current_size,
-            self.agent_pos[1] / self.current_size,
-            (self.goal_pos[0] - self.agent_pos[0]) / self.current_size,
-            (self.goal_pos[1] - self.agent_pos[1]) / self.current_size,
-            self.current_size / 10.0,  # Environment size as feature
-            len(self.obstacles) / 10.0  # Number of obstacles
-        ], dtype=np.float32)
+        obs = np.array(
+            [
+                self.agent_pos[0] / self.current_size,
+                self.agent_pos[1] / self.current_size,
+                (self.goal_pos[0] - self.agent_pos[0]) / self.current_size,
+                (self.goal_pos[1] - self.agent_pos[1]) / self.current_size,
+                self.current_size / 10.0,  # Environment size as feature
+                len(self.obstacles) / 10.0,  # Number of obstacles
+            ],
+            dtype=np.float32,
+        )
 
         # Add observation noise
         if self.noise_std > 0:
@@ -111,25 +115,29 @@ class RobustEnvironment:
             reward = -5.0  # Collision penalty
         else:
             # Regular reward
-            done = (self.agent_pos == self.goal_pos)
+            done = self.agent_pos == self.goal_pos
             if done:
                 reward = 10.0
             else:
                 # Distance-based reward
-                dist = abs(self.agent_pos[0] - self.goal_pos[0]) + abs(self.agent_pos[1] - self.goal_pos[1])
+                dist = abs(self.agent_pos[0] - self.goal_pos[0]) + abs(
+                    self.agent_pos[1] - self.goal_pos[1]
+                )
                 reward = -0.1 - 0.01 * dist
 
         # Add reward noise
         if self.reward_noise_std > 0:
             reward += np.random.normal(0, self.reward_noise_std)
 
-        done = (self.agent_pos == self.goal_pos) or (self.current_step >= self.max_episode_steps)
+        done = (self.agent_pos == self.goal_pos) or (
+            self.current_step >= self.max_episode_steps
+        )
 
         info = {
-            'environment_size': self.current_size,
-            'noise_level': self.noise_std,
-            'action_failure_prob': self.action_failure_prob,
-            'obstacles': len(self.obstacles)
+            "environment_size": self.current_size,
+            "noise_level": self.noise_std,
+            "action_failure_prob": self.action_failure_prob,
+            "obstacles": len(self.obstacles),
         }
 
         return self.get_observation(), reward, done, info

@@ -31,7 +31,7 @@ class ConstrainedPolicyOptimization:
             nn.Linear(128, 128),
             nn.ReLU(),
             nn.Linear(128, action_dim),
-            nn.Softmax(dim=-1)
+            nn.Softmax(dim=-1),
         ).to(device)
 
         # Value networks for rewards and constraints
@@ -40,7 +40,7 @@ class ConstrainedPolicyOptimization:
             nn.ReLU(),
             nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(128, 1)
+            nn.Linear(128, 1),
         ).to(device)
 
         self.cost_value_network = nn.Sequential(
@@ -48,7 +48,7 @@ class ConstrainedPolicyOptimization:
             nn.ReLU(),
             nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(128, 1)
+            nn.Linear(128, 1),
         ).to(device)
 
         # Optimizers
@@ -93,7 +93,11 @@ class ConstrainedPolicyOptimization:
                 next_non_terminal = 1.0 - dones[step]
                 next_value_step = values[step + 1]
 
-            delta = rewards[step] + self.gamma * next_value_step * next_non_terminal - values[step]
+            delta = (
+                rewards[step]
+                + self.gamma * next_value_step * next_non_terminal
+                - values[step]
+            )
             gae = delta + self.gamma * self.lam * next_non_terminal * gae
             advantages.insert(0, gae)
 
@@ -107,7 +111,9 @@ class ConstrainedPolicyOptimization:
 
         ratio = torch.exp(new_log_probs - old_log_probs)
         surr1 = ratio * advantages
-        surr2 = torch.clamp(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio) * advantages
+        surr2 = (
+            torch.clamp(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio) * advantages
+        )
 
         policy_loss = -torch.min(surr1, surr2).mean()
 
@@ -116,7 +122,9 @@ class ConstrainedPolicyOptimization:
 
         return policy_loss, kl_div
 
-    def compute_constraint_violation(self, states, actions, cost_advantages, old_log_probs):
+    def compute_constraint_violation(
+        self, states, actions, cost_advantages, old_log_probs
+    ):
         """Compute expected constraint violation."""
         action_probs = self.policy_network(states)
         action_dist = Categorical(action_probs)
@@ -161,14 +169,21 @@ class ConstrainedPolicyOptimization:
             next_value = self.value_network(states[-1:]).squeeze()
             next_cost_value = self.cost_value_network(states[-1:]).squeeze()
 
-        advantages = self.compute_gae(all_rewards, values.detach().cpu().numpy(),
-                                    all_dones, next_value.item())
-        cost_advantages = self.compute_gae(all_costs, cost_values.detach().cpu().numpy(),
-                                         all_dones, next_cost_value.item())
+        advantages = self.compute_gae(
+            all_rewards, values.detach().cpu().numpy(), all_dones, next_value.item()
+        )
+        cost_advantages = self.compute_gae(
+            all_costs,
+            cost_values.detach().cpu().numpy(),
+            all_dones,
+            next_cost_value.item(),
+        )
 
         # Normalize advantages
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-        cost_advantages = (cost_advantages - cost_advantages.mean()) / (cost_advantages.std() + 1e-8)
+        cost_advantages = (cost_advantages - cost_advantages.mean()) / (
+            cost_advantages.std() + 1e-8
+        )
 
         # Update value networks
         returns = advantages + values.detach()
@@ -199,10 +214,14 @@ class ConstrainedPolicyOptimization:
         if constraint_violation.item() <= self.constraint_limit:
             self.policy_optimizer.zero_grad()
             policy_loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.policy_network.parameters(), max_norm=0.5)
+            torch.nn.utils.clip_grad_norm_(
+                self.policy_network.parameters(), max_norm=0.5
+            )
             self.policy_optimizer.step()
         else:
-            print(f"⚠️ Policy update skipped due to constraint violation: {constraint_violation.item():.4f}")
+            print(
+                f"⚠️ Policy update skipped due to constraint violation: {constraint_violation.item():.4f}"
+            )
 
         # Store statistics
         self.policy_losses.append(policy_loss.item())
@@ -211,18 +230,20 @@ class ConstrainedPolicyOptimization:
         self.constraint_violations.append(constraint_violation.item())
 
         return {
-            'policy_loss': policy_loss.item(),
-            'value_loss': value_loss.item(),
-            'cost_loss': cost_loss.item(),
-            'constraint_violation': constraint_violation.item(),
-            'kl_divergence': kl_div.item()
+            "policy_loss": policy_loss.item(),
+            "value_loss": value_loss.item(),
+            "cost_loss": cost_loss.item(),
+            "constraint_violation": constraint_violation.item(),
+            "kl_divergence": kl_div.item(),
         }
 
 
 class LagrangianSafeRL:
     """Lagrangian method for Safe RL with adaptive penalty."""
 
-    def __init__(self, state_dim, action_dim, constraint_limit=0.1, lr=3e-4, lagrange_lr=1e-2):
+    def __init__(
+        self, state_dim, action_dim, constraint_limit=0.1, lr=3e-4, lagrange_lr=1e-2
+    ):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.constraint_limit = constraint_limit
@@ -234,7 +255,7 @@ class LagrangianSafeRL:
             nn.Linear(128, 128),
             nn.ReLU(),
             nn.Linear(128, action_dim),
-            nn.Softmax(dim=-1)
+            nn.Softmax(dim=-1),
         ).to(device)
 
         self.value_network = nn.Sequential(
@@ -242,7 +263,7 @@ class LagrangianSafeRL:
             nn.ReLU(),
             nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(128, 1)
+            nn.Linear(128, 1),
         ).to(device)
 
         # Optimizers
@@ -327,7 +348,9 @@ class LagrangianSafeRL:
         log_probs = action_dist.log_prob(actions)
 
         # Policy loss with Lagrangian penalty
-        policy_loss = -(log_probs * (advantages - self.lagrange_multiplier * cost_advantages)).mean()
+        policy_loss = -(
+            log_probs * (advantages - self.lagrange_multiplier * cost_advantages)
+        ).mean()
 
         # Value loss
         value_loss = F.mse_loss(values, returns)
@@ -362,9 +385,9 @@ class LagrangianSafeRL:
         self.total_rewards.append(returns.mean().item())
 
         return {
-            'policy_loss': policy_loss.item(),
-            'value_loss': value_loss.item(),
-            'lagrange_multiplier': self.lagrange_multiplier.item(),
-            'constraint_violation': constraint_violation.item(),
-            'avg_cost': avg_cost.item()
+            "policy_loss": policy_loss.item(),
+            "value_loss": value_loss.item(),
+            "lagrange_multiplier": self.lagrange_multiplier.item(),
+            "constraint_violation": constraint_violation.item(),
+            "avg_cost": avg_cost.item(),
         }

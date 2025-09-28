@@ -31,7 +31,7 @@ class MADDPGAgent:
             nn.Linear(128, 128),
             nn.ReLU(),
             nn.Linear(128, action_dim),
-            nn.Softmax(dim=-1)
+            nn.Softmax(dim=-1),
         ).to(device)
 
         # Critic network (centralized, uses global information)
@@ -42,7 +42,7 @@ class MADDPGAgent:
             nn.ReLU(),
             nn.Linear(256, 256),
             nn.ReLU(),
-            nn.Linear(256, 1)
+            nn.Linear(256, 1),
         ).to(device)
 
         # Target networks
@@ -151,18 +151,23 @@ class MADDPGAgent:
         self.actor_losses.append(actor_loss.item())
         self.critic_losses.append(critic_loss.item())
 
-        return {
-            'actor_loss': actor_loss.item(),
-            'critic_loss': critic_loss.item()
-        }
+        return {"actor_loss": actor_loss.item(), "critic_loss": critic_loss.item()}
 
     def soft_update(self):
         """Soft update of target networks."""
-        for target_param, param in zip(self.critic_target.parameters(), self.critic.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+        for target_param, param in zip(
+            self.critic_target.parameters(), self.critic.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
 
-        for target_param, param in zip(self.actor_target.parameters(), self.actor.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+        for target_param, param in zip(
+            self.actor_target.parameters(), self.actor.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
 
 
 class QMIXAgent:
@@ -175,29 +180,30 @@ class QMIXAgent:
         self.state_dim = state_dim
 
         # Individual Q-networks for each agent
-        self.q_networks = nn.ModuleList([
-            nn.Sequential(
-                nn.Linear(obs_dim, 128),
-                nn.ReLU(),
-                nn.Linear(128, 128),
-                nn.ReLU(),
-                nn.Linear(128, action_dim)
-            ).to(device) for _ in range(num_agents)
-        ])
+        self.q_networks = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.Linear(obs_dim, 128),
+                    nn.ReLU(),
+                    nn.Linear(128, 128),
+                    nn.ReLU(),
+                    nn.Linear(128, action_dim),
+                ).to(device)
+                for _ in range(num_agents)
+            ]
+        )
 
         # Mixing network
         self.mixing_network = nn.Sequential(
             nn.Linear(state_dim, 256),
             nn.ReLU(),
             nn.Linear(256, num_agents * 32),  # Weights for mixing
-            nn.ReLU()
+            nn.ReLU(),
         ).to(device)
 
         # Final mixing layer
         self.final_layer = nn.Sequential(
-            nn.Linear(32, 32),
-            nn.ReLU(),
-            nn.Linear(32, 1)
+            nn.Linear(32, 32), nn.ReLU(), nn.Linear(32, 1)
         ).to(device)
 
         # Target networks
@@ -206,9 +212,11 @@ class QMIXAgent:
         self.target_final_layer = copy.deepcopy(self.final_layer)
 
         # Optimizers
-        all_params = (list(self.q_networks.parameters()) +
-                     list(self.mixing_network.parameters()) +
-                     list(self.final_layer.parameters()))
+        all_params = (
+            list(self.q_networks.parameters())
+            + list(self.mixing_network.parameters())
+            + list(self.final_layer.parameters())
+        )
         self.optimizer = optim.Adam(all_params, lr=lr)
 
         # Training parameters
@@ -252,7 +260,9 @@ class QMIXAgent:
 
         # Mix individual Q-values
         individual_q_values = individual_q_values.unsqueeze(-1)  # [batch, agents, 1]
-        mixed_values = torch.bmm(mixing_weights.transpose(1, 2), individual_q_values)  # [batch, 32, 1]
+        mixed_values = torch.bmm(
+            mixing_weights.transpose(1, 2), individual_q_values
+        )  # [batch, 32, 1]
         mixed_values = mixed_values.squeeze(-1)  # [batch, 32]
 
         # Final layer
@@ -281,7 +291,9 @@ class QMIXAgent:
         individual_q_values = []
         for i in range(self.num_agents):
             q_vals = self.q_networks[i](states_tensor[:, i])
-            chosen_q_vals = q_vals.gather(1, actions_tensor[:, i].unsqueeze(1)).squeeze()
+            chosen_q_vals = q_vals.gather(
+                1, actions_tensor[:, i].unsqueeze(1)
+            ).squeeze()
             individual_q_values.append(chosen_q_vals)
 
         individual_q_values = torch.stack(individual_q_values, dim=1)  # [batch, agents]
@@ -307,12 +319,15 @@ class QMIXAgent:
 
             next_individual_q_values_expanded = next_individual_q_values.unsqueeze(-1)
             target_mixed_values = torch.bmm(
-                target_mixing_weights.transpose(1, 2),
-                next_individual_q_values_expanded
+                target_mixing_weights.transpose(1, 2), next_individual_q_values_expanded
             ).squeeze(-1)
 
-            target_team_q_values = self.target_final_layer(target_mixed_values).squeeze()
-            target_team_q_values = team_rewards + self.gamma * target_team_q_values * (~dones_tensor)
+            target_team_q_values = self.target_final_layer(
+                target_mixed_values
+            ).squeeze()
+            target_team_q_values = team_rewards + self.gamma * target_team_q_values * (
+                ~dones_tensor
+            )
 
         # Compute loss
         loss = F.mse_loss(team_q_values, target_team_q_values)
@@ -321,10 +336,10 @@ class QMIXAgent:
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(
-            list(self.q_networks.parameters()) +
-            list(self.mixing_network.parameters()) +
-            list(self.final_layer.parameters()),
-            max_norm=1.0
+            list(self.q_networks.parameters())
+            + list(self.mixing_network.parameters())
+            + list(self.final_layer.parameters()),
+            max_norm=1.0,
         )
         self.optimizer.step()
 
@@ -340,21 +355,29 @@ class QMIXAgent:
         self.team_rewards.append(team_rewards.mean().item())
 
         return {
-            'loss': loss.item(),
-            'team_reward': team_rewards.mean().item(),
-            'epsilon': self.epsilon
+            "loss": loss.item(),
+            "team_reward": team_rewards.mean().item(),
+            "epsilon": self.epsilon,
         }
 
     def soft_update_targets(self):
         """Soft update of target networks."""
         for target, source in zip(self.target_q_networks, self.q_networks):
             for target_param, param in zip(target.parameters(), source.parameters()):
-                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+                target_param.data.copy_(
+                    self.tau * param.data + (1 - self.tau) * target_param.data
+                )
 
-        for target_param, param in zip(self.target_mixing_network.parameters(),
-                                      self.mixing_network.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+        for target_param, param in zip(
+            self.target_mixing_network.parameters(), self.mixing_network.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
 
-        for target_param, param in zip(self.target_final_layer.parameters(),
-                                      self.final_layer.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+        for target_param, param in zip(
+            self.target_final_layer.parameters(), self.final_layer.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )

@@ -12,13 +12,13 @@ from .wrappers import (
     ActionRepeatWrapper,
     FrameStackWrapper,
     RewardScaleWrapper,
-    ObservationWrapper
+    ObservationWrapper,
 )
 
 __all__ = [
-    'TimeLimitWrapper',
-    'ActionRepeatWrapper',
-    'FrameStackWrapper',
-    'RewardScaleWrapper',
-    'ObservationWrapper'
+    "TimeLimitWrapper",
+    "ActionRepeatWrapper",
+    "FrameStackWrapper",
+    "RewardScaleWrapper",
+    "ObservationWrapper",
 ]

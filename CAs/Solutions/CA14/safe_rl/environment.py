@@ -13,7 +13,7 @@ class SafeEnvironment:
     def __init__(self, size=6, hazard_positions=None, constraint_threshold=0.1):
         self.size = size
         self.state = [0, 0]
-        self.goal = [size-1, size-1]
+        self.goal = [size - 1, size - 1]
         self.constraint_threshold = constraint_threshold
 
         # Define hazardous areas
@@ -54,7 +54,7 @@ class SafeEnvironment:
             self.state[0] += 1
 
         # Compute reward
-        done = (self.state == self.goal)
+        done = self.state == self.goal
         reward = 10.0 if done else -0.1
 
         # Compute constraint cost (safety violations)
@@ -64,10 +64,10 @@ class SafeEnvironment:
         episode_done = done or self.current_step >= self.max_episode_steps
 
         info = {
-            'constraint_cost': constraint_cost,
-            'constraint_violation': constraint_cost > 0,
-            'total_violations': self.constraint_violations,
-            'position': self.state.copy()
+            "constraint_cost": constraint_cost,
+            "constraint_violation": constraint_cost > 0,
+            "total_violations": self.constraint_violations,
+            "position": self.state.copy(),
         }
 
         return np.array(self.state, dtype=np.float32), reward, episode_done, info
@@ -82,7 +82,12 @@ class SafeEnvironment:
             self.constraint_violations += 1
 
         # Boundary penalty (soft constraints)
-        if state[0] == 0 or state[0] == self.size-1 or state[1] == 0 or state[1] == self.size-1:
+        if (
+            state[0] == 0
+            or state[0] == self.size - 1
+            or state[1] == 0
+            or state[1] == self.size - 1
+        ):
             cost += 0.1  # Small cost for being near boundaries
 
         self.total_constraint_cost += cost

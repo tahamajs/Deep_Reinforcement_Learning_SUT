@@ -32,7 +32,7 @@ class ConservativeQNetwork(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, action_dim)
+            nn.Linear(hidden_dim, action_dim),
         )
 
         # Value network for advantage computation
@@ -41,7 +41,7 @@ class ConservativeQNetwork(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, 1),
         )
 
     def forward(self, state):
@@ -113,7 +113,9 @@ class ConservativeQLearning:
 
         # Compute losses
         conservative_loss = self.compute_conservative_loss(states, actions)
-        bellman_loss = self.compute_bellman_loss(states, actions, rewards, next_states, dones)
+        bellman_loss = self.compute_bellman_loss(
+            states, actions, rewards, next_states, dones
+        )
 
         # Total loss
         total_loss = self.conservative_weight * conservative_loss + bellman_loss
@@ -135,15 +137,19 @@ class ConservativeQLearning:
         self.bellman_losses.append(bellman_loss.item())
 
         return {
-            'total_loss': total_loss.item(),
-            'conservative_loss': conservative_loss.item(),
-            'bellman_loss': bellman_loss.item()
+            "total_loss": total_loss.item(),
+            "conservative_loss": conservative_loss.item(),
+            "bellman_loss": bellman_loss.item(),
         }
 
     def soft_update_target(self):
         """Soft update of target network."""
-        for target_param, param in zip(self.target_q_network.parameters(), self.q_network.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+        for target_param, param in zip(
+            self.target_q_network.parameters(), self.q_network.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
 
     def get_action(self, state, epsilon=0.0):
         """Get action using epsilon-greedy policy."""
@@ -173,7 +179,7 @@ class ImplicitQLearning:
             nn.Linear(256, 256),
             nn.ReLU(),
             nn.Linear(256, action_dim),
-            nn.Softmax(dim=-1)
+            nn.Softmax(dim=-1),
         ).to(device)
 
         # Optimizers
@@ -201,11 +207,15 @@ class ImplicitQLearning:
 
         with torch.no_grad():
             _, next_state_values = self.target_q_network(next_states)
-            target_q_values = rewards + (self.gamma * next_state_values.squeeze() * (~dones))
+            target_q_values = rewards + (
+                self.gamma * next_state_values.squeeze() * (~dones)
+            )
 
         # Q-function loss using expectile regression
         q_errors = target_q_values - current_q_values
-        q_loss = self.compute_expectile_loss(q_errors, 0.5)  # Standard MSE for Q-function
+        q_loss = self.compute_expectile_loss(
+            q_errors, 0.5
+        )  # Standard MSE for Q-function
 
         # Value function loss using expectile for advantage estimation
         advantages = current_q_values.detach() - state_values.squeeze()
@@ -228,7 +238,9 @@ class ImplicitQLearning:
             weights = torch.exp(advantages / 3.0).clamp(max=100)  # Temperature scaling
 
         action_probs = self.policy_network(states)
-        log_probs = torch.log(action_probs.gather(1, actions.unsqueeze(1)).squeeze() + 1e-8)
+        log_probs = torch.log(
+            action_probs.gather(1, actions.unsqueeze(1)).squeeze() + 1e-8
+        )
 
         policy_loss = -(weights.detach() * log_probs).mean()
 
@@ -243,14 +255,20 @@ class ImplicitQLearning:
         states, actions, rewards, next_states, dones = batch
 
         # Update Q-function and value function
-        q_loss, avg_advantage = self.update_q_function(states, actions, rewards, next_states, dones)
+        q_loss, avg_advantage = self.update_q_function(
+            states, actions, rewards, next_states, dones
+        )
 
         # Update policy
         policy_loss = self.update_policy(states, actions)
 
         # Soft update target networks
-        for target_param, param in zip(self.target_q_network.parameters(), self.q_network.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+        for target_param, param in zip(
+            self.target_q_network.parameters(), self.q_network.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
 
         # Store statistics
         self.q_losses.append(q_loss)
@@ -258,9 +276,9 @@ class ImplicitQLearning:
         self.advantages.append(avg_advantage)
 
         return {
-            'q_loss': q_loss,
-            'policy_loss': policy_loss,
-            'avg_advantage': avg_advantage
+            "q_loss": q_loss,
+            "policy_loss": policy_loss,
+            "avg_advantage": avg_advantage,
         }
 
     def get_action(self, state):
