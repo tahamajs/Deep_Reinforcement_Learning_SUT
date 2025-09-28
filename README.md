@@ -1,3 +1,4 @@
+
 # Deep Reinforcement Learning Course Repository: Comprehensive Report
 
 ## Table of Contents
@@ -6,12 +7,18 @@
 2. [Introduction](#introduction)
 3. [Repository Structure and Organization](#repository-structure-and-organization)
 4. [Detailed Analysis of Course Assignments](#detailed-analysis-of-course-assignments)
+
    4.1. [Computer Assignments (CAs)](#computer-assignments-cas)
+
    4.2. [Additional Assignment Collections](#additional-assignment-collections)
 5. [Educational Resources and Materials](#educational-resources-and-materials)
+
    5.1. [Lecture Slides](#lecture-slides)
+
    5.2. [Course Notes](#course-notes)
+
    5.3. [Questions and Notes](#questions-and-notes)
+
    5.4. [Supplementary Resources](#supplementary-resources)
 6. [Technical Implementation Details](#technical-implementation-details)
 7. [Pedagogical Approach and Learning Objectives](#pedagogical-approach-and-learning-objectives)
@@ -19,7 +26,6 @@
 9. [References and Acknowledgments](#references-and-acknowledgments)
 
 ---
-
 
 ## Introduction
 
@@ -33,20 +39,27 @@ The Deep Reinforcement Learning course at Sharif University of Technology provid
 
 The primary objectives of this repository are:
 
-1. **Educational Delivery**: Provide structured learning materials for DRL concepts
-2. **Practical Implementation**: Offer complete, runnable code solutions for all assignments
-3. **Progressive Learning**: Support learning from basic to advanced RL topics
-4. **Research Foundation**: Enable students to build upon implementations for research projects
-5. **Community Resource**: Serve as a reference for RL practitioners and researchers
+1.**Educational Delivery**: Provide structured learning materials for DRL concepts
+
+2.**Practical Implementation**: Offer complete, runnable code solutions for all assignments
+
+3.**Progressive Learning**: Support learning from basic to advanced RL topics
+
+4.**Research Foundation**: Enable students to build upon implementations for research projects
+
+5.**Community Resource**: Serve as a reference for RL practitioners and researchers
 
 ### Technical Foundation
 
 The repository utilizes modern Python-based frameworks including:
 
-- **PyTorch**: Primary deep learning framework for neural network implementations
-- **Gymnasium**: Standardized environment library for RL experimentation
-- **NumPy/Matplotlib**: Scientific computing and visualization
-- **Jupyter Notebooks**: Interactive development and demonstration environment
+-**PyTorch**: Primary deep learning framework for neural network implementations
+
+-**Gymnasium**: Standardized environment library for RL experimentation
+
+-**NumPy/Matplotlib**: Scientific computing and visualization
+
+-**Jupyter Notebooks**: Interactive development and demonstration environment
 
 ---
 
@@ -57,26 +70,40 @@ The repository follows a hierarchical organization designed to support systemati
 ### Root Level Structure
 
 ```
+
 DRL_SUT/
+
 ├── requirements.txt              # Global Python dependencies
+
 ├── CAs/                          # Computer Assignments (Primary focus)
+
 ├── Assisments/                   # Additional assignment collections
+
 ├── notes_related/                # Supplementary course notes
+
 ├── QuestionsAndNotes/            # Session-specific materials
+
 ├── Slides/                       # Lecture presentation materials
+
 ├── Other_RES/                    # Miscellaneous resources
+
 └── README.md                     # This documentation
+
 ```
 
 ### Design Principles
 
 The organization follows several key principles:
 
-1. **Separation of Concerns**: Assignments, solutions, and resources are clearly separated
-2. **Progressive Complexity**: Materials are ordered from basic to advanced concepts
-3. **Modularity**: Code is organized into reusable components
-4. **Documentation**: Comprehensive documentation at all levels
-5. **Reproducibility**: All implementations include necessary dependencies and instructions
+1.**Separation of Concerns**: Assignments, solutions, and resources are clearly separated
+
+2.**Progressive Complexity**: Materials are ordered from basic to advanced concepts
+
+3.**Modularity**: Code is organized into reusable components
+
+4.**Documentation**: Comprehensive documentation at all levels
+
+5.**Reproducibility**: All implementations include necessary dependencies and instructions
 
 ---
 
@@ -88,7 +115,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA1: Introduction to Reinforcement Learning Fundamentals
 
-**Location:** `CAs/Solutions/CA1/`
+**Location:**`CAs/Solutions/CA1/`
 
 **Core Concepts:**
 
@@ -113,7 +140,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA2: Exploration Strategies in Reinforcement Learning
 
-**Location:** `CAs/Solutions/CA2/`
+**Location:**`CAs/Solutions/CA2/`
 
 **Core Concepts:**
 
@@ -139,7 +166,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA3: Function Approximation in Reinforcement Learning
 
-**Location:** `CAs/Solutions/CA3/`
+**Location:**`CAs/Solutions/CA3/`
 
 **Core Concepts:**
 
@@ -164,7 +191,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA4: Deep Q-Networks (DQN)
 
-**Location:** `CAs/Solutions/CA4/`
+**Location:**`CAs/Solutions/CA4/`
 
 **Core Concepts:**
 
@@ -189,7 +216,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA5: Advanced DQN Variants
 
-**Location:** `CAs/Solutions/CA5/`
+**Location:**`CAs/Solutions/CA5/`
 
 **Core Concepts:**
 
@@ -215,7 +242,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA6: Policy Gradient Methods
 
-**Location:** `CAs/Solutions/CA6/`
+**Location:**`CAs/Solutions/CA6/`
 
 **Core Concepts:**
 
@@ -241,7 +268,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA7: Advanced Policy Gradient Methods
 
-**Location:** `CAs/Solutions/CA7/`
+**Location:**`CAs/Solutions/CA7/`
 
 **Core Concepts:**
 
@@ -267,7 +294,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA8: Causal Reinforcement Learning and Multi-modal Learning
 
-**Location:** `CAs/Solutions/CA8/`
+**Location:**`CAs/Solutions/CA8/`
 
 **Core Concepts:**
 
@@ -293,7 +320,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA9: Continuous Control and Advanced Policy Gradients
 
-**Location:** `CAs/Solutions/CA9/`
+**Location:**`CAs/Solutions/CA9/`
 
 **Core Concepts:**
 
@@ -319,7 +346,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA10: Model-Based Reinforcement Learning
 
-**Location:** `CAs/Solutions/CA10/`
+**Location:**`CAs/Solutions/CA10/`
 
 **Core Concepts:**
 
@@ -346,7 +373,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA11: World Models and Dreamer Algorithm
 
-**Location:** `CAs/Solutions/CA11/`
+**Location:**`CAs/Solutions/CA11/`
 
 **Core Concepts:**
 
@@ -372,7 +399,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA12: Multi-Agent Reinforcement Learning
 
-**Location:** `CAs/Solutions/CA12/`
+**Location:**`CAs/Solutions/CA12/`
 
 **Core Concepts:**
 
@@ -398,7 +425,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA13: Sample Efficient Reinforcement Learning
 
-**Location:** `CAs/Solutions/CA13/`
+**Location:**`CAs/Solutions/CA13/`
 
 **Core Concepts:**
 
@@ -424,7 +451,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA14: Advanced RL Topics (Offline, Safe, Robust)
 
-**Location:** `CAs/Solutions/CA14/`
+**Location:**`CAs/Solutions/CA14/`
 
 **Core Concepts:**
 
@@ -450,7 +477,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA15: Hierarchical Reinforcement Learning
 
-**Location:** `CAs/Solutions/CA15/`
+**Location:**`CAs/Solutions/CA15/`
 
 **Core Concepts:**
 
@@ -476,7 +503,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### CA16-CA19: Future of Reinforcement Learning
 
-**Location:** `CAs/Solutions/CA16-CA19/`
+**Location:**`CAs/Solutions/CA16-CA19/`
 
 **Core Concepts:**
 
@@ -504,7 +531,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### Berkeley CS285 Deep RL Assignments
 
-**Location:** `Assisments/berkeley-deep-RL-pytorch-solutions/`
+**Location:**`Assisments/berkeley-deep-RL-pytorch-solutions/`
 
 **Content Overview:**
 
@@ -522,7 +549,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### Deep Learning Assignments 2022
 
-**Location:** `Assisments/Deep-Learning-Assignments-2022/`
+**Location:**`Assisments/Deep-Learning-Assignments-2022/`
 
 **Content Overview:**
 
@@ -541,7 +568,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### Additional Deep RL Assignments
 
-**Location:** `Assisments/Deep-RL-Assignments/`
+**Location:**`Assisments/Deep-RL-Assignments/`
 
 **Content Overview:**
 
@@ -552,7 +579,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 #### Homework Collections
 
-**Location:** `Assisments/homework/`, `Assisments/homework_fall2022/`
+**Location:**`Assisments/homework/`, `Assisments/homework_fall2022/`
 
 **Content Overview:**
 
@@ -567,7 +594,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 ### Lecture Slides
 
-**Location:** `Slides/`
+**Location:**`Slides/`
 
 **Content Structure:**
 
@@ -593,11 +620,12 @@ The core component of the repository consists of nineteen computer assignments, 
 13. Advanced Topics
 14. Applications and Case Studies
 15. Future Directions
+
     16-19. Specialized Advanced Topics
 
 ### Course Notes
 
-**Location:** `notes_related/`
+**Location:**`notes_related/`
 
 **Content Overview:**
 
@@ -615,7 +643,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 ### Questions and Notes
 
-**Location:** `QuestionsAndNotes/`
+**Location:**`QuestionsAndNotes/`
 
 **Content Structure:**
 
@@ -633,7 +661,7 @@ The core component of the repository consists of nineteen computer assignments, 
 
 ### Supplementary Resources
 
-**Location:** `Other_RES/`
+**Location:**`Other_RES/`
 
 **Content Overview:**
 
@@ -650,10 +678,13 @@ The core component of the repository consists of nineteen computer assignments, 
 
 The repository follows a modular architecture designed for:
 
-1. **Reusability**: Common components shared across assignments
-2. **Maintainability**: Clear separation of concerns
-3. **Educational Value**: Code designed for learning and modification
-4. **Research Applications**: Extensible for advanced research
+1.**Reusability**: Common components shared across assignments
+
+2.**Maintainability**: Clear separation of concerns
+
+3.**Educational Value**: Code designed for learning and modification
+
+4.**Research Applications**: Extensible for advanced research
 
 ### Key Technical Features
 
@@ -706,11 +737,15 @@ The repository follows a modular architecture designed for:
 
 The course follows a carefully designed progression:
 
-1. **Foundation Building**: Basic concepts and algorithms
-2. **Theoretical Understanding**: Mathematical foundations
-3. **Practical Implementation**: Hands-on coding experience
-4. **Advanced Topics**: Cutting-edge research areas
-5. **Integration**: Connecting concepts across domains
+1.**Foundation Building**: Basic concepts and algorithms
+
+2.**Theoretical Understanding**: Mathematical foundations
+
+3.**Practical Implementation**: Hands-on coding experience
+
+4.**Advanced Topics**: Cutting-edge research areas
+
+5.**Integration**: Connecting concepts across domains
 
 ### Educational Objectives
 
@@ -762,21 +797,33 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 Copyright (c) 2025 Taha Majlesi
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
+
 of this software and associated documentation files (the "Software"), to deal
+
 in the Software without restriction, including without limitation the rights
+
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+
 copies of the Software, and to permit persons to whom the Software is
+
 furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all
+
 copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+
 SOFTWARE.
 
 ### Educational Use
