@@ -1,0 +1,8 @@
+gymnasium
+numpy
+scipy
+matplotlib
+keras
+tensorflow
+tensorboardX
+seaborn

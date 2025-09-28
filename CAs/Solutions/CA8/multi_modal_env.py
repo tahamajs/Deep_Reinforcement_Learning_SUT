@@ -20,9 +20,9 @@ class PromptTemplate:
 
     def __init__(self):
         self.templates = {
-            'navigation': "Navigate to the {color} {shape} in the {direction} corner.",
-            'collection': "Collect the {color} {shape} while avoiding {obstacle}.",
-            'puzzle': "Solve the puzzle by arranging {objects} in {pattern}."
+            "navigation": "Navigate to the {color} {shape} in the {direction} corner.",
+            "collection": "Collect the {color} {shape} while avoiding {obstacle}.",
+            "puzzle": "Solve the puzzle by arranging {objects} in {pattern}.",
         }
 
     def generate_prompt(self, task_type: str, **kwargs) -> str:
@@ -39,11 +39,7 @@ class PromptTemplate:
         tokens = prompt.lower().split()
         token_ids = [hash(token) % 1000 for token in tokens]  # Simplified
 
-        return {
-            'tokens': token_ids,
-            'mask': [1] * len(token_ids),
-            'text': prompt
-        }
+        return {"tokens": token_ids, "mask": [1] * len(token_ids), "text": prompt}
 
 
 class MultiModalGridWorld:
@@ -66,15 +62,21 @@ class MultiModalGridWorld:
         self.action_space = spaces.Discrete(4)
 
         # Observation space: Multi-modal (visual + text + state)
-        self.observation_space = spaces.Dict({
-            'visual': spaces.Box(low=0, high=255, shape=(render_size, render_size, 3), dtype=np.uint8),
-            'text': spaces.Dict({
-                'tokens': spaces.MultiDiscrete([1000] * 20),  # Max 20 tokens
-                'mask': spaces.MultiBinary(20),
-                'text': spaces.Text(max_length=200)
-            }),
-            'state': spaces.Box(low=0, high=size-1, shape=(2,), dtype=np.int32)
-        })
+        self.observation_space = spaces.Dict(
+            {
+                "visual": spaces.Box(
+                    low=0, high=255, shape=(render_size, render_size, 3), dtype=np.uint8
+                ),
+                "text": spaces.Dict(
+                    {
+                        "tokens": spaces.MultiDiscrete([1000] * 20),  # Max 20 tokens
+                        "mask": spaces.MultiBinary(20),
+                        "text": spaces.Text(max_length=200),
+                    }
+                ),
+                "state": spaces.Box(low=0, high=size - 1, shape=(2,), dtype=np.int32),
+            }
+        )
 
     def reset(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Reset the environment"""
@@ -90,25 +92,29 @@ class MultiModalGridWorld:
         self.obstacles = []
         for _ in range(self.size // 2):
             obstacle = np.random.randint(0, self.size, size=2)
-            while (np.array_equal(obstacle, self.agent_pos) or
-                   np.array_equal(obstacle, self.goal_pos) or
-                   any(np.array_equal(obstacle, obs) for obs in self.obstacles)):
+            while (
+                np.array_equal(obstacle, self.agent_pos)
+                or np.array_equal(obstacle, self.goal_pos)
+                or any(np.array_equal(obstacle, obs) for obs in self.obstacles)
+            ):
                 obstacle = np.random.randint(0, self.size, size=2)
             self.obstacles.append(obstacle)
 
         self.steps = 0
-        self.task_type = np.random.choice(['navigation', 'collection', 'puzzle'])
+        self.task_type = np.random.choice(["navigation", "collection", "puzzle"])
 
         return self._get_observation(), {}
 
-    def step(self, action: int) -> Tuple[Dict[str, Any], float, bool, bool, Dict[str, Any]]:
+    def step(
+        self, action: int
+    ) -> Tuple[Dict[str, Any], float, bool, bool, Dict[str, Any]]:
         """Take a step in the environment"""
         # Action mapping: 0=Up, 1=Down, 2=Left, 3=Right
         action_map = {
             0: np.array([-1, 0]),  # Up
-            1: np.array([1, 0]),   # Down
+            1: np.array([1, 0]),  # Down
             2: np.array([0, -1]),  # Left
-            3: np.array([0, 1])    # Right
+            3: np.array([0, 1]),  # Right
         }
 
         # Update position
@@ -150,16 +156,12 @@ class MultiModalGridWorld:
         # State observation
         state_obs = self.agent_pos.copy()
 
-        return {
-            'visual': visual_obs,
-            'text': text_obs,
-            'state': state_obs
-        }
+        return {"visual": visual_obs, "text": text_obs, "state": state_obs}
 
     def _render_visual(self) -> np.ndarray:
         """Render visual observation"""
         # Create RGB image
-        img = Image.new('RGB', (self.render_size, self.render_size), color='white')
+        img = Image.new("RGB", (self.render_size, self.render_size), color="white")
         draw = ImageDraw.Draw(img)
 
         # Cell size
@@ -168,24 +170,30 @@ class MultiModalGridWorld:
         # Draw grid
         for i in range(self.size + 1):
             # Horizontal lines
-            draw.line([0, i * cell_size, self.render_size, i * cell_size],
-                     fill='black', width=1)
+            draw.line(
+                [0, i * cell_size, self.render_size, i * cell_size],
+                fill="black",
+                width=1,
+            )
             # Vertical lines
-            draw.line([i * cell_size, 0, i * cell_size, self.render_size],
-                     fill='black', width=1)
+            draw.line(
+                [i * cell_size, 0, i * cell_size, self.render_size],
+                fill="black",
+                width=1,
+            )
 
         # Draw obstacles
         for obs in self.obstacles:
             x, y = obs[1] * cell_size, obs[0] * cell_size
-            draw.rectangle([x, y, x + cell_size, y + cell_size], fill='red')
+            draw.rectangle([x, y, x + cell_size, y + cell_size], fill="red")
 
         # Draw goal
         x, y = self.goal_pos[1] * cell_size, self.goal_pos[0] * cell_size
-        draw.rectangle([x, y, x + cell_size, y + cell_size], fill='green')
+        draw.rectangle([x, y, x + cell_size, y + cell_size], fill="green")
 
         # Draw agent
         x, y = self.agent_pos[1] * cell_size, self.agent_pos[0] * cell_size
-        draw.rectangle([x, y, x + cell_size, y + cell_size], fill='blue')
+        draw.rectangle([x, y, x + cell_size, y + cell_size], fill="blue")
 
         # Convert to numpy array
         img_array = np.array(img)
@@ -194,26 +202,18 @@ class MultiModalGridWorld:
 
     def _generate_instruction(self) -> Dict[str, Any]:
         """Generate textual instruction"""
-        if self.task_type == 'navigation':
+        if self.task_type == "navigation":
             direction = self._get_direction_to_goal()
             instruction = self.prompt_template.generate_prompt(
-                'navigation',
-                color='green',
-                shape='square',
-                direction=direction
+                "navigation", color="green", shape="square", direction=direction
             )
-        elif self.task_type == 'collection':
+        elif self.task_type == "collection":
             instruction = self.prompt_template.generate_prompt(
-                'collection',
-                color='green',
-                shape='square',
-                obstacle='red squares'
+                "collection", color="green", shape="square", obstacle="red squares"
             )
         else:  # puzzle
             instruction = self.prompt_template.generate_prompt(
-                'puzzle',
-                objects='colored squares',
-                pattern='specific arrangement'
+                "puzzle", objects="colored squares", pattern="specific arrangement"
             )
 
         return self.prompt_template.tokenize_prompt(instruction)
@@ -234,13 +234,13 @@ class MultiModalGridWorld:
             else:
                 return "left"
 
-    def render(self, mode: str = 'human') -> Optional[np.ndarray]:
+    def render(self, mode: str = "human") -> Optional[np.ndarray]:
         """Render the environment"""
-        if mode == 'rgb_array':
+        if mode == "rgb_array":
             return self._render_visual()
-        elif mode == 'human':
+        elif mode == "human":
             plt.imshow(self._render_visual())
-            plt.axis('off')
+            plt.axis("off")
             plt.show()
         return None
 
@@ -259,8 +259,8 @@ class MultiModalWrapper:
 
         # Feature dimensions
         self.visual_dim = 64  # After CNN processing
-        self.text_dim = 32    # After transformer processing
-        self.state_dim = 2    # Raw state
+        self.text_dim = 32  # After transformer processing
+        self.state_dim = 2  # Raw state
 
         self.total_dim = self.visual_dim + self.text_dim + self.state_dim
 
@@ -275,13 +275,13 @@ class MultiModalWrapper:
             Processed feature vector
         """
         # Process visual (simplified - would use CNN in practice)
-        visual_features = self._process_visual(obs['visual'])
+        visual_features = self._process_visual(obs["visual"])
 
         # Process text (simplified - would use transformer in practice)
-        text_features = self._process_text(obs['text'])
+        text_features = self._process_text(obs["text"])
 
         # State features (normalized)
-        state_features = obs['state'].astype(np.float32) / self.env.size
+        state_features = obs["state"].astype(np.float32) / self.env.size
 
         # Concatenate
         features = np.concatenate([visual_features, text_features, state_features])
@@ -298,8 +298,8 @@ class MultiModalWrapper:
     def _process_text(self, text_obs: Dict[str, Any]) -> np.ndarray:
         """Process textual observation (simplified)"""
         # Simple averaging of token embeddings
-        tokens = np.array(text_obs['tokens'])
-        mask = np.array(text_obs['mask'])
+        tokens = np.array(text_obs["tokens"])
+        mask = np.array(text_obs["mask"])
 
         # Masked average
         masked_tokens = tokens * mask

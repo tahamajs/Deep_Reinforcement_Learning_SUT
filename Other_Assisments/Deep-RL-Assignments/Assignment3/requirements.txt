@@ -1,0 +1,7 @@
+gymnasium
+torch
+torchvision
+numpy
+opencv-python
+tensorboardX
+matplotlib

@@ -19,8 +19,13 @@ class CausalReasoningNetwork(nn.Module):
     Neural network that performs causal reasoning
     """
 
-    def __init__(self, state_dim: int, action_dim: int, causal_graph: CausalGraph,
-                 hidden_dim: int = 128):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        causal_graph: CausalGraph,
+        hidden_dim: int = 128,
+    ):
         super(CausalReasoningNetwork, self).__init__()
 
         self.state_dim = state_dim
@@ -32,9 +37,7 @@ class CausalReasoningNetwork(nn.Module):
         self.variable_encoders = nn.ModuleDict()
         for var in causal_graph.variables:
             self.variable_encoders[var] = nn.Sequential(
-                nn.Linear(1, hidden_dim),
-                nn.ReLU(),
-                nn.Linear(hidden_dim, hidden_dim)
+                nn.Linear(1, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, hidden_dim)
             )
 
         # Causal reasoning layers
@@ -42,7 +45,7 @@ class CausalReasoningNetwork(nn.Module):
             nn.Linear(hidden_dim * len(causal_graph.variables), hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU()
+            nn.ReLU(),
         )
 
         # Policy head
@@ -64,7 +67,9 @@ class CausalReasoningNetwork(nn.Module):
         # Encode each variable
         variable_features = []
         for i, var in enumerate(self.causal_graph.variables):
-            var_value = state[:, i:i+1] if len(state.shape) > 1 else state[i:i+1]
+            var_value = (
+                state[:, i : i + 1] if len(state.shape) > 1 else state[i : i + 1]
+            )
             var_feature = self.variable_encoders[var](var_value)
             variable_features.append(var_feature)
 
@@ -80,7 +85,9 @@ class CausalReasoningNetwork(nn.Module):
 
         return policy_logits, value
 
-    def intervene(self, state: torch.Tensor, intervention: Dict[str, float]) -> torch.Tensor:
+    def intervene(
+        self, state: torch.Tensor, intervention: Dict[str, float]
+    ) -> torch.Tensor:
         """
         Perform causal intervention
 
@@ -106,15 +113,24 @@ class CausalRLAgent:
     Reinforcement Learning agent that uses causal reasoning
     """
 
-    def __init__(self, state_dim: int, action_dim: int, causal_graph: CausalGraph,
-                 lr: float = 1e-3, gamma: float = 0.99, hidden_dim: int = 128):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        causal_graph: CausalGraph,
+        lr: float = 1e-3,
+        gamma: float = 0.99,
+        hidden_dim: int = 128,
+    ):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.gamma = gamma
         self.causal_graph = causal_graph
 
         # Create causal reasoning network
-        self.network = CausalReasoningNetwork(state_dim, action_dim, causal_graph, hidden_dim)
+        self.network = CausalReasoningNetwork(
+            state_dim, action_dim, causal_graph, hidden_dim
+        )
         self.optimizer = optim.Adam(self.network.parameters(), lr=lr)
 
         # Logging
@@ -123,7 +139,9 @@ class CausalRLAgent:
         self.value_losses = []
         self.causal_interventions = []
 
-    def select_action(self, state: np.ndarray, deterministic: bool = False) -> Tuple[int, torch.Tensor]:
+    def select_action(
+        self, state: np.ndarray, deterministic: bool = False
+    ) -> Tuple[int, torch.Tensor]:
         """
         Select action using causal reasoning
 
@@ -150,9 +168,14 @@ class CausalRLAgent:
 
         return action, log_prob
 
-    def update(self, states: List[np.ndarray], actions: List[int],
-               rewards: List[float], next_states: List[np.ndarray],
-               dones: List[bool]) -> Dict[str, float]:
+    def update(
+        self,
+        states: List[np.ndarray],
+        actions: List[int],
+        rewards: List[float],
+        next_states: List[np.ndarray],
+        dones: List[bool],
+    ) -> Dict[str, float]:
         """
         Update the agent using causal reasoning
 
@@ -203,14 +226,19 @@ class CausalRLAgent:
         self.value_losses.append(value_loss.item())
 
         return {
-            'policy_loss': policy_loss.item(),
-            'value_loss': value_loss.item(),
-            'total_loss': total_loss.item()
+            "policy_loss": policy_loss.item(),
+            "value_loss": value_loss.item(),
+            "total_loss": total_loss.item(),
         }
 
-    def _compute_causal_advantages(self, states: torch.Tensor, rewards: torch.Tensor,
-                                  next_states: torch.Tensor, dones: torch.Tensor,
-                                  values: torch.Tensor) -> torch.Tensor:
+    def _compute_causal_advantages(
+        self,
+        states: torch.Tensor,
+        rewards: torch.Tensor,
+        next_states: torch.Tensor,
+        dones: torch.Tensor,
+        values: torch.Tensor,
+    ) -> torch.Tensor:
         """
         Compute advantages using causal structure
 
@@ -237,8 +265,9 @@ class CausalRLAgent:
 
         return advantages
 
-    def perform_intervention(self, state: np.ndarray,
-                           intervention: Dict[str, float]) -> np.ndarray:
+    def perform_intervention(
+        self, state: np.ndarray, intervention: Dict[str, float]
+    ) -> np.ndarray:
         """
         Perform causal intervention on state
 
@@ -255,8 +284,11 @@ class CausalRLAgent:
 
         return intervened_state.squeeze(0).cpu().numpy()
 
-    def counterfactual_reasoning(self, trajectory: List[Tuple[np.ndarray, int, float, np.ndarray, bool]],
-                                intervention: Dict[str, float]) -> List[float]:
+    def counterfactual_reasoning(
+        self,
+        trajectory: List[Tuple[np.ndarray, int, float, np.ndarray, bool]],
+        intervention: Dict[str, float],
+    ) -> List[float]:
         """
         Perform counterfactual reasoning on a trajectory
 
@@ -274,7 +306,9 @@ class CausalRLAgent:
             intervened_state = self.perform_intervention(state, intervention)
 
             # Get action under intervention
-            intervened_action, _ = self.select_action(intervened_state, deterministic=True)
+            intervened_action, _ = self.select_action(
+                intervened_state, deterministic=True
+            )
 
             # Simulate reward (simplified - would need environment model)
             counterfactual_reward = reward * 0.8  # Placeholder
@@ -335,8 +369,9 @@ class CounterfactualRLAgent(CausalRLAgent):
         super().__init__(*args, **kwargs)
         self.counterfactual_experiences = []
 
-    def update_with_counterfactuals(self, trajectory: List[Tuple],
-                                  interventions: List[Dict[str, float]]) -> Dict[str, float]:
+    def update_with_counterfactuals(
+        self, trajectory: List[Tuple], interventions: List[Dict[str, float]]
+    ) -> Dict[str, float]:
         """
         Update using counterfactual reasoning
 
@@ -365,11 +400,11 @@ class CounterfactualRLAgent(CausalRLAgent):
             [t[1] for t in trajectory],
             [t[2] for t in trajectory],
             [t[3] for t in trajectory],
-            [t[4] for t in trajectory]
+            [t[4] for t in trajectory],
         )
 
         return {
             **standard_losses,
-            'counterfactual_loss': total_loss.item(),
-            'avg_counterfactual_loss': np.mean(counterfactual_losses)
+            "counterfactual_loss": total_loss.item(),
+            "avg_counterfactual_loss": np.mean(counterfactual_losses),
         }

@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Dict, List, Tuple, Optional, Any
 import warnings
-warnings.filterwarnings('ignore')
+
+warnings.filterwarnings("ignore")
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

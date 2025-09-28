@@ -129,8 +129,9 @@ class CausalDiscovery:
     """
 
     @staticmethod
-    def pc_algorithm(data: np.ndarray, variable_names: List[str],
-                    alpha: float = 0.05) -> CausalGraph:
+    def pc_algorithm(
+        data: np.ndarray, variable_names: List[str], alpha: float = 0.05
+    ) -> CausalGraph:
         """
         PC algorithm for causal discovery
 
@@ -231,6 +232,8 @@ class CausalDiscovery:
             # Remove this variable from consideration
             residuals = np.delete(residuals, target_idx, axis=1)
             data = np.delete(data, target_idx, axis=1)
-            variable_names = [v for k, v in enumerate(variable_names) if k != target_idx]
+            variable_names = [
+                v for k, v in enumerate(variable_names) if k != target_idx
+            ]
 
         return graph
