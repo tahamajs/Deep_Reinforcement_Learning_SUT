@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Dict, List, Tuple, Optional
 
+
 def experiment_td0(env, policy, num_episodes=1000, alpha=0.1, gamma=0.9):
     """Run TD(0) policy evaluation experiment"""
     from algorithms import TD0Agent
@@ -10,11 +11,16 @@ def experiment_td0(env, policy, num_episodes=1000, alpha=0.1, gamma=0.9):
 
     return agent, V_td
 
-def experiment_q_learning(env, num_episodes=1000, alpha=0.1, gamma=0.9, epsilon=0.1, epsilon_decay=0.995):
+
+def experiment_q_learning(
+    env, num_episodes=1000, alpha=0.1, gamma=0.9, epsilon=0.1, epsilon_decay=0.995
+):
     """Run Q-Learning experiment"""
     from algorithms import QLearningAgent
 
-    agent = QLearningAgent(env, alpha=alpha, gamma=gamma, epsilon=epsilon, epsilon_decay=epsilon_decay)
+    agent = QLearningAgent(
+        env, alpha=alpha, gamma=gamma, epsilon=epsilon, epsilon_decay=epsilon_decay
+    )
     agent.train(num_episodes=num_episodes, print_every=200)
 
     V_optimal = agent.get_value_function()
@@ -23,11 +29,16 @@ def experiment_q_learning(env, num_episodes=1000, alpha=0.1, gamma=0.9, epsilon=
 
     return agent, V_optimal, optimal_policy, evaluation
 
-def experiment_sarsa(env, num_episodes=1000, alpha=0.1, gamma=0.9, epsilon=0.1, epsilon_decay=0.995):
+
+def experiment_sarsa(
+    env, num_episodes=1000, alpha=0.1, gamma=0.9, epsilon=0.1, epsilon_decay=0.995
+):
     """Run SARSA experiment"""
     from algorithms import SARSAAgent
 
-    agent = SARSAAgent(env, alpha=alpha, gamma=gamma, epsilon=epsilon, epsilon_decay=epsilon_decay)
+    agent = SARSAAgent(
+        env, alpha=alpha, gamma=gamma, epsilon=epsilon, epsilon_decay=epsilon_decay
+    )
     agent.train(num_episodes=num_episodes, print_every=200)
 
     V_sarsa = agent.get_value_function()
@@ -36,11 +47,14 @@ def experiment_sarsa(env, num_episodes=1000, alpha=0.1, gamma=0.9, epsilon=0.1, 
 
     return agent, V_sarsa, sarsa_policy, evaluation
 
+
 def experiment_exploration_strategies(env, strategies, num_episodes=300, num_runs=2):
     """Run exploration strategies comparison experiment"""
     from exploration import ExplorationExperiment
 
     experiment = ExplorationExperiment(env)
-    results = experiment.run_exploration_experiment(strategies, num_episodes=num_episodes, num_runs=num_runs)
+    results = experiment.run_exploration_experiment(
+        strategies, num_episodes=num_episodes, num_runs=num_runs
+    )
 
     return results

@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Dict, List, Tuple, Optional
 
+
 class RandomPolicy:
     """Random policy for testing TD(0)"""
 

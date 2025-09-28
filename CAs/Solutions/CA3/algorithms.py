@@ -3,6 +3,7 @@ import pandas as pd
 from collections import defaultdict
 from typing import Dict, List, Tuple, Optional
 
+
 class TD0Agent:
     """
     TD(0) agent for policy evaluation
@@ -22,7 +23,7 @@ class TD0Agent:
 
     def get_action(self, state):
         """Get action from policy"""
-        if hasattr(self.policy, 'get_action'):
+        if hasattr(self.policy, "get_action"):
             return self.policy.get_action(state)
         else:
             valid_actions = self.env.get_valid_actions(state)
@@ -90,17 +91,26 @@ class TD0Agent:
         """Get current value function as dictionary"""
         return dict(self.V)
 
+
 class QLearningAgent:
     """
     Q-Learning agent for finding optimal policy
     Learns Q*(s,a) through off-policy temporal difference learning
     """
 
-    def __init__(self, env, alpha=0.1, gamma=0.9, epsilon=0.1, epsilon_decay=0.995, epsilon_min=0.01):
+    def __init__(
+        self,
+        env,
+        alpha=0.1,
+        gamma=0.9,
+        epsilon=0.1,
+        epsilon_decay=0.995,
+        epsilon_min=0.01,
+    ):
         self.env = env
-        self.alpha = alpha          # Learning rate
-        self.gamma = gamma          # Discount factor
-        self.epsilon = epsilon      # Exploration rate
+        self.alpha = alpha  # Learning rate
+        self.gamma = gamma  # Discount factor
+        self.epsilon = epsilon  # Exploration rate
         self.epsilon_decay = epsilon_decay
         self.epsilon_min = epsilon_min
 
@@ -205,8 +215,10 @@ class QLearningAgent:
             if (episode + 1) % print_every == 0:
                 avg_reward = np.mean(self.episode_rewards[-print_every:])
                 avg_steps = np.mean(self.episode_steps[-print_every:])
-                print(f"Episode {episode + 1}: Avg Reward = {avg_reward:.2f}, "
-                      f"Avg Steps = {avg_steps:.1f}, ε = {self.epsilon:.3f}")
+                print(
+                    f"Episode {episode + 1}: Avg Reward = {avg_reward:.2f}, "
+                    f"Avg Steps = {avg_steps:.1f}, ε = {self.epsilon:.3f}"
+                )
 
         print("Q-Learning training completed!")
 
@@ -256,11 +268,12 @@ class QLearningAgent:
             steps_list.append(steps)
 
         return {
-            'avg_reward': np.mean(rewards),
-            'std_reward': np.std(rewards),
-            'avg_steps': np.mean(steps_list),
-            'success_rate': sum(1 for r in rewards if r > 5) / len(rewards)
+            "avg_reward": np.mean(rewards),
+            "std_reward": np.std(rewards),
+            "avg_steps": np.mean(steps_list),
+            "success_rate": sum(1 for r in rewards if r > 5) / len(rewards),
         }
+
 
 class SARSAAgent:
     """
@@ -268,7 +281,15 @@ class SARSAAgent:
     Learns Q^π(s,a) for the policy being followed
     """
 
-    def __init__(self, env, alpha=0.1, gamma=0.9, epsilon=0.1, epsilon_decay=0.995, epsilon_min=0.01):
+    def __init__(
+        self,
+        env,
+        alpha=0.1,
+        gamma=0.9,
+        epsilon=0.1,
+        epsilon_decay=0.995,
+        epsilon_min=0.01,
+    ):
         self.env = env
         self.alpha = alpha
         self.gamma = gamma
@@ -338,7 +359,9 @@ class SARSAAgent:
             else:
                 next_action = self.get_action(next_state, explore=True)
 
-            td_error = self.update_q_sarsa(state, action, reward, next_state, next_action, done)
+            td_error = self.update_q_sarsa(
+                state, action, reward, next_state, next_action, done
+            )
 
             state = next_state
             action = next_action
@@ -366,8 +389,10 @@ class SARSAAgent:
             if (episode + 1) % print_every == 0:
                 avg_reward = np.mean(self.episode_rewards[-print_every:])
                 avg_steps = np.mean(self.episode_steps[-print_every:])
-                print(f"Episode {episode + 1}: Avg Reward = {avg_reward:.2f}, "
-                      f"Avg Steps = {avg_steps:.1f}, ε = {self.epsilon:.3f}")
+                print(
+                    f"Episode {episode + 1}: Avg Reward = {avg_reward:.2f}, "
+                    f"Avg Steps = {avg_steps:.1f}, ε = {self.epsilon:.3f}"
+                )
 
         print("SARSA training completed!")
 
@@ -417,8 +442,8 @@ class SARSAAgent:
             steps_list.append(steps)
 
         return {
-            'avg_reward': np.mean(rewards),
-            'std_reward': np.std(rewards),
-            'avg_steps': np.mean(steps_list),
-            'success_rate': sum(1 for r in rewards if r > 5) / len(rewards)
+            "avg_reward": np.mean(rewards),
+            "std_reward": np.std(rewards),
+            "avg_steps": np.mean(steps_list),
+            "success_rate": sum(1 for r in rewards if r > 5) / len(rewards),
         }

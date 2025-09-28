@@ -5,18 +5,20 @@ from typing import Dict, List, Tuple, Optional
 import random
 from collections import defaultdict, deque
 import warnings
-warnings.filterwarnings('ignore')
+
+warnings.filterwarnings("ignore")
 
 np.random.seed(42)
 random.seed(42)
 
-plt.rcParams['figure.figsize'] = (10, 6)
-plt.rcParams['font.size'] = 12
+plt.rcParams["figure.figsize"] = (10, 6)
+plt.rcParams["font.size"] = 12
 sns.set_style("whitegrid")
 
 print("Libraries imported successfully!")
 print("Environment configured for Temporal Difference Learning")
 print("Session 3: Ready to explore model-free reinforcement learning!")
+
 
 class GridWorld:
     """
@@ -32,12 +34,12 @@ class GridWorld:
 
         self.states = [(i, j) for i in range(size) for j in range(size)]
 
-        self.actions = ['up', 'down', 'left', 'right']
+        self.actions = ["up", "down", "left", "right"]
         self.action_effects = {
-            'up': (-1, 0),
-            'down': (1, 0),
-            'left': (0, -1),
-            'right': (0, 1)
+            "up": (-1, 0),
+            "down": (1, 0),
+            "left": (0, -1),
+            "right": (0, 1),
         }
 
         self.start_state = (0, 0)
@@ -75,7 +77,7 @@ class GridWorld:
         else:
             reward = self.step_reward
 
-        done = (next_state == self.goal_state)
+        done = next_state == self.goal_state
 
         self.current_state = next_state
 
@@ -104,34 +106,77 @@ class GridWorld:
                     grid[i, j] = values.get(state, 0)
 
         fig, ax = plt.subplots(figsize=(8, 6))
-        im = ax.imshow(grid, cmap='RdYlGn', aspect='equal')
+        im = ax.imshow(grid, cmap="RdYlGn", aspect="equal")
 
-        arrow_map = {'up': '↑', 'down': '↓', 'left': '←', 'right': '→'}
+        arrow_map = {"up": "↑", "down": "↓", "left": "←", "right": "→"}
         for i in range(self.size):
             for j in range(self.size):
                 state = (i, j)
                 if state == self.goal_state:
-                    ax.text(j, i, 'G', ha='center', va='center',
-                           fontsize=16, fontweight='bold', color='darkgreen')
+                    ax.text(
+                        j,
+                        i,
+                        "G",
+                        ha="center",
+                        va="center",
+                        fontsize=16,
+                        fontweight="bold",
+                        color="darkgreen",
+                    )
                 elif state in self.obstacles:
-                    ax.text(j, i, 'X', ha='center', va='center',
-                           fontsize=16, fontweight='bold', color='darkred')
+                    ax.text(
+                        j,
+                        i,
+                        "X",
+                        ha="center",
+                        va="center",
+                        fontsize=16,
+                        fontweight="bold",
+                        color="darkred",
+                    )
                 elif state == self.start_state:
-                    ax.text(j, i-0.3, 'S', ha='center', va='center',
-                           fontsize=12, fontweight='bold', color='blue')
-                    ax.text(j, i+0.2, f'{values.get(state, 0):.1f}',
-                           ha='center', va='center', fontsize=10)
+                    ax.text(
+                        j,
+                        i - 0.3,
+                        "S",
+                        ha="center",
+                        va="center",
+                        fontsize=12,
+                        fontweight="bold",
+                        color="blue",
+                    )
+                    ax.text(
+                        j,
+                        i + 0.2,
+                        f"{values.get(state, 0):.1f}",
+                        ha="center",
+                        va="center",
+                        fontsize=10,
+                    )
                 else:
-                    ax.text(j, i, f'{values.get(state, 0):.1f}',
-                           ha='center', va='center', fontsize=10)
+                    ax.text(
+                        j,
+                        i,
+                        f"{values.get(state, 0):.1f}",
+                        ha="center",
+                        va="center",
+                        fontsize=10,
+                    )
 
                 if policy and state in policy and not self.is_terminal(state):
                     action = policy[state]
                     if action in arrow_map:
-                        ax.text(j+0.3, i-0.3, arrow_map[action],
-                               ha='center', va='center', fontsize=8, color='blue')
+                        ax.text(
+                            j + 0.3,
+                            i - 0.3,
+                            arrow_map[action],
+                            ha="center",
+                            va="center",
+                            fontsize=8,
+                            color="blue",
+                        )
 
-        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.set_title(title, fontsize=14, fontweight="bold")
         ax.set_xticks(range(self.size))
         ax.set_yticks(range(self.size))
         plt.colorbar(im, ax=ax)
