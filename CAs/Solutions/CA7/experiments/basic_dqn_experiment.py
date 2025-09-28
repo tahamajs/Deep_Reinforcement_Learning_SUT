@@ -20,7 +20,7 @@ import gymnasium as gym
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from dqn import DQNAgent, PerformanceAnalyzer
+from ..agents.core import DQNAgent, PerformanceAnalyzer
 import warnings
 
 warnings.filterwarnings("ignore")

@@ -7,11 +7,11 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-from world_models.vae import VariationalAutoencoder
-from world_models.dynamics import LatentDynamicsModel
-from world_models.reward_model import RewardModel
-from world_models.world_model import WorldModel
-from world_models.trainers import WorldModelTrainer
+from ..models.vae import VariationalAutoencoder
+from ..models.dynamics import LatentDynamicsModel
+from ..models.reward_model import RewardModel
+from ..models.world_model import WorldModel
+from ..models.trainers import WorldModelTrainer
 from agents.latent_actor import LatentActor
 from agents.latent_critic import LatentCritic
 from agents.dreamer_agent import DreamerAgent

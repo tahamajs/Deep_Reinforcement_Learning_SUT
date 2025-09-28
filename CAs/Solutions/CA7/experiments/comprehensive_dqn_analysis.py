@@ -35,7 +35,7 @@ from collections import defaultdict
 from typing import Dict, List, Any, Optional
 import time
 
-from dqn import (
+from ..agents.core import (
     DQNAgent,
     DoubleDQNAgent,
     DuelingDQNAgent,

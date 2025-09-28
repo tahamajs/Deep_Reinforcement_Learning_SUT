@@ -7,8 +7,8 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-from world_models.rssm import RecurrentStateSpaceModel
-from world_models.trainers import RSSMTrainer
+from ..models.rssm import RecurrentStateSpaceModel
+from ..models.trainers import RSSMTrainer
 from environments.sequence_environment import SequenceEnvironment
 from utils.data_collection import collect_sequence_data, prepare_rssm_batch
 from utils.visualization import plot_rssm_training
