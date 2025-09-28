@@ -29,28 +29,22 @@ __author__ = "Deep RL Course"
 __description__ = "Policy Gradient Methods for Reinforcement Learning"
 
 __all__ = [
-    # Environments
     "EnvironmentWrapper",
     "create_environment",
     "get_environment_info",
-    # Policies
     "PolicyNetwork",
     "ValueNetwork",
     "create_policy_network",
     "test_policy_network",
-    # Algorithms
     "REINFORCEAgent",
     "ActorCriticAgent",
     "create_agent",
-    # Visualization
     "PolicyVisualizer",
     "PolicyGradientMathVisualizer",
     "TrainingVisualizer",
     "plot_learning_curves",
-    # Exploration
     "ExplorationScheduler",
     "create_exploration_strategy",
-    # Experiments
     "PolicyGradientExperiment",
     "run_quick_test",
 ]

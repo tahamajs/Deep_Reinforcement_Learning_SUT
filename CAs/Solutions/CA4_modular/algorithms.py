@@ -11,7 +11,7 @@ from torch.distributions import Categorical, Normal
 import numpy as np
 from typing import List, Tuple, Optional, Dict, Any
 
-# Import from local modules
+
 try:
     from .policies import (
         PolicyNetwork,
@@ -59,6 +59,9 @@ class REINFORCEAgent:
 
         if baseline:
             self.value_net = ValueNetwork(state_size)
+
+            for param in self.value_net.parameters():
+                param.requires_grad_(True)
             self.value_optimizer = optim.Adam(self.value_net.parameters(), lr=lr)
 
         self.reset_episode()
@@ -154,7 +157,6 @@ class REINFORCEAgent:
         returns = self.compute_returns(self.rewards)
         baselines = self.compute_baselines(self.states)
 
-        # Normalize returns
         returns = (returns - returns.mean()) / (returns.std() + 1e-8)
 
         policy_loss = []
@@ -171,19 +173,15 @@ class REINFORCEAgent:
 
         value_loss = None
         if self.baseline:
-            # Update value network
-            with torch.enable_grad():
-                self.value_net.train()  # Ensure training mode
-                state_tensors = torch.FloatTensor(np.array(self.states))
-                baselines = self.value_net(state_tensors).squeeze()
-                value_targets = returns.detach()
 
-                self.value_optimizer.zero_grad()
-                value_loss = F.mse_loss(baselines, value_targets)
-                value_loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.value_net.parameters(), 1.0)
-                self.value_optimizer.step()
-                value_loss = value_loss.item()
+            state_tensors = torch.FloatTensor(np.array(self.states))
+            baselines = self.value_net(state_tensors).squeeze()
+            value_targets = returns.detach()
+
+            self.value_optimizer.zero_grad()
+            value_loss = F.mse_loss(baselines, value_targets)
+
+            value_loss = value_loss.item()
 
         self.episode_rewards.append(sum(self.rewards))
         self.episode_lengths.append(len(self.rewards))
@@ -343,21 +341,19 @@ class ActorCriticAgent:
         next_state_tensor = torch.FloatTensor(next_state).unsqueeze(0)
 
         if done:
-            td_target = reward
+            td_target = torch.tensor(reward, dtype=torch.float32)
         else:
             next_value = self.critic(next_state_tensor).squeeze()
             td_target = reward + self.gamma * next_value.detach()
 
         td_error = td_target - value
 
-        # Update critic
         critic_loss = F.mse_loss(value, td_target.detach())
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 1.0)
         self.critic_optimizer.step()
 
-        # Update actor
         actor_loss = -log_prob * td_error.detach()
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
@@ -500,29 +496,24 @@ class ContinuousActorCriticTrainer:
         Returns:
             Tuple of (policy_loss, value_loss)
         """
-        # Get value of next state
+
         if done:
             td_target = reward
         else:
             next_value = self.agent.value_net(next_state).squeeze()
             td_target = reward + self.gamma * next_value.detach()
 
-        # Current value
         value = self.agent.value_net(state).squeeze()
         td_error = td_target - value
 
-        # Update value network
         value_loss = F.mse_loss(value, td_target.detach())
         self.value_optimizer.zero_grad()
         value_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.agent.value_net.parameters(), 1.0)
         self.value_optimizer.step()
 
-        # Update policy network
         log_prob, entropy, _ = self.agent.evaluate_action(state, action)
-        policy_loss = -(
-            log_prob * td_error.detach() + 0.01 * entropy
-        )  # Add entropy regularization
+        policy_loss = -(log_prob * td_error.detach() + 0.01 * entropy)
 
         self.policy_optimizer.zero_grad()
         policy_loss.backward()
@@ -640,7 +631,7 @@ def compare_algorithms(
         if hasattr(agent, "train"):
             results[alg] = agent.train(env, num_episodes, print_every=50)
         else:
-            # Handle trainer case
+
             scores = []
             for episode in range(num_episodes):
                 total_reward, _ = agent.train_episode(env)

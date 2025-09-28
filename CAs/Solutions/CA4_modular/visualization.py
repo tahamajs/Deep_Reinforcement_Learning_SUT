@@ -31,7 +31,7 @@ class PolicyVisualizer:
         Returns:
             Action probabilities
         """
-        exp_prefs = np.exp(preferences - np.max(preferences))  # Numerical stability
+        exp_prefs = np.exp(preferences - np.max(preferences))
         return exp_prefs / np.sum(exp_prefs)
 
     def gaussian_policy(self, mu: float, sigma: float, action: float) -> float:
@@ -211,7 +211,7 @@ class PolicyGradientMathVisualizer:
         axes[0, 1].legend()
         axes[0, 1].grid(True, alpha=0.3)
 
-        returns = np.random.normal(10, 5, 1000)  # Sample returns
+        returns = np.random.normal(10, 5, 1000)
         baseline_values = np.linspace(5, 15, 50)
         variances = []
 
@@ -244,8 +244,8 @@ class PolicyGradientMathVisualizer:
         baseline = np.mean(returns_sample)
 
         for episode in range(n_episodes):
-            grad_no_baseline = returns_sample[episode]  # G_t
-            grad_with_baseline = returns_sample[episode] - baseline  # G_t - b
+            grad_no_baseline = returns_sample[episode]
+            grad_with_baseline = returns_sample[episode] - baseline
 
             gradients_no_baseline.append(grad_no_baseline)
             gradients_with_baseline.append(grad_with_baseline)
@@ -350,7 +350,6 @@ class TrainingVisualizer:
 
         episodes = range(len(list(results.values())[0]))
 
-        # Learning curves
         for name, scores in results.items():
             axes[0, 0].plot(scores, alpha=0.6, label=name)
 
@@ -372,7 +371,6 @@ class TrainingVisualizer:
         axes[0, 0].legend()
         axes[0, 0].grid(True, alpha=0.3)
 
-        # Performance distribution
         data = list(results.values())
         labels = list(results.keys())
         axes[0, 1].boxplot(data, labels=labels)
@@ -380,7 +378,6 @@ class TrainingVisualizer:
         axes[0, 1].set_ylabel("Episode Reward")
         axes[0, 1].grid(True, alpha=0.3)
 
-        # Learning stability (variance)
         window_size = 50
         for name, scores in results.items():
             if len(scores) >= window_size:
@@ -399,7 +396,6 @@ class TrainingVisualizer:
         axes[1, 0].legend()
         axes[1, 0].grid(True, alpha=0.3)
 
-        # Cumulative reward
         for name, scores in results.items():
             cumsum = np.cumsum(scores)
             axes[1, 1].plot(episodes, cumsum, linewidth=2, label=name)
@@ -448,14 +444,12 @@ class TrainingVisualizer:
         models = ["Tabular", "Separate NN", "Shared NN", "Continuous NN"]
         state_sizes = [10, 100, 1000, 10000]
 
-        tabular_params = [s * 2 for s in state_sizes]  # Q-table size
+        tabular_params = [s * 2 for s in state_sizes]
         separate_params = [(s * 128 + 128 * 64 + 64 * 2) * 2 for s in state_sizes]
         shared_params = [
             s * 128 + 128 * 64 + 64 * 2 + 64 * 32 + 32 * 2 for s in state_sizes
         ]
-        continuous_params = [
-            s * 128 + 128 * 64 + 64 * 4 for s in state_sizes
-        ]  # 2 actions
+        continuous_params = [s * 128 + 128 * 64 + 64 * 4 for s in state_sizes]
 
         x = np.arange(len(state_sizes))
         width = 0.2
@@ -554,7 +548,7 @@ class TrainingVisualizer:
             400,
             1,
             10,
-        ]  # Relative memory for action representation
+        ]
 
         colors = ["skyblue", "lightcoral", "lightgreen", "orange"]
         bars = axes[1, 1].bar(
@@ -611,7 +605,6 @@ def create_training_summary(
         "convergence_episode": None,
     }
 
-    # Find convergence (when moving average stabilizes)
     if len(scores) >= 100:
         window = 20
         moving_avg = [
@@ -649,7 +642,6 @@ def print_training_comparison(results_dict: Dict[str, Dict]) -> None:
         if summary["convergence_episode"]:
             print(f"  Converged at Episode: {summary['convergence_episode']}")
 
-    # Overall comparison
     best_alg = max(summaries, key=lambda x: x["final_avg_score"])
     print(f"\nBest Performing Algorithm: {best_alg['algorithm']}")
     print(f"Final Score: {best_alg['final_avg_score']:.2f}")

@@ -262,8 +262,8 @@ class ContinuousPolicyNetwork(nn.Module):
         x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))
 
-        mu = torch.tanh(self.mu_head(x))  # Bounded actions [-1, 1]
-        log_std = torch.clamp(self.log_std_head(x), -20, 2)  # Prevent extreme values
+        mu = torch.tanh(self.mu_head(x))
+        log_std = torch.clamp(self.log_std_head(x), -20, 2)
 
         return mu, log_std
 
@@ -393,7 +393,7 @@ def test_policy_network(network: nn.Module, state_size: int, continuous: bool = 
     Returns:
         Test results dictionary
     """
-    # Create dummy state
+
     state = torch.randn(1, state_size)
 
     try:

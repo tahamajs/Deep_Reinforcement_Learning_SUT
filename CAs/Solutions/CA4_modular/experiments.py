@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from typing import Dict, List, Any, Optional, Tuple
 
-# Import from local modules
+
 try:
     from .environments import EnvironmentWrapper
     from .algorithms import REINFORCEAgent, ActorCriticAgent, compare_algorithms
@@ -194,21 +194,18 @@ class PolicyGradientExperiment:
         for strategy in exploration_strategies:
             print(f"\\nTesting {strategy} exploration...")
 
-            # Create exploration scheduler
             exploration_scheduler = ExplorationScheduler(strategy, **kwargs)
 
-            # Create agent with exploration
             if base_algorithm == "reinforce":
                 agent = REINFORCEAgent(self.state_size, self.action_size, **kwargs)
             else:
                 agent = ActorCriticAgent(self.state_size, self.action_size, **kwargs)
 
-            # Run episodes with exploration
             scores = []
             exploration_rates = []
 
             for episode in range(num_episodes):
-                # Reset environment
+
                 state = self.env.reset()
                 if isinstance(state, tuple):
                     state = state[0]
@@ -218,7 +215,7 @@ class PolicyGradientExperiment:
                 truncated = False
 
                 while not (done or truncated):
-                    # Get action probabilities from agent
+
                     if hasattr(agent, "policy_net"):
                         action_probs = (
                             agent.policy_net.get_action_probs(
@@ -229,7 +226,7 @@ class PolicyGradientExperiment:
                             .flatten()
                         )
                     else:
-                        # For actor-critic, get from actor
+
                         action_probs = (
                             agent.actor.get_action_probs(
                                 torch.FloatTensor(state).unsqueeze(0)
@@ -239,20 +236,17 @@ class PolicyGradientExperiment:
                             .flatten()
                         )
 
-                    # Select action using exploration strategy
                     action = exploration_scheduler.select_action(action_probs)
 
-                    # Take step
                     next_state, reward, done, truncated, _ = self.env.step(action)
 
-                    # Store transition and update agent
                     if base_algorithm == "reinforce":
                         log_prob = agent.policy_net.get_log_prob(
                             torch.FloatTensor(state).unsqueeze(0), action
                         )
                         agent.store_transition(state, action, reward, log_prob)
                     else:
-                        # Actor-critic update
+
                         _, log_prob, value = agent.get_action_and_value(state)
                         agent.update(
                             state,
@@ -267,7 +261,6 @@ class PolicyGradientExperiment:
                     state = next_state
                     episode_reward += reward
 
-                # Update exploration
                 exploration_scheduler.update_exploration(episode_reward)
 
                 scores.append(episode_reward)
@@ -320,7 +313,6 @@ class PolicyGradientExperiment:
         for value in param_values:
             print(f"\\nTesting {param_name} = {value}...")
 
-            # Set parameter
             params = kwargs.copy()
             params[param_name] = value
 
@@ -381,7 +373,7 @@ class PolicyGradientExperiment:
         }
 
         if self.results:
-            # Find best performing experiment
+
             best_score = -float("inf")
             best_experiment = None
 
@@ -424,7 +416,7 @@ class PolicyGradientExperiment:
                 )
 
         elif len(self.results) > 1:
-            # Compare multiple experiments
+
             comparison_data = {}
             for exp_name, results in self.results.items():
                 if isinstance(results, dict) and "scores" in results:

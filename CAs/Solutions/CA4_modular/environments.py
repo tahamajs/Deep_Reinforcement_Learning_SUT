@@ -29,7 +29,7 @@ class EnvironmentWrapper:
         except Exception as e:
             print(f"Environment {env_name} not available: {e}")
             self.env = None
-            self.state_size = 4  # Default for CartPole-like
+            self.state_size = 4
             self.action_size = 2
             self.is_continuous = False
 
@@ -49,15 +49,21 @@ class EnvironmentWrapper:
                 action = action.item() if action.ndim == 0 else action[0]
 
             next_state, reward, done, truncated, info = self.env.step(action)
-            return np.array(next_state), reward, done, truncated, info
 
-        # Mock environment for demonstration
+            return (
+                np.array(next_state),
+                float(reward),
+                np.bool_(done),
+                np.bool_(truncated),
+                info,
+            )
+
         next_state = np.random.randn(self.state_size)
         reward = 1.0 if np.random.rand() > 0.5 else -1.0
         done = np.random.rand() > 0.95
         truncated = False
         info = {}
-        return next_state, reward, done, truncated, info
+        return next_state, reward, np.bool_(done), np.bool_(truncated), info
 
     def close(self):
         """Close environment"""
@@ -85,13 +91,11 @@ class PolicyDemoEnvironment:
         self.n_actions = n_actions
         self.current_state = 0
 
-        # Define transition dynamics
         self.transitions = np.random.rand(n_states, n_actions, n_states)
         self.transitions = self.transitions / self.transitions.sum(
             axis=2, keepdims=True
         )
 
-        # Define rewards
         self.rewards = np.random.randn(n_states, n_actions)
 
     def reset(self) -> int:
@@ -104,20 +108,17 @@ class PolicyDemoEnvironment:
         if action >= self.n_actions:
             action = self.n_actions - 1
 
-        # Sample next state
         next_state_probs = self.transitions[self.current_state, action]
         next_state = np.random.choice(self.n_states, p=next_state_probs)
 
-        # Get reward
         reward = self.rewards[self.current_state, action]
 
-        # Check if terminal
         done = next_state == self.n_states - 1
         truncated = False
 
         self.current_state = next_state
 
-        return next_state, reward, done, truncated, {}
+        return next_state, reward, np.bool_(done), np.bool_(truncated), {}
 
 
 def create_environment(env_name: str = "CartPole-v1") -> EnvironmentWrapper:

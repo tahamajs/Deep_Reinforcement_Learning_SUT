@@ -103,7 +103,7 @@ class BoltzmannExploration(ExplorationStrategy):
         Returns:
             Selected action
         """
-        # Apply temperature scaling
+
         scaled_probs = action_probs ** (1.0 / self.temperature)
         scaled_probs = scaled_probs / np.sum(scaled_probs)
 
@@ -140,7 +140,7 @@ class EntropyBonusExploration:
         Returns:
             Entropy value
         """
-        # Avoid log(0) by adding small epsilon
+
         probs = np.clip(action_probs, 1e-8, 1.0)
         return -np.sum(probs * np.log(probs))
 
@@ -177,7 +177,6 @@ class CuriosityDrivenExploration:
         self.state_size = state_size
         self.beta = beta
 
-        # Forward model: predicts next state from current state and action
         self.forward_model = torch.nn.Sequential(
             torch.nn.Linear(state_size + 1, hidden_size),
             torch.nn.ReLU(),
@@ -200,18 +199,15 @@ class CuriosityDrivenExploration:
         Returns:
             Intrinsic reward
         """
-        # Prepare input for forward model
+
         state_action = np.concatenate([state, [action]])
         state_action_tensor = torch.FloatTensor(state_action).unsqueeze(0)
         next_state_tensor = torch.FloatTensor(next_state).unsqueeze(0)
 
-        # Predict next state
         predicted_next = self.forward_model(state_action_tensor)
 
-        # Compute prediction error
         prediction_error = self.criterion(predicted_next, next_state_tensor).item()
 
-        # Update forward model
         self.optimizer.zero_grad()
         loss = self.criterion(predicted_next, next_state_tensor)
         loss.backward()
@@ -262,17 +258,15 @@ class ExplorationScheduler:
         """
         self.episode_rewards.append(episode_reward)
 
-        # Store current exploration rate
         if hasattr(self.strategy, "epsilon"):
             self.exploration_rates.append(self.strategy.epsilon)
         elif hasattr(self.strategy, "temperature"):
             self.exploration_rates.append(self.strategy.temperature)
 
-        # Adaptive update based on performance
         if len(self.episode_rewards) >= 10:
             recent_avg = np.mean(self.episode_rewards[-10:])
-            if recent_avg > np.mean(self.episode_rewards):  # Improving
-                # Reduce exploration more aggressively
+            if recent_avg > np.mean(self.episode_rewards):
+
                 if hasattr(self.strategy, "decay_rate"):
                     self.strategy.decay_rate = min(
                         0.999, self.strategy.decay_rate * 1.01
@@ -384,7 +378,6 @@ class ExplorationVisualizer:
             if rewards:
                 axes[0, 1].plot(rewards, label=strategy_name, alpha=0.7)
 
-                # Performance distribution
                 axes[1, 0].boxplot(
                     [rewards],
                     positions=[list(strategies_results.keys()).index(strategy_name)],
@@ -407,12 +400,11 @@ class ExplorationVisualizer:
         axes[1, 0].set_ylabel("Episode Reward")
         axes[1, 0].grid(True, alpha=0.3)
 
-        # Sample efficiency comparison
         sample_efficiency = {}
         for strategy_name, results in strategies_results.items():
             rewards = results.get("episode_rewards", [])
             if rewards:
-                # Episodes to reach 80% of max performance
+
                 max_reward = np.max(rewards)
                 threshold = 0.8 * max_reward
                 episodes_to_threshold = next(
@@ -478,7 +470,7 @@ def test_exploration_strategy(
     Returns:
         Test results dictionary
     """
-    # Mock action probabilities (prefer action 0)
+
     action_probs = np.array([0.7, 0.2, 0.1])
 
     action_counts = np.zeros(len(action_probs))
