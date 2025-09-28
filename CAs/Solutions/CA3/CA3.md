@@ -1,54 +1,54 @@
-# CA3: Temporal Difference Learning and Q-Learning
+# Ca3: Temporal Difference Learning and Q-learning
 # Table of Contents
 
 - [CA3: Temporal Difference Learning and Q-Learning](#ca3-temporal-difference-learning-and-q-learning)
-  - [Model-Free Reinforcement Learning Methods](#model-free-reinforcement-learning-methods)
-    - [Learning Objectives](#learning-objectives)
-    - [Prerequisites](#prerequisites)
-    - [Roadmap](#roadmap)
-  - [Part 1: Environment Setup and GridWorld Implementation](#part-1-environment-setup-and-gridworld-implementation)
-    - [Introduction to Temporal Difference Learning](#introduction-to-temporal-difference-learning)
-    - [The Three Learning Paradigms](#the-three-learning-paradigms)
-    - [TD Learning Advantages](#td-learning-advantages)
+- [Model-Free Reinforcement Learning Methods](#model-free-reinforcement-learning-methods)
+- [Learning Objectives](#learning-objectives)
+- [Prerequisites](#prerequisites)
+- [Roadmap](#roadmap)
+- [Part 1: Environment Setup and GridWorld Implementation](#part-1-environment-setup-and-gridworld-implementation)
+- [Introduction to Temporal Difference Learning](#introduction-to-temporal-difference-learning)
+- [The Three Learning Paradigms](#the-three-learning-paradigms)
+- [TD Learning Advantages](#td-learning-advantages)
 - [Import from modular files](#import-from-modular-files)
 - [Visualize the environment](#visualize-the-environment)
-  - [Part 2: TD(0) Learning - Bootstrapping from Experience](#part-2-td0-learning---bootstrapping-from-experience)
-    - [Understanding TD(0) Algorithm](#understanding-td0-algorithm)
-    - [Mathematical Foundation](#mathematical-foundation)
-    - [TD(0) vs Other Methods](#td0-vs-other-methods)
-    - [Learning Rate (α) Impact](#learning-rate-α-impact)
-  - [Part 3: Q-Learning - Off-Policy Control](#part-3-q-learning---off-policy-control)
-    - [From Policy Evaluation to Control](#from-policy-evaluation-to-control)
-    - [Q-Learning Algorithm](#q-learning-algorithm)
-    - [Off-Policy Nature](#off-policy-nature)
-    - [Q-Learning vs SARSA Comparison](#q-learning-vs-sarsa-comparison)
-    - [Exploration-Exploitation Trade-off](#exploration-exploitation-trade-off)
-  - [Part 4: SARSA - On-Policy Control](#part-4-sarsa---on-policy-control)
-    - [Understanding SARSA Algorithm](#understanding-sarsa-algorithm)
-    - [SARSA vs Q-Learning: Key Differences](#sarsa-vs-q-learning-key-differences)
-    - [SARSA Update Rule](#sarsa-update-rule)
-    - [On-Policy Nature](#on-policy-nature)
-    - [When to Use SARSA vs Q-Learning](#when-to-use-sarsa-vs-q-learning)
-  - [Part 5: Exploration Strategies in Reinforcement Learning](#part-5-exploration-strategies-in-reinforcement-learning)
-    - [The Exploration-Exploitation Dilemma](#the-exploration-exploitation-dilemma)
-    - [Common Exploration Strategies](#common-exploration-strategies)
-      - [1. Epsilon-Greedy (ε-greedy)](#1-epsilon-greedy-ε-greedy)
-      - [2. Decaying Epsilon](#2-decaying-epsilon)
-      - [3. Boltzmann Exploration (Softmax)](#3-boltzmann-exploration-softmax)
-      - [4. Upper Confidence Bound (UCB)](#4-upper-confidence-bound-ucb)
-    - [Exploration in Different Environments](#exploration-in-different-environments)
-  - [Part 6: Algorithm Comparison and Analysis](#part-6-algorithm-comparison-and-analysis)
-    - [Comparative Analysis of TD Learning Algorithms](#comparative-analysis-of-td-learning-algorithms)
-    - [Key Comparison Dimensions](#key-comparison-dimensions)
-  - [Part 7: Session Summary and Interactive Exercises](#part-7-session-summary-and-interactive-exercises)
-    - [Session Summary: Temporal Difference Learning](#session-summary-temporal-difference-learning)
-    - [Key Achievements](#key-achievements)
-    - [Algorithm Selection Guide](#algorithm-selection-guide)
-    - [Next Steps and Advanced Topics](#next-steps-and-advanced-topics)
+- [Part 2: TD(0) Learning - Bootstrapping from Experience](#part-2-td0-learning---bootstrapping-from-experience)
+- [Understanding TD(0) Algorithm](#understanding-td0-algorithm)
+- [Mathematical Foundation](#mathematical-foundation)
+- [TD(0) vs Other Methods](#td0-vs-other-methods)
+- [Learning Rate (α) Impact](#learning-rate-α-impact)
+- [Part 3: Q-Learning - Off-Policy Control](#part-3-q-learning---off-policy-control)
+- [From Policy Evaluation to Control](#from-policy-evaluation-to-control)
+- [Q-Learning Algorithm](#q-learning-algorithm)
+- [Off-Policy Nature](#off-policy-nature)
+- [Q-Learning vs SARSA Comparison](#q-learning-vs-sarsa-comparison)
+- [Exploration-Exploitation Trade-off](#exploration-exploitation-trade-off)
+- [Part 4: SARSA - On-Policy Control](#part-4-sarsa---on-policy-control)
+- [Understanding SARSA Algorithm](#understanding-sarsa-algorithm)
+- [SARSA vs Q-Learning: Key Differences](#sarsa-vs-q-learning-key-differences)
+- [SARSA Update Rule](#sarsa-update-rule)
+- [On-Policy Nature](#on-policy-nature)
+- [When to Use SARSA vs Q-Learning](#when-to-use-sarsa-vs-q-learning)
+- [Part 5: Exploration Strategies in Reinforcement Learning](#part-5-exploration-strategies-in-reinforcement-learning)
+- [The Exploration-Exploitation Dilemma](#the-exploration-exploitation-dilemma)
+- [Common Exploration Strategies](#common-exploration-strategies)
+- [1. Epsilon-Greedy (ε-greedy)](#1-epsilon-greedy-ε-greedy)
+- [2. Decaying Epsilon](#2-decaying-epsilon)
+- [3. Boltzmann Exploration (Softmax)](#3-boltzmann-exploration-softmax)
+- [4. Upper Confidence Bound (UCB)](#4-upper-confidence-bound-ucb)
+- [Exploration in Different Environments](#exploration-in-different-environments)
+- [Part 6: Algorithm Comparison and Analysis](#part-6-algorithm-comparison-and-analysis)
+- [Comparative Analysis of TD Learning Algorithms](#comparative-analysis-of-td-learning-algorithms)
+- [Key Comparison Dimensions](#key-comparison-dimensions)
+- [Part 7: Session Summary and Interactive Exercises](#part-7-session-summary-and-interactive-exercises)
+- [Session Summary: Temporal Difference Learning](#session-summary-temporal-difference-learning)
+- [Key Achievements](#key-achievements)
+- [Algorithm Selection Guide](#algorithm-selection-guide)
+- [Next Steps and Advanced Topics](#next-steps-and-advanced-topics)
 
 
 
-## Model-Free Reinforcement Learning Methods
+## Model-free Reinforcement Learning Methods
 
 Welcome to Computer Assignment 3, where we transition from model-based reinforcement learning to model-free methods through Temporal Difference (TD) learning. This assignment explores how agents can learn optimal policies directly from experience without requiring knowledge of the environment's dynamics, establishing the foundation for modern reinforcement learning algorithms.
 
@@ -82,7 +82,7 @@ This comprehensive assignment follows a structured progression from theory to pr
 
 Let's dive into the world of model-free reinforcement learning and discover how agents can learn from pure experience!
 
-## Part 1: Environment Setup and GridWorld Implementation
+## Part 1: Environment Setup and Gridworld Implementation
 
 ### Introduction to Temporal Difference Learning
 
@@ -100,7 +100,7 @@ Let's dive into the world of model-free reinforcement learning and discover how 
 | **Monte Carlo** | No | After episode | High | None |
 | **Temporal Difference** | No | After each step | Low | Some (bootstrap) |
 
-### TD Learning Advantages
+### Td Learning Advantages
 
 1. **Online Learning**: Can learn while interacting with environment
 2. **No Model Required**: Works without knowing P(s'|s,a) or R(s,a,s')
@@ -130,13 +130,13 @@ print("Libraries imported successfully!")
 print("Environment configured for Temporal Difference Learning")
 print("Session 3: Ready to explore model-free reinforcement learning!")
 
-# Import from modular files
+# Import from Modular Files
 from environments import GridWorld
 from agents.policies import RandomPolicy
 from agents.algorithms import TD0Agent, QLearningAgent, SARSAAgent
-from utils.visualization import plot_learning_curve, plot_q_learning_analysis, compare_algorithms
+from utils.visualization import plot*learning*curve, plot*q*learning*analysis, compare*algorithms
 from agents.exploration import ExplorationStrategies, BoltzmannQLearning
-from experiments import experiment_td0, experiment_q_learning, experiment_sarsa
+from experiments import experiment*td0, experiment*q*learning, experiment*sarsa
 
 print("Modular components imported successfully!")
 ```
@@ -160,9 +160,9 @@ print(f"Obstacles: {env.obstacles}")
 state = env.reset()
 print(f"\nEnvironment reset. Current state: {state}")
 next_state, reward, done, info = env.step('right')
-print(f"Action 'right': next_state={next_state}, reward={reward}, done={done}")
+print(f"Action 'right': next*state={next*state}, reward={reward}, done={done}")
 
-# Visualize the environment
+# Visualize the Environment
 env.visualize_values({state: 0 for state in env.states}, title="GridWorld Environment Layout")
 ```
 
@@ -179,13 +179,13 @@ env.visualize_values({state: 0 for state in env.states}, title="GridWorld Enviro
 
 
     
-![png](CA3_files/CA3_3_1.png)
+![png](CA3*files/CA3*3_1.png)
     
 
 
-## Part 2: TD(0) Learning - Bootstrapping from Experience
+## Part 2: Td(0) Learning - Bootstrapping from Experience
 
-### Understanding TD(0) Algorithm
+### Understanding Td(0) Algorithm
 
 **TD(0)** is the simplest temporal difference method for policy evaluation. It updates value estimates after each step using the observed reward and the current estimate of the next state.
 
@@ -193,12 +193,12 @@ env.visualize_values({state: 0 for state in env.states}, title="GridWorld Enviro
 
 **Bellman Equation for V^π(s)**:
 ```
-V^π(s) = E[R_{t+1} + γV^π(S_{t+1}) | S_t = s]
+V^π(s) = E[R*{t+1} + γV^π(S*{t+1}) | S_t = s]
 ```
 
 **TD(0) Update Rule**:
 ```
-V(S_t) ← V(S_t) + α[R_{t+1} + γV(S_{t+1}) - V(S_t)]
+V(S*t) ← V(S*t) + α[R*{t+1} + γV(S*{t+1}) - V(S_t)]
 ```
 
 **Components**:
@@ -206,16 +206,16 @@ V(S_t) ← V(S_t) + α[R_{t+1} + γV(S_{t+1}) - V(S_t)]
 - **α**: Learning rate (step size)
 - **R_{t+1}**: Observed immediate reward
 - **γ**: Discount factor
-- **TD Target**: R_{t+1} + γV(S_{t+1})
-- **TD Error**: R_{t+1} + γV(S_{t+1}) - V(S_t)
+- **TD Target**: R*{t+1} + γV(S*{t+1})
+- **TD Error**: R*{t+1} + γV(S*{t+1}) - V(S_t)
 
-### TD(0) vs Other Methods
+### Td(0) Vs Other Methods
 
 | Aspect | Monte Carlo | TD(0) | Dynamic Programming |
 |--------|-------------|-------|-------------------|
 | **Model** | Not required | Not required | Required |
 | **Update** | End of episode | Every step | Full sweep |
-| **Target** | Actual return G_t | R_{t+1} + γV(S_{t+1}) | Expected value |
+| **Target** | Actual return G*t | R*{t+1} + γV(S_{t+1}) | Expected value |
 | **Bias** | Unbiased | Biased (bootstrap) | Unbiased |
 | **Variance** | High | Low | None |
 
@@ -230,18 +230,18 @@ V(S_t) ← V(S_t) + α[R_{t+1} + γV(S_{t+1}) - V(S_t)]
 print("Creating TD(0) agent with random policy...")
 
 random_policy = RandomPolicy(env)
-td_agent = TD0Agent(env, random_policy, alpha=0.1, gamma=0.9)
+td*agent = TD0Agent(env, random*policy, alpha=0.1, gamma=0.9)
 
 print("TD(0) agent created successfully!")
 print(f"Initial value function (should be all zeros): {len(td_agent.V)} states initialized")
 
 print("\nTraining TD(0) agent...")
-V_td = td_agent.train(num_episodes=500, print_every=100)
+V*td = td*agent.train(num*episodes=500, print*every=100)
 
 print("\nLearned Value Function:")
-env.visualize_values(V_td, title="TD(0) Learned Value Function - Random Policy")
+env.visualize*values(V*td, title="TD(0) Learned Value Function - Random Policy")
 
-plot_learning_curve(td_agent.episode_rewards, "TD(0) Learning")
+plot*learning*curve(td*agent.episode*rewards, "TD(0) Learning")
 
 key_states = [(0, 0), (1, 0), (2, 0), (3, 2), (2, 2)]
 print(f"\nLearned values for key states:")
@@ -276,13 +276,13 @@ print(f"The agent learned state values through interaction with the environment.
 
 
     
-![png](CA3_files/CA3_5_1.png)
+![png](CA3*files/CA3*5_1.png)
     
 
 
 
     
-![png](CA3_files/CA3_5_2.png)
+![png](CA3*files/CA3*5_2.png)
     
 
 
@@ -306,7 +306,7 @@ print(f"The agent learned state values through interaction with the environment.
     The agent learned state values through interaction with the environment.
 
 
-## Part 3: Q-Learning - Off-Policy Control
+## Part 3: Q-learning - Off-policy Control
 
 ### From Policy Evaluation to Control
 
@@ -314,32 +314,32 @@ print(f"The agent learned state values through interaction with the environment.
 
 **Q-Learning** solves the **control** problem: find the optimal policy π* and optimal action-value function Q*(s,a).
 
-### Q-Learning Algorithm
+### Q-learning Algorithm
 
 **Objective**: Learn Q*(s,a) = optimal action-value function
 
 **Q-Learning Update Rule**:
 ```
-Q(S_t, A_t) ← Q(S_t, A_t) + α[R_{t+1} + γ max_a Q(S_{t+1}, a) - Q(S_t, A_t)]
+Q(S*t, A*t) ← Q(S*t, A*t) + α[R*{t+1} + γ max*a Q(S*{t+1}, a) - Q(S*t, A_t)]
 ```
 
 **Key Components**:
-- **Q(S_t, A_t)**: Current Q-value estimate
+- **Q(S*t, A*t)**: Current Q-value estimate
 - **α**: Learning rate
 - **R_{t+1}**: Observed reward
 - **γ**: Discount factor
-- **max_a Q(S_{t+1}, a)**: Maximum Q-value for next state (greedy action)
-- **TD Target**: R_{t+1} + γ max_a Q(S_{t+1}, a)
-- **TD Error**: R_{t+1} + γ max_a Q(S_{t+1}, a) - Q(S_t, A_t)
+- **max*a Q(S*{t+1}, a)**: Maximum Q-value for next state (greedy action)
+- **TD Target**: R*{t+1} + γ max*a Q(S_{t+1}, a)
+- **TD Error**: R*{t+1} + γ max*a Q(S*{t+1}, a) - Q(S*t, A_t)
 
-### Off-Policy Nature
+### Off-policy Nature
 
 **Q-Learning is Off-Policy**:
 - **Behavior Policy**: The policy used to generate actions (e.g., ε-greedy)
 - **Target Policy**: The policy being learned (greedy w.r.t. Q)
 - **Independence**: Can learn optimal policy while following exploratory policy
 
-### Q-Learning vs SARSA Comparison
+### Q-learning Vs Sarsa Comparison
 
 | Aspect | Q-Learning | SARSA |
 |--------|------------|--------|
@@ -349,7 +349,7 @@ Q(S_t, A_t) ← Q(S_t, A_t) + α[R_{t+1} + γ max_a Q(S_{t+1}, a) - Q(S_t, A_t)]
 | **Exploration Impact** | No direct impact on target | Affects learning target |
 | **Convergence** | To Q* under conditions | To Q^π of current policy |
 
-### Exploration-Exploitation Trade-off
+### Exploration-exploitation Trade-off
 
 **Problem**: Pure greedy policy may never discover optimal actions
 
@@ -359,49 +359,49 @@ Q(S_t, A_t) ← Q(S_t, A_t) + α[R_{t+1} + γ max_a Q(S_{t+1}, a) - Q(S_t, A_t)]
 
 **ε-greedy variants**:
 - **Fixed ε**: Constant exploration rate
-- **Decaying ε**: ε decreases over time (ε_t = ε_0 / (1 + decay_rate * t))
+- **Decaying ε**: ε decreases over time (ε*t = ε*0 / (1 + decay_rate * t))
 - **Adaptive ε**: ε based on learning progress
 
 
 ```python
 print("Creating Q-Learning agent...")
-q_agent = QLearningAgent(env, alpha=0.1, gamma=0.9, epsilon=0.1, epsilon_decay=0.995)
+q*agent = QLearningAgent(env, alpha=0.1, gamma=0.9, epsilon=0.1, epsilon*decay=0.995)
 print("Q-Learning agent created successfully!")
 print("Ready to learn optimal Q-function Q*(s,a)")
 
 print("\nTraining Q-Learning agent...")
-q_agent.train(num_episodes=1000, print_every=200)
+q*agent.train(num*episodes=1000, print_every=200)
 
-V_optimal = q_agent.get_value_function()
-optimal_policy = q_agent.get_policy()
+V*optimal = q*agent.get*value*function()
+optimal*policy = q*agent.get_policy()
 
 print("\nLearned Optimal Value Function V*(s):")
-env.visualize_values(V_optimal, title="Q-Learning: Optimal Value Function V*", policy=optimal_policy)
+env.visualize*values(V*optimal, title="Q-Learning: Optimal Value Function V*", policy=optimal_policy)
 
 print("\nEvaluating learned policy...")
-evaluation = q_agent.evaluate_policy(num_episodes=100)
+evaluation = q*agent.evaluate*policy(num_episodes=100)
 print(f"Policy Evaluation Results:")
-print(f"Average reward: {evaluation['avg_reward']:.2f} ± {evaluation['std_reward']:.2f}")
+print(f"Average reward: {evaluation['avg*reward']:.2f} ± {evaluation['std*reward']:.2f}")
 print(f"Average steps to goal: {evaluation['avg_steps']:.1f}")
 print(f"Success rate: {evaluation['success_rate']*100:.1f}%")
 
-plot_q_learning_analysis(q_agent)
+plot*q*learning*analysis(q*agent)
 
-def show_q_values(agent, states_to_show=[(0,0), (1,0), (2,0), (0,1), (2,2)]):
+def show*q*values(agent, states*to*show=[(0,0), (1,0), (2,0), (0,1), (2,2)]):
     """Display Q-values for specific states"""
     print("\nLearned Q-values for key states:")
     print("State\t\tAction\t\tQ-value")
     print("-" * 40)
 
-    for state in states_to_show:
+    for state in states*to*show:
         if not agent.env.is_terminal(state):
-            valid_actions = agent.env.get_valid_actions(state)
+            valid*actions = agent.env.get*valid_actions(state)
             for action in valid_actions:
                 q_val = agent.Q[state][action]
                 print(f"{state}\t\t{action}\t\t{q_val:.3f}")
             print("-" * 40)
 
-show_q_values(q_agent)
+show*q*values(q_agent)
 
 print("\nQ-Learning has successfully learned the optimal policy!")
 print("The agent can now navigate efficiently to the goal while avoiding obstacles.")
@@ -426,7 +426,7 @@ print("The agent can now navigate efficiently to the goal while avoiding obstacl
 
 
     
-![png](CA3_files/CA3_7_1.png)
+![png](CA3*files/CA3*7_1.png)
     
 
 
@@ -440,7 +440,7 @@ print("The agent can now navigate efficiently to the goal while avoiding obstacl
 
 
     
-![png](CA3_files/CA3_7_3.png)
+![png](CA3*files/CA3*7_3.png)
     
 
 
@@ -478,13 +478,13 @@ print("The agent can now navigate efficiently to the goal while avoiding obstacl
     The agent can now navigate efficiently to the goal while avoiding obstacles.
 
 
-## Part 4: SARSA - On-Policy Control
+## Part 4: Sarsa - On-policy Control
 
-### Understanding SARSA Algorithm
+### Understanding Sarsa Algorithm
 
 **SARSA** (State-Action-Reward-State-Action) is an **on-policy** temporal difference control algorithm that learns the action-value function Q^π(s,a) for the policy it is following.
 
-### SARSA vs Q-Learning: Key Differences
+### Sarsa Vs Q-learning: Key Differences
 
 | Aspect | SARSA | Q-Learning |
 |--------|--------|------------|
@@ -494,27 +494,27 @@ print("The agent can now navigate efficiently to the goal while avoiding obstacl
 | **Exploration Effect** | Affects learned Q-values | Only affects experience collection |
 | **Safety** | More conservative | More aggressive |
 
-### SARSA Update Rule
+### Sarsa Update Rule
 
 ```
-Q(S_t, A_t) ← Q(S_t, A_t) + α[R_{t+1} + γQ(S_{t+1}, A_{t+1}) - Q(S_t, A_t)]
+Q(S*t, A*t) ← Q(S*t, A*t) + α[R*{t+1} + γQ(S*{t+1}, A*{t+1}) - Q(S*t, A_t)]
 ```
 
-**SARSA Tuple**: (S_t, A_t, R_{t+1}, S_{t+1}, A_{t+1})
+**SARSA Tuple**: (S*t, A*t, R*{t+1}, S*{t+1}, A_{t+1})
 - **S_t**: Current state
 - **A_t**: Current action
 - **R_{t+1}**: Reward received
 - **S_{t+1}**: Next state
 - **A_{t+1}**: Next action (chosen by current policy)
 
-### On-Policy Nature
+### On-policy Nature
 
 **SARSA learns Q^π** where π is the policy being followed:
 - The policy used to select actions IS the policy being evaluated
 - Exploration actions directly affect the learned Q-values
 - More conservative in dangerous environments
 
-### When to Use SARSA vs Q-Learning
+### When to Use Sarsa Vs Q-learning
 
 **Use SARSA when**:
 - Safety is important (e.g., robot navigation)
@@ -531,23 +531,23 @@ Q(S_t, A_t) ← Q(S_t, A_t) + α[R_{t+1} + γQ(S_{t+1}, A_{t+1}) - Q(S_t, A_t)]
 
 ```python
 print("Creating SARSA agent...")
-sarsa_agent = SARSAAgent(env, alpha=0.1, gamma=0.9, epsilon=0.1, epsilon_decay=0.995)
+sarsa*agent = SARSAAgent(env, alpha=0.1, gamma=0.9, epsilon=0.1, epsilon*decay=0.995)
 print("SARSA agent created successfully!")
 print("Training SARSA agent...")
-sarsa_agent.train(num_episodes=1000, print_every=200)
+sarsa*agent.train(num*episodes=1000, print_every=200)
 
-V_sarsa = sarsa_agent.get_value_function()
-sarsa_policy = sarsa_agent.get_policy()
+V*sarsa = sarsa*agent.get*value*function()
+sarsa*policy = sarsa*agent.get_policy()
 
 print("\nSARSA Learned Value Function:")
-env.visualize_values(V_sarsa, title="SARSA: Learned Value Function", policy=sarsa_policy)
+env.visualize*values(V*sarsa, title="SARSA: Learned Value Function", policy=sarsa_policy)
 
 print("\nEvaluating SARSA policy...")
-sarsa_evaluation = sarsa_agent.evaluate_policy(num_episodes=100)
+sarsa*evaluation = sarsa*agent.evaluate*policy(num*episodes=100)
 print(f"SARSA Policy Evaluation:")
-print(f"Average reward: {sarsa_evaluation['avg_reward']:.2f} ± {sarsa_evaluation['std_reward']:.2f}")
-print(f"Average steps: {sarsa_evaluation['avg_steps']:.1f}")
-print(f"Success rate: {sarsa_evaluation['success_rate']*100:.1f}%")
+print(f"Average reward: {sarsa*evaluation['avg*reward']:.2f} ± {sarsa*evaluation['std*reward']:.2f}")
+print(f"Average steps: {sarsa*evaluation['avg*steps']:.1f}")
+print(f"Success rate: {sarsa*evaluation['success*rate']*100:.1f}%")
 ```
 
     Creating SARSA agent...
@@ -567,7 +567,7 @@ print(f"Success rate: {sarsa_evaluation['success_rate']*100:.1f}%")
 
 
     
-![png](CA3_files/CA3_9_1.png)
+![png](CA3*files/CA3*9_1.png)
     
 
 
@@ -581,7 +581,7 @@ print(f"Success rate: {sarsa_evaluation['success_rate']*100:.1f}%")
 
 ## Part 5: Exploration Strategies in Reinforcement Learning
 
-### The Exploration-Exploitation Dilemma
+### The Exploration-exploitation Dilemma
 
 **The Problem**: How to balance between:
 - **Exploitation**: Choose actions that are currently believed to be best
@@ -594,7 +594,7 @@ print(f"Success rate: {sarsa_evaluation['success_rate']*100:.1f}%")
 
 ### Common Exploration Strategies
 
-#### 1. Epsilon-Greedy (ε-greedy)
+#### 1. Epsilon-greedy (ε-greedy)
 
 **Basic ε-greedy**:
 - With probability ε: choose random action
@@ -605,13 +605,13 @@ print(f"Success rate: {sarsa_evaluation['success_rate']*100:.1f}%")
 
 #### 2. Decaying Epsilon
 
-**Exponential Decay**: ε_t = ε_0 × decay_rate^t
-**Linear Decay**: ε_t = max(ε_min, ε_0 - decay_rate × t)
-**Inverse Decay**: ε_t = ε_0 / (1 + decay_rate × t)
+**Exponential Decay**: ε*t = ε*0 × decay_rate^t
+**Linear Decay**: ε*t = max(ε*min, ε*0 - decay*rate × t)
+**Inverse Decay**: ε*t = ε*0 / (1 + decay_rate × t)
 
 **Rationale**: High exploration early, more exploitation as learning progresses
 
-#### 3. Boltzmann Exploration (Softmax)
+#### 3. Boltzmann Exploration (softmax)
 
 **Softmax Action Selection**:
 ```
@@ -624,11 +624,11 @@ Where τ (tau) is the **temperature** parameter:
 - τ → 0: Pure greedy
 - τ → ∞: Pure random
 
-#### 4. Upper Confidence Bound (UCB)
+#### 4. Upper Confidence Bound (ucb)
 
 **UCB Action Selection**:
 ```
-A_t = argmax_a [Q_t(a) + c√(ln(t)/N_t(a))]
+A*t = argmax*a [Q*t(a) + c√(ln(t)/N*t(a))]
 ```
 
 Where:
@@ -656,14 +656,14 @@ exploration_experiment = ExplorationExperiment(env)
 strategies = {
     'epsilon_0.1': {'epsilon': 0.1, 'decay': 1.0},  # Fixed epsilon
     'epsilon_0.3': {'epsilon': 0.3, 'decay': 1.0},  # Higher fixed epsilon
-    'epsilon_decay_fast': {'epsilon': 0.9, 'decay': 0.99},  # Fast decay
-    'epsilon_decay_slow': {'epsilon': 0.5, 'decay': 0.995},  # Slow decay
+    'epsilon*decay*fast': {'epsilon': 0.9, 'decay': 0.99},  # Fast decay
+    'epsilon*decay*slow': {'epsilon': 0.5, 'decay': 0.995},  # Slow decay
     'boltzmann': {'temperature': 2.0}  # Boltzmann exploration
 }
 
-results = exploration_experiment.run_exploration_experiment(strategies, num_episodes=300, num_runs=2)
+results = exploration*experiment.run*exploration*experiment(strategies, num*episodes=300, num_runs=2)
 
-def analyze_exploration_results(results):
+def analyze*exploration*results(results):
     """Analyze and visualize exploration experiment results"""
 
     print("\nEXPLORATION STRATEGY COMPARISON")
@@ -674,20 +674,20 @@ def analyze_exploration_results(results):
     strategy_performance = {}
 
     for strategy, runs in results.items():
-        avg_rewards = [run['evaluation']['avg_reward'] for run in runs]
-        success_rates = [run['evaluation']['success_rate'] for run in runs]
+        avg*rewards = [run['evaluation']['avg*reward'] for run in runs]
+        success*rates = [run['evaluation']['success*rate'] for run in runs]
 
-        mean_reward = np.mean(avg_rewards)
-        mean_success = np.mean(success_rates)
-        std_reward = np.std(avg_rewards)
+        mean*reward = np.mean(avg*rewards)
+        mean*success = np.mean(success*rates)
+        std*reward = np.std(avg*rewards)
 
         strategy_performance[strategy] = {
-            'mean_reward': mean_reward,
-            'mean_success': mean_success,
-            'std_reward': std_reward
+            'mean*reward': mean*reward,
+            'mean*success': mean*success,
+            'std*reward': std*reward
         }
 
-        print(f"{strategy:<20} {mean_reward:<12.2f} {mean_success*100:<15.1f}% {std_reward:<12.3f}")
+        print(f"{strategy:<20} {mean*reward:<12.2f} {mean*success*100:<15.1f}% {std_reward:<12.3f}")
 
     plt.figure(figsize=(15, 10))
 
@@ -703,21 +703,21 @@ def analyze_exploration_results(results):
     plt.grid(True, alpha=0.3)
 
     plt.subplot(2, 2, 2)
-    strategies_list = list(strategy_performance.keys())
-    rewards = [strategy_performance[s]['mean_reward'] for s in strategies_list]
-    errors = [strategy_performance[s]['std_reward'] for s in strategies_list]
+    strategies*list = list(strategy*performance.keys())
+    rewards = [strategy*performance[s]['mean*reward'] for s in strategies_list]
+    errors = [strategy*performance[s]['std*reward'] for s in strategies_list]
 
     bars = plt.bar(range(len(strategies_list)), rewards, yerr=errors,
                    capsize=5, alpha=0.7, color=['blue', 'red', 'green', 'orange', 'purple'])
-    plt.xticks(range(len(strategies_list)), strategies_list, rotation=45)
+    plt.xticks(range(len(strategies*list)), strategies*list, rotation=45)
     plt.ylabel('Average Reward')
     plt.title('Final Performance Comparison')
     plt.grid(True, alpha=0.3)
 
     plt.subplot(2, 2, 3)
-    success_rates = [strategy_performance[s]['mean_success']*100 for s in strategies_list]
-    plt.bar(range(len(strategies_list)), success_rates, alpha=0.7, color='green')
-    plt.xticks(range(len(strategies_list)), strategies_list, rotation=45)
+    success*rates = [strategy*performance[s]['mean*success']*100 for s in strategies*list]
+    plt.bar(range(len(strategies*list)), success*rates, alpha=0.7, color='green')
+    plt.xticks(range(len(strategies*list)), strategies*list, rotation=45)
     plt.ylabel('Success Rate (%)')
     plt.title('Success Rate Comparison')
     plt.grid(True, alpha=0.3)
@@ -737,7 +737,7 @@ def analyze_exploration_results(results):
 
     return strategy_performance
 
-performance_analysis = analyze_exploration_results(results)
+performance*analysis = analyze*exploration_results(results)
 
 print("\n" + "=" * 80)
 print("EXPLORATION STRATEGY INSIGHTS")
@@ -776,35 +776,35 @@ print("=" * 80)
 
 ## Part 6: Algorithm Comparison and Analysis
 
-### Comparative Analysis of TD Learning Algorithms
+### Comparative Analysis of Td Learning Algorithms
 
 Now that we have implemented and trained all three algorithms (TD(0), Q-Learning, and SARSA), let's compare their performance, learning characteristics, and suitability for different scenarios.
 
 ### Key Comparison Dimensions
 
 1. **Learning Objective**:
-   - TD(0): Policy evaluation (learns V^π for fixed policy)
-   - Q-Learning: Optimal control (learns Q*)
-   - SARSA: On-policy control (learns Q^π for behavior policy)
+- TD(0): Policy evaluation (learns V^π for fixed policy)
+- Q-Learning: Optimal control (learns Q*)
+- SARSA: On-policy control (learns Q^π for behavior policy)
 
 2. **Policy Type**:
-   - TD(0): Uses provided policy (RandomPolicy in our case)
-   - Q-Learning: Off-policy (learns optimal policy)
-   - SARSA: On-policy (learns policy being followed)
+- TD(0): Uses provided policy (RandomPolicy in our case)
+- Q-Learning: Off-policy (learns optimal policy)
+- SARSA: On-policy (learns policy being followed)
 
 3. **Update Mechanism**:
-   - TD(0): V(s) ← V(s) + α[R + γV(s') - V(s)]
-   - Q-Learning: Q(s,a) ← Q(s,a) + α[R + γmax_a'Q(s',a') - Q(s,a)]
-   - SARSA: Q(s,a) ← Q(s,a) + α[R + γQ(s',a') - Q(s,a)]
+- TD(0): V(s) ← V(s) + α[R + γV(s') - V(s)]
+- Q-Learning: Q(s,a) ← Q(s,a) + α[R + γmax_a'Q(s',a') - Q(s,a)]
+- SARSA: Q(s,a) ← Q(s,a) + α[R + γQ(s',a') - Q(s,a)]
 
 4. **Exploration Handling**:
-   - TD(0): Exploration determined by evaluation policy
-   - Q-Learning: Exploration affects behavior but not targets
-   - SARSA: Exploration affects both behavior and targets
+- TD(0): Exploration determined by evaluation policy
+- Q-Learning: Exploration affects behavior but not targets
+- SARSA: Exploration affects both behavior and targets
 
 
 ```python
-comparison_results = compare_algorithms()
+comparison*results = compare*algorithms()
 
 print("\n" + "=" * 80)
 print("ALGORITHM ANALYSIS SUMMARY")
@@ -823,12 +823,12 @@ print("=" * 80)
     TypeError                                 Traceback (most recent call last)
 
     Cell In[7], line 1
-    ----> 1 comparison_results = compare_algorithms()
+    ----> 1 comparison*results = compare*algorithms()
           3 print("\n" + "=" * 80)
           4 print("ALGORITHM ANALYSIS SUMMARY")
 
 
-    TypeError: compare_algorithms() missing 8 required positional arguments: 'td_agent', 'q_agent', 'sarsa_agent', 'V_td', 'V_optimal', 'V_sarsa', 'evaluation', and 'sarsa_evaluation'
+    TypeError: compare*algorithms() missing 8 required positional arguments: 'td*agent', 'q*agent', 'sarsa*agent', 'V*td', 'V*optimal', 'V*sarsa', 'evaluation', and 'sarsa*evaluation'
 
 
 ## Part 7: Session Summary and Interactive Exercises
@@ -882,7 +882,7 @@ print("=" * 80)
 print("SESSION 3 SUMMARY: TEMPORAL DIFFERENCE LEARNING")
 print("=" * 80)
 
-def print_session_summary():
+def print*session*summary():
     """Print comprehensive session summary"""
 
     summary_points = {
@@ -956,7 +956,7 @@ def print_session_summary():
         for reason in reasons:
             print(f"  • {reason}")
 
-print_session_summary()
+print*session*summary()
 
 print("\n" + "=" * 80)
 print("FINAL PERFORMANCE SUMMARY")
@@ -972,7 +972,7 @@ try:
         },
         "SARSA": {
             "Type": "On-policy Control",
-            "Performance": sarsa_evaluation if 'sarsa_evaluation' in globals() else "Not evaluated",
+            "Performance": sarsa*evaluation if 'sarsa*evaluation' in globals() else "Not evaluated",
             "Convergence": "Slower but safer",
             "Exploration": "ε-greedy with decay"
         }
@@ -1096,7 +1096,7 @@ print("=" * 80)
 print("INTERACTIVE LEARNING EXERCISES")
 print("=" * 80)
 
-def self_check_questions():
+def self*check*questions():
     """Self-assessment questions for TD learning concepts"""
 
     questions = [
@@ -1181,7 +1181,7 @@ def self_check_questions():
         print(f"Explanation: {q['explanation']}")
         print()
 
-self_check_questions()
+self*check*questions()
 
 print("=" * 80)
 print("HANDS-ON CHALLENGES")

@@ -1,189 +1,189 @@
-# CA5: Deep Q-Networks and Advanced Value-Based Methods
+# Ca5: Deep Q-networks and Advanced Value-based Methods
 # Table of Contents
 
 - [CA5: Deep Q-Networks and Advanced Value-Based Methods](#ca5-deep-q-networks-and-advanced-value-based-methods)
-  - [Neural Network Function Approximation in Reinforcement Learning](#neural-network-function-approximation-in-reinforcement-learning)
-    - [Learning Objectives](#learning-objectives)
-    - [Prerequisites](#prerequisites)
-    - [Roadmap](#roadmap)
+- [Neural Network Function Approximation in Reinforcement Learning](#neural-network-function-approximation-in-reinforcement-learning)
+- [Learning Objectives](#learning-objectives)
+- [Prerequisites](#prerequisites)
+- [Roadmap](#roadmap)
 - [Part 1: From Tabular Q-Learning to Deep Q-Networks](#part-1-from-tabular-q-learning-to-deep-q-networks)
-  - [1.1 Limitations of Tabular Q-Learning](#11-limitations-of-tabular-q-learning)
-  - [1.2 Function Approximation Solution](#12-function-approximation-solution)
-  - [1.3 Deep Q-Network (DQN) Architecture](#13-deep-q-network-dqn-architecture)
-    - [1.3.1 Fully Connected DQN](#131-fully-connected-dqn)
-    - [1.3.2 Convolutional DQN](#132-convolutional-dqn)
-  - [1.4 DQN Training Process](#14-dqn-training-process)
-  - [1.5 Key Challenges in Deep Q-Learning](#15-key-challenges-in-deep-q-learning)
+- [1.1 Limitations of Tabular Q-Learning](#11-limitations-of-tabular-q-learning)
+- [1.2 Function Approximation Solution](#12-function-approximation-solution)
+- [1.3 Deep Q-Network (DQN) Architecture](#13-deep-q-network-dqn-architecture)
+- [1.3.1 Fully Connected DQN](#131-fully-connected-dqn)
+- [1.3.2 Convolutional DQN](#132-convolutional-dqn)
+- [1.4 DQN Training Process](#14-dqn-training-process)
+- [1.5 Key Challenges in Deep Q-Learning](#15-key-challenges-in-deep-q-learning)
 - [Part 2: Experience Replay and Target Networks](#part-2-experience-replay-and-target-networks)
-  - [2.1 Experience Replay](#21-experience-replay)
-    - [2.1.1 Experience Replay Mechanism](#211-experience-replay-mechanism)
-    - [2.1.2 Replay Buffer Implementation](#212-replay-buffer-implementation)
-  - [2.2 Target Networks](#22-target-networks)
-    - [2.2.1 Target Network Mechanism](#221-target-network-mechanism)
-    - [2.2.2 Target Network Benefits](#222-target-network-benefits)
-  - [2.3 Complete DQN Algorithm](#23-complete-dqn-algorithm)
-  - [2.4 Hyperparameter Considerations](#24-hyperparameter-considerations)
+- [2.1 Experience Replay](#21-experience-replay)
+- [2.1.1 Experience Replay Mechanism](#211-experience-replay-mechanism)
+- [2.1.2 Replay Buffer Implementation](#212-replay-buffer-implementation)
+- [2.2 Target Networks](#22-target-networks)
+- [2.2.1 Target Network Mechanism](#221-target-network-mechanism)
+- [2.2.2 Target Network Benefits](#222-target-network-benefits)
+- [2.3 Complete DQN Algorithm](#23-complete-dqn-algorithm)
+- [2.4 Hyperparameter Considerations](#24-hyperparameter-considerations)
 - [Part 3: Double DQN and Overestimation Bias](#part-3-double-dqn-and-overestimation-bias)
-  - [3.1 The Overestimation Problem in Q-Learning](#31-the-overestimation-problem-in-q-learning)
-    - [3.1.1 Why Overestimation Occurs](#311-why-overestimation-occurs)
-    - [3.1.2 Demonstrating Overestimation](#312-demonstrating-overestimation)
-  - [3.2 Double Q-Learning Solution](#32-double-q-learning-solution)
-    - [3.2.1 Double Q-Learning Update Rules](#321-double-q-learning-update-rules)
-  - [3.3 Double DQN (DDQN)](#33-double-dqn-ddqn)
-    - [3.3.1 Double DQN Update](#331-double-dqn-update)
-    - [3.3.2 Benefits of Double DQN](#332-benefits-of-double-dqn)
-  - [3.4 Theoretical Analysis](#34-theoretical-analysis)
-  - [3.5 Implementation Comparison](#35-implementation-comparison)
+- [3.1 The Overestimation Problem in Q-Learning](#31-the-overestimation-problem-in-q-learning)
+- [3.1.1 Why Overestimation Occurs](#311-why-overestimation-occurs)
+- [3.1.2 Demonstrating Overestimation](#312-demonstrating-overestimation)
+- [3.2 Double Q-Learning Solution](#32-double-q-learning-solution)
+- [3.2.1 Double Q-Learning Update Rules](#321-double-q-learning-update-rules)
+- [3.3 Double DQN (DDQN)](#33-double-dqn-ddqn)
+- [3.3.1 Double DQN Update](#331-double-dqn-update)
+- [3.3.2 Benefits of Double DQN](#332-benefits-of-double-dqn)
+- [3.4 Theoretical Analysis](#34-theoretical-analysis)
+- [3.5 Implementation Comparison](#35-implementation-comparison)
 - [Action selection with online network](#action-selection-with-online-network)
 - [Action evaluation with target network](#action-evaluation-with-target-network)
-  - [3.6 Empirical Results](#36-empirical-results)
+- [3.6 Empirical Results](#36-empirical-results)
 - [Part 4: Dueling DQN Architecture](#part-4-dueling-dqn-architecture)
-  - [4.1 Motivation for Dueling Networks](#41-motivation-for-dueling-networks)
-  - [4.2 The Dueling Architecture](#42-the-dueling-architecture)
-    - [4.2.1 Why Subtract the Mean?](#421-why-subtract-the-mean)
-    - [4.2.2 Alternative Formulations](#422-alternative-formulations)
-  - [4.3 Benefits of Dueling Architecture](#43-benefits-of-dueling-architecture)
-    - [4.3.1 Learning Efficiency](#431-learning-efficiency)
-    - [4.3.2 When Dueling Helps Most](#432-when-dueling-helps-most)
-  - [4.4 Implementation Details](#44-implementation-details)
-    - [4.4.1 Network Architecture](#441-network-architecture)
-    - [4.4.2 Training Considerations](#442-training-considerations)
-  - [4.5 Theoretical Properties](#45-theoretical-properties)
-    - [4.5.1 Approximation Quality](#451-approximation-quality)
-    - [4.5.2 Convergence Properties](#452-convergence-properties)
-  - [4.6 Combination with Other Techniques](#46-combination-with-other-techniques)
+- [4.1 Motivation for Dueling Networks](#41-motivation-for-dueling-networks)
+- [4.2 The Dueling Architecture](#42-the-dueling-architecture)
+- [4.2.1 Why Subtract the Mean?](#421-why-subtract-the-mean)
+- [4.2.2 Alternative Formulations](#422-alternative-formulations)
+- [4.3 Benefits of Dueling Architecture](#43-benefits-of-dueling-architecture)
+- [4.3.1 Learning Efficiency](#431-learning-efficiency)
+- [4.3.2 When Dueling Helps Most](#432-when-dueling-helps-most)
+- [4.4 Implementation Details](#44-implementation-details)
+- [4.4.1 Network Architecture](#441-network-architecture)
+- [4.4.2 Training Considerations](#442-training-considerations)
+- [4.5 Theoretical Properties](#45-theoretical-properties)
+- [4.5.1 Approximation Quality](#451-approximation-quality)
+- [4.5.2 Convergence Properties](#452-convergence-properties)
+- [4.6 Combination with Other Techniques](#46-combination-with-other-techniques)
 - [Part 5: Prioritized Experience Replay](#part-5-prioritized-experience-replay)
-  - [5.1 Motivation for Prioritized Replay](#51-motivation-for-prioritized-replay)
-  - [5.2 Prioritized Replay Mechanism](#52-prioritized-replay-mechanism)
-    - [5.2.1 Priority Definition](#521-priority-definition)
-    - [5.2.2 Sampling Probability](#522-sampling-probability)
-    - [5.2.3 Importance Sampling Correction](#523-importance-sampling-correction)
-  - [5.3 Implementation Strategies](#53-implementation-strategies)
-    - [5.3.1 Sum Tree Data Structure](#531-sum-tree-data-structure)
-    - [5.3.2 Rank-Based Prioritization](#532-rank-based-prioritization)
-  - [5.4 Prioritized Replay Algorithm](#54-prioritized-replay-algorithm)
-  - [5.5 Hyperparameter Considerations](#55-hyperparameter-considerations)
-    - [5.5.1 Priority Exponent (α)](#551-priority-exponent-α)
-    - [5.5.2 Importance Sampling Exponent (β)](#552-importance-sampling-exponent-β)
-    - [5.5.3 Other Parameters](#553-other-parameters)
-  - [5.6 Benefits and Challenges](#56-benefits-and-challenges)
-    - [5.6.1 Benefits](#561-benefits)
-    - [5.6.2 Challenges](#562-challenges)
-  - [5.7 Variants and Extensions](#57-variants-and-extensions)
-    - [5.7.1 Multi-Step Prioritization](#571-multi-step-prioritization)
-    - [5.7.2 Distributional Prioritization](#572-distributional-prioritization)
-    - [5.7.3 Curiosity-Driven Prioritization](#573-curiosity-driven-prioritization)
+- [5.1 Motivation for Prioritized Replay](#51-motivation-for-prioritized-replay)
+- [5.2 Prioritized Replay Mechanism](#52-prioritized-replay-mechanism)
+- [5.2.1 Priority Definition](#521-priority-definition)
+- [5.2.2 Sampling Probability](#522-sampling-probability)
+- [5.2.3 Importance Sampling Correction](#523-importance-sampling-correction)
+- [5.3 Implementation Strategies](#53-implementation-strategies)
+- [5.3.1 Sum Tree Data Structure](#531-sum-tree-data-structure)
+- [5.3.2 Rank-Based Prioritization](#532-rank-based-prioritization)
+- [5.4 Prioritized Replay Algorithm](#54-prioritized-replay-algorithm)
+- [5.5 Hyperparameter Considerations](#55-hyperparameter-considerations)
+- [5.5.1 Priority Exponent (α)](#551-priority-exponent-α)
+- [5.5.2 Importance Sampling Exponent (β)](#552-importance-sampling-exponent-β)
+- [5.5.3 Other Parameters](#553-other-parameters)
+- [5.6 Benefits and Challenges](#56-benefits-and-challenges)
+- [5.6.1 Benefits](#561-benefits)
+- [5.6.2 Challenges](#562-challenges)
+- [5.7 Variants and Extensions](#57-variants-and-extensions)
+- [5.7.1 Multi-Step Prioritization](#571-multi-step-prioritization)
+- [5.7.2 Distributional Prioritization](#572-distributional-prioritization)
+- [5.7.3 Curiosity-Driven Prioritization](#573-curiosity-driven-prioritization)
 - [Part 6: Rainbow DQN - Combining All Improvements](#part-6-rainbow-dqn---combining-all-improvements)
-  - [6.1 Rainbow DQN Overview](#61-rainbow-dqn-overview)
-  - [6.2 Additional Components](#62-additional-components)
-    - [6.2.1 Multi-Step Learning](#621-multi-step-learning)
-    - [6.2.2 Distributional Reinforcement Learning](#622-distributional-reinforcement-learning)
-    - [6.2.3 Noisy Networks](#623-noisy-networks)
-  - [6.3 Rainbow Architecture Integration](#63-rainbow-architecture-integration)
-    - [6.3.1 Network Architecture](#631-network-architecture)
-    - [6.3.2 Loss Function](#632-loss-function)
-    - [6.3.3 Target Network Updates](#633-target-network-updates)
-  - [6.4 Rainbow Implementation Challenges](#64-rainbow-implementation-challenges)
-    - [6.4.1 Hyperparameter Interactions](#641-hyperparameter-interactions)
-    - [6.4.2 Computational Complexity](#642-computational-complexity)
-    - [6.4.3 Implementation Complexity](#643-implementation-complexity)
-  - [6.5 Rainbow Performance Analysis](#65-rainbow-performance-analysis)
-    - [6.5.1 Ablation Studies](#651-ablation-studies)
-    - [6.5.2 Sample Efficiency](#652-sample-efficiency)
-    - [6.5.3 Computational Trade-offs](#653-computational-trade-offs)
-  - [6.6 Rainbow Variants and Extensions](#66-rainbow-variants-and-extensions)
-    - [6.6.1 Simplified Rainbow](#661-simplified-rainbow)
-    - [6.6.2 Rainbow with Additional Components](#662-rainbow-with-additional-components)
-    - [6.6.3 Distributed Rainbow](#663-distributed-rainbow)
-  - [6.7 Implementation Best Practices](#67-implementation-best-practices)
-    - [6.7.1 Component Integration Order](#671-component-integration-order)
-    - [6.7.2 Debugging Strategies](#672-debugging-strategies)
-    - [6.7.3 Hyperparameter Guidelines](#673-hyperparameter-guidelines)
+- [6.1 Rainbow DQN Overview](#61-rainbow-dqn-overview)
+- [6.2 Additional Components](#62-additional-components)
+- [6.2.1 Multi-Step Learning](#621-multi-step-learning)
+- [6.2.2 Distributional Reinforcement Learning](#622-distributional-reinforcement-learning)
+- [6.2.3 Noisy Networks](#623-noisy-networks)
+- [6.3 Rainbow Architecture Integration](#63-rainbow-architecture-integration)
+- [6.3.1 Network Architecture](#631-network-architecture)
+- [6.3.2 Loss Function](#632-loss-function)
+- [6.3.3 Target Network Updates](#633-target-network-updates)
+- [6.4 Rainbow Implementation Challenges](#64-rainbow-implementation-challenges)
+- [6.4.1 Hyperparameter Interactions](#641-hyperparameter-interactions)
+- [6.4.2 Computational Complexity](#642-computational-complexity)
+- [6.4.3 Implementation Complexity](#643-implementation-complexity)
+- [6.5 Rainbow Performance Analysis](#65-rainbow-performance-analysis)
+- [6.5.1 Ablation Studies](#651-ablation-studies)
+- [6.5.2 Sample Efficiency](#652-sample-efficiency)
+- [6.5.3 Computational Trade-offs](#653-computational-trade-offs)
+- [6.6 Rainbow Variants and Extensions](#66-rainbow-variants-and-extensions)
+- [6.6.1 Simplified Rainbow](#661-simplified-rainbow)
+- [6.6.2 Rainbow with Additional Components](#662-rainbow-with-additional-components)
+- [6.6.3 Distributed Rainbow](#663-distributed-rainbow)
+- [6.7 Implementation Best Practices](#67-implementation-best-practices)
+- [6.7.1 Component Integration Order](#671-component-integration-order)
+- [6.7.2 Debugging Strategies](#672-debugging-strategies)
+- [6.7.3 Hyperparameter Guidelines](#673-hyperparameter-guidelines)
 - [Part 7: Practical Exercises and Assignments](#part-7-practical-exercises-and-assignments)
-  - [Exercise 7.1: Basic DQN Implementation (Beginner)](#exercise-71-basic-dqn-implementation-beginner)
+- [Exercise 7.1: Basic DQN Implementation (Beginner)](#exercise-71-basic-dqn-implementation-beginner)
 - [TODO: Complete the DQN implementation](#todo-complete-the-dqn-implementation)
 - [TODO: Complete the agent implementation](#todo-complete-the-agent-implementation)
-  - [Exercise 7.2: Double DQN vs Standard DQN (Intermediate)](#exercise-72-double-dqn-vs-standard-dqn-intermediate)
+- [Exercise 7.2: Double DQN vs Standard DQN (Intermediate)](#exercise-72-double-dqn-vs-standard-dqn-intermediate)
 - [Create environment where true Q-values are known](#create-environment-where-true-q-values-are-known)
-  - [Exercise 7.3: Dueling Architecture Benefits (Intermediate)](#exercise-73-dueling-architecture-benefits-intermediate)
-  - [Exercise 7.4: Prioritized Replay Implementation (Advanced)](#exercise-74-prioritized-replay-implementation-advanced)
-  - [Exercise 7.5: Rainbow DQN Component Analysis (Expert)](#exercise-75-rainbow-dqn-component-analysis-expert)
-  - [Exercise 7.6: Real-World Application (Capstone)](#exercise-76-real-world-application-capstone)
-    - [Option A: Portfolio Management](#option-a-portfolio-management)
-    - [Option B: Resource Allocation](#option-b-resource-allocation)
-    - [Option C: Game AI](#option-c-game-ai)
-  - [Assignment Guidelines](#assignment-guidelines)
-    - [Submission Requirements](#submission-requirements)
-    - [Grading Rubric](#grading-rubric)
-    - [Bonus Opportunities](#bonus-opportunities)
+- [Exercise 7.3: Dueling Architecture Benefits (Intermediate)](#exercise-73-dueling-architecture-benefits-intermediate)
+- [Exercise 7.4: Prioritized Replay Implementation (Advanced)](#exercise-74-prioritized-replay-implementation-advanced)
+- [Exercise 7.5: Rainbow DQN Component Analysis (Expert)](#exercise-75-rainbow-dqn-component-analysis-expert)
+- [Exercise 7.6: Real-World Application (Capstone)](#exercise-76-real-world-application-capstone)
+- [Option A: Portfolio Management](#option-a-portfolio-management)
+- [Option B: Resource Allocation](#option-b-resource-allocation)
+- [Option C: Game AI](#option-c-game-ai)
+- [Assignment Guidelines](#assignment-guidelines)
+- [Submission Requirements](#submission-requirements)
+- [Grading Rubric](#grading-rubric)
+- [Bonus Opportunities](#bonus-opportunities)
 - [Part 8: Summary and Advanced Topics](#part-8-summary-and-advanced-topics)
-  - [8.1 Deep Q-Networks Evolution Summary](#81-deep-q-networks-evolution-summary)
-    - [8.1.1 Historical Progression](#811-historical-progression)
-    - [8.1.2 Key Algorithmic Insights](#812-key-algorithmic-insights)
-  - [8.2 Comparative Analysis](#82-comparative-analysis)
-    - [8.2.1 Algorithm Comparison Matrix](#821-algorithm-comparison-matrix)
-    - [8.2.2 When to Use Which Algorithm](#822-when-to-use-which-algorithm)
-  - [8.3 Limitations and Challenges](#83-limitations-and-challenges)
-    - [8.3.1 Fundamental Limitations](#831-fundamental-limitations)
-    - [8.3.2 Practical Challenges](#832-practical-challenges)
-  - [8.4 Future Directions and Research](#84-future-directions-and-research)
-    - [8.4.1 Immediate Research Directions](#841-immediate-research-directions)
-    - [8.4.2 Emerging Paradigms](#842-emerging-paradigms)
-  - [8.5 Practical Implementation Guidelines](#85-practical-implementation-guidelines)
-    - [8.5.1 Development Best Practices](#851-development-best-practices)
-    - [8.5.2 Production Considerations](#852-production-considerations)
-  - [8.6 Conclusion](#86-conclusion)
-    - [8.6.1 Key Takeaways](#861-key-takeaways)
-    - [8.6.2 Looking Forward](#862-looking-forward)
+- [8.1 Deep Q-Networks Evolution Summary](#81-deep-q-networks-evolution-summary)
+- [8.1.1 Historical Progression](#811-historical-progression)
+- [8.1.2 Key Algorithmic Insights](#812-key-algorithmic-insights)
+- [8.2 Comparative Analysis](#82-comparative-analysis)
+- [8.2.1 Algorithm Comparison Matrix](#821-algorithm-comparison-matrix)
+- [8.2.2 When to Use Which Algorithm](#822-when-to-use-which-algorithm)
+- [8.3 Limitations and Challenges](#83-limitations-and-challenges)
+- [8.3.1 Fundamental Limitations](#831-fundamental-limitations)
+- [8.3.2 Practical Challenges](#832-practical-challenges)
+- [8.4 Future Directions and Research](#84-future-directions-and-research)
+- [8.4.1 Immediate Research Directions](#841-immediate-research-directions)
+- [8.4.2 Emerging Paradigms](#842-emerging-paradigms)
+- [8.5 Practical Implementation Guidelines](#85-practical-implementation-guidelines)
+- [8.5.1 Development Best Practices](#851-development-best-practices)
+- [8.5.2 Production Considerations](#852-production-considerations)
+- [8.6 Conclusion](#86-conclusion)
+- [8.6.1 Key Takeaways](#861-key-takeaways)
+- [8.6.2 Looking Forward](#862-looking-forward)
 - [Part 9: Theoretical Questions and Comprehensive Answers](#part-9-theoretical-questions-and-comprehensive-answers)
-  - [9.1 Fundamental Deep Q-Learning Theory](#91-fundamental-deep-q-learning-theory)
-    - [Question 1: What is the fundamental challenge when applying Q-learning to high-dimensional state spaces?](#question-1-what-is-the-fundamental-challenge-when-applying-q-learning-to-high-dimensional-state-spaces)
-    - [Question 2: Why does naive application of neural networks to Q-learning lead to instability?](#question-2-why-does-naive-application-of-neural-networks-to-q-learning-lead-to-instability)
-    - [Question 3: Explain the mathematical formulation of the DQN loss function and its components.](#question-3-explain-the-mathematical-formulation-of-the-dqn-loss-function-and-its-components)
-  - [9.2 Experience Replay Mechanism](#92-experience-replay-mechanism)
-    - [Question 4: Why is experience replay crucial for DQN, and how does it break the correlation problem?](#question-4-why-is-experience-replay-crucial-for-dqn-and-how-does-it-break-the-correlation-problem)
-    - [Question 5: What are the theoretical guarantees for convergence with function approximation in DQN?](#question-5-what-are-the-theoretical-guarantees-for-convergence-with-function-approximation-in-dqn)
-  - [9.3 Double DQN and Overestimation Bias](#93-double-dqn-and-overestimation-bias)
-    - [Question 6: Explain the mathematical origin of overestimation bias in Q-learning and how Double DQN addresses it.](#question-6-explain-the-mathematical-origin-of-overestimation-bias-in-q-learning-and-how-double-dqn-addresses-it)
-    - [Question 7: Under what conditions might Double DQN perform worse than standard DQN?](#question-7-under-what-conditions-might-double-dqn-perform-worse-than-standard-dqn)
-  - [9.4 Dueling DQN Architecture](#94-dueling-dqn-architecture)
-    - [Question 8: Provide the mathematical derivation of the dueling DQN architecture and explain the aggregation methods.](#question-8-provide-the-mathematical-derivation-of-the-dueling-dqn-architecture-and-explain-the-aggregation-methods)
-    - [Question 9: When does dueling architecture provide the most benefit, and what are its limitations?](#question-9-when-does-dueling-architecture-provide-the-most-benefit-and-what-are-its-limitations)
-  - [9.5 Prioritized Experience Replay Theory](#95-prioritized-experience-replay-theory)
-    - [Question 10: Derive the importance sampling correction for prioritized experience replay and explain why it's necessary.](#question-10-derive-the-importance-sampling-correction-for-prioritized-experience-replay-and-explain-why-its-necessary)
-    - [Question 11: Analyze the computational complexity of different prioritized replay implementations.](#question-11-analyze-the-computational-complexity-of-different-prioritized-replay-implementations)
-    - [Question 12: What are the theoretical limitations of prioritized experience replay?](#question-12-what-are-the-theoretical-limitations-of-prioritized-experience-replay)
-  - [9.6 Rainbow DQN Integration Theory](#96-rainbow-dqn-integration-theory)
-    - [Question 13: Analyze the theoretical interactions between different Rainbow DQN components.](#question-13-analyze-the-theoretical-interactions-between-different-rainbow-dqn-components)
-    - [Question 14: What are the fundamental limitations of the value-based approach that Rainbow DQN represents?](#question-14-what-are-the-fundamental-limitations-of-the-value-based-approach-that-rainbow-dqn-represents)
-  - [9.7 Implementation and Practical Questions](#97-implementation-and-practical-questions)
-    - [Question 15: Implement a custom loss function that combines Double DQN with Huber loss. Explain when and why this is beneficial.](#question-15-implement-a-custom-loss-function-that-combines-double-dqn-with-huber-loss-explain-when-and-why-this-is-beneficial)
-    - [Question 16: How would you implement and debug a custom priority function for experience replay that combines TD error with state novelty?](#question-16-how-would-you-implement-and-debug-a-custom-priority-function-for-experience-replay-that-combines-td-error-with-state-novelty)
-    - [Question 17: Analyze the theoretical convergence properties of your novelty-enhanced prioritized replay. What are the potential issues?](#question-17-analyze-the-theoretical-convergence-properties-of-your-novelty-enhanced-prioritized-replay-what-are-the-potential-issues)
-    - [Question 18: How would you extend DQN to handle multiple objectives (e.g., reward maximization + safety constraints)? Provide both theoretical framework and implementation.](#question-18-how-would-you-extend-dqn-to-handle-multiple-objectives-eg-reward-maximization--safety-constraints-provide-both-theoretical-framework-and-implementation)
-  - [9.8 Comprehensive Theoretical Summary](#98-comprehensive-theoretical-summary)
-    - [Question 19: Provide a unified theoretical framework that connects all the DQN improvements we've studied. How do they address the fundamental challenges of deep reinforcement learning?](#question-19-provide-a-unified-theoretical-framework-that-connects-all-the-dqn-improvements-weve-studied-how-do-they-address-the-fundamental-challenges-of-deep-reinforcement-learning)
-    - [1. **Instability Challenge**](#1-instability-challenge)
-    - [2. **Overestimation Challenge**](#2-overestimation-challenge)
-    - [3. **Sample Efficiency Challenge**](#3-sample-efficiency-challenge)
-    - [4. **Representation Challenge**](#4-representation-challenge)
-    - [**Theoretical Connections:**](#theoretical-connections)
-    - [**Practical Synthesis:**](#practical-synthesis)
-    - [Question 20: Looking forward, what are the most promising theoretical and practical directions for advancing value-based deep reinforcement learning beyond Rainbow DQN?](#question-20-looking-forward-what-are-the-most-promising-theoretical-and-practical-directions-for-advancing-value-based-deep-reinforcement-learning-beyond-rainbow-dqn)
-    - [1. **Theoretical Foundations**](#1-theoretical-foundations)
-    - [2. **Algorithmic Innovations**](#2-algorithmic-innovations)
-- [Current: Q(s,a) ← Q(s,a) + α[r + γ max_a' Q(s',a') - Q(s,a)]](#current-qsa--qsa--αr--γ-max_a-qsa---qsa)
+- [9.1 Fundamental Deep Q-Learning Theory](#91-fundamental-deep-q-learning-theory)
+- [Question 1: What is the fundamental challenge when applying Q-learning to high-dimensional state spaces?](#question-1-what-is-the-fundamental-challenge-when-applying-q-learning-to-high-dimensional-state-spaces)
+- [Question 2: Why does naive application of neural networks to Q-learning lead to instability?](#question-2-why-does-naive-application-of-neural-networks-to-q-learning-lead-to-instability)
+- [Question 3: Explain the mathematical formulation of the DQN loss function and its components.](#question-3-explain-the-mathematical-formulation-of-the-dqn-loss-function-and-its-components)
+- [9.2 Experience Replay Mechanism](#92-experience-replay-mechanism)
+- [Question 4: Why is experience replay crucial for DQN, and how does it break the correlation problem?](#question-4-why-is-experience-replay-crucial-for-dqn-and-how-does-it-break-the-correlation-problem)
+- [Question 5: What are the theoretical guarantees for convergence with function approximation in DQN?](#question-5-what-are-the-theoretical-guarantees-for-convergence-with-function-approximation-in-dqn)
+- [9.3 Double DQN and Overestimation Bias](#93-double-dqn-and-overestimation-bias)
+- [Question 6: Explain the mathematical origin of overestimation bias in Q-learning and how Double DQN addresses it.](#question-6-explain-the-mathematical-origin-of-overestimation-bias-in-q-learning-and-how-double-dqn-addresses-it)
+- [Question 7: Under what conditions might Double DQN perform worse than standard DQN?](#question-7-under-what-conditions-might-double-dqn-perform-worse-than-standard-dqn)
+- [9.4 Dueling DQN Architecture](#94-dueling-dqn-architecture)
+- [Question 8: Provide the mathematical derivation of the dueling DQN architecture and explain the aggregation methods.](#question-8-provide-the-mathematical-derivation-of-the-dueling-dqn-architecture-and-explain-the-aggregation-methods)
+- [Question 9: When does dueling architecture provide the most benefit, and what are its limitations?](#question-9-when-does-dueling-architecture-provide-the-most-benefit-and-what-are-its-limitations)
+- [9.5 Prioritized Experience Replay Theory](#95-prioritized-experience-replay-theory)
+- [Question 10: Derive the importance sampling correction for prioritized experience replay and explain why it's necessary.](#question-10-derive-the-importance-sampling-correction-for-prioritized-experience-replay-and-explain-why-its-necessary)
+- [Question 11: Analyze the computational complexity of different prioritized replay implementations.](#question-11-analyze-the-computational-complexity-of-different-prioritized-replay-implementations)
+- [Question 12: What are the theoretical limitations of prioritized experience replay?](#question-12-what-are-the-theoretical-limitations-of-prioritized-experience-replay)
+- [9.6 Rainbow DQN Integration Theory](#96-rainbow-dqn-integration-theory)
+- [Question 13: Analyze the theoretical interactions between different Rainbow DQN components.](#question-13-analyze-the-theoretical-interactions-between-different-rainbow-dqn-components)
+- [Question 14: What are the fundamental limitations of the value-based approach that Rainbow DQN represents?](#question-14-what-are-the-fundamental-limitations-of-the-value-based-approach-that-rainbow-dqn-represents)
+- [9.7 Implementation and Practical Questions](#97-implementation-and-practical-questions)
+- [Question 15: Implement a custom loss function that combines Double DQN with Huber loss. Explain when and why this is beneficial.](#question-15-implement-a-custom-loss-function-that-combines-double-dqn-with-huber-loss-explain-when-and-why-this-is-beneficial)
+- [Question 16: How would you implement and debug a custom priority function for experience replay that combines TD error with state novelty?](#question-16-how-would-you-implement-and-debug-a-custom-priority-function-for-experience-replay-that-combines-td-error-with-state-novelty)
+- [Question 17: Analyze the theoretical convergence properties of your novelty-enhanced prioritized replay. What are the potential issues?](#question-17-analyze-the-theoretical-convergence-properties-of-your-novelty-enhanced-prioritized-replay-what-are-the-potential-issues)
+- [Question 18: How would you extend DQN to handle multiple objectives (e.g., reward maximization + safety constraints)? Provide both theoretical framework and implementation.](#question-18-how-would-you-extend-dqn-to-handle-multiple-objectives-eg-reward-maximization--safety-constraints-provide-both-theoretical-framework-and-implementation)
+- [9.8 Comprehensive Theoretical Summary](#98-comprehensive-theoretical-summary)
+- [Question 19: Provide a unified theoretical framework that connects all the DQN improvements we've studied. How do they address the fundamental challenges of deep reinforcement learning?](#question-19-provide-a-unified-theoretical-framework-that-connects-all-the-dqn-improvements-weve-studied-how-do-they-address-the-fundamental-challenges-of-deep-reinforcement-learning)
+- [1. **Instability Challenge**](#1-instability-challenge)
+- [2. **Overestimation Challenge**](#2-overestimation-challenge)
+- [3. **Sample Efficiency Challenge**](#3-sample-efficiency-challenge)
+- [4. **Representation Challenge**](#4-representation-challenge)
+- [**Theoretical Connections:**](#theoretical-connections)
+- [**Practical Synthesis:**](#practical-synthesis)
+- [Question 20: Looking forward, what are the most promising theoretical and practical directions for advancing value-based deep reinforcement learning beyond Rainbow DQN?](#question-20-looking-forward-what-are-the-most-promising-theoretical-and-practical-directions-for-advancing-value-based-deep-reinforcement-learning-beyond-rainbow-dqn)
+- [1. **Theoretical Foundations**](#1-theoretical-foundations)
+- [2. **Algorithmic Innovations**](#2-algorithmic-innovations)
+- [Current: Q(s,a) ← Q(s,a) + α[r + γ max*a' Q(s',a') - Q(s,a)]](#current-qsa--qsa--αr--γ-max*a-qsa---qsa)
 - [Future possibilities:](#future-possibilities)
 - [- Higher-order methods (second-order optimization)](#--higher-order-methods-second-order-optimization)
 - [- Meta-learning update rules](#--meta-learning-update-rules)
 - [- Adaptive step sizes based on value uncertainty](#--adaptive-step-sizes-based-on-value-uncertainty)
-    - [3. **Multi-Modal and Continuous Extensions**](#3-multi-modal-and-continuous-extensions)
-    - [4. **Advanced Exploration**](#4-advanced-exploration)
-    - [5. **Meta-Learning and Transfer**](#5-meta-learning-and-transfer)
-    - [6. **Scalability and Efficiency**](#6-scalability-and-efficiency)
-    - [7. **Safety and Robustness**](#7-safety-and-robustness)
-    - [8. **Integration with Other Paradigms**](#8-integration-with-other-paradigms)
-    - [**Practical Implementation Priorities:**](#practical-implementation-priorities)
+- [3. **Multi-Modal and Continuous Extensions**](#3-multi-modal-and-continuous-extensions)
+- [4. **Advanced Exploration**](#4-advanced-exploration)
+- [5. **Meta-Learning and Transfer**](#5-meta-learning-and-transfer)
+- [6. **Scalability and Efficiency**](#6-scalability-and-efficiency)
+- [7. **Safety and Robustness**](#7-safety-and-robustness)
+- [8. **Integration with Other Paradigms**](#8-integration-with-other-paradigms)
+- [**Practical Implementation Priorities:**](#practical-implementation-priorities)
 
 
 
@@ -249,7 +249,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 print("✓ All libraries imported successfully")
 print(f"✓ Device: {device}")
-print("✓ PyTorch version:", torch.__version__)
+print("✓ PyTorch version:", torch.**version**)
 print("✓ Random seeds set for reproducibility")
 
 ```
@@ -260,9 +260,9 @@ print("✓ Random seeds set for reproducibility")
     ✓ Random seeds set for reproducibility
 
 
-# Part 1: From Tabular Q-Learning to Deep Q-Networks
+# Part 1: from Tabular Q-learning to Deep Q-networks
 
-## 1.1 Limitations of Tabular Q-Learning
+## 1.1 Limitations of Tabular Q-learning
 
 **Recall from Session 3**: Tabular Q-Learning stores Q-values in a lookup table Q(s,a).
 
@@ -289,7 +289,7 @@ Q(s,a;θ) ≈ Q*(s,a)
 - **Continuous States**: Natural handling of continuous observations
 - **Feature Learning**: Automatically learn relevant features
 
-## 1.3 Deep Q-Network (DQN) Architecture
+## 1.3 Deep Q-network (dqn) Architecture
 
 **Standard DQN Network:**
 ```
@@ -298,13 +298,13 @@ State → Conv/FC Layers → Hidden Layers → Q-values for all actions
 
 **Two Main Architectures:**
 
-### 1.3.1 Fully Connected DQN
+### 1.3.1 Fully Connected Dqn
 For low-dimensional state spaces (CartPole, etc.):
 ```
 State (n) → FC(512) → ReLU → FC(256) → ReLU → FC(|A|)
 ```
 
-### 1.3.2 Convolutional DQN
+### 1.3.2 Convolutional Dqn
 For image-based state spaces (Atari games):
 ```
 Image (84×84×4) → Conv(32,8×8,s=4) → ReLU → 
@@ -312,7 +312,7 @@ Conv(64,4×4,s=2) → ReLU → Conv(64,3×3,s=1) → ReLU →
 FC(512) → ReLU → FC(|A|)
 ```
 
-## 1.4 DQN Training Process
+## 1.4 Dqn Training Process
 
 **Loss Function** (Mean Squared Error):
 ```
@@ -329,7 +329,7 @@ yi = ri + γ max_a' Q(si+1,a';θ)
 θ ← θ - α ∇_θ L(θ)
 ```
 
-## 1.5 Key Challenges in Deep Q-Learning
+## 1.5 Key Challenges in Deep Q-learning
 
 **1. Non-Stationary Targets**
 - Target yi changes as Q-network updates
@@ -354,32 +354,32 @@ yi = ri + γ max_a' Q(si+1,a';θ)
 class DQN(nn.Module):
     """Deep Q-Network for discrete action spaces"""
     
-    def __init__(self, state_size, action_size, hidden_sizes=[512, 256], dropout=0.1):
-        super(DQN, self).__init__()
-        self.state_size = state_size
-        self.action_size = action_size
+    def **init**(self, state*size, action*size, hidden_sizes=[512, 256], dropout=0.1):
+        super(DQN, self).**init**()
+        self.state*size = state*size
+        self.action*size = action*size
         
         layers = []
-        input_size = state_size
+        input*size = state*size
         
-        for hidden_size in hidden_sizes:
+        for hidden*size in hidden*sizes:
             layers.extend([
-                nn.Linear(input_size, hidden_size),
+                nn.Linear(input*size, hidden*size),
                 nn.ReLU(),
                 nn.Dropout(dropout)
             ])
-            input_size = hidden_size
+            input*size = hidden*size
         
-        layers.append(nn.Linear(input_size, action_size))
+        layers.append(nn.Linear(input*size, action*size))
         
         self.network = nn.Sequential(*layers)
         
-        self.apply(self._init_weights)
+        self.apply(self.*init*weights)
     
-    def _init_weights(self, layer):
+    def *init*weights(self, layer):
         """Initialize network weights"""
         if isinstance(layer, nn.Linear):
-            nn.init.xavier_uniform_(layer.weight)
+            nn.init.xavier*uniform*(layer.weight)
             layer.bias.data.fill_(0.01)
     
     def forward(self, state):
@@ -389,17 +389,17 @@ class DQN(nn.Module):
 class ConvDQN(nn.Module):
     """Convolutional DQN for image-based observations"""
     
-    def __init__(self, action_size, input_channels=4):
-        super(ConvDQN, self).__init__()
-        self.action_size = action_size
+    def **init**(self, action*size, input*channels=4):
+        super(ConvDQN, self).**init**()
+        self.action*size = action*size
         
-        self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=8, stride=4)
+        self.conv1 = nn.Conv2d(input*channels, 32, kernel*size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
         
-        conv_out_size = 64 * 7 * 7
+        conv*out*size = 64 * 7 * 7
         
-        self.fc1 = nn.Linear(conv_out_size, 512)
+        self.fc1 = nn.Linear(conv*out*size, 512)
         self.fc2 = nn.Linear(512, action_size)
         
         self.dropout = nn.Dropout(0.1)
@@ -421,7 +421,7 @@ class ConvDQN(nn.Module):
 class DQNComparison:
     """Compare different DQN architectures and their properties"""
     
-    def __init__(self):
+    def **init**(self):
         self.architectures = {}
         
     def create_networks(self):
@@ -432,7 +432,7 @@ class DQNComparison:
         
         self.architectures['Large_FC'] = DQN(1000, 10, [1024, 512, 256])
         
-        self.architectures['Conv_Atari'] = ConvDQN(4, input_channels=4)
+        self.architectures['Conv*Atari'] = ConvDQN(4, input*channels=4)
         
         return self.architectures
     
@@ -445,7 +445,7 @@ class DQNComparison:
         param_counts = {}
         for name, net in networks.items():
             param_count = sum(p.numel() for p in net.parameters())
-            param_counts[name] = param_count
+            param*counts[name] = param*count
         
         names = list(param_counts.keys())
         counts = list(param_counts.values())
@@ -459,7 +459,7 @@ class DQNComparison:
         
         for bar, count in zip(bars, counts):
             height = bar.get_height()
-            axes[0,0].text(bar.get_x() + bar.get_width()/2., height*1.1,
+            axes[0,0].text(bar.get*x() + bar.get*width()/2., height*1.1,
                           f'{count:,}', ha='center', va='bottom', fontsize=10)
         
         memory_usage = {}
@@ -468,9 +468,9 @@ class DQNComparison:
             if 'Conv' in name:
                 activation_memory = 84*84*4 + 20*20*32 + 9*9*64 + 7*7*64 + 512  # Rough estimate
             else:
-                activation_memory = sum([layer.out_features for layer in net.network if isinstance(layer, nn.Linear)])
+                activation*memory = sum([layer.out*features for layer in net.network if isinstance(layer, nn.Linear)])
             
-            memory_usage[name] = (params * 4 + activation_memory * 4) / 1024 / 1024  # MB
+            memory*usage[name] = (params * 4 + activation*memory * 4) / 1024 / 1024  # MB
         
         names = list(memory_usage.keys())
         usage = list(memory_usage.values())
@@ -518,11 +518,11 @@ class DQNComparison:
         plt.tight_layout()
         plt.show()
         
-        return param_counts, memory_usage, flops_estimate
+        return param*counts, memory*usage, flops_estimate
 
 print("Analyzing Different DQN Architectures...")
 comparison = DQNComparison()
-param_counts, memory_usage, flops_estimate = comparison.analyze_architectures()
+param*counts, memory*usage, flops*estimate = comparison.analyze*architectures()
 
 print("\\nArchitecture Analysis Summary:")
 print("=" * 50)
@@ -543,7 +543,7 @@ print("✓ Parameter efficiency and computational costs evaluated")
 
 
     
-![png](CA5_files/CA5_3_1.png)
+![png](CA5*files/CA5*3_1.png)
     
 
 
@@ -607,7 +607,7 @@ print("✓ Parameter efficiency and computational costs evaluated")
 
 ```python
 class ReplayBuffer:
-    def __init__(self, capacity):
+    def **init**(self, capacity):
         self.buffer = deque(maxlen=capacity)
     
     def push(self, state, action, reward, next_state, done):
@@ -656,7 +656,7 @@ yi = ri + γ max_a' Q(si+1,a';θ⁻)
 - Reduced oscillations
 - More consistent Q-value estimates
 
-## 2.3 Complete DQN Algorithm
+## 2.3 Complete Dqn Algorithm
 
 **DQN with Experience Replay and Target Networks:**
 
@@ -666,13 +666,13 @@ Initialize replay buffer D
 for episode in episodes:
     Initialize state s₁
     for t in episode:
-        Select action: a_t = ε-greedy(Q(s_t,·;θ))
-        Execute a_t, observe r_t, s_{t+1}
-        Store (s_t, a_t, r_t, s_{t+1}, done) in D
+        Select action: a*t = ε-greedy(Q(s*t,·;θ))
+        Execute a*t, observe r*t, s_{t+1}
+        Store (s*t, a*t, r*t, s*{t+1}, done) in D
         
         Sample random batch from D
-        Compute targets: y_i = r_i + γ max_a Q̂(s'_i,a;θ⁻)
-        Update θ: minimize (y_i - Q(s_i,a_i;θ))²
+        Compute targets: y*i = r*i + γ max*a Q̂(s'*i,a;θ⁻)
+        Update θ: minimize (y*i - Q(s*i,a_i;θ))²
         
         Every τ steps: θ⁻ ← θ
 ```
@@ -703,7 +703,7 @@ for episode in episodes:
 class ReplayBuffer:
     """Replay buffer for storing and sampling experiences"""
     
-    def __init__(self, capacity):
+    def **init**(self, capacity):
         self.capacity = capacity
         self.buffer = deque(maxlen=capacity)
         self.experience = namedtuple('Experience', ['state', 'action', 'reward', 'next_state', 'done'])
@@ -717,31 +717,31 @@ class ReplayBuffer:
         """Sample a batch of experiences"""
         return random.sample(self.buffer, batch_size)
     
-    def __len__(self):
+    def **len**(self):
         return len(self.buffer)
 
 class DQNAgent:
     """Complete DQN agent with experience replay and target networks"""
     
-    def __init__(self, state_size, action_size, lr=0.0005, gamma=0.99, 
-                 epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.01,
-                 buffer_size=100000, batch_size=32, target_update_freq=1000):
+    def **init**(self, state*size, action*size, lr=0.0005, gamma=0.99, 
+                 epsilon=1.0, epsilon*decay=0.995, epsilon*min=0.01,
+                 buffer*size=100000, batch*size=32, target*update*freq=1000):
         
-        self.state_size = state_size
-        self.action_size = action_size
+        self.state*size = state*size
+        self.action*size = action*size
         self.lr = lr
         self.gamma = gamma
         self.epsilon = epsilon
-        self.epsilon_decay = epsilon_decay
-        self.epsilon_min = epsilon_min
-        self.batch_size = batch_size
-        self.target_update_freq = target_update_freq
+        self.epsilon*decay = epsilon*decay
+        self.epsilon*min = epsilon*min
+        self.batch*size = batch*size
+        self.target*update*freq = target*update*freq
         
-        self.q_network = DQN(state_size, action_size).to(device)
-        self.target_network = DQN(state_size, action_size).to(device)
+        self.q*network = DQN(state*size, action_size).to(device)
+        self.target*network = DQN(state*size, action_size).to(device)
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
         
-        self.target_network.load_state_dict(self.q_network.state_dict())
+        self.target*network.load*state*dict(self.q*network.state_dict())
         
         self.memory = ReplayBuffer(buffer_size)
         
@@ -758,16 +758,16 @@ class DQNAgent:
             return random.randrange(self.action_size)
         
         state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
-        q_values = self.q_network(state_tensor)
+        q*values = self.q*network(state_tensor)
         return q_values.argmax().item()
     
-    def store_experience(self, state, action, reward, next_state, done):
+    def store*experience(self, state, action, reward, next*state, done):
         """Store experience in replay buffer"""
         self.memory.push(state, action, reward, next_state, done)
     
-    def update_target_network(self):
+    def update*target*network(self):
         """Copy weights from main network to target network"""
-        self.target_network.load_state_dict(self.q_network.state_dict())
+        self.target*network.load*state*dict(self.q*network.state_dict())
     
     def train_step(self):
         """Perform one training step if enough experiences are available"""
@@ -775,52 +775,52 @@ class DQNAgent:
             return None
         
         experiences = self.memory.sample(self.batch_size)
-        batch = self.experience_to_batch(experiences)
+        batch = self.experience*to*batch(experiences)
         
         states, actions, rewards, next_states, dones = batch
         
-        current_q_values = self.q_network(states).gather(1, actions)
+        current*q*values = self.q_network(states).gather(1, actions)
         
         with torch.no_grad():
-            next_q_values = self.target_network(next_states).max(1)[0].unsqueeze(1)
-            target_q_values = rewards + (self.gamma * next_q_values * (1 - dones))
+            next*q*values = self.target*network(next*states).max(1)[0].unsqueeze(1)
+            target*q*values = rewards + (self.gamma * next*q*values * (1 - dones))
         
-        loss = F.mse_loss(current_q_values, target_q_values)
+        loss = F.mse*loss(current*q*values, target*q_values)
         
         self.optimizer.zero_grad()
         loss.backward()
         
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
+        torch.nn.utils.clip*grad*norm*(self.q*network.parameters(), 1.0)
         
         self.optimizer.step()
         
         self.step_count += 1
-        if self.step_count % self.target_update_freq == 0:
-            self.update_target_network()
+        if self.step*count % self.target*update_freq == 0:
+            self.update*target*network()
         
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
         
         self.losses.append(loss.item())
-        avg_q_value = current_q_values.mean().item()
-        self.q_values.append(avg_q_value)
+        avg*q*value = current*q*values.mean().item()
+        self.q*values.append(avg*q_value)
         
         return loss.item()
     
-    def experience_to_batch(self, experiences):
+    def experience*to*batch(self, experiences):
         """Convert batch of experiences to tensors"""
         states = torch.FloatTensor([e.state for e in experiences]).to(device)
         actions = torch.LongTensor([e.action for e in experiences]).unsqueeze(1).to(device)
         rewards = torch.FloatTensor([e.reward for e in experiences]).unsqueeze(1).to(device)
-        next_states = torch.FloatTensor([e.next_state for e in experiences]).to(device)
+        next*states = torch.FloatTensor([e.next*state for e in experiences]).to(device)
         dones = torch.FloatTensor([e.done for e in experiences]).unsqueeze(1).to(device)
         
         return states, actions, rewards, next_states, dones
     
-    def train(self, env, num_episodes=1000, print_every=100):
+    def train(self, env, num*episodes=1000, print*every=100):
         """Train the DQN agent"""
         scores = []
-        losses_per_episode = []
+        losses*per*episode = []
         
         for episode in range(num_episodes):
             state = env.reset()
@@ -832,9 +832,9 @@ class DQNAgent:
             
             while True:
                 action = self.get_action(state, training=True)
-                next_state, reward, done, truncated, _ = env.step(action)
+                next*state, reward, done, truncated, * = env.step(action)
                 
-                self.store_experience(state, action, reward, next_state, done or truncated)
+                self.store*experience(state, action, reward, next*state, done or truncated)
                 
                 loss = self.train_step()
                 if loss is not None:
@@ -847,27 +847,27 @@ class DQNAgent:
                     break
             
             scores.append(total_reward)
-            losses_per_episode.append(np.mean(episode_losses) if episode_losses else 0)
-            self.episode_rewards.append(total_reward)
+            losses*per*episode.append(np.mean(episode*losses) if episode*losses else 0)
+            self.episode*rewards.append(total*reward)
             
             if (episode + 1) % print_every == 0:
-                avg_score = np.mean(scores[-print_every:])
-                avg_loss = np.mean(losses_per_episode[-print_every:])
+                avg*score = np.mean(scores[-print*every:])
+                avg*loss = np.mean(losses*per*episode[-print*every:])
                 print(f"Episode {episode + 1:4d} | "
                       f"Avg Score: {avg_score:7.2f} | "
                       f"Avg Loss: {avg_loss:8.4f} | "
                       f"Epsilon: {self.epsilon:.3f} | "
                       f"Buffer Size: {len(self.memory)}")
         
-        return scores, losses_per_episode
+        return scores, losses*per*episode
 
 class DQNAnalysis:
     """Analyze and visualize DQN training"""
     
-    def __init__(self, agent):
+    def **init**(self, agent):
         self.agent = agent
     
-    def plot_training_progress(self, scores, losses):
+    def plot*training*progress(self, scores, losses):
         """Plot comprehensive training analysis"""
         fig, axes = plt.subplots(2, 3, figsize=(18, 12))
         
@@ -896,8 +896,8 @@ class DQNAnalysis:
             axes[0,1].grid(True, alpha=0.3)
         
         if len(self.agent.q_values) > 0:
-            q_episodes = np.linspace(0, len(episodes), len(self.agent.q_values))
-            axes[0,2].plot(q_episodes, self.agent.q_values, alpha=0.6, color='green')
+            q*episodes = np.linspace(0, len(episodes), len(self.agent.q*values))
+            axes[0,2].plot(q*episodes, self.agent.q*values, alpha=0.6, color='green')
             axes[0,2].set_title('Average Q-Values')
             axes[0,2].set_xlabel('Training Steps')
             axes[0,2].set_ylabel('Avg Q-Value')
@@ -905,8 +905,8 @@ class DQNAnalysis:
         
         epsilon_values = []
         eps = 1.0
-        eps_decay = self.agent.epsilon_decay
-        eps_min = self.agent.epsilon_min
+        eps*decay = self.agent.epsilon*decay
+        eps*min = self.agent.epsilon*min
         
         for _ in range(len(episodes)):
             epsilon_values.append(eps)
@@ -934,9 +934,9 @@ class DQNAnalysis:
             phase_scores = []
             
             for i in range(4):
-                start_idx = i * phase_size
-                end_idx = (i + 1) * phase_size if i < 3 else len(scores)
-                phase_scores.append(scores[start_idx:end_idx])
+                start*idx = i * phase*size
+                end*idx = (i + 1) * phase*size if i < 3 else len(scores)
+                phase*scores.append(scores[start*idx:end_idx])
             
             axes[1,2].boxplot(phase_scores, labels=phases)
             axes[1,2].set_title('Learning Progress by Phase')
@@ -958,7 +958,7 @@ class DQNAnalysis:
         if len(scores) >= 100:
             early_performance = np.mean(scores[:len(scores)//4])
             late_performance = np.mean(scores[3*len(scores)//4:])
-            improvement = late_performance - early_performance
+            improvement = late*performance - early*performance
             
             print(f"\\nLearning Progress:")
             print(f"Early Performance: {early_performance:.2f}")
@@ -970,11 +970,11 @@ class DQNAnalysis:
         print(f"Buffer Utilization: {len(self.agent.memory)}/{self.agent.memory.capacity}")
         print(f"Final Epsilon: {self.agent.epsilon:.4f}")
 
-def create_test_environment():
+def create*test*environment():
     """Create a test environment for DQN"""
     try:
         env = gym.make('CartPole-v1')
-        return env, env.observation_space.shape[0], env.action_space.n
+        return env, env.observation*space.shape[0], env.action*space.n
     except:
         print("CartPole environment not available")
         return None, 4, 2
@@ -994,9 +994,9 @@ print("✓ Training analysis tools prepared")
     ✓ Training analysis tools prepared
 
 
-# Part 3: Double DQN and Overestimation Bias
+# Part 3: Double Dqn and Overestimation Bias
 
-## 3.1 The Overestimation Problem in Q-Learning
+## 3.1 the Overestimation Problem in Q-learning
 
 **Standard DQN Target:**
 ```
@@ -1009,7 +1009,7 @@ yi = ri + γ max_a' Q(si+1,a';θ⁻)
 
 **Mathematical Explanation:**
 - Q-values are estimates with noise: Q̃(s,a) = Q*(s,a) + ε
-- Taking max amplifies positive noise: E[max_a Q̃(s,a)] ≥ max_a E[Q̃(s,a)]
+- Taking max amplifies positive noise: E[max*a Q̃(s,a)] ≥ max*a E[Q̃(s,a)]
 - This bias compounds over multiple updates
 - Particularly severe with function approximation
 
@@ -1026,7 +1026,7 @@ Consider a simple example:
 - With noise: Q̃(s,[a₁,a₂,a₃]) = [1.1, 1.2, 0.7] (due to estimation errors)
 - Standard Q-learning picks a₂ (overestimated) instead of optimal a₁
 
-## 3.2 Double Q-Learning Solution
+## 3.2 Double Q-learning Solution
 
 **Key Insight**: Use two separate Q-functions to decorrelate action selection and evaluation.
 
@@ -1035,7 +1035,7 @@ Consider a simple example:
 - For each update, randomly choose which Q-function to update
 - Use one Q-function to select action, the other to evaluate it
 
-### 3.2.1 Double Q-Learning Update Rules
+### 3.2.1 Double Q-learning Update Rules
 
 **Classical Double Q-Learning:**
 
@@ -1049,13 +1049,13 @@ Update Q₂:
 Q₂(s,a) ← Q₂(s,a) + α[r + γQ₁(s', argmax_a' Q₂(s',a')) - Q₂(s,a)]
 ```
 
-## 3.3 Double DQN (DDQN)
+## 3.3 Double Dqn (ddqn)
 
 **Problem with Standard Double Q-Learning**: Need to train two separate networks.
 
 **Double DQN Solution**: Reuse target network as the second Q-function.
 
-### 3.3.1 Double DQN Update
+### 3.3.1 Double Dqn Update
 
 **Action Selection**: Use online network
 ```
@@ -1072,7 +1072,7 @@ yi = ri + γ Q(s', a*; θ⁻)
 yi = ri + γ Q(si+1, argmax_a' Q(si+1,a';θ); θ⁻)
 ```
 
-### 3.3.2 Benefits of Double DQN
+### 3.3.2 Benefits of Double Dqn
 
 **Overestimation Reduction:**
 - Decorrelates action selection and evaluation
@@ -1092,8 +1092,8 @@ yi = ri + γ Q(si+1, argmax_a' Q(si+1,a';θ); θ⁻)
 ## 3.4 Theoretical Analysis
 
 **Bias Comparison:**
-- Standard DQN: E[max_a Q̃(s,a)] ≥ max_a Q*(s,a)
-- Double DQN: E[Q̃₂(s, argmax_a Q̃₁(s,a))] ≈ max_a Q*(s,a)
+- Standard DQN: E[max*a Q̃(s,a)] ≥ max*a Q*(s,a)
+- Double DQN: E[Q̃₂(s, argmax*a Q̃₁(s,a))] ≈ max*a Q*(s,a)
 
 **Under-estimation Risk:**
 - Double DQN can slightly under-estimate
@@ -1104,17 +1104,17 @@ yi = ri + γ Q(si+1, argmax_a' Q(si+1,a';θ); θ⁻)
 
 **Standard DQN:**
 ```python
-next_q_values = target_network(next_states).max(1)[0]
-targets = rewards + gamma * next_q_values * (1 - dones)
+next*q*values = target*network(next*states).max(1)[0]
+targets = rewards + gamma * next*q*values * (1 - dones)
 ```
 
 **Double DQN:**
 ```python
-# Action selection with online network
-next_actions = q_network(next_states).argmax(1, keepdim=True)
-# Action evaluation with target network
-next_q_values = target_network(next_states).gather(1, next_actions).squeeze()
-targets = rewards + gamma * next_q_values * (1 - dones)
+# Action Selection with Online Network
+next*actions = q*network(next_states).argmax(1, keepdim=True)
+# Action Evaluation with Target Network
+next*q*values = target*network(next*states).gather(1, next_actions).squeeze()
+targets = rewards + gamma * next*q*values * (1 - dones)
 ```
 
 ## 3.6 Empirical Results
@@ -1137,11 +1137,11 @@ targets = rewards + gamma * next_q_values * (1 - dones)
 class DoubleDQNAgent(DQNAgent):
     """Double DQN agent that addresses overestimation bias"""
     
-    def __init__(self, state_size, action_size, **kwargs):
-        super().__init__(state_size, action_size, **kwargs)
+    def **init**(self, state*size, action*size, **kwargs):
+        super().**init**(state*size, action*size, **kwargs)
         self.agent_type = "Double DQN"
         
-        self.q_value_estimates = []
+        self.q*value*estimates = []
         self.target_values = []
     
     def train_step(self):
@@ -1150,100 +1150,100 @@ class DoubleDQNAgent(DQNAgent):
             return None
         
         experiences = self.memory.sample(self.batch_size)
-        batch = self.experience_to_batch(experiences)
+        batch = self.experience*to*batch(experiences)
         
         states, actions, rewards, next_states, dones = batch
         
-        current_q_values = self.q_network(states).gather(1, actions)
+        current*q*values = self.q_network(states).gather(1, actions)
         
         with torch.no_grad():
-            next_actions = self.q_network(next_states).argmax(1, keepdim=True)
-            next_q_values = self.target_network(next_states).gather(1, next_actions)
-            target_q_values = rewards + (self.gamma * next_q_values * (1 - dones))
+            next*actions = self.q*network(next_states).argmax(1, keepdim=True)
+            next*q*values = self.target*network(next*states).gather(1, next_actions)
+            target*q*values = rewards + (self.gamma * next*q*values * (1 - dones))
         
-        loss = F.mse_loss(current_q_values, target_q_values)
+        loss = F.mse*loss(current*q*values, target*q_values)
         
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
+        torch.nn.utils.clip*grad*norm*(self.q*network.parameters(), 1.0)
         self.optimizer.step()
         
         self.step_count += 1
-        if self.step_count % self.target_update_freq == 0:
-            self.update_target_network()
+        if self.step*count % self.target*update_freq == 0:
+            self.update*target*network()
         
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
         
         self.losses.append(loss.item())
-        avg_q_value = current_q_values.mean().item()
-        avg_target = target_q_values.mean().item()
+        avg*q*value = current*q*values.mean().item()
+        avg*target = target*q_values.mean().item()
         
-        self.q_values.append(avg_q_value)
-        self.q_value_estimates.append(avg_q_value)
-        self.target_values.append(avg_target)
+        self.q*values.append(avg*q_value)
+        self.q*value*estimates.append(avg*q*value)
+        self.target*values.append(avg*target)
         
         return loss.item()
 
 class OverestimationAnalysis:
     """Analyze and demonstrate overestimation bias in DQN vs Double DQN"""
     
-    def __init__(self):
+    def **init**(self):
         self.results = {}
     
-    def create_synthetic_environment(self, n_states=10, n_actions=5, noise_level=0.1):
+    def create*synthetic*environment(self, n*states=10, n*actions=5, noise_level=0.1):
         """Create synthetic environment to study overestimation"""
-        true_q_values = np.random.uniform(0, 1, (n_states, n_actions))
+        true*q*values = np.random.uniform(0, 1, (n*states, n*actions))
         
         for s in range(n_states):
-            best_action = np.argmax(true_q_values[s])
-            true_q_values[s, best_action] += 0.2  # Boost best action
+            best*action = np.argmax(true*q_values[s])
+            true*q*values[s, best_action] += 0.2  # Boost best action
         
-        return true_q_values, noise_level
+        return true*q*values, noise_level
     
-    def simulate_estimation_bias(self, true_q_values, noise_level, n_estimates=1000):
+    def simulate*estimation*bias(self, true*q*values, noise*level, n*estimates=1000):
         """Simulate Q-value estimation with noise"""
-        n_states, n_actions = true_q_values.shape
+        n*states, n*actions = true*q*values.shape
         
         standard_estimates = []
         double_estimates = []
         
-        for _ in range(n_estimates):
-            noisy_q1 = true_q_values + np.random.normal(0, noise_level, true_q_values.shape)
-            noisy_q2 = true_q_values + np.random.normal(0, noise_level, true_q_values.shape)
+        for * in range(n*estimates):
+            noisy*q1 = true*q*values + np.random.normal(0, noise*level, true*q*values.shape)
+            noisy*q2 = true*q*values + np.random.normal(0, noise*level, true*q*values.shape)
             
-            standard_max = np.max(noisy_q1, axis=1)
-            standard_estimates.append(standard_max)
+            standard*max = np.max(noisy*q1, axis=1)
+            standard*estimates.append(standard*max)
             
-            selected_actions = np.argmax(noisy_q1, axis=1)
-            double_values = noisy_q2[np.arange(n_states), selected_actions]
-            double_estimates.append(double_values)
+            selected*actions = np.argmax(noisy*q1, axis=1)
+            double*values = noisy*q2[np.arange(n*states), selected*actions]
+            double*estimates.append(double*values)
         
-        standard_estimates = np.array(standard_estimates)
-        double_estimates = np.array(double_estimates)
+        standard*estimates = np.array(standard*estimates)
+        double*estimates = np.array(double*estimates)
         
-        true_optimal = np.max(true_q_values, axis=1)
+        true*optimal = np.max(true*q_values, axis=1)
         
         return {
-            'true_optimal': true_optimal,
-            'standard_estimates': standard_estimates,
-            'double_estimates': double_estimates,
-            'standard_bias': np.mean(standard_estimates, axis=0) - true_optimal,
-            'double_bias': np.mean(double_estimates, axis=0) - true_optimal
+            'true*optimal': true*optimal,
+            'standard*estimates': standard*estimates,
+            'double*estimates': double*estimates,
+            'standard*bias': np.mean(standard*estimates, axis=0) - true_optimal,
+            'double*bias': np.mean(double*estimates, axis=0) - true_optimal
         }
     
-    def visualize_bias_analysis(self):
+    def visualize*bias*analysis(self):
         """Visualize overestimation bias comparison"""
-        true_q_values, noise_level = self.create_synthetic_environment()
-        bias_results = self.simulate_estimation_bias(true_q_values, noise_level)
+        true*q*values, noise*level = self.create*synthetic_environment()
+        bias*results = self.simulate*estimation*bias(true*q*values, noise*level)
         
         fig, axes = plt.subplots(2, 2, figsize=(16, 12))
         
-        states = range(len(bias_results['true_optimal']))
+        states = range(len(bias*results['true*optimal']))
         
-        axes[0,0].bar([s-0.2 for s in states], bias_results['standard_bias'], 
+        axes[0,0].bar([s-0.2 for s in states], bias*results['standard*bias'], 
                      width=0.4, label='Standard DQN', alpha=0.7, color='red')
-        axes[0,0].bar([s+0.2 for s in states], bias_results['double_bias'], 
+        axes[0,0].bar([s+0.2 for s in states], bias*results['double*bias'], 
                      width=0.4, label='Double DQN', alpha=0.7, color='blue')
         axes[0,0].axhline(y=0, color='black', linestyle='--', alpha=0.5)
         axes[0,0].set_title('Q-Value Estimation Bias by State')
@@ -1252,16 +1252,16 @@ class OverestimationAnalysis:
         axes[0,0].legend()
         axes[0,0].grid(True, alpha=0.3)
         
-        state_0_standard = bias_results['standard_estimates'][:, 0]
-        state_0_double = bias_results['double_estimates'][:, 0]
-        true_value_0 = bias_results['true_optimal'][0]
+        state*0*standard = bias*results['standard*estimates'][:, 0]
+        state*0*double = bias*results['double*estimates'][:, 0]
+        true*value*0 = bias*results['true*optimal'][0]
         
-        axes[0,1].hist(state_0_standard, bins=30, alpha=0.6, label='Standard DQN', 
+        axes[0,1].hist(state*0*standard, bins=30, alpha=0.6, label='Standard DQN', 
                       color='red', density=True)
-        axes[0,1].hist(state_0_double, bins=30, alpha=0.6, label='Double DQN', 
+        axes[0,1].hist(state*0*double, bins=30, alpha=0.6, label='Double DQN', 
                       color='blue', density=True)
-        axes[0,1].axvline(true_value_0, color='black', linestyle='--', 
-                         label=f'True Value: {true_value_0:.3f}')
+        axes[0,1].axvline(true*value*0, color='black', linestyle='--', 
+                         label=f'True Value: {true*value*0:.3f}')
         axes[0,1].set_title('Q-Value Estimate Distribution (State 0)')
         axes[0,1].set_xlabel('Estimated Q-Value')
         axes[0,1].set_ylabel('Density')
@@ -1273,13 +1273,13 @@ class OverestimationAnalysis:
         double_biases = []
         
         for noise in noise_levels:
-            results = self.simulate_estimation_bias(true_q_values, noise, 200)
-            standard_biases.append(np.mean(results['standard_bias']))
-            double_biases.append(np.mean(results['double_bias']))
+            results = self.simulate*estimation*bias(true*q*values, noise, 200)
+            standard*biases.append(np.mean(results['standard*bias']))
+            double*biases.append(np.mean(results['double*bias']))
         
-        axes[1,0].plot(noise_levels, standard_biases, 'o-', label='Standard DQN', 
+        axes[1,0].plot(noise*levels, standard*biases, 'o-', label='Standard DQN', 
                       color='red', linewidth=2)
-        axes[1,0].plot(noise_levels, double_biases, 'o-', label='Double DQN', 
+        axes[1,0].plot(noise*levels, double*biases, 'o-', label='Double DQN', 
                       color='blue', linewidth=2)
         axes[1,0].axhline(y=0, color='black', linestyle='--', alpha=0.5)
         axes[1,0].set_title('Average Bias vs Noise Level')
@@ -1288,8 +1288,8 @@ class OverestimationAnalysis:
         axes[1,0].legend()
         axes[1,0].grid(True, alpha=0.3)
         
-        standard_vars = np.var(bias_results['standard_estimates'], axis=0)
-        double_vars = np.var(bias_results['double_estimates'], axis=0)
+        standard*vars = np.var(bias*results['standard_estimates'], axis=0)
+        double*vars = np.var(bias*results['double_estimates'], axis=0)
         
         axes[1,1].bar([s-0.2 for s in states], standard_vars, 
                      width=0.4, label='Standard DQN', alpha=0.7, color='red')
@@ -1306,9 +1306,9 @@ class OverestimationAnalysis:
         
         print("Overestimation Bias Analysis Summary:")
         print("=" * 50)
-        print(f"Average Standard DQN Bias: {np.mean(bias_results['standard_bias']):.4f}")
-        print(f"Average Double DQN Bias: {np.mean(bias_results['double_bias']):.4f}")
-        print(f"Bias Reduction: {(np.mean(bias_results['standard_bias']) - np.mean(bias_results['double_bias'])):.4f}")
+        print(f"Average Standard DQN Bias: {np.mean(bias*results['standard*bias']):.4f}")
+        print(f"Average Double DQN Bias: {np.mean(bias*results['double*bias']):.4f}")
+        print(f"Bias Reduction: {(np.mean(bias*results['standard*bias']) - np.mean(bias*results['double*bias'])):.4f}")
         print(f"Standard DQN Variance: {np.mean(standard_vars):.4f}")
         print(f"Double DQN Variance: {np.mean(double_vars):.4f}")
         
@@ -1317,12 +1317,12 @@ class OverestimationAnalysis:
 class DQNComparison:
     """Compare Standard DQN vs Double DQN performance"""
     
-    def __init__(self, env, state_size, action_size):
+    def **init**(self, env, state*size, action*size):
         self.env = env
-        self.state_size = state_size
-        self.action_size = action_size
+        self.state*size = state*size
+        self.action*size = action*size
         
-    def run_comparison(self, num_episodes=500, num_runs=3):
+    def run*comparison(self, num*episodes=500, num_runs=3):
         """Run comparison between Standard DQN and Double DQN"""
         print("Starting DQN vs Double DQN Comparison...")
         print("=" * 60)
@@ -1334,39 +1334,39 @@ class DQNComparison:
             print(f"\\nRun {run + 1}/{num_runs}")
             
             print("Training Standard DQN...")
-            standard_agent = DQNAgent(self.state_size, self.action_size,
-                                    lr=0.0005, target_update_freq=1000)
-            standard_scores, _ = standard_agent.train(self.env, num_episodes, 
-                                                    print_every=num_episodes//5)
-            standard_results.append(standard_scores)
+            standard*agent = DQNAgent(self.state*size, self.action_size,
+                                    lr=0.0005, target*update*freq=1000)
+            standard*scores, * = standard*agent.train(self.env, num*episodes, 
+                                                    print*every=num*episodes//5)
+            standard*results.append(standard*scores)
             
             print("Training Double DQN...")
-            double_agent = DoubleDQNAgent(self.state_size, self.action_size,
-                                        lr=0.0005, target_update_freq=1000)
-            double_scores, _ = double_agent.train(self.env, num_episodes, 
-                                                print_every=num_episodes//5)
-            double_results.append(double_scores)
+            double*agent = DoubleDQNAgent(self.state*size, self.action_size,
+                                        lr=0.0005, target*update*freq=1000)
+            double*scores, * = double*agent.train(self.env, num*episodes, 
+                                                print*every=num*episodes//5)
+            double*results.append(double*scores)
         
-        return standard_results, double_results, standard_agent, double_agent
+        return standard*results, double*results, standard*agent, double*agent
     
-    def visualize_comparison(self, standard_results, double_results):
+    def visualize*comparison(self, standard*results, double_results):
         """Visualize comparison results"""
         fig, axes = plt.subplots(2, 2, figsize=(16, 10))
         
-        standard_mean = np.mean(standard_results, axis=0)
-        double_mean = np.mean(double_results, axis=0)
-        standard_std = np.std(standard_results, axis=0)
-        double_std = np.std(double_results, axis=0)
+        standard*mean = np.mean(standard*results, axis=0)
+        double*mean = np.mean(double*results, axis=0)
+        standard*std = np.std(standard*results, axis=0)
+        double*std = np.std(double*results, axis=0)
         
         episodes = range(len(standard_mean))
         
         axes[0,0].plot(episodes, standard_mean, color='red', label='Standard DQN', linewidth=2)
-        axes[0,0].fill_between(episodes, standard_mean - standard_std, 
-                              standard_mean + standard_std, alpha=0.3, color='red')
+        axes[0,0].fill*between(episodes, standard*mean - standard_std, 
+                              standard*mean + standard*std, alpha=0.3, color='red')
         
         axes[0,0].plot(episodes, double_mean, color='blue', label='Double DQN', linewidth=2)
-        axes[0,0].fill_between(episodes, double_mean - double_std, 
-                              double_mean + double_std, alpha=0.3, color='blue')
+        axes[0,0].fill*between(episodes, double*mean - double_std, 
+                              double*mean + double*std, alpha=0.3, color='blue')
         
         axes[0,0].set_title('Learning Curves Comparison')
         axes[0,0].set_xlabel('Episode')
@@ -1374,35 +1374,35 @@ class DQNComparison:
         axes[0,0].legend()
         axes[0,0].grid(True, alpha=0.3)
         
-        final_standard = [scores[-50:] for scores in standard_results]
-        final_double = [scores[-50:] for scores in double_results]
+        final*standard = [scores[-50:] for scores in standard*results]
+        final*double = [scores[-50:] for scores in double*results]
         
-        final_standard_flat = [score for run in final_standard for score in run]
-        final_double_flat = [score for run in final_double for score in run]
+        final*standard*flat = [score for run in final_standard for score in run]
+        final*double*flat = [score for run in final_double for score in run]
         
-        axes[0,1].boxplot([final_standard_flat, final_double_flat], 
+        axes[0,1].boxplot([final*standard*flat, final*double*flat], 
                          labels=['Standard DQN', 'Double DQN'])
         axes[0,1].set_title('Final Performance Distribution')
         axes[0,1].set_ylabel('Episode Reward')
         axes[0,1].grid(True, alpha=0.3)
         
-        convergence_threshold = np.mean(double_mean[-100:]) * 0.9  # 90% of final performance
+        convergence*threshold = np.mean(double*mean[-100:]) * 0.9  # 90% of final performance
         
         standard_convergence = []
         double_convergence = []
         
-        for standard_scores in standard_results:
-            conv_episode = next((i for i, score in enumerate(standard_scores) 
-                               if score >= convergence_threshold), len(standard_scores))
-            standard_convergence.append(conv_episode)
+        for standard*scores in standard*results:
+            conv*episode = next((i for i, score in enumerate(standard*scores) 
+                               if score >= convergence*threshold), len(standard*scores))
+            standard*convergence.append(conv*episode)
         
-        for double_scores in double_results:
-            conv_episode = next((i for i, score in enumerate(double_scores) 
-                               if score >= convergence_threshold), len(double_scores))
-            double_convergence.append(conv_episode)
+        for double*scores in double*results:
+            conv*episode = next((i for i, score in enumerate(double*scores) 
+                               if score >= convergence*threshold), len(double*scores))
+            double*convergence.append(conv*episode)
         
         axes[1,0].bar(['Standard DQN', 'Double DQN'], 
-                     [np.mean(standard_convergence), np.mean(double_convergence)],
+                     [np.mean(standard*convergence), np.mean(double*convergence)],
                      color=['red', 'blue'], alpha=0.7)
         axes[1,0].set_title('Convergence Speed')
         axes[1,0].set_ylabel('Episodes to Convergence')
@@ -1413,15 +1413,15 @@ class DQNComparison:
         double_improvement = []
         
         for i in range(improvement_window, len(episodes)):
-            std_improvement = np.mean(standard_mean[i-improvement_window:i]) - np.mean(standard_mean[:improvement_window])
-            dbl_improvement = np.mean(double_mean[i-improvement_window:i]) - np.mean(double_mean[:improvement_window])
-            standard_improvement.append(std_improvement)
-            double_improvement.append(dbl_improvement)
+            std*improvement = np.mean(standard*mean[i-improvement*window:i]) - np.mean(standard*mean[:improvement_window])
+            dbl*improvement = np.mean(double*mean[i-improvement*window:i]) - np.mean(double*mean[:improvement_window])
+            standard*improvement.append(std*improvement)
+            double*improvement.append(dbl*improvement)
         
-        imp_episodes = range(improvement_window, len(episodes))
-        axes[1,1].plot(imp_episodes, standard_improvement, color='red', 
+        imp*episodes = range(improvement*window, len(episodes))
+        axes[1,1].plot(imp*episodes, standard*improvement, color='red', 
                       label='Standard DQN', linewidth=2)
-        axes[1,1].plot(imp_episodes, double_improvement, color='blue', 
+        axes[1,1].plot(imp*episodes, double*improvement, color='blue', 
                       label='Double DQN', linewidth=2)
         axes[1,1].set_title('Cumulative Improvement')
         axes[1,1].set_xlabel('Episode')
@@ -1434,7 +1434,7 @@ class DQNComparison:
 
 print("Analyzing Overestimation Bias...")
 bias_analysis = OverestimationAnalysis()
-bias_results = bias_analysis.visualize_bias_analysis()
+bias*results = bias*analysis.visualize*bias*analysis()
 
 print("\\n✓ Double DQN implemented")
 print("✓ Overestimation bias analysis complete")
@@ -1447,7 +1447,7 @@ print("✓ Comparison framework ready")
 
 
     
-![png](CA5_files/CA5_7_1.png)
+![png](CA5*files/CA5*7_1.png)
     
 
 
@@ -1463,7 +1463,7 @@ print("✓ Comparison framework ready")
     ✓ Comparison framework ready
 
 
-# Part 4: Dueling DQN Architecture
+# Part 4: Dueling Dqn Architecture
 
 ## 4.1 Motivation for Dueling Networks
 
@@ -1480,7 +1480,7 @@ Where:
 - **V(s)**: State value function - "How good is it to be in state s?"
 - **A(s,a)**: Advantage function - "How much better is action a compared to others?"
 
-## 4.2 The Dueling Architecture
+## 4.2 the Dueling Architecture
 
 **Standard DQN Architecture:**
 ```
@@ -1632,72 +1632,72 @@ Q(s,a) = V(s) + A(s,a) - max_a' A(s,a')
 class DuelingDQN(nn.Module):
     """Dueling DQN architecture separating value and advantage streams"""
     
-    def __init__(self, state_size, action_size, hidden_sizes=[512, 256], 
-                 value_hidden=128, advantage_hidden=128, dropout=0.1):
-        super(DuelingDQN, self).__init__()
-        self.state_size = state_size
-        self.action_size = action_size
+    def **init**(self, state*size, action*size, hidden_sizes=[512, 256], 
+                 value*hidden=128, advantage*hidden=128, dropout=0.1):
+        super(DuelingDQN, self).**init**()
+        self.state*size = state*size
+        self.action*size = action*size
         
         shared_layers = []
-        input_size = state_size
+        input*size = state*size
         
-        for hidden_size in hidden_sizes:
+        for hidden*size in hidden*sizes:
             shared_layers.extend([
-                nn.Linear(input_size, hidden_size),
+                nn.Linear(input*size, hidden*size),
                 nn.ReLU(),
                 nn.Dropout(dropout)
             ])
-            input_size = hidden_size
+            input*size = hidden*size
         
-        self.shared_features = nn.Sequential(*shared_layers)
-        final_shared_size = hidden_sizes[-1]
+        self.shared*features = nn.Sequential(*shared*layers)
+        final*shared*size = hidden_sizes[-1]
         
         self.value_stream = nn.Sequential(
-            nn.Linear(final_shared_size, value_hidden),
+            nn.Linear(final*shared*size, value_hidden),
             nn.ReLU(),
             nn.Linear(value_hidden, 1)
         )
         
         self.advantage_stream = nn.Sequential(
-            nn.Linear(final_shared_size, advantage_hidden),
+            nn.Linear(final*shared*size, advantage_hidden),
             nn.ReLU(),
-            nn.Linear(advantage_hidden, action_size)
+            nn.Linear(advantage*hidden, action*size)
         )
         
-        self.apply(self._init_weights)
+        self.apply(self.*init*weights)
     
-    def _init_weights(self, layer):
+    def *init*weights(self, layer):
         """Initialize network weights"""
         if isinstance(layer, nn.Linear):
-            nn.init.xavier_uniform_(layer.weight)
+            nn.init.xavier*uniform*(layer.weight)
             layer.bias.data.fill_(0.01)
     
     def forward(self, state):
         """Forward pass through dueling architecture"""
-        shared_features = self.shared_features(state)
+        shared*features = self.shared*features(state)
         
-        value = self.value_stream(shared_features)
-        advantage = self.advantage_stream(shared_features)
+        value = self.value*stream(shared*features)
+        advantage = self.advantage*stream(shared*features)
         
         advantage_mean = advantage.mean(dim=1, keepdim=True)
-        q_values = value + advantage - advantage_mean
+        q*values = value + advantage - advantage*mean
         
         return q_values, value, advantage
 
 class DuelingConvDQN(nn.Module):
     """Dueling DQN with convolutional layers for image inputs"""
     
-    def __init__(self, action_size, input_channels=4):
-        super(DuelingConvDQN, self).__init__()
-        self.action_size = action_size
+    def **init**(self, action*size, input*channels=4):
+        super(DuelingConvDQN, self).**init**()
+        self.action*size = action*size
         
-        self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=8, stride=4)
+        self.conv1 = nn.Conv2d(input*channels, 32, kernel*size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
         
-        conv_out_size = 64 * 7 * 7
+        conv*out*size = 64 * 7 * 7
         
-        self.shared_fc = nn.Linear(conv_out_size, 512)
+        self.shared*fc = nn.Linear(conv*out_size, 512)
         
         self.value_stream = nn.Sequential(
             nn.Linear(512, 512),
@@ -1717,28 +1717,28 @@ class DuelingConvDQN(nn.Module):
         x = F.relu(self.conv3(x))
         
         x = x.view(x.size(0), -1)
-        shared_features = F.relu(self.shared_fc(x))
+        shared*features = F.relu(self.shared*fc(x))
         
-        value = self.value_stream(shared_features)
-        advantage = self.advantage_stream(shared_features)
+        value = self.value*stream(shared*features)
+        advantage = self.advantage*stream(shared*features)
         
         advantage_mean = advantage.mean(dim=1, keepdim=True)
-        q_values = value + advantage - advantage_mean
+        q*values = value + advantage - advantage*mean
         
         return q_values, value, advantage
 
 class DuelingDQNAgent(DoubleDQNAgent):
     """Dueling DQN agent combining dueling architecture with Double DQN"""
     
-    def __init__(self, state_size, action_size, **kwargs):
-        super().__init__(state_size, action_size, **kwargs)
+    def **init**(self, state*size, action*size, **kwargs):
+        super().**init**(state*size, action*size, **kwargs)
         self.agent_type = "Dueling Double DQN"
         
-        self.q_network = DuelingDQN(state_size, action_size).to(device)
-        self.target_network = DuelingDQN(state_size, action_size).to(device)
+        self.q*network = DuelingDQN(state*size, action_size).to(device)
+        self.target*network = DuelingDQN(state*size, action_size).to(device)
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.lr)
         
-        self.target_network.load_state_dict(self.q_network.state_dict())
+        self.target*network.load*state*dict(self.q*network.state_dict())
         
         self.value_estimates = []
         self.advantage_estimates = []
@@ -1749,56 +1749,56 @@ class DuelingDQNAgent(DoubleDQNAgent):
             return None
         
         experiences = self.memory.sample(self.batch_size)
-        batch = self.experience_to_batch(experiences)
+        batch = self.experience*to*batch(experiences)
         states, actions, rewards, next_states, dones = batch
         
-        current_q_values, current_values, current_advantages = self.q_network(states)
-        current_q_values = current_q_values.gather(1, actions)
+        current*q*values, current*values, current*advantages = self.q_network(states)
+        current*q*values = current*q*values.gather(1, actions)
         
         with torch.no_grad():
-            next_q_online, _, _ = self.q_network(next_states)
-            next_actions = next_q_online.argmax(1, keepdim=True)
+            next*q*online, *, * = self.q*network(next*states)
+            next*actions = next*q_online.argmax(1, keepdim=True)
             
-            next_q_target, _, _ = self.target_network(next_states)
-            next_q_values = next_q_target.gather(1, next_actions)
+            next*q*target, *, * = self.target*network(next*states)
+            next*q*values = next*q*target.gather(1, next_actions)
             
-            target_q_values = rewards + (self.gamma * next_q_values * (1 - dones))
+            target*q*values = rewards + (self.gamma * next*q*values * (1 - dones))
         
-        loss = F.mse_loss(current_q_values, target_q_values)
+        loss = F.mse*loss(current*q*values, target*q_values)
         
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
+        torch.nn.utils.clip*grad*norm*(self.q*network.parameters(), 1.0)
         self.optimizer.step()
         
         self.step_count += 1
-        if self.step_count % self.target_update_freq == 0:
-            self.update_target_network()
+        if self.step*count % self.target*update_freq == 0:
+            self.update*target*network()
         
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
         
         self.losses.append(loss.item())
-        self.q_values.append(current_q_values.mean().item())
-        self.value_estimates.append(current_values.mean().item())
-        self.advantage_estimates.append(current_advantages.abs().mean().item())
+        self.q*values.append(current*q_values.mean().item())
+        self.value*estimates.append(current*values.mean().item())
+        self.advantage*estimates.append(current*advantages.abs().mean().item())
         
         return loss.item()
 
 class DuelingAnalysis:
     """Analyze dueling architecture properties and benefits"""
     
-    def __init__(self):
+    def **init**(self):
         self.results = {}
     
-    def analyze_value_advantage_decomposition(self, agent, env, num_episodes=50):
+    def analyze*value*advantage*decomposition(self, agent, env, num*episodes=50):
         """Analyze how dueling network decomposes Q-values"""
         if not isinstance(agent.q_network, DuelingDQN):
             print("Agent must use DuelingDQN for this analysis")
             return
         
         states_data = []
-        q_values_data = []
+        q*values*data = []
         values_data = []
         advantages_data = []
         rewards_data = []
@@ -1813,15 +1813,15 @@ class DuelingAnalysis:
             while True:
                 state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
                 with torch.no_grad():
-                    q_vals, value, advantage = agent.q_network(state_tensor)
+                    q*vals, value, advantage = agent.q*network(state_tensor)
                 
                 states_data.append(state.copy())
-                q_values_data.append(q_vals.cpu().numpy()[0])
+                q*values*data.append(q_vals.cpu().numpy()[0])
                 values_data.append(value.cpu().numpy()[0, 0])
                 advantages_data.append(advantage.cpu().numpy()[0])
                 
                 action = agent.get_action(state, training=False)
-                next_state, reward, done, truncated, _ = env.step(action)
+                next*state, reward, done, truncated, * = env.step(action)
                 
                 episode_reward += reward
                 state = next_state
@@ -1829,21 +1829,21 @@ class DuelingAnalysis:
                 if done or truncated:
                     break
             
-            rewards_data.append(episode_reward)
+            rewards*data.append(episode*reward)
         
         return {
             'states': np.array(states_data),
-            'q_values': np.array(q_values_data),
+            'q*values': np.array(q*values_data),
             'values': np.array(values_data),
             'advantages': np.array(advantages_data),
-            'episode_rewards': rewards_data
+            'episode*rewards': rewards*data
         }
     
-    def visualize_dueling_components(self, decomposition_data):
+    def visualize*dueling*components(self, decomposition_data):
         """Visualize value and advantage decomposition"""
         fig, axes = plt.subplots(2, 3, figsize=(18, 12))
         
-        q_values = decomposition_data['q_values']
+        q*values = decomposition*data['q_values']
         values = decomposition_data['values']
         advantages = decomposition_data['advantages']
         
@@ -1867,10 +1867,10 @@ class DuelingAnalysis:
         axes[0,2].legend()
         axes[0,2].grid(True, alpha=0.3)
         
-        max_q_values = np.max(q_values, axis=1)
-        correlation = np.corrcoef(values, max_q_values)[0, 1]
+        max*q*values = np.max(q_values, axis=1)
+        correlation = np.corrcoef(values, max*q*values)[0, 1]
         
-        axes[1,0].scatter(values, max_q_values, alpha=0.6, s=20)
+        axes[1,0].scatter(values, max*q*values, alpha=0.6, s=20)
         axes[1,0].plot([values.min(), values.max()], [values.min(), values.max()], 
                       'r--', alpha=0.8, label=f'Perfect Correlation')
         axes[1,0].set_title(f'Value vs Max Q-Value\\n(Correlation: {correlation:.3f})')
@@ -1880,20 +1880,20 @@ class DuelingAnalysis:
         axes[1,0].grid(True, alpha=0.3)
         
         advantage_ranges = np.max(advantages, axis=1) - np.min(advantages, axis=1)
-        time_steps = range(len(advantage_ranges))
+        time*steps = range(len(advantage*ranges))
         
-        axes[1,1].plot(time_steps, advantage_ranges, alpha=0.7, color='orange')
+        axes[1,1].plot(time*steps, advantage*ranges, alpha=0.7, color='orange')
         axes[1,1].set_title('Advantage Range Over Time')
         axes[1,1].set_xlabel('Time Step')
         axes[1,1].set_ylabel('Advantage Range (Max - Min)')
         axes[1,1].grid(True, alpha=0.3)
         
         reconstructed_q = values.reshape(-1, 1) + advantages - advantages.mean(axis=1, keepdims=True)
-        reconstruction_error = np.abs(q_values - reconstructed_q).mean(axis=1)
+        reconstruction*error = np.abs(q*values - reconstructed_q).mean(axis=1)
         
         axes[1,2].hist(reconstruction_error, bins=30, alpha=0.7, color='purple', edgecolor='black')
         axes[1,2].set_title('Q-Value Reconstruction Error')
-        axes[1,2].set_xlabel('|Q_actual - Q_reconstructed|')
+        axes[1,2].set*xlabel('|Q*actual - Q_reconstructed|')
         axes[1,2].set_ylabel('Frequency')
         axes[1,2].grid(True, alpha=0.3)
         
@@ -1911,58 +1911,58 @@ class DuelingAnalysis:
         return {
             'correlation': correlation,
             'advantage_mean': np.mean(advantages),
-            'reconstruction_error': np.mean(reconstruction_error)
+            'reconstruction*error': np.mean(reconstruction*error)
         }
 
 class ArchitectureComparison:
     """Compare Standard DQN vs Dueling DQN architectures"""
     
-    def __init__(self, state_size, action_size):
-        self.state_size = state_size
-        self.action_size = action_size
+    def **init**(self, state*size, action*size):
+        self.state*size = state*size
+        self.action*size = action*size
         
-    def create_test_networks(self):
+    def create*test*networks(self):
         """Create different network architectures for comparison"""
         networks = {
-            'Standard': DQN(self.state_size, self.action_size),
-            'Dueling': DuelingDQN(self.state_size, self.action_size),
-            'Dueling_Large': DuelingDQN(self.state_size, self.action_size, 
+            'Standard': DQN(self.state*size, self.action*size),
+            'Dueling': DuelingDQN(self.state*size, self.action*size),
+            'Dueling*Large': DuelingDQN(self.state*size, self.action_size, 
                                       hidden_sizes=[1024, 512], 
-                                      value_hidden=256, advantage_hidden=256)
+                                      value*hidden=256, advantage*hidden=256)
         }
         
         return networks
     
-    def analyze_parameter_efficiency(self):
+    def analyze*parameter*efficiency(self):
         """Analyze parameter efficiency of different architectures"""
-        networks = self.create_test_networks()
+        networks = self.create*test*networks()
         
         analysis = {}
         for name, network in networks.items():
             total_params = sum(p.numel() for p in network.parameters())
             
             if hasattr(network, 'shared_features'):
-                shared_params = sum(p.numel() for p in network.shared_features.parameters())
-                value_params = sum(p.numel() for p in network.value_stream.parameters())
-                advantage_params = sum(p.numel() for p in network.advantage_stream.parameters())
+                shared*params = sum(p.numel() for p in network.shared*features.parameters())
+                value*params = sum(p.numel() for p in network.value*stream.parameters())
+                advantage*params = sum(p.numel() for p in network.advantage*stream.parameters())
                 
                 analysis[name] = {
-                    'total_params': total_params,
-                    'shared_params': shared_params,
-                    'value_params': value_params,
-                    'advantage_params': advantage_params,
+                    'total*params': total*params,
+                    'shared*params': shared*params,
+                    'value*params': value*params,
+                    'advantage*params': advantage*params,
                     'architecture': 'Dueling'
                 }
             else:
                 analysis[name] = {
-                    'total_params': total_params,
+                    'total*params': total*params,
                     'architecture': 'Standard'
                 }
         
         fig, axes = plt.subplots(1, 2, figsize=(15, 6))
         
         names = list(analysis.keys())
-        total_params = [analysis[name]['total_params'] for name in names]
+        total*params = [analysis[name]['total*params'] for name in names]
         colors = ['skyblue', 'lightgreen', 'lightcoral']
         
         bars = axes[0].bar(names, total_params, color=colors, alpha=0.8)
@@ -1972,10 +1972,10 @@ class ArchitectureComparison:
         
         for bar, params in zip(bars, total_params):
             height = bar.get_height()
-            axes[0].text(bar.get_x() + bar.get_width()/2., height*1.02,
+            axes[0].text(bar.get*x() + bar.get*width()/2., height*1.02,
                         f'{params:,}', ha='center', va='bottom', fontsize=10)
         
-        dueling_networks = {k: v for k, v in analysis.items() if 'shared_params' in v}
+        dueling*networks = {k: v for k, v in analysis.items() if 'shared*params' in v}
         
         if dueling_networks:
             breakdown_data = []
@@ -1989,15 +1989,15 @@ class ArchitectureComparison:
                 ])
                 labels.append(name)
             
-            breakdown_data = np.array(breakdown_data)
+            breakdown*data = np.array(breakdown*data)
             
-            bottom_shared = breakdown_data[:, 0]
-            bottom_value = bottom_shared + breakdown_data[:, 1]
+            bottom*shared = breakdown*data[:, 0]
+            bottom*value = bottom*shared + breakdown_data[:, 1]
             
             axes[1].bar(labels, breakdown_data[:, 0], label='Shared', alpha=0.8, color='blue')
-            axes[1].bar(labels, breakdown_data[:, 1], bottom=breakdown_data[:, 0], 
+            axes[1].bar(labels, breakdown*data[:, 1], bottom=breakdown*data[:, 0], 
                        label='Value Stream', alpha=0.8, color='green')
-            axes[1].bar(labels, breakdown_data[:, 2], bottom=bottom_value,
+            axes[1].bar(labels, breakdown*data[:, 2], bottom=bottom*value,
                        label='Advantage Stream', alpha=0.8, color='red')
             
             axes[1].set_title('Parameter Breakdown (Dueling Networks)')
@@ -2012,8 +2012,8 @@ class ArchitectureComparison:
 
 print("Creating Dueling DQN Analysis...")
 
-arch_comparison = ArchitectureComparison(state_size=4, action_size=2)
-param_analysis = arch_comparison.analyze_parameter_efficiency()
+arch*comparison = ArchitectureComparison(state*size=4, action_size=2)
+param*analysis = arch*comparison.analyze*parameter*efficiency()
 
 dueling_analysis = DuelingAnalysis()
 
@@ -2029,7 +2029,7 @@ print("✓ Parameter efficiency analysis complete")
 
 
     
-![png](CA5_files/CA5_9_1.png)
+![png](CA5*files/CA5*9_1.png)
     
 
 
@@ -2122,7 +2122,7 @@ wi = wi / max_j wj
 - **Sample**: O(log n) to sample based on priority
 - **Insert**: O(log n) to add new experience
 
-### 5.3.2 Rank-Based Prioritization
+### 5.3.2 Rank-based Prioritization
 
 **Alternative**: Rank experiences by TD error, sample based on rank.
 ```
@@ -2159,10 +2159,10 @@ for episode in episodes:
         batch, indices, weights = D.sample(batch_size, β)
         
         # Compute TD errors
-        δ_batch = compute_td_errors(batch)
+        δ*batch = compute*td_errors(batch)
         
         # Update priorities
-        D.update_priorities(indices, |δ_batch| + ε)
+        D.update*priorities(indices, |δ*batch| + ε)
         
         # Update network with importance sampling weights
         loss = (weights * δ_batch²).mean()
@@ -2223,7 +2223,7 @@ for episode in episodes:
 
 ## 5.7 Variants and Extensions
 
-### 5.7.1 Multi-Step Prioritization
+### 5.7.1 Multi-step Prioritization
 
 Combine with n-step returns for better priority estimates:
 ```
@@ -2236,7 +2236,7 @@ Use distributional RL metrics for priority:
 - Wasserstein distance between distributions
 - KL divergence for priority calculation
 
-### 5.7.3 Curiosity-Driven Prioritization
+### 5.7.3 Curiosity-driven Prioritization
 
 Combine TD error with curiosity/novelty measures:
 - Prediction error from forward models
@@ -2258,7 +2258,7 @@ class SumTree:
     Enables O(log n) sampling and updating.
     """
     
-    def __init__(self, capacity):
+    def **init**(self, capacity):
         self.capacity = capacity
         self.tree = np.zeros(2 * capacity - 1)  # Internal + leaf nodes
         self.data = np.zeros(capacity, dtype=object)  # Store experiences
@@ -2267,13 +2267,13 @@ class SumTree:
         
     def add(self, priority, data):
         """Add experience with given priority."""
-        tree_idx = self.data_pointer + self.capacity - 1
+        tree*idx = self.data*pointer + self.capacity - 1
         
         self.data[self.data_pointer] = data
         
         self.update(tree_idx, priority)
         
-        self.data_pointer = (self.data_pointer + 1) % self.capacity
+        self.data*pointer = (self.data*pointer + 1) % self.capacity
         if self.size < self.capacity:
             self.size += 1
     
@@ -2283,7 +2283,7 @@ class SumTree:
         self.tree[tree_idx] = priority
         
         while tree_idx != 0:
-            tree_idx = (tree_idx - 1) // 2
+            tree*idx = (tree*idx - 1) // 2
             self.tree[tree_idx] += change
     
     def get_leaf(self, value):
@@ -2294,21 +2294,21 @@ class SumTree:
         parent_idx = 0
         
         while True:
-            left_child_idx = 2 * parent_idx + 1
-            right_child_idx = left_child_idx + 1
+            left*child*idx = 2 * parent_idx + 1
+            right*child*idx = left*child*idx + 1
             
-            if left_child_idx >= len(self.tree):
-                leaf_idx = parent_idx
+            if left*child*idx >= len(self.tree):
+                leaf*idx = parent*idx
                 break
             else:
-                if value <= self.tree[left_child_idx]:
-                    parent_idx = left_child_idx
+                if value <= self.tree[left*child*idx]:
+                    parent*idx = left*child_idx
                 else:
-                    value -= self.tree[left_child_idx]
-                    parent_idx = right_child_idx
+                    value -= self.tree[left*child*idx]
+                    parent*idx = right*child_idx
         
-        data_idx = leaf_idx - self.capacity + 1
-        return leaf_idx, self.tree[leaf_idx], self.data[data_idx]
+        data*idx = leaf*idx - self.capacity + 1
+        return leaf*idx, self.tree[leaf*idx], self.data[data_idx]
     
     @property
     def total_priority(self):
@@ -2323,7 +2323,7 @@ class PrioritizedReplayBuffer:
     Applies importance sampling correction for unbiased learning.
     """
     
-    def __init__(self, capacity, alpha=0.6, beta=0.4, beta_increment=0.001, epsilon=1e-6):
+    def **init**(self, capacity, alpha=0.6, beta=0.4, beta_increment=0.001, epsilon=1e-6):
         """
         Initialize prioritized replay buffer.
         
@@ -2337,7 +2337,7 @@ class PrioritizedReplayBuffer:
         self.capacity = capacity
         self.alpha = alpha
         self.beta = beta
-        self.beta_increment = beta_increment
+        self.beta*increment = beta*increment
         self.epsilon = epsilon
         
         self.tree = SumTree(capacity)
@@ -2365,7 +2365,7 @@ class PrioritizedReplayBuffer:
         batch = []
         indices = []
         priorities = []
-        segment = self.tree.total_priority / batch_size
+        segment = self.tree.total*priority / batch*size
         
         self.beta = min(1.0, self.beta + self.beta_increment)
         
@@ -2374,26 +2374,26 @@ class PrioritizedReplayBuffer:
             right = segment * (i + 1)
             sample_value = random.uniform(left, right)
             
-            tree_idx, priority, experience = self.tree.get_leaf(sample_value)
+            tree*idx, priority, experience = self.tree.get*leaf(sample_value)
             
             batch.append(experience)
             indices.append(tree_idx)
             priorities.append(priority)
         
-        sampling_probs = np.array(priorities) / self.tree.total_priority
+        sampling*probs = np.array(priorities) / self.tree.total*priority
         weights = np.power(self.tree.size * sampling_probs, -self.beta)
         weights = weights / weights.max()  # Normalize
         
         return batch, indices, weights
     
-    def update_priorities(self, indices, td_errors):
+    def update*priorities(self, indices, td*errors):
         """Update priorities based on TD errors."""
-        for idx, td_error in zip(indices, td_errors):
+        for idx, td*error in zip(indices, td*errors):
             priority = (abs(td_error) + self.epsilon) ** self.alpha
             self.tree.update(idx, priority)
-            self.max_priority = max(self.max_priority, priority)
+            self.max*priority = max(self.max*priority, priority)
     
-    def __len__(self):
+    def **len**(self):
         return self.tree.size
 
 class PrioritizedDQNAgent:
@@ -2404,13 +2404,13 @@ class PrioritizedDQNAgent:
     sample efficiency and learning stability.
     """
     
-    def __init__(self, state_size, action_size, lr=1e-3, device='cpu'):
-        self.state_size = state_size
-        self.action_size = action_size
+    def **init**(self, state*size, action*size, lr=1e-3, device='cpu'):
+        self.state*size = state*size
+        self.action*size = action*size
         self.device = device
         
-        self.q_network = DQN(state_size, action_size).to(device)
-        self.target_network = DQN(state_size, action_size).to(device)
+        self.q*network = DQN(state*size, action_size).to(device)
+        self.target*network = DQN(state*size, action_size).to(device)
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
         
         self.memory = PrioritizedReplayBuffer(
@@ -2432,14 +2432,14 @@ class PrioritizedDQNAgent:
         self.memory.add(state, action, reward, next_state, done)
         
         self.step_count += 1
-        if self.step_count % self.update_every == 0 and len(self.memory) > self.batch_size:
+        if self.step*count % self.update*every == 0 and len(self.memory) > self.batch_size:
             self.train()
     
     def act(self, state, epsilon=0.1):
         """Choose action using epsilon-greedy policy."""
         if random.random() > epsilon:
             state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-            q_values = self.q_network(state_tensor)
+            q*values = self.q*network(state_tensor)
             return q_values.argmax().item()
         else:
             return random.randrange(self.action_size)
@@ -2451,52 +2451,52 @@ class PrioritizedDQNAgent:
         states = torch.FloatTensor([e.state for e in batch]).to(self.device)
         actions = torch.LongTensor([e.action for e in batch]).to(self.device)
         rewards = torch.FloatTensor([e.reward for e in batch]).to(self.device)
-        next_states = torch.FloatTensor([e.next_state for e in batch]).to(self.device)
+        next*states = torch.FloatTensor([e.next*state for e in batch]).to(self.device)
         dones = torch.FloatTensor([e.done for e in batch]).to(self.device)
         weights = torch.FloatTensor(weights).to(self.device)
         
-        current_q_values = self.q_network(states).gather(1, actions.unsqueeze(1))
+        current*q*values = self.q_network(states).gather(1, actions.unsqueeze(1))
         
         with torch.no_grad():
-            next_actions = self.q_network(next_states).argmax(1)
-            next_q_values = self.target_network(next_states).gather(1, next_actions.unsqueeze(1))
-            target_q_values = rewards.unsqueeze(1) + (self.gamma * next_q_values * (1 - dones.unsqueeze(1)))
+            next*actions = self.q*network(next_states).argmax(1)
+            next*q*values = self.target*network(next*states).gather(1, next_actions.unsqueeze(1))
+            target*q*values = rewards.unsqueeze(1) + (self.gamma * next*q*values * (1 - dones.unsqueeze(1)))
         
-        td_errors = target_q_values - current_q_values
+        td*errors = target*q*values - current*q_values
         
         loss = (weights.unsqueeze(1) * td_errors.pow(2)).mean()
         
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
+        torch.nn.utils.clip*grad*norm*(self.q*network.parameters(), 1.0)
         self.optimizer.step()
         
-        td_errors_np = td_errors.detach().cpu().numpy().flatten()
-        self.memory.update_priorities(indices, td_errors_np)
+        td*errors*np = td_errors.detach().cpu().numpy().flatten()
+        self.memory.update*priorities(indices, td*errors_np)
         
         self.soft_update()
     
     def soft_update(self):
         """Soft update target network parameters."""
-        for target_param, local_param in zip(self.target_network.parameters(), 
+        for target*param, local*param in zip(self.target_network.parameters(), 
                                            self.q_network.parameters()):
-            target_param.data.copy_(self.tau * local_param.data + 
+            target*param.data.copy*(self.tau * local_param.data + 
                                   (1.0 - self.tau) * target_param.data)
 
 class PriorityAnalysis:
     """Analyze prioritized replay behavior and effectiveness."""
     
-    def __init__(self):
+    def **init**(self):
         self.priority_history = []
-        self.td_error_history = []
+        self.td*error*history = []
         self.sampling_counts = {}
         
-    def log_priorities(self, priorities, td_errors):
+    def log*priorities(self, priorities, td*errors):
         """Log priority and TD error statistics."""
         self.priority_history.extend(priorities)
-        self.td_error_history.extend(td_errors)
+        self.td*error*history.extend(td_errors)
     
-    def plot_priority_distribution(self):
+    def plot*priority*distribution(self):
         """Plot distribution of priorities over time."""
         fig, axes = plt.subplots(2, 2, figsize=(12, 10))
         
@@ -2505,13 +2505,13 @@ class PriorityAnalysis:
         axes[0,0].set_xlabel('Priority')
         axes[0,0].set_ylabel('Frequency')
         
-        axes[0,1].hist(self.td_error_history, bins=50, alpha=0.7)
+        axes[0,1].hist(self.td*error*history, bins=50, alpha=0.7)
         axes[0,1].set_title('TD Error Distribution')
         axes[0,1].set_xlabel('TD Error')
         axes[0,1].set_ylabel('Frequency')
         
-        if len(self.priority_history) == len(self.td_error_history):
-            axes[1,0].scatter(self.td_error_history[:1000], 
+        if len(self.priority*history) == len(self.td*error_history):
+            axes[1,0].scatter(self.td*error*history[:1000], 
                             self.priority_history[:1000], alpha=0.5)
             axes[1,0].set_xlabel('TD Error')
             axes[1,0].set_ylabel('Priority')
@@ -2525,7 +2525,7 @@ class PriorityAnalysis:
         plt.tight_layout()
         plt.show()
     
-    def compare_sampling_efficiency(self, uniform_results, prioritized_results):
+    def compare*sampling*efficiency(self, uniform*results, prioritized*results):
         """Compare learning efficiency between uniform and prioritized replay."""
         fig, axes = plt.subplots(1, 2, figsize=(12, 5))
         
@@ -2537,13 +2537,13 @@ class PriorityAnalysis:
         axes[0].legend()
         
         threshold = np.mean(uniform_results['rewards'][-100:])
-        uniform_episodes = np.where(np.array(uniform_results['rewards']) >= threshold)[0]
-        prioritized_episodes = np.where(np.array(prioritized_results['rewards']) >= threshold)[0]
+        uniform*episodes = np.where(np.array(uniform*results['rewards']) >= threshold)[0]
+        prioritized*episodes = np.where(np.array(prioritized*results['rewards']) >= threshold)[0]
         
-        if len(uniform_episodes) > 0 and len(prioritized_episodes) > 0:
-            improvement = (uniform_episodes[0] - prioritized_episodes[0]) / uniform_episodes[0] * 100
+        if len(uniform*episodes) > 0 and len(prioritized*episodes) > 0:
+            improvement = (uniform*episodes[0] - prioritized*episodes[0]) / uniform_episodes[0] * 100
             axes[1].bar(['Uniform', 'Prioritized'], 
-                       [uniform_episodes[0], prioritized_episodes[0]])
+                       [uniform*episodes[0], prioritized*episodes[0]])
             axes[1].set_ylabel('Episodes to Reach Threshold')
             axes[1].set_title(f'Sample Efficiency\n({improvement:.1f}% improvement)')
         
@@ -2557,7 +2557,7 @@ print("- Importance sampling correction with beta annealing")
 print("- Double DQN integration for reduced overestimation")
 print("- Comprehensive priority analysis tools")
 
-if __name__ == "__main__":
+if **name** == "**main**":
     buffer = PrioritizedReplayBuffer(capacity=1000)
     
     for i in range(100):
@@ -2573,7 +2573,7 @@ if __name__ == "__main__":
     print(f"Importance weights range: [{weights.min():.3f}, {weights.max():.3f}]")
     
     td_errors = np.random.random(32)
-    buffer.update_priorities(indices, td_errors)
+    buffer.update*priorities(indices, td*errors)
     print("Priorities updated successfully!")
 
 ```
@@ -2581,19 +2581,19 @@ if __name__ == "__main__":
     Prioritized Experience Replay Implementation Complete!
     
     Key Features:
-    - Sum Tree for efficient O(log n) sampling and updates
-    - Importance sampling correction with beta annealing
-    - Double DQN integration for reduced overestimation
-    - Comprehensive priority analysis tools
+- Sum Tree for efficient O(log n) sampling and updates
+- Importance sampling correction with beta annealing
+- Double DQN integration for reduced overestimation
+- Comprehensive priority analysis tools
     
     Sampled batch size: 32
     Importance weights range: [1.000, 1.000]
     Priorities updated successfully!
 
 
-# Part 6: Rainbow DQN - Combining All Improvements
+# Part 6: Rainbow Dqn - Combining All Improvements
 
-## 6.1 Rainbow DQN Overview
+## 6.1 Rainbow Dqn Overview
 
 **Rainbow DQN** combines six major improvements to DQN into a single agent:
 
@@ -2612,7 +2612,7 @@ if __name__ == "__main__":
 
 ## 6.2 Additional Components
 
-### 6.2.1 Multi-Step Learning
+### 6.2.1 Multi-step Learning
 
 **Standard DQN**: 1-step TD target
 ```
@@ -2621,7 +2621,7 @@ r + γ max_a' Q(s', a')
 
 **Multi-Step**: n-step TD target
 ```
-Σ(t=0 to n-1) γ^t r_t+1 + γ^n max_a Q(s_n, a)
+Σ(t=0 to n-1) γ^t r*t+1 + γ^n max*a Q(s_n, a)
 ```
 
 **Benefits:**
@@ -2643,7 +2643,7 @@ r + γ max_a' Q(s', a')
 **C51 Algorithm:**
 - Parameterize return distribution with fixed support
 - Use categorical distribution over discrete atoms
-- Support: [V_min, V_max] divided into N atoms
+- Support: [V*min, V*max] divided into N atoms
 
 **Distributional Bellman Operator:**
 ```
@@ -2680,7 +2680,7 @@ Where:
 **Factorized Gaussian Noise:**
 - Reduces number of random variables
 - More efficient computation
-- ε^w_{i,j} = f(ε_i) × f(ε_j) where f(x) = sign(x)√|x|
+- ε^w*{i,j} = f(ε*i) × f(ε_j) where f(x) = sign(x)√|x|
 
 ## 6.3 Rainbow Architecture Integration
 
@@ -2708,7 +2708,7 @@ Value Head     Advantage Head
 
 **Distributional Loss**: Cross-entropy between predicted and target distributions
 ```
-L = -Σ_i p_i log q_i
+L = -Σ*i p*i log q_i
 ```
 
 Where:
@@ -2719,7 +2719,7 @@ Where:
 
 **Modified for Multi-Step + Distributional:**
 ```
-Target = Σ(t=0 to n-1) γ^t r_t+1 + γ^n Z_target(s_n, a*)
+Target = Σ(t=0 to n-1) γ^t r*t+1 + γ^n Z*target(s_n, a*)
 ```
 
 Where a* is selected using current network (Double DQN).
@@ -2868,7 +2868,7 @@ Where a* is selected using current network (Double DQN).
 
 # Part 7: Practical Exercises and Assignments
 
-## Exercise 7.1: Basic DQN Implementation (Beginner)
+## Exercise 7.1: Basic Dqn Implementation (beginner)
 
 **Objective**: Implement and train a basic DQN agent on CartPole-v1.
 
@@ -2880,10 +2880,10 @@ Where a* is selected using current network (Double DQN).
 
 **Implementation Template:**
 ```python
-# TODO: Complete the DQN implementation
+# Todo: Complete the Dqn Implementation
 class StudentDQN(nn.Module):
-    def __init__(self, state_size, action_size, hidden_size=128):
-        super(StudentDQN, self).__init__()
+    def **init**(self, state*size, action*size, hidden_size=128):
+        super(StudentDQN, self).**init**()
         # TODO: Define network layers
         pass
     
@@ -2891,9 +2891,9 @@ class StudentDQN(nn.Module):
         # TODO: Implement forward pass
         pass
 
-# TODO: Complete the agent implementation
+# Todo: Complete the Agent Implementation
 class StudentDQNAgent:
-    def __init__(self, state_size, action_size):
+    def **init**(self, state*size, action*size):
         # TODO: Initialize networks and optimizer
         pass
     
@@ -2914,7 +2914,7 @@ class StudentDQNAgent:
 
 ---
 
-## Exercise 7.2: Double DQN vs Standard DQN (Intermediate)
+## Exercise 7.2: Double Dqn Vs Standard Dqn (intermediate)
 
 **Objective**: Compare overestimation bias in standard DQN vs Double DQN.
 
@@ -2926,9 +2926,9 @@ class StudentDQNAgent:
 
 **Custom Environment Design:**
 ```python
-# Create environment where true Q-values are known
+# Create Environment Where True Q-values Are Known
 class OverestimationTestEnv:
-    def __init__(self):
+    def **init**(self):
         # Design environment with known optimal values
         # Include stochastic rewards to induce overestimation
         pass
@@ -2936,7 +2936,7 @@ class OverestimationTestEnv:
 
 **Analysis Requirements:**
 - Plot true vs estimated Q-values over time
-- Measure overestimation bias: E[Q_estimated] - Q_true
+- Measure overestimation bias: E[Q*estimated] - Q*true
 - Compare learning stability (variance in returns)
 - Statistical significance testing of results
 
@@ -2947,7 +2947,7 @@ class OverestimationTestEnv:
 
 ---
 
-## Exercise 7.3: Dueling Architecture Benefits (Intermediate)
+## Exercise 7.3: Dueling Architecture Benefits (intermediate)
 
 **Objective**: Analyze when dueling architecture provides the most benefit.
 
@@ -2964,7 +2964,7 @@ class OverestimationTestEnv:
 
 **Visualization Requirements:**
 ```python
-def visualize_dueling_benefits(agent, env):
+def visualize*dueling*benefits(agent, env):
     """
     Visualize value and advantage functions.
     Show where dueling helps most.
@@ -2981,7 +2981,7 @@ def visualize_dueling_benefits(agent, env):
 
 ---
 
-## Exercise 7.4: Prioritized Replay Implementation (Advanced)
+## Exercise 7.4: Prioritized Replay Implementation (advanced)
 
 **Objective**: Implement and optimize prioritized experience replay.
 
@@ -2996,11 +2996,11 @@ def visualize_dueling_benefits(agent, env):
 class OptimizedSumTree:
     """
     Memory-efficient sum tree with additional optimizations:
-    - Batch operations
-    - Memory pooling
-    - Compressed storage
+- Batch operations
+- Memory pooling
+- Compressed storage
     """
-    def __init__(self, capacity):
+    def **init**(self, capacity):
         # TODO: Implement optimized version
         pass
     
@@ -3022,7 +3022,7 @@ class OptimizedSumTree:
 
 ---
 
-## Exercise 7.5: Rainbow DQN Component Analysis (Expert)
+## Exercise 7.5: Rainbow Dqn Component Analysis (expert)
 
 **Objective**: Systematic ablation study of Rainbow DQN components.
 
@@ -3047,14 +3047,14 @@ class RainbowAblationStudy:
     6. Noisy Networks
     """
     
-    def __init__(self):
+    def **init**(self):
         self.components = [
-            'double_dqn', 'prioritized_replay', 'dueling',
-            'multi_step', 'distributional', 'noisy_networks'
+            'double*dqn', 'prioritized*replay', 'dueling',
+            'multi*step', 'distributional', 'noisy*networks'
         ]
         self.results = {}
     
-    def run_ablation(self, env_name, num_seeds=5):
+    def run*ablation(self, env*name, num_seeds=5):
         # TODO: Test all 2^6 = 64 combinations
         # TODO: Statistical analysis of results
         pass
@@ -3079,7 +3079,7 @@ class RainbowAblationStudy:
 
 ---
 
-## Exercise 7.6: Real-World Application (Capstone)
+## Exercise 7.6: Real-world Application (capstone)
 
 **Objective**: Apply DQN variants to a complex, real-world inspired problem.
 
@@ -3096,7 +3096,7 @@ class PortfolioEnv:
     Rewards: Risk-adjusted returns (Sharpe ratio)
     """
     
-    def __init__(self, assets, lookback_window=20):
+    def **init**(self, assets, lookback_window=20):
         # TODO: Implement realistic trading environment
         pass
 ```
@@ -3112,12 +3112,12 @@ class ResourceAllocationEnv:
     Rewards: Efficiency vs SLA violation trade-off
     """
     
-    def __init__(self, num_services, num_resources):
+    def **init**(self, num*services, num*resources):
         # TODO: Implement resource allocation environment
         pass
 ```
 
-### Option C: Game AI
+### Option C: Game Ai
 ```python
 class StrategicGameEnv:
     """
@@ -3132,7 +3132,7 @@ class StrategicGameEnv:
     Rewards: Based on resource collection, unit survival, enemy defeat, and victory
     """
     
-    def __init__(self, game_config):
+    def **init**(self, game_config):
         """
         Initialize the strategic game environment.
         
@@ -3140,11 +3140,11 @@ class StrategicGameEnv:
             game_config: Dictionary with game configuration parameters
         """
         # Game configuration
-        self.grid_size = game_config.get('grid_size', 10)
-        self.max_steps = game_config.get('max_steps', 200)
-        self.num_units = game_config.get('num_units', 3)
-        self.num_enemies = game_config.get('num_enemies', 2)
-        self.num_resources = game_config.get('num_resources', 5)
+        self.grid*size = game*config.get('grid_size', 10)
+        self.max*steps = game*config.get('max_steps', 200)
+        self.num*units = game*config.get('num_units', 3)
+        self.num*enemies = game*config.get('num_enemies', 2)
+        self.num*resources = game*config.get('num_resources', 5)
         
         # Game state components
         self.units = []  # Player units
@@ -3155,34 +3155,34 @@ class StrategicGameEnv:
         self.enemies_defeated = 0
         
         # Action space
-        self.action_space_size = self._calculate_action_space()
+        self.action*space*size = self.*calculate*action_space()
         
         # State space
-        self.state_size = self._calculate_state_size()
+        self.state*size = self.*calculate*state*size()
         
         # Reset to initial state
         self.reset()
     
-    def _calculate_action_space(self):
+    def *calculate*action_space(self):
         """Calculate the size of the action space."""
         # Actions per unit: move (4 directions), attack, gather, build
-        actions_per_unit = 4 + 1 + 1 + 1  # move + attack + gather + build
-        return self.num_units * actions_per_unit
+        actions*per*unit = 4 + 1 + 1 + 1  # move + attack + gather + build
+        return self.num*units * actions*per_unit
     
-    def _calculate_state_size(self):
+    def *calculate*state_size(self):
         """Calculate the size of the state space."""
         # Unit states: position (2), health (1), type (1) per unit
-        unit_state_size = self.num_units * 4
+        unit*state*size = self.num_units * 4
         # Enemy states: position (2), health (1) per enemy
-        enemy_state_size = self.num_enemies * 3
+        enemy*state*size = self.num_enemies * 3
         # Resource states: position (2), amount (1) per resource
-        resource_state_size = self.num_resources * 3
+        resource*state*size = self.num_resources * 3
         # Building states: position (2), type (1) per building (max 3 buildings)
-        building_state_size = 3 * 3
+        building*state*size = 3 * 3
         # Global state: resources collected, enemies defeated, step count
-        global_state_size = 3
+        global*state*size = 3
         
-        return unit_state_size + enemy_state_size + resource_state_size + building_state_size + global_state_size
+        return unit*state*size + enemy*state*size + resource*state*size + building*state*size + global*state*size
     
     def reset(self):
         """Reset the environment to initial state."""
@@ -3205,7 +3205,7 @@ class StrategicGameEnv:
             enemy = {
                 'id': i,
                 'position': [np.random.randint(0, self.grid_size), 
-                           np.random.randint(self.grid_size // 2, self.grid_size)],  # Start in top half
+                           np.random.randint(self.grid*size // 2, self.grid*size)],  # Start in top half
                 'health': 80
             }
             self.enemies.append(enemy)
@@ -3229,7 +3229,7 @@ class StrategicGameEnv:
         self.enemies_defeated = 0
         self.step_count = 0
         
-        return self._get_state()
+        return self.*get*state()
     
     def step(self, action):
         """
@@ -3251,36 +3251,36 @@ class StrategicGameEnv:
             # Invalid unit, no-op
             reward = -1
         else:
-            reward = self._execute_unit_action(unit_id, unit_action)
+            reward = self.*execute*unit*action(unit*id, unit_action)
         
         # Enemy AI (simple random movement toward player units)
-        enemy_reward = self._execute_enemy_actions()
+        enemy*reward = self.*execute*enemy*actions()
         
         # Update game state
-        self._update_game_state()
+        self.*update*game_state()
         
         # Check win/lose conditions
-        done = self._is_game_over()
+        done = self.*is*game_over()
         if done:
-            if self._check_victory():
+            if self.*check*victory():
                 reward += 100  # Victory bonus
             else:
                 reward -= 50   # Defeat penalty
         
         # Step limit
-        if self.step_count >= self.max_steps:
+        if self.step*count >= self.max*steps:
             done = True
         
-        next_state = self._get_state()
+        next*state = self.*get_state()
         info = {
-            'resources_collected': self.resources_collected,
-            'enemies_defeated': self.enemies_defeated,
+            'resources*collected': self.resources*collected,
+            'enemies*defeated': self.enemies*defeated,
             'units_alive': sum(1 for u in self.units if u['health'] > 0)
         }
         
         return next_state, reward, done, info
     
-    def _execute_unit_action(self, unit_id, action):
+    def *execute*unit*action(self, unit*id, action):
         """Execute action for a specific unit."""
         unit = self.units[unit_id]
         reward = 0
@@ -3291,9 +3291,9 @@ class StrategicGameEnv:
         if action < 4:  # Move actions (0-3)
             directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # N, S, W, E
             dx, dy = directions[action]
-            new_x = max(0, min(self.grid_size - 1, unit['position'][0] + dx))
-            new_y = max(0, min(self.grid_size - 1, unit['position'][1] + dy))
-            unit['position'] = [new_x, new_y]
+            new*x = max(0, min(self.grid*size - 1, unit['position'][0] + dx))
+            new*y = max(0, min(self.grid*size - 1, unit['position'][1] + dy))
+            unit['position'] = [new*x, new*y]
             
         elif action == 4:  # Attack
             # Find nearest enemy
@@ -3301,7 +3301,7 @@ class StrategicGameEnv:
             min_dist = float('inf')
             for enemy in self.enemies:
                 if enemy['health'] > 0:
-                    dist = self._manhattan_distance(unit['position'], enemy['position'])
+                    dist = self.*manhattan*distance(unit['position'], enemy['position'])
                     if dist < min_dist and dist <= 2:  # Attack range
                         min_dist = dist
                         nearest_enemy = enemy
@@ -3321,15 +3321,15 @@ class StrategicGameEnv:
                 min_dist = float('inf')
                 for resource in self.resources:
                     if resource['amount'] > 0:
-                        dist = self._manhattan_distance(unit['position'], resource['position'])
+                        dist = self.*manhattan*distance(unit['position'], resource['position'])
                         if dist < min_dist and dist <= 1:  # Gather range
                             min_dist = dist
                             nearest_resource = resource
                 
                 if nearest_resource:
-                    gather_amount = min(10, nearest_resource['amount'])
+                    gather*amount = min(10, nearest*resource['amount'])
                     unit['carrying'] += gather_amount
-                    nearest_resource['amount'] -= gather_amount
+                    nearest*resource['amount'] -= gather*amount
                     reward += gather_amount * 0.1  # Small reward for gathering
         
         elif action == 6:  # Build
@@ -3346,7 +3346,7 @@ class StrategicGameEnv:
         
         return reward
     
-    def _execute_enemy_actions(self):
+    def *execute*enemy_actions(self):
         """Execute enemy AI actions."""
         reward = 0
         for enemy in self.enemies:
@@ -3358,7 +3358,7 @@ class StrategicGameEnv:
             min_dist = float('inf')
             for unit in self.units:
                 if unit['health'] > 0:
-                    dist = self._manhattan_distance(enemy['position'], unit['position'])
+                    dist = self.*manhattan*distance(enemy['position'], unit['position'])
                     if dist < min_dist:
                         min_dist = dist
                         nearest_unit = unit
@@ -3368,27 +3368,27 @@ class StrategicGameEnv:
                 dx = 1 if nearest_unit['position'][0] > enemy['position'][0] else -1
                 dy = 1 if nearest_unit['position'][1] > enemy['position'][1] else -1
                 
-                new_x = max(0, min(self.grid_size - 1, enemy['position'][0] + dx))
-                new_y = max(0, min(self.grid_size - 1, enemy['position'][1] + dy))
-                enemy['position'] = [new_x, new_y]
+                new*x = max(0, min(self.grid*size - 1, enemy['position'][0] + dx))
+                new*y = max(0, min(self.grid*size - 1, enemy['position'][1] + dy))
+                enemy['position'] = [new*x, new*y]
                 
                 # Attack if in range
-                if self._manhattan_distance(enemy['position'], nearest_unit['position']) <= 1:
+                if self.*manhattan*distance(enemy['position'], nearest_unit['position']) <= 1:
                     nearest_unit['health'] -= 15
                     if nearest_unit['health'] <= 0:
                         reward -= 10  # Penalty for losing unit
         
         return reward
     
-    def _update_game_state(self):
+    def *update*game_state(self):
         """Update game state after actions."""
         # Remove depleted resources
         self.resources = [r for r in self.resources if r['amount'] > 0]
         
         # Check for victory/defeat
-        pass  # Handled in _is_game_over
+        pass  # Handled in *is*game_over
     
-    def _is_game_over(self):
+    def *is*game_over(self):
         """Check if the game is over."""
         # Victory: all enemies defeated
         if all(e['health'] <= 0 for e in self.enemies):
@@ -3400,11 +3400,11 @@ class StrategicGameEnv:
         
         return False
     
-    def _check_victory(self):
+    def *check*victory(self):
         """Check if player won."""
         return all(e['health'] <= 0 for e in self.enemies)
     
-    def _get_state(self):
+    def *get*state(self):
         """Get current state representation."""
         state = []
         
@@ -3430,7 +3430,7 @@ class StrategicGameEnv:
             ])
         
         # Pad if fewer enemies
-        while len(state) < self.num_units * 4 + self.num_enemies * 3:
+        while len(state) < self.num*units * 4 + self.num*enemies * 3:
             state.extend([0.0, 0.0, 0.0])
         
         # Resource states
@@ -3442,7 +3442,7 @@ class StrategicGameEnv:
             ])
         
         # Pad if fewer resources
-        while len(state) < self.num_units * 4 + self.num_enemies * 3 + self.num_resources * 3:
+        while len(state) < self.num*units * 4 + self.num*enemies * 3 + self.num_resources * 3:
             state.extend([0.0, 0.0, 0.0])
         
         # Building states (max 3 buildings)
@@ -3454,25 +3454,25 @@ class StrategicGameEnv:
             ])
         
         # Pad buildings
-        while len(state) < self.num_units * 4 + self.num_enemies * 3 + self.num_resources * 3 + 3 * 3:
+        while len(state) < self.num*units * 4 + self.num*enemies * 3 + self.num_resources * 3 + 3 * 3:
             state.extend([0.0, 0.0, 0.0])
         
         # Global state
         state.extend([
             self.resources_collected / 100.0,
-            self.enemies_defeated / self.num_enemies,
-            self.step_count / self.max_steps
+            self.enemies*defeated / self.num*enemies,
+            self.step*count / self.max*steps
         ])
         
         return np.array(state, dtype=np.float32)
     
-    def _manhattan_distance(self, pos1, pos2):
+    def *manhattan*distance(self, pos1, pos2):
         """Calculate Manhattan distance between two positions."""
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
     
     def render(self):
         """Render the current game state (text-based)."""
-        grid = [['.' for _ in range(self.grid_size)] for _ in range(self.grid_size)]
+        grid = [['.' for * in range(self.grid*size)] for * in range(self.grid*size)]
         
         # Place resources
         for resource in self.resources:
@@ -3499,7 +3499,7 @@ class StrategicGameEnv:
                 grid[y][x] = 'E'
         
         # Print grid
-        print(f"Step: {self.step_count}, Resources: {self.resources_collected}, Enemies defeated: {self.enemies_defeated}")
+        print(f"Step: {self.step*count}, Resources: {self.resources*collected}, Enemies defeated: {self.enemies_defeated}")
         for row in grid:
             print(' '.join(row))
         print()
@@ -3591,7 +3591,7 @@ class StrategicGameEnv:
 
 # Part 8: Summary and Advanced Topics
 
-## 8.1 Deep Q-Networks Evolution Summary
+## 8.1 Deep Q-networks Evolution Summary
 
 ### 8.1.1 Historical Progression
 
@@ -3874,9 +3874,9 @@ Whether applying these methods to research problems or practical applications, t
 
 # Part 9: Theoretical Questions and Comprehensive Answers
 
-## 9.1 Fundamental Deep Q-Learning Theory
+## 9.1 Fundamental Deep Q-learning Theory
 
-### Question 1: What is the fundamental challenge when applying Q-learning to high-dimensional state spaces?
+### Question 1: What Is the Fundamental Challenge When Applying Q-learning to High-dimensional State Spaces?
 
 **Answer:**
 The fundamental challenge is the **curse of dimensionality** in traditional tabular Q-learning. When state spaces are continuous or have very high dimensionality (like raw pixels in Atari games), it becomes impossible to maintain a lookup table for every state-action pair.
@@ -3893,7 +3893,7 @@ The fundamental challenge is the **curse of dimensionality** in traditional tabu
 - Parameters θ are updated through gradient descent
 - Enables handling of continuous and high-dimensional spaces
 
-### Question 2: Why does naive application of neural networks to Q-learning lead to instability?
+### Question 2: Why Does Naive Application of Neural Networks to Q-learning Lead to Instability?
 
 **Answer:**
 Naive application leads to instability due to several factors that violate the assumptions of supervised learning:
@@ -3918,68 +3918,68 @@ Naive application leads to instability due to several factors that violate the a
 - **Experience Replay**: Break correlations in data
 - **Clipping/Regularization**: Control gradient magnitudes
 
-### Question 3: Explain the mathematical formulation of the DQN loss function and its components.
+### Question 3: Explain the Mathematical Formulation of the Dqn Loss Function and Its Components.
 
 **Answer:**
 The DQN loss function is:
 
-**L(θ) = E[(y_i - Q(s_i,a_i;θ))²]**
+**L(θ) = E[(y*i - Q(s*i,a_i;θ))²]**
 
 Where:
-- **y_i = r_i + γ max_a' Q(s'_i,a';θ^-)** is the target value
-- **Q(s_i,a_i;θ)** is the current Q-value prediction
+- **y*i = r*i + γ max*a' Q(s'*i,a';θ^-)** is the target value
+- **Q(s*i,a*i;θ)** is the current Q-value prediction
 - **θ^-** represents target network parameters (fixed)
 - **θ** represents current network parameters (updated)
 
 **Component Analysis:**
 
-1. **Current Q-Value: Q(s_i,a_i;θ)**
-   - Network's current estimate for state-action pair
-   - Updated through backpropagation
+1. **Current Q-Value: Q(s*i,a*i;θ)**
+- Network's current estimate for state-action pair
+- Updated through backpropagation
 
 2. **Target Value: y_i**
-   - **r_i**: Immediate reward (observed)
-   - **γ max_a' Q(s'_i,a';θ^-)**: Discounted future value (estimated)
-   - Uses target network θ^- to stabilize training
+- **r_i**: Immediate reward (observed)
+- **γ max*a' Q(s'*i,a';θ^-)**: Discounted future value (estimated)
+- Uses target network θ^- to stabilize training
 
 3. **Squared Error Loss:**
-   - Penalizes large prediction errors quadratically
-   - Provides smooth gradients for optimization
-   - Standard choice for regression problems
+- Penalizes large prediction errors quadratically
+- Provides smooth gradients for optimization
+- Standard choice for regression problems
 
 **Gradient Update:**
-∇_θ L(θ) = E[2(Q(s,a;θ) - y)(∇_θ Q(s,a;θ))]
+∇*θ L(θ) = E[2(Q(s,a;θ) - y)(∇*θ Q(s,a;θ))]
 
 ## 9.2 Experience Replay Mechanism
 
-### Question 4: Why is experience replay crucial for DQN, and how does it break the correlation problem?
+### Question 4: Why Is Experience Replay Crucial for Dqn, and How Does It Break the Correlation Problem?
 
 **Answer:**
 Experience replay is crucial because it addresses the **temporal correlation problem** inherent in sequential reinforcement learning.
 
 **The Correlation Problem:**
-- Sequential experiences (s_t,a_t,r_t,s_{t+1}) are highly correlated
+- Sequential experiences (s*t,a*t,r*t,s*{t+1}) are highly correlated
 - Consecutive states often very similar (e.g., adjacent video frames)
 - SGD assumes i.i.d. data, but RL data violates this assumption
 - Can lead to overfitting to recent trajectory and catastrophic forgetting
 
 **How Experience Replay Solves This:**
 
-1. **Storage**: Store transitions in replay buffer D = {e_1, e_2, ..., e_N}
+1. **Storage**: Store transitions in replay buffer D = {e*1, e*2, ..., e_N}
 2. **Random Sampling**: Sample mini-batch randomly from buffer
 3. **Decorrelation**: Random sampling breaks temporal correlations
 4. **Data Reuse**: Each experience can be used multiple times
 
 **Mathematical Impact:**
-- Standard online update: θ_{t+1} = θ_t + α∇_θ L(θ_t, e_t)
-- Replay update: θ_{t+1} = θ_t + α∇_θ L(θ_t, batch_random)
+- Standard online update: θ*{t+1} = θ*t + α∇*θ L(θ*t, e_t)
+- Replay update: θ*{t+1} = θ*t + α∇*θ L(θ*t, batch_random)
 
 **Additional Benefits:**
 - **Sample Efficiency**: Reuse valuable experiences
 - **Stability**: Smoother gradient updates
 - **Robustness**: Less sensitive to individual bad experiences
 
-### Question 5: What are the theoretical guarantees for convergence with function approximation in DQN?
+### Question 5: What Are the Theoretical Guarantees for Convergence with Function Approximation in Dqn?
 
 **Answer:**
 **Short Answer**: DQN has **no formal convergence guarantees** in the general case.
@@ -4018,9 +4018,9 @@ Experience replay is crucial because it addresses the **temporal correlation pro
 - Neural Tangent Kernel theory offers some insights
 - But general guarantees remain elusive
 
-## 9.3 Double DQN and Overestimation Bias
+## 9.3 Double Dqn and Overestimation Bias
 
-### Question 6: Explain the mathematical origin of overestimation bias in Q-learning and how Double DQN addresses it.
+### Question 6: Explain the Mathematical Origin of Overestimation Bias in Q-learning and How Double Dqn Addresses It.
 
 **Answer:**
 
@@ -4035,7 +4035,7 @@ The bias comes from the **maximization operation** in the Q-learning update:
 **Mathematical Analysis:**
 Let Q(s,a) = Q*(s,a) + ε(s,a), where ε(s,a) is estimation error.
 
-max_a Q(s,a) = max_a [Q*(s,a) + ε(s,a)] ≥ max_a Q*(s,a) + max_a ε(s,a)
+max*a Q(s,a) = max*a [Q*(s,a) + ε(s,a)] ≥ max*a Q*(s,a) + max*a ε(s,a)
 
 If errors are zero-mean but max operation selects positive errors more often, we get systematic overestimation.
 
@@ -4062,7 +4062,7 @@ y = r + γ Q(s', argmax_a Q(s',a; θ); θ^-)
 - More stable learning curves
 - Better final performance in many environments
 
-### Question 7: Under what conditions might Double DQN perform worse than standard DQN?
+### Question 7: under What Conditions Might Double Dqn Perform Worse Than Standard Dqn?
 
 **Answer:**
 
@@ -4096,9 +4096,9 @@ Double DQN can perform worse under several specific conditions:
 **Theoretical Consideration:**
 Double DQN trades reduced bias for potentially increased variance in value estimates. In some settings, this trade-off might not be favorable.
 
-## 9.4 Dueling DQN Architecture
+## 9.4 Dueling Dqn Architecture
 
-### Question 8: Provide the mathematical derivation of the dueling DQN architecture and explain the aggregation methods.
+### Question 8: Provide the Mathematical Derivation of the Dueling Dqn Architecture and Explain the Aggregation Methods.
 
 **Answer:**
 
@@ -4119,8 +4119,8 @@ Where:
    φ(s) = CNN_features(s)
 
 2. **Dueling Streams:**
-   - Value stream: V(s; θ, α) = FC_V(φ(s))
-   - Advantage stream: A(s,a; θ, β) = FC_A(φ(s))
+- Value stream: V(s; θ, α) = FC_V(φ(s))
+- Advantage stream: A(s,a; θ, β) = FC_A(φ(s))
 
 3. **Aggregation Methods:**
 
@@ -4143,10 +4143,10 @@ Q(s,a; θ,α,β) = V(s; θ,α) + [A(s,a; θ,β) - max_a' A(s,a'; θ,β)]
 
 **Mathematical Properties:**
 - **Identifiability**: Unique decomposition given the constraint
-- **Optimal Policy Preservation**: argmax_a Q(s,a) = argmax_a A(s,a)
+- **Optimal Policy Preservation**: argmax*a Q(s,a) = argmax*a A(s,a)
 - **Advantage Interpretation**: A(s,a) represents relative action value
 
-### Question 9: When does dueling architecture provide the most benefit, and what are its limitations?
+### Question 9: When Does Dueling Architecture Provide the Most Benefit, and What Are Its Limitations?
 
 **Answer:**
 
@@ -4208,7 +4208,7 @@ If Var(V(s)) >> Var(A(s,a)), then dueling provides maximum benefit because:
 
 ## 9.5 Prioritized Experience Replay Theory
 
-### Question 10: Derive the importance sampling correction for prioritized experience replay and explain why it's necessary.
+### Question 10: Derive the Importance Sampling Correction for Prioritized Experience Replay and Explain Why It's Necessary.
 
 **Answer:**
 
@@ -4220,19 +4220,19 @@ Prioritized replay changes sampling distribution from uniform to priority-based,
 - Unbiased gradient estimates
 
 **Prioritized Sampling:**
-- Each experience sampled with probability: P(i) = p_i^α / Σ_j p_j^α
+- Each experience sampled with probability: P(i) = p*i^α / Σ*j p_j^α
 - Creates bias in gradient estimates
 
 **Bias Correction Derivation:**
 
-**Standard gradient**: ∇_θ J(θ) = E_uniform[∇_θ L(θ, e_i)]
+**Standard gradient**: ∇*θ J(θ) = E*uniform[∇*θ L(θ, e*i)]
 
-**Prioritized gradient**: ∇_θ J_prioritized(θ) = E_prioritized[∇_θ L(θ, e_i)]
+**Prioritized gradient**: ∇*θ J*prioritized(θ) = E*prioritized[∇*θ L(θ, e_i)]
 
 **Importance Sampling Correction:**
 To correct bias, we need to weight each sample by the ratio of target distribution to actual distribution:
 
-w_i = P_uniform(i) / P(i) = (1/N) / (p_i^α / Σ_j p_j^α) = (Σ_j p_j^α) / (N × p_i^α)
+w*i = P*uniform(i) / P(i) = (1/N) / (p*i^α / Σ*j p*j^α) = (Σ*j p*j^α) / (N × p*i^α)
 
 **Simplified Form:**
 w_i = (1/N × 1/P(i))^β = (N × P(i))^(-β)
@@ -4243,7 +4243,7 @@ Where β controls the amount of bias correction:
 
 **Normalization:**
 To prevent weights from scaling gradients too much:
-w_i = w_i / max_j w_j
+w*i = w*i / max*j w*j
 
 **Why This Works:**
 - High priority experiences (large P(i)) get small weights w_i
@@ -4256,7 +4256,7 @@ Start with β = 0.4 and anneal to β = 1.0 because:
 - Early training: Prioritization more important than bias correction
 - Later training: Bias correction more important for convergence
 
-### Question 11: Analyze the computational complexity of different prioritized replay implementations.
+### Question 11: Analyze the Computational Complexity of Different Prioritized Replay Implementations.
 
 **Answer:**
 
@@ -4270,24 +4270,24 @@ Start with β = 0.4 and anneal to β = 1.0 because:
 **Complexity Analysis:**
 
 1. **Insertion: O(log N)**
-   - Add new leaf at current position
-   - Propagate sum changes up to root
-   - Update parent nodes: log_2(N) operations
+- Add new leaf at current position
+- Propagate sum changes up to root
+- Update parent nodes: log_2(N) operations
 
 2. **Priority Update: O(log N)**  
-   - Change leaf priority value
-   - Propagate difference up tree: log_2(N) operations
-   - Critical for online priority updates
+- Change leaf priority value
+- Propagate difference up tree: log_2(N) operations
+- Critical for online priority updates
 
 3. **Sampling: O(log N)**
-   - Start from root with random value
-   - Navigate down tree: log_2(N) comparisons
-   - Find corresponding experience
+- Start from root with random value
+- Navigate down tree: log_2(N) comparisons
+- Find corresponding experience
 
 4. **Batch Operations: O(K log N)**
-   - K samples: K × O(log N)
-   - K updates: K × O(log N)
-   - Total: O(K log N) for batch size K
+- K samples: K × O(log N)
+- K updates: K × O(log N)
+- Total: O(K log N) for batch size K
 
 **Alternative: Rank-Based Implementation:**
 
@@ -4298,16 +4298,16 @@ Start with β = 0.4 and anneal to β = 1.0 because:
 **Complexity Analysis:**
 
 1. **Insertion: O(N)**
-   - Insert in sorted order
-   - May require shifting elements
+- Insert in sorted order
+- May require shifting elements
 
 2. **Priority Update: O(N)**
-   - Change priority requires re-sorting
-   - Expensive for frequent updates
+- Change priority requires re-sorting
+- Expensive for frequent updates
 
 3. **Sampling: O(log N)**
-   - Binary search for rank-based sampling
-   - More robust to outliers
+- Binary search for rank-based sampling
+- More robust to outliers
 
 **Segment Tree Alternative:**
 
@@ -4331,21 +4331,21 @@ Similar to sum tree but with segment-based operations:
 **Practical Optimizations:**
 
 1. **Vectorized Operations:**
-   - Batch priority updates
-   - Parallel tree traversals
-   - SIMD operations for aggregation
+- Batch priority updates
+- Parallel tree traversals
+- SIMD operations for aggregation
 
 2. **Memory Pooling:**
-   - Pre-allocate tree nodes
-   - Reduce dynamic allocation overhead
-   - Better cache performance
+- Pre-allocate tree nodes
+- Reduce dynamic allocation overhead
+- Better cache performance
 
 3. **Lazy Updates:**
-   - Buffer priority changes
-   - Batch tree updates
-   - Reduce update frequency
+- Buffer priority changes
+- Batch tree updates
+- Reduce update frequency
 
-### Question 12: What are the theoretical limitations of prioritized experience replay?
+### Question 12: What Are the Theoretical Limitations of Prioritized Experience Replay?
 
 **Answer:**
 
@@ -4380,8 +4380,8 @@ Similar to sum tree but with segment-based operations:
 **Convergence Properties:**
 - No formal convergence guarantees for prioritized replay
 - IS correction provides unbiased estimates only if:
-  - Priorities are fixed during sampling
-  - β = 1 (full correction)
+- Priorities are fixed during sampling
+- β = 1 (full correction)
 - In practice, priorities change continuously
 
 **Sample Complexity:**
@@ -4422,9 +4422,9 @@ Similar to sum tree but with segment-based operations:
 - Can we provide theoretical convergence guarantees?
 - How do priorities interact with exploration?
 
-## 9.6 Rainbow DQN Integration Theory
+## 9.6 Rainbow Dqn Integration Theory
 
-### Question 13: Analyze the theoretical interactions between different Rainbow DQN components.
+### Question 13: Analyze the Theoretical Interactions between Different Rainbow Dqn Components.
 
 **Answer:**
 
@@ -4487,7 +4487,7 @@ Similar to sum tree but with segment-based operations:
 **Mathematical Framework:**
 
 **Combined Loss Function:**
-L_Rainbow = E_prioritized[w_i × KL(D_target || D_current)]
+L*Rainbow = E*prioritized[w*i × KL(D*target || D_current)]
 
 Where:
 - w_i: Importance sampling weights from prioritized replay
@@ -4496,7 +4496,7 @@ Where:
 - KL: Kullback-Leibler divergence for distributional loss
 
 **Target Distribution Construction:**
-D_target = Distributional_Bellman(r + γ × Distribution_from_Double_Target(s', dueling_network))
+D*target = Distributional*Bellman(r + γ × Distribution*from*Double*Target(s', dueling*network))
 
 **Theoretical Challenges:**
 
@@ -4538,7 +4538,7 @@ D_target = Distributional_Bellman(r + γ × Distribution_from_Double_Target(s', 
 - 30-100% performance improvement
 - Not always worth the complexity
 
-### Question 14: What are the fundamental limitations of the value-based approach that Rainbow DQN represents?
+### Question 14: What Are the Fundamental Limitations of the Value-based Approach That Rainbow Dqn Represents?
 
 **Answer:**
 
@@ -4667,7 +4667,7 @@ While Rainbow DQN represents a significant achievement in value-based RL, it has
 
 ## 9.7 Implementation and Practical Questions
 
-### Question 15: Implement a custom loss function that combines Double DQN with Huber loss. Explain when and why this is beneficial.
+### Question 15: Implement a Custom Loss Function That Combines Double Dqn with Huber Loss. Explain When and Why This Is Beneficial.
 
 **Answer:**
 
@@ -4700,33 +4700,33 @@ class DoubleDQNHuberAgent:
     Combines overestimation bias reduction with outlier-robust loss function.
     """
     
-    def __init__(self, state_size, action_size, lr=1e-3, huber_delta=1.0):
-        self.state_size = state_size
-        self.action_size = action_size
-        self.huber_delta = huber_delta
+    def **init**(self, state*size, action*size, lr=1e-3, huber_delta=1.0):
+        self.state*size = state*size
+        self.action*size = action*size
+        self.huber*delta = huber*delta
         
-        self.q_network = DQN(state_size, action_size)
-        self.target_network = DQN(state_size, action_size)
+        self.q*network = DQN(state*size, action_size)
+        self.target*network = DQN(state*size, action_size)
         self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=lr)
         
         self.gamma = 0.99
         self.tau = 1e-3
         
-    def compute_double_dqn_targets(self, rewards, next_states, dones):
+    def compute*double*dqn*targets(self, rewards, next*states, dones):
         """
         Compute Double DQN targets using current network for action selection
         and target network for action evaluation.
         """
         with torch.no_grad():
-            next_actions = self.q_network(next_states).argmax(1)
+            next*actions = self.q*network(next_states).argmax(1)
             
-            next_q_values = self.target_network(next_states).gather(1, next_actions.unsqueeze(1))
+            next*q*values = self.target*network(next*states).gather(1, next_actions.unsqueeze(1))
             
-            targets = rewards + (self.gamma * next_q_values * (1 - dones))
+            targets = rewards + (self.gamma * next*q*values * (1 - dones))
             
         return targets
     
-    def huber_loss(self, td_errors, delta=1.0):
+    def huber*loss(self, td*errors, delta=1.0):
         """
         Compute Huber loss for TD errors.
         
@@ -4737,38 +4737,38 @@ class DoubleDQNHuberAgent:
         Returns:
             Huber loss values
         """
-        abs_errors = torch.abs(td_errors)
+        abs*errors = torch.abs(td*errors)
         quadratic = torch.clamp(abs_errors, max=delta)
         linear = abs_errors - quadratic
         
         return 0.5 * quadratic.pow(2) + delta * linear
     
-    def train_step(self, states, actions, rewards, next_states, dones):
+    def train*step(self, states, actions, rewards, next*states, dones):
         """
         Single training step with Double DQN + Huber loss.
         """
-        current_q_values = self.q_network(states).gather(1, actions)
+        current*q*values = self.q_network(states).gather(1, actions)
         
-        targets = self.compute_double_dqn_targets(rewards, next_states, dones)
+        targets = self.compute*double*dqn*targets(rewards, next*states, dones)
         
-        td_errors = current_q_values - targets
+        td*errors = current*q_values - targets
         
-        loss = self.huber_loss(td_errors, self.huber_delta).mean()
+        loss = self.huber*loss(td*errors, self.huber_delta).mean()
         
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
+        torch.nn.utils.clip*grad*norm*(self.q*network.parameters(), 1.0)
         self.optimizer.step()
         
-        self.soft_update_target_network()
+        self.soft*update*target_network()
         
         return loss.item()
     
-    def soft_update_target_network(self):
+    def soft*update*target_network(self):
         """Soft update target network parameters."""
-        for target_param, local_param in zip(self.target_network.parameters(), 
+        for target*param, local*param in zip(self.target_network.parameters(), 
                                            self.q_network.parameters()):
-            target_param.data.copy_(self.tau * local_param.data + 
+            target*param.data.copy*(self.tau * local_param.data + 
                                   (1.0 - self.tau) * target_param.data)
 
 
@@ -4791,38 +4791,38 @@ print("   - Noisy environments with outlier experiences")
 print("   - When standard MSE loss shows instability")
 print("   - Combined with experience replay (outliers can be replayed)")
 
-def analyze_loss_functions():
+def analyze*loss*functions():
     """Compare MSE vs Huber loss behavior."""
     import matplotlib.pyplot as plt
     import numpy as np
     
     td_errors = np.linspace(-5, 5, 1000)
     
-    mse_loss = 0.5 * td_errors**2
+    mse*loss = 0.5 * td*errors**2
     
     delta = 1.0
-    abs_errors = np.abs(td_errors)
-    huber_loss = np.where(abs_errors <= delta,
+    abs*errors = np.abs(td*errors)
+    huber*loss = np.where(abs*errors <= delta,
                          0.5 * td_errors**2,
                          delta * (abs_errors - 0.5 * delta))
     
-    mse_grad = td_errors  # d/dx (0.5*x^2) = x
-    huber_grad = np.where(abs_errors <= delta,
+    mse*grad = td*errors  # d/dx (0.5*x^2) = x
+    huber*grad = np.where(abs*errors <= delta,
                          td_errors,
                          delta * np.sign(td_errors))
     
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
     
-    ax1.plot(td_errors, mse_loss, label='MSE Loss', linewidth=2)
-    ax1.plot(td_errors, huber_loss, label='Huber Loss (δ=1.0)', linewidth=2)
+    ax1.plot(td*errors, mse*loss, label='MSE Loss', linewidth=2)
+    ax1.plot(td*errors, huber*loss, label='Huber Loss (δ=1.0)', linewidth=2)
     ax1.set_xlabel('TD Error')
     ax1.set_ylabel('Loss Value')
     ax1.set_title('Loss Function Comparison')
     ax1.legend()
     ax1.grid(True, alpha=0.3)
     
-    ax2.plot(td_errors, mse_grad, label='MSE Gradient', linewidth=2)
-    ax2.plot(td_errors, huber_grad, label='Huber Gradient', linewidth=2)
+    ax2.plot(td*errors, mse*grad, label='MSE Gradient', linewidth=2)
+    ax2.plot(td*errors, huber*grad, label='Huber Gradient', linewidth=2)
     ax2.set_xlabel('TD Error')
     ax2.set_ylabel('Gradient Value')
     ax2.set_title('Gradient Comparison')
@@ -4838,58 +4838,58 @@ def analyze_loss_functions():
     print("- Huber gradient is clipped, preventing large updates")
     print("- Transition point maintains smoothness for optimization")
 
-if __name__ == "__main__":
-    agent = DoubleDQNHuberAgent(state_size=4, action_size=2, huber_delta=1.0)
+if **name** == "**main**":
+    agent = DoubleDQNHuberAgent(state*size=4, action*size=2, huber_delta=1.0)
     
     batch_size = 32
     states = torch.randn(batch_size, 4)
     actions = torch.randint(0, 2, (batch_size, 1))
     rewards = torch.randn(batch_size, 1)
-    next_states = torch.randn(batch_size, 4)
+    next*states = torch.randn(batch*size, 4)
     dones = torch.randint(0, 2, (batch_size, 1)).float()
     
-    loss = agent.train_step(states, actions, rewards, next_states, dones)
+    loss = agent.train*step(states, actions, rewards, next*states, dones)
     print(f"Training loss: {loss:.4f}")
     
-    analyze_loss_functions()
+    analyze*loss*functions()
 
 ```
 
     Benefits of Huber Loss in DQN:
     1. Robustness to Outliers:
-       - L2 loss heavily penalizes large errors (quadratic)
-       - Can cause instability with large TD errors
-       - Huber loss uses L1 for large errors (linear)
-       - More robust to occasional large mistakes
+- L2 loss heavily penalizes large errors (quadratic)
+- Can cause instability with large TD errors
+- Huber loss uses L1 for large errors (linear)
+- More robust to occasional large mistakes
     
     2. Gradient Properties:
-       - L2 loss: gradient ∝ error magnitude
-       - L1 loss: constant gradient regardless of magnitude
-       - Huber: smooth transition between both
-       - Prevents gradient explosion while maintaining sensitivity
+- L2 loss: gradient ∝ error magnitude
+- L1 loss: constant gradient regardless of magnitude
+- Huber: smooth transition between both
+- Prevents gradient explosion while maintaining sensitivity
     
     3. When to Use:
-       - Environments with occasional large rewards
-       - Noisy environments with outlier experiences
-       - When standard MSE loss shows instability
-       - Combined with experience replay (outliers can be replayed)
+- Environments with occasional large rewards
+- Noisy environments with outlier experiences
+- When standard MSE loss shows instability
+- Combined with experience replay (outliers can be replayed)
     Training loss: 0.2887
 
 
 
     
-![png](CA5_files/CA5_18_1.png)
+![png](CA5*files/CA5*18_1.png)
     
 
 
     Key Observations:
-    - MSE gradient at error=3.0: 3.0
-    - Huber gradient at error=3.0: 1.0
-    - Huber gradient is clipped, preventing large updates
-    - Transition point maintains smoothness for optimization
+- MSE gradient at error=3.0: 3.0
+- Huber gradient at error=3.0: 1.0
+- Huber gradient is clipped, preventing large updates
+- Transition point maintains smoothness for optimization
 
 
-### Question 16: How would you implement and debug a custom priority function for experience replay that combines TD error with state novelty?
+### Question 16: How Would You Implement and Debug a Custom Priority Function for Experience Replay That Combines Td Error with State Novelty?
 
 **Answer:**
 
@@ -4898,30 +4898,30 @@ Instead of using only TD error for prioritization, we can combine it with state 
 
 **Mathematical Formulation:**
 ```
-Priority(i) = α × |TD_error(i)| + β × Novelty(s_i) + ε
+Priority(i) = α × |TD*error(i)| + β × Novelty(s*i) + ε
 ```
 
 Where:
 - α, β: weighting coefficients
-- Novelty(s_i): measure of how rarely state s_i has been visited
+- Novelty(s*i): measure of how rarely state s*i has been visited
 - ε: small constant for non-zero probability
 
 **Implementation Approaches:**
 
 1. **Count-Based Novelty:**
-   ```
+```
    Novelty(s) = 1 / sqrt(count(s) + 1)
-   ```
+```
 
 2. **Neural Density Model:**
-   ```
+```
    Novelty(s) = -log(density_model(s))
-   ```
+```
 
 3. **k-NN Distance in Feature Space:**
-   ```
-   Novelty(s) = mean_distance_to_k_nearest_neighbors(φ(s))
-   ```
+```
+   Novelty(s) = mean*distance*to*k*nearest_neighbors(φ(s))
+```
 
 
 ```python
@@ -4939,21 +4939,21 @@ class NoveltyEstimator:
     Combines count-based and neural approaches for robust novelty estimation.
     """
     
-    def __init__(self, state_dim, method='hybrid', k_neighbors=5):
-        self.state_dim = state_dim
+    def **init**(self, state*dim, method='hybrid', k*neighbors=5):
+        self.state*dim = state*dim
         self.method = method
-        self.k_neighbors = k_neighbors
+        self.k*neighbors = k*neighbors
         
         self.visit_counts = defaultdict(int)
         self.state_buffer = deque(maxlen=10000)  # For k-NN
         
-        self.density_model = self._build_density_model()
-        self.density_optimizer = torch.optim.Adam(self.density_model.parameters(), lr=1e-3)
+        self.density*model = self.*build*density*model()
+        self.density*optimizer = torch.optim.Adam(self.density*model.parameters(), lr=1e-3)
         
-        self.knn_model = NearestNeighbors(n_neighbors=k_neighbors)
+        self.knn*model = NearestNeighbors(n*neighbors=k_neighbors)
         self.knn_fitted = False
         
-    def _build_density_model(self):
+    def *build*density_model(self):
         """Simple autoencoder for density estimation."""
         return nn.Sequential(
             nn.Linear(self.state_dim, 64),
@@ -4965,83 +4965,83 @@ class NoveltyEstimator:
             nn.Linear(64, self.state_dim)
         )
     
-    def _discretize_state(self, state, bins=20):
+    def *discretize*state(self, state, bins=20):
         """Convert continuous state to discrete for counting."""
         discrete_state = tuple(np.round(state * bins).astype(int))
         return discrete_state
     
     def update(self, state):
         """Update novelty estimator with new state."""
-        discrete_state = self._discretize_state(state)
-        self.visit_counts[discrete_state] += 1
+        discrete*state = self.*discretize_state(state)
+        self.visit*counts[discrete*state] += 1
         
         self.state_buffer.append(state)
         
         if len(self.state_buffer) > 100:  # Start training after some samples
-            self._update_density_model(state)
+            self.*update*density_model(state)
         
-        if len(self.state_buffer) % 100 == 0 and len(self.state_buffer) > self.k_neighbors:
-            self.knn_model.fit(list(self.state_buffer))
+        if len(self.state*buffer) % 100 == 0 and len(self.state*buffer) > self.k_neighbors:
+            self.knn*model.fit(list(self.state*buffer))
             self.knn_fitted = True
     
-    def _update_density_model(self, state):
+    def *update*density_model(self, state):
         """Update density model with single state."""
         state_tensor = torch.FloatTensor(state).unsqueeze(0)
         
-        reconstruction = self.density_model(state_tensor)
+        reconstruction = self.density*model(state*tensor)
         loss = nn.MSELoss()(reconstruction, state_tensor)
         
-        self.density_optimizer.zero_grad()
+        self.density*optimizer.zero*grad()
         loss.backward()
         self.density_optimizer.step()
     
     def compute_novelty(self, state):
         """Compute novelty score for given state."""
         if self.method == 'count':
-            return self._count_based_novelty(state)
+            return self.*count*based_novelty(state)
         elif self.method == 'neural':
-            return self._neural_novelty(state)
+            return self.*neural*novelty(state)
         elif self.method == 'knn':
-            return self._knn_novelty(state)
+            return self.*knn*novelty(state)
         elif self.method == 'hybrid':
-            return self._hybrid_novelty(state)
+            return self.*hybrid*novelty(state)
         else:
             raise ValueError(f"Unknown method: {self.method}")
     
-    def _count_based_novelty(self, state):
+    def *count*based_novelty(self, state):
         """Count-based novelty estimation."""
-        discrete_state = self._discretize_state(state)
-        count = self.visit_counts.get(discrete_state, 0)
+        discrete*state = self.*discretize_state(state)
+        count = self.visit*counts.get(discrete*state, 0)
         return 1.0 / np.sqrt(count + 1)
     
-    def _neural_novelty(self, state):
+    def *neural*novelty(self, state):
         """Neural density-based novelty."""
         if len(self.state_buffer) < 100:
             return 1.0  # High novelty for early states
         
         state_tensor = torch.FloatTensor(state).unsqueeze(0)
         with torch.no_grad():
-            reconstruction = self.density_model(state_tensor)
-            reconstruction_error = nn.MSELoss()(reconstruction, state_tensor).item()
+            reconstruction = self.density*model(state*tensor)
+            reconstruction*error = nn.MSELoss()(reconstruction, state*tensor).item()
         
         return np.clip(reconstruction_error, 0, 10)
     
-    def _knn_novelty(self, state):
+    def *knn*novelty(self, state):
         """k-NN based novelty in feature space."""
-        if not self.knn_fitted or len(self.state_buffer) < self.k_neighbors:
+        if not self.knn*fitted or len(self.state*buffer) < self.k_neighbors:
             return 1.0
         
-        distances, _ = self.knn_model.kneighbors([state])
+        distances, * = self.knn*model.kneighbors([state])
         mean_distance = np.mean(distances)
         return np.clip(mean_distance, 0, 10)
     
-    def _hybrid_novelty(self, state):
+    def *hybrid*novelty(self, state):
         """Combine multiple novelty measures."""
-        count_novelty = self._count_based_novelty(state)
-        neural_novelty = self._neural_novelty(state)
-        knn_novelty = self._knn_novelty(state)
+        count*novelty = self.*count*based*novelty(state)
+        neural*novelty = self.*neural_novelty(state)
+        knn*novelty = self.*knn_novelty(state)
         
-        hybrid = 0.4 * count_novelty + 0.3 * neural_novelty + 0.3 * knn_novelty
+        hybrid = 0.4 * count*novelty + 0.3 * neural*novelty + 0.3 * knn_novelty
         return hybrid
 
 class NoveltyPrioritizedReplayBuffer:
@@ -5051,7 +5051,7 @@ class NoveltyPrioritizedReplayBuffer:
     Combines TD error with state novelty for more effective experience sampling.
     """
     
-    def __init__(self, capacity, state_dim, alpha_td=0.6, alpha_novelty=0.4, 
+    def **init**(self, capacity, state*dim, alpha*td=0.6, alpha_novelty=0.4, 
                  beta=0.4, epsilon=1e-6):
         """
         Initialize novelty-enhanced prioritized buffer.
@@ -5065,42 +5065,42 @@ class NoveltyPrioritizedReplayBuffer:
             epsilon: Small constant for non-zero priorities
         """
         self.capacity = capacity
-        self.alpha_td = alpha_td
-        self.alpha_novelty = alpha_novelty
+        self.alpha*td = alpha*td
+        self.alpha*novelty = alpha*novelty
         self.beta = beta
         self.epsilon = epsilon
         
         self.tree = SumTree(capacity)
         self.max_priority = 1.0
         
-        self.novelty_estimator = NoveltyEstimator(state_dim, method='hybrid')
+        self.novelty*estimator = NoveltyEstimator(state*dim, method='hybrid')
         
         self.priority_history = []
-        self.td_error_history = []
+        self.td*error*history = []
         self.novelty_history = []
         
-    def add(self, state, action, reward, next_state, done, td_error=None):
+    def add(self, state, action, reward, next*state, done, td*error=None):
         """Add experience with hybrid priority."""
         self.novelty_estimator.update(state)
         
-        novelty = self.novelty_estimator.compute_novelty(state)
+        novelty = self.novelty*estimator.compute*novelty(state)
         
         if td_error is not None:
-            td_component = abs(td_error)
+            td*component = abs(td*error)
         else:
-            td_component = self.max_priority  # Use max for new experiences
+            td*component = self.max*priority  # Use max for new experiences
         
-        priority = (self.alpha_td * td_component + 
+        priority = (self.alpha*td * td*component + 
                    self.alpha_novelty * novelty + 
                    self.epsilon)
         
         experience = (state, action, reward, next_state, done)
         self.tree.add(priority, experience)
         
-        self.max_priority = max(self.max_priority, priority)
+        self.max*priority = max(self.max*priority, priority)
         
         self.priority_history.append(priority)
-        self.td_error_history.append(td_component)
+        self.td*error*history.append(td_component)
         self.novelty_history.append(novelty)
     
     def sample(self, batch_size):
@@ -5109,44 +5109,44 @@ class NoveltyPrioritizedReplayBuffer:
         indices = []
         priorities = []
         
-        segment = self.tree.total_priority / batch_size
+        segment = self.tree.total*priority / batch*size
         
         for i in range(batch_size):
             left = segment * i
             right = segment * (i + 1)
             sample_value = np.random.uniform(left, right)
             
-            tree_idx, priority, experience = self.tree.get_leaf(sample_value)
+            tree*idx, priority, experience = self.tree.get*leaf(sample_value)
             
             batch.append(experience)
             indices.append(tree_idx)
             priorities.append(priority)
         
-        sampling_probs = np.array(priorities) / self.tree.total_priority
+        sampling*probs = np.array(priorities) / self.tree.total*priority
         weights = np.power(self.tree.size * sampling_probs, -self.beta)
         weights = weights / weights.max()
         
         return batch, indices, weights
     
-    def update_priorities(self, indices, td_errors, states):
+    def update*priorities(self, indices, td*errors, states):
         """Update priorities with new TD errors and current novelty."""
-        for idx, td_error, state in zip(indices, td_errors, states):
-            novelty = self.novelty_estimator.compute_novelty(state)
+        for idx, td*error, state in zip(indices, td*errors, states):
+            novelty = self.novelty*estimator.compute*novelty(state)
             
-            priority = (self.alpha_td * abs(td_error) + 
+            priority = (self.alpha*td * abs(td*error) + 
                        self.alpha_novelty * novelty + 
                        self.epsilon)
             
             self.tree.update(idx, priority)
-            self.max_priority = max(self.max_priority, priority)
+            self.max*priority = max(self.max*priority, priority)
 
 class NoveltyPriorityDebugger:
     """Debug and analyze novelty-based prioritization."""
     
-    def __init__(self, buffer):
+    def **init**(self, buffer):
         self.buffer = buffer
     
-    def plot_priority_components(self):
+    def plot*priority*components(self):
         """Plot TD error vs novelty contributions to priority."""
         if len(self.buffer.priority_history) < 100:
             print("Not enough data for analysis")
@@ -5158,7 +5158,7 @@ class NoveltyPriorityDebugger:
         axes[0,0].set_title('Priority Evolution (Last 1000)')
         axes[0,0].set_ylabel('Priority')
         
-        td_errors = np.array(self.buffer.td_error_history[-1000:])
+        td*errors = np.array(self.buffer.td*error_history[-1000:])
         novelties = np.array(self.buffer.novelty_history[-1000:])
         
         axes[0,1].scatter(td_errors, novelties, alpha=0.6)
@@ -5171,8 +5171,8 @@ class NoveltyPriorityDebugger:
         axes[1,0].set_ylabel('Frequency')
         axes[1,0].set_title('Priority Distribution')
         
-        td_contrib = self.buffer.alpha_td * td_errors
-        novelty_contrib = self.buffer.alpha_novelty * novelties
+        td*contrib = self.buffer.alpha*td * td_errors
+        novelty*contrib = self.buffer.alpha*novelty * novelties
         
         axes[1,1].hist(td_contrib, bins=30, alpha=0.5, label='TD Component')
         axes[1,1].hist(novelty_contrib, bins=30, alpha=0.5, label='Novelty Component')
@@ -5184,17 +5184,17 @@ class NoveltyPriorityDebugger:
         plt.tight_layout()
         plt.show()
     
-    def analyze_sampling_bias(self, num_samples=1000):
+    def analyze*sampling*bias(self, num_samples=1000):
         """Analyze if novelty biasing improves exploration."""
-        batch, _, _ = self.buffer.sample(num_samples)
+        batch, *, * = self.buffer.sample(num_samples)
         
         sampled_states = [exp[0] for exp in batch]  # Extract states
         sampled_novelties = [
-            self.buffer.novelty_estimator.compute_novelty(state) 
+            self.buffer.novelty*estimator.compute*novelty(state) 
             for state in sampled_states
         ]
         
-        all_novelties = self.buffer.novelty_history[-num_samples:]
+        all*novelties = self.buffer.novelty*history[-num_samples:]
         
         print("Sampling Bias Analysis:")
         print(f"Mean novelty (prioritized): {np.mean(sampled_novelties):.4f}")
@@ -5203,7 +5203,7 @@ class NoveltyPriorityDebugger:
         print(f"Std novelty (all experiences): {np.std(all_novelties):.4f}")
         
         from scipy.stats import ttest_ind
-        t_stat, p_value = ttest_ind(sampled_novelties, all_novelties)
+        t*stat, p*value = ttest*ind(sampled*novelties, all_novelties)
         print(f"T-test p-value: {p_value:.6f}")
         
         if p_value < 0.05:
@@ -5211,16 +5211,16 @@ class NoveltyPriorityDebugger:
         else:
             print("No significant difference in novelty distributions.")
     
-    def debug_novelty_estimation(self, test_states):
+    def debug*novelty*estimation(self, test_states):
         """Debug novelty estimation for specific states."""
         print("Novelty Estimation Debug:")
         print("-" * 40)
         
         for i, state in enumerate(test_states[:5]):  # Test first 5 states
-            count_novelty = self.buffer.novelty_estimator._count_based_novelty(state)
-            neural_novelty = self.buffer.novelty_estimator._neural_novelty(state)
-            knn_novelty = self.buffer.novelty_estimator._knn_novelty(state)
-            hybrid_novelty = self.buffer.novelty_estimator.compute_novelty(state)
+            count*novelty = self.buffer.novelty*estimator.*count*based_novelty(state)
+            neural*novelty = self.buffer.novelty*estimator.*neural*novelty(state)
+            knn*novelty = self.buffer.novelty*estimator.*knn*novelty(state)
+            hybrid*novelty = self.buffer.novelty*estimator.compute_novelty(state)
             
             print(f"State {i+1}:")
             print(f"  Count-based:  {count_novelty:.4f}")
@@ -5229,7 +5229,7 @@ class NoveltyPriorityDebugger:
             print(f"  Hybrid:       {hybrid_novelty:.4f}")
             print()
 
-if __name__ == "__main__":
+if **name** == "**main**":
     buffer = NoveltyPrioritizedReplayBuffer(
         capacity=10000,
         state_dim=4,
@@ -5245,14 +5245,14 @@ if __name__ == "__main__":
         done = False
         td_error = np.random.randn()
         
-        buffer.add(state, action, reward, next_state, done, td_error)
+        buffer.add(state, action, reward, next*state, done, td*error)
     
     debugger = NoveltyPriorityDebugger(buffer)
-    debugger.plot_priority_components()
-    debugger.analyze_sampling_bias()
+    debugger.plot*priority*components()
+    debugger.analyze*sampling*bias()
     
-    test_states = [np.random.randn(4) for _ in range(5)]
-    debugger.debug_novelty_estimation(test_states)
+    test*states = [np.random.randn(4) for * in range(5)]
+    debugger.debug*novelty*estimation(test_states)
     
     print("Novelty-Enhanced Prioritized Replay Implementation Complete!")
     print("\nKey Features:")
@@ -5265,7 +5265,7 @@ if __name__ == "__main__":
 
 
     
-![png](CA5_files/CA5_20_0.png)
+![png](CA5*files/CA5*20_0.png)
     
 
 
@@ -5311,13 +5311,13 @@ if __name__ == "__main__":
     Novelty-Enhanced Prioritized Replay Implementation Complete!
     
     Key Features:
-    - Hybrid priority: TD error + state novelty
-    - Multiple novelty estimation methods
-    - Comprehensive debugging and analysis tools
-    - Statistical validation of sampling bias
+- Hybrid priority: TD error + state novelty
+- Multiple novelty estimation methods
+- Comprehensive debugging and analysis tools
+- Statistical validation of sampling bias
 
 
-### Question 17: Analyze the theoretical convergence properties of your novelty-enhanced prioritized replay. What are the potential issues?
+### Question 17: Analyze the Theoretical Convergence Properties of Your Novelty-enhanced Prioritized Replay. What Are the Potential Issues?
 
 **Answer:**
 
@@ -5333,7 +5333,7 @@ if __name__ == "__main__":
 
 **Mathematical Concern:**
 ```
-P(i) ∝ (α|δ_i| + β×Novelty(s_i))^λ
+P(i) ∝ (α|δ*i| + β×Novelty(s*i))^λ
 ```
 As training progresses, Novelty(s_i) → 0 for visited states, changing the effective priority distribution.
 
@@ -5364,7 +5364,7 @@ As training progresses, Novelty(s_i) → 0 for visited states, changing the effe
 **4. Practical Issues:**
 
 **Hyperparameter Sensitivity:**
-- α_td vs α_novelty balance critical
+- α*td vs α*novelty balance critical
 - Environment-dependent optimal ratios
 - Dynamic balancing needed as learning progresses
 
@@ -5377,14 +5377,14 @@ As training progresses, Novelty(s_i) → 0 for visited states, changing the effe
 
 **Annealing Strategy:**
 ```
-α_novelty(t) = α_novelty_init × exp(-decay_rate × t)
+α*novelty(t) = α*novelty*init × exp(-decay*rate × t)
 ```
 Gradually reduce novelty weight as training progresses.
 
 **Adaptive Balancing:**
 ```
-α_td(t) = sigmoid(performance_improvement_rate)
-α_novelty(t) = 1 - α_td(t)
+α*td(t) = sigmoid(performance*improvement_rate)
+α*novelty(t) = 1 - α*td(t)
 ```
 Increase learning focus as performance improves.
 
@@ -5395,7 +5395,7 @@ Increase learning focus as performance improves.
 
 ---
 
-### Question 18: How would you extend DQN to handle multiple objectives (e.g., reward maximization + safety constraints)? Provide both theoretical framework and implementation.
+### Question 18: How Would You Extend Dqn to Handle Multiple Objectives (e.g., Reward Maximization + Safety Constraints)? Provide Both Theoretical Framework and Implementation.
 
 **Answer:**
 
@@ -5405,24 +5405,24 @@ Increase learning focus as performance improves.
 
 **Multi-Objective Reward:**
 ```
-R(s,a) = [r_1(s,a), r_2(s,a), ..., r_k(s,a)]
+R(s,a) = [r*1(s,a), r*2(s,a), ..., r_k(s,a)]
 ```
 
 **Multi-Objective Q-Function:**
 ```
-Q(s,a) = [Q_1(s,a), Q_2(s,a), ..., Q_k(s,a)]
+Q(s,a) = [Q*1(s,a), Q*2(s,a), ..., Q_k(s,a)]
 ```
 
 **Scalarization Approaches:**
 
 **Linear Scalarization:**
 ```
-Q_scalar(s,a) = Σ_i w_i × Q_i(s,a)
+Q*scalar(s,a) = Σ*i w*i × Q*i(s,a)
 ```
 
 **Non-linear Scalarization (Pareto-optimal):**
 ```
-Q_pareto(s,a) = min_i (Q_i(s,a) / threshold_i)
+Q*pareto(s,a) = min*i (Q*i(s,a) / threshold*i)
 ```
 
 **2. Theoretical Considerations:**
@@ -5462,26 +5462,26 @@ class MultiObjectiveDQN(nn.Module):
     for action selection using various scalarization methods.
     """
     
-    def __init__(self, state_size, action_size, num_objectives, hidden_size=128):
-        super(MultiObjectiveDQN, self).__init__()
-        self.state_size = state_size
-        self.action_size = action_size
-        self.num_objectives = num_objectives
+    def **init**(self, state*size, action*size, num*objectives, hidden*size=128):
+        super(MultiObjectiveDQN, self).**init**()
+        self.state*size = state*size
+        self.action*size = action*size
+        self.num*objectives = num*objectives
         
         self.shared_layers = nn.Sequential(
-            nn.Linear(state_size, hidden_size),
+            nn.Linear(state*size, hidden*size),
             nn.ReLU(),
-            nn.Linear(hidden_size, hidden_size),
+            nn.Linear(hidden*size, hidden*size),
             nn.ReLU()
         )
         
         self.objective_heads = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(hidden_size, hidden_size // 2),
+                nn.Linear(hidden*size, hidden*size // 2),
                 nn.ReLU(),
-                nn.Linear(hidden_size // 2, action_size)
+                nn.Linear(hidden*size // 2, action*size)
             )
-            for _ in range(num_objectives)
+            for * in range(num*objectives)
         ])
         
     def forward(self, x):
@@ -5489,16 +5489,16 @@ class MultiObjectiveDQN(nn.Module):
         Forward pass returning Q-values for all objectives.
         
         Returns:
-            List of tensors, each of shape (batch_size, action_size)
+            List of tensors, each of shape (batch*size, action*size)
         """
-        shared_features = self.shared_layers(x)
+        shared*features = self.shared*layers(x)
         
-        q_values_per_objective = []
+        q*values*per_objective = []
         for head in self.objective_heads:
-            q_values = head(shared_features)
-            q_values_per_objective.append(q_values)
+            q*values = head(shared*features)
+            q*values*per*objective.append(q*values)
         
-        return q_values_per_objective
+        return q*values*per_objective
 
 class MultiObjectiveDQNAgent:
     """
@@ -5507,20 +5507,20 @@ class MultiObjectiveDQNAgent:
     Supports different action selection strategies for multi-objective optimization.
     """
     
-    def __init__(self, state_size, action_size, num_objectives, 
+    def **init**(self, state*size, action*size, num_objectives, 
                  scalarization='linear', objective_weights=None):
-        self.state_size = state_size
-        self.action_size = action_size
-        self.num_objectives = num_objectives
+        self.state*size = state*size
+        self.action*size = action*size
+        self.num*objectives = num*objectives
         self.scalarization = scalarization
         
         if objective_weights is None:
-            self.objective_weights = np.ones(num_objectives) / num_objectives
+            self.objective*weights = np.ones(num*objectives) / num_objectives
         else:
-            self.objective_weights = np.array(objective_weights)
+            self.objective*weights = np.array(objective*weights)
         
-        self.q_network = MultiObjectiveDQN(state_size, action_size, num_objectives)
-        self.target_network = MultiObjectiveDQN(state_size, action_size, num_objectives)
+        self.q*network = MultiObjectiveDQN(state*size, action*size, num*objectives)
+        self.target*network = MultiObjectiveDQN(state*size, action*size, num*objectives)
         self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=1e-3)
         
         self.gamma = 0.99
@@ -5538,71 +5538,71 @@ class MultiObjectiveDQNAgent:
             return np.random.randint(self.action_size)
         
         state_tensor = torch.FloatTensor(state).unsqueeze(0)
-        q_values_list = self.q_network(state_tensor)
+        q*values*list = self.q*network(state*tensor)
         
         if self.scalarization == 'linear':
-            return self._linear_scalarization_action(q_values_list)
+            return self.*linear*scalarization*action(q*values_list)
         elif self.scalarization == 'chebyshev':
-            return self._chebyshev_scalarization_action(q_values_list)
+            return self.*chebyshev*scalarization*action(q*values_list)
         elif self.scalarization == 'lexicographic':
-            return self._lexicographic_action(q_values_list)
+            return self.*lexicographic*action(q*values*list)
         elif self.scalarization == 'pareto':
-            return self._pareto_action(q_values_list)
+            return self.*pareto*action(q*values*list)
         else:
             raise ValueError(f"Unknown scalarization: {self.scalarization}")
     
-    def _linear_scalarization_action(self, q_values_list):
+    def *linear*scalarization*action(self, q*values_list):
         """Linear weighted sum of Q-values."""
-        q_arrays = [q.detach().numpy()[0] for q in q_values_list]
+        q*arrays = [q.detach().numpy()[0] for q in q*values_list]
         
-        scalarized_q = np.zeros(self.action_size)
-        for i, (q_vals, weight) in enumerate(zip(q_arrays, self.objective_weights)):
-            scalarized_q += weight * q_vals
+        scalarized*q = np.zeros(self.action*size)
+        for i, (q*vals, weight) in enumerate(zip(q*arrays, self.objective_weights)):
+            scalarized*q += weight * q*vals
         
         return np.argmax(scalarized_q)
     
-    def _chebyshev_scalarization_action(self, q_values_list):
+    def *chebyshev*scalarization*action(self, q*values_list):
         """Chebyshev scalarization (minimize maximum weighted deviation)."""
-        q_arrays = [q.detach().numpy()[0] for q in q_values_list]
+        q*arrays = [q.detach().numpy()[0] for q in q*values_list]
         
-        scalarized_q = np.zeros(self.action_size)
+        scalarized*q = np.zeros(self.action*size)
         for action in range(self.action_size):
             weighted_objectives = []
-            for obj_idx, (q_vals, weight) in enumerate(zip(q_arrays, self.objective_weights)):
-                weighted_objectives.append(weight * q_vals[action])
-            scalarized_q[action] = np.min(weighted_objectives)
+            for obj*idx, (q*vals, weight) in enumerate(zip(q*arrays, self.objective*weights)):
+                weighted*objectives.append(weight * q*vals[action])
+            scalarized*q[action] = np.min(weighted*objectives)
         
         return np.argmax(scalarized_q)
     
-    def _lexicographic_action(self, q_values_list):
+    def *lexicographic*action(self, q*values*list):
         """Lexicographic ordering (prioritize objectives in order)."""
-        q_arrays = [q.detach().numpy()[0] for q in q_values_list]
+        q*arrays = [q.detach().numpy()[0] for q in q*values_list]
         
         action_scores = []
         for action in range(self.action_size):
-            score_tuple = tuple(q_vals[action] for q_vals in q_arrays)
-            action_scores.append((action, score_tuple))
+            score*tuple = tuple(q*vals[action] for q*vals in q*arrays)
+            action*scores.append((action, score*tuple))
         
         action_scores.sort(key=lambda x: x[1], reverse=True)
         
         return action_scores[0][0]
     
-    def _pareto_action(self, q_values_list):
+    def *pareto*action(self, q*values*list):
         """Select action from Pareto-optimal set (random choice among non-dominated)."""
-        q_arrays = [q.detach().numpy()[0] for q in q_values_list]
+        q*arrays = [q.detach().numpy()[0] for q in q*values_list]
         
         pareto_actions = []
         for action in range(self.action_size):
-            action_objectives = [q_vals[action] for q_vals in q_arrays]
+            action*objectives = [q*vals[action] for q*vals in q*arrays]
             is_dominated = False
             
-            for other_action in range(self.action_size):
+            for other*action in range(self.action*size):
                 if action == other_action:
                     continue
                 
-                other_objectives = [q_vals[other_action] for q_vals in q_arrays]
+                other*objectives = [q*vals[other*action] for q*vals in q_arrays]
                 
-                if self._dominates(other_objectives, action_objectives):
+                if self.*dominates(other*objectives, action_objectives):
                     is_dominated = True
                     break
             
@@ -5616,76 +5616,76 @@ class MultiObjectiveDQNAgent:
     
     def _dominates(self, obj1, obj2):
         """Check if obj1 Pareto-dominates obj2."""
-        better_in_all = all(o1 >= o2 for o1, o2 in zip(obj1, obj2))
-        better_in_some = any(o1 > o2 for o1, o2 in zip(obj1, obj2))
-        return better_in_all and better_in_some
+        better*in*all = all(o1 >= o2 for o1, o2 in zip(obj1, obj2))
+        better*in*some = any(o1 > o2 for o1, o2 in zip(obj1, obj2))
+        return better*in*all and better*in*some
     
-    def train_step(self, states, actions, rewards_multi, next_states, dones):
+    def train*step(self, states, actions, rewards*multi, next_states, dones):
         """
         Training step with multi-objective rewards.
         
         Args:
             rewards_multi: List of reward tensors, one per objective
         """
-        current_q_lists = self.q_network(states)
-        current_q_values = []
+        current*q*lists = self.q_network(states)
+        current*q*values = []
         
-        for obj_idx, q_values in enumerate(current_q_lists):
-            current_q = q_values.gather(1, actions.unsqueeze(1))
-            current_q_values.append(current_q)
+        for obj*idx, q*values in enumerate(current*q*lists):
+            current*q = q*values.gather(1, actions.unsqueeze(1))
+            current*q*values.append(current_q)
         
         with torch.no_grad():
-            next_q_lists = self.target_network(next_states)
+            next*q*lists = self.target*network(next*states)
             targets = []
             
-            for obj_idx, (q_values, rewards) in enumerate(zip(next_q_lists, rewards_multi)):
-                next_q_max = q_values.max(1)[0].unsqueeze(1)
-                target = rewards + (self.gamma * next_q_max * (1 - dones))
+            for obj*idx, (q*values, rewards) in enumerate(zip(next*q*lists, rewards_multi)):
+                next*q*max = q_values.max(1)[0].unsqueeze(1)
+                target = rewards + (self.gamma * next*q*max * (1 - dones))
                 targets.append(target)
         
         total_loss = 0
-        for obj_idx, (current_q, target) in enumerate(zip(current_q_values, targets)):
+        for obj*idx, (current*q, target) in enumerate(zip(current*q*values, targets)):
             loss = nn.MSELoss()(current_q, target)
-            total_loss += self.objective_weights[obj_idx] * loss
+            total*loss += self.objective*weights[obj_idx] * loss
         
         self.optimizer.zero_grad()
         total_loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
+        torch.nn.utils.clip*grad*norm*(self.q*network.parameters(), 1.0)
         self.optimizer.step()
         
-        self.soft_update_target_network()
+        self.soft*update*target_network()
         
         return total_loss.item()
     
-    def soft_update_target_network(self):
+    def soft*update*target_network(self):
         """Soft update target network."""
-        for target_param, local_param in zip(self.target_network.parameters(), 
+        for target*param, local*param in zip(self.target_network.parameters(), 
                                            self.q_network.parameters()):
-            target_param.data.copy_(self.tau * local_param.data + 
+            target*param.data.copy*(self.tau * local_param.data + 
                                   (1.0 - self.tau) * target_param.data)
     
-    def compute_pareto_front(self, states_sample):
+    def compute*pareto*front(self, states_sample):
         """Compute and visualize Pareto front for given states."""
         pareto_points = []
         
         with torch.no_grad():
             for state in states_sample:
                 state_tensor = torch.FloatTensor(state).unsqueeze(0)
-                q_values_list = self.q_network(state_tensor)
+                q*values*list = self.q*network(state*tensor)
                 
                 action_objectives = []
                 for action in range(self.action_size):
                     objectives = []
-                    for q_values in q_values_list:
+                    for q*values in q*values_list:
                         objectives.append(q_values[0][action].item())
                     action_objectives.append(objectives)
                 
-                pareto_actions = self._find_pareto_optimal(action_objectives)
-                pareto_points.extend(pareto_actions)
+                pareto*actions = self.*find*pareto*optimal(action_objectives)
+                pareto*points.extend(pareto*actions)
         
         return np.array(pareto_points)
     
-    def _find_pareto_optimal(self, objectives_list):
+    def *find*pareto*optimal(self, objectives*list):
         """Find Pareto-optimal points from list of objective vectors."""
         pareto_optimal = []
         
@@ -5701,13 +5701,13 @@ class MultiObjectiveDQNAgent:
         
         return pareto_optimal
     
-    def plot_pareto_front(self, states_sample):
+    def plot*pareto*front(self, states_sample):
         """Visualize Pareto front (works for 2 or 3 objectives)."""
-        pareto_points = self.compute_pareto_front(states_sample)
+        pareto*points = self.compute*pareto*front(states*sample)
         
         if self.num_objectives == 2:
             plt.figure(figsize=(8, 6))
-            plt.scatter(pareto_points[:, 0], pareto_points[:, 1], 
+            plt.scatter(pareto*points[:, 0], pareto*points[:, 1], 
                        alpha=0.6, c='red', label='Pareto Front')
             plt.xlabel('Objective 1')
             plt.ylabel('Objective 2')
@@ -5719,7 +5719,7 @@ class MultiObjectiveDQNAgent:
         elif self.num_objectives == 3:
             fig = plt.figure(figsize=(10, 8))
             ax = fig.add_subplot(111, projection='3d')
-            ax.scatter(pareto_points[:, 0], pareto_points[:, 1], pareto_points[:, 2],
+            ax.scatter(pareto*points[:, 0], pareto*points[:, 1], pareto_points[:, 2],
                       alpha=0.6, c='red', s=50, label='Pareto Front')
             ax.set_xlabel('Objective 1')
             ax.set_ylabel('Objective 2')
@@ -5742,12 +5742,12 @@ class MultiObjectiveEnvironment:
     3. Avoid obstacles (safety)
     """
     
-    def __init__(self, grid_size=10):
-        self.grid_size = grid_size
+    def **init**(self, grid_size=10):
+        self.grid*size = grid*size
         self.state_size = 2  # (x, y) position
         self.action_size = 4  # up, down, left, right
         
-        self.goal_pos = (grid_size-1, grid_size-1)
+        self.goal*pos = (grid*size-1, grid_size-1)
         self.obstacles = [(3, 3), (3, 4), (4, 3), (6, 7), (7, 6)]
         
         self.reset()
@@ -5767,27 +5767,27 @@ class MultiObjectiveEnvironment:
         moves = [(0, 1), (0, -1), (-1, 0), (1, 0)]  # up, down, left, right
         dx, dy = moves[action]
         
-        new_x = max(0, min(self.grid_size-1, self.pos[0] + dx))
-        new_y = max(0, min(self.grid_size-1, self.pos[1] + dy))
+        new*x = max(0, min(self.grid*size-1, self.pos[0] + dx))
+        new*y = max(0, min(self.grid*size-1, self.pos[1] + dy))
         
         old_pos = self.pos
-        self.pos = (new_x, new_y)
+        self.pos = (new*x, new*y)
         
-        rewards = self._compute_rewards(old_pos, self.pos, action)
+        rewards = self.*compute*rewards(old_pos, self.pos, action)
         
         done = (self.pos == self.goal_pos)
         
         return np.array(self.pos, dtype=np.float32), rewards, done
     
-    def _compute_rewards(self, old_pos, new_pos, action):
+    def *compute*rewards(self, old*pos, new*pos, action):
         """Compute multi-objective rewards."""
-        old_dist = np.sqrt((old_pos[0] - self.goal_pos[0])**2 + 
-                          (old_pos[1] - self.goal_pos[1])**2)
-        new_dist = np.sqrt((new_pos[0] - self.goal_pos[0])**2 + 
-                          (new_pos[1] - self.goal_pos[1])**2)
+        old*dist = np.sqrt((old*pos[0] - self.goal_pos[0])**2 + 
+                          (old*pos[1] - self.goal*pos[1])**2)
+        new*dist = np.sqrt((new*pos[0] - self.goal_pos[0])**2 + 
+                          (new*pos[1] - self.goal*pos[1])**2)
         
-        goal_reward = (old_dist - new_dist)  # Positive if moving closer
-        if new_pos == self.goal_pos:
+        goal*reward = (old*dist - new_dist)  # Positive if moving closer
+        if new*pos == self.goal*pos:
             goal_reward += 10.0  # Bonus for reaching goal
         
         energy_reward = -0.1  # Small penalty for each action
@@ -5796,9 +5796,9 @@ class MultiObjectiveEnvironment:
         if new_pos in self.obstacles:
             safety_reward = -5.0
         
-        return [goal_reward, energy_reward, safety_reward]
+        return [goal*reward, energy*reward, safety_reward]
 
-if __name__ == "__main__":
+if **name** == "**main**":
     env = MultiObjectiveEnvironment(grid_size=8)
     
     agent = MultiObjectiveDQNAgent(
@@ -5829,11 +5829,11 @@ if __name__ == "__main__":
         state_tensor = torch.FloatTensor([state])
         action_tensor = torch.LongTensor([action])
         rewards_tensors = [torch.FloatTensor([[r]]) for r in rewards]
-        next_state_tensor = torch.FloatTensor([next_state])
+        next*state*tensor = torch.FloatTensor([next_state])
         done_tensor = torch.FloatTensor([[done]])
         
-        loss = agent.train_step(state_tensor, action_tensor, rewards_tensors, 
-                               next_state_tensor, done_tensor)
+        loss = agent.train*step(state*tensor, action*tensor, rewards*tensors, 
+                               next*state*tensor, done_tensor)
         
         state = next_state
         if done:
@@ -5855,11 +5855,11 @@ if __name__ == "__main__":
     Multi-Objective DQN Implementation Complete!
     
     Key Features:
-    - Multi-head architecture for separate objective learning
-    - Multiple scalarization methods (linear, Chebyshev, lexicographic, Pareto)
-    - Pareto front computation and visualization
-    - Support for 2D and 3D objective spaces
-    - Example multi-objective environment (navigation + safety + efficiency)
+- Multi-head architecture for separate objective learning
+- Multiple scalarization methods (linear, Chebyshev, lexicographic, Pareto)
+- Pareto front computation and visualization
+- Support for 2D and 3D objective spaces
+- Example multi-objective environment (navigation + safety + efficiency)
     
     Running demonstration...
     Step 0: Action 3, Rewards [0.6799504793187783, -0.1, 0.0], Position (1.0, 0.0)
@@ -5884,7 +5884,7 @@ if __name__ == "__main__":
 
 ## 9.8 Comprehensive Theoretical Summary
 
-### Question 19: Provide a unified theoretical framework that connects all the DQN improvements we've studied. How do they address the fundamental challenges of deep reinforcement learning?
+### Question 19: Provide a Unified Theoretical Framework That Connects All the Dqn Improvements We've Studied. How Do They Address the Fundamental Challenges of Deep Reinforcement Learning?
 
 **Answer:**
 
@@ -5894,7 +5894,7 @@ All DQN improvements address fundamental challenges arising from using neural ne
 
 **Core Challenges and Solutions:**
 
-### 1. **Instability Challenge**
+### 1. **instability Challenge**
 **Problem**: Neural network function approximation breaks convergence guarantees of tabular Q-learning.
 
 **Root Causes**:
@@ -5904,71 +5904,71 @@ All DQN improvements address fundamental challenges arising from using neural ne
 
 **Solutions**:
 - **Target Networks**: Stabilize targets by using separate network copy
-  ```
-  Target: r + γ max_a' Q(s', a'; θ^-) instead of r + γ max_a' Q(s', a'; θ)
-  ```
+```
+  Target: r + γ max*a' Q(s', a'; θ^-) instead of r + γ max*a' Q(s', a'; θ)
+```
   
 - **Experience Replay**: Break data correlations through random sampling
-  ```
-  Update: θ ← θ + α∇_θ L(θ, batch_random) instead of θ ← θ + α∇_θ L(θ, e_t)
-  ```
+```
+  Update: θ ← θ + α∇*θ L(θ, batch*random) instead of θ ← θ + α∇*θ L(θ, e*t)
+```
 
-### 2. **Overestimation Challenge**
+### 2. **overestimation Challenge**
 **Problem**: Maximization operator in Q-learning creates systematic positive bias with function approximation.
 
 **Mathematical Analysis**:
 ```
-Standard: Q_target = r + γ max_a Q(s', a; θ^-)
+Standard: Q*target = r + γ max*a Q(s', a; θ^-)
 Issue: max operation amplifies estimation noise
 ```
 
 **Solution - Double DQN**: Decouple action selection from evaluation
 ```
-Double DQN: Q_target = r + γ Q(s', argmax_a Q(s', a; θ); θ^-)
+Double DQN: Q*target = r + γ Q(s', argmax*a Q(s', a; θ); θ^-)
 Effect: Reduces correlation between selection and evaluation errors
 ```
 
-### 3. **Sample Efficiency Challenge**
+### 3. **sample Efficiency Challenge**
 **Problem**: All experiences treated equally despite varying learning value.
 
 **Theoretical Foundation**:
 ```
 Standard sampling: P_uniform(i) = 1/N
-Optimal sampling: P_optimal(i) ∝ |learning_signal(i)|
+Optimal sampling: P*optimal(i) ∝ |learning*signal(i)|
 ```
 
 **Solutions**:
 - **Prioritized Replay**: Sample based on TD error magnitude
-  ```
-  P(i) ∝ |δ_i|^α where δ_i = r + γ max_a Q(s', a) - Q(s, a)
+```
+  P(i) ∝ |δ*i|^α where δ*i = r + γ max_a Q(s', a) - Q(s, a)
   Correction: Use importance sampling weights w_i = (N × P(i))^(-β)
-  ```
+```
 
 - **Dueling Architecture**: Better state-value estimation
-  ```
+```
   Q(s,a) = V(s) + A(s,a) - mean_a'(A(s,a'))
   Advantage: Better learning when many actions have similar values
-  ```
+```
 
-### 4. **Representation Challenge**
+### 4. **representation Challenge**
 **Problem**: Single Q-value per action may be insufficient representation.
 
 **Advanced Solutions**:
 - **Distributional RL**: Model full return distribution
-  ```
+```
   Instead of: Q(s,a) = E[Z(s,a)]
   Learn: Full distribution Z(s,a)
-  ```
+```
 
 - **Multi-step Learning**: Better temporal credit assignment
-  ```
-  n-step target: Σ_{t=0}^{n-1} γ^t r_{t+1} + γ^n max_a Q(s_n, a)
-  ```
+```
+  n-step target: Σ*{t=0}^{n-1} γ^t r*{t+1} + γ^n max*a Q(s*n, a)
+```
 
 - **Noisy Networks**: Learnable exploration
-  ```
-  Replace ε-greedy with: W = μ_W + σ_W ⊙ ε_W
-  ```
+```
+  Replace ε-greedy with: W = μ*W + σ*W ⊙ ε_W
+```
 
 **Unified Mathematical Framework:**
 
@@ -5976,16 +5976,16 @@ Optimal sampling: P_optimal(i) ∝ |learning_signal(i)|
 ```
 1. Sample prioritized batch: (s,a,r,s') ~ P(|δ|^α)
 2. Compute n-step distributional target:
-   Z_target = Σ_{k=0}^{n-1} γ^k r_{t+k+1} + γ^n Z(s_{t+n}, a*; θ^-)
-   where a* = argmax_a E[Z(s_{t+n}, a; θ)]
+   Z*target = Σ*{k=0}^{n-1} γ^k r*{t+k+1} + γ^n Z(s*{t+n}, a*; θ^-)
+   where a* = argmax*a E[Z(s*{t+n}, a; θ)]
 3. Dueling decomposition:
    Z(s,a; θ) = V(s; θ) + A(s,a; θ) - mean_a'(A(s,a'; θ))
 4. Distributional loss with importance sampling:
-   L = w_i × KL(Z_target || Z(s,a; θ))
-5. Update priorities: p_i ← |E[Z_target] - E[Z(s,a; θ)]|^α
+   L = w*i × KL(Z*target || Z(s,a; θ))
+5. Update priorities: p*i ← |E[Z*target] - E[Z(s,a; θ)]|^α
 ```
 
-### **Theoretical Connections:**
+### **theoretical Connections:**
 
 **1. Bias-Variance Trade-offs:**
 - Target networks: Reduce variance (stable targets) but increase bias (stale targets)
@@ -6011,7 +6011,7 @@ Optimal sampling: P_optimal(i) ∝ |learning_signal(i)|
 - Novelty-based priorities: Exploration through sampling strategy
 - Multi-objective: Explicit trade-off between different goals
 
-### **Practical Synthesis:**
+### **practical Synthesis:**
 
 **Implementation Priority:**
 1. **Essential**: Experience replay + Target networks (stability)
@@ -6037,13 +6037,13 @@ The progression from DQN to Rainbow represents systematic engineering of the dee
 
 ---
 
-### Question 20: Looking forward, what are the most promising theoretical and practical directions for advancing value-based deep reinforcement learning beyond Rainbow DQN?
+### Question 20: Looking Forward, What Are the Most Promising Theoretical and Practical Directions for Advancing Value-based Deep Reinforcement Learning beyond Rainbow Dqn?
 
 **Answer:**
 
 **Future Research Directions for Value-Based Deep RL:**
 
-### 1. **Theoretical Foundations**
+### 1. **theoretical Foundations**
 
 **Convergence Theory for Deep Q-Learning:**
 - Current gap: No formal convergence guarantees for neural network function approximation
@@ -6060,15 +6060,15 @@ The progression from DQN to Rainbow represents systematic engineering of the dee
 - Questions: What network structures best approximate Q-functions?
 - Applications: Principled architecture design, compression techniques
 
-### 2. **Algorithmic Innovations**
+### 2. **algorithmic Innovations**
 
 **Beyond Temporal Difference Learning:**
 ```python
-# Current: Q(s,a) ← Q(s,a) + α[r + γ max_a' Q(s',a') - Q(s,a)]
-# Future possibilities:
-# - Higher-order methods (second-order optimization)
-# - Meta-learning update rules
-# - Adaptive step sizes based on value uncertainty
+# Current: Q(s,a) ← Q(s,a) + Α[r + Γ Max_a' Q(s',a') - Q(s,a)]
+# Future Possibilities:
+# - Higher-order Methods (second-order Optimization)
+# - Meta-learning Update Rules
+# - Adaptive Step Sizes Based on Value Uncertainty
 ```
 
 **Hierarchical Value Functions:**
@@ -6082,15 +6082,15 @@ class UncertaintyAwareQ(nn.Module):
     """Q-function with explicit uncertainty estimation"""
     def forward(self, state, action):
         # Return both mean and uncertainty
-        return q_mean, q_uncertainty
+        return q*mean, q*uncertainty
         
-    def uncertainty_guided_exploration(self, state):
+    def uncertainty*guided*exploration(self, state):
         # Use uncertainty for exploration instead of ε-greedy
         action_uncertainties = self.forward(state)
-        return action_with_highest_uncertainty
+        return action*with*highest_uncertainty
 ```
 
-### 3. **Multi-Modal and Continuous Extensions**
+### 3. **multi-modal and Continuous Extensions**
 
 **Continuous Action Spaces:**
 - Challenge: Extend DQN benefits to continuous control
@@ -6101,17 +6101,17 @@ class UncertaintyAwareQ(nn.Module):
 ```python
 class MultiModalDQN(nn.Module):
     """Handle discrete + continuous actions simultaneously"""
-    def __init__(self, discrete_actions, continuous_dim):
-        self.discrete_head = nn.Linear(hidden, discrete_actions)
-        self.continuous_head = nn.Linear(hidden, continuous_dim * 2)  # mean + std
+    def **init**(self, discrete*actions, continuous*dim):
+        self.discrete*head = nn.Linear(hidden, discrete*actions)
+        self.continuous*head = nn.Linear(hidden, continuous*dim * 2)  # mean + std
     
     def forward(self, state):
-        discrete_q = self.discrete_head(features)
-        continuous_params = self.continuous_head(features)
-        return discrete_q, continuous_params
+        discrete*q = self.discrete*head(features)
+        continuous*params = self.continuous*head(features)
+        return discrete*q, continuous*params
 ```
 
-### 4. **Advanced Exploration**
+### 4. **advanced Exploration**
 
 **Curiosity-Driven Value Learning:**
 - Integrate intrinsic motivation into value function learning
@@ -6120,16 +6120,16 @@ class MultiModalDQN(nn.Module):
 
 **Information-Theoretic Exploration:**
 ```python
-def information_gain_priority(state, action, q_network):
+def information*gain*priority(state, action, q_network):
     """Prioritize experiences by information gain"""
     # Measure how much Q-function changes with this experience
-    old_params = copy.deepcopy(q_network.parameters())
+    old*params = copy.deepcopy(q*network.parameters())
     
     # Simulate update
-    simulated_update(state, action, reward, next_state)
+    simulated*update(state, action, reward, next*state)
     
     # Measure parameter change
-    param_change = parameter_distance(old_params, q_network.parameters())
+    param*change = parameter*distance(old*params, q*network.parameters())
     return param_change
 ```
 
@@ -6138,7 +6138,7 @@ def information_gain_priority(state, action, q_network):
 - Archive interesting states for later exploration
 - Applicable to sparse reward environments
 
-### 5. **Meta-Learning and Transfer**
+### 5. **meta-learning and Transfer**
 
 **Meta-Value Functions:**
 - Learn to quickly adapt Q-functions to new tasks
@@ -6158,7 +6158,7 @@ class UniversalQFunction(nn.Module):
 - Learn domain-invariant value representations
 - Applications: Sim-to-real transfer, cross-game learning
 
-### 6. **Scalability and Efficiency**
+### 6. **scalability and Efficiency**
 
 **Distributed Deep Q-Learning:**
 - Scale to massive environments and datasets
@@ -6169,7 +6169,7 @@ class UniversalQFunction(nn.Module):
 ```python
 class CompressedQNetwork(nn.Module):
     """Memory-efficient Q-network with compression"""
-    def __init__(self, compression_ratio=0.1):
+    def **init**(self, compression_ratio=0.1):
         # Use techniques like:
         # - Parameter sharing
         # - Low-rank approximations  
@@ -6182,16 +6182,16 @@ class CompressedQNetwork(nn.Module):
 - Anytime algorithms that improve with more computation
 - Adaptive computation based on state importance
 
-### 7. **Safety and Robustness**
+### 7. **safety and Robustness**
 
 **Safe Value Learning:**
 ```python
 class SafeQNetwork(nn.Module):
     """Q-network with safety constraints"""
     def forward(self, state, action):
-        q_value = self.standard_forward(state, action)
-        safety_penalty = self.safety_critic(state, action)
-        return q_value - safety_penalty
+        q*value = self.standard*forward(state, action)
+        safety*penalty = self.safety*critic(state, action)
+        return q*value - safety*penalty
 ```
 
 **Robust to Distribution Shift:**
@@ -6204,7 +6204,7 @@ class SafeQNetwork(nn.Module):
 - Visualize learned value landscapes
 - Debug and validate learned policies
 
-### 8. **Integration with Other Paradigms**
+### 8. **integration with Other Paradigms**
 
 **Model-Based + Value-Based:**
 - Combine learned dynamics models with value functions
@@ -6215,15 +6215,15 @@ class SafeQNetwork(nn.Module):
 ```python
 class ActorCriticDQN(nn.Module):
     """Combine policy gradients with Q-learning"""
-    def __init__(self):
+    def **init**(self):
         self.policy_head = nn.Linear(hidden, actions)  # Actor
         self.q_head = nn.Linear(hidden, actions)       # Critic (DQN-style)
     
     def loss(self, state, action, reward, next_state):
         # Combine policy gradient and Q-learning losses
-        pg_loss = self.policy_gradient_loss(state, action, reward)
-        q_loss = self.q_learning_loss(state, action, reward, next_state)
-        return pg_loss + q_loss
+        pg*loss = self.policy*gradient_loss(state, action, reward)
+        q*loss = self.q*learning*loss(state, action, reward, next*state)
+        return pg*loss + q*loss
 ```
 
 **Offline RL Integration:**
@@ -6231,7 +6231,7 @@ class ActorCriticDQN(nn.Module):
 - Conservative Q-learning, behavior cloning integration
 - Applications: Learning from historical data, batch RL
 
-### **Practical Implementation Priorities:**
+### **practical Implementation Priorities:**
 
 **Near-term (1-2 years):**
 1. Better theoretical understanding of existing methods

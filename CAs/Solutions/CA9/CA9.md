@@ -1,50 +1,50 @@
-# CA9: Advanced Policy Gradient Methods
+# Ca9: Advanced Policy Gradient Methods
 # Table of Contents
 
 - [CA9: Advanced Policy Gradient Methods](#ca9-advanced-policy-gradient-methods)
-  - [Deep Reinforcement Learning - Session 9](#deep-reinforcement-learning---session-9)
-    - [Course Information](#course-information)
-    - [Learning Objectives](#learning-objectives)
-    - [Prerequisites](#prerequisites)
-    - [Roadmap](#roadmap)
-    - [Project Structure](#project-structure)
-    - [Contents Overview](#contents-overview)
+- [Deep Reinforcement Learning - Session 9](#deep-reinforcement-learning---session-9)
+- [Course Information](#course-information)
+- [Learning Objectives](#learning-objectives)
+- [Prerequisites](#prerequisites)
+- [Roadmap](#roadmap)
+- [Project Structure](#project-structure)
+- [Contents Overview](#contents-overview)
 - [Section 2: REINFORCE Algorithm - Basic Policy Gradient](#section-2-reinforce-algorithm---basic-policy-gradient)
-  - [The REINFORCE Algorithm](#the-reinforce-algorithm)
-    - [Algorithm Overview](#algorithm-overview)
-    - [Mathematical Foundation](#mathematical-foundation)
-    - [Key Properties](#key-properties)
+- [The REINFORCE Algorithm](#the-reinforce-algorithm)
+- [Algorithm Overview](#algorithm-overview)
+- [Mathematical Foundation](#mathematical-foundation)
+- [Key Properties](#key-properties)
 - [Section 3: Variance Reduction Techniques](#section-3-variance-reduction-techniques)
-  - [The High Variance Problem](#the-high-variance-problem)
-  - [Baseline Subtraction](#baseline-subtraction)
-    - [Mathematical Foundation](#mathematical-foundation)
-    - [Common Baseline Choices](#common-baseline-choices)
-  - [Advantage Function](#advantage-function)
+- [The High Variance Problem](#the-high-variance-problem)
+- [Baseline Subtraction](#baseline-subtraction)
+- [Mathematical Foundation](#mathematical-foundation)
+- [Common Baseline Choices](#common-baseline-choices)
+- [Advantage Function](#advantage-function)
 - [Section 4: Actor-Critic Methods](#section-4-actor-critic-methods)
-  - [Combining Policy and Value Learning](#combining-policy-and-value-learning)
-    - [Key Advantages](#key-advantages)
-    - [Mathematical Foundation](#mathematical-foundation)
-    - [Algorithm Variants](#algorithm-variants)
+- [Combining Policy and Value Learning](#combining-policy-and-value-learning)
+- [Key Advantages](#key-advantages)
+- [Mathematical Foundation](#mathematical-foundation)
+- [Algorithm Variants](#algorithm-variants)
 - [Section 5: Advanced Policy Gradient Methods](#section-5-advanced-policy-gradient-methods)
-  - [Proximal Policy Optimization (PPO)](#proximal-policy-optimization-ppo)
-    - [The Problem with Large Updates](#the-problem-with-large-updates)
-    - [PPO Solution: Clipped Surrogate Objective](#ppo-solution-clipped-surrogate-objective)
-    - [Key Features](#key-features)
-    - [PPO Algorithm Steps](#ppo-algorithm-steps)
+- [Proximal Policy Optimization (PPO)](#proximal-policy-optimization-ppo)
+- [The Problem with Large Updates](#the-problem-with-large-updates)
+- [PPO Solution: Clipped Surrogate Objective](#ppo-solution-clipped-surrogate-objective)
+- [Key Features](#key-features)
+- [PPO Algorithm Steps](#ppo-algorithm-steps)
 - [Section 6: Continuous Control with Policy Gradients](#section-6-continuous-control-with-policy-gradients)
-  - [6.1 Continuous Action Spaces](#61-continuous-action-spaces)
-  - [6.2 Gaussian Policy Implementation](#62-gaussian-policy-implementation)
-  - [6.3 Practical Implementation Considerations](#63-practical-implementation-considerations)
+- [6.1 Continuous Action Spaces](#61-continuous-action-spaces)
+- [6.2 Gaussian Policy Implementation](#62-gaussian-policy-implementation)
+- [6.3 Practical Implementation Considerations](#63-practical-implementation-considerations)
 - [Section 7: Performance Analysis and Hyperparameter Tuning](#section-7-performance-analysis-and-hyperparameter-tuning)
-  - [7.1 Critical Hyperparameters](#71-critical-hyperparameters)
-  - [7.2 Common Issues and Solutions](#72-common-issues-and-solutions)
-  - [7.3 Environment-Specific Considerations](#73-environment-specific-considerations)
+- [7.1 Critical Hyperparameters](#71-critical-hyperparameters)
+- [7.2 Common Issues and Solutions](#72-common-issues-and-solutions)
+- [7.3 Environment-Specific Considerations](#73-environment-specific-considerations)
 - [Section 8: Advanced Topics and Future Directions](#section-8-advanced-topics-and-future-directions)
-  - [8.1 Natural Policy Gradients](#81-natural-policy-gradients)
-  - [8.2 Trust Region Methods](#82-trust-region-methods)
-  - [8.3 Multi-Agent Policy Gradients](#83-multi-agent-policy-gradients)
-  - [8.4 Hierarchical Policy Gradients](#84-hierarchical-policy-gradients)
-  - [8.5 Current Research Directions](#85-current-research-directions)
+- [8.1 Natural Policy Gradients](#81-natural-policy-gradients)
+- [8.2 Trust Region Methods](#82-trust-region-methods)
+- [8.3 Multi-Agent Policy Gradients](#83-multi-agent-policy-gradients)
+- [8.4 Hierarchical Policy Gradients](#84-hierarchical-policy-gradients)
+- [8.5 Current Research Directions](#85-current-research-directions)
 
 
 ## Deep Reinforcement Learning - Session 9
@@ -60,108 +60,108 @@
 By the end of this notebook, you will understand:
 
 1. **Policy Gradient Foundations**:
-   - Policy gradient theorem and mathematical derivation
-   - REINFORCE algorithm and its limitations
-   - Variance reduction techniques (baselines, advantage functions)
-   - Actor-critic architectures and their benefits
+- Policy gradient theorem and mathematical derivation
+- REINFORCE algorithm and its limitations
+- Variance reduction techniques (baselines, advantage functions)
+- Actor-critic architectures and their benefits
 
 2. **Advanced Policy Optimization**:
-   - Proximal Policy Optimization (PPO) algorithm
-   - Trust region methods and constrained optimization
-   - Generalized Advantage Estimation (GAE)
-   - Sample efficiency improvements
+- Proximal Policy Optimization (PPO) algorithm
+- Trust region methods and constrained optimization
+- Generalized Advantage Estimation (GAE)
+- Sample efficiency improvements
 
 3. **Continuous Control**:
-   - Gaussian policies for continuous action spaces
-   - Action bound handling and numerical stability
-   - Continuous control environments and challenges
-   - Policy gradient adaptations for continuous domains
+- Gaussian policies for continuous action spaces
+- Action bound handling and numerical stability
+- Continuous control environments and challenges
+- Policy gradient adaptations for continuous domains
 
 4. **Implementation and Analysis Skills**:
-   - Complete policy gradient implementations from scratch
-   - Hyperparameter tuning and performance optimization
-   - Comparative analysis of different algorithms
-   - Debugging and troubleshooting policy gradient training
+- Complete policy gradient implementations from scratch
+- Hyperparameter tuning and performance optimization
+- Comparative analysis of different algorithms
+- Debugging and troubleshooting policy gradient training
 
 ### Prerequisites
 
 Before starting this notebook, ensure you have:
 
 - **Mathematical Background**:
-  - Calculus (gradients, optimization, chain rule)
-  - Probability theory (distributions, expectations)
-  - Linear algebra (vectors, matrices, eigenvalues)
-  - Statistics (variance, bias, convergence)
+- Calculus (gradients, optimization, chain rule)
+- Probability theory (distributions, expectations)
+- Linear algebra (vectors, matrices, eigenvalues)
+- Statistics (variance, bias, convergence)
 
 - **Programming Skills**:
-  - Advanced Python programming and debugging
-  - PyTorch proficiency (autograd, custom networks, optimization)
-  - NumPy for numerical computations
-  - Matplotlib/Seaborn for advanced visualization
+- Advanced Python programming and debugging
+- PyTorch proficiency (autograd, custom networks, optimization)
+- NumPy for numerical computations
+- Matplotlib/Seaborn for advanced visualization
 
 - **Reinforcement Learning Fundamentals**:
-  - Markov Decision Processes (MDPs)
-  - Value functions (state-value, action-value, advantage)
-  - Basic policy gradients and actor-critic methods
-  - Experience replay and stability techniques
+- Markov Decision Processes (MDPs)
+- Value functions (state-value, action-value, advantage)
+- Basic policy gradients and actor-critic methods
+- Experience replay and stability techniques
 
 - **Previous Course Knowledge**:
-  - CA1-CA3: Basic RL concepts and dynamic programming
-  - CA4-CA6: Policy gradient methods and actor-critic algorithms
-  - CA7-CA8: Advanced value-based methods and multi-modal learning
-  - Strong foundation in PyTorch neural network implementation
+- CA1-CA3: Basic RL concepts and dynamic programming
+- CA4-CA6: Policy gradient methods and actor-critic algorithms
+- CA7-CA8: Advanced value-based methods and multi-modal learning
+- Strong foundation in PyTorch neural network implementation
 
 ### Roadmap
 
 This notebook follows a structured progression from theory to advanced applications:
 
 1. **Section 1: Theoretical Foundations** (45 min)
-   - Policy gradient theorem derivation
-   - Mathematical foundations of policy-based methods
-   - Advantages over value-based approaches
-   - Key theoretical insights and intuitions
+- Policy gradient theorem derivation
+- Mathematical foundations of policy-based methods
+- Advantages over value-based approaches
+- Key theoretical insights and intuitions
 
 2. **Section 2: REINFORCE Algorithm** (60 min)
-   - Basic policy gradient implementation
-   - Monte Carlo policy gradient updates
-   - Performance analysis and limitations
-   - Variance characteristics and convergence properties
+- Basic policy gradient implementation
+- Monte Carlo policy gradient updates
+- Performance analysis and limitations
+- Variance characteristics and convergence properties
 
 3. **Section 3: Variance Reduction Techniques** (45 min)
-   - Baseline subtraction and unbiased gradients
-   - Advantage function estimation
-   - Generalized Advantage Estimation (GAE)
-   - Practical variance reduction strategies
+- Baseline subtraction and unbiased gradients
+- Advantage function estimation
+- Generalized Advantage Estimation (GAE)
+- Practical variance reduction strategies
 
 4. **Section 4: Actor-Critic Methods** (60 min)
-   - Actor-critic architecture design
-   - TD-based policy gradient updates
-   - Advantage actor-critic (A2C) implementation
-   - Performance comparison with REINFORCE
+- Actor-critic architecture design
+- TD-based policy gradient updates
+- Advantage actor-critic (A2C) implementation
+- Performance comparison with REINFORCE
 
 5. **Section 5: Proximal Policy Optimization (PPO)** (60 min)
-   - PPO algorithm and clipped surrogate objective
-   - Trust region policy optimization concepts
-   - Implementation details and practical considerations
-   - Hyperparameter tuning and best practices
+- PPO algorithm and clipped surrogate objective
+- Trust region policy optimization concepts
+- Implementation details and practical considerations
+- Hyperparameter tuning and best practices
 
 6. **Section 6: Continuous Control** (45 min)
-   - Gaussian policies for continuous action spaces
-   - Action bound handling and numerical stability
-   - Continuous control environments
-   - Policy gradient adaptations for continuous domains
+- Gaussian policies for continuous action spaces
+- Action bound handling and numerical stability
+- Continuous control environments
+- Policy gradient adaptations for continuous domains
 
 7. **Section 7: Performance Analysis** (45 min)
-   - Hyperparameter sensitivity analysis
-   - Comparative algorithm benchmarking
-   - Common issues and debugging strategies
-   - Environment-specific optimization
+- Hyperparameter sensitivity analysis
+- Comparative algorithm benchmarking
+- Common issues and debugging strategies
+- Environment-specific optimization
 
 8. **Section 8: Advanced Topics** (45 min)
-   - Natural policy gradients and Fisher information
-   - Multi-agent policy gradients
-   - Hierarchical policy gradients
-   - Current research directions and future work
+- Natural policy gradients and Fisher information
+- Multi-agent policy gradients
+- Hierarchical policy gradients
+- Current research directions and future work
 
 ### Project Structure
 
@@ -185,12 +185,12 @@ CA9/
 │   ├── visualization.py   # Training visualization tools
 │   ├── analysis.py        # Performance analysis utilities
 │   ├── hyperparameter_tuning.py  # Hyperparameter optimization
-│   └── policy_gradient_visualizer.py  # Advanced visualizations
+│   └── policy*gradient*visualizer.py  # Advanced visualizations
 ├── experiments/           # Experiment scripts
-│   ├── basic_policy_gradient.py
-│   ├── actor_critic_comparison.py
+│   ├── basic*policy*gradient.py
+│   ├── actor*critic*comparison.py
 │   ├── ppo_experiments.py
-│   └── continuous_control_experiments.py
+│   └── continuous*control*experiments.py
 ├── requirements.txt       # Python dependencies
 └── CA9.ipynb             # This educational notebook
 ```
@@ -210,10 +210,10 @@ CA9/
 ```python
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath('__file__')))
+sys.path.append(os.path.dirname(os.path.abspath('**file**')))
 
 from utils.utils import device
-from utils.policy_gradient_visualizer import PolicyGradientVisualizer
+from utils.policy*gradient*visualizer import PolicyGradientVisualizer
 
 import numpy as np
 import torch
@@ -230,7 +230,7 @@ sns.set_palette("husl")
 torch.manual_seed(42)
 np.random.seed(42)
 
-def test_environment_setup():
+def test*environment*setup():
     """Test basic environment functionality"""
     try:
         env = gym.make('CartPole-v1')
@@ -245,7 +245,7 @@ def test_environment_setup():
     except Exception as e:
         print(f"Environment setup failed: {e}")
 
-test_environment_setup()
+test*environment*setup()
 
 print("Setup completed successfully! Ready for policy gradient methods exploration.")
 
@@ -260,18 +260,18 @@ print("Setup completed successfully! Ready for policy gradient methods explorati
 
 
 ```python
-from policy_gradient_visualizer import PolicyGradientVisualizer
+from policy*gradient*visualizer import PolicyGradientVisualizer
 
 pg_visualizer = PolicyGradientVisualizer()
 
 print("1. Policy Gradient Intuition...")
-intuition_results = pg_visualizer.demonstrate_policy_gradient_intuition()
+intuition*results = pg*visualizer.demonstrate*policy*gradient_intuition()
 
 print("\n2. Value-based vs Policy-based Comparison...")
-pg_visualizer.compare_value_vs_policy_methods()
+pg*visualizer.compare*value*vs*policy_methods()
 
 print("\n3. Advanced Visualizations...")
-pg_visualizer.create_advanced_visualizations()
+pg*visualizer.create*advanced_visualizations()
 
 ```
 
@@ -283,7 +283,7 @@ pg_visualizer.create_advanced_visualizations()
 
 
     
-![png](CA9_files/CA9_2_1.png)
+![png](CA9*files/CA9*2_1.png)
     
 
 
@@ -297,7 +297,7 @@ pg_visualizer.create_advanced_visualizations()
 
 
     
-![png](CA9_files/CA9_2_3.png)
+![png](CA9*files/CA9*2_3.png)
     
 
 
@@ -320,7 +320,7 @@ pg_visualizer.create_advanced_visualizations()
 
 
     
-![png](CA9_files/CA9_2_5.png)
+![png](CA9*files/CA9*2_5.png)
     
 
 
@@ -478,9 +478,9 @@ pg_visualizer.create_advanced_visualizations()
 
 
 
-# Section 2: REINFORCE Algorithm - Basic Policy Gradient
+# Section 2: Reinforce Algorithm - Basic Policy Gradient
 
-## The REINFORCE Algorithm
+## The Reinforce Algorithm
 
 REINFORCE (REward Increment = Nonnegative Factor × Offset Reinforcement × Characteristic Eligibility) is the simplest policy gradient algorithm, implementing the policy gradient theorem directly.
 
@@ -491,15 +491,15 @@ REINFORCE (REward Increment = Nonnegative Factor × Offset Reinforcement × Char
 **Algorithm Steps**:
 1. Initialize policy parameters θ
 2. For each episode:
-   - Generate trajectory τ = {s₀, a₀, r₀, s₁, a₁, r₁, ...} following π_θ
-   - For each time step t:
-     - Compute return G_t = Σ(k=t to T) γ^(k-t) * r_k
-     - Update: θ ← θ + α * ∇_θ log π_θ(a_t|s_t) * G_t
+- Generate trajectory τ = {s₀, a₀, r₀, s₁, a₁, r₁, ...} following π_θ
+- For each time step t:
+- Compute return G*t = Σ(k=t to T) γ^(k-t) * r*k
+- Update: θ ← θ + α * ∇*θ log π*θ(a*t|s*t) * G_t
 
 ### Mathematical Foundation
 
 The REINFORCE update rule directly implements the policy gradient theorem:
-$$\theta_{t+1} = \theta_t + \alpha \nabla_\theta \log \pi_\theta(a_t|s_t) G_t$$
+$$\theta*{t+1} = \theta*t + \alpha \nabla*\theta \log \pi*\theta(a*t|s*t) G_t$$
 
 where G_t is the return (cumulative discounted reward) from time step t.
 
@@ -516,7 +516,7 @@ from agents.reinforce import REINFORCEAgent, REINFORCEAnalyzer
 reinforce_analyzer = REINFORCEAnalyzer()
 
 print("Training REINFORCE Agent...")
-reinforce_agent = reinforce_analyzer.train_and_analyze('CartPole-v1', num_episodes=300)
+reinforce*agent = reinforce*analyzer.train*and*analyze('CartPole-v1', num_episodes=300)
 
 ```
 
@@ -542,7 +542,7 @@ reinforce_agent = reinforce_analyzer.train_and_analyze('CartPole-v1', num_episod
 
 
     
-![png](CA9_files/CA9_4_1.png)
+![png](CA9*files/CA9*4_1.png)
     
 
 
@@ -571,10 +571,10 @@ REINFORCE suffers from high variance in gradient estimates because it uses full 
 ### Mathematical Foundation
 
 The policy gradient with baseline:
-$$\nabla_\theta J(\theta) = \mathbb{E}_{\pi_\theta} \left[ \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot (G_t - b(s_t)) \right]$$
+$$\nabla*\theta J(\theta) = \mathbb{E}*{\pi*\theta} \left[ \nabla*\theta \log \pi*\theta(a*t|s*t) \cdot (G*t - b(s_t)) \right]$$
 
 **Proof of Unbiasedness**:
-$$\mathbb{E}[\nabla_\theta \log \pi_\theta(a_t|s_t) \cdot b(s_t)] = b(s_t) \sum_a \nabla_\theta \pi_\theta(a|s_t) = b(s_t) \nabla_\theta \sum_a \pi_\theta(a|s_t) = b(s_t) \nabla_\theta 1 = 0$$
+$$\mathbb{E}[\nabla*\theta \log \pi*\theta(a*t|s*t) \cdot b(s*t)] = b(s*t) \sum*a \nabla*\theta \pi*\theta(a|s*t) = b(s*t) \nabla*\theta \sum*a \pi*\theta(a|s*t) = b(s*t) \nabla_\theta 1 = 0$$
 
 ### Common Baseline Choices
 
@@ -594,7 +594,7 @@ This measures how much better action a is compared to the average action in stat
 from agents.baseline_reinforce import VarianceAnalyzer
 
 variance_analyzer = VarianceAnalyzer()
-baseline_results = variance_analyzer.compare_baseline_methods('CartPole-v1', num_episodes=200)
+baseline*results = variance*analyzer.compare*baseline*methods('CartPole-v1', num_episodes=200)
 
 ```
 
@@ -639,7 +639,7 @@ baseline_results = variance_analyzer.compare_baseline_methods('CartPole-v1', num
 
 
     
-![png](CA9_files/CA9_6_1.png)
+![png](CA9*files/CA9*6_1.png)
     
 
 
@@ -663,7 +663,7 @@ baseline_results = variance_analyzer.compare_baseline_methods('CartPole-v1', num
       Average Advantage Variance (last 50): 0.3010
 
 
-# Section 4: Actor-Critic Methods
+# Section 4: Actor-critic Methods
 
 ## Combining Policy and Value Learning
 
@@ -681,13 +681,13 @@ Actor-Critic methods combine the best of both worlds:
 ### Mathematical Foundation
 
 **Actor Update** (Policy Gradient):
-$$\theta \leftarrow \theta + \alpha_\theta \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot \delta_t$$
+$$\theta \leftarrow \theta + \alpha*\theta \nabla*\theta \log \pi*\theta(a*t|s*t) \cdot \delta*t$$
 
 **Critic Update** (TD Learning):
-$$\phi \leftarrow \phi + \alpha_\phi \delta_t \nabla_\phi V_\phi(s_t)$$
+$$\phi \leftarrow \phi + \alpha*\phi \delta*t \nabla*\phi V*\phi(s_t)$$
 
 where the TD error is:
-$$\delta_t = r_t + \gamma V_\phi(s_{t+1}) - V_\phi(s_t)$$
+$$\delta*t = r*t + \gamma V*\phi(s*{t+1}) - V*\phi(s*t)$$
 
 ### Algorithm Variants
 
@@ -709,7 +709,7 @@ print("Moving to PPO demonstration...")
 
 # Section 5: Advanced Policy Gradient Methods
 
-## Proximal Policy Optimization (PPO)
+## Proximal Policy Optimization (ppo)
 
 PPO addresses the problem of large policy updates that can destabilize training by constraining the policy update step.
 
@@ -720,14 +720,14 @@ In standard policy gradients, large updates can cause:
 - Oscillatory behavior  
 - Poor sample efficiency
 
-### PPO Solution: Clipped Surrogate Objective
+### Ppo Solution: Clipped Surrogate Objective
 
 PPO introduces a clipped surrogate objective that prevents excessively large policy updates:
 
-$$L^{CLIP}(\theta) = \mathbb{E}_t \left[ \min(r_t(\theta) \hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t) \right]$$
+$$L^{CLIP}(\theta) = \mathbb{E}*t \left[ \min(r*t(\theta) \hat{A}*t, \text{clip}(r*t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t) \right]$$
 
 where:
-- $r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}$ is the probability ratio
+- $r*t(\theta) = \frac{\pi*\theta(a*t|s*t)}{\pi*{\theta*{old}}(a*t|s*t)}$ is the probability ratio
 - $\hat{A}_t$ is the advantage estimate
 - $\epsilon$ is the clipping parameter (typically 0.2)
 
@@ -738,13 +738,13 @@ where:
 3. **Stability**: More stable than TRPO with simpler implementation
 4. **Practical**: Easy to implement and tune
 
-### PPO Algorithm Steps
+### Ppo Algorithm Steps
 
 1. Collect trajectories using current policy
 2. Compute advantages using GAE
 3. For multiple epochs:
-   - Update policy using clipped objective
-   - Update value function
+- Update policy using clipped objective
+- Update value function
 4. Repeat
 
 
@@ -768,7 +768,7 @@ In continuous control, actions come from continuous distributions (typically Gau
 
 **Key Differences:**
 - Action space: $\mathcal{A} = \mathbb{R}^n$ (continuous)  
-- Policy: $\pi_\theta(a|s) = \mathcal{N}(\mu_\theta(s), \sigma_\theta(s))$
+- Policy: $\pi*\theta(a|s) = \mathcal{N}(\mu*\theta(s), \sigma_\theta(s))$
 - Log probability: Different calculation for continuous distributions
 - Exploration: Through stochastic policy rather than ε-greedy
 
@@ -776,14 +776,14 @@ In continuous control, actions come from continuous distributions (typically Gau
 
 For continuous control, we typically use a Gaussian (normal) policy:
 
-$$\pi_\theta(a|s) = \frac{1}{\sqrt{2\pi\sigma_\theta(s)^2}} \exp\left(-\frac{(a - \mu_\theta(s))^2}{2\sigma_\theta(s)^2}\right)$$
+$$\pi*\theta(a|s) = \frac{1}{\sqrt{2\pi\sigma*\theta(s)^2}} \exp\left(-\frac{(a - \mu*\theta(s))^2}{2\sigma*\theta(s)^2}\right)$$
 
 Where:
 - $\mu_\theta(s)$: Mean of the action distribution
 - $\sigma_\theta(s)$: Standard deviation of the action distribution
 
 The policy gradient for continuous actions becomes:
-$$\nabla_\theta \log \pi_\theta(a|s) = \frac{(a - \mu_\theta(s))}{\sigma_\theta(s)^2} \nabla_\theta \mu_\theta(s) - \frac{1}{\sigma_\theta(s)} \nabla_\theta \sigma_\theta(s) + \frac{(a - \mu_\theta(s))^2}{\sigma_\theta(s)^3} \nabla_\theta \sigma_\theta(s)$$
+$$\nabla*\theta \log \pi*\theta(a|s) = \frac{(a - \mu*\theta(s))}{\sigma*\theta(s)^2} \nabla*\theta \mu*\theta(s) - \frac{1}{\sigma*\theta(s)} \nabla*\theta \sigma*\theta(s) + \frac{(a - \mu*\theta(s))^2}{\sigma*\theta(s)^3} \nabla*\theta \sigma_\theta(s)$$
 
 ## 6.3 Practical Implementation Considerations
 
@@ -799,7 +799,7 @@ $$\nabla_\theta \log \pi_\theta(a|s) = \frac{(a - \mu_\theta(s))}{\sigma_\theta(
 
 **Action Scaling:**
 - Scale network outputs to match environment action bounds
-- Use tanh activation and scale: `action = action_scale * tanh(output) + action_bias`
+- Use tanh activation and scale: `action = action*scale * tanh(output) + action*bias`
 
 
 ```python
@@ -816,20 +816,20 @@ print("• Numerical stability considerations")
 
 print("\nTo test with a continuous environment like Pendulum-v1:")
 print("env = gym.make('Pendulum-v1')")
-print("agent = ContinuousREINFORCEAgent(env.observation_space.shape[0], env.action_space.shape[0])")
+print("agent = ContinuousREINFORCEAgent(env.observation*space.shape[0], env.action*space.shape[0])")
 
 state_dim = 3  # Example: Pendulum
 action_dim = 1  # Example: Pendulum
-continuous_actor = ContinuousActorNetwork(state_dim, action_dim, action_bound=2.0)
+continuous*actor = ContinuousActorNetwork(state*dim, action*dim, action*bound=2.0)
 
 print(f"\nContinuous Actor Network Architecture:")
 print(f"Input dimension: {state_dim}")
-print(f"Output dimension: {action_dim} (mean) + {action_dim} (std)")
+print(f"Output dimension: {action*dim} (mean) + {action*dim} (std)")
 print(f"Parameters: {sum(p.numel() for p in continuous_actor.parameters())}")
 
 with torch.no_grad():
-    sample_state = torch.randn(1, state_dim)
-    mean, std = continuous_actor(sample_state)
+    sample*state = torch.randn(1, state*dim)
+    mean, std = continuous*actor(sample*state)
     print(f"\nSample output:")
     print(f"Mean: {mean.numpy()}")
     print(f"Std: {std.numpy()}")
@@ -846,7 +846,7 @@ with torch.no_grad():
     
     To test with a continuous environment like Pendulum-v1:
     env = gym.make('Pendulum-v1')
-    agent = ContinuousREINFORCEAgent(env.observation_space.shape[0], env.action_space.shape[0])
+    agent = ContinuousREINFORCEAgent(env.observation*space.shape[0], env.action*space.shape[0])
     
     Continuous Actor Network Architecture:
     Input dimension: 3
@@ -895,7 +895,7 @@ Understanding how different hyperparameters affect policy gradient methods is cr
 - Conservative policy updates (PPO clipping)
 - Proper network initialization
 
-## 7.3 Environment-Specific Considerations
+## 7.3 Environment-specific Considerations
 
 **CartPole:**
 - Fast learning possible with simple networks
@@ -915,11 +915,11 @@ benchmark = PolicyGradientBenchmark()
 
 print("Hyperparameter Tuning and Benchmarking Framework Ready!")
 print("\nTo run hyperparameter tuning:")
-print("lr_results = tuner.tune_learning_rates()")
-print("ppo_results = tuner.tune_ppo_parameters()")
+print("lr*results = tuner.tune*learning_rates()")
+print("ppo*results = tuner.tune*ppo_parameters()")
 
 print("\nTo run comprehensive benchmark:")
-print("results = benchmark.run_benchmark(num_episodes=150, num_seeds=3)")
+print("results = benchmark.run*benchmark(num*episodes=150, num_seeds=3)")
 
 ```
 
@@ -946,10 +946,10 @@ This final section covers advanced topics in policy gradient methods and current
 
 Natural Policy Gradients use the Fisher Information Matrix to define a more principled update direction:
 
-$$\tilde{\nabla}_\theta J(\theta) = F(\theta)^{-1} \nabla_\theta J(\theta)$$
+$$\tilde{\nabla}*\theta J(\theta) = F(\theta)^{-1} \nabla*\theta J(\theta)$$
 
 Where $F(\theta)$ is the Fisher Information Matrix:
-$$F(\theta) = \mathbb{E}_{s \sim d^\pi, a \sim \pi_\theta}[\nabla_\theta \log \pi_\theta(a|s) \nabla_\theta \log \pi_\theta(a|s)^T]$$
+$$F(\theta) = \mathbb{E}*{s \sim d^\pi, a \sim \pi*\theta}[\nabla*\theta \log \pi*\theta(a|s) \nabla*\theta \log \pi*\theta(a|s)^T]$$
 
 **Key Benefits:**
 - Policy updates are invariant to reparameterization
@@ -960,13 +960,13 @@ $$F(\theta) = \mathbb{E}_{s \sim d^\pi, a \sim \pi_\theta}[\nabla_\theta \log \p
 
 **TRPO (Trust Region Policy Optimization):**
 - Constrains policy updates using KL-divergence
-- Solves: $\max_\theta \mathbb{E}[\frac{\pi_\theta(a|s)}{\pi_{\theta_{old}}(a|s)} A(s,a)]$ subject to $\mathbb{E}[D_{KL}(\pi_{\theta_{old}}||\pi_\theta)] \leq \delta$
+- Solves: $\max*\theta \mathbb{E}[\frac{\pi*\theta(a|s)}{\pi*{\theta*{old}}(a|s)} A(s,a)]$ subject to $\mathbb{E}[D*{KL}(\pi*{\theta*{old}}||\pi*\theta)] \leq \delta$
 
 **PPO as Approximation:**
 - PPO's clipped surrogate objective approximates TRPO's constrained optimization
 - Much simpler to implement while maintaining similar performance
 
-## 8.3 Multi-Agent Policy Gradients
+## 8.3 Multi-agent Policy Gradients
 
 **Independent Learners:**
 - Each agent learns independently using single-agent methods
@@ -977,7 +977,7 @@ $$F(\theta) = \mathbb{E}_{s \sim d^\pi, a \sim \pi_\theta}[\nabla_\theta \log \p
 - Decentralized actors for execution
 
 **Policy Gradient Theorem in Multi-Agent Settings:**
-$$\nabla_{\theta_i} J_i(\theta_1, ..., \theta_n) = \mathbb{E}[\nabla_{\theta_i} \log \pi_{\theta_i}(a_i|s) Q_i(s, a_1, ..., a_n)]$$
+$$\nabla*{\theta*i} J*i(\theta*1, ..., \theta*n) = \mathbb{E}[\nabla*{\theta*i} \log \pi*{\theta*i}(a*i|s) Q*i(s, a*1, ..., a_n)]$$
 
 ## 8.4 Hierarchical Policy Gradients
 

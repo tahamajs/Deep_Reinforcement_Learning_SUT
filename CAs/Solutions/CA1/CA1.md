@@ -1,14 +1,14 @@
-# CA1: Introduction to Deep Reinforcement Learning
+# Ca1: Introduction to Deep Reinforcement Learning
 # Table of Contents
 
 - [CA1: Introduction to Deep Reinforcement Learning](#ca1-introduction-to-deep-reinforcement-learning)
-  - [Fundamental Concepts and Markov Decision Processes](#fundamental-concepts-and-markov-decision-processes)
-    - [Learning Objectives](#learning-objectives)
-    - [Prerequisites](#prerequisites)
-    - [Roadmap](#roadmap)
-  - [Part 2: Deep Q-Learning (DQN)](#part-2-deep-q-learning-dqn)
-    - [2.1 Q-Learning Algorithm](#21-q-learning-algorithm)
-    - [2.2 Deep Q-Network (DQN) Enhancements](#22-deep-q-network-dqn-enhancements)
+- [Fundamental Concepts and Markov Decision Processes](#fundamental-concepts-and-markov-decision-processes)
+- [Learning Objectives](#learning-objectives)
+- [Prerequisites](#prerequisites)
+- [Roadmap](#roadmap)
+- [Part 2: Deep Q-Learning (DQN)](#part-2-deep-q-learning-dqn)
+- [2.1 Q-Learning Algorithm](#21-q-learning-algorithm)
+- [2.2 Deep Q-Network (DQN) Enhancements](#22-deep-q-network-dqn-enhancements)
 - [Import necessary libraries](#import-necessary-libraries)
 - [Set reproducible seed](#set-reproducible-seed)
 - [Check if GPU is available and select device](#check-if-gpu-is-available-and-select-device)
@@ -17,14 +17,14 @@
 - [Quick smoke-test (keeps outputs small in notebooks)](#quick-smoke-test-keeps-outputs-small-in-notebooks)
 - [Test the replay buffer](#test-the-replay-buffer)
 - [Initialize agent for smoke test](#initialize-agent-for-smoke-test)
-  - [Part 3: Policy Gradient Methods](#part-3-policy-gradient-methods)
-    - [3.1 Policy Gradient Theorem](#31-policy-gradient-theorem)
-    - [3.2 REINFORCE Algorithm](#32-reinforce-algorithm)
-    - [3.3 Actor-Critic Methods](#33-actor-critic-methods)
+- [Part 3: Policy Gradient Methods](#part-3-policy-gradient-methods)
+- [3.1 Policy Gradient Theorem](#31-policy-gradient-theorem)
+- [3.2 REINFORCE Algorithm](#32-reinforce-algorithm)
+- [3.3 Actor-Critic Methods](#33-actor-critic-methods)
 - [Initialize agents for smoke tests](#initialize-agents-for-smoke-tests)
 - [Initialize Actor-Critic agent](#initialize-actor-critic-agent)
-  - [Part 4: Practical Implementation and Comparison](#part-4-practical-implementation-and-comparison)
-    - [4.1 Training Environment Setup](#41-training-environment-setup)
+- [Part 4: Practical Implementation and Comparison](#part-4-practical-implementation-and-comparison)
+- [4.1 Training Environment Setup](#41-training-environment-setup)
 - [Create environment (use gym if available; otherwise fallback to a simple MockEnv)](#create-environment-use-gym-if-available-otherwise-fallback-to-a-simple-mockenv)
 - [Create environment (use gymnasium if available; otherwise fallback to a simple MockEnv)](#create-environment-use-gymnasium-if-available-otherwise-fallback-to-a-simple-mockenv)
 - [Demonstration of training (short episodes for notebook demonstration)](#demonstration-of-training-short-episodes-for-notebook-demonstration)
@@ -32,29 +32,29 @@
 - [Keep models small for quick demos in notebooks](#keep-models-small-for-quick-demos-in-notebooks)
 - [Store results](#store-results)
 - [Visualize training results (if results are available)](#visualize-training-results-if-results-are-available)
-  - [Part 5: Exercises and Questions](#part-5-exercises-and-questions)
-    - [Exercise 1: Theoretical Understanding](#exercise-1-theoretical-understanding)
-    - [Exercise 2: Implementation Analysis](#exercise-2-implementation-analysis)
-    - [Exercise 3: Experimental Design](#exercise-3-experimental-design)
+- [Part 5: Exercises and Questions](#part-5-exercises-and-questions)
+- [Exercise 1: Theoretical Understanding](#exercise-1-theoretical-understanding)
+- [Exercise 2: Implementation Analysis](#exercise-2-implementation-analysis)
+- [Exercise 3: Experimental Design](#exercise-3-experimental-design)
 - [Exercise 3: Sample Efficiency Experiment](#exercise-3-sample-efficiency-experiment)
 - [Exercise 4: Hyperparameter Analysis (simple grid search wrapper)](#exercise-4-hyperparameter-analysis-simple-grid-search-wrapper)
 - [Exercise 5: Advanced DQN Variants](#exercise-5-advanced-dqn-variants)
-  - [Part 6: Conclusions and Analysis](#part-6-conclusions-and-analysis)
-    - [6.1 Algorithm Comparison Summary](#61-algorithm-comparison-summary)
-    - [6.2 Key Insights](#62-key-insights)
-    - [6.3 When to Use Each Algorithm](#63-when-to-use-each-algorithm)
-    - [6.4 Advanced Topics for Further Study](#64-advanced-topics-for-further-study)
-    - [6.5 Further Reading](#65-further-reading)
-  - [Sample Efficiency Experiment Results (Updated)](#sample-efficiency-experiment-results-updated)
+- [Part 6: Conclusions and Analysis](#part-6-conclusions-and-analysis)
+- [6.1 Algorithm Comparison Summary](#61-algorithm-comparison-summary)
+- [6.2 Key Insights](#62-key-insights)
+- [6.3 When to Use Each Algorithm](#63-when-to-use-each-algorithm)
+- [6.4 Advanced Topics for Further Study](#64-advanced-topics-for-further-study)
+- [6.5 Further Reading](#65-further-reading)
+- [Sample Efficiency Experiment Results (Updated)](#sample-efficiency-experiment-results-updated)
 - [Run the sample efficiency experiment](#run-the-sample-efficiency-experiment)
 - [Create a fresh environment factory](#create-a-fresh-environment-factory)
 - [Define agent factories](#define-agent-factories)
-- [Run the experiment (increase runs and max_episodes for more robust results, but keep small for demo)](#run-the-experiment-increase-runs-and-max_episodes-for-more-robust-results-but-keep-small-for-demo)
-  - [Assignment Submission Requirements](#assignment-submission-requirements)
-    - [What to Submit:](#what-to-submit)
-    - [Evaluation Criteria:](#evaluation-criteria)
-    - [Submission Deadline: [Insert Date]](#submission-deadline-insert-date)
-    - [Additional Notes:](#additional-notes)
+- [Run the experiment (increase runs and max*episodes for more robust results, but keep small for demo)](#run-the-experiment-increase-runs-and-max*episodes-for-more-robust-results-but-keep-small-for-demo)
+- [Assignment Submission Requirements](#assignment-submission-requirements)
+- [What to Submit:](#what-to-submit)
+- [Evaluation Criteria:](#evaluation-criteria)
+- [Submission Deadline: [Insert Date]](#submission-deadline-insert-date)
+- [Additional Notes:](#additional-notes)
 
 
 
@@ -89,16 +89,16 @@ This comprehensive assignment is structured as follows:
 
 Let's begin our journey into the fundamentals of reinforcement learning!
 
-## Part 2: Deep Q-Learning (DQN)
+## Part 2: Deep Q-learning (dqn)
 
-### 2.1 Q-Learning Algorithm
+### 2.1 Q-learning Algorithm
 
 Q-Learning is a model-free, off-policy algorithm that learns the optimal action-value function:
 
 **Q-Learning Update Rule:**
 $$Q(s,a) \leftarrow Q(s,a) + \alpha [r + \gamma \max_{a'} Q(s',a') - Q(s,a)]$$
 
-### 2.2 Deep Q-Network (DQN) Enhancements
+### 2.2 Deep Q-network (dqn) Enhancements
 
 **Key Innovations:**
 1. **Experience Replay**: Store transitions $(s,a,r,s')$ in replay buffer
@@ -107,13 +107,13 @@ $$Q(s,a) \leftarrow Q(s,a) + \alpha [r + \gamma \max_{a'} Q(s',a') - Q(s,a)]$$
 4. **Dueling DQN**: Separate value and advantage streams
 
 **DQN Loss Function:**
-$$L(\theta) = \mathbb{E}_{(s,a,r,s') \sim D} \left[ \left( r + \gamma \max_{a'} Q(s',a';\theta^-) - Q(s,a;\theta) \right)^2 \right]$$
+$$L(\theta) = \mathbb{E}*{(s,a,r,s') \sim D} \left[ \left( r + \gamma \max*{a'} Q(s',a';\theta^-) - Q(s,a;\theta) \right)^2 \right]$$
 
 Where $\theta^-$ represents the target network parameters.
 
 
 ```python
-# Import necessary libraries
+# Import Necessary Libraries
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -134,19 +134,19 @@ def set_seed(seed: int = 42) -> None:
     random.seed(seed)
 
 
-# Set reproducible seed
+# Set Reproducible Seed
 set_seed(42)
 
-# Check if GPU is available and select device
+# Check If Gpu Is Available and Select Device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-# Configure plotting style (nice for notebooks)
+# Configure Plotting Style (nice for Notebooks)
 plt.style.use('seaborn-v0_8')
 sns.set_palette("husl")
 
 
-# Small utility: moving average for plotting
+# Small Utility: Moving Average for Plotting
 def moving_average(x: List[float], window: int = 10) -> np.ndarray:
     """Compute moving average using a convolution. Returns same-length array."""
     if len(x) < 1:
@@ -168,11 +168,11 @@ class DQN(nn.Module):
 
     Simple MLP with two hidden layers and ReLU activations.
     """
-    def __init__(self, state_size: int, action_size: int, hidden_size: int = 64) -> None:
-        super(DQN, self).__init__()
-        self.fc1 = nn.Linear(state_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, action_size)
+    def **init**(self, state*size: int, action*size: int, hidden_size: int = 64) -> None:
+        super(DQN, self).**init**()
+        self.fc1 = nn.Linear(state*size, hidden*size)
+        self.fc2 = nn.Linear(hidden*size, hidden*size)
+        self.fc3 = nn.Linear(hidden*size, action*size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if x.dim() == 1:
@@ -188,25 +188,25 @@ class DuelingDQN(nn.Module):
 
     Q(s,a) = V(s) + A(s,a) - mean_a A(s,a)
     """
-    def __init__(self, state_size: int, action_size: int, hidden_size: int = 64) -> None:
-        super(DuelingDQN, self).__init__()
+    def **init**(self, state*size: int, action*size: int, hidden_size: int = 64) -> None:
+        super(DuelingDQN, self).**init**()
         self.feature_layer = nn.Sequential(
-            nn.Linear(state_size, hidden_size),
+            nn.Linear(state*size, hidden*size),
             nn.ReLU()
         )
 
         # Value stream
         self.value_stream = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
+            nn.Linear(hidden*size, hidden*size),
             nn.ReLU(),
             nn.Linear(hidden_size, 1)
         )
 
         # Advantage stream
         self.advantage_stream = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
+            nn.Linear(hidden*size, hidden*size),
             nn.ReLU(),
-            nn.Linear(hidden_size, action_size)
+            nn.Linear(hidden*size, action*size)
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -222,12 +222,12 @@ class DuelingDQN(nn.Module):
         return q_value
 
 
-# Quick smoke-test (keeps outputs small in notebooks)
+# Quick Smoke-test (keeps Outputs Small in Notebooks)
 state_size = 4  # Example: CartPole observation size
 action_size = 2  # Example: CartPole action size
 
-_dqn = DQN(state_size, action_size)
-_dueling = DuelingDQN(state_size, action_size)
+*dqn = DQN(state*size, action_size)
+*dueling = DuelingDQN(state*size, action_size)
 
 print("DQN and DuelingDQN classes defined.")
 
@@ -244,7 +244,7 @@ class ReplayBuffer:
     provides a method to sample batches converted to torch tensors on the
     selected device.
     """
-    def __init__(self, capacity: int) -> None:
+    def **init**(self, capacity: int) -> None:
         self.buffer = deque(maxlen=capacity)
         self.experience = namedtuple('Experience', ['state', 'action', 'reward', 'next_state', 'done'])
 
@@ -257,10 +257,10 @@ class ReplayBuffer:
         """Sample a batch of experiences and return tensors.
 
         Returns:
-            states: FloatTensor (batch_size, state_dim)
+            states: FloatTensor (batch*size, state*dim)
             actions: LongTensor (batch_size, 1)
             rewards: FloatTensor (batch_size, 1)
-            next_states: FloatTensor (batch_size, state_dim)
+            next*states: FloatTensor (batch*size, state_dim)
             dones: FloatTensor (batch_size, 1)
         """
         experiences = random.sample(self.buffer, k=batch_size)
@@ -268,22 +268,22 @@ class ReplayBuffer:
         states = np.vstack([e.state for e in experiences if e is not None])
         actions = np.vstack([e.action for e in experiences if e is not None])
         rewards = np.vstack([e.reward for e in experiences if e is not None])
-        next_states = np.vstack([e.next_state for e in experiences if e is not None])
+        next*states = np.vstack([e.next*state for e in experiences if e is not None])
         dones = np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)
 
         states = torch.from_numpy(states).float().to(device)
         actions = torch.from_numpy(actions).long().to(device)
         rewards = torch.from_numpy(rewards).float().to(device)
-        next_states = torch.from_numpy(next_states).float().to(device)
+        next*states = torch.from*numpy(next_states).float().to(device)
         dones = torch.from_numpy(dones).float().to(device)
 
         return states, actions, rewards, next_states, dones
 
-    def __len__(self) -> int:
+    def **len**(self) -> int:
         return len(self.buffer)
 
 
-# Test the replay buffer
+# Test the Replay Buffer
 buffer = ReplayBuffer(10000)
 print(f"Replay buffer initialized with capacity: {10000}")
 print(f"Current buffer size: {len(buffer)}")
@@ -301,7 +301,7 @@ class DQNAgent:
     DQN Agent with Experience Replay and Target Network. Supports optional
     Double DQN and Dueling architectures.
     """
-    def __init__(self,
+    def **init**(self,
                  state_size: int,
                  action_size: int,
                  lr: float = 1e-3,
@@ -313,28 +313,28 @@ class DQNAgent:
                  batch_size: int = 64,
                  update_every: int = 4,
                  tau: float = 1e-3,
-                 use_double_dqn: bool = False,
+                 use*double*dqn: bool = False,
                  use_dueling: bool = False) -> None:
 
-        self.state_size = state_size
-        self.action_size = action_size
+        self.state*size = state*size
+        self.action*size = action*size
         self.lr = lr
         self.gamma = gamma
         self.epsilon = epsilon
-        self.epsilon_decay = epsilon_decay
-        self.epsilon_min = epsilon_min
-        self.batch_size = batch_size
-        self.update_every = update_every
+        self.epsilon*decay = epsilon*decay
+        self.epsilon*min = epsilon*min
+        self.batch*size = batch*size
+        self.update*every = update*every
         self.tau = tau
-        self.use_double_dqn = use_double_dqn
+        self.use*double*dqn = use*double*dqn
 
         # Neural networks
         if use_dueling:
-            self.q_network = DuelingDQN(state_size, action_size).to(device)
-            self.target_network = DuelingDQN(state_size, action_size).to(device)
+            self.q*network = DuelingDQN(state*size, action_size).to(device)
+            self.target*network = DuelingDQN(state*size, action_size).to(device)
         else:
-            self.q_network = DQN(state_size, action_size).to(device)
-            self.target_network = DQN(state_size, action_size).to(device)
+            self.q*network = DQN(state*size, action_size).to(device)
+            self.target*network = DQN(state*size, action_size).to(device)
 
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
 
@@ -343,13 +343,13 @@ class DQNAgent:
         self.t_step = 0
 
         # Initialize target network weights
-        self.hard_update(self.target_network, self.q_network)
+        self.hard*update(self.target*network, self.q_network)
 
     def step(self, state: np.ndarray, action: int, reward: float, next_state: np.ndarray, done: bool) -> None:
         """Save experience and, every `update_every` steps, sample a batch and learn."""
         self.memory.add(state, action, reward, next_state, done)
 
-        self.t_step = (self.t_step + 1) % self.update_every
+        self.t*step = (self.t*step + 1) % self.update_every
         if self.t_step == 0:
             if len(self.memory) > self.batch_size:
                 experiences = self.memory.sample(self.batch_size)
@@ -361,10 +361,10 @@ class DQNAgent:
             eps = self.epsilon
 
         if random.random() > eps:
-            state_t = torch.from_numpy(state).float().unsqueeze(0).to(device)
+            state*t = torch.from*numpy(state).float().unsqueeze(0).to(device)
             self.q_network.eval()
             with torch.no_grad():
-                action_values = self.q_network(state_t)
+                action*values = self.q*network(state_t)
             self.q_network.train()
             return int(action_values.argmax(dim=1).item())
         else:
@@ -375,20 +375,20 @@ class DQNAgent:
         states, actions, rewards, next_states, dones = experiences
 
         # Double DQN: select actions using local network, evaluate with target network
-        if self.use_double_dqn:
-            next_actions = self.q_network(next_states).detach().argmax(1).unsqueeze(1)
-            Q_targets_next = self.target_network(next_states).detach().gather(1, next_actions)
+        if self.use*double*dqn:
+            next*actions = self.q*network(next_states).detach().argmax(1).unsqueeze(1)
+            Q*targets*next = self.target*network(next*states).detach().gather(1, next_actions)
         else:
-            Q_targets_next = self.target_network(next_states).detach().max(1)[0].unsqueeze(1)
+            Q*targets*next = self.target*network(next*states).detach().max(1)[0].unsqueeze(1)
 
         # Compute target Q values
-        Q_targets = rewards + (self.gamma * Q_targets_next * (1 - dones))
+        Q*targets = rewards + (self.gamma * Q*targets_next * (1 - dones))
 
         # Get expected Q values from local model
-        Q_expected = self.q_network(states).gather(1, actions)
+        Q*expected = self.q*network(states).gather(1, actions)
 
         # Compute loss
-        loss = F.mse_loss(Q_expected, Q_targets)
+        loss = F.mse*loss(Q*expected, Q_targets)
 
         # Minimize the loss
         self.optimizer.zero_grad()
@@ -396,27 +396,27 @@ class DQNAgent:
         self.optimizer.step()
 
         # Soft-update target network parameters
-        self.soft_update(self.q_network, self.target_network, self.tau)
+        self.soft*update(self.q*network, self.target_network, self.tau)
 
         # Decay epsilon (ensure it doesn't go below epsilon_min)
-        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+        self.epsilon = max(self.epsilon*min, self.epsilon * self.epsilon*decay)
 
-    def soft_update(self, local_model: nn.Module, target_model: nn.Module, tau: float) -> None:
+    def soft*update(self, local*model: nn.Module, target_model: nn.Module, tau: float) -> None:
         """Soft update model parameters: target = tau*local + (1-tau)*target"""
-        for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
-            target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
+        for target*param, local*param in zip(target*model.parameters(), local*model.parameters()):
+            target*param.data.copy*(tau * local*param.data + (1.0 - tau) * target*param.data)
 
     def hard_update(self, target: nn.Module, source: nn.Module) -> None:
         """Copy weights from source to target network."""
         for target_param, param in zip(target.parameters(), source.parameters()):
-            target_param.data.copy_(param.data)
+            target*param.data.copy*(param.data)
 
 
-# Initialize agent for smoke test
-agent = DQNAgent(state_size=4, action_size=2, use_dueling=True, use_double_dqn=True)
+# Initialize Agent for Smoke Test
+agent = DQNAgent(state*size=4, action*size=2, use*dueling=True, use*double_dqn=True)
 print("DQN Agent initialized successfully!")
 print(f"Network type: {'Dueling' if isinstance(agent.q_network, DuelingDQN) else 'Standard'}")
-print(f"Double DQN enabled: {agent.use_double_dqn}")
+print(f"Double DQN enabled: {agent.use*double*dqn}")
 
 ```
 
@@ -432,20 +432,20 @@ print(f"Double DQN enabled: {agent.use_double_dqn}")
 Instead of learning value functions, policy gradient methods directly optimize the policy parameters $\theta$.
 
 **Policy Gradient Theorem:**
-$$\nabla_\theta J(\theta) = \mathbb{E}_{\pi_\theta} \left[ \nabla_\theta \log \pi_\theta(a|s) \cdot Q^{\pi_\theta}(s,a) \right]$$
+$$\nabla*\theta J(\theta) = \mathbb{E}*{\pi*\theta} \left[ \nabla*\theta \log \pi*\theta(a|s) \cdot Q^{\pi*\theta}(s,a) \right]$$
 
 Where $J(\theta)$ is the expected return under policy $\pi_\theta$.
 
-### 3.2 REINFORCE Algorithm
+### 3.2 Reinforce Algorithm
 
 REINFORCE uses Monte Carlo sampling to estimate the policy gradient:
 
 **REINFORCE Update:**
-$$\theta_{t+1} = \theta_t + \alpha \nabla_\theta \log \pi_\theta(a_t|s_t) G_t$$
+$$\theta*{t+1} = \theta*t + \alpha \nabla*\theta \log \pi*\theta(a*t|s*t) G_t$$
 
 Where $G_t$ is the return from time step $t$.
 
-### 3.3 Actor-Critic Methods
+### 3.3 Actor-critic Methods
 
 Actor-Critic combines policy gradient (actor) with value function approximation (critic):
 
@@ -453,12 +453,12 @@ Actor-Critic combines policy gradient (actor) with value function approximation 
 - **Critic**: Updates value function parameters using TD learning
 
 **Actor Update:**
-$$\theta_{t+1} = \theta_t + \alpha_\theta \nabla_\theta \log \pi_\theta(a_t|s_t) \delta_t$$
+$$\theta*{t+1} = \theta*t + \alpha*\theta \nabla*\theta \log \pi*\theta(a*t|s*t) \delta*t$$
 
 **Critic Update:**
-$$w_{t+1} = w_t + \alpha_w \delta_t \nabla_w V_w(s_t)$$
+$$w*{t+1} = w*t + \alpha*w \delta*t \nabla*w V*w(s_t)$$
 
-Where $\delta_t = r_t + \gamma V_w(s_{t+1}) - V_w(s_t)$ is the TD error.
+Where $\delta*t = r*t + \gamma V*w(s*{t+1}) - V*w(s*t)$ is the TD error.
 
 
 ```python
@@ -466,11 +466,11 @@ class PolicyNetwork(nn.Module):
     """
     Simple policy network that outputs action probabilities for discrete action spaces.
     """
-    def __init__(self, state_size: int, action_size: int, hidden_size: int = 64) -> None:
-        super(PolicyNetwork, self).__init__()
-        self.fc1 = nn.Linear(state_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, action_size)
+    def **init**(self, state*size: int, action*size: int, hidden_size: int = 64) -> None:
+        super(PolicyNetwork, self).**init**()
+        self.fc1 = nn.Linear(state*size, hidden*size)
+        self.fc2 = nn.Linear(hidden*size, hidden*size)
+        self.fc3 = nn.Linear(hidden*size, action*size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if x.dim() == 1:
@@ -485,13 +485,13 @@ class REINFORCEAgent:
     REINFORCE policy gradient agent using Monte-Carlo returns.
     Stores log-probabilities to compute the policy gradient at episode end.
     """
-    def __init__(self, state_size: int, action_size: int, lr: float = 1e-3, gamma: float = 0.99) -> None:
-        self.state_size = state_size
-        self.action_size = action_size
+    def **init**(self, state*size: int, action*size: int, lr: float = 1e-3, gamma: float = 0.99) -> None:
+        self.state*size = state*size
+        self.action*size = action*size
         self.gamma = gamma
 
         # Policy network and optimizer
-        self.policy = PolicyNetwork(state_size, action_size).to(device)
+        self.policy = PolicyNetwork(state*size, action*size).to(device)
         self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
 
         # Episode storage
@@ -506,11 +506,11 @@ class REINFORCEAgent:
 
     def act(self, state: np.ndarray) -> int:
         """Sample an action from the policy and store log-probability."""
-        state_t = torch.from_numpy(state).float().unsqueeze(0).to(device)
+        state*t = torch.from*numpy(state).float().unsqueeze(0).to(device)
         probs = self.policy(state_t)
         m = torch.distributions.Categorical(probs)
         action = m.sample()
-        self.log_probs.append(m.log_prob(action))
+        self.log*probs.append(m.log*prob(action))
         return int(action.item())
 
     def step(self, state: np.ndarray, action: int, reward: float) -> None:
@@ -528,12 +528,12 @@ class REINFORCEAgent:
             returns.insert(0, G)
 
         returns_t = torch.tensor(returns).float().to(device)
-        returns_t = (returns_t - returns_t.mean()) / (returns_t.std() + 1e-8)
+        returns*t = (returns*t - returns*t.mean()) / (returns*t.std() + 1e-8)
 
         # Policy loss
         policy_loss = []
-        for log_prob, Gt in zip(self.log_probs, returns_t):
-            policy_loss.append(-log_prob * Gt)
+        for log*prob, Gt in zip(self.log*probs, returns_t):
+            policy*loss.append(-log*prob * Gt)
 
         self.optimizer.zero_grad()
         loss = torch.stack(policy_loss).sum()
@@ -547,10 +547,10 @@ class REINFORCEAgent:
 
 class ValueNetwork(nn.Module):
     """Value network used by Actor-Critic (returns scalar state-values)."""
-    def __init__(self, state_size: int, hidden_size: int = 64) -> None:
-        super(ValueNetwork, self).__init__()
-        self.fc1 = nn.Linear(state_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, hidden_size)
+    def **init**(self, state*size: int, hidden*size: int = 64) -> None:
+        super(ValueNetwork, self).**init**()
+        self.fc1 = nn.Linear(state*size, hidden*size)
+        self.fc2 = nn.Linear(hidden*size, hidden*size)
         self.fc3 = nn.Linear(hidden_size, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -563,57 +563,57 @@ class ValueNetwork(nn.Module):
 
 class ActorCriticAgent:
     """A simple one-step Actor-Critic agent using a separate actor and critic."""
-    def __init__(self, state_size: int, action_size: int, lr_actor: float = 1e-3, lr_critic: float = 1e-3, gamma: float = 0.99) -> None:
-        self.state_size = state_size
-        self.action_size = action_size
+    def **init**(self, state*size: int, action*size: int, lr*actor: float = 1e-3, lr*critic: float = 1e-3, gamma: float = 0.99) -> None:
+        self.state*size = state*size
+        self.action*size = action*size
         self.gamma = gamma
 
         # Actor and critic
-        self.actor = PolicyNetwork(state_size, action_size).to(device)
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr_actor)
+        self.actor = PolicyNetwork(state*size, action*size).to(device)
+        self.actor*optimizer = optim.Adam(self.actor.parameters(), lr=lr*actor)
 
         self.critic = ValueNetwork(state_size).to(device)
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr_critic)
+        self.critic*optimizer = optim.Adam(self.critic.parameters(), lr=lr*critic)
 
     def act(self, state: np.ndarray) -> Tuple[int, torch.Tensor]:
-        state_t = torch.from_numpy(state).float().unsqueeze(0).to(device)
+        state*t = torch.from*numpy(state).float().unsqueeze(0).to(device)
         probs = self.actor(state_t)
         m = torch.distributions.Categorical(probs)
         action = m.sample()
         return int(action.item()), m.log_prob(action)
 
-    def learn(self, state: np.ndarray, action: int, reward: float, next_state: np.ndarray, done: bool, log_prob: torch.Tensor) -> Tuple[float, float]:
-        state_t = torch.from_numpy(state).float().unsqueeze(0).to(device)
-        next_state_t = torch.from_numpy(next_state).float().unsqueeze(0).to(device)
+    def learn(self, state: np.ndarray, action: int, reward: float, next*state: np.ndarray, done: bool, log*prob: torch.Tensor) -> Tuple[float, float]:
+        state*t = torch.from*numpy(state).float().unsqueeze(0).to(device)
+        next*state*t = torch.from*numpy(next*state).float().unsqueeze(0).to(device)
         reward_t = torch.tensor([reward]).float().to(device)
         done_t = torch.tensor([done]).float().to(device)
 
         # Critic update: compute TD target & error
-        current_value = self.critic(state_t)
-        next_value = self.critic(next_state_t) if not done else torch.zeros_like(current_value).to(device)
+        current*value = self.critic(state*t)
+        next*value = self.critic(next*state*t) if not done else torch.zeros*like(current_value).to(device)
 
-        td_target = reward_t + self.gamma * next_value * (1 - done_t)
-        td_error = td_target - current_value
+        td*target = reward*t + self.gamma * next*value * (1 - done*t)
+        td*error = td*target - current_value
 
-        critic_loss = td_error.pow(2).mean()
+        critic*loss = td*error.pow(2).mean()
 
-        self.critic_optimizer.zero_grad()
+        self.critic*optimizer.zero*grad()
         critic_loss.backward()
         self.critic_optimizer.step()
 
         # Actor update using the TD error as advantage estimate
-        actor_loss = (-log_prob * td_error.detach()).mean()
+        actor*loss = (-log*prob * td_error.detach()).mean()
 
-        self.actor_optimizer.zero_grad()
+        self.actor*optimizer.zero*grad()
         actor_loss.backward()
         self.actor_optimizer.step()
 
-        return float(actor_loss.item()), float(critic_loss.item())
+        return float(actor*loss.item()), float(critic*loss.item())
 
 
-# Initialize agents for smoke tests
-reinforce_agent = REINFORCEAgent(state_size=4, action_size=2, lr=1e-3)
-ac_agent = ActorCriticAgent(state_size=4, action_size=2)
+# Initialize Agents for Smoke Tests
+reinforce*agent = REINFORCEAgent(state*size=4, action_size=2, lr=1e-3)
+ac*agent = ActorCriticAgent(state*size=4, action_size=2)
 print("REINFORCE and Actor-Critic agents initialized.")
 
 ```
@@ -627,10 +627,10 @@ class ValueNetwork(nn.Module):
     """
     Value Network for Actor-Critic
     """
-    def __init__(self, state_size, hidden_size=64):
-        super(ValueNetwork, self).__init__()
-        self.fc1 = nn.Linear(state_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, hidden_size)
+    def **init**(self, state*size, hidden*size=64):
+        super(ValueNetwork, self).**init**()
+        self.fc1 = nn.Linear(state*size, hidden*size)
+        self.fc2 = nn.Linear(hidden*size, hidden*size)
         self.fc3 = nn.Linear(hidden_size, 1)
 
     def forward(self, x):
@@ -642,18 +642,18 @@ class ActorCriticAgent:
     """
     Actor-Critic Agent implementation
     """
-    def __init__(self, state_size, action_size, lr_actor=1e-3, lr_critic=1e-3, gamma=0.99):
-        self.state_size = state_size
-        self.action_size = action_size
+    def **init**(self, state*size, action*size, lr*actor=1e-3, lr*critic=1e-3, gamma=0.99):
+        self.state*size = state*size
+        self.action*size = action*size
         self.gamma = gamma
 
         # Actor network (policy)
-        self.actor = PolicyNetwork(state_size, action_size).to(device)
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr_actor)
+        self.actor = PolicyNetwork(state*size, action*size).to(device)
+        self.actor*optimizer = optim.Adam(self.actor.parameters(), lr=lr*actor)
 
         # Critic network (value function)
         self.critic = ValueNetwork(state_size).to(device)
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr_critic)
+        self.critic*optimizer = optim.Adam(self.critic.parameters(), lr=lr*critic)
 
     def act(self, state):
         """Choose action based on policy"""
@@ -666,41 +666,41 @@ class ActorCriticAgent:
 
         return action.item(), m.log_prob(action)
 
-    def learn(self, state, action, reward, next_state, done, log_prob):
+    def learn(self, state, action, reward, next*state, done, log*prob):
         """Update actor and critic using one-step TD error"""
         state = torch.from_numpy(state).float().unsqueeze(0).to(device)
-        next_state = torch.from_numpy(next_state).float().unsqueeze(0).to(device)
+        next*state = torch.from*numpy(next_state).float().unsqueeze(0).to(device)
         reward = torch.tensor([reward]).float().to(device)
         done = torch.tensor([done]).float().to(device)
 
         # Critic update
         current_value = self.critic(state)
-        next_value = self.critic(next_state) if not done else torch.zeros(1).to(device)
+        next*value = self.critic(next*state) if not done else torch.zeros(1).to(device)
 
         # TD target and error
-        td_target = reward + self.gamma * next_value * (1 - done)
-        td_error = td_target - current_value
+        td*target = reward + self.gamma * next*value * (1 - done)
+        td*error = td*target - current_value
 
         # Critic loss (squared TD error)
-        critic_loss = td_error.pow(2)
+        critic*loss = td*error.pow(2)
 
         # Actor loss (policy gradient with baseline)
-        actor_loss = -log_prob * td_error.detach()
+        actor*loss = -log*prob * td_error.detach()
 
         # Update critic
-        self.critic_optimizer.zero_grad()
+        self.critic*optimizer.zero*grad()
         critic_loss.backward()
         self.critic_optimizer.step()
 
         # Update actor
-        self.actor_optimizer.zero_grad()
+        self.actor*optimizer.zero*grad()
         actor_loss.backward()
         self.actor_optimizer.step()
 
-        return actor_loss.item(), critic_loss.item()
+        return actor*loss.item(), critic*loss.item()
 
-# Initialize Actor-Critic agent
-ac_agent = ActorCriticAgent(state_size=4, action_size=2, lr_actor=1e-3, lr_critic=1e-3)
+# Initialize Actor-critic Agent
+ac*agent = ActorCriticAgent(state*size=4, action*size=2, lr*actor=1e-3, lr_critic=1e-3)
 print("Actor-Critic Agent initialized successfully!")
 print("Actor (Policy) network:")
 print(ac_agent.actor)
@@ -711,16 +711,16 @@ print(ac_agent.critic)
     Actor-Critic Agent initialized successfully!
     Actor (Policy) network:
     PolicyNetwork(
-      (fc1): Linear(in_features=4, out_features=64, bias=True)
-      (fc2): Linear(in_features=64, out_features=64, bias=True)
-      (fc3): Linear(in_features=64, out_features=2, bias=True)
+      (fc1): Linear(in*features=4, out*features=64, bias=True)
+      (fc2): Linear(in*features=64, out*features=64, bias=True)
+      (fc3): Linear(in*features=64, out*features=2, bias=True)
     )
     
     Critic (Value) network:
     ValueNetwork(
-      (fc1): Linear(in_features=4, out_features=64, bias=True)
-      (fc2): Linear(in_features=64, out_features=64, bias=True)
-      (fc3): Linear(in_features=64, out_features=1, bias=True)
+      (fc1): Linear(in*features=4, out*features=64, bias=True)
+      (fc2): Linear(in*features=64, out*features=64, bias=True)
+      (fc3): Linear(in*features=64, out*features=1, bias=True)
     )
 
 
@@ -760,11 +760,11 @@ def gym_step(env: gym.Env, action: Any) -> Tuple[np.ndarray, float, bool, dict]:
     """
     # Handle case where agent returns a tuple (e.g., Actor-Critic returns action and log_prob)
     if isinstance(action, tuple):
-        action_to_env = action[0] # Assume the first element is the action
+        action*to*env = action[0] # Assume the first element is the action
     else:
-        action_to_env = action
+        action*to*env = action
 
-    result = env.step(action_to_env)
+    result = env.step(action*to*env)
     if len(result) == 4:
         next_state, reward, done, info = result
     else:  # new API: (obs, reward, terminated, truncated, info)
@@ -773,18 +773,18 @@ def gym_step(env: gym.Env, action: Any) -> Tuple[np.ndarray, float, bool, dict]:
     return np.array(next_state, dtype=np.float32), float(reward), bool(done), info
 
 
-def train_dqn_agent(agent: DQNAgent, env: gym.Env, n_episodes: int = 1000, max_t: int = 1000) -> List[float]:
+def train*dqn*agent(agent: DQNAgent, env: gym.Env, n*episodes: int = 1000, max*t: int = 1000) -> List[float]:
     """Train DQN agent and return per-episode scores."""
     scores: List[float] = []
     scores_window = deque(maxlen=100)
 
-    for i_episode in range(1, n_episodes + 1):
+    for i*episode in range(1, n*episodes + 1):
         state = gym_reset(env)
         score = 0.0
 
         for t in range(max_t):
             action = agent.act(state)
-            next_state, reward, done, _ = gym_step(env, action)
+            next*state, reward, done, * = gym_step(env, action)
 
             agent.step(state, action, reward, next_state, done)
             state = next_state
@@ -797,28 +797,28 @@ def train_dqn_agent(agent: DQNAgent, env: gym.Env, n_episodes: int = 1000, max_t
         scores.append(score)
 
         if i_episode % 100 == 0:
-            print(f'Episode {i_episode}\tAverage Score: {np.mean(scores_window):.2f}\tEpsilon: {agent.epsilon:.3f}')
+            print(f'Episode {i*episode}\tAverage Score: {np.mean(scores*window):.2f}\tEpsilon: {agent.epsilon:.3f}')
 
-        if len(scores_window) == scores_window.maxlen and np.mean(scores_window) >= 195.0:
-            print(f'Environment solved in {i_episode} episodes!\tAverage Score: {np.mean(scores_window):.2f}')
+        if len(scores*window) == scores*window.maxlen and np.mean(scores_window) >= 195.0:
+            print(f'Environment solved in {i*episode} episodes!\tAverage Score: {np.mean(scores*window):.2f}')
             break
 
     return scores
 
 
-def train_reinforce_agent(agent: REINFORCEAgent, env: gym.Env, n_episodes: int = 1000, max_t: int = 1000) -> List[float]:
+def train*reinforce*agent(agent: REINFORCEAgent, env: gym.Env, n*episodes: int = 1000, max*t: int = 1000) -> List[float]:
     """Train REINFORCE agent (full-episode updates)."""
     scores: List[float] = []
     scores_window = deque(maxlen=100)
 
-    for i_episode in range(1, n_episodes + 1):
+    for i*episode in range(1, n*episodes + 1):
         state = gym_reset(env)
         agent.reset_episode()
         score = 0.0
 
         for t in range(max_t):
             action = agent.act(state)
-            next_state, reward, done, _ = gym_step(env, action)
+            next*state, reward, done, * = gym_step(env, action)
             agent.step(state, action, reward)
             state = next_state
             score += reward
@@ -830,28 +830,28 @@ def train_reinforce_agent(agent: REINFORCEAgent, env: gym.Env, n_episodes: int =
         scores.append(score)
 
         if i_episode % 100 == 0:
-            print(f'Episode {i_episode}\tAverage Score: {np.mean(scores_window):.2f}\tLoss: {loss:.3f}')
+            print(f'Episode {i*episode}\tAverage Score: {np.mean(scores*window):.2f}\tLoss: {loss:.3f}')
 
-        if len(scores_window) == scores_window.maxlen and np.mean(scores_window) >= 195.0:
-            print(f'Environment solved in {i_episode} episodes!\tAverage Score: {np.mean(scores_window):.2f}')
+        if len(scores*window) == scores*window.maxlen and np.mean(scores_window) >= 195.0:
+            print(f'Environment solved in {i*episode} episodes!\tAverage Score: {np.mean(scores*window):.2f}')
             break
 
     return scores
 
 
-def train_actor_critic_agent(agent: ActorCriticAgent, env: gym.Env, n_episodes: int = 1000, max_t: int = 1000) -> List[float]:
+def train*actor*critic*agent(agent: ActorCriticAgent, env: gym.Env, n*episodes: int = 1000, max_t: int = 1000) -> List[float]:
     """Train Actor-Critic agent with online updates per step."""
     scores: List[float] = []
     scores_window = deque(maxlen=100)
 
-    for i_episode in range(1, n_episodes + 1):
+    for i*episode in range(1, n*episodes + 1):
         state = gym_reset(env)
         score = 0.0
 
         for t in range(max_t):
             action, log_prob = agent.act(state)
-            next_state, reward, done, _ = gym_step(env, (action, log_prob)) # Pass the tuple to gym_step
-            actor_loss, critic_loss = agent.learn(state, action, reward, next_state, done, log_prob)
+            next*state, reward, done, * = gym*step(env, (action, log*prob)) # Pass the tuple to gym_step
+            actor*loss, critic*loss = agent.learn(state, action, reward, next*state, done, log*prob)
             state = next_state
             score += reward
             if done:
@@ -861,10 +861,10 @@ def train_actor_critic_agent(agent: ActorCriticAgent, env: gym.Env, n_episodes: 
         scores.append(score)
 
         if i_episode % 100 == 0:
-            print(f'Episode {i_episode}\tAverage Score: {np.mean(scores_window):.2f}\tActorLoss: {actor_loss:.3f}\tCriticLoss: {critic_loss:.3f}')
+            print(f'Episode {i*episode}\tAverage Score: {np.mean(scores*window):.2f}\tActorLoss: {actor*loss:.3f}\tCriticLoss: {critic*loss:.3f}')
 
-        if len(scores_window) == scores_window.maxlen and np.mean(scores_window) >= 195.0:
-            print(f'Environment solved in {i_episode} episodes!\tAverage Score: {np.mean(scores_window):.2f}')
+        if len(scores*window) == scores*window.maxlen and np.mean(scores_window) >= 195.0:
+            print(f'Environment solved in {i*episode} episodes!\tAverage Score: {np.mean(scores*window):.2f}')
             break
 
     return scores
@@ -877,7 +877,7 @@ print("Training functions defined successfully!")
 
 
 ```python
-# Create environment (use gym if available; otherwise fallback to a simple MockEnv)
+# Create Environment (use Gym If Available; Otherwise Fallback to a Simple Mockenv)
 try:
     env_name = 'CartPole-v1'
     try:
@@ -898,7 +898,7 @@ try:
 except Exception:
     # Fallback simple mock environment for demonstrations and testing
     class MockEnv:
-        def __init__(self):
+        def **init**(self):
             self.observation_space = type('', (), {'shape': (4,)})()
             self.action_space = type('', (), {'n': 2})()
             self.state = np.random.random(4).astype(np.float32)
@@ -949,7 +949,7 @@ except Exception:
 
 
 ```python
-# Create environment (use gymnasium if available; otherwise fallback to a simple MockEnv)
+# Create Environment (use Gymnasium If Available; Otherwise Fallback to a Simple Mockenv)
 try:
     env_name = 'CartPole-v1'
     import gymnasium as gym # Import gymnasium instead of gym
@@ -971,7 +971,7 @@ try:
 except Exception:
     # Fallback simple mock environment for demonstrations and testing
     class MockEnv:
-        def __init__(self):
+        def **init**(self):
             self.observation_space = type('', (), {'shape': (4,)})()
             self.action_space = type('', (), {'n': 2})()
             self.state = np.random.random(4).astype(np.float32)
@@ -1002,34 +1002,34 @@ except Exception:
 
 
 ```python
-# Demonstration of training (short episodes for notebook demonstration)
-n_demo_episodes = 50
+# Demonstration of Training (short Episodes for Notebook Demonstration)
+n*demo*episodes = 50
 
 print("=" * 60)
 print("TRAINING DEMONSTRATION (short runs)")
 print("=" * 60)
 
-# Initialize fresh agents for fair comparison
-# Keep models small for quick demos in notebooks
-_demo_hidden = 64
+# Initialize Fresh Agents for Fair Comparison
+# Keep Models Small for Quick Demos in Notebooks
+*demo*hidden = 64
 
-dqn_agent_demo = DQNAgent(state_size=4, action_size=2, use_dueling=True, use_double_dqn=True)
-reinforce_agent_demo = REINFORCEAgent(state_size=4, action_size=2)
-ac_agent_demo = ActorCriticAgent(state_size=4, action_size=2)
+dqn*agent*demo = DQNAgent(state*size=4, action*size=2, use*dueling=True, use*double_dqn=True)
+reinforce*agent*demo = REINFORCEAgent(state*size=4, action*size=2)
+ac*agent*demo = ActorCriticAgent(state*size=4, action*size=2)
 
-# Store results
+# Store Results
 results = {}
 
 print("\n1. Training DQN Agent (demo)...")
-dqn_scores = train_dqn_agent(dqn_agent_demo, env, n_episodes=n_demo_episodes, max_t=200)
+dqn*scores = train*dqn*agent(dqn*agent*demo, env, n*episodes=n*demo*episodes, max_t=200)
 results['DQN'] = dqn_scores
 
 print("\n2. Training REINFORCE Agent (demo)...")
-reinforce_scores = train_reinforce_agent(reinforce_agent_demo, env, n_episodes=n_demo_episodes, max_t=200)
+reinforce*scores = train*reinforce*agent(reinforce*agent*demo, env, n*episodes=n*demo*episodes, max_t=200)
 results['REINFORCE'] = reinforce_scores
 
 print("\n3. Training Actor-Critic Agent (demo)...")
-ac_scores = train_actor_critic_agent(ac_agent_demo, env, n_episodes=n_demo_episodes, max_t=200)
+ac*scores = train*actor*critic*agent(ac*agent*demo, env, n*episodes=n*demo*episodes, max*t=200)
 results['Actor-Critic'] = ac_scores
 
 print("\nTraining demonstration completed!")
@@ -1050,7 +1050,7 @@ print("\nTraining demonstration completed!")
 
 
 ```python
-# Visualize training results (if results are available)
+# Visualize Training Results (if Results Are Available)
 if not results:
     print("No results to plot. Run the demo training cell first.")
 else:
@@ -1062,7 +1062,7 @@ else:
         plt.plot(scores, label=algorithm, linewidth=2)
         if len(scores) >= 3:
             window_size = min(10, max(1, len(scores)))
-            ma = moving_average(scores, window=window_size)
+            ma = moving*average(scores, window=window*size)
             # Adjust the x-axis range for the moving average plot
             plt.plot(range(window_size - 1, len(scores)), ma, '--', alpha=0.7, linewidth=1)
 
@@ -1083,7 +1083,7 @@ else:
     plt.grid(True, alpha=0.3, axis='y')
 
     for bar, score in zip(bars, final_scores):
-        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 1, f'{score:.1f}', ha='center', va='bottom', fontweight='bold')
+        plt.text(bar.get*x() + bar.get*width() / 2, bar.get_height() + 1, f'{score:.1f}', ha='center', va='bottom', fontweight='bold')
 
     # Plot 3: Score distribution
     plt.subplot(2, 2, 3)
@@ -1107,12 +1107,12 @@ else:
         })
 
     import pandas as pd
-    df_stats = pd.DataFrame(stats_data).set_index('Algorithm')
+    df*stats = pd.DataFrame(stats*data).set_index('Algorithm')
     df_stats.plot(kind='bar', ax=plt.gca())
     plt.title('Statistical Summary')
     plt.ylabel('Value')
     plt.xticks(rotation=45)
-    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.legend(bbox*to*anchor=(1.05, 1), loc='upper left')
     plt.grid(True, alpha=0.3, axis='y')
 
     plt.tight_layout()
@@ -1120,7 +1120,7 @@ else:
     # Save the visualization
     import os
     os.makedirs('visualization', exist_ok=True)
-    plt.savefig('visualization/learning_curves.png', dpi=300, bbox_inches='tight')
+    plt.savefig('visualization/learning*curves.png', dpi=300, bbox*inches='tight')
 
     # Save results as JSON
     import json
@@ -1150,7 +1150,7 @@ else:
 
 
     
-![png](CA1_files/CA1_15_0.png)
+![png](CA1*files/CA1*15_0.png)
     
 
 
@@ -1234,36 +1234,36 @@ The dilemma is that excessive exploration can lead to poor performance, while ex
 
 **Answer**:
 The goal is to find the gradient of the performance measure $J(\theta)$ with respect to the policy parameters $\theta$. We start with the definition of the state-value function:
-$V^\pi(s) = \mathbb{E}_\pi[G_t | S_t=s]$
+$V^\pi(s) = \mathbb{E}*\pi[G*t | S_t=s]$
 
 The policy gradient theorem states:
-$$\nabla_\theta J(\theta) \propto \sum_s d^\pi(s) \sum_a \nabla_\theta \pi_\theta(a|s) Q^\pi(s,a)$$
+$$\nabla*\theta J(\theta) \propto \sum*s d^\pi(s) \sum*a \nabla*\theta \pi_\theta(a|s) Q^\pi(s,a)$$
 
 Here is a common derivation:
 1.  Start with the gradient of the state-value function:
-    $\nabla_\theta V^\pi(s) = \nabla_\theta \sum_a \pi_\theta(a|s) Q^\pi(s,a)$
-    $= \sum_a [\nabla_\theta \pi_\theta(a|s) Q^\pi(s,a) + \pi_\theta(a|s) \nabla_\theta Q^\pi(s,a)]$ (Product Rule)
+    $\nabla*\theta V^\pi(s) = \nabla*\theta \sum*a \pi*\theta(a|s) Q^\pi(s,a)$
+    $= \sum*a [\nabla*\theta \pi*\theta(a|s) Q^\pi(s,a) + \pi*\theta(a|s) \nabla_\theta Q^\pi(s,a)]$ (Product Rule)
 
 2.  Now expand the gradient of the Q-value function:
-    $\nabla_\theta Q^\pi(s,a) = \nabla_\theta \sum_{s',r} p(s',r|s,a) [r + \gamma V^\pi(s')]$
-    $= \gamma \sum_{s'} p(s'|s) \nabla_\theta V^\pi(s')$
+    $\nabla*\theta Q^\pi(s,a) = \nabla*\theta \sum_{s',r} p(s',r|s,a) [r + \gamma V^\pi(s')]$
+    $= \gamma \sum*{s'} p(s'|s) \nabla*\theta V^\pi(s')$
 
 3.  Substitute (2) back into (1):
-    $\nabla_\theta V^\pi(s) = \sum_a [\nabla_\theta \pi_\theta(a|s) Q^\pi(s,a) + \pi_\theta(a|s) \gamma \sum_{s'} p(s'|s,a) \nabla_\theta V^\pi(s')]$
+    $\nabla*\theta V^\pi(s) = \sum*a [\nabla*\theta \pi*\theta(a|s) Q^\pi(s,a) + \pi*\theta(a|s) \gamma \sum*{s'} p(s'|s,a) \nabla_\theta V^\pi(s')]$
 
 4.  This equation expresses a recursive relationship for the gradient. If we unroll it, we can see how the gradient at a state `s` depends on the gradients of future states. Let's define the discounted state distribution $d^\pi(s)$.
     The performance measure is $J(\theta) = V^\pi(s_0)$.
-    $\nabla_\theta J(\theta) = \nabla_\theta V^\pi(s_0)$
+    $\nabla*\theta J(\theta) = \nabla*\theta V^\pi(s_0)$
 
 5.  Unrolling the recursion from step 3 gives:
-    $\nabla_\theta J(\theta) = \sum_{x \in S} d^\pi(x) \sum_a \nabla_\theta \pi_\theta(a|x) Q^\pi(x,a)$
+    $\nabla*\theta J(\theta) = \sum*{x \in S} d^\pi(x) \sum*a \nabla*\theta \pi_\theta(a|x) Q^\pi(x,a)$
 
-6.  Now, use the **log-derivative trick**: $\nabla_\theta \pi_\theta(a|s) = \pi_\theta(a|s) \nabla_\theta \log \pi_\theta(a|s)$.
+6.  Now, use the **log-derivative trick**: $\nabla*\theta \pi*\theta(a|s) = \pi*\theta(a|s) \nabla*\theta \log \pi_\theta(a|s)$.
     Substitute this into the equation:
-    $\nabla_\theta J(\theta) = \sum_{s \in S} d^\pi(s) \sum_a \pi_\theta(a|s) (\nabla_\theta \log \pi_\theta(a|s)) Q^\pi(s,a)$
+    $\nabla*\theta J(\theta) = \sum*{s \in S} d^\pi(s) \sum*a \pi*\theta(a|s) (\nabla*\theta \log \pi*\theta(a|s)) Q^\pi(s,a)$
 
 7.  This can be expressed as an expectation:
-    $\nabla_\theta J(\theta) = \mathbb{E}_{\pi_\theta} [\nabla_\theta \log \pi_\theta(A_t|S_t) Q^{\pi_\theta}(S_t, A_t)]$
+    $\nabla*\theta J(\theta) = \mathbb{E}*{\pi*\theta} [\nabla*\theta \log \pi*\theta(A*t|S*t) Q^{\pi*\theta}(S*t, A*t)]$
 
 This final form is the most common expression of the Policy Gradient Theorem. It tells us to increase the probability of actions that lead to higher-than-expected rewards.
 
@@ -1287,9 +1287,9 @@ The primary reason is the **Experience Replay Buffer** in DQN.
 **Answer**:
 **Why we use a target network:**
 
-The target network is a crucial innovation for stabilizing the learning process in DQN. The Q-learning update involves calculating a target value: $y_t = r_t + \gamma \max_{a'} Q(s_{t+1}, a'; \theta)$.
+The target network is a crucial innovation for stabilizing the learning process in DQN. The Q-learning update involves calculating a target value: $y*t = r*t + \gamma \max*{a'} Q(s*{t+1}, a'; \theta)$.
 
-If we use the *same* network for both estimating the current Q-value ($Q(s_t, a_t; \theta)$) and the target Q-value ($Q(s_{t+1}, a'; \theta)$), a problem arises. Every time we update the network weights $\theta$, the target value $y_t$ also changes. This is like trying to hit a moving target. The learning process can become unstable, leading to oscillations or divergence.
+If we use the *same* network for both estimating the current Q-value ($Q(s*t, a*t; \theta)$) and the target Q-value ($Q(s*{t+1}, a'; \theta)$), a problem arises. Every time we update the network weights $\theta$, the target value $y*t$ also changes. This is like trying to hit a moving target. The learning process can become unstable, leading to oscillations or divergence.
 
 The **target network** solves this by providing a stable, fixed target for a period of time. It is a separate network whose weights ($\theta^-$) are a copy of the main Q-network's weights. These weights are held constant for several training steps and are only updated periodically (e.g., by copying the main network's weights every C steps, or through a slow "soft" update).
 
@@ -1362,11 +1362,11 @@ To ensure the comparison is fair, we must control for confounding variables:
 # Exercise 3: Sample Efficiency Experiment
 from collections import defaultdict
 
-def sample_efficiency_experiment(env_factory,
+def sample*efficiency*experiment(env_factory,
                                  agent_factories: dict,
                                  threshold: float = 195.0,
                                  max_episodes: int = 1000,
-                                 max_steps_per_episode: int = 1000,
+                                 max*steps*per_episode: int = 1000,
                                  runs: int = 3) -> dict:
     """Run a small sample-efficiency experiment.
 
@@ -1375,7 +1375,7 @@ def sample_efficiency_experiment(env_factory,
         agent_factories: dict[str, callable] mapping name->callable that returns a fresh agent.
         threshold: score threshold to consider the environment "solved" (average over window).
         max_episodes: maximum episodes to run per trial.
-        max_steps_per_episode: maximum steps per episode.
+        max*steps*per_episode: maximum steps per episode.
         runs: number of independent runs (different random seeds) per agent.
 
     Returns:
@@ -1385,8 +1385,8 @@ def sample_efficiency_experiment(env_factory,
     rng = np.random.RandomState(0)
     results = {}
 
-    for name, make_agent in agent_factories.items():
-        steps_to_threshold = []
+    for name, make*agent in agent*factories.items():
+        steps*to*threshold = []
         for run in range(runs):
             env = env_factory()
             agent = make_agent()
@@ -1397,9 +1397,9 @@ def sample_efficiency_experiment(env_factory,
             for ep in range(1, max_episodes + 1):
                 state = gym_reset(env)
                 score = 0.0
-                for t in range(max_steps_per_episode):
+                for t in range(max*steps*per_episode):
                     action = agent.act(state)
-                    next_state, reward, done, _ = gym_step(env, action)
+                    next*state, reward, done, * = gym_step(env, action)
                     # If agent has step method (DQN), call it to store experience
                     if hasattr(agent, 'step'):
                         try:
@@ -1428,11 +1428,11 @@ def sample_efficiency_experiment(env_factory,
                 scores_window.append(score)
 
                 # Check solve condition
-                if len(scores_window) == scores_window.maxlen and np.mean(scores_window) >= threshold:
-                    solved_at = total_steps
+                if len(scores*window) == scores*window.maxlen and np.mean(scores_window) >= threshold:
+                    solved*at = total*steps
                     break
 
-            steps_to_threshold.append(solved_at)
+            steps*to*threshold.append(solved_at)
             # cleanup env if possible
             try:
                 env.close()
@@ -1440,9 +1440,9 @@ def sample_efficiency_experiment(env_factory,
                 pass
 
         # summarise
-        numeric = [s for s in steps_to_threshold if s is not None]
+        numeric = [s for s in steps*to*threshold if s is not None]
         summary = {
-            'per_run': steps_to_threshold,
+            'per*run': steps*to_threshold,
             'mean_steps': float(np.mean(numeric)) if numeric else None,
             'std_steps': float(np.std(numeric)) if numeric else None,
             'runs': runs
@@ -1452,30 +1452,30 @@ def sample_efficiency_experiment(env_factory,
     return results
 
 
-# Exercise 4: Hyperparameter Analysis (simple grid search wrapper)
-def hyperparameter_sensitivity_analysis(env_factory,
-                                        agent_factory_fn,
+# Exercise 4: Hyperparameter Analysis (simple Grid Search Wrapper)
+def hyperparameter*sensitivity*analysis(env_factory,
+                                        agent*factory*fn,
                                         lr_values: list = [1e-4, 1e-3, 1e-2],
                                         gamma_values: list = [0.9, 0.95, 0.99],
                                         n_episodes: int = 50) -> dict:
     """Very small hyperparameter sweep which returns average scores for combinations.
 
-    agent_factory_fn should accept kwargs (lr, gamma) and return an agent instance.
+    agent*factory*fn should accept kwargs (lr, gamma) and return an agent instance.
     This function runs short experiments to get a rough sensitivity picture.
     """
     results = {}
     for lr in lr_values:
         for gamma in gamma_values:
             env = env_factory()
-            agent = agent_factory_fn(lr=lr, gamma=gamma)
+            agent = agent*factory*fn(lr=lr, gamma=gamma)
             # Assuming agent has a train method similar to DQN for this analysis
             # This part might need adjustment based on agent types
             if isinstance(agent, DQNAgent):
-                 scores = train_dqn_agent(agent, env, n_episodes=n_episodes, max_t=200)
+                 scores = train*dqn*agent(agent, env, n*episodes=n*episodes, max_t=200)
             elif isinstance(agent, REINFORCEAgent):
-                 scores = train_reinforce_agent(agent, env, n_episodes=n_episodes, max_t=200)
+                 scores = train*reinforce*agent(agent, env, n*episodes=n*episodes, max_t=200)
             elif isinstance(agent, ActorCriticAgent):
-                 scores = train_actor_critic_agent(agent, env, n_episodes=n_episodes, max_t=200)
+                 scores = train*actor*critic*agent(agent, env, n*episodes=n*episodes, max*t=200)
             else:
                  print(f"Warning: Hyperparameter analysis not implemented for agent type {type(agent)}")
                  scores = []
@@ -1492,7 +1492,7 @@ def hyperparameter_sensitivity_analysis(env_factory,
     return results
 
 
-# Exercise 5: Advanced DQN Variants
+# Exercise 5: Advanced Dqn Variants
 class PrioritizedReplayBuffer:
     """A simple proportional Prioritized Replay Buffer implementation.
 
@@ -1500,7 +1500,7 @@ class PrioritizedReplayBuffer:
     It stores priorities in a numpy array and samples with probability p_i^alpha.
     It also provides importance-sampling (IS) weights for unbiased updates.
     """
-    def __init__(self, capacity: int, alpha: float = 0.6) -> None:
+    def **init**(self, capacity: int, alpha: float = 0.6) -> None:
         self.capacity = int(capacity)
         self.alpha = float(alpha)
         self.buffer = []
@@ -1528,7 +1528,7 @@ class PrioritizedReplayBuffer:
     def sample(self, batch_size: int, beta: float = 0.4):
         """Sample a batch of experiences with importance-sampling weights.
 
-        Returns: (states, actions, rewards, next_states, dones), indices, is_weights
+        Returns: (states, actions, rewards, next*states, dones), indices, is*weights
         """
         if len(self.buffer) == 0:
             raise ValueError("The buffer is empty")
@@ -1543,54 +1543,54 @@ class PrioritizedReplayBuffer:
         N = len(self.buffer)
         weights = (N * probs[indices]) ** (-beta)
         weights = weights / weights.max()
-        is_weights = torch.from_numpy(weights).float().unsqueeze(1).to(device)
+        is*weights = torch.from*numpy(weights).float().unsqueeze(1).to(device)
 
         states = torch.from_numpy(np.vstack([e[0] for e in experiences])).float().to(device)
         actions = torch.from_numpy(np.vstack([e[1] for e in experiences])).long().to(device)
         rewards = torch.from_numpy(np.vstack([e[2] for e in experiences])).float().to(device)
-        next_states = torch.from_numpy(np.vstack([e[3] for e in experiences])).float().to(device)
+        next*states = torch.from*numpy(np.vstack([e[3] for e in experiences])).float().to(device)
         dones = torch.from_numpy(np.vstack([e[4] for e in experiences]).astype(np.uint8)).float().to(device)
 
-        return (states, actions, rewards, next_states, dones), indices, is_weights
+        return (states, actions, rewards, next*states, dones), indices, is*weights
 
     def update_priorities(self, indices, priorities) -> None:
         for idx, prio in zip(indices, priorities):
             self.priorities[idx] = float(prio) + 1e-6
 
-    def __len__(self) -> int:
+    def **len**(self) -> int:
         return len(self.buffer)
 
 
 class NoisyLinear(nn.Module):
     """A simple Noisy linear layer (independent Gaussian parameter noise).
 
-    This implements: weight = mu_weight + sigma_weight * epsilon_weight
+    This implements: weight = mu*weight + sigma*weight * epsilon_weight
     where epsilon ~ N(0,1). During evaluation we use only mu.
     """
-    def __init__(self, in_features: int, out_features: int, sigma_init: float = 0.017):
-        super(NoisyLinear, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
+    def **init**(self, in*features: int, out*features: int, sigma_init: float = 0.017):
+        super(NoisyLinear, self).**init**()
+        self.in*features = in*features
+        self.out*features = out*features
 
-        self.mu_weight = nn.Parameter(torch.empty(out_features, in_features))
-        self.sigma_weight = nn.Parameter(torch.empty(out_features, in_features))
+        self.mu*weight = nn.Parameter(torch.empty(out*features, in_features))
+        self.sigma*weight = nn.Parameter(torch.empty(out*features, in_features))
 
-        self.mu_bias = nn.Parameter(torch.empty(out_features))
-        self.sigma_bias = nn.Parameter(torch.empty(out_features))
+        self.mu*bias = nn.Parameter(torch.empty(out*features))
+        self.sigma*bias = nn.Parameter(torch.empty(out*features))
 
         # initialize
         bound = 1 / np.sqrt(in_features)
-        nn.init.uniform_(self.mu_weight, -bound, bound)
-        nn.init.uniform_(self.mu_bias, -bound, bound)
-        nn.init.constant_(self.sigma_weight, sigma_init)
-        nn.init.constant_(self.sigma_bias, sigma_init)
+        nn.init.uniform*(self.mu*weight, -bound, bound)
+        nn.init.uniform*(self.mu*bias, -bound, bound)
+        nn.init.constant*(self.sigma*weight, sigma_init)
+        nn.init.constant*(self.sigma*bias, sigma_init)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.training:
-            eps_w = torch.randn_like(self.sigma_weight)
-            eps_b = torch.randn_like(self.sigma_bias)
-            weight = self.mu_weight + self.sigma_weight * eps_w
-            bias = self.mu_bias + self.sigma_bias * eps_b
+            eps*w = torch.randn*like(self.sigma_weight)
+            eps*b = torch.randn*like(self.sigma_bias)
+            weight = self.mu*weight + self.sigma*weight * eps_w
+            bias = self.mu*bias + self.sigma*bias * eps_b
         else:
             weight = self.mu_weight
             bias = self.mu_bias
@@ -1599,11 +1599,11 @@ class NoisyLinear(nn.Module):
 
 class NoisyDQN(nn.Module):
     """DQN using NoisyLinear layers for exploration (simple two hidden layers)."""
-    def __init__(self, state_size: int, action_size: int, hidden_size: int = 64):
-        super(NoisyDQN, self).__init__()
-        self.fc1 = NoisyLinear(state_size, hidden_size)
-        self.fc2 = NoisyLinear(hidden_size, hidden_size)
-        self.fc3 = NoisyLinear(hidden_size, action_size)
+    def **init**(self, state*size: int, action*size: int, hidden_size: int = 64):
+        super(NoisyDQN, self).**init**()
+        self.fc1 = NoisyLinear(state*size, hidden*size)
+        self.fc2 = NoisyLinear(hidden*size, hidden*size)
+        self.fc3 = NoisyLinear(hidden*size, action*size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if x.dim() == 1:
@@ -1613,10 +1613,10 @@ class NoisyDQN(nn.Module):
         return self.fc3(x)
 
 
-print("Exercise implementations completed: sample_efficiency_experiment, hyperparameter_sensitivity_analysis, PrioritizedReplayBuffer, NoisyDQN")
+print("Exercise implementations completed: sample*efficiency*experiment, hyperparameter*sensitivity*analysis, PrioritizedReplayBuffer, NoisyDQN")
 ```
 
-    Exercise implementations completed: sample_efficiency_experiment, hyperparameter_sensitivity_analysis, PrioritizedReplayBuffer, NoisyDQN
+    Exercise implementations completed: sample*efficiency*experiment, hyperparameter*sensitivity*analysis, PrioritizedReplayBuffer, NoisyDQN
 
 
 ## Part 6: Conclusions and Analysis
@@ -1632,19 +1632,19 @@ print("Exercise implementations completed: sample_efficiency_experiment, hyperpa
 ### 6.2 Key Insights
 
 1. **DQN Advantages**:
-   - Sample efficient due to experience replay
-   - Stable learning with target networks
-   - Good for discrete action spaces
+- Sample efficient due to experience replay
+- Stable learning with target networks
+- Good for discrete action spaces
 
 2. **REINFORCE Advantages**:
-   - Simple implementation
-   - Works with continuous actions
-   - Direct policy optimization
+- Simple implementation
+- Works with continuous actions
+- Direct policy optimization
 
 3. **Actor-Critic Advantages**:
-   - Lower variance than REINFORCE
-   - Online learning capability
-   - Balances bias-variance tradeoff
+- Lower variance than REINFORCE
+- Online learning capability
+- Balances bias-variance tradeoff
 
 ### 6.3 When to Use Each Algorithm
 
@@ -1655,32 +1655,32 @@ print("Exercise implementations completed: sample_efficiency_experiment, hyperpa
 ### 6.4 Advanced Topics for Further Study
 
 1. **Advanced DQN Variants**:
-   - Rainbow DQN (combines multiple improvements)
-   - Distributional DQN
-   - Quantile Regression DQN
+- Rainbow DQN (combines multiple improvements)
+- Distributional DQN
+- Quantile Regression DQN
 
 2. **Advanced Policy Methods**:
-   - Proximal Policy Optimization (PPO)
-   - Trust Region Policy Optimization (TRPO)
-   - Soft Actor-Critic (SAC)
+- Proximal Policy Optimization (PPO)
+- Trust Region Policy Optimization (TRPO)
+- Soft Actor-Critic (SAC)
 
 3. **Model-Based RL**:
-   - Model-Predictive Control
-   - Dyna-Q
-   - Model-based Policy Optimization
+- Model-Predictive Control
+- Dyna-Q
+- Model-based Policy Optimization
 
 ### 6.5 Further Reading
 
 - **Books**:
-  - "Reinforcement Learning: An Introduction" by Sutton & Barto
-  - "Deep Reinforcement Learning Hands-On" by Maxim Lapan
+- "Reinforcement Learning: An Introduction" by Sutton & Barto
+- "Deep Reinforcement Learning Hands-On" by Maxim Lapan
 
 - **Papers**:
-  - DQN: "Human-level control through deep reinforcement learning" (Mnih et al., 2015)
-  - Actor-Critic: "Actor-Critic Algorithms" (Konda & Tsitsiklis, 2000)
-  - Policy Gradients: "Policy Gradient Methods" (Sutton et al., 1999)
+- DQN: "Human-level control through deep reinforcement learning" (Mnih et al., 2015)
+- Actor-Critic: "Actor-Critic Algorithms" (Konda & Tsitsiklis, 2000)
+- Policy Gradients: "Policy Gradient Methods" (Sutton et al., 1999)
 
-## Sample Efficiency Experiment Results (Updated)
+## Sample Efficiency Experiment Results (updated)
 
 The sample efficiency experiment compared DQN, REINFORCE, and Actor-Critic algorithms. Here are the latest results:
 
@@ -1703,44 +1703,44 @@ The sample efficiency experiment compared DQN, REINFORCE, and Actor-Critic algor
 
 
 ```python
-# Run the sample efficiency experiment
-# Create a fresh environment factory
-def create_cartpole_env():
+# Run the Sample Efficiency Experiment
+# Create a Fresh Environment Factory
+def create*cartpole*env():
     import gymnasium as gym
     return gym.make('CartPole-v1')
 
-# Define agent factories
+# Define Agent Factories
 agent_factories = {
-    'DQN': lambda: DQNAgent(state_size=4, action_size=2, use_dueling=True, use_double_dqn=True),
-    'REINFORCE': lambda: REINFORCEAgent(state_size=4, action_size=2),
-    'Actor-Critic': lambda: ActorCriticAgent(state_size=4, action_size=2)
+    'DQN': lambda: DQNAgent(state*size=4, action*size=2, use*dueling=True, use*double_dqn=True),
+    'REINFORCE': lambda: REINFORCEAgent(state*size=4, action*size=2),
+    'Actor-Critic': lambda: ActorCriticAgent(state*size=4, action*size=2)
 }
 
-# Run the experiment (increase runs and max_episodes for more robust results, but keep small for demo)
+# Run the Experiment (increase Runs and Max_episodes for More Robust Results, but Keep Small for Demo)
 print("Running sample efficiency experiment...")
-sample_efficiency_results = sample_efficiency_experiment(
-    env_factory=create_cartpole_env,
-    agent_factories=agent_factories,
+sample*efficiency*results = sample*efficiency*experiment(
+    env*factory=create*cartpole_env,
+    agent*factories=agent*factories,
     threshold=195.0,
     max_episodes=1500, # Increased episodes for better chance of solving
-    max_steps_per_episode=200,
+    max*steps*per_episode=200,
     runs=3 # Increased runs for more reliable average
 )
 
 print("\nSample efficiency experiment completed.")
 print("Results:")
-for name, data in sample_efficiency_results.items():
+for name, data in sample*efficiency*results.items():
     print(f"  {name}:")
     print(f"    Steps to threshold (per run): {data['per_run']}")
-    print(f"    Mean steps to threshold: {data['mean_steps'] if data['mean_steps'] is not None else 'Not solved'}")
-    print(f"    Std dev steps: {data['std_steps'] if data['std_steps'] is not None else 'N/A'}")
+    print(f"    Mean steps to threshold: {data['mean*steps'] if data['mean*steps'] is not None else 'Not solved'}")
+    print(f"    Std dev steps: {data['std*steps'] if data['std*steps'] is not None else 'N/A'}")
 ```
 
     Running sample efficiency experiment...
 
 
     /var/folders/cg/l2rdx46d6lv3b5xc17b420yc0000gn/T/ipykernel_38153/1754553734.py:67: UserWarning: std(): degrees of freedom is <= 0. Correction should be strictly less than the reduction factor (input numel divided by output numel). (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/aten/src/ATen/native/ReduceOps.cpp:1839.)
-      returns_t = (returns_t - returns_t.mean()) / (returns_t.std() + 1e-8)
+      returns*t = (returns*t - returns*t.mean()) / (returns*t.std() + 1e-8)
 
 
     
@@ -1765,21 +1765,21 @@ for name, data in sample_efficiency_results.items():
 ### What to Submit:
 
 1. **This completed notebook** with:
-   - All code cells executed
-   - All theoretical questions answered
-   - Experimental results and analysis
+- All code cells executed
+- All theoretical questions answered
+- Experimental results and analysis
 
 2. **Written Report** (2-3 pages) including:
-   - Comparison of the three algorithms
-   - Analysis of experimental results
-   - Discussion of hyperparameter sensitivity
-   - Recommendations for different scenarios
+- Comparison of the three algorithms
+- Analysis of experimental results
+- Discussion of hyperparameter sensitivity
+- Recommendations for different scenarios
 
 3. **Code Implementation** of at least one advanced feature:
-   - Prioritized Experience Replay
-   - Dueling DQN improvements
-   - Custom environment implementation
-   - Hyperparameter optimization
+- Prioritized Experience Replay
+- Dueling DQN improvements
+- Custom environment implementation
+- Hyperparameter optimization
 
 ### Evaluation Criteria:
 
@@ -1788,7 +1788,7 @@ for name, data in sample_efficiency_results.items():
 - **Experimental Analysis (20%)**: Thorough analysis of results, meaningful comparisons
 - **Innovation/Extensions (10%)**: Creative improvements or additional implementations
 
-### Submission Deadline: [Insert Date]
+### Submission Deadline: [insert Date]
 
 ### Additional Notes:
 

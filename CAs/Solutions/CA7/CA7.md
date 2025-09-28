@@ -1,60 +1,60 @@
-# CA7: Deep Q-Networks (DQN) and Value-Based Methods
+# Ca7: Deep Q-networks (dqn) and Value-based Methods
 # Table of Contents
 
 - [CA7: Deep Q-Networks (DQN) and Value-Based Methods](#ca7-deep-q-networks-dqn-and-value-based-methods)
-  - [Deep Reinforcement Learning - Session 7](#deep-reinforcement-learning---session-7)
-    - [Course Information](#course-information)
-    - [Learning Objectives](#learning-objectives)
-    - [Prerequisites](#prerequisites)
-    - [Roadmap](#roadmap)
-    - [Project Structure](#project-structure)
-    - [Contents Overview](#contents-overview)
+- [Deep Reinforcement Learning - Session 7](#deep-reinforcement-learning---session-7)
+- [Course Information](#course-information)
+- [Learning Objectives](#learning-objectives)
+- [Prerequisites](#prerequisites)
+- [Roadmap](#roadmap)
+- [Project Structure](#project-structure)
+- [Contents Overview](#contents-overview)
 - [Section 1: Theoretical Foundations of Deep Q-Learning](#section-1-theoretical-foundations-of-deep-q-learning)
-  - [1.1 From Tabular Q-Learning to Deep Q-Networks](#11-from-tabular-q-learning-to-deep-q-networks)
-    - [The Q-Learning Foundation](#the-q-learning-foundation)
-    - [The Deep Q-Network Approach](#the-deep-q-network-approach)
-  - [1.2 Core Challenges in Deep Q-Learning](#12-core-challenges-in-deep-q-learning)
-    - [1. Instability and Divergence](#1-instability-and-divergence)
-    - [2. Correlation in Sequential Data](#2-correlation-in-sequential-data)
-    - [3. Overestimation Bias](#3-overestimation-bias)
-  - [1.3 DQN Innovations](#13-dqn-innovations)
-    - [Experience Replay](#experience-replay)
-    - [Target Network](#target-network)
-    - [Mathematical Formulation](#mathematical-formulation)
+- [1.1 From Tabular Q-Learning to Deep Q-Networks](#11-from-tabular-q-learning-to-deep-q-networks)
+- [The Q-Learning Foundation](#the-q-learning-foundation)
+- [The Deep Q-Network Approach](#the-deep-q-network-approach)
+- [1.2 Core Challenges in Deep Q-Learning](#12-core-challenges-in-deep-q-learning)
+- [1. Instability and Divergence](#1-instability-and-divergence)
+- [2. Correlation in Sequential Data](#2-correlation-in-sequential-data)
+- [3. Overestimation Bias](#3-overestimation-bias)
+- [1.3 DQN Innovations](#13-dqn-innovations)
+- [Experience Replay](#experience-replay)
+- [Target Network](#target-network)
+- [Mathematical Formulation](#mathematical-formulation)
 - [Section 2: Basic DQN Implementation and Core Concepts](#section-2-basic-dqn-implementation-and-core-concepts)
-  - [2.1 Deep Q-Network Architecture](#21-deep-q-network-architecture)
-    - [Key Design Principles:](#key-design-principles)
-  - [2.2 Experience Replay Buffer](#22-experience-replay-buffer)
-  - [2.3 Training Loop and Key Components](#23-training-loop-and-key-components)
+- [2.1 Deep Q-Network Architecture](#21-deep-q-network-architecture)
+- [Key Design Principles:](#key-design-principles)
+- [2.2 Experience Replay Buffer](#22-experience-replay-buffer)
+- [2.3 Training Loop and Key Components](#23-training-loop-and-key-components)
 - [Section 3: Experience Replay and Target Networks](#section-3-experience-replay-and-target-networks)
-  - [3.1 Experience Replay: Breaking the Correlation Chain](#31-experience-replay-breaking-the-correlation-chain)
-    - [Problems with Sequential Training](#problems-with-sequential-training)
-    - [Benefits of Experience Replay](#benefits-of-experience-replay)
-  - [3.2 Target Networks: Stabilizing the Moving Target](#32-target-networks-stabilizing-the-moving-target)
-    - [The Problem](#the-problem)
-    - [The Solution](#the-solution)
+- [3.1 Experience Replay: Breaking the Correlation Chain](#31-experience-replay-breaking-the-correlation-chain)
+- [Problems with Sequential Training](#problems-with-sequential-training)
+- [Benefits of Experience Replay](#benefits-of-experience-replay)
+- [3.2 Target Networks: Stabilizing the Moving Target](#32-target-networks-stabilizing-the-moving-target)
+- [The Problem](#the-problem)
+- [The Solution](#the-solution)
 - [Section 4: Double DQN and Overestimation Bias](#section-4-double-dqn-and-overestimation-bias)
-  - [4.1 The Overestimation Problem in Q-Learning](#41-the-overestimation-problem-in-q-learning)
-    - [Mathematical Analysis of Overestimation Bias](#mathematical-analysis-of-overestimation-bias)
-    - [Impact on Learning](#impact-on-learning)
-  - [4.2 Double DQN Solution](#42-double-dqn-solution)
-    - [Key Insight](#key-insight)
-    - [Benefits](#benefits)
+- [4.1 The Overestimation Problem in Q-Learning](#41-the-overestimation-problem-in-q-learning)
+- [Mathematical Analysis of Overestimation Bias](#mathematical-analysis-of-overestimation-bias)
+- [Impact on Learning](#impact-on-learning)
+- [4.2 Double DQN Solution](#42-double-dqn-solution)
+- [Key Insight](#key-insight)
+- [Benefits](#benefits)
 - [Section 5: Dueling DQN and Value Decomposition](#section-5-dueling-dqn-and-value-decomposition)
-  - [5.1 The Motivation Behind Dueling Architecture](#51-the-motivation-behind-dueling-architecture)
-    - [Value Decomposition Theory](#value-decomposition-theory)
-    - [Why This Matters](#why-this-matters)
-  - [5.2 Dueling Network Architecture](#52-dueling-network-architecture)
-    - [Network Structure](#network-structure)
-    - [Combining the Streams](#combining-the-streams)
-  - [5.3 Benefits of Dueling Architecture](#53-benefits-of-dueling-architecture)
+- [5.1 The Motivation Behind Dueling Architecture](#51-the-motivation-behind-dueling-architecture)
+- [Value Decomposition Theory](#value-decomposition-theory)
+- [Why This Matters](#why-this-matters)
+- [5.2 Dueling Network Architecture](#52-dueling-network-architecture)
+- [Network Structure](#network-structure)
+- [Combining the Streams](#combining-the-streams)
+- [5.3 Benefits of Dueling Architecture](#53-benefits-of-dueling-architecture)
 - [Section 6: Performance Analysis and Comparisons](#section-6-performance-analysis-and-comparisons)
-  - [6.1 Comprehensive Performance Analysis](#61-comprehensive-performance-analysis)
-  - [6.2 Key Insights and Best Practices](#62-key-insights-and-best-practices)
-    - [DQN Best Practices:](#dqn-best-practices)
-    - [Hyperparameter Tuning:](#hyperparameter-tuning)
-    - [When to Use Each Variant:](#when-to-use-each-variant)
-  - [6.3 Running Full Experiments](#63-running-full-experiments)
+- [6.1 Comprehensive Performance Analysis](#61-comprehensive-performance-analysis)
+- [6.2 Key Insights and Best Practices](#62-key-insights-and-best-practices)
+- [DQN Best Practices:](#dqn-best-practices)
+- [Hyperparameter Tuning:](#hyperparameter-tuning)
+- [When to Use Each Variant:](#when-to-use-each-variant)
+- [6.3 Running Full Experiments](#63-running-full-experiments)
 - [Run basic DQN experiment](#run-basic-dqn-experiment)
 - [Run comprehensive analysis (all variants)](#run-comprehensive-analysis-all-variants)
 
@@ -72,82 +72,82 @@
 By the end of this notebook, you will understand:
 
 1. **Theoretical Foundations**:
-   - Q-learning and its limitations in complex environments
-   - Deep Q-Networks (DQN) architecture and training process
-   - Experience replay and target networks
-   - Double DQN and addressing overestimation bias
-   - Dueling DQN and advantage decomposition
+- Q-learning and its limitations in complex environments
+- Deep Q-Networks (DQN) architecture and training process
+- Experience replay and target networks
+- Double DQN and addressing overestimation bias
+- Dueling DQN and advantage decomposition
 
 2. **Implementation Skills**:
-   - Complete DQN implementation from scratch
-   - Experience replay buffer design and management
-   - Target network updates and stability techniques
-   - Advanced variants: Double DQN, Dueling DQN
-   - Performance analysis and debugging techniques
+- Complete DQN implementation from scratch
+- Experience replay buffer design and management
+- Target network updates and stability techniques
+- Advanced variants: Double DQN, Dueling DQN
+- Performance analysis and debugging techniques
 
 3. **Practical Applications**:
-   - Training DQN on classic control environments
-   - Hyperparameter tuning and optimization strategies
-   - Comparison with different DQN variants
+- Training DQN on classic control environments
+- Hyperparameter tuning and optimization strategies
+- Comparison with different DQN variants
 
 ### Prerequisites
 
 Before starting this notebook, ensure you have:
 
 - **Mathematical Background**:
-  - Basic calculus (gradients, optimization)
-  - Linear algebra (matrices, vectors)
-  - Probability theory (expectation, distributions)
+- Basic calculus (gradients, optimization)
+- Linear algebra (matrices, vectors)
+- Probability theory (expectation, distributions)
 
 - **Programming Skills**:
-  - Python programming fundamentals
-  - PyTorch basics (tensors, autograd, neural networks)
-  - NumPy and Matplotlib for data manipulation and visualization
+- Python programming fundamentals
+- PyTorch basics (tensors, autograd, neural networks)
+- NumPy and Matplotlib for data manipulation and visualization
 
 - **Reinforcement Learning Fundamentals**:
-  - Markov Decision Processes (MDPs)
-  - Value functions (state-value, action-value)
-  - Basic Q-learning algorithm
-  - Policy evaluation and improvement
+- Markov Decision Processes (MDPs)
+- Value functions (state-value, action-value)
+- Basic Q-learning algorithm
+- Policy evaluation and improvement
 
 - **Previous Course Knowledge**:
-  - CA1-CA3: Basic RL concepts and dynamic programming
-  - CA4-CA5: Neural networks in RL and policy gradients
-  - CA6: Actor-critic methods and advanced policy optimization
+- CA1-CA3: Basic RL concepts and dynamic programming
+- CA4-CA5: Neural networks in RL and policy gradients
+- CA6: Actor-critic methods and advanced policy optimization
 
 ### Roadmap
 
 This notebook follows a structured progression from theory to practice:
 
 1. **Section 1: Theoretical Foundations** (45 min)
-   - Review Q-learning limitations
-   - Introduce DQN architecture and innovations
-   - Mathematical formulation of the DQN loss
+- Review Q-learning limitations
+- Introduce DQN architecture and innovations
+- Mathematical formulation of the DQN loss
 
 2. **Section 2: Basic DQN Implementation** (60 min)
-   - Build core DQN components
-   - Implement experience replay buffer
-   - Train basic DQN on CartPole environment
+- Build core DQN components
+- Implement experience replay buffer
+- Train basic DQN on CartPole environment
 
 3. **Section 3: Experience Replay and Target Networks** (45 min)
-   - Deep dive into experience replay mechanics
-   - Target network implementation and benefits
-   - Performance analysis and stability improvements
+- Deep dive into experience replay mechanics
+- Target network implementation and benefits
+- Performance analysis and stability improvements
 
 4. **Section 4: Double DQN and Overestimation Bias** (45 min)
-   - Analyze overestimation bias in Q-learning
-   - Implement Double DQN solution
-   - Comparative performance evaluation
+- Analyze overestimation bias in Q-learning
+- Implement Double DQN solution
+- Comparative performance evaluation
 
 5. **Section 5: Dueling DQN and Value Decomposition** (45 min)
-   - Understand value-advantage decomposition
-   - Implement dueling network architecture
-   - Analyze benefits and performance gains
+- Understand value-advantage decomposition
+- Implement dueling network architecture
+- Analyze benefits and performance gains
 
 6. **Section 6: Performance Analysis and Comparisons** (60 min)
-   - Comprehensive comparison of all variants
-   - Hyperparameter tuning guidelines
-   - Best practices and practical recommendations
+- Comprehensive comparison of all variants
+- Hyperparameter tuning guidelines
+- Best practices and practical recommendations
 
 ### Project Structure
 
@@ -161,8 +161,8 @@ CA7/
 │   ├── dueling_dqn.py     # Dueling DQN architecture
 │   └── utils.py           # Visualization and analysis utilities
 ├── experiments/           # Experiment scripts
-│   ├── basic_dqn_experiment.py
-│   └── comprehensive_dqn_analysis.py
+│   ├── basic*dqn*experiment.py
+│   └── comprehensive*dqn*analysis.py
 ├── requirements.txt       # Python dependencies
 └── CA7.ipynb             # This educational notebook
 ```
@@ -219,13 +219,13 @@ print("="*60)
     ============================================================
 
 
-# Section 1: Theoretical Foundations of Deep Q-Learning
+# Section 1: Theoretical Foundations of Deep Q-learning
 
-## 1.1 From Tabular Q-Learning to Deep Q-Networks
+## 1.1 from Tabular Q-learning to Deep Q-networks
 
 Traditional Q-learning works well for discrete, small state spaces where we can maintain a Q-table. However, in complex environments like Atari games or continuous control tasks, the state space becomes enormous, making tabular methods impractical.
 
-### The Q-Learning Foundation
+### The Q-learning Foundation
 
 The Q-learning update rule is:
 ```
@@ -240,11 +240,11 @@ Where:
 - `γ`: Discount factor
 - `s'`: Next state
 
-### The Deep Q-Network Approach
+### The Deep Q-network Approach
 
 DQN replaces the Q-table with a deep neural network `Q(s, a; θ)` that approximates the Q-values for all actions given a state. The network parameters `θ` are updated to minimize the temporal difference (TD) error.
 
-## 1.2 Core Challenges in Deep Q-Learning
+## 1.2 Core Challenges in Deep Q-learning
 
 ### 1. Instability and Divergence
 - Neural networks can be unstable when used with bootstrapping
@@ -261,7 +261,7 @@ DQN replaces the Q-table with a deep neural network `Q(s, a; θ)` that approxima
 - Amplified in function approximation settings
 - Can cause instability and poor performance
 
-## 1.3 DQN Innovations
+## 1.3 Dqn Innovations
 
 ### Experience Replay
 - Store experiences in a replay buffer
@@ -288,10 +288,10 @@ Where `θ⁻` represents the parameters of the target network.
 visualizer = QNetworkVisualization()
 
 print("1. Visualizing Core Q-Learning Concepts...")
-visualizer.visualize_q_learning_concepts()
+visualizer.visualize*q*learning_concepts()
 
 print("\n2. Demonstrating Overestimation Bias...")
-visualizer.demonstrate_overestimation_bias()
+visualizer.demonstrate*overestimation*bias()
 
 ```
 
@@ -300,7 +300,7 @@ visualizer.demonstrate_overestimation_bias()
 
 
     
-![png](CA7_files/CA7_3_1.png)
+![png](CA7*files/CA7*3_1.png)
     
 
 
@@ -310,7 +310,7 @@ visualizer.demonstrate_overestimation_bias()
 
 
     
-![png](CA7_files/CA7_3_3.png)
+![png](CA7*files/CA7*3_3.png)
     
 
 
@@ -319,9 +319,9 @@ visualizer.demonstrate_overestimation_bias()
     Average Estimated Maximum: 2.429
 
 
-# Section 2: Basic DQN Implementation and Core Concepts
+# Section 2: Basic Dqn Implementation and Core Concepts
 
-## 2.1 Deep Q-Network Architecture
+## 2.1 Deep Q-network Architecture
 
 The DQN architecture typically consists of:
 
@@ -359,8 +359,8 @@ Let's demonstrate the basic DQN implementation.
 
 ```python
 env = gym.make("CartPole-v1")
-state_dim = env.observation_space.shape[0]
-action_dim = env.action_space.n
+state*dim = env.observation*space.shape[0]
+action*dim = env.action*space.n
 
 print(f"Environment: CartPole-v1")
 print(f"State dimension: {state_dim}")
@@ -370,8 +370,8 @@ print()
 
 
 agent = DQNAgent(
-    state_dim=state_dim,
-    action_dim=action_dim,
+    state*dim=state*dim,
+    action*dim=action*dim,
     lr=1e-3,
     gamma=0.99,
     epsilon_start=1.0,
@@ -379,16 +379,16 @@ agent = DQNAgent(
     epsilon_decay=0.995,
     buffer_size=10000,
     batch_size=64,
-    target_update_freq=100,
+    target*update*freq=100,
 )
 
 
 num_episodes = 100
-max_steps_per_episode = 500
+max*steps*per_episode = 500
 
 print("Training Configuration:")
 print(f"  Episodes: {num_episodes}")
-print(f"  Max steps per episode: {max_steps_per_episode}")
+print(f"  Max steps per episode: {max*steps*per_episode}")
 print(f"  Learning rate: {agent.optimizer.param_groups[0]['lr']}")
 print(f"  Gamma: {agent.gamma}")
 print(f"  Epsilon decay: {agent.epsilon_decay}")
@@ -400,11 +400,11 @@ print("-" * 40)
 
 episode_rewards = []
 for episode in range(num_episodes):
-    reward, steps = agent.train_episode(env, max_steps=max_steps_per_episode)
+    reward, steps = agent.train*episode(env, max*steps=max*steps*per_episode)
     episode_rewards.append(reward)
 
     if (episode + 1) % 25 == 0:
-        avg_reward = np.mean(episode_rewards[-25:])
+        avg*reward = np.mean(episode*rewards[-25:])
         print(
             f"Episode {episode+1:3d} | Avg Reward: {avg_reward:6.1f} | Epsilon: {agent.epsilon:.3f}"
         )
@@ -415,9 +415,9 @@ print()
 
 
 print("Final Evaluation:")
-eval_results = agent.evaluate(env, num_episodes=10)
+eval*results = agent.evaluate(env, num*episodes=10)
 print(
-    f"Mean Reward: {eval_results['mean_reward']:.2f} ± {eval_results['std_reward']:.2f}"
+    f"Mean Reward: {eval*results['mean*reward']:.2f} ± {eval*results['std*reward']:.2f}"
 )
 
 env.close()
@@ -485,7 +485,7 @@ analyzer = PerformanceAnalyzer()
 
 
 print("Analyzing Q-value distributions...")
-agent, _ = analyzer.analyze_q_value_distributions(
+agent, * = analyzer.analyze*q*value*distributions(
     agent, gym.make("CartPole-v1"), num_samples=500
 )
 
@@ -499,7 +499,7 @@ agent, _ = analyzer.analyze_q_value_distributions(
 
 
     
-![png](CA7_files/CA7_7_1.png)
+![png](CA7*files/CA7*7_1.png)
     
 
 
@@ -511,9 +511,9 @@ agent, _ = analyzer.analyze_q_value_distributions(
     Action 1: Mean=78.486, Std=9.774, Range=[2.070, 82.878]
 
 
-# Section 4: Double DQN and Overestimation Bias
+# Section 4: Double Dqn and Overestimation Bias
 
-## 4.1 The Overestimation Problem in Q-Learning
+## 4.1 the Overestimation Problem in Q-learning
 
 Standard Q-learning suffers from a systematic overestimation bias due to the max operator in the Bellman equation. This problem is amplified in function approximation settings.
 
@@ -532,7 +532,7 @@ The issue arises because we use the same network to both **select** the action a
 - **Instability**: Inconsistent value estimates cause training instability
 - **Slow Convergence**: Biased estimates slow down learning
 
-## 4.2 Double DQN Solution
+## 4.2 Double Dqn Solution
 
 Double DQN addresses this by **decoupling action selection from action evaluation**:
 
@@ -555,17 +555,17 @@ Let's compare standard DQN vs Double DQN.
 ```python
 
 env = gym.make('CartPole-v1')
-state_dim = env.observation_space.shape[0]
-action_dim = env.action_space.n
+state*dim = env.observation*space.shape[0]
+action*dim = env.action*space.n
 
 agents = {
     'Standard DQN': DQNAgent(
-        state_dim=state_dim, action_dim=action_dim,
-        lr=1e-3, epsilon_decay=0.995, buffer_size=10000
+        state*dim=state*dim, action*dim=action*dim,
+        lr=1e-3, epsilon*decay=0.995, buffer*size=10000
     ),
     'Double DQN': DoubleDQNAgent(
-        state_dim=state_dim, action_dim=action_dim,
-        lr=1e-3, epsilon_decay=0.995, buffer_size=10000
+        state*dim=state*dim, action*dim=action*dim,
+        lr=1e-3, epsilon*decay=0.995, buffer*size=10000
     )
 }
 
@@ -580,21 +580,21 @@ for name, agent in agents.items():
     episode_rewards = []
 
     for episode in range(num_episodes):
-        reward, _ = agent.train_episode(env, max_steps=500)
+        reward, * = agent.train*episode(env, max_steps=500)
         episode_rewards.append(reward)
 
         if (episode + 1) % 25 == 0:
-            avg_reward = np.mean(episode_rewards[-25:])
+            avg*reward = np.mean(episode*rewards[-25:])
             print(f"  Episode {episode+1}: Avg Reward = {avg_reward:.1f}")
 
-    eval_results = agent.evaluate(env, num_episodes=10)
+    eval*results = agent.evaluate(env, num*episodes=10)
     results[name] = {
         'rewards': episode_rewards,
-        'eval_performance': eval_results,
-        'final_performance': np.mean(episode_rewards[-10:])
+        'eval*performance': eval*results,
+        'final*performance': np.mean(episode*rewards[-10:])
     }
 
-PerformanceAnalyzer.plot_learning_curves(results)
+PerformanceAnalyzer.plot*learning*curves(results)
 
 env.close()
 print("Comparison completed!")
@@ -615,16 +615,16 @@ print("Comparison completed!")
 
 
     
-![png](CA7_files/CA7_9_1.png)
+![png](CA7*files/CA7*9_1.png)
     
 
 
     Comparison completed!
 
 
-# Section 5: Dueling DQN and Value Decomposition
+# Section 5: Dueling Dqn and Value Decomposition
 
-## 5.1 The Motivation Behind Dueling Architecture
+## 5.1 the Motivation behind Dueling Architecture
 
 Standard DQN learns Q-values directly, but these can be decomposed into two meaningful components:
 
@@ -683,21 +683,21 @@ Let's demonstrate the Dueling DQN architecture.
 ```python
 
 env = gym.make('CartPole-v1')
-state_dim = env.observation_space.shape[0]
-action_dim = env.action_space.n
+state*dim = env.observation*space.shape[0]
+action*dim = env.action*space.n
 
 agents = {
     'Standard DQN': DQNAgent(
-        state_dim=state_dim, action_dim=action_dim,
-        lr=1e-3, epsilon_decay=0.995, buffer_size=10000
+        state*dim=state*dim, action*dim=action*dim,
+        lr=1e-3, epsilon*decay=0.995, buffer*size=10000
     ),
     'Dueling DQN (Mean)': DuelingDQNAgent(
-        state_dim=state_dim, action_dim=action_dim,
-        dueling_type='mean', lr=1e-3, epsilon_decay=0.995, buffer_size=10000
+        state*dim=state*dim, action*dim=action*dim,
+        dueling*type='mean', lr=1e-3, epsilon*decay=0.995, buffer_size=10000
     ),
     'Dueling DQN (Max)': DuelingDQNAgent(
-        state_dim=state_dim, action_dim=action_dim,
-        dueling_type='max', lr=1e-3, epsilon_decay=0.995, buffer_size=10000
+        state*dim=state*dim, action*dim=action*dim,
+        dueling*type='max', lr=1e-3, epsilon*decay=0.995, buffer_size=10000
     )
 }
 
@@ -712,29 +712,29 @@ for name, agent in agents.items():
     episode_rewards = []
 
     for episode in range(num_episodes):
-        reward, _ = agent.train_episode(env, max_steps=500)
+        reward, * = agent.train*episode(env, max_steps=500)
         episode_rewards.append(reward)
 
         if (episode + 1) % 30 == 0:
-            avg_reward = np.mean(episode_rewards[-30:])
+            avg*reward = np.mean(episode*rewards[-30:])
             print(f"  Episode {episode+1}: Avg Reward = {avg_reward:.1f}")
 
-    eval_results = agent.evaluate(env, num_episodes=10)
+    eval*results = agent.evaluate(env, num*episodes=10)
     results[name] = {
         'rewards': episode_rewards,
-        'eval_performance': eval_results,
-        'final_performance': np.mean(episode_rewards[-10:])
+        'eval*performance': eval*results,
+        'final*performance': np.mean(episode*rewards[-10:])
     }
 
-PerformanceAnalyzer.plot_learning_curves(results)
+PerformanceAnalyzer.plot*learning*curves(results)
 
 print("\nAnalyzing Value-Advantage Decomposition...")
 sample_state = [0.1, 0.1, 0.1, 0.1]  # Example CartPole state
 
 for name, data in results.items():
     agent = data.get('agent')
-    if hasattr(agent, 'get_value_advantage_decomposition'):
-        decomp = agent.get_value_advantage_decomposition(sample_state)
+    if hasattr(agent, 'get*value*advantage_decomposition'):
+        decomp = agent.get*value*advantage*decomposition(sample*state)
         print(f"\n{name} decomposition for sample state:")
         print(f"  Q-values: {decomp['q_values']}")
         print(f"  State value: {decomp['value']:.3f}")
@@ -763,7 +763,7 @@ print("\nDueling DQN demonstration completed!")
 
 
     
-![png](CA7_files/CA7_11_1.png)
+![png](CA7*files/CA7*11_1.png)
     
 
 
@@ -781,7 +781,7 @@ Let's run a comprehensive analysis comparing all DQN variants and analyze their 
 
 ## 6.2 Key Insights and Best Practices
 
-### DQN Best Practices:
+### Dqn Best Practices:
 1. **Experience Replay**: Essential for breaking correlations and improving stability
 2. **Target Networks**: Critical for preventing divergence and ensuring stable learning
 3. **Double DQN**: Reduces overestimation bias, especially important in complex environments
@@ -806,11 +806,11 @@ Let's run a comprehensive analysis comparing all DQN variants and analyze their 
 For comprehensive experiments, use the experiment scripts in the `experiments/` directory:
 
 ```bash
-# Run basic DQN experiment
-python experiments/basic_dqn_experiment.py
+# Run Basic Dqn Experiment
+python experiments/basic*dqn*experiment.py
 
-# Run comprehensive analysis (all variants)
-python experiments/comprehensive_dqn_analysis.py
+# Run Comprehensive Analysis (all Variants)
+python experiments/comprehensive*dqn*analysis.py
 ```
 
 These scripts will provide detailed training curves, performance metrics, and analysis.
@@ -823,21 +823,21 @@ print("CA7 Final Analysis: DQN Variants Comparison")
 print("="*60)
 
 env = gym.make('CartPole-v1')
-state_dim = env.observation_space.shape[0]
-action_dim = env.action_space.n
+state*dim = env.observation*space.shape[0]
+action*dim = env.action*space.n
 
 variants = {
     'Basic DQN': DQNAgent(
-        state_dim=state_dim, action_dim=action_dim,
-        lr=1e-3, epsilon_decay=0.995, buffer_size=15000
+        state*dim=state*dim, action*dim=action*dim,
+        lr=1e-3, epsilon*decay=0.995, buffer*size=15000
     ),
     'Double DQN': DoubleDQNAgent(
-        state_dim=state_dim, action_dim=action_dim,
-        lr=1e-3, epsilon_decay=0.995, buffer_size=15000
+        state*dim=state*dim, action*dim=action*dim,
+        lr=1e-3, epsilon*decay=0.995, buffer*size=15000
     ),
     'Dueling DQN': DuelingDQNAgent(
-        state_dim=state_dim, action_dim=action_dim,
-        dueling_type='mean', lr=1e-3, epsilon_decay=0.995, buffer_size=15000
+        state*dim=state*dim, action*dim=action*dim,
+        dueling*type='mean', lr=1e-3, epsilon*decay=0.995, buffer_size=15000
     )
 }
 
@@ -852,35 +852,35 @@ for name, agent in variants.items():
     episode_rewards = []
 
     for episode in range(num_episodes):
-        reward, _ = agent.train_episode(env, max_steps=500)
+        reward, * = agent.train*episode(env, max_steps=500)
         episode_rewards.append(reward)
 
         if (episode + 1) % 40 == 0:
-            avg_reward = np.mean(episode_rewards[-40:])
+            avg*reward = np.mean(episode*rewards[-40:])
             print(f"  Episode {episode+1}: Avg Reward = {avg_reward:.1f}")
 
-    eval_results = agent.evaluate(env, num_episodes=15)
+    eval*results = agent.evaluate(env, num*episodes=15)
     final_results[name] = {
         'agent': agent,
         'rewards': episode_rewards,
         'losses': agent.losses,
-        'epsilon_history': agent.epsilon_history,
-        'eval_performance': eval_results,
-        'final_performance': np.mean(episode_rewards[-15:])
+        'epsilon*history': agent.epsilon*history,
+        'eval*performance': eval*results,
+        'final*performance': np.mean(episode*rewards[-15:])
     }
 
-PerformanceAnalyzer.plot_learning_curves(final_results)
+PerformanceAnalyzer.plot*learning*curves(final_results)
 
 print("\n" + "="*60)
 print("PERFORMANCE SUMMARY")
 print("="*60)
 
 for name, data in final_results.items():
-    eval_perf = data['eval_performance']
-    final_perf = data['final_performance']
+    eval*perf = data['eval*performance']
+    final*perf = data['final*performance']
     print(f"{name}:")
     print(f"  Training Performance: {final_perf:.1f}")
-    print(f"  Evaluation Performance: {eval_perf['mean_reward']:.1f} ± {eval_perf['std_reward']:.1f}")
+    print(f"  Evaluation Performance: {eval*perf['mean*reward']:.1f} ± {eval*perf['std*reward']:.1f}")
     print()
 
 print("Key Insights:")
@@ -894,7 +894,7 @@ env.close()
 print("\n" + "="*60)
 print("CA7 Analysis Complete!")
 print("For more detailed experiments, run:")
-print("  python experiments/comprehensive_dqn_analysis.py")
+print("  python experiments/comprehensive*dqn*analysis.py")
 print("="*60)
 
 ```
@@ -920,7 +920,7 @@ print("="*60)
 
 
     
-![png](CA7_files/CA7_13_1.png)
+![png](CA7*files/CA7*13_1.png)
     
 
 
@@ -949,6 +949,6 @@ print("="*60)
     ============================================================
     CA7 Analysis Complete!
     For more detailed experiments, run:
-      python experiments/comprehensive_dqn_analysis.py
+      python experiments/comprehensive*dqn*analysis.py
     ============================================================
 

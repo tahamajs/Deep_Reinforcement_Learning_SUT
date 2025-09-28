@@ -1,28 +1,28 @@
-# CA4: Policy Gradient Methods and Neural Networks in RL
+# Ca4: Policy Gradient Methods and Neural Networks in Rl
 # Table of Contents
 
 - [CA4: Policy Gradient Methods and Neural Networks in RL](#ca4-policy-gradient-methods-and-neural-networks-in-rl)
-  - [Direct Policy Optimization and Actor-Critic Architectures](#direct-policy-optimization-and-actor-critic-architectures)
-    - [Learning Objectives](#learning-objectives)
-    - [Prerequisites](#prerequisites)
-    - [Roadmap](#roadmap)
+- [Direct Policy Optimization and Actor-Critic Architectures](#direct-policy-optimization-and-actor-critic-architectures)
+- [Learning Objectives](#learning-objectives)
+- [Prerequisites](#prerequisites)
+- [Roadmap](#roadmap)
 - [Part 1: Policy Representations and Theory](#part-1-policy-representations-and-theory)
-  - [1.1 Policy Parameterization](#11-policy-parameterization)
-  - [1.2 Policy Gradient Mathematics](#12-policy-gradient-mathematics)
+- [1.1 Policy Parameterization](#11-policy-parameterization)
+- [1.2 Policy Gradient Mathematics](#12-policy-gradient-mathematics)
 - [Part 2: REINFORCE Algorithm](#part-2-reinforce-algorithm)
-  - [2.1 REINFORCE Implementation](#21-reinforce-implementation)
+- [2.1 REINFORCE Implementation](#21-reinforce-implementation)
 - [Part 3: Actor-Critic Methods](#part-3-actor-critic-methods)
-  - [3.1 Actor-Critic Architecture](#31-actor-critic-architecture)
+- [3.1 Actor-Critic Architecture](#31-actor-critic-architecture)
 - [Part 4: Algorithm Comparison](#part-4-algorithm-comparison)
-  - [4.1 Side-by-Side Comparison](#41-side-by-side-comparison)
+- [4.1 Side-by-Side Comparison](#41-side-by-side-comparison)
 - [Part 5: Neural Network Architecture Analysis](#part-5-neural-network-architecture-analysis)
-  - [5.1 Network Architecture Comparison](#51-network-architecture-comparison)
+- [5.1 Network Architecture Comparison](#51-network-architecture-comparison)
 - [Part 6: Advanced Topics and Applications](#part-6-advanced-topics-and-applications)
-  - [6.1 Real-World Applications](#61-real-world-applications)
+- [6.1 Real-World Applications](#61-real-world-applications)
 
 
 
-## Direct Policy Optimization and Actor-Critic Architectures
+## Direct Policy Optimization and Actor-critic Architectures
 
 Welcome to Computer Assignment 4, where we explore policy gradient methods that directly optimize policy parameters using gradient ascent. This assignment introduces neural network-based policies, the fundamental policy gradient theorem, and advanced actor-critic architectures that combine the strengths of policy and value-based methods.
 
@@ -62,7 +62,7 @@ Let's begin our exploration of direct policy optimization and discover how neura
 import sys
 import os
 
-ca4_path = os.path.join(os.getcwd(), "CA4_modular")
+ca4*path = os.path.join(os.getcwd(), "CA4*modular")
 sys.path.insert(0, ca4_path)
 
 import numpy as np
@@ -71,17 +71,17 @@ import matplotlib.pyplot as plt
 
 
 from environments import EnvironmentWrapper, create_environment
-from agents.policies import PolicyNetwork, ValueNetwork, create_policy_network
+from agents.policies import PolicyNetwork, ValueNetwork, create*policy*network
 from agents.algorithms import REINFORCEAgent, ActorCriticAgent
 from utils.visualization import (
     PolicyVisualizer,
     PolicyGradientMathVisualizer,
     TrainingVisualizer,
 )
-from experiments import PolicyGradientExperiment, run_quick_test
+from experiments import PolicyGradientExperiment, run*quick*test
 
 print("✓ All modular components imported successfully")
-print(f"PyTorch version: {torch.__version__}")
+print(f"PyTorch version: {torch.**version**}")
 print(f"CUDA available: {torch.cuda.is_available()}")
 ```
 
@@ -113,7 +113,7 @@ print("✓ Gaussian policies handle continuous action spaces naturally")
 
 
     
-![png](CA4_files/CA4_3_0.png)
+![png](CA4*files/CA4*3_0.png)
     
 
 
@@ -128,7 +128,7 @@ print("✓ Gaussian policies handle continuous action spaces naturally")
 
 The policy gradient theorem provides the theoretical foundation:
 
-**∇_θ J(θ) = E[∇_θ log π(a|s,θ) * G_t]**
+**∇*θ J(θ) = E[∇*θ log π(a|s,θ) * G_t]**
 
 Key insights:
 - Score function ∇_θ log π(a|s,θ) guides parameter updates
@@ -138,7 +138,7 @@ Key insights:
 
 ```python
 math_viz = PolicyGradientMathVisualizer()
-math_viz.demonstrate_score_function()
+math*viz.demonstrate*score_function()
 
 print("Policy Gradient Mathematics Analysis:")
 print("✓ Score function guides parameter updates")
@@ -149,7 +149,7 @@ print("✓ Optimal baseline is the expected return")
 
 
     
-![png](CA4_files/CA4_5_0.png)
+![png](CA4*files/CA4*5_0.png)
     
 
 
@@ -160,13 +160,13 @@ print("✓ Optimal baseline is the expected return")
     ✓ Optimal baseline is the expected return
 
 
-# Part 2: REINFORCE Algorithm
+# Part 2: Reinforce Algorithm
 
-## 2.1 REINFORCE Implementation
+## 2.1 Reinforce Implementation
 
 REINFORCE uses Monte Carlo returns to estimate the policy gradient:
 
-**θ ← θ + α ∇_θ log π(a_t|s_t,θ) G_t**
+**θ ← θ + α ∇*θ log π(a*t|s*t,θ) G*t**
 
 Where G_t is the return from time step t.
 
@@ -179,8 +179,8 @@ print(f"Action size: {env.action_size}")
 
 
 reinforce_agent = REINFORCEAgent(
-    state_size=env.state_size,
-    action_size=env.action_size,
+    state*size=env.state*size,
+    action*size=env.action*size,
     lr=0.001,
     gamma=0.99,
     baseline=True,
@@ -200,7 +200,7 @@ print("✓ REINFORCE agent created with baseline")
 print("Training REINFORCE Agent on CartPole...")
 print("=" * 50)
 
-reinforce_results = reinforce_agent.train(env.env, num_episodes=10, print_every=5)
+reinforce*results = reinforce*agent.train(env.env, num*episodes=10, print*every=5)
 
 print("\nTraining completed!")
 print(f"Final average score: {np.mean(reinforce_results['scores'][-5:]):.2f}")
@@ -220,31 +220,31 @@ print(f"Best episode: {max(reinforce_results['scores']):.2f}")
 
 ```python
 viz = TrainingVisualizer()
-viz.plot_learning_curves(reinforce_results["scores"], "REINFORCE Learning Curve")
+viz.plot*learning*curves(reinforce_results["scores"], "REINFORCE Learning Curve")
 
-if reinforce_results.get("policy_losses"):
+if reinforce*results.get("policy*losses"):
     viz.plot_losses(
-        reinforce_results["policy_losses"],
-        reinforce_results.get("value_losses"),
+        reinforce*results["policy*losses"],
+        reinforce*results.get("value*losses"),
         "REINFORCE Training Losses",
     )
 ```
 
 
     
-![png](CA4_files/CA4_9_0.png)
+![png](CA4*files/CA4*9_0.png)
     
 
 
 
     
-![png](CA4_files/CA4_9_1.png)
+![png](CA4*files/CA4*9_1.png)
     
 
 
-# Part 3: Actor-Critic Methods
+# Part 3: Actor-critic Methods
 
-## 3.1 Actor-Critic Architecture
+## 3.1 Actor-critic Architecture
 
 Actor-Critic methods combine policy and value estimation:
 - **Actor**: Learns the policy π(a|s,θ)
@@ -252,22 +252,22 @@ Actor-Critic methods combine policy and value estimation:
 - **Advantage**: A(s,a) = Q(s,a) - V(s) or A(s,a) = δ_t
 
 **Update Rules:**
-- Critic: w ← w + α_w δ_t ∇_w V(s,w)
-- Actor: θ ← θ + α_θ δ_t ∇_θ log π(a|s,θ)
+- Critic: w ← w + α*w δ*t ∇_w V(s,w)
+- Actor: θ ← θ + α*θ δ*t ∇_θ log π(a|s,θ)
 
 
 ```python
 ac_agent = ActorCriticAgent(
-    state_size=env.state_size,
-    action_size=env.action_size,
+    state*size=env.state*size,
+    action*size=env.action*size,
     lr_actor=0.001,
     lr_critic=0.005,
     gamma=0.99,
 )
 
 print("✓ Actor-Critic agent created")
-print(f"Actor learning rate: {ac_agent.lr_actor}")
-print(f"Critic learning rate: {ac_agent.lr_critic}")
+print(f"Actor learning rate: {ac*agent.lr*actor}")
+print(f"Critic learning rate: {ac*agent.lr*critic}")
 ```
 
     ✓ Actor-Critic agent created
@@ -280,7 +280,7 @@ print(f"Critic learning rate: {ac_agent.lr_critic}")
 print("Training Actor-Critic Agent on CartPole...")
 print("=" * 50)
 
-ac_results = ac_agent.train(env.env, num_episodes=50, print_every=10)
+ac*results = ac*agent.train(env.env, num*episodes=50, print*every=10)
 
 print("\nTraining completed!")
 print(f"Final average score: {np.mean(ac_results['scores'][-10:]):.2f}")
@@ -310,43 +310,43 @@ print(f"Best episode: {max(ac_results['scores']):.2f}")
 
 
 ```python
-viz.plot_learning_curves(ac_results["scores"], "Actor-Critic Learning Curve")
+viz.plot*learning*curves(ac_results["scores"], "Actor-Critic Learning Curve")
 
-if ac_results.get("actor_losses") and ac_results.get("critic_losses"):
+if ac*results.get("actor*losses") and ac*results.get("critic*losses"):
     viz.plot_losses(
-        ac_results["actor_losses"],
-        ac_results["critic_losses"],
+        ac*results["actor*losses"],
+        ac*results["critic*losses"],
         "Actor-Critic Training Losses",
     )
 ```
 
 
     
-![png](CA4_files/CA4_13_0.png)
+![png](CA4*files/CA4*13_0.png)
     
 
 
 
     
-![png](CA4_files/CA4_13_1.png)
+![png](CA4*files/CA4*13_1.png)
     
 
 
 # Part 4: Algorithm Comparison
 
-## 4.1 Side-by-Side Comparison
+## 4.1 Side-by-side Comparison
 
 Let's compare REINFORCE vs Actor-Critic performance on the same environment.
 
 
 ```python
 experiment = PolicyGradientExperiment("CartPole-v1")
-comparison_results = experiment.run_comparison_experiment(
-    algorithms=["reinforce", "actor_critic"], num_episodes=200
+comparison*results = experiment.run*comparison_experiment(
+    algorithms=["reinforce", "actor*critic"], num*episodes=200
 )
 
 
-viz.plot_multiple_curves(
+viz.plot*multiple*curves(
     {alg: results["scores"] for alg, results in comparison_results.items()},
     "REINFORCE vs Actor-Critic Comparison",
 )
@@ -383,15 +383,15 @@ viz.plot_multiple_curves(
 
 
     
-![png](CA4_files/CA4_15_1.png)
+![png](CA4*files/CA4*15_1.png)
     
 
 
 
 ```python
-from visualization import print_training_comparison
+from visualization import print*training*comparison
 
-print_training_comparison(comparison_results)
+print*training*comparison(comparison_results)
 ```
 
     Training Results Comparison:
@@ -424,7 +424,7 @@ Different neural network architectures have different properties:
 
 
 ```python
-viz.plot_network_analysis()
+viz.plot*network*analysis()
 
 print("\nNetwork Architecture Comparison:")
 print("✓ Separate networks: High parameter count, independent learning")
@@ -435,7 +435,7 @@ print("✓ Parameter count scales with state space size")
 
 
     
-![png](CA4_files/CA4_18_0.png)
+![png](CA4*files/CA4*18_0.png)
     
 
 
@@ -449,7 +449,7 @@ print("✓ Parameter count scales with state space size")
 
 # Part 6: Advanced Topics and Applications
 
-## 6.1 Real-World Applications
+## 6.1 Real-world Applications
 
 Policy gradient methods have been successfully applied to:
 - **Robotics**: Manipulation, autonomous vehicles, drone control

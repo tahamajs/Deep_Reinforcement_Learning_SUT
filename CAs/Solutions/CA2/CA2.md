@@ -1,50 +1,50 @@
-# CA2: Markov Decision Processes and Dynamic Programming
+# Ca2: Markov Decision Processes and Dynamic Programming
 # Table of Contents
 
 - [CA2: Markov Decision Processes and Dynamic Programming](#ca2-markov-decision-processes-and-dynamic-programming)
-  - [Fundamental Concepts of Sequential Decision Making](#fundamental-concepts-of-sequential-decision-making)
-    - [Learning Objectives](#learning-objectives)
-    - [Prerequisites](#prerequisites)
-    - [Roadmap](#roadmap)
+- [Fundamental Concepts of Sequential Decision Making](#fundamental-concepts-of-sequential-decision-making)
+- [Learning Objectives](#learning-objectives)
+- [Prerequisites](#prerequisites)
+- [Roadmap](#roadmap)
 - [Setup and imports](#setup-and-imports)
 - [Import RL modules](#import-rl-modules)
 - [Set random seeds and plotting style](#set-random-seeds-and-plotting-style)
-  - [Part 1: Theoretical Foundation](#part-1-theoretical-foundation)
-    - [1.1 Reinforcement Learning Framework](#11-reinforcement-learning-framework)
-    - [1.2 Markov Decision Process (MDP)](#12-markov-decision-process-mdp)
-    - [1.3 Value Functions](#13-value-functions)
+- [Part 1: Theoretical Foundation](#part-1-theoretical-foundation)
+- [1.1 Reinforcement Learning Framework](#11-reinforcement-learning-framework)
+- [1.2 Markov Decision Process (MDP)](#12-markov-decision-process-mdp)
+- [1.3 Value Functions](#13-value-functions)
 - [Create GridWorld environment](#create-gridworld-environment)
-  - [Part 2: Policy Evaluation](#part-2-policy-evaluation)
-    - [2.1 Random Policy Evaluation](#21-random-policy-evaluation)
+- [Part 2: Policy Evaluation](#part-2-policy-evaluation)
+- [2.1 Random Policy Evaluation](#21-random-policy-evaluation)
 - [Evaluate random policy](#evaluate-random-policy)
-    - [2.2 Custom Policy Evaluation](#22-custom-policy-evaluation)
+- [2.2 Custom Policy Evaluation](#22-custom-policy-evaluation)
 - [Evaluate custom policy](#evaluate-custom-policy)
-    - [2.3 Policy Comparison](#23-policy-comparison)
+- [2.3 Policy Comparison](#23-policy-comparison)
 - [Run policy comparison experiment](#run-policy-comparison-experiment)
-  - [Part 3: Q-Value Functions](#part-3-q-value-functions)
-    - [3.1 Computing Q-Values from V-Values](#31-computing-q-values-from-v-values)
+- [Part 3: Q-Value Functions](#part-3-q-value-functions)
+- [3.1 Computing Q-Values from V-Values](#31-computing-q-values-from-v-values)
 - [Compute Q-values from V-values](#compute-q-values-from-v-values)
 - [Show sample Q-values for key states](#show-sample-q-values-for-key-states)
-    - [3.2 Computing V-Values from Q-Values](#32-computing-v-values-from-q-values)
+- [3.2 Computing V-Values from Q-Values](#32-computing-v-values-from-q-values)
 - [Compute V-values from Q-values](#compute-v-values-from-q-values)
 - [Verify consistency](#verify-consistency)
-  - [Part 4: Policy Iteration](#part-4-policy-iteration)
-    - [4.1 Running Policy Iteration](#41-running-policy-iteration)
+- [Part 4: Policy Iteration](#part-4-policy-iteration)
+- [4.1 Running Policy Iteration](#41-running-policy-iteration)
 - [Run Policy Iteration](#run-policy-iteration)
-  - [Part 5: Value Iteration](#part-5-value-iteration)
-    - [5.1 Running Value Iteration](#51-running-value-iteration)
+- [Part 5: Value Iteration](#part-5-value-iteration)
+- [5.1 Running Value Iteration](#51-running-value-iteration)
 - [Run Value Iteration](#run-value-iteration)
-  - [Part 6: Q-Learning](#part-6-q-learning)
-    - [6.1 Running Q-Learning](#61-running-q-learning)
+- [Part 6: Q-Learning](#part-6-q-learning)
+- [6.1 Running Q-Learning](#61-running-q-learning)
 - [Run Q-Learning](#run-q-learning)
-  - [Part 7: Effect of Discount Factor](#part-7-effect-of-discount-factor)
-    - [7.1 Discount Factor Experiments](#71-discount-factor-experiments)
-  - [Part 8: Environment Modifications](#part-8-environment-modifications)
-    - [8.1 Testing Different Environments](#81-testing-different-environments)
-  - [Part 9: Summary and Conclusions](#part-9-summary-and-conclusions)
-    - [9.1 Key Takeaways](#91-key-takeaways)
-    - [9.2 What We Learned](#92-what-we-learned)
-    - [9.3 Next Steps](#93-next-steps)
+- [Part 7: Effect of Discount Factor](#part-7-effect-of-discount-factor)
+- [7.1 Discount Factor Experiments](#71-discount-factor-experiments)
+- [Part 8: Environment Modifications](#part-8-environment-modifications)
+- [8.1 Testing Different Environments](#81-testing-different-environments)
+- [Part 9: Summary and Conclusions](#part-9-summary-and-conclusions)
+- [9.1 Key Takeaways](#91-key-takeaways)
+- [9.2 What We Learned](#92-what-we-learned)
+- [9.3 Next Steps](#93-next-steps)
 
 
 
@@ -85,24 +85,24 @@ Let's embark on this mathematical journey through the core principles of reinfor
 
 
 ```python
-# Setup and imports
+# Setup and Imports
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import random
 from collections import defaultdict
 
-# Import RL modules
+# Import Rl Modules
 from environments import GridWorld
 from agents.policies import RandomPolicy, CustomPolicy
-from agents.algorithms import policy_evaluation, compute_q_from_v, compute_v_from_q
+from agents.algorithms import policy*evaluation, compute*q*from*v, compute*v*from_q
 from experiments import (
-    experiment_policy_comparison, experiment_policy_iteration,
-    experiment_value_iteration, experiment_q_learning,
-    experiment_discount_factors, experiment_environment_modifications
+    experiment*policy*comparison, experiment*policy*iteration,
+    experiment*value*iteration, experiment*q*learning,
+    experiment*discount*factors, experiment*environment*modifications
 )
 
-# Set random seeds and plotting style
+# Set Random Seeds and Plotting Style
 np.random.seed(42)
 random.seed(42)
 plt.style.use('seaborn-v0_8')
@@ -139,7 +139,7 @@ Think of RL like learning to drive:
 
 ---
 
-### 1.2 Markov Decision Process (MDP)
+### 1.2 Markov Decision Process (mdp)
 
 **Definition:**
 An MDP is defined by the tuple (S, A, P, R, γ) where:
@@ -153,7 +153,7 @@ An MDP is defined by the tuple (S, A, P, R, γ) where:
 **Markov Property:**
 The future depends only on the current state, not on the history of how we got there. Mathematically:
 
-P(S_{t+1} = s' | S_t = s, A_t = a, S_{t-1}, A_{t-1}, ..., S_0, A_0) = P(S_{t+1} = s' | S_t = s, A_t = a)
+P(S*{t+1} = s' | S*t = s, A*t = a, S*{t-1}, A*{t-1}, ..., S*0, A*0) = P(S*{t+1} = s' | S*t = s, A*t = a)
 
 **Intuition:**
 The current state contains all information needed to make optimal decisions. The past is already "encoded" in the current state.
@@ -163,12 +163,12 @@ The current state contains all information needed to make optimal decisions. The
 ### 1.3 Value Functions
 
 **State-Value Function:**
-$$V^π(s) = \mathbb{E}_π[G_t | S_t = s]$$
+$$V^π(s) = \mathbb{E}*π[G*t | S_t = s]$$
 
 **Interpretation:** Expected total reward when starting from state s and following policy π. It answers: "How good is it to be in this state?"
 
 **Action-Value Function:**
-$$Q^π(s,a) = \mathbb{E}_π[G_t | S_t = s, A_t = a]$$
+$$Q^π(s,a) = \mathbb{E}*π[G*t | S*t = s, A*t = a]$$
 
 **Interpretation:** Expected total reward when taking action a in state s and then following policy π. It answers: "How good is it to take this specific action in this state?"
 
@@ -176,9 +176,9 @@ $$Q^π(s,a) = \mathbb{E}_π[G_t | S_t = s, A_t = a]$$
 
 
 ```python
-# Create GridWorld environment
+# Create Gridworld Environment
 env = GridWorld()
-print(f"✓ GridWorld created: {len(env.states)} states, start={env.start_state}, goal={env.goal_state}")
+print(f"✓ GridWorld created: {len(env.states)} states, start={env.start*state}, goal={env.goal*state}")
 env.visualize_grid(title="GridWorld Environment")
 ```
 
@@ -187,7 +187,7 @@ env.visualize_grid(title="GridWorld Environment")
 
 
     
-![png](CA2_files/CA2_3_1.png)
+![png](CA2*files/CA2*3_1.png)
     
 
 
@@ -199,12 +199,12 @@ Let's start by evaluating a random policy in our GridWorld environment.
 
 
 ```python
-# Evaluate random policy
+# Evaluate Random Policy
 random_policy = RandomPolicy(env)
-random_values = policy_evaluation(env, random_policy, gamma=0.9)
+random*values = policy*evaluation(env, random_policy, gamma=0.9)
 
-print(f"✓ Random policy evaluated - V({env.start_state}) = {random_values[env.start_state]:.3f}")
-plot_value_function(env, random_values, "Random Policy Value Function")
+print(f"✓ Random policy evaluated - V({env.start*state}) = {random*values[env.start_state]:.3f}")
+plot*value*function(env, random_values, "Random Policy Value Function")
 ```
 
     Policy evaluation converged after 39 iterations
@@ -217,12 +217,12 @@ plot_value_function(env, random_values, "Random Policy Value Function")
     NameError                                 Traceback (most recent call last)
 
     Cell In[3], line 6
-          3 random_values = policy_evaluation(env, random_policy, gamma=0.9)
-          5 print(f"✓ Random policy evaluated - V({env.start_state}) = {random_values[env.start_state]:.3f}")
-    ----> 6 plot_value_function(env, random_values, "Random Policy Value Function")
+          3 random*values = policy*evaluation(env, random_policy, gamma=0.9)
+          5 print(f"✓ Random policy evaluated - V({env.start*state}) = {random*values[env.start_state]:.3f}")
+    ----> 6 plot*value*function(env, random_values, "Random Policy Value Function")
 
 
-    NameError: name 'plot_value_function' is not defined
+    NameError: name 'plot*value*function' is not defined
 
 
 ### 2.2 Custom Policy Evaluation
@@ -231,12 +231,12 @@ Now let's evaluate a custom policy that prefers moving right and down.
 
 
 ```python
-# Evaluate custom policy
+# Evaluate Custom Policy
 custom_policy = CustomPolicy(env)
-custom_values = policy_evaluation(env, custom_policy, gamma=0.9)
+custom*values = policy*evaluation(env, custom_policy, gamma=0.9)
 
-print(f"✓ Custom policy evaluated - V({env.start_state}) = {custom_values[env.start_state]:.3f}")
-plot_value_function(env, custom_values, "Custom Policy Value Function")
+print(f"✓ Custom policy evaluated - V({env.start*state}) = {custom*values[env.start_state]:.3f}")
+plot*value*function(env, custom_values, "Custom Policy Value Function")
 ```
 
     Policy evaluation converged after 111 iterations
@@ -245,7 +245,7 @@ plot_value_function(env, custom_values, "Custom Policy Value Function")
 
 
     
-![png](CA2_files/CA2_7_1.png)
+![png](CA2*files/CA2*7_1.png)
     
 
 
@@ -255,8 +255,8 @@ Let's compare different policies side by side.
 
 
 ```python
-# Run policy comparison experiment
-experiment_policy_comparison(env, gamma=0.9)
+# Run Policy Comparison Experiment
+experiment*policy*comparison(env, gamma=0.9)
 ```
 
     === Experiment: Policy Comparison ===
@@ -268,7 +268,7 @@ experiment_policy_comparison(env, gamma=0.9)
 
 
     
-![png](CA2_files/CA2_9_1.png)
+![png](CA2*files/CA2*9_1.png)
     
 
 
@@ -280,23 +280,23 @@ experiment_policy_comparison(env, gamma=0.9)
     Optimal Policy: Start state value = -1.000
 
 
-## Part 3: Q-Value Functions
+## Part 3: Q-value Functions
 
-### 3.1 Computing Q-Values from V-Values
+### 3.1 Computing Q-values from V-values
 
 Let's compute Q-values from the value function of our custom policy.
 
 
 ```python
 # Compute Q-values from V-values
-Q_from_V = compute_q_from_v(env, custom_values, gamma=0.9)
+Q*from*V = compute*q*from*v(env, custom*values, gamma=0.9)
 
 print("✓ Q-values computed from custom policy V-values")
-# Show sample Q-values for key states
+# Show Sample Q-values for Key States
 for state in [(0,0), (1,0), (2,2)]:
-    print(f"State {state}: {[(a, Q_from_V[(state, a)]) for a in env.get_valid_actions(state)]}")
+    print(f"State {state}: {[(a, Q*from*V[(state, a)]) for a in env.get*valid*actions(state)]}")
 
-plot_q_values(env, Q_from_V, "Q-Values from Custom Policy")
+plot*q*values(env, Q*from*V, "Q-Values from Custom Policy")
 ```
 
 
@@ -306,7 +306,7 @@ plot_q_values(env, Q_from_V, "Q-Values from Custom Policy")
 
     Cell In[4], line 2
           1 # Compute Q-values from V-values
-    ----> 2 Q_from_V = compute_q_from_v(env, custom_values, gamma=0.9)
+    ----> 2 Q*from*V = compute*q*from*v(env, custom*values, gamma=0.9)
           4 print("✓ Q-values computed from custom policy V-values")
           5 # Show sample Q-values for key states
 
@@ -314,22 +314,22 @@ plot_q_values(env, Q_from_V, "Q-Values from Custom Policy")
     NameError: name 'custom_values' is not defined
 
 
-### 3.2 Computing V-Values from Q-Values
+### 3.2 Computing V-values from Q-values
 
 Now let's do the reverse - compute V-values from Q-values.
 
 
 ```python
 # Compute V-values from Q-values
-V_from_Q = compute_v_from_q(Q_from_V, env)
+V*from*Q = compute*v*from*q(Q*from_V, env)
 
 print("✓ V-values computed from Q-values")
-# Verify consistency
-max_diff = max(abs(custom_values[s] - V_from_Q[s]) for s in env.states
+# Verify Consistency
+max*diff = max(abs(custom*values[s] - V*from*Q[s]) for s in env.states
                if s not in env.obstacles and s != env.goal_state)
 print(f"✓ Max difference between original and computed V: {max_diff:.6f}")
 
-plot_value_function(env, V_from_Q, "V-Values from Q-Values")
+plot*value*function(env, V*from*Q, "V-Values from Q-Values")
 ```
 
 
@@ -339,12 +339,12 @@ plot_value_function(env, V_from_Q, "V-Values from Q-Values")
 
     Cell In[5], line 2
           1 # Compute V-values from Q-values
-    ----> 2 V_from_Q = compute_v_from_q(Q_from_V, env)
+    ----> 2 V*from*Q = compute*v*from*q(Q*from_V, env)
           4 print("✓ V-values computed from Q-values")
           5 # Verify consistency
 
 
-    NameError: name 'Q_from_V' is not defined
+    NameError: name 'Q*from*V' is not defined
 
 
 ## Part 4: Policy Iteration
@@ -356,8 +356,8 @@ Let's run the policy iteration algorithm to find the optimal policy.
 
 ```python
 # Run Policy Iteration
-optimal_policy, optimal_values, _ = experiment_policy_iteration(env, gamma=0.9)
-print(f"✓ Policy Iteration converged - V({env.start_state}) = {optimal_values[env.start_state]:.3f}")
+optimal*policy, optimal*values, * = experiment*policy_iteration(env, gamma=0.9)
+print(f"✓ Policy Iteration converged - V({env.start*state}) = {optimal*values[env.start_state]:.3f}")
 ```
 
     === Experiment: Policy Iteration ===
@@ -377,13 +377,13 @@ print(f"✓ Policy Iteration converged - V({env.start_state}) = {optimal_values[
 
 
     
-![png](CA2_files/CA2_15_1.png)
+![png](CA2*files/CA2*15_1.png)
     
 
 
 
     
-![png](CA2_files/CA2_15_2.png)
+![png](CA2*files/CA2*15_2.png)
     
 
 
@@ -399,8 +399,8 @@ Now let's run value iteration to find the optimal value function.
 
 ```python
 # Run Value Iteration
-optimal_values_vi, optimal_policy_vi, _ = experiment_value_iteration(env, gamma=0.9)
-print(f"✓ Value Iteration converged - V({env.start_state}) = {optimal_values_vi[env.start_state]:.3f}")
+optimal*values*vi, optimal*policy*vi, * = experiment*value_iteration(env, gamma=0.9)
+print(f"✓ Value Iteration converged - V({env.start*state}) = {optimal*values*vi[env.start*state]:.3f}")
 ```
 
     === Experiment: Value Iteration ===
@@ -412,38 +412,38 @@ print(f"✓ Value Iteration converged - V({env.start_state}) = {optimal_values_v
 
 
     
-![png](CA2_files/CA2_17_1.png)
+![png](CA2*files/CA2*17_1.png)
     
 
 
 
     
-![png](CA2_files/CA2_17_2.png)
+![png](CA2*files/CA2*17_2.png)
     
 
 
 
     
-![png](CA2_files/CA2_17_3.png)
+![png](CA2*files/CA2*17_3.png)
     
 
 
     ✓ Value Iteration converged - V((0, 0)) = 5.495
 
 
-## Part 6: Q-Learning
+## Part 6: Q-learning
 
-### 6.1 Running Q-Learning
+### 6.1 Running Q-learning
 
 Let's train an agent using Q-learning.
 
 
 ```python
-# Run Q-Learning
-Q_learned, values_learned, policy_learned, _ = experiment_q_learning(
+# Run Q-learning
+Q*learned, values*learned, policy*learned, * = experiment*q*learning(
     env, num_episodes=1000, alpha=0.1, gamma=0.9, epsilon=0.1
 )
-print(f"✓ Q-Learning completed - V({env.start_state}) = {values_learned[env.start_state]:.3f}")
+print(f"✓ Q-Learning completed - V({env.start*state}) = {values*learned[env.start_state]:.3f}")
 ```
 
     === Experiment: Q-Learning ===
@@ -453,19 +453,19 @@ print(f"✓ Q-Learning completed - V({env.start_state}) = {values_learned[env.st
 
 
     
-![png](CA2_files/CA2_19_1.png)
+![png](CA2*files/CA2*19_1.png)
     
 
 
 
     
-![png](CA2_files/CA2_19_2.png)
+![png](CA2*files/CA2*19_2.png)
     
 
 
 
     
-![png](CA2_files/CA2_19_3.png)
+![png](CA2*files/CA2*19_3.png)
     
 
 
@@ -480,7 +480,7 @@ Let's see how different discount factors affect the value function.
 
 
 ```python
-experiment_discount_factors(env, random_policy, gamma_values=[0.1, 0.5, 0.9, 0.99])
+experiment*discount*factors(env, random*policy, gamma*values=[0.1, 0.5, 0.9, 0.99])
 ```
 
     === Experiment: Effect of Discount Factor ===
@@ -508,7 +508,7 @@ experiment_discount_factors(env, random_policy, gamma_values=[0.1, 0.5, 0.9, 0.9
 
 
     
-![png](CA2_files/CA2_21_1.png)
+![png](CA2*files/CA2*21_1.png)
     
 
 
@@ -594,7 +594,7 @@ Let's test how the optimal policy changes with different obstacle configurations
 
 
 ```python
-experiment_environment_modifications()
+experiment*environment*modifications()
 ```
 
     === Experiment: Environment Modifications ===
@@ -648,7 +648,7 @@ experiment_environment_modifications()
 
 
     
-![png](CA2_files/CA2_23_1.png)
+![png](CA2*files/CA2*23_1.png)
     
 
 

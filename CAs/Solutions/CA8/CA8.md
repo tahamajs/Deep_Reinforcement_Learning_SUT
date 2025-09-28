@@ -1,20 +1,20 @@
-# CA8: Causal Reasoning and Multi-Modal Reinforcement Learning
+# Ca8: Causal Reasoning and Multi-modal Reinforcement Learning
 # Table of Contents
 
 - [CA8: Causal Reasoning and Multi-Modal Reinforcement Learning](#ca8-causal-reasoning-and-multi-modal-reinforcement-learning)
-  - [Deep Reinforcement Learning - Session 8](#deep-reinforcement-learning---session-8)
-    - [Course Information](#course-information)
-    - [Learning Objectives](#learning-objectives)
-    - [Prerequisites](#prerequisites)
-    - [Roadmap](#roadmap)
-    - [Project Structure](#project-structure)
-    - [Contents Overview](#contents-overview)
-  - [Section 1: Causal Discovery](#section-1-causal-discovery)
-  - [Section 2: Causal Reinforcement Learning](#section-2-causal-reinforcement-learning)
-  - [Section 3: Multi-Modal Environments](#section-3-multi-modal-environments)
-  - [Section 4: Integrated Causal Multi-Modal RL](#section-4-integrated-causal-multi-modal-rl)
-  - [Section 5: Comprehensive Experiments](#section-5-comprehensive-experiments)
-  - [Conclusion](#conclusion)
+- [Deep Reinforcement Learning - Session 8](#deep-reinforcement-learning---session-8)
+- [Course Information](#course-information)
+- [Learning Objectives](#learning-objectives)
+- [Prerequisites](#prerequisites)
+- [Roadmap](#roadmap)
+- [Project Structure](#project-structure)
+- [Contents Overview](#contents-overview)
+- [Section 1: Causal Discovery](#section-1-causal-discovery)
+- [Section 2: Causal Reinforcement Learning](#section-2-causal-reinforcement-learning)
+- [Section 3: Multi-Modal Environments](#section-3-multi-modal-environments)
+- [Section 4: Integrated Causal Multi-Modal RL](#section-4-integrated-causal-multi-modal-rl)
+- [Section 5: Comprehensive Experiments](#section-5-comprehensive-experiments)
+- [Conclusion](#conclusion)
 
 
 ## Deep Reinforcement Learning - Session 8
@@ -30,89 +30,89 @@
 By the end of this notebook, you will understand:
 
 1. **Causal Reasoning Foundations**:
-   - Causal discovery algorithms (PC, GES, LiNGAM)
-   - Causal graph construction and manipulation
-   - Counterfactual reasoning in decision making
-   - Causal interventions and their effects
+- Causal discovery algorithms (PC, GES, LiNGAM)
+- Causal graph construction and manipulation
+- Counterfactual reasoning in decision making
+- Causal interventions and their effects
 
 2. **Multi-Modal Learning**:
-   - Multi-modal observation processing (visual, textual, state)
-   - Feature fusion techniques for heterogeneous data
-   - Cross-modal attention mechanisms
-   - Multi-modal representation learning
+- Multi-modal observation processing (visual, textual, state)
+- Feature fusion techniques for heterogeneous data
+- Cross-modal attention mechanisms
+- Multi-modal representation learning
 
 3. **Integrated Causal Multi-Modal RL**:
-   - Causal RL agents with multi-modal perception
-   - Counterfactual reasoning in complex environments
-   - Causal structure learning from multi-modal data
-   - Performance analysis and benchmarking
+- Causal RL agents with multi-modal perception
+- Counterfactual reasoning in complex environments
+- Causal structure learning from multi-modal data
+- Performance analysis and benchmarking
 
 4. **Implementation Skills**:
-   - Causal discovery implementation from scratch
-   - Multi-modal environment design and wrappers
-   - Integrated causal multi-modal agent architectures
-   - Experimental design and comparative analysis
+- Causal discovery implementation from scratch
+- Multi-modal environment design and wrappers
+- Integrated causal multi-modal agent architectures
+- Experimental design and comparative analysis
 
 ### Prerequisites
 
 Before starting this notebook, ensure you have:
 
 - **Mathematical Background**:
-  - Probability theory and graphical models
-  - Causal inference fundamentals
-  - Linear algebra and matrix operations
-  - Information theory basics
+- Probability theory and graphical models
+- Causal inference fundamentals
+- Linear algebra and matrix operations
+- Information theory basics
 
 - **Programming Skills**:
-  - Advanced Python programming
-  - PyTorch for neural networks and custom architectures
-  - NumPy for numerical computations
-  - Data visualization with Matplotlib/Seaborn
+- Advanced Python programming
+- PyTorch for neural networks and custom architectures
+- NumPy for numerical computations
+- Data visualization with Matplotlib/Seaborn
 
 - **Reinforcement Learning Knowledge**:
-  - Value-based methods (DQN variants from CA7)
-  - Policy gradient methods (from CA4-CA6)
-  - Actor-critic architectures
-  - Experience replay and stability techniques
+- Value-based methods (DQN variants from CA7)
+- Policy gradient methods (from CA4-CA6)
+- Actor-critic architectures
+- Experience replay and stability techniques
 
 - **Previous Course Knowledge**:
-  - CA1-CA3: Basic RL concepts and Markov processes
-  - CA4-CA7: Deep RL methods and neural architectures
-  - Strong foundation in PyTorch and neural network implementation
+- CA1-CA3: Basic RL concepts and Markov processes
+- CA4-CA7: Deep RL methods and neural architectures
+- Strong foundation in PyTorch and neural network implementation
 
 ### Roadmap
 
 This notebook follows a structured progression from foundational concepts to advanced integration:
 
 1. **Section 1: Causal Discovery** (60 min)
-   - Introduction to causal graphs and DAGs
-   - PC algorithm implementation and analysis
-   - GES and LiNGAM algorithms
-   - Causal structure validation and visualization
+- Introduction to causal graphs and DAGs
+- PC algorithm implementation and analysis
+- GES and LiNGAM algorithms
+- Causal structure validation and visualization
 
 2. **Section 2: Causal Reinforcement Learning** (60 min)
-   - Causal RL agent architecture
-   - Counterfactual reasoning implementation
-   - Causal interventions in decision making
-   - Performance comparison with standard RL
+- Causal RL agent architecture
+- Counterfactual reasoning implementation
+- Causal interventions in decision making
+- Performance comparison with standard RL
 
 3. **Section 3: Multi-Modal Environments** (45 min)
-   - Multi-modal observation spaces design
-   - Visual, textual, and state information integration
-   - Environment wrappers and preprocessing
-   - Multi-modal data representation challenges
+- Multi-modal observation spaces design
+- Visual, textual, and state information integration
+- Environment wrappers and preprocessing
+- Multi-modal data representation challenges
 
 4. **Section 4: Integrated Causal Multi-Modal RL** (60 min)
-   - Combined causal and multi-modal architectures
-   - Cross-modal causal reasoning
-   - Integrated agent implementation
-   - Training and evaluation protocols
+- Combined causal and multi-modal architectures
+- Cross-modal causal reasoning
+- Integrated agent implementation
+- Training and evaluation protocols
 
 5. **Section 5: Comprehensive Experiments** (60 min)
-   - Comparative analysis of different approaches
-   - Ablation studies on causal vs multi-modal components
-   - Performance benchmarking across environments
-   - Hyperparameter sensitivity analysis
+- Comparative analysis of different approaches
+- Ablation studies on causal vs multi-modal components
+- Performance benchmarking across environments
+- Hyperparameter sensitivity analysis
 
 ### Project Structure
 
@@ -136,7 +136,7 @@ CA8/
 │   └── encoders.py        # Modality-specific encoders
 ├── experiments/           # Experiment scripts
 │   ├── causal_experiments.py
-│   ├── multi_modal_experiments.py
+│   ├── multi*modal*experiments.py
 │   └── integrated_experiments.py
 ├── requirements.txt       # Python dependencies
 └── CA8.ipynb             # This educational notebook
@@ -154,7 +154,7 @@ CA8/
 ```python
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath('__file__')))
+sys.path.append(os.path.dirname(os.path.abspath('**file**')))
 
 import numpy as np
 import torch
@@ -172,20 +172,20 @@ np.random.seed(42)
 torch.manual_seed(42)
 
 import importlib
-import causal_rl_utils
+import causal*rl*utils
 import causal_discovery
-import causal_rl_agent
-import multi_modal_env
+import causal*rl*agent
+import multi*modal*env
 
-importlib.reload(causal_rl_utils)
+importlib.reload(causal*rl*utils)
 importlib.reload(causal_discovery)
-importlib.reload(causal_rl_agent)
-importlib.reload(multi_modal_env)
+importlib.reload(causal*rl*agent)
+importlib.reload(multi*modal*env)
 
-from utils.causal_rl_utils import device
+from utils.causal*rl*utils import device
 from agents.causal_discovery import CausalGraph, CausalDiscovery
-from agents.causal_rl_agent import CausalRLAgent, CounterfactualRLAgent, CausalReasoningNetwork
-from environments.multi_modal_env import MultiModalGridWorld, MultiModalWrapper
+from agents.causal*rl*agent import CausalRLAgent, CounterfactualRLAgent, CausalReasoningNetwork
+from environments.multi*modal*env import MultiModalGridWorld, MultiModalWrapper
 
 print("Setup complete!")
 print(f"Using device: {device}")
@@ -203,7 +203,7 @@ In this section, we explore methods for learning causal structure from observati
 
 ```python
 
-def demonstrate_causal_graph():
+def demonstrate*causal*graph():
     """Demonstrate basic causal graph operations"""
     print("=== Causal Graph Demonstration ===")
     
@@ -219,7 +219,7 @@ def demonstrate_causal_graph():
     print(f"Graph structure: {graph}")
     
     print(f"Is DAG: {graph.is_dag()}")
-    print(f"Topological order: {graph.get_topological_order()}")
+    print(f"Topological order: {graph.get*topological*order()}")
     
     print(f"Parents of D: {graph.get_parents('D')}")
     print(f"Children of A: {graph.get_children('A')}")
@@ -231,8 +231,8 @@ def demonstrate_causal_graph():
         G = graph.to_networkx()
         pos = nx.spring_layout(G)
         plt.figure(figsize=(8, 6))
-        nx.draw(G, pos, with_labels=True, node_color='lightblue', 
-                node_size=2000, font_size=16, arrows=True, arrowsize=20)
+        nx.draw(G, pos, with*labels=True, node*color='lightblue', 
+                node*size=2000, font*size=16, arrows=True, arrowsize=20)
         plt.title("Causal Graph Visualization")
         plt.show()
     except ImportError:
@@ -240,7 +240,7 @@ def demonstrate_causal_graph():
     
     return graph
 
-causal_graph = demonstrate_causal_graph()
+causal*graph = demonstrate*causal_graph()
 
 ```
 
@@ -257,14 +257,14 @@ causal_graph = demonstrate_causal_graph()
 
 
     
-![png](CA8_files/CA8_3_1.png)
+![png](CA8*files/CA8*3_1.png)
     
 
 
 
 ```python
 
-def demonstrate_causal_discovery():
+def demonstrate*causal*discovery():
     """Demonstrate causal discovery from data"""
     print("=== Causal Discovery Demonstration ===")
     
@@ -301,7 +301,7 @@ def demonstrate_causal_discovery():
     
     return discovered_graphs
 
-discovered_graphs = demonstrate_causal_discovery()
+discovered*graphs = demonstrate*causal_discovery()
 
 ```
 
@@ -326,15 +326,15 @@ Now we implement RL agents that leverage causal structure for improved learning.
 
 ```python
 
-def demonstrate_causal_rl():
+def demonstrate*causal*rl():
     """Demonstrate causal RL agent on a simple environment"""
     print("=== Causal RL Agent Demonstration ===")
     
     class SimpleGridWorld:
         """Simple grid world for testing"""
-        def __init__(self, size=5):
+        def **init**(self, size=5):
             self.size = size
-            self.state_dim = 4  # pos_x, pos_y, distance, reward
+            self.state*dim = 4  # pos*x, pos_y, distance, reward
             self.action_dim = 4  # up, down, left, right
             
         def reset(self):
@@ -349,7 +349,7 @@ def demonstrate_causal_rl():
             moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right
             new_pos = self.pos + np.array(moves[action])
             
-            new_pos = np.clip(new_pos, 0, self.size - 1)
+            new*pos = np.clip(new*pos, 0, self.size - 1)
             self.pos = new_pos
             
             center = np.array([self.size//2, self.size//2])
@@ -362,18 +362,18 @@ def demonstrate_causal_rl():
     
     env = SimpleGridWorld()
     
-    variables = ['pos_x', 'pos_y', 'distance', 'reward']
+    variables = ['pos*x', 'pos*y', 'distance', 'reward']
     causal_graph = CausalGraph(variables)
-    causal_graph.add_edge('pos_x', 'distance')
-    causal_graph.add_edge('pos_y', 'distance')
-    causal_graph.add_edge('distance', 'reward')
+    causal*graph.add*edge('pos_x', 'distance')
+    causal*graph.add*edge('pos_y', 'distance')
+    causal*graph.add*edge('distance', 'reward')
     
     print(f"Environment causal graph: {causal_graph}")
     
     agent = CausalRLAgent(
-        state_dim=env.state_dim,
-        action_dim=env.action_dim,
-        causal_graph=causal_graph,
+        state*dim=env.state*dim,
+        action*dim=env.action*dim,
+        causal*graph=causal*graph,
         lr=1e-3
     )
     
@@ -385,8 +385,8 @@ def demonstrate_causal_rl():
         episode_reward = 0
         
         for step in range(20):
-            action, _ = agent.select_action(state)
-            next_state, reward, done, _, _ = env.step(action)
+            action, * = agent.select*action(state)
+            next*state, reward, done, *, _ = env.step(action)
             
             agent.update([state], [action], [reward], [next_state], [done])
             
@@ -405,30 +405,30 @@ def demonstrate_causal_rl():
     print("\nTesting causal interventions...")
     center = np.array([env.size//2, env.size//2])
     test_pos = np.array([2.0, 2.0])
-    test_distance = np.linalg.norm(test_pos - center)
-    test_state = np.array([test_pos[0], test_pos[1], test_distance, 0.0])  # Include all 4 variables
+    test*distance = np.linalg.norm(test*pos - center)
+    test*state = np.array([test*pos[0], test*pos[1], test*distance, 0.0])  # Include all 4 variables
     
-    original_action, _ = agent.select_action(test_state, deterministic=True)
-    print(f"Original state {test_state}: Action {original_action}")
+    original*action, * = agent.select*action(test*state, deterministic=True)
+    print(f"Original state {test*state}: Action {original*action}")
     
-    intervention = {'pos_x': 0.0, 'pos_y': 0.0}  # Move to corner
-    intervened_state = agent.perform_intervention(test_state, intervention)
-    intervened_action, _ = agent.select_action(intervened_state, deterministic=True)
+    intervention = {'pos*x': 0.0, 'pos*y': 0.0}  # Move to corner
+    intervened*state = agent.perform*intervention(test_state, intervention)
+    intervened*action, * = agent.select*action(intervened*state, deterministic=True)
     print(f"After intervention {intervention}: Action {intervened_action}")
     
     return {
         'agent': agent,
         'environment': env,
         'rewards': rewards,
-        'causal_graph': causal_graph
+        'causal*graph': causal*graph
     }
 
-causal_rl_results = demonstrate_causal_rl()
+causal*rl*results = demonstrate*causal*rl()
 
 ```
 
     === Causal RL Agent Demonstration ===
-    Environment causal graph: CausalGraph(variables=['pos_x', 'pos_y', 'distance', 'reward'], edges=['pos_x -> distance', 'pos_y -> distance', 'distance -> reward'])
+    Environment causal graph: CausalGraph(variables=['pos*x', 'pos*y', 'distance', 'reward'], edges=['pos*x -> distance', 'pos*y -> distance', 'distance -> reward'])
     
     Training Causal RL Agent...
     Episode  20 | Avg Reward: -6.738
@@ -443,22 +443,22 @@ causal_rl_results = demonstrate_causal_rl()
     
     Testing causal interventions...
     Original state [2. 2. 0. 0.]: Action 0
-    After intervention {'pos_x': 0.0, 'pos_y': 0.0}: Action 0
+    After intervention {'pos*x': 0.0, 'pos*y': 0.0}: Action 0
     Episode 100 | Avg Reward: -6.708
     
     Testing causal interventions...
     Original state [2. 2. 0. 0.]: Action 0
-    After intervention {'pos_x': 0.0, 'pos_y': 0.0}: Action 0
+    After intervention {'pos*x': 0.0, 'pos*y': 0.0}: Action 0
 
 
-## Section 3: Multi-Modal Environments
+## Section 3: Multi-modal Environments
 
 This section explores environments that provide multiple modalities of information.
 
 
 ```python
 
-def demonstrate_multi_modal_env():
+def demonstrate*multi*modal_env():
     """Demonstrate multi-modal grid world environment"""
     print("=== Multi-Modal Environment Demonstration ===")
     
@@ -475,11 +475,11 @@ def demonstrate_multi_modal_env():
     
     for i in range(6):
         action = np.random.randint(0, 4)
-        next_obs, reward, done, _, _ = env.step(action)
+        next*obs, reward, done, *, _ = env.step(action)
         
         ax = axes[i // 3, i % 3]
         ax.imshow(next_obs['visual'])
-        ax.set_title(f"Step {i+1}: {next_obs['text']['text'][:30]}...")
+        ax.set*title(f"Step {i+1}: {next*obs['text']['text'][:30]}...")
         ax.axis('off')
         
         if done:
@@ -489,7 +489,7 @@ def demonstrate_multi_modal_env():
     plt.show()
     
     wrapper = MultiModalWrapper(env)
-    processed_obs = wrapper.process_observation(obs)
+    processed*obs = wrapper.process*observation(obs)
     
     print(f"\nProcessed observation shape: {processed_obs.shape}")
     print(f"Feature breakdown:")
@@ -499,69 +499,69 @@ def demonstrate_multi_modal_env():
     
     return env, wrapper
 
-mm_env, mm_wrapper = demonstrate_multi_modal_env()
+mm*env, mm*wrapper = demonstrate*multi*modal_env()
 
 ```
 
     === Multi-Modal Environment Demonstration ===
     Observation modalities:
-    - Visual: (84, 84, 3) (RGB image)
-    - Text: Solve the puzzle by arranging colored squares in specific arrangement.
-    - State: [1 0] (agent position)
+- Visual: (84, 84, 3) (RGB image)
+- Text: Solve the puzzle by arranging colored squares in specific arrangement.
+- State: [1 0] (agent position)
 
 
 
     
-![png](CA8_files/CA8_8_1.png)
+![png](CA8*files/CA8*8_1.png)
     
 
 
     
     Processed observation shape: (37,)
     Feature breakdown:
-    - Visual features: 64
-    - Text features: 32
-    - State features: 2
+- Visual features: 64
+- Text features: 32
+- State features: 2
 
 
-## Section 4: Integrated Causal Multi-Modal RL
+## Section 4: Integrated Causal Multi-modal Rl
 
 Combining causal reasoning with multi-modal perception for advanced RL.
 
 
 ```python
 
-def demonstrate_integrated_system():
+def demonstrate*integrated*system():
     """Demonstrate integrated causal multi-modal RL system"""
     print("=== Integrated Causal Multi-Modal RL Demonstration ===")
     
     env = MultiModalGridWorld(size=4, render_size=64)  # Smaller for faster training
     wrapper = MultiModalWrapper(env)
     
-    variables = ['agent_x', 'agent_y', 'goal_x', 'goal_y', 'visual_features', 'text_features', 'reward']
+    variables = ['agent*x', 'agent*y', 'goal*x', 'goal*y', 'visual*features', 'text*features', 'reward']
     causal_graph = CausalGraph(variables)
     
-    causal_graph.add_edge('agent_x', 'visual_features')
-    causal_graph.add_edge('agent_y', 'visual_features')
-    causal_graph.add_edge('goal_x', 'visual_features')
-    causal_graph.add_edge('goal_y', 'visual_features')
-    causal_graph.add_edge('agent_x', 'text_features')
-    causal_graph.add_edge('agent_y', 'text_features')
-    causal_graph.add_edge('goal_x', 'text_features')
-    causal_graph.add_edge('goal_y', 'text_features')
-    causal_graph.add_edge('visual_features', 'reward')
-    causal_graph.add_edge('text_features', 'reward')
+    causal*graph.add*edge('agent*x', 'visual*features')
+    causal*graph.add*edge('agent*y', 'visual*features')
+    causal*graph.add*edge('goal*x', 'visual*features')
+    causal*graph.add*edge('goal*y', 'visual*features')
+    causal*graph.add*edge('agent*x', 'text*features')
+    causal*graph.add*edge('agent*y', 'text*features')
+    causal*graph.add*edge('goal*x', 'text*features')
+    causal*graph.add*edge('goal*y', 'text*features')
+    causal*graph.add*edge('visual_features', 'reward')
+    causal*graph.add*edge('text_features', 'reward')
     
     print(f"Causal graph for multi-modal RL: {causal_graph}")
     
     class MultiModalCausalRLAgent(CausalRLAgent):
         """Causal RL agent adapted for multi-modal observations"""
         
-        def __init__(self, wrapper, causal_graph, lr=1e-3):
+        def **init**(self, wrapper, causal_graph, lr=1e-3):
             self.wrapper = wrapper
-            state_dim = wrapper.total_dim
+            state*dim = wrapper.total*dim
             action_dim = 4  # grid world actions
-            super().__init__(state_dim, action_dim, causal_graph, lr)
+            super().**init**(state*dim, action*dim, causal_graph, lr)
         
         def select_action(self, obs, deterministic=False):
             """Select action from multi-modal observation"""
@@ -577,14 +577,14 @@ def demonstrate_integrated_system():
             states, actions, rewards, next_obss, dones = [], [], [], [], []
             
             while steps < env.max_steps:
-                action, _ = self.select_action(obs)
-                next_obs, reward, terminated, truncated, _ = env.step(action)
+                action, * = self.select*action(obs)
+                next*obs, reward, terminated, truncated, * = env.step(action)
                 done = terminated or truncated
                 
                 states.append(self.wrapper.process_observation(obs))
                 actions.append(action)
                 rewards.append(reward)
-                next_obss.append(self.wrapper.process_observation(next_obs))
+                next*obss.append(self.wrapper.process*observation(next_obs))
                 dones.append(done)
                 
                 episode_reward += reward
@@ -597,7 +597,7 @@ def demonstrate_integrated_system():
             if len(states) > 0:
                 self.update(states, actions, rewards, next_obss, dones)
             
-            self.episode_rewards.append(episode_reward)
+            self.episode*rewards.append(episode*reward)
             return episode_reward, steps
     
     agent = MultiModalCausalRLAgent(wrapper, causal_graph, lr=1e-3)
@@ -610,7 +610,7 @@ def demonstrate_integrated_system():
         training_rewards.append(reward)
         
         if (episode + 1) % 10 == 0:
-            avg_reward = np.mean(training_rewards[-10:])
+            avg*reward = np.mean(training*rewards[-10:])
             print(f"Episode {episode+1:2d} | Avg Reward: {avg_reward:.3f} | Steps: {steps}")
     
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
@@ -636,16 +636,16 @@ def demonstrate_integrated_system():
         'agent': agent,
         'environment': env,
         'wrapper': wrapper,
-        'training_rewards': training_rewards,
-        'causal_graph': causal_graph
+        'training*rewards': training*rewards,
+        'causal*graph': causal*graph
     }
 
-integrated_results = demonstrate_integrated_system()
+integrated*results = demonstrate*integrated_system()
 
 ```
 
     === Integrated Causal Multi-Modal RL Demonstration ===
-    Causal graph for multi-modal RL: CausalGraph(variables=['agent_x', 'agent_y', 'goal_x', 'goal_y', 'visual_features', 'text_features', 'reward'], edges=['agent_x -> visual_features', 'agent_x -> text_features', 'agent_y -> visual_features', 'agent_y -> text_features', 'goal_x -> visual_features', 'goal_x -> text_features', 'goal_y -> visual_features', 'goal_y -> text_features', 'visual_features -> reward', 'text_features -> reward'])
+    Causal graph for multi-modal RL: CausalGraph(variables=['agent*x', 'agent*y', 'goal*x', 'goal*y', 'visual*features', 'text*features', 'reward'], edges=['agent*x -> visual*features', 'agent*x -> text*features', 'agent*y -> visual*features', 'agent*y -> text*features', 'goal*x -> visual*features', 'goal*x -> text*features', 'goal*y -> visual*features', 'goal*y -> text*features', 'visual*features -> reward', 'text*features -> reward'])
     
     Training Multi-Modal Causal RL Agent...
     Episode 10 | Avg Reward: 0.374 | Steps: 4
@@ -662,7 +662,7 @@ integrated_results = demonstrate_integrated_system()
 
 
     
-![png](CA8_files/CA8_10_1.png)
+![png](CA8*files/CA8*10_1.png)
     
 
 
@@ -673,25 +673,25 @@ Running comprehensive experiments to compare different approaches.
 
 ```python
 
-def run_comprehensive_experiments():
+def run*comprehensive*experiments():
     """Run comprehensive experiments comparing different RL approaches"""
     print("=== Comprehensive RL Experiments ===")
     
     class MultiModalCausalRLAgent(CausalRLAgent):
         """Causal RL agent adapted for multi-modal observations"""
         
-        def __init__(self, wrapper, causal_graph, lr=1e-3):
+        def **init**(self, wrapper, causal_graph, lr=1e-3):
             self.wrapper = wrapper
-            state_dim = wrapper.total_dim
+            state*dim = wrapper.total*dim
             action_dim = 4  # grid world actions
-            super().__init__(state_dim, action_dim, causal_graph, lr)
+            super().**init**(state*dim, action*dim, causal_graph, lr)
         
         def select_action(self, obs, deterministic=False):
             """Select action from multi-modal observation"""
             state = self.wrapper.process_observation(obs)
             return super().select_action(state, deterministic)
         
-        def train_episode(self, env, max_steps=1000):
+        def train*episode(self, env, max*steps=1000):
             """Train for one episode with multi-modal observations"""
             obs, _ = env.reset()
             episode_reward = 0
@@ -700,14 +700,14 @@ def run_comprehensive_experiments():
             states, actions, rewards, next_obss, dones = [], [], [], [], []
             
             while steps < max_steps:
-                action, _ = self.select_action(obs)
-                next_obs, reward, terminated, truncated, _ = env.step(action)
+                action, * = self.select*action(obs)
+                next*obs, reward, terminated, truncated, * = env.step(action)
                 done = terminated or truncated
                 
                 states.append(self.wrapper.process_observation(obs))
                 actions.append(action)
                 rewards.append(reward)
-                next_obss.append(self.wrapper.process_observation(next_obs))
+                next*obss.append(self.wrapper.process*observation(next_obs))
                 dones.append(done)
                 
                 episode_reward += reward
@@ -720,27 +720,27 @@ def run_comprehensive_experiments():
             if len(states) > 0:
                 self.update(states, actions, rewards, next_obss, dones)
             
-            self.episode_rewards.append(episode_reward)
+            self.episode*rewards.append(episode*reward)
             return episode_reward, steps
     
-    simple_env = MultiModalGridWorld(size=5, render_size=64)
+    simple*env = MultiModalGridWorld(size=5, render*size=64)
     wrapper = MultiModalWrapper(simple_env)
     
     class MultiModalCausalRLAgent(CausalRLAgent):
         """Causal RL agent adapted for multi-modal observations"""
         
-        def __init__(self, wrapper, causal_graph, lr=1e-3):
+        def **init**(self, wrapper, causal_graph, lr=1e-3):
             self.wrapper = wrapper
-            state_dim = wrapper.total_dim
+            state*dim = wrapper.total*dim
             action_dim = 4  # grid world actions
-            super().__init__(state_dim, action_dim, causal_graph, lr)
+            super().**init**(state*dim, action*dim, causal_graph, lr)
         
         def select_action(self, obs, deterministic=False):
             """Select action from multi-modal observation"""
             state = self.wrapper.process_observation(obs)
             return super().select_action(state, deterministic)
         
-        def train_episode(self, env, max_steps=1000):
+        def train*episode(self, env, max*steps=1000):
             """Train for one episode with multi-modal observations"""
             obs, _ = env.reset()
             episode_reward = 0
@@ -749,14 +749,14 @@ def run_comprehensive_experiments():
             states, actions, rewards, next_obss, dones = [], [], [], [], []
             
             while steps < max_steps:
-                action, _ = self.select_action(obs)
-                next_obs, reward, terminated, truncated, _ = env.step(action)
+                action, * = self.select*action(obs)
+                next*obs, reward, terminated, truncated, * = env.step(action)
                 done = terminated or truncated
                 
                 states.append(self.wrapper.process_observation(obs))
                 actions.append(action)
                 rewards.append(reward)
-                next_obss.append(self.wrapper.process_observation(next_obs))
+                next*obss.append(self.wrapper.process*observation(next_obs))
                 dones.append(done)
                 
                 episode_reward += reward
@@ -769,28 +769,28 @@ def run_comprehensive_experiments():
             if len(states) > 0:
                 self.update(states, actions, rewards, next_obss, dones)
             
-            self.episode_rewards.append(episode_reward)
+            self.episode*rewards.append(episode*reward)
             return episode_reward, steps
-    simple_causal_graph = CausalGraph(['pos_x', 'pos_y'])
-    simple_causal_graph.add_edge('pos_x', 'pos_y')
+    simple*causal*graph = CausalGraph(['pos*x', 'pos*y'])
+    simple*causal*graph.add*edge('pos*x', 'pos_y')
     
-    multi_modal_causal_graph = CausalGraph(['agent_x', 'agent_y', 'goal_x', 'goal_y', 'visual', 'text', 'reward'])
-    multi_modal_causal_graph.add_edge('agent_x', 'visual')
-    multi_modal_causal_graph.add_edge('agent_y', 'visual')
-    multi_modal_causal_graph.add_edge('goal_x', 'visual')
-    multi_modal_causal_graph.add_edge('goal_y', 'visual')
-    multi_modal_causal_graph.add_edge('agent_x', 'text')
-    multi_modal_causal_graph.add_edge('agent_y', 'text')
-    multi_modal_causal_graph.add_edge('goal_x', 'text')
-    multi_modal_causal_graph.add_edge('goal_y', 'text')
-    multi_modal_causal_graph.add_edge('visual', 'reward')
-    multi_modal_causal_graph.add_edge('text', 'reward')
+    multi*modal*causal*graph = CausalGraph(['agent*x', 'agent*y', 'goal*x', 'goal_y', 'visual', 'text', 'reward'])
+    multi*modal*causal*graph.add*edge('agent_x', 'visual')
+    multi*modal*causal*graph.add*edge('agent_y', 'visual')
+    multi*modal*causal*graph.add*edge('goal_x', 'visual')
+    multi*modal*causal*graph.add*edge('goal_y', 'visual')
+    multi*modal*causal*graph.add*edge('agent_x', 'text')
+    multi*modal*causal*graph.add*edge('agent_y', 'text')
+    multi*modal*causal*graph.add*edge('goal_x', 'text')
+    multi*modal*causal*graph.add*edge('goal_y', 'text')
+    multi*modal*causal*graph.add*edge('visual', 'reward')
+    multi*modal*causal*graph.add*edge('text', 'reward')
     
     experiments = {
-        'Standard RL': {'use_causal': False, 'use_multi_modal': False},
-        'Multi-Modal RL': {'use_causal': False, 'use_multi_modal': True},
-        'Causal RL': {'use_causal': True, 'use_multi_modal': False},
-        'Causal Multi-Modal RL': {'use_causal': True, 'use_multi_modal': True}
+        'Standard RL': {'use*causal': False, 'use*multi_modal': False},
+        'Multi-Modal RL': {'use*causal': False, 'use*multi_modal': True},
+        'Causal RL': {'use*causal': True, 'use*multi_modal': False},
+        'Causal Multi-Modal RL': {'use*causal': True, 'use*multi_modal': True}
     }
     
     results = {}
@@ -799,26 +799,26 @@ def run_comprehensive_experiments():
         print(f"\n--- Running {exp_name} ---")
         
         if config['use_causal']:
-            if config['use_multi_modal']:
+            if config['use*multi*modal']:
                 class ExpAgent(MultiModalCausalRLAgent):
                     pass
-                agent = ExpAgent(wrapper, multi_modal_causal_graph)
+                agent = ExpAgent(wrapper, multi*modal*causal_graph)
             else:
                 agent = CausalRLAgent(
-                    state_dim=2, action_dim=4, causal_graph=simple_causal_graph
+                    state*dim=2, action*dim=4, causal*graph=simple*causal_graph
                 )
         else:
-            if config['use_multi_modal']:
+            if config['use*multi*modal']:
                 class ExpAgent(CausalRLAgent):
-                    def __init__(self, wrapper):
+                    def **init**(self, wrapper):
                         self.wrapper = wrapper
-                        super().__init__(wrapper.total_dim, 4, multi_modal_causal_graph)
+                        super().**init**(wrapper.total*dim, 4, multi*modal*causal*graph)
                         
                     def select_action(self, obs, deterministic=False):
                         state = self.wrapper.process_observation(obs)
                         return super().select_action(state, deterministic)
                         
-                    def train_episode(self, env, max_steps=1000):
+                    def train*episode(self, env, max*steps=1000):
                         """Train for one episode with multi-modal observations"""
                         obs, _ = env.reset()
                         episode_reward = 0
@@ -827,14 +827,14 @@ def run_comprehensive_experiments():
                         states, actions, rewards, next_obss, dones = [], [], [], [], []
                         
                         while steps < max_steps:
-                            action, _ = self.select_action(obs)
-                            next_obs, reward, terminated, truncated, _ = env.step(action)
+                            action, * = self.select*action(obs)
+                            next*obs, reward, terminated, truncated, * = env.step(action)
                             done = terminated or truncated
                             
                             states.append(self.wrapper.process_observation(obs))
                             actions.append(action)
                             rewards.append(reward)
-                            next_obss.append(self.wrapper.process_observation(next_obs))
+                            next*obss.append(self.wrapper.process*observation(next_obs))
                             dones.append(done)
                             
                             episode_reward += reward
@@ -847,24 +847,24 @@ def run_comprehensive_experiments():
                         if len(states) > 0:
                             self.update(states, actions, rewards, next_obss, dones)
                         
-                        self.episode_rewards.append(episode_reward)
+                        self.episode*rewards.append(episode*reward)
                         return episode_reward, steps
                 agent = ExpAgent(wrapper)
             else:
-                agent = CausalRLAgent(2, 4, simple_causal_graph)
+                agent = CausalRLAgent(2, 4, simple*causal*graph)
         
         rewards = []
         for episode in range(30):  # Short training for demo
-            if config['use_multi_modal']:
-                reward, _ = agent.train_episode(simple_env)
+            if config['use*multi*modal']:
+                reward, * = agent.train*episode(simple_env)
             else:
-                obs, _ = simple_env.reset()
+                obs, * = simple*env.reset()
                 state = obs['state']  # Extract state from multi-modal observation
                 episode_reward = 0
                 for step in range(10):
-                    action, _ = agent.select_action(state.astype(float))
-                    next_obs, reward, done, _, _ = simple_env.step(action)
-                    next_state = next_obs['state']  # Extract next state
+                    action, * = agent.select*action(state.astype(float))
+                    next*obs, reward, done, *, * = simple*env.step(action)
+                    next*state = next*obs['state']  # Extract next state
                     agent.update([state.astype(float)], [action], [reward], 
                                [next_state.astype(float)], [done])
                     episode_reward += reward
@@ -881,7 +881,7 @@ def run_comprehensive_experiments():
             'config': config
         }
         
-        print(f"{exp_name}: Final Avg Reward = {results[exp_name]['final_avg']:.3f}")
+        print(f"{exp*name}: Final Avg Reward = {results[exp*name]['final_avg']:.3f}")
     
     fig, axes = plt.subplots(1, 2, figsize=(15, 6))
     
@@ -895,16 +895,16 @@ def run_comprehensive_experiments():
     axes[0].grid(True, alpha=0.3)
     
     exp_names = list(results.keys())
-    final_scores = [results[name]['final_avg'] for name in exp_names]
+    final*scores = [results[name]['final*avg'] for name in exp_names]
     
-    bars = axes[1].bar(exp_names, final_scores, color=['blue', 'green', 'red', 'purple'], alpha=0.7)
+    bars = axes[1].bar(exp*names, final*scores, color=['blue', 'green', 'red', 'purple'], alpha=0.7)
     axes[1].set_title('Final Performance Comparison')
     axes[1].set_ylabel('Average Reward (Last 10 Episodes)')
     axes[1].tick_params(axis='x', rotation=45)
     axes[1].grid(True, alpha=0.3)
     
     for bar, score in zip(bars, final_scores):
-        axes[1].text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+        axes[1].text(bar.get*x() + bar.get*width()/2, bar.get_height() + 0.01,
                     f'{score:.3f}', ha='center', va='bottom')
     
     plt.tight_layout()
@@ -913,14 +913,14 @@ def run_comprehensive_experiments():
     print("\n=== Experiment Summary ===")
     for exp_name, result in results.items():
         config = result['config']
-        causal_status = "✓" if config['use_causal'] else "✗"
-        modal_status = "✓" if config['use_multi_modal'] else "✗"
-        print(f"{exp_name:20s}: Causal={causal_status} Multi-Modal={modal_status} "
+        causal*status = "✓" if config['use*causal'] else "✗"
+        modal*status = "✓" if config['use*multi_modal'] else "✗"
+        print(f"{exp*name:20s}: Causal={causal*status} Multi-Modal={modal_status} "
               f"Final Score={result['final_avg']:.3f}")
     
     return results
 
-experiment_results = run_comprehensive_experiments()
+experiment*results = run*comprehensive_experiments()
 
 ```
 
@@ -951,7 +951,7 @@ experiment_results = run_comprehensive_experiments()
 
 
     
-![png](CA8_files/CA8_12_1.png)
+![png](CA8*files/CA8*12_1.png)
     
 
 

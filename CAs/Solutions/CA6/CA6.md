@@ -1,26 +1,26 @@
-# CA6: Policy Gradient Methods - Complete Implementation and Analysis
+# Ca6: Policy Gradient Methods - Complete Implementation and Analysis
 # Table of Contents
 
 - [CA6: Policy Gradient Methods - Complete Implementation and Analysis](#ca6-policy-gradient-methods---complete-implementation-and-analysis)
-  - [Direct Policy Optimization and Actor-Critic Architectures](#direct-policy-optimization-and-actor-critic-architectures)
-    - [Learning Objectives](#learning-objectives)
-    - [Prerequisites](#prerequisites)
-    - [Roadmap](#roadmap)
-  - [Section 1: Theoretical Foundations of Policy Gradient Methods](#section-1-theoretical-foundations-of-policy-gradient-methods)
-    - [The Policy Gradient Theorem](#the-policy-gradient-theorem)
-  - [Section 2: REINFORCE Algorithm Implementation and Analysis](#section-2-reinforce-algorithm-implementation-and-analysis)
-  - [Section 3: Actor-Critic Methods with Baseline](#section-3-actor-critic-methods-with-baseline)
-  - [Section 4: Advanced A2C/A3C Implementation](#section-4-advanced-a2ca3c-implementation)
-  - [Section 5: Variance Reduction Techniques](#section-5-variance-reduction-techniques)
-  - [Section 6: Continuous Action Space Policy Gradients](#section-6-continuous-action-space-policy-gradients)
-  - [Section 7: Performance Analysis and Comparisons](#section-7-performance-analysis-and-comparisons)
-  - [Section 8: Practical Applications and Case Studies](#section-8-practical-applications-and-case-studies)
-  - [Summary and Key Takeaways](#summary-and-key-takeaways)
-    - [Key Insights:](#key-insights)
+- [Direct Policy Optimization and Actor-Critic Architectures](#direct-policy-optimization-and-actor-critic-architectures)
+- [Learning Objectives](#learning-objectives)
+- [Prerequisites](#prerequisites)
+- [Roadmap](#roadmap)
+- [Section 1: Theoretical Foundations of Policy Gradient Methods](#section-1-theoretical-foundations-of-policy-gradient-methods)
+- [The Policy Gradient Theorem](#the-policy-gradient-theorem)
+- [Section 2: REINFORCE Algorithm Implementation and Analysis](#section-2-reinforce-algorithm-implementation-and-analysis)
+- [Section 3: Actor-Critic Methods with Baseline](#section-3-actor-critic-methods-with-baseline)
+- [Section 4: Advanced A2C/A3C Implementation](#section-4-advanced-a2ca3c-implementation)
+- [Section 5: Variance Reduction Techniques](#section-5-variance-reduction-techniques)
+- [Section 6: Continuous Action Space Policy Gradients](#section-6-continuous-action-space-policy-gradients)
+- [Section 7: Performance Analysis and Comparisons](#section-7-performance-analysis-and-comparisons)
+- [Section 8: Practical Applications and Case Studies](#section-8-practical-applications-and-case-studies)
+- [Summary and Key Takeaways](#summary-and-key-takeaways)
+- [Key Insights:](#key-insights)
 
 
 
-## Direct Policy Optimization and Actor-Critic Architectures
+## Direct Policy Optimization and Actor-critic Architectures
 
 Welcome to Computer Assignment 6, where we explore the complete spectrum of policy gradient methods in deep reinforcement learning. This assignment provides a comprehensive implementation of policy-based approaches, from basic REINFORCE to advanced actor-critic methods, with thorough theoretical analysis and practical applications.
 
@@ -97,17 +97,17 @@ print(f"Using device: {device}")
 
 The core idea behind policy gradient methods is to directly optimize the policy $\pi_\theta(a|s)$ by computing gradients with respect to the expected return:
 
-$$\nabla_\theta J(\theta) = \mathbb{E}_{\pi_\theta} [\nabla_\theta \log \pi_\theta(a|s) \cdot Q^{\pi_\theta}(s,a)]$$
+$$\nabla*\theta J(\theta) = \mathbb{E}*{\pi*\theta} [\nabla*\theta \log \pi*\theta(a|s) \cdot Q^{\pi*\theta}(s,a)]$$
 
 This theorem provides the foundation for all policy gradient algorithms we will implement.
 
-## Section 2: REINFORCE Algorithm Implementation and Analysis
+## Section 2: Reinforce Algorithm Implementation and Analysis
 
 
 ```python
-from agents.reinforce import REINFORCEAgent, test_reinforce, demonstrate_reinforce
+from agents.reinforce import REINFORCEAgent, test*reinforce, demonstrate*reinforce
 
-reinforce_agent = demonstrate_reinforce()
+reinforce*agent = demonstrate*reinforce()
 
 ```
 
@@ -142,17 +142,17 @@ reinforce_agent = demonstrate_reinforce()
 
 
     
-![png](CA6_files/CA6_4_1.png)
+![png](CA6*files/CA6*4_1.png)
     
 
 
-## Section 3: Actor-Critic Methods with Baseline
+## Section 3: Actor-critic Methods with Baseline
 
 
 ```python
-from agents.actor_critic import ActorCriticAgent, SharedActorCriticAgent, compare_actor_critic_agents, test_actor_critic, demonstrate_actor_critic
+from agents.actor*critic import ActorCriticAgent, SharedActorCriticAgent, compare*actor*critic*agents, test*actor*critic, demonstrate*actor*critic
 
-ac_results = demonstrate_actor_critic()
+ac*results = demonstrate*actor_critic()
 
 ```
 
@@ -191,17 +191,17 @@ ac_results = demonstrate_actor_critic()
 
 
     
-![png](CA6_files/CA6_6_1.png)
+![png](CA6*files/CA6*6_1.png)
     
 
 
-## Section 4: Advanced A2C/A3C Implementation
+## Section 4: Advanced A2c/a3c Implementation
 
 
 ```python
-from agents.advanced_pg import A2CAgent, PPOAgent, A3CAgent, compare_advanced_pg, test_advanced_pg, demonstrate_advanced_pg
+from agents.advanced*pg import A2CAgent, PPOAgent, A3CAgent, compare*advanced*pg, test*advanced*pg, demonstrate*advanced_pg
 
-adv_results = demonstrate_advanced_pg()
+adv*results = demonstrate*advanced_pg()
 
 ```
 
@@ -217,44 +217,44 @@ adv_results = demonstrate_advanced_pg()
     RuntimeError                              Traceback (most recent call last)
 
     Cell In[10], line 5
-          2 from advanced_pg import A2CAgent, PPOAgent, A3CAgent, compare_advanced_pg, test_advanced_pg, demonstrate_advanced_pg
+          2 from advanced*pg import A2CAgent, PPOAgent, A3CAgent, compare*advanced*pg, test*advanced*pg, demonstrate*advanced_pg
           4 # Run advanced policy gradient demonstration
-    ----> 5 adv_results = demonstrate_advanced_pg()
+    ----> 5 adv*results = demonstrate*advanced_pg()
 
 
-    File ~/Documents/uni/DRL/CAs/Solutions/CA6/advanced_pg.py:831, in demonstrate_advanced_pg()
+    File ~/Documents/uni/DRL/CAs/Solutions/CA6/advanced*pg.py:831, in demonstrate*advanced_pg()
         829 """Demonstrate advanced policy gradient methods"""
         830 print("🚀 Advanced Policy Gradient Methods Demonstration")
-    --> 831 results = test_advanced_pg()
+    --> 831 results = test*advanced*pg()
         832 return results
 
 
-    File ~/Documents/uni/DRL/CAs/Solutions/CA6/advanced_pg.py:824, in test_advanced_pg()
-        822 def test_advanced_pg():
+    File ~/Documents/uni/DRL/CAs/Solutions/CA6/advanced*pg.py:824, in test*advanced_pg()
+        822 def test*advanced*pg():
         823     """Test advanced policy gradient implementations"""
-    --> 824     return compare_advanced_pg()
+    --> 824     return compare*advanced*pg()
 
 
-    File ~/Documents/uni/DRL/CAs/Solutions/CA6/advanced_pg.py:771, in compare_advanced_pg()
+    File ~/Documents/uni/DRL/CAs/Solutions/CA6/advanced*pg.py:771, in compare*advanced_pg()
         768 log_interval = 50
         770 for episode in range(num_episodes):
-    --> 771     episode_reward, actor_loss, critic_loss = agent.train_episode(env)
+    --> 771     episode*reward, actor*loss, critic*loss = agent.train*episode(env)
         773     if (episode + 1) % log_interval == 0:
-        774         avg_reward = np.mean(agent.episode_rewards[-log_interval:])
+        774         avg*reward = np.mean(agent.episode*rewards[-log_interval:])
 
 
-    File ~/Documents/uni/DRL/CAs/Solutions/CA6/advanced_pg.py:200, in A2CAgent.train_episode(self, env)
+    File ~/Documents/uni/DRL/CAs/Solutions/CA6/advanced*pg.py:200, in A2CAgent.train*episode(self, env)
         197         break
         199 # Update networks
-    --> 200 actor_loss, critic_loss = self.update_a2c(
+    --> 200 actor*loss, critic*loss = self.update_a2c(
         201     states, actions, rewards, next_states, dones
         202 )
-        204 self.episode_rewards.append(episode_reward)
-        206 return episode_reward, actor_loss, critic_loss
+        204 self.episode*rewards.append(episode*reward)
+        206 return episode*reward, actor*loss, critic_loss
 
 
-    File ~/Documents/uni/DRL/CAs/Solutions/CA6/advanced_pg.py:131, in A2CAgent.update_a2c(self, states, actions, rewards, next_states, dones)
-        125 next_values = self.critic_net(next_states).squeeze()
+    File ~/Documents/uni/DRL/CAs/Solutions/CA6/advanced*pg.py:131, in A2CAgent.update*a2c(self, states, actions, rewards, next_states, dones)
+        125 next*values = self.critic*net(next_states).squeeze()
         127 # Compute GAE advantages
         128 advantages = torch.FloatTensor(
         129     self.compute_gae(
@@ -275,9 +275,9 @@ adv_results = demonstrate_advanced_pg()
 
 
 ```python
-from agents.variance_reduction import VarianceReductionAgent, ControlVariatesAgent, compare_variance_reduction, test_variance_reduction, demonstrate_variance_reduction
+from agents.variance*reduction import VarianceReductionAgent, ControlVariatesAgent, compare*variance*reduction, test*variance*reduction, demonstrate*variance_reduction
 
-var_results, variances = demonstrate_variance_reduction()
+var*results, variances = demonstrate*variance_reduction()
 
 ```
 
@@ -285,9 +285,9 @@ var_results, variances = demonstrate_variance_reduction()
 
 
 ```python
-from environments.continuous_control import ContinuousREINFORCEAgent, ContinuousActorCriticAgent, PPOContinuousAgent, compare_continuous_control, test_continuous_control, demonstrate_continuous_control
+from environments.continuous*control import ContinuousREINFORCEAgent, ContinuousActorCriticAgent, PPOContinuousAgent, compare*continuous*control, test*continuous*control, demonstrate*continuous_control
 
-cont_results = demonstrate_continuous_control()
+cont*results = demonstrate*continuous_control()
 
 ```
 
@@ -295,9 +295,9 @@ cont_results = demonstrate_continuous_control()
 
 
 ```python
-from utils.performance_analysis import PolicyEvaluator, PerformanceAnalyzer, AblationStudy, RobustnessTester, create_comprehensive_report, visualize_performance_comparison, demonstrate_performance_analysis
+from utils.performance*analysis import PolicyEvaluator, PerformanceAnalyzer, AblationStudy, RobustnessTester, create*comprehensive*report, visualize*performance*comparison, demonstrate*performance_analysis
 
-analysis_report = demonstrate_performance_analysis()
+analysis*report = demonstrate*performance_analysis()
 
 ```
 
@@ -305,9 +305,9 @@ analysis_report = demonstrate_performance_analysis()
 
 
 ```python
-from experiments.applications import CuriosityDrivenAgent, MetaLearningAgent, HierarchicalAgent, SafeRLAgent, demonstrate_advanced_applications
+from experiments.applications import CuriosityDrivenAgent, MetaLearningAgent, HierarchicalAgent, SafeRLAgent, demonstrate*advanced*applications
 
-app_results = demonstrate_advanced_applications()
+app*results = demonstrate*advanced_applications()
 
 ```
 
