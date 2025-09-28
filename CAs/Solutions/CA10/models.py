@@ -16,13 +16,16 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
+# Set random seeds for reproducibility
 np.random.seed(42)
 torch.manual_seed(42)
 random.seed(42)
 
+# Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
+# Plotting configuration
 plt.style.use("default")
 plt.rcParams["figure.figsize"] = (12, 8)
 plt.rcParams["font.size"] = 12
@@ -40,10 +43,13 @@ class TabularModel:
         self.num_states = num_states
         self.num_actions = num_actions
 
+        # Transition counts: N(s,a,s')
         self.transition_counts = np.zeros((num_states, num_actions, num_states))
 
+        # State-action counts: N(s,a)
         self.sa_counts = np.zeros((num_states, num_actions))
 
+        # Reward sums and counts
         self.reward_sums = np.zeros((num_states, num_actions))
         self.reward_counts = np.zeros((num_states, num_actions))
 
@@ -72,6 +78,7 @@ class TabularModel:
 
     def sample_transition(self, state, action):
         """Sample next state and reward from model"""
+        # Sample next state
         if self.sa_counts[state, action] == 0:
             next_state = np.random.randint(self.num_states)
         else:
@@ -80,6 +87,7 @@ class TabularModel:
             )
             next_state = np.random.choice(self.num_states, p=probs)
 
+        # Get expected reward
         reward = self.get_expected_reward(state, action)
 
         return next_state, reward
@@ -112,11 +120,13 @@ class NeuralModel:
     """Neural network environment model"""
 
     def __init__(self, state_dim, action_dim, hidden_dim=256, ensemble_size=1):
+        # super().__init__()
 
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.ensemble_size = ensemble_size
 
+        # Create ensemble of models
         self.models = nn.ModuleList()
 
         for _ in range(ensemble_size):
@@ -133,11 +143,13 @@ class NeuralModel:
 
     def forward(self, state, action, model_idx=None):
         """Forward pass through model(s)"""
+        # Concatenate state and action
         if len(state.shape) == 1:
             state = state.unsqueeze(0)
         if len(action.shape) == 0:
             action = action.unsqueeze(0)
 
+        # Handle discrete actions
         if action.dtype == torch.long:
             action_one_hot = torch.zeros(action.size(0), self.action_dim).to(
                 action.device
@@ -148,11 +160,14 @@ class NeuralModel:
         x = torch.cat([state, action], dim=1)
 
         if model_idx is not None:
+            # Use specific model
             output = self.models[model_idx](x)
         else:
+            # Use ensemble average
             outputs = torch.stack([model(x) for model in self.models])
             output = outputs.mean(dim=0)
 
+        # Split into next state and reward
         next_state = output[:, : self.state_dim]
         reward = output[:, self.state_dim]
 
@@ -169,6 +184,7 @@ class NeuralModel:
 
             outputs = torch.stack(outputs)  # (ensemble_size, batch_size, state_dim + 1)
 
+            # Compute mean and uncertainty
             mean = outputs.mean(dim=0)
             uncertainty = outputs.std(dim=0)
 
@@ -201,6 +217,7 @@ class ModelTrainer:
         """Single training step"""
         self.optimizer.zero_grad()
 
+        # Convert to tensors
         states = torch.FloatTensor(states).to(device)
         actions = (
             torch.LongTensor(actions).to(device)
@@ -212,17 +229,20 @@ class ModelTrainer:
 
         total_loss = 0
 
+        # Train each model in ensemble
         for i in range(self.model.ensemble_size):
             pred_next_states, pred_rewards = self.model.forward(
                 states, actions, model_idx=i
             )
 
+            # Compute loss
             state_loss = F.mse_loss(pred_next_states, next_states)
             reward_loss = F.mse_loss(pred_rewards, rewards)
 
             loss = state_loss + reward_loss
             total_loss += loss
 
+        # Backward pass
         total_loss.backward()
         self.optimizer.step()
 
@@ -237,6 +257,7 @@ class ModelTrainer:
             epoch_loss = 0
             n_batches = 0
 
+            # Shuffle data
             indices = np.random.permutation(n_samples)
 
             for i in range(0, n_samples, batch_size):

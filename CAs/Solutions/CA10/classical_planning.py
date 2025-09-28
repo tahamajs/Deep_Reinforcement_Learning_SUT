@@ -15,9 +15,11 @@ class ModelBasedPlanner:
         self.num_actions = num_actions
         self.gamma = gamma
 
+        # Initialize value function and policy
         self.V = np.zeros(num_states)
         self.policy = np.zeros(num_states, dtype=int)
 
+        # Planning history for analysis
         self.value_history = []
         self.policy_history = []
 
@@ -30,9 +32,11 @@ class ModelBasedPlanner:
             old_V = self.V.copy()
 
             for state in range(self.num_states):
+                # Compute Q-values for all actions
                 q_values = np.zeros(self.num_actions)
 
                 for action in range(self.num_actions):
+                    # Compute expected value using model
                     expected_value = 0
 
                     for next_state in range(self.num_states):
@@ -46,12 +50,15 @@ class ModelBasedPlanner:
 
                     q_values[action] = expected_value
 
+                # Update value and policy
                 self.V[state] = np.max(q_values)
                 self.policy[state] = np.argmax(q_values)
 
+            # Store history
             self.value_history.append(self.V.copy())
             self.policy_history.append(self.policy.copy())
 
+            # Check convergence
             if np.max(np.abs(self.V - old_V)) < tolerance:
                 print(f"Converged after {iteration + 1} iterations")
                 break
@@ -63,15 +70,18 @@ class ModelBasedPlanner:
 
         print(f"Running Policy Iteration (max_iter={max_iterations})")
 
+        # Initialize random policy
         self.policy = np.random.randint(0, self.num_actions, self.num_states)
 
         for iteration in range(max_iterations):
             old_policy = self.policy.copy()
 
+            # Policy Evaluation
             self.V = self.policy_evaluation(
                 self.policy, max_iterations=eval_max_iterations
             )
 
+            # Policy Improvement
             for state in range(self.num_states):
                 q_values = np.zeros(self.num_actions)
 
@@ -91,9 +101,11 @@ class ModelBasedPlanner:
 
                 self.policy[state] = np.argmax(q_values)
 
+            # Store history
             self.value_history.append(self.V.copy())
             self.policy_history.append(self.policy.copy())
 
+            # Check convergence
             if np.array_equal(self.policy, old_policy):
                 print(f"Converged after {iteration + 1} iterations")
                 break
@@ -168,6 +180,7 @@ class UncertaintyAwarePlanner:
 
         print(f"Running Pessimistic Value Iteration (beta={beta})")
         
+        # Set model to eval mode to avoid gradient computation
         self.ensemble_model.eval()
         
         for iteration in range(max_iterations):
@@ -177,22 +190,27 @@ class UncertaintyAwarePlanner:
                 q_values = np.zeros(self.num_actions)
 
                 for action in range(self.num_actions):
+                    # Get predictions from ensemble
                     state_onehot = np.eye(self.num_states)[state : state + 1]
                     action_tensor = np.array([action])
 
+                    # Convert to tensors
                     state_tensor = torch.FloatTensor(state_onehot).to(device)
                     action_tensor = torch.LongTensor(action_tensor).to(device)
 
+                    # Get ensemble predictions
                     next_state_mean, reward_mean, next_state_std, reward_std = (
                         self.ensemble_model.predict_with_uncertainty(
                             state_tensor, action_tensor
                         )
                     )
 
+                    # Use pessimistic estimates
                     pessimistic_reward = (
                         reward_mean.cpu().item() - beta * reward_std.cpu().item()
                     )
 
+                    # For simplicity, assume deterministic next state (can be extended)
                     next_state_pred = next_state_mean.cpu().detach().numpy()[0]
                     next_state_idx = np.argmax(
                         next_state_pred
@@ -219,6 +237,7 @@ class UncertaintyAwarePlanner:
 
         print(f"Running Optimistic Value Iteration (beta={beta})")
 
+        # Set model to eval mode to avoid gradient computation
         self.ensemble_model.eval()
 
         for iteration in range(max_iterations):
@@ -228,22 +247,27 @@ class UncertaintyAwarePlanner:
                 q_values = np.zeros(self.num_actions)
 
                 for action in range(self.num_actions):
+                    # Get predictions from ensemble
                     state_onehot = np.eye(self.num_states)[state : state + 1]
                     action_tensor = np.array([action])
 
+                    # Convert to tensors
                     state_tensor = torch.FloatTensor(state_onehot).to(device)
                     action_tensor = torch.LongTensor(action_tensor).to(device)
 
+                    # Get ensemble predictions
                     next_state_mean, reward_mean, next_state_std, reward_std = (
                         self.ensemble_model.predict_with_uncertainty(
                             state_tensor, action_tensor
                         )
                     )
 
+                    # Use optimistic estimates
                     optimistic_reward = (
                         reward_mean.cpu().item() + beta * reward_std.cpu().item()
                     )
 
+                    # For simplicity, assume deterministic next state
                     next_state_pred = next_state_mean.cpu().detach().numpy()[0]
                     next_state_idx = np.argmax(next_state_pred)
 
@@ -276,8 +300,10 @@ class ModelBasedPolicySearch:
         best_value = -np.inf
 
         for _ in range(num_sequences):
+            # Sample random action sequence
             action_sequence = np.random.randint(0, self.action_dim, horizon)
 
+            # Evaluate sequence using model
             total_reward = 0
             current_state = initial_state
             discount = 1.0
@@ -304,9 +330,11 @@ class ModelBasedPolicySearch:
     ):
         """Cross-entropy method for policy search"""
 
+        # Initialize action probabilities (uniform)
         action_probs = np.ones((horizon, self.action_dim)) / self.action_dim
 
         for iteration in range(num_iterations):
+            # Sample action sequences
             sequences = []
             values = []
 
@@ -316,6 +344,7 @@ class ModelBasedPolicySearch:
                     action = np.random.choice(self.action_dim, p=action_probs[t])
                     sequence.append(action)
 
+                # Evaluate sequence
                 total_reward = 0
                 current_state = initial_state
                 discount = 1.0
@@ -331,22 +360,27 @@ class ModelBasedPolicySearch:
                 sequences.append(sequence)
                 values.append(total_reward)
 
+            # Select elite sequences
             elite_indices = np.argsort(values)[-num_elite:]
             elite_sequences = [sequences[i] for i in elite_indices]
 
+            # Update action probabilities
             action_counts = np.zeros((horizon, self.action_dim))
 
             for sequence in elite_sequences:
                 for t, action in enumerate(sequence):
                     action_counts[t, action] += 1
 
+            # Smooth update
             alpha = 0.7
             new_probs = action_counts / num_elite
             action_probs = alpha * new_probs + (1 - alpha) * action_probs
 
+            # Add small amount of noise for exploration
             action_probs += 0.01 / self.action_dim
             action_probs /= np.sum(action_probs, axis=1, keepdims=True)
 
+        # Return best sequence
         best_sequence = elite_sequences[np.argmax([values[i] for i in elite_indices])]
         best_value = max([values[i] for i in elite_indices])
 
@@ -359,9 +393,11 @@ def demonstrate_classical_planning():
     print("Classical Planning with Learned Models")
     print("=" * 50)
 
+    # Create environment and collect data
     env = SimpleGridWorld(size=4)
     tabular_model = TabularModel(env.num_states, env.num_actions)
 
+    # Collect experience
     n_episodes = 1000
     experience_data = []
 
@@ -374,22 +410,27 @@ def demonstrate_classical_planning():
             action = np.random.randint(env.num_actions)  # Random policy
             next_state, reward, done = env.step(action)
 
+            # Update tabular model
             tabular_model.update(state, action, next_state, reward)
 
+            # Store for neural model
             experience_data.append((state, action, next_state, reward))
 
             state = next_state
 
     print(f"Collected {len(experience_data)} transitions")
 
+    # Prepare data for neural model
     states = np.array([exp[0] for exp in experience_data])
     actions = np.array([exp[1] for exp in experience_data])
     next_states = np.array([exp[2] for exp in experience_data])
     rewards = np.array([exp[3] for exp in experience_data])
 
+    # Convert states to one-hot for neural model
     states_onehot = np.eye(env.num_states)[states]
     next_states_onehot = np.eye(env.num_states)[next_states]
 
+    # Train neural model
     print("\n2. Training neural model...")
     neural_model = NeuralModel(
         env.num_states, env.num_actions, hidden_dim=64, ensemble_size=3
@@ -400,6 +441,7 @@ def demonstrate_classical_planning():
         (states_onehot, actions, next_states_onehot, rewards), epochs=50, batch_size=64
     )
 
+    # Use the tabular model we learned earlier
     planner = ModelBasedPlanner(
         tabular_model, env.num_states, env.num_actions, gamma=0.95
     )
@@ -413,6 +455,7 @@ def demonstrate_classical_planning():
     )
     pi_values, pi_policy = planner_pi.policy_iteration(max_iterations=20)
 
+    # Compare with uncertainty-aware planning
     print("\n5. Uncertainty-Aware Planning:")
     uncertainty_planner = UncertaintyAwarePlanner(
         neural_model, env.num_states, env.num_actions
@@ -424,8 +467,10 @@ def demonstrate_classical_planning():
         beta=0.5
     )
 
+    # Visualization
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
 
+    # Reshape values and policies for visualization
     grid_size = int(np.sqrt(env.num_states))
 
     def plot_value_function(ax, values, title):
@@ -436,6 +481,7 @@ def demonstrate_classical_planning():
 
     def plot_policy(ax, policy, title):
         policy_grid = policy.reshape(grid_size, grid_size)
+        # Map actions to arrows: 0=↑, 1=↓, 2=←, 3=→
         arrow_map = {0: "↑", 1: "↓", 2: "←", 3: "→"}
 
         ax.imshow(np.zeros((grid_size, grid_size)), cmap="gray", alpha=0.3)
@@ -458,10 +504,12 @@ def demonstrate_classical_planning():
         ax.set_xticks([])
         ax.set_yticks([])
 
+    # Plot value functions
     plot_value_function(axes[0, 0], vi_values, "Value Iteration - Values")
     plot_value_function(axes[0, 1], pi_values, "Policy Iteration - Values")
     plot_value_function(axes[0, 2], pessimistic_V, "Pessimistic Planning - Values")
 
+    # Plot policies
     plot_policy(axes[1, 0], vi_policy, "Value Iteration - Policy")
     plot_policy(axes[1, 1], pi_policy, "Policy Iteration - Policy")
     plot_policy(axes[1, 2], pessimistic_policy, "Pessimistic Planning - Policy")
@@ -470,6 +518,7 @@ def demonstrate_classical_planning():
     plt.savefig("visualizations/classical_planning.png", dpi=300, bbox_inches="tight")
     plt.show()
 
+    # Compare planning methods
     print("\n6. Planning Method Comparison:")
     print(
         f"Value Iteration - Max Value: {np.max(vi_values):.3f}, Policy Changes: {len(planner.value_history)}"
@@ -480,11 +529,13 @@ def demonstrate_classical_planning():
     print(f"Pessimistic Planning - Max Value: {np.max(pessimistic_V):.3f}")
     print(f"Optimistic Planning - Max Value: {np.max(optimistic_V):.3f}")
 
+    # Test policy search methods
     print("\n7. Model-Based Policy Search:")
     policy_searcher = ModelBasedPolicySearch(
         tabular_model, env.num_states, env.num_actions
     )
 
+    # Random shooting
     initial_state = 0
     best_sequence_rs, best_value_rs = policy_searcher.random_shooting(
         initial_state, horizon=5, num_sequences=500
@@ -493,6 +544,7 @@ def demonstrate_classical_planning():
         f"Random Shooting - Best Value: {best_value_rs:.3f}, Best Sequence: {best_sequence_rs}"
     )
 
+    # Cross-entropy method
     best_sequence_cem, best_value_cem = policy_searcher.cross_entropy_method(
         initial_state, horizon=5, num_sequences=200, num_elite=20
     )
