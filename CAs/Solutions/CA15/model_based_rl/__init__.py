@@ -9,12 +9,7 @@ from .algorithms import (
     DynamicsModel,
     ModelEnsemble,
     ModelPredictiveController,
-    DynaQAgent
+    DynaQAgent,
 )
 
-__all__ = [
-    'DynamicsModel',
-    'ModelEnsemble',
-    'ModelPredictiveController',
-    'DynaQAgent'
-]
+__all__ = ["DynamicsModel", "ModelEnsemble", "ModelPredictiveController", "DynaQAgent"]

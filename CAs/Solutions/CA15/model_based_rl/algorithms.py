@@ -37,7 +37,7 @@ class DynamicsModel(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, state_dim + 1)  # next_state + reward
+            nn.Linear(hidden_dim, state_dim + 1),  # next_state + reward
         )
 
         # Uncertainty estimation
@@ -45,7 +45,7 @@ class DynamicsModel(nn.Module):
             nn.Linear(state_dim + action_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, state_dim + 1),  # Uncertainty for state + reward
-            nn.Softplus()  # Ensure positive uncertainty
+            nn.Softplus(),  # Ensure positive uncertainty
         )
 
     def forward(self, state, action):
@@ -57,7 +57,9 @@ class DynamicsModel(nn.Module):
 
         # Handle discrete actions
         if action.dtype == torch.long:
-            action_one_hot = torch.zeros(action.size(0), self.action_dim).to(action.device)
+            action_one_hot = torch.zeros(action.size(0), self.action_dim).to(
+                action.device
+            )
             action_one_hot.scatter_(1, action.unsqueeze(1), 1)
             action = action_one_hot
 
@@ -67,25 +69,25 @@ class DynamicsModel(nn.Module):
         prediction = self.transition_net(input_tensor)
         uncertainty = self.uncertainty_net(input_tensor)
 
-        next_state_mean = prediction[:, :self.state_dim]
-        reward_mean = prediction[:, self.state_dim:]
+        next_state_mean = prediction[:, : self.state_dim]
+        reward_mean = prediction[:, self.state_dim :]
 
-        next_state_std = uncertainty[:, :self.state_dim]
-        reward_std = uncertainty[:, self.state_dim:]
+        next_state_std = uncertainty[:, : self.state_dim]
+        reward_std = uncertainty[:, self.state_dim :]
 
         return {
-            'next_state_mean': next_state_mean,
-            'reward_mean': reward_mean,
-            'next_state_std': next_state_std,
-            'reward_std': reward_std
+            "next_state_mean": next_state_mean,
+            "reward_mean": reward_mean,
+            "next_state_std": next_state_std,
+            "reward_std": reward_std,
         }
 
     def sample_prediction(self, state, action):
         """Sample from the predictive distribution."""
         output = self.forward(state, action)
 
-        next_state = torch.normal(output['next_state_mean'], output['next_state_std'])
-        reward = torch.normal(output['reward_mean'], output['reward_std'])
+        next_state = torch.normal(output["next_state_mean"], output["next_state_std"])
+        reward = torch.normal(output["reward_mean"], output["reward_std"])
 
         return next_state.squeeze(), reward.squeeze()
 
@@ -114,17 +116,19 @@ class ModelEnsemble:
             output = model(states, actions)
 
             # Compute losses
-            state_loss = F.mse_loss(output['next_state_mean'], next_states)
-            reward_loss = F.mse_loss(output['reward_mean'], rewards.unsqueeze(-1))
+            state_loss = F.mse_loss(output["next_state_mean"], next_states)
+            reward_loss = F.mse_loss(output["reward_mean"], rewards.unsqueeze(-1))
 
             # Negative log-likelihood loss for uncertainty
             state_nll = 0.5 * torch.sum(
-                ((output['next_state_mean'] - next_states) ** 2) / (output['next_state_std'] ** 2) +
-                torch.log(output['next_state_std'] ** 2)
+                ((output["next_state_mean"] - next_states) ** 2)
+                / (output["next_state_std"] ** 2)
+                + torch.log(output["next_state_std"] ** 2)
             )
             reward_nll = 0.5 * torch.sum(
-                ((output['reward_mean'] - rewards.unsqueeze(-1)) ** 2) / (output['reward_std'] ** 2) +
-                torch.log(output['reward_std'] ** 2)
+                ((output["reward_mean"] - rewards.unsqueeze(-1)) ** 2)
+                / (output["reward_std"] ** 2)
+                + torch.log(output["reward_std"] ** 2)
             )
 
             loss = state_loss + reward_loss + 0.1 * (state_nll + reward_nll)
@@ -171,7 +175,7 @@ class ModelPredictiveController:
         """Plan optimal action using MPC."""
         state = torch.FloatTensor(state).to(device)
         best_action = None
-        best_value = float('-inf')
+        best_value = float("-inf")
 
         # Random shooting for action sequences
         for _ in range(self.num_samples):
@@ -186,15 +190,17 @@ class ModelPredictiveController:
             current_state = state
 
             for t in range(self.horizon):
-                next_state, reward = self.model_ensemble.predict_mean(current_state, actions[t])
+                next_state, reward = self.model_ensemble.predict_mean(
+                    current_state, actions[t]
+                )
 
                 # Goal-based reward if goal is provided
                 if goal_state is not None:
                     goal_state_tensor = torch.FloatTensor(goal_state).to(device)
                     goal_reward = -torch.norm(next_state - goal_state_tensor)
-                    total_reward += goal_reward * (0.99 ** t)
+                    total_reward += goal_reward * (0.99**t)
                 else:
-                    total_reward += reward * (0.99 ** t)
+                    total_reward += reward * (0.99**t)
 
                 current_state = next_state
 
@@ -202,7 +208,11 @@ class ModelPredictiveController:
                 best_value = total_reward
                 best_action = actions[0]
 
-        return best_action.cpu().numpy() if best_action is not None else np.random.randint(self.action_dim)
+        return (
+            best_action.cpu().numpy()
+            if best_action is not None
+            else np.random.randint(self.action_dim)
+        )
 
 
 class DynaQAgent:
@@ -218,7 +228,7 @@ class DynaQAgent:
             nn.ReLU(),
             nn.Linear(256, 256),
             nn.ReLU(),
-            nn.Linear(256, action_dim)
+            nn.Linear(256, action_dim),
         ).to(device)
 
         self.q_optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
@@ -231,9 +241,9 @@ class DynaQAgent:
 
         # Statistics
         self.training_stats = {
-            'q_losses': [],
-            'model_losses': [],
-            'planning_rewards': []
+            "q_losses": [],
+            "model_losses": [],
+            "planning_rewards": [],
         }
 
     def get_action(self, state, epsilon=0.1):
@@ -274,7 +284,7 @@ class DynaQAgent:
         loss.backward()
         self.q_optimizer.step()
 
-        self.training_stats['q_losses'].append(loss.item())
+        self.training_stats["q_losses"].append(loss.item())
         return loss.item()
 
     def update_model(self, batch_size=32):
@@ -291,7 +301,7 @@ class DynaQAgent:
         next_states = torch.FloatTensor(next_states).to(device)
 
         loss = self.model_ensemble.train_step(states, actions, next_states, rewards)
-        self.training_stats['model_losses'].append(loss)
+        self.training_stats["model_losses"].append(loss)
         return loss
 
     def planning_step(self, num_planning_steps=50):
@@ -311,7 +321,9 @@ class DynaQAgent:
             action_tensor = torch.LongTensor([action]).to(device)
 
             # Simulate next state and reward
-            next_state, reward = self.model_ensemble.predict_mean(state_tensor, action_tensor)
+            next_state, reward = self.model_ensemble.predict_mean(
+                state_tensor, action_tensor
+            )
 
             # Update Q-function with simulated experience
             with torch.no_grad():
@@ -327,5 +339,5 @@ class DynaQAgent:
             total_planning_reward += reward.item()
 
         avg_planning_reward = total_planning_reward / num_planning_steps
-        self.training_stats['planning_rewards'].append(avg_planning_reward)
+        self.training_stats["planning_rewards"].append(avg_planning_reward)
         return avg_planning_reward
