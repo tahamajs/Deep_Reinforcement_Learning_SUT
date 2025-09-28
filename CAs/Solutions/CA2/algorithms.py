@@ -286,8 +286,12 @@ def q_learning(env, num_episodes=1000, alpha=0.1, gamma=0.9, epsilon=0.1):
             episode_reward += reward
 
             # Q-learning update
-            best_next_q = max([Q[(next_state, a)] for a in env.get_valid_actions(next_state)] + [0])
-            Q[(state, action)] += alpha * (reward + gamma * best_next_q - Q[(state, action)])
+            best_next_q = max(
+                [Q[(next_state, a)] for a in env.get_valid_actions(next_state)] + [0]
+            )
+            Q[(state, action)] += alpha * (
+                reward + gamma * best_next_q - Q[(state, action)]
+            )
 
             state = next_state
 
