@@ -1,3 +1,29 @@
+# Homework 5: Offline and Advanced Deep Reinforcement Learning
+
+## Overview
+This assignment focuses on offline reinforcement learning and advanced exploration techniques. You will implement and analyze algorithms that learn from fixed datasets without environment interaction, including Conservative Q-Learning (CQL), Advantage-Weighted Actor-Critic (AWAC), and Implicit Q-Learning (IQL). Additionally, you'll explore Random Network Distillation (RND) for intrinsic motivation and curiosity-driven exploration.
+
+## Learning Objectives
+- Master offline RL algorithms that work with static datasets
+- Understand conservative and advantage-weighted policy learning
+- Implement exploration bonuses using intrinsic motivation
+- Analyze the challenges of offline RL (distribution shift, bootstrapping error)
+- Combine exploration and exploitation in single agents
+
+## Key Concepts
+- **Offline RL**: Learning policies from pre-collected datasets without online interaction
+- **Conservative Q-Learning (CQL)**: Regularizing Q-values to prevent overestimation in offline settings
+- **Advantage-Weighted Actor-Critic (AWAC)**: Weighting policy updates by advantage for stable offline learning
+- **Implicit Q-Learning (IQL)**: Learning value functions via expectile regression for offline policy optimization
+- **Random Network Distillation (RND)**: Using prediction error as intrinsic reward for exploration
+- **Intrinsic vs Extrinsic Rewards**: Balancing curiosity-driven and task-driven learning
+
+## Structure
+- `cs285/`: RL codebase (AWAC, CQL, IQL, RND, infrastructure)
+- `results/`: Experiment outputs
+- `README.md`: This file
+- `*.ipynb`: Notebooks for analysis
+
 ## Setup
 
 You can run this code on your own machine or on Google Colab. 
@@ -51,3 +77,27 @@ You may also want to look through [scripts/run_hw5_expl.py](cs285/scripts/run_hw
 See the [assignment PDF](hw5.pdf) for more details on what files to edit.
 
 For this particular assignment, you will need to install networkx==2.5
+
+## Running Experiments
+- Example command:
+  ```bash
+  python cs285/scripts/run_hw5.py --env_name PointmassMedium-v0 --exp_name awac_test
+  ```
+- Results are saved in `results/`.
+
+## Key Files
+- `cs285/agents/`: AWAC, CQL, IQL agents
+- `cs285/critics/`: CQL, IQL critics
+- `cs285/exploration/`: RND exploration model
+- `cs285/policies/`: Policy networks
+- `cs285/infrastructure/`: Utilities and trainers
+
+## Submission
+- Submit code, results, and report as required.
+
+## References
+- Kumar, A., et al. (2020). Conservative Q-Learning for Offline Reinforcement Learning. NeurIPS.
+- Nair, A., et al. (2020). AWAC: Accelerating Online Reinforcement Learning with Offline Datasets. arXiv.
+- Kostrikov, I., et al. (2022). Offline Reinforcement Learning with Implicit Q-Learning. ICLR.
+- Burda, Y., et al. (2019). Exploration by Random Network Distillation. ICLR.
+- OpenAI Gymnasium documentation

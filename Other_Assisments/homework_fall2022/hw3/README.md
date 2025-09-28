@@ -1,17 +1,57 @@
+# Homework 3: Q-Learning and Actor-Critic Methods
+
+## Overview
+This assignment covers value-based and actor-critic reinforcement learning algorithms. You will implement Deep Q-Networks (DQN) for discrete action spaces, explore experience replay and target networks, and develop actor-critic methods for continuous control. The assignment is divided into three parts: Q-learning, actor-critic, and soft actor-critic.
+
+## Learning Objectives
+- Master value-based RL with Q-learning and DQN
+- Understand experience replay and target networks for stable training
+- Implement actor-critic algorithms for continuous action spaces
+- Analyze the differences between on-policy and off-policy methods
+- Explore entropy regularization in SAC
+
+## Key Concepts
+- **Q-Learning**: Off-policy TD learning for optimal Q-function
+- **Deep Q-Networks (DQN)**: Using neural networks for Q-function approximation
+- **Experience Replay**: Storing and sampling past experiences for efficient learning
+- **Target Networks**: Stabilizing training by slowly updating target Q-networks
+- **Actor-Critic**: Combining policy (actor) and value (critic) function learning
+- **Advantage Actor-Critic (A2C)**: Synchronous actor-critic with multiple workers
+- **Soft Actor-Critic (SAC)**: Maximum entropy RL for exploration and stability
+
+## Structure
+- `cs285/`: RL codebase (agents, policies, critics)
+- `results/`: Experiment outputs
+- `README.md`: This file
+- `*.ipynb`: Notebooks for analysis
+
 ## Setup
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. (Optional) Use a virtual environment.
 
-You can run this code on your own machine or on Google Colab. 
+## Running Experiments
+- Example command:
+  ```bash
+  python cs285/scripts/run_hw3.py --env_name LunarLander-v2 --exp_name ac_test
+  ```
+- Results are saved in `results/`.
 
-1. **Local option:** If you choose to run locally, you will need to install MuJoCo and some Python packages; see [installation.md](../hw1/installation.md) from homework 1 for instructions. There are two new package requirements (`opencv-python` and `gym[atari]`) beyond what was used in the previous assignments; make sure to install these with `pip install -r requirements.txt`, `pip install gym[atari]`, and `pip install gym[accept-rom-license]` 
-if you are running the assignment locally.
+## Key Files
+- `cs285/agents/`: DQN, Actor-Critic, SAC agents
+- `cs285/policies/`: Policy networks
+- `cs285/critics/`: Q-networks and value networks
 
-2. **Colab:** The first few sections of the notebook will install all required dependencies. You can try out the Colab option by clicking the badges below:
+## Submission
+- Submit code, results, and report as required.
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berkeleydeeprlcourse/homework_fall2022/blob/main/hw3/cs285/scripts/run_hw3_dqn.ipynb) **Part I (Q-learning)** 
-
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berkeleydeeprlcourse/homework_fall2022/blob/main/hw3/cs285/scripts/run_hw3_actor_critic.ipynb)     **Part II (Actor-critic)**
-
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berkeleydeeprlcourse/homework_fall2022/blob/main/hw3/cs285/scripts/run_hw3_soft_actor_critic.ipynb)     **Part III (Soft Actor-critic)** 
+## References
+- Mnih, V., et al. (2015). Human-level control through deep reinforcement learning. Nature.
+- Schulman, J., et al. (2017). Proximal policy optimization algorithms. arXiv.
+- Haarnoja, T., et al. (2018). Soft actor-critic: Off-policy maximum entropy deep reinforcement learning with a stochastic actor. ICML.
+- OpenAI Gymnasium documentation
 
 ## Complete the code
 
