@@ -8,9 +8,19 @@ network function approximation.
 """
 
 from .environments import EnvironmentWrapper, create_environment, get_environment_info
-from .policies import PolicyNetwork, ValueNetwork, create_policy_network, test_policy_network
+from .policies import (
+    PolicyNetwork,
+    ValueNetwork,
+    create_policy_network,
+    test_policy_network,
+)
 from .algorithms import REINFORCEAgent, ActorCriticAgent, create_agent
-from .visualization import PolicyVisualizer, PolicyGradientMathVisualizer, TrainingVisualizer, plot_learning_curves
+from .visualization import (
+    PolicyVisualizer,
+    PolicyGradientMathVisualizer,
+    TrainingVisualizer,
+    plot_learning_curves,
+)
 from .exploration import ExplorationScheduler, create_exploration_strategy
 from .experiments import PolicyGradientExperiment, run_quick_test
 
@@ -20,32 +30,27 @@ __description__ = "Policy Gradient Methods for Reinforcement Learning"
 
 __all__ = [
     # Environments
-    'EnvironmentWrapper',
-    'create_environment',
-    'get_environment_info',
-
+    "EnvironmentWrapper",
+    "create_environment",
+    "get_environment_info",
     # Policies
-    'PolicyNetwork',
-    'ValueNetwork',
-    'create_policy_network',
-    'test_policy_network',
-
+    "PolicyNetwork",
+    "ValueNetwork",
+    "create_policy_network",
+    "test_policy_network",
     # Algorithms
-    'REINFORCEAgent',
-    'ActorCriticAgent',
-    'create_agent',
-
+    "REINFORCEAgent",
+    "ActorCriticAgent",
+    "create_agent",
     # Visualization
-    'PolicyVisualizer',
-    'PolicyGradientMathVisualizer',
-    'TrainingVisualizer',
-    'plot_learning_curves',
-
+    "PolicyVisualizer",
+    "PolicyGradientMathVisualizer",
+    "TrainingVisualizer",
+    "plot_learning_curves",
     # Exploration
-    'ExplorationScheduler',
-    'create_exploration_strategy',
-
+    "ExplorationScheduler",
+    "create_exploration_strategy",
     # Experiments
-    'PolicyGradientExperiment',
-    'run_quick_test'
+    "PolicyGradientExperiment",
+    "run_quick_test",
 ]

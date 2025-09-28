@@ -34,7 +34,9 @@ class ExplorationStrategy:
 class EpsilonGreedyExploration(ExplorationStrategy):
     """ε-greedy exploration for policy gradients"""
 
-    def __init__(self, epsilon: float = 0.1, decay_rate: float = 0.995, min_epsilon: float = 0.01):
+    def __init__(
+        self, epsilon: float = 0.1, decay_rate: float = 0.995, min_epsilon: float = 0.01
+    ):
         """Initialize ε-greedy exploration
 
         Args:
@@ -76,7 +78,9 @@ class EpsilonGreedyExploration(ExplorationStrategy):
 class BoltzmannExploration(ExplorationStrategy):
     """Boltzmann exploration (temperature-based)"""
 
-    def __init__(self, temperature: float = 1.0, decay_rate: float = 0.995, min_temp: float = 0.1):
+    def __init__(
+        self, temperature: float = 1.0, decay_rate: float = 0.995, min_temp: float = 0.1
+    ):
         """Initialize Boltzmann exploration
 
         Args:
@@ -155,8 +159,13 @@ class EntropyBonusExploration:
 class CuriosityDrivenExploration:
     """Curiosity-driven exploration using prediction error"""
 
-    def __init__(self, state_size: int, hidden_size: int = 64, lr: float = 0.001,
-                 beta: float = 0.2):
+    def __init__(
+        self,
+        state_size: int,
+        hidden_size: int = 64,
+        lr: float = 0.001,
+        beta: float = 0.2,
+    ):
         """Initialize curiosity module
 
         Args:
@@ -172,14 +181,15 @@ class CuriosityDrivenExploration:
         self.forward_model = torch.nn.Sequential(
             torch.nn.Linear(state_size + 1, hidden_size),
             torch.nn.ReLU(),
-            torch.nn.Linear(hidden_size, state_size)
+            torch.nn.Linear(hidden_size, state_size),
         )
 
         self.optimizer = torch.optim.Adam(self.forward_model.parameters(), lr=lr)
         self.criterion = torch.nn.MSELoss()
 
-    def compute_intrinsic_reward(self, state: np.ndarray, action: int,
-                               next_state: np.ndarray) -> float:
+    def compute_intrinsic_reward(
+        self, state: np.ndarray, action: int, next_state: np.ndarray
+    ) -> float:
         """Compute curiosity-driven intrinsic reward
 
         Args:
@@ -253,9 +263,9 @@ class ExplorationScheduler:
         self.episode_rewards.append(episode_reward)
 
         # Store current exploration rate
-        if hasattr(self.strategy, 'epsilon'):
+        if hasattr(self.strategy, "epsilon"):
             self.exploration_rates.append(self.strategy.epsilon)
-        elif hasattr(self.strategy, 'temperature'):
+        elif hasattr(self.strategy, "temperature"):
             self.exploration_rates.append(self.strategy.temperature)
 
         # Adaptive update based on performance
@@ -263,8 +273,10 @@ class ExplorationScheduler:
             recent_avg = np.mean(self.episode_rewards[-10:])
             if recent_avg > np.mean(self.episode_rewards):  # Improving
                 # Reduce exploration more aggressively
-                if hasattr(self.strategy, 'decay_rate'):
-                    self.strategy.decay_rate = min(0.999, self.strategy.decay_rate * 1.01)
+                if hasattr(self.strategy, "decay_rate"):
+                    self.strategy.decay_rate = min(
+                        0.999, self.strategy.decay_rate * 1.01
+                    )
 
         self.strategy.update(episode_done)
 
@@ -275,11 +287,17 @@ class ExplorationScheduler:
             Dictionary with exploration statistics
         """
         return {
-            'strategy': self.strategy_name,
-            'current_rate': self.exploration_rates[-1] if self.exploration_rates else None,
-            'rate_history': self.exploration_rates,
-            'total_episodes': len(self.episode_rewards),
-            'avg_recent_reward': np.mean(self.episode_rewards[-10:]) if len(self.episode_rewards) >= 10 else None
+            "strategy": self.strategy_name,
+            "current_rate": (
+                self.exploration_rates[-1] if self.exploration_rates else None
+            ),
+            "rate_history": self.exploration_rates,
+            "total_episodes": len(self.episode_rewards),
+            "avg_recent_reward": (
+                np.mean(self.episode_rewards[-10:])
+                if len(self.episode_rewards) >= 10
+                else None
+            ),
         }
 
 
@@ -290,8 +308,12 @@ class ExplorationVisualizer:
         """Initialize exploration visualizer"""
         pass
 
-    def plot_exploration_schedule(self, exploration_rates: List[float],
-                                episode_rewards: List[float], title: str = "Exploration Schedule"):
+    def plot_exploration_schedule(
+        self,
+        exploration_rates: List[float],
+        episode_rewards: List[float],
+        title: str = "Exploration Schedule",
+    ):
         """Plot exploration rate over time
 
         Args:
@@ -305,31 +327,43 @@ class ExplorationVisualizer:
 
         episodes = range(len(exploration_rates))
 
-        axes[0].plot(episodes, exploration_rates, color='blue', linewidth=2)
-        axes[0].set_title(f'{title} - Exploration Rate')
-        axes[0].set_xlabel('Episode')
-        axes[0].set_ylabel('Exploration Rate')
+        axes[0].plot(episodes, exploration_rates, color="blue", linewidth=2)
+        axes[0].set_title(f"{title} - Exploration Rate")
+        axes[0].set_xlabel("Episode")
+        axes[0].set_ylabel("Exploration Rate")
         axes[0].grid(True, alpha=0.3)
 
         window = 20
         if len(episode_rewards) >= window:
-            moving_avg = [np.mean(episode_rewards[i-window:i])
-                         for i in range(window, len(episode_rewards))]
-            axes[1].plot(range(window, len(episode_rewards)), moving_avg,
-                        color='red', linewidth=2, label=f'{window}-Episode Average')
+            moving_avg = [
+                np.mean(episode_rewards[i - window : i])
+                for i in range(window, len(episode_rewards))
+            ]
+            axes[1].plot(
+                range(window, len(episode_rewards)),
+                moving_avg,
+                color="red",
+                linewidth=2,
+                label=f"{window}-Episode Average",
+            )
 
-        axes[1].plot(episode_rewards, alpha=0.6, color='orange', label='Episode Rewards')
-        axes[1].set_title('Learning Progress')
-        axes[1].set_xlabel('Episode')
-        axes[1].set_ylabel('Episode Reward')
+        axes[1].plot(
+            episode_rewards, alpha=0.6, color="orange", label="Episode Rewards"
+        )
+        axes[1].set_title("Learning Progress")
+        axes[1].set_xlabel("Episode")
+        axes[1].set_ylabel("Episode Reward")
         axes[1].legend()
         axes[1].grid(True, alpha=0.3)
 
         plt.tight_layout()
         plt.show()
 
-    def compare_exploration_strategies(self, strategies_results: Dict[str, Dict],
-                                     title: str = "Exploration Strategies Comparison"):
+    def compare_exploration_strategies(
+        self,
+        strategies_results: Dict[str, Dict],
+        title: str = "Exploration Strategies Comparison",
+    ):
         """Compare different exploration strategies
 
         Args:
@@ -341,59 +375,74 @@ class ExplorationVisualizer:
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
         for strategy_name, results in strategies_results.items():
-            rates = results.get('exploration_rates', [])
-            rewards = results.get('episode_rewards', [])
+            rates = results.get("exploration_rates", [])
+            rewards = results.get("episode_rewards", [])
 
             if rates:
-                axes[0,0].plot(rates, label=strategy_name, alpha=0.7)
+                axes[0, 0].plot(rates, label=strategy_name, alpha=0.7)
 
             if rewards:
-                axes[0,1].plot(rewards, label=strategy_name, alpha=0.7)
+                axes[0, 1].plot(rewards, label=strategy_name, alpha=0.7)
 
                 # Performance distribution
-                axes[1,0].boxplot([rewards], positions=[list(strategies_results.keys()).index(strategy_name)],
-                                labels=[strategy_name])
+                axes[1, 0].boxplot(
+                    [rewards],
+                    positions=[list(strategies_results.keys()).index(strategy_name)],
+                    labels=[strategy_name],
+                )
 
-        axes[0,0].set_title('Exploration Rate Decay')
-        axes[0,0].set_xlabel('Episode')
-        axes[0,0].set_ylabel('Exploration Rate')
-        axes[0,0].legend()
-        axes[0,0].grid(True, alpha=0.3)
+        axes[0, 0].set_title("Exploration Rate Decay")
+        axes[0, 0].set_xlabel("Episode")
+        axes[0, 0].set_ylabel("Exploration Rate")
+        axes[0, 0].legend()
+        axes[0, 0].grid(True, alpha=0.3)
 
-        axes[0,1].set_title('Learning Curves')
-        axes[0,1].set_xlabel('Episode')
-        axes[0,1].set_ylabel('Episode Reward')
-        axes[0,1].legend()
-        axes[0,1].grid(True, alpha=0.3)
+        axes[0, 1].set_title("Learning Curves")
+        axes[0, 1].set_xlabel("Episode")
+        axes[0, 1].set_ylabel("Episode Reward")
+        axes[0, 1].legend()
+        axes[0, 1].grid(True, alpha=0.3)
 
-        axes[1,0].set_title('Performance Distribution')
-        axes[1,0].set_ylabel('Episode Reward')
-        axes[1,0].grid(True, alpha=0.3)
+        axes[1, 0].set_title("Performance Distribution")
+        axes[1, 0].set_ylabel("Episode Reward")
+        axes[1, 0].grid(True, alpha=0.3)
 
         # Sample efficiency comparison
         sample_efficiency = {}
         for strategy_name, results in strategies_results.items():
-            rewards = results.get('episode_rewards', [])
+            rewards = results.get("episode_rewards", [])
             if rewards:
                 # Episodes to reach 80% of max performance
                 max_reward = np.max(rewards)
                 threshold = 0.8 * max_reward
-                episodes_to_threshold = next((i for i, r in enumerate(rewards) if r >= threshold), len(rewards))
+                episodes_to_threshold = next(
+                    (i for i, r in enumerate(rewards) if r >= threshold), len(rewards)
+                )
                 sample_efficiency[strategy_name] = episodes_to_threshold
 
         if sample_efficiency:
             strategies = list(sample_efficiency.keys())
             episodes = list(sample_efficiency.values())
 
-            bars = axes[1,1].bar(strategies, episodes, alpha=0.7, color=['skyblue', 'lightcoral', 'lightgreen'])
-            axes[1,1].set_title('Sample Efficiency (Episodes to 80% Performance)')
-            axes[1,1].set_ylabel('Episodes')
-            axes[1,1].grid(True, alpha=0.3)
+            bars = axes[1, 1].bar(
+                strategies,
+                episodes,
+                alpha=0.7,
+                color=["skyblue", "lightcoral", "lightgreen"],
+            )
+            axes[1, 1].set_title("Sample Efficiency (Episodes to 80% Performance)")
+            axes[1, 1].set_ylabel("Episodes")
+            axes[1, 1].grid(True, alpha=0.3)
 
             for bar, episodes in zip(bars, episodes):
                 height = bar.get_height()
-                axes[1,1].text(bar.get_x() + bar.get_width()/2., height,
-                              f'{int(episodes)}', ha='center', va='bottom')
+                axes[1, 1].text(
+                    bar.get_x() + bar.get_width() / 2.0,
+                    height,
+                    f"{int(episodes)}",
+                    ha="center",
+                    va="bottom",
+                )
 
         plt.tight_layout()
         plt.show()
@@ -417,7 +466,9 @@ def create_exploration_strategy(strategy_name: str, **kwargs) -> ExplorationStra
         raise ValueError(f"Unknown exploration strategy: {strategy_name}")
 
 
-def test_exploration_strategy(strategy: ExplorationStrategy, n_tests: int = 1000) -> Dict[str, Any]:
+def test_exploration_strategy(
+    strategy: ExplorationStrategy, n_tests: int = 1000
+) -> Dict[str, Any]:
     """Test exploration strategy behavior
 
     Args:
@@ -439,8 +490,10 @@ def test_exploration_strategy(strategy: ExplorationStrategy, n_tests: int = 1000
     empirical_probs = action_counts / n_tests
 
     return {
-        'action_counts': action_counts,
-        'empirical_probabilities': empirical_probs,
-        'theoretical_probabilities': action_probs,
-        'exploration_rate': 1.0 - empirical_probs[0] / action_probs[0] if action_probs[0] > 0 else 0
+        "action_counts": action_counts,
+        "empirical_probabilities": empirical_probs,
+        "theoretical_probabilities": action_probs,
+        "exploration_rate": (
+            1.0 - empirical_probs[0] / action_probs[0] if action_probs[0] > 0 else 0
+        ),
     }

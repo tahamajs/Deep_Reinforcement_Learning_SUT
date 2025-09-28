@@ -147,7 +147,7 @@ class SharedFeatureNetwork(nn.Module):
             nn.BatchNorm1d(hidden_size),
             nn.Dropout(0.1),
             nn.Linear(hidden_size, feature_size),
-            nn.ReLU()
+            nn.ReLU(),
         )
 
     def forward(self, state: torch.Tensor) -> torch.Tensor:
@@ -165,7 +165,13 @@ class SharedFeatureNetwork(nn.Module):
 class AdvancedActorCritic(nn.Module):
     """Advanced Actor-Critic with shared features"""
 
-    def __init__(self, state_size: int, action_size: int, hidden_size: int = 128, feature_size: int = 64):
+    def __init__(
+        self,
+        state_size: int,
+        action_size: int,
+        hidden_size: int = 128,
+        feature_size: int = 64,
+    ):
         """Initialize advanced actor-critic network
 
         Args:
@@ -176,19 +182,21 @@ class AdvancedActorCritic(nn.Module):
         """
         super(AdvancedActorCritic, self).__init__()
 
-        self.shared_features = SharedFeatureNetwork(state_size, hidden_size, feature_size)
+        self.shared_features = SharedFeatureNetwork(
+            state_size, hidden_size, feature_size
+        )
 
         self.actor_head = nn.Sequential(
             nn.Linear(feature_size, hidden_size // 2),
             nn.ReLU(),
             nn.Linear(hidden_size // 2, action_size),
-            nn.Softmax(dim=-1)
+            nn.Softmax(dim=-1),
         )
 
         self.critic_head = nn.Sequential(
             nn.Linear(feature_size, hidden_size // 2),
             nn.ReLU(),
-            nn.Linear(hidden_size // 2, 1)
+            nn.Linear(hidden_size // 2, 1),
         )
 
     def forward(self, state: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -205,7 +213,9 @@ class AdvancedActorCritic(nn.Module):
         value = self.critic_head(features)
         return action_probs, value.squeeze()
 
-    def get_action_and_value(self, state: torch.Tensor) -> Tuple[int, torch.Tensor, torch.Tensor]:
+    def get_action_and_value(
+        self, state: torch.Tensor
+    ) -> Tuple[int, torch.Tensor, torch.Tensor]:
         """Get action and value from state
 
         Args:
@@ -275,7 +285,9 @@ class ContinuousPolicyNetwork(nn.Module):
 
         return action.detach().numpy(), log_prob
 
-    def evaluate_action(self, state: torch.Tensor, action: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def evaluate_action(
+        self, state: torch.Tensor, action: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Evaluate action under current policy
 
         Args:
@@ -322,7 +334,9 @@ class ContinuousActorCriticAgent(nn.Module):
         """
         return self.policy_net.sample_action(state)
 
-    def evaluate_action(self, state: torch.Tensor, action: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def evaluate_action(
+        self, state: torch.Tensor, action: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Evaluate action under current policy and get value
 
         Args:
@@ -337,8 +351,13 @@ class ContinuousActorCriticAgent(nn.Module):
         return log_prob, entropy, value
 
 
-def create_policy_network(state_size: int, action_size: int, continuous: bool = False,
-                         shared_features: bool = False, **kwargs) -> nn.Module:
+def create_policy_network(
+    state_size: int,
+    action_size: int,
+    continuous: bool = False,
+    shared_features: bool = False,
+    **kwargs
+) -> nn.Module:
     """Factory function to create policy network
 
     Args:
@@ -379,43 +398,40 @@ def test_policy_network(network: nn.Module, state_size: int, continuous: bool = 
 
     try:
         if continuous:
-            if hasattr(network, 'get_action'):
+            if hasattr(network, "get_action"):
                 action, log_prob = network.get_action(state)
                 return {
-                    'success': True,
-                    'action_shape': action.shape,
-                    'log_prob_shape': log_prob.shape,
-                    'action_sample': action
+                    "success": True,
+                    "action_shape": action.shape,
+                    "log_prob_shape": log_prob.shape,
+                    "action_sample": action,
                 }
             else:
                 mu, log_std = network(state)
                 return {
-                    'success': True,
-                    'mu_shape': mu.shape,
-                    'log_std_shape': log_std.shape,
-                    'mu_sample': mu.detach().numpy(),
-                    'std_sample': torch.exp(log_std).detach().numpy()
+                    "success": True,
+                    "mu_shape": mu.shape,
+                    "log_std_shape": log_std.shape,
+                    "mu_sample": mu.detach().numpy(),
+                    "std_sample": torch.exp(log_std).detach().numpy(),
                 }
         else:
-            if hasattr(network, 'get_action_and_value'):
+            if hasattr(network, "get_action_and_value"):
                 action, log_prob, value = network.get_action_and_value(state)
                 return {
-                    'success': True,
-                    'action': action,
-                    'log_prob_shape': log_prob.shape,
-                    'value_shape': value.shape
+                    "success": True,
+                    "action": action,
+                    "log_prob_shape": log_prob.shape,
+                    "value_shape": value.shape,
                 }
             else:
                 probs = network.get_action_probs(state)
                 action, log_prob = network.sample_action(state)
                 return {
-                    'success': True,
-                    'action_probs_shape': probs.shape,
-                    'sampled_action': action,
-                    'log_prob_shape': log_prob.shape
+                    "success": True,
+                    "action_probs_shape": probs.shape,
+                    "sampled_action": action,
+                    "log_prob_shape": log_prob.shape,
                 }
     except Exception as e:
-        return {
-            'success': False,
-            'error': str(e)
-        }
+        return {"success": False, "error": str(e)}

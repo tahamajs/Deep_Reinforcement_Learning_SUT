@@ -41,9 +41,14 @@ class PolicyGradientExperiment:
         self.results = {}
         self.experiment_log = []
 
-    def run_reinforce_experiment(self, num_episodes: int = 500, lr: float = 0.001,
-                               gamma: float = 0.99, baseline: bool = True,
-                               **kwargs) -> Dict[str, Any]:
+    def run_reinforce_experiment(
+        self,
+        num_episodes: int = 500,
+        lr: float = 0.001,
+        gamma: float = 0.99,
+        baseline: bool = True,
+        **kwargs,
+    ) -> Dict[str, Any]:
         """Run REINFORCE experiment
 
         Args:
@@ -65,25 +70,30 @@ class PolicyGradientExperiment:
             action_size=self.action_size,
             lr=lr,
             gamma=gamma,
-            baseline=baseline
+            baseline=baseline,
         )
 
         start_time = time.time()
         results = agent.train(self.env.env, num_episodes, print_every=50)
         training_time = time.time() - start_time
 
-        results['training_time'] = training_time
-        results['baseline_used'] = baseline
-        results['learning_rate'] = lr
+        results["training_time"] = training_time
+        results["baseline_used"] = baseline
+        results["learning_rate"] = lr
 
-        self.results['reinforce'] = results
-        self._log_experiment('reinforce', results)
+        self.results["reinforce"] = results
+        self._log_experiment("reinforce", results)
 
         return results
 
-    def run_actor_critic_experiment(self, num_episodes: int = 500,
-                                  lr_actor: float = 0.001, lr_critic: float = 0.005,
-                                  gamma: float = 0.99, **kwargs) -> Dict[str, Any]:
+    def run_actor_critic_experiment(
+        self,
+        num_episodes: int = 500,
+        lr_actor: float = 0.001,
+        lr_critic: float = 0.005,
+        gamma: float = 0.99,
+        **kwargs,
+    ) -> Dict[str, Any]:
         """Run Actor-Critic experiment
 
         Args:
@@ -105,24 +115,28 @@ class PolicyGradientExperiment:
             action_size=self.action_size,
             lr_actor=lr_actor,
             lr_critic=lr_critic,
-            gamma=gamma
+            gamma=gamma,
         )
 
         start_time = time.time()
         results = agent.train(self.env.env, num_episodes, print_every=50)
         training_time = time.time() - start_time
 
-        results['training_time'] = training_time
-        results['actor_lr'] = lr_actor
-        results['critic_lr'] = lr_critic
+        results["training_time"] = training_time
+        results["actor_lr"] = lr_actor
+        results["critic_lr"] = lr_critic
 
-        self.results['actor_critic'] = results
-        self._log_experiment('actor_critic', results)
+        self.results["actor_critic"] = results
+        self._log_experiment("actor_critic", results)
 
         return results
 
-    def run_comparison_experiment(self, algorithms: List[str] = ['reinforce', 'actor_critic'],
-                                num_episodes: int = 300, **kwargs) -> Dict[str, Dict]:
+    def run_comparison_experiment(
+        self,
+        algorithms: List[str] = ["reinforce", "actor_critic"],
+        num_episodes: int = 300,
+        **kwargs,
+    ) -> Dict[str, Dict]:
         """Run comparison between algorithms
 
         Args:
@@ -139,8 +153,12 @@ class PolicyGradientExperiment:
         print("=" * 60)
 
         results = compare_algorithms(
-            self.env.env, algorithms, self.state_size, self.action_size,
-            num_episodes, **kwargs
+            self.env.env,
+            algorithms,
+            self.state_size,
+            self.action_size,
+            num_episodes,
+            **kwargs,
         )
 
         self.results.update(results)
@@ -149,9 +167,13 @@ class PolicyGradientExperiment:
 
         return results
 
-    def run_exploration_experiment(self, base_algorithm: str = 'reinforce',
-                                 exploration_strategies: List[str] = ['boltzmann', 'epsilon_greedy'],
-                                 num_episodes: int = 300, **kwargs) -> Dict[str, Dict]:
+    def run_exploration_experiment(
+        self,
+        base_algorithm: str = "reinforce",
+        exploration_strategies: List[str] = ["boltzmann", "epsilon_greedy"],
+        num_episodes: int = 300,
+        **kwargs,
+    ) -> Dict[str, Dict]:
         """Run exploration strategy comparison
 
         Args:
@@ -176,7 +198,7 @@ class PolicyGradientExperiment:
             exploration_scheduler = ExplorationScheduler(strategy, **kwargs)
 
             # Create agent with exploration
-            if base_algorithm == 'reinforce':
+            if base_algorithm == "reinforce":
                 agent = REINFORCEAgent(self.state_size, self.action_size, **kwargs)
             else:
                 agent = ActorCriticAgent(self.state_size, self.action_size, **kwargs)
@@ -197,15 +219,25 @@ class PolicyGradientExperiment:
 
                 while not (done or truncated):
                     # Get action probabilities from agent
-                    if hasattr(agent, 'policy_net'):
-                        action_probs = agent.policy_net.get_action_probs(
-                            torch.FloatTensor(state).unsqueeze(0)
-                        ).detach().numpy().flatten()
+                    if hasattr(agent, "policy_net"):
+                        action_probs = (
+                            agent.policy_net.get_action_probs(
+                                torch.FloatTensor(state).unsqueeze(0)
+                            )
+                            .detach()
+                            .numpy()
+                            .flatten()
+                        )
                     else:
                         # For actor-critic, get from actor
-                        action_probs = agent.actor.get_action_probs(
-                            torch.FloatTensor(state).unsqueeze(0)
-                        ).detach().numpy().flatten()
+                        action_probs = (
+                            agent.actor.get_action_probs(
+                                torch.FloatTensor(state).unsqueeze(0)
+                            )
+                            .detach()
+                            .numpy()
+                            .flatten()
+                        )
 
                     # Select action using exploration strategy
                     action = exploration_scheduler.select_action(action_probs)
@@ -214,7 +246,7 @@ class PolicyGradientExperiment:
                     next_state, reward, done, truncated, _ = self.env.step(action)
 
                     # Store transition and update agent
-                    if base_algorithm == 'reinforce':
+                    if base_algorithm == "reinforce":
                         log_prob = agent.policy_net.get_log_prob(
                             torch.FloatTensor(state).unsqueeze(0), action
                         )
@@ -222,7 +254,15 @@ class PolicyGradientExperiment:
                     else:
                         # Actor-critic update
                         _, log_prob, value = agent.get_action_and_value(state)
-                        agent.update(state, action, reward, next_state, done or truncated, log_prob, value)
+                        agent.update(
+                            state,
+                            action,
+                            reward,
+                            next_state,
+                            done or truncated,
+                            log_prob,
+                            value,
+                        )
 
                     state = next_state
                     episode_reward += reward
@@ -231,25 +271,34 @@ class PolicyGradientExperiment:
                 exploration_scheduler.update_exploration(episode_reward)
 
                 scores.append(episode_reward)
-                exploration_rates.append(exploration_scheduler.get_exploration_stats()['current_rate'])
+                exploration_rates.append(
+                    exploration_scheduler.get_exploration_stats()["current_rate"]
+                )
 
                 if (episode + 1) % 50 == 0:
                     avg_score = np.mean(scores[-50:])
                     current_rate = exploration_rates[-1]
-                    print(f"Episode {episode + 1:4d} | Avg Score: {avg_score:7.2f} | Exploration: {current_rate:.3f}")
+                    print(
+                        f"Episode {episode + 1:4d} | Avg Score: {avg_score:7.2f} | Exploration: {current_rate:.3f}"
+                    )
 
             results[strategy] = {
-                'scores': scores,
-                'exploration_rates': exploration_rates,
-                'episode_rewards': scores
+                "scores": scores,
+                "exploration_rates": exploration_rates,
+                "episode_rewards": scores,
             }
 
-        self.results['exploration_experiment'] = results
+        self.results["exploration_experiment"] = results
         return results
 
-    def run_hyperparameter_sweep(self, algorithm: str = 'reinforce',
-                               param_name: str = 'lr', param_values: List[float] = [0.001, 0.01, 0.1],
-                               num_episodes: int = 200, **kwargs) -> Dict[str, Dict]:
+    def run_hyperparameter_sweep(
+        self,
+        algorithm: str = "reinforce",
+        param_name: str = "lr",
+        param_values: List[float] = [0.001, 0.01, 0.1],
+        num_episodes: int = 200,
+        **kwargs,
+    ) -> Dict[str, Dict]:
         """Run hyperparameter sweep
 
         Args:
@@ -275,18 +324,22 @@ class PolicyGradientExperiment:
             params = kwargs.copy()
             params[param_name] = value
 
-            if algorithm == 'reinforce':
+            if algorithm == "reinforce":
                 agent = REINFORCEAgent(self.state_size, self.action_size, **params)
-                training_results = agent.train(self.env.env, num_episodes, print_every=50)
-            elif algorithm == 'actor_critic':
+                training_results = agent.train(
+                    self.env.env, num_episodes, print_every=50
+                )
+            elif algorithm == "actor_critic":
                 agent = ActorCriticAgent(self.state_size, self.action_size, **params)
-                training_results = agent.train(self.env.env, num_episodes, print_every=50)
+                training_results = agent.train(
+                    self.env.env, num_episodes, print_every=50
+                )
             else:
                 raise ValueError(f"Unknown algorithm: {algorithm}")
 
             results[f"{param_name}_{value}"] = training_results
 
-        self.results['hyperparameter_sweep'] = results
+        self.results["hyperparameter_sweep"] = results
         return results
 
     def _log_experiment(self, experiment_name: str, results: Dict[str, Any]):
@@ -297,13 +350,20 @@ class PolicyGradientExperiment:
             results: Experiment results
         """
         log_entry = {
-            'experiment': experiment_name,
-            'timestamp': time.time(),
-            'environment': self.env_name,
-            'final_score': np.mean(results.get('scores', [])[-50:]) if results.get('scores') else None,
-            'training_time': results.get('training_time', 0),
-            'parameters': {k: v for k, v in results.items()
-                          if not isinstance(v, (list, np.ndarray)) and k != 'scores'}
+            "experiment": experiment_name,
+            "timestamp": time.time(),
+            "environment": self.env_name,
+            "final_score": (
+                np.mean(results.get("scores", [])[-50:])
+                if results.get("scores")
+                else None
+            ),
+            "training_time": results.get("training_time", 0),
+            "parameters": {
+                k: v
+                for k, v in results.items()
+                if not isinstance(v, (list, np.ndarray)) and k != "scores"
+            },
         }
 
         self.experiment_log.append(log_entry)
@@ -315,25 +375,29 @@ class PolicyGradientExperiment:
             Summary of all experiments
         """
         summary = {
-            'environment': self.env_name,
-            'total_experiments': len(self.experiment_log),
-            'experiments': self.experiment_log
+            "environment": self.env_name,
+            "total_experiments": len(self.experiment_log),
+            "experiments": self.experiment_log,
         }
 
         if self.results:
             # Find best performing experiment
-            best_score = -float('inf')
+            best_score = -float("inf")
             best_experiment = None
 
             for exp_name, results in self.results.items():
-                if isinstance(results, dict) and 'scores' in results:
-                    final_score = np.mean(results['scores'][-50:]) if len(results['scores']) >= 50 else np.mean(results['scores'])
+                if isinstance(results, dict) and "scores" in results:
+                    final_score = (
+                        np.mean(results["scores"][-50:])
+                        if len(results["scores"]) >= 50
+                        else np.mean(results["scores"])
+                    )
                     if final_score > best_score:
                         best_score = final_score
                         best_experiment = exp_name
 
-            summary['best_experiment'] = best_experiment
-            summary['best_score'] = best_score
+            summary["best_experiment"] = best_experiment
+            summary["best_score"] = best_score
 
         return summary
 
@@ -347,24 +411,29 @@ class PolicyGradientExperiment:
 
         if experiment_name and experiment_name in self.results:
             results = self.results[experiment_name]
-            if 'scores' in results:
-                visualizer.plot_learning_curves(results['scores'],
-                                              title=f"{experiment_name.upper()} Learning Curve")
+            if "scores" in results:
+                visualizer.plot_learning_curves(
+                    results["scores"], title=f"{experiment_name.upper()} Learning Curve"
+                )
 
-            if 'policy_losses' in results and 'value_losses' in results:
-                visualizer.plot_losses(results['policy_losses'], results['value_losses'],
-                                     title=f"{experiment_name.upper()} Training Losses")
+            if "policy_losses" in results and "value_losses" in results:
+                visualizer.plot_losses(
+                    results["policy_losses"],
+                    results["value_losses"],
+                    title=f"{experiment_name.upper()} Training Losses",
+                )
 
         elif len(self.results) > 1:
             # Compare multiple experiments
             comparison_data = {}
             for exp_name, results in self.results.items():
-                if isinstance(results, dict) and 'scores' in results:
-                    comparison_data[exp_name] = results['scores']
+                if isinstance(results, dict) and "scores" in results:
+                    comparison_data[exp_name] = results["scores"]
 
             if comparison_data:
-                visualizer.plot_multiple_curves(comparison_data,
-                                              title="Algorithm Comparison")
+                visualizer.plot_multiple_curves(
+                    comparison_data, title="Algorithm Comparison"
+                )
 
         else:
             print("No results to visualize")
@@ -376,13 +445,13 @@ class BenchmarkSuite:
     def __init__(self):
         """Initialize benchmark suite"""
         self.environments = [
-            'CartPole-v1',
-            'Acrobot-v1',
-            'MountainCar-v0',
-            'Pendulum-v1'
+            "CartPole-v1",
+            "Acrobot-v1",
+            "MountainCar-v0",
+            "Pendulum-v1",
         ]
 
-        self.algorithms = ['reinforce', 'actor_critic']
+        self.algorithms = ["reinforce", "actor_critic"]
         self.results = {}
 
     def run_benchmark(self, episodes_per_env: int = 200) -> Dict[str, Any]:
@@ -407,16 +476,18 @@ class BenchmarkSuite:
                 for algorithm in self.algorithms:
                     print(f"  Running {algorithm}...")
 
-                    if algorithm == 'reinforce':
+                    if algorithm == "reinforce":
                         results = experiment.run_reinforce_experiment(episodes_per_env)
-                    elif algorithm == 'actor_critic':
-                        results = experiment.run_actor_critic_experiment(episodes_per_env)
+                    elif algorithm == "actor_critic":
+                        results = experiment.run_actor_critic_experiment(
+                            episodes_per_env
+                        )
 
                     self.results[env_name][algorithm] = results
 
             except Exception as e:
                 print(f"  Error benchmarking {env_name}: {e}")
-                self.results[env_name] = {'error': str(e)}
+                self.results[env_name] = {"error": str(e)}
 
         return self.results
 
@@ -433,16 +504,18 @@ class BenchmarkSuite:
             report += f"Environment: {env_name}\\n"
             report += "-" * 30 + "\\n"
 
-            if 'error' in env_results:
+            if "error" in env_results:
                 report += f"Error: {env_results['error']}\\n\\n"
                 continue
 
             for alg_name, results in env_results.items():
-                if isinstance(results, dict) and 'scores' in results:
-                    scores = results['scores']
-                    final_avg = np.mean(scores[-50:]) if len(scores) >= 50 else np.mean(scores)
+                if isinstance(results, dict) and "scores" in results:
+                    scores = results["scores"]
+                    final_avg = (
+                        np.mean(scores[-50:]) if len(scores) >= 50 else np.mean(scores)
+                    )
                     best_score = np.max(scores)
-                    training_time = results.get('training_time', 0)
+                    training_time = results.get("training_time", 0)
 
                     report += f"{alg_name.upper()}:\\n"
                     report += f"  Final Average: {final_avg:.2f}\\n"
@@ -454,8 +527,9 @@ class BenchmarkSuite:
         return report
 
 
-def run_quick_test(env_name: str = "CartPole-v1", algorithm: str = "reinforce",
-                  episodes: int = 50) -> Dict[str, Any]:
+def run_quick_test(
+    env_name: str = "CartPole-v1", algorithm: str = "reinforce", episodes: int = 50
+) -> Dict[str, Any]:
     """Run quick test of algorithm
 
     Args:
@@ -477,7 +551,7 @@ def run_quick_test(env_name: str = "CartPole-v1", algorithm: str = "reinforce",
     else:
         raise ValueError(f"Unknown algorithm: {algorithm}")
 
-    scores = results.get('scores', [])
+    scores = results.get("scores", [])
     if scores:
         print(f"Final Average Score: {np.mean(scores[-10:]):.2f}")
         print(f"Best Score: {np.max(scores):.2f}")

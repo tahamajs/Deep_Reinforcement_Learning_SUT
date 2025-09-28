@@ -13,16 +13,32 @@ from typing import List, Tuple, Optional, Dict, Any
 
 # Import from local modules
 try:
-    from .policies import PolicyNetwork, ValueNetwork, AdvancedActorCritic, ContinuousActorCriticAgent
+    from .policies import (
+        PolicyNetwork,
+        ValueNetwork,
+        AdvancedActorCritic,
+        ContinuousActorCriticAgent,
+    )
 except ImportError:
-    from policies import PolicyNetwork, ValueNetwork, AdvancedActorCritic, ContinuousActorCriticAgent
+    from policies import (
+        PolicyNetwork,
+        ValueNetwork,
+        AdvancedActorCritic,
+        ContinuousActorCriticAgent,
+    )
 
 
 class REINFORCEAgent:
     """REINFORCE agent with baseline"""
 
-    def __init__(self, state_size: int, action_size: int, lr: float = 0.001,
-                 gamma: float = 0.99, baseline: bool = True):
+    def __init__(
+        self,
+        state_size: int,
+        action_size: int,
+        lr: float = 0.001,
+        gamma: float = 0.99,
+        baseline: bool = True,
+    ):
         """Initialize REINFORCE agent
 
         Args:
@@ -71,7 +87,9 @@ class REINFORCEAgent:
         state_tensor = torch.FloatTensor(state).unsqueeze(0)
         return self.policy_net.sample_action(state_tensor)
 
-    def store_transition(self, state: np.ndarray, action: int, reward: float, log_prob: torch.Tensor):
+    def store_transition(
+        self, state: np.ndarray, action: int, reward: float, log_prob: torch.Tensor
+    ):
         """Store transition for episode
 
         Args:
@@ -101,7 +119,9 @@ class REINFORCEAgent:
             returns.insert(0, G)
         return torch.FloatTensor(returns)
 
-    def compute_baselines(self, states: List[np.ndarray], requires_grad: bool = False) -> torch.Tensor:
+    def compute_baselines(
+        self, states: List[np.ndarray], requires_grad: bool = False
+    ) -> torch.Tensor:
         """Compute baseline values for states
 
         Args:
@@ -205,7 +225,9 @@ class REINFORCEAgent:
 
         return total_reward, episode_length
 
-    def train(self, env, num_episodes: int = 1000, print_every: int = 100) -> Dict[str, List]:
+    def train(
+        self, env, num_episodes: int = 1000, print_every: int = 100
+    ) -> Dict[str, List]:
         """Train REINFORCE agent
 
         Args:
@@ -224,22 +246,27 @@ class REINFORCEAgent:
 
             if (episode + 1) % print_every == 0:
                 avg_score = np.mean(scores[-print_every:])
-                print(f"Episode {episode + 1:4d} | "
-                      f"Avg Score: {avg_score:7.2f}")
+                print(f"Episode {episode + 1:4d} | " f"Avg Score: {avg_score:7.2f}")
 
         return {
-            'scores': scores,
-            'episode_lengths': self.episode_lengths,
-            'policy_losses': self.policy_losses,
-            'value_losses': self.value_losses if self.baseline else None
+            "scores": scores,
+            "episode_lengths": self.episode_lengths,
+            "policy_losses": self.policy_losses,
+            "value_losses": self.value_losses if self.baseline else None,
         }
 
 
 class ActorCriticAgent:
     """Actor-Critic agent with separate networks"""
 
-    def __init__(self, state_size: int, action_size: int, lr_actor: float = 0.001,
-                 lr_critic: float = 0.005, gamma: float = 0.99):
+    def __init__(
+        self,
+        state_size: int,
+        action_size: int,
+        lr_actor: float = 0.001,
+        lr_critic: float = 0.005,
+        gamma: float = 0.99,
+    ):
         """Initialize Actor-Critic agent
 
         Args:
@@ -266,7 +293,9 @@ class ActorCriticAgent:
         self.episode_rewards = []
         self.td_errors = []
 
-    def get_action_and_value(self, state: np.ndarray) -> Tuple[int, torch.Tensor, torch.Tensor]:
+    def get_action_and_value(
+        self, state: np.ndarray
+    ) -> Tuple[int, torch.Tensor, torch.Tensor]:
         """Get action from actor and value from critic
 
         Args:
@@ -286,8 +315,16 @@ class ActorCriticAgent:
 
         return action.item(), log_prob, value
 
-    def update(self, state: np.ndarray, action: int, reward: float, next_state: np.ndarray,
-               done: bool, log_prob: torch.Tensor, value: torch.Tensor) -> Tuple[float, float, float]:
+    def update(
+        self,
+        state: np.ndarray,
+        action: int,
+        reward: float,
+        next_state: np.ndarray,
+        done: bool,
+        log_prob: torch.Tensor,
+        value: torch.Tensor,
+    ) -> Tuple[float, float, float]:
         """Update actor and critic networks
 
         Args:
@@ -369,7 +406,9 @@ class ActorCriticAgent:
 
         return total_reward, episode_length
 
-    def train(self, env, num_episodes: int = 1000, print_every: int = 100) -> Dict[str, List]:
+    def train(
+        self, env, num_episodes: int = 1000, print_every: int = 100
+    ) -> Dict[str, List]:
         """Train Actor-Critic agent
 
         Args:
@@ -392,26 +431,33 @@ class ActorCriticAgent:
                 avg_critic_loss = np.mean(self.critic_losses[-episode_length:])
                 avg_td_error = np.mean(self.td_errors[-episode_length:])
 
-                print(f"Episode {episode + 1:4d} | "
-                      f"Avg Score: {avg_score:7.2f} | "
-                      f"Actor Loss: {avg_actor_loss:8.4f} | "
-                      f"Critic Loss: {avg_critic_loss:8.4f} | "
-                      f"TD Error: {avg_td_error:6.3f}")
+                print(
+                    f"Episode {episode + 1:4d} | "
+                    f"Avg Score: {avg_score:7.2f} | "
+                    f"Actor Loss: {avg_actor_loss:8.4f} | "
+                    f"Critic Loss: {avg_critic_loss:8.4f} | "
+                    f"TD Error: {avg_td_error:6.3f}"
+                )
 
         return {
-            'scores': scores,
-            'actor_losses': self.actor_losses,
-            'critic_losses': self.critic_losses,
-            'td_errors': self.td_errors,
-            'episode_rewards': self.episode_rewards
+            "scores": scores,
+            "actor_losses": self.actor_losses,
+            "critic_losses": self.critic_losses,
+            "td_errors": self.td_errors,
+            "episode_rewards": self.episode_rewards,
         }
 
 
 class ContinuousActorCriticTrainer:
     """Trainer for continuous action spaces"""
 
-    def __init__(self, agent: ContinuousActorCriticAgent, lr_policy: float = 0.001,
-                 lr_value: float = 0.001, gamma: float = 0.99):
+    def __init__(
+        self,
+        agent: ContinuousActorCriticAgent,
+        lr_policy: float = 0.001,
+        lr_value: float = 0.001,
+        gamma: float = 0.99,
+    ):
         """Initialize continuous trainer
 
         Args:
@@ -423,15 +469,25 @@ class ContinuousActorCriticTrainer:
         self.agent = agent
         self.gamma = gamma
 
-        self.policy_optimizer = optim.Adam(self.agent.policy_net.parameters(), lr=lr_policy)
-        self.value_optimizer = optim.Adam(self.agent.value_net.parameters(), lr=lr_value)
+        self.policy_optimizer = optim.Adam(
+            self.agent.policy_net.parameters(), lr=lr_policy
+        )
+        self.value_optimizer = optim.Adam(
+            self.agent.value_net.parameters(), lr=lr_value
+        )
 
         self.policy_losses = []
         self.value_losses = []
         self.episode_rewards = []
 
-    def update(self, state: torch.Tensor, action: torch.Tensor, reward: float,
-               next_state: torch.Tensor, done: bool) -> Tuple[float, float]:
+    def update(
+        self,
+        state: torch.Tensor,
+        action: torch.Tensor,
+        reward: float,
+        next_state: torch.Tensor,
+        done: bool,
+    ) -> Tuple[float, float]:
         """Update networks for continuous control
 
         Args:
@@ -464,7 +520,9 @@ class ContinuousActorCriticTrainer:
 
         # Update policy network
         log_prob, entropy, _ = self.agent.evaluate_action(state, action)
-        policy_loss = -(log_prob * td_error.detach() + 0.01 * entropy)  # Add entropy regularization
+        policy_loss = -(
+            log_prob * td_error.detach() + 0.01 * entropy
+        )  # Add entropy regularization
 
         self.policy_optimizer.zero_grad()
         policy_loss.backward()
@@ -502,8 +560,11 @@ class ContinuousActorCriticTrainer:
             next_state_tensor = torch.FloatTensor(next_state)
 
             policy_loss, value_loss = self.update(
-                state.unsqueeze(0), action_tensor.unsqueeze(0),
-                reward, next_state_tensor.unsqueeze(0), done or truncated
+                state.unsqueeze(0),
+                action_tensor.unsqueeze(0),
+                reward,
+                next_state_tensor.unsqueeze(0),
+                done or truncated,
             )
 
             state = next_state_tensor
@@ -517,8 +578,13 @@ class ContinuousActorCriticTrainer:
         return total_reward, episode_length
 
 
-def create_agent(algorithm: str, state_size: int, action_size: int,
-                continuous: bool = False, **kwargs) -> Any:
+def create_agent(
+    algorithm: str,
+    state_size: int,
+    action_size: int,
+    continuous: bool = False,
+    **kwargs,
+) -> Any:
     """Factory function to create RL agent
 
     Args:
@@ -531,9 +597,9 @@ def create_agent(algorithm: str, state_size: int, action_size: int,
     Returns:
         Agent instance
     """
-    if algorithm.lower() == 'reinforce':
+    if algorithm.lower() == "reinforce":
         return REINFORCEAgent(state_size, action_size, **kwargs)
-    elif algorithm.lower() == 'actor_critic':
+    elif algorithm.lower() == "actor_critic":
         if continuous:
             agent = ContinuousActorCriticAgent(state_size, action_size, **kwargs)
             trainer = ContinuousActorCriticTrainer(agent, **kwargs)
@@ -544,8 +610,14 @@ def create_agent(algorithm: str, state_size: int, action_size: int,
         raise ValueError(f"Unknown algorithm: {algorithm}")
 
 
-def compare_algorithms(env, algorithms: List[str], state_size: int, action_size: int,
-                      num_episodes: int = 300, **kwargs) -> Dict[str, Dict]:
+def compare_algorithms(
+    env,
+    algorithms: List[str],
+    state_size: int,
+    action_size: int,
+    num_episodes: int = 300,
+    **kwargs,
+) -> Dict[str, Dict]:
     """Compare different algorithms
 
     Args:
@@ -565,7 +637,7 @@ def compare_algorithms(env, algorithms: List[str], state_size: int, action_size:
         print(f"Training {alg}...")
         agent = create_agent(alg, state_size, action_size, **kwargs)
 
-        if hasattr(agent, 'train'):
+        if hasattr(agent, "train"):
             results[alg] = agent.train(env, num_episodes, print_every=50)
         else:
             # Handle trainer case
@@ -578,10 +650,10 @@ def compare_algorithms(env, algorithms: List[str], state_size: int, action_size:
                     print(f"Episode {episode + 1:4d} | Avg Score: {avg_score:7.2f}")
 
             results[alg] = {
-                'scores': scores,
-                'policy_losses': agent.policy_losses,
-                'value_losses': agent.value_losses,
-                'episode_rewards': agent.episode_rewards
+                "scores": scores,
+                "policy_losses": agent.policy_losses,
+                "value_losses": agent.value_losses,
+                "episode_rewards": agent.episode_rewards,
             }
 
         print(f"✓ {alg} training completed")
