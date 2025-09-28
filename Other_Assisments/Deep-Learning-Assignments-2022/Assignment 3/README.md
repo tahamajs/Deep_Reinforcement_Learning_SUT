@@ -1,7 +1,10 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
+# Author: Mohammad taha majlesi - 810101504, University of Tehran
 # Assignment 3
-# Name: Saeedreza Zouashkiani
-# Student ID: 400206262
+
+This folder contains two notebook questions and supporting files. See the per-question READMEs for details:
+
+- `README_q1.md` — Question 1 (MLP vs CNN comparison)
+- `README_q2.md` — Question 2 (Knowledge distillation on CIFAR-10)
 
 ## Question 1
 This question focuses on the performance comparison between MLP and CNN with the same number of parameters. 
