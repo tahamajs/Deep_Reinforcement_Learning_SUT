@@ -543,22 +543,24 @@ def demonstrate_training_orchestrator():
             super().__init__()
             self.obs_dim = obs_dim
             self.action_dim = action_dim
-            self.policy = nn.Sequential(nn.Linear(obs_dim, action_dim))
+            self.policy = nn.Sequential(nn.Linear(obs_dim, action_dim), nn.Tanh())
 
         def select_action(self, obs, deterministic=False):
-            logits = self.policy(obs)
+            obs_tensor = torch.tensor(obs, dtype=torch.float32)
+            action = self.policy(obs_tensor)
             if deterministic:
-                return torch.argmax(logits)
+                return action
             else:
-                dist = Categorical(logits=logits)
-                return dist.sample(), dist.log_prob
+                # Add noise for stochasticity
+                noise = torch.randn_like(action) * 0.1
+                return action + noise, torch.tensor(0.0)  # Dummy log_prob
 
         def update(self, batch):
             # Simple policy gradient update
             return torch.tensor(0.1)  # Dummy loss
 
     agents = [SimpleAgent() for _ in range(3)]
-    env = MultiAgentEnvironment(n_agents=3, obs_dim=10, action_dim=4)
+    env = MultiAgentEnvironment(n_agents=3, state_dim=10, action_dim=4)
 
     orchestrator = MultiAgentTrainingOrchestrator(agents, env, {"n_episodes": 10})
 
@@ -581,10 +583,10 @@ def demonstrate_comprehensive_evaluation():
             super().__init__()
 
         def select_action(self, obs, deterministic=False):
-            return torch.tensor(0)  # Always action 0
+            return torch.zeros(2)  # Return zero vector for 2D action space
 
     agents = [SimpleAgent() for _ in range(2)]
-    env = MultiAgentEnvironment(n_agents=2, obs_dim=4, action_dim=2)
+    env = MultiAgentEnvironment(n_agents=2, state_dim=4, action_dim=2)
 
     evaluator = ComprehensiveEvaluator(agents, [env])
 
@@ -597,9 +599,9 @@ def demonstrate_comprehensive_evaluation():
 
 
 # Run demonstrations
-print("🎓 Multi-Agent Training Framework and Evaluation")
-training_demo = demonstrate_training_orchestrator()
-eval_demo = demonstrate_comprehensive_evaluation()
-
-print("\n🚀 Training framework and evaluation ready!")
-print("✅ Multi-agent training orchestrator and comprehensive evaluation implemented!")
+if __name__ == "__main__":
+    print("🎓 Multi-Agent Training Framework and Evaluation")
+    training_demo = demonstrate_training_orchestrator()
+    eval_demo = demonstrate_comprehensive_evaluation()
+    print("\n🚀 Training framework and evaluation ready!")
+    print("✅ Multi-agent training orchestrator and comprehensive evaluation implemented!")

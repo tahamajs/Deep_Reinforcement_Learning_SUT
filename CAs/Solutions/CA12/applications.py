@@ -48,8 +48,8 @@ class ResourceAllocationEnvironment:
         Args:
             agent_actions: [n_agents, n_resources] - allocation requests
         """
-        # Validate actions
-        agent_actions = torch.clamp(agent_actions, 0, self.resource_demands)
+        # Validate actions - clamp each agent's actions to their demands
+        agent_actions = torch.min(agent_actions, self.resource_demands)
 
         # Check resource constraints
         total_requested = agent_actions.sum(dim=0)
@@ -317,8 +317,8 @@ class SmartGridEnvironment:
         # Time of day encoding
         time_of_day = torch.tensor(
             [
-                torch.sin(2 * torch.pi * self.current_step / self.n_time_steps),
-                torch.cos(2 * torch.pi * self.current_step / self.n_time_steps),
+                torch.sin(torch.tensor(2 * torch.pi * self.current_step / self.n_time_steps)),
+                torch.cos(torch.tensor(2 * torch.pi * self.current_step / self.n_time_steps)),
             ]
         )
 
@@ -634,7 +634,7 @@ def demonstrate_game_theory():
     """Demonstrate game theory analysis."""
     print("\n🎮 Game Theory Analysis Demo")
 
-    analyzer = MultiAgentGameTheoryAnalyzer()
+    analyzer = MultiAgentGameTheoryAnalyzer(n_agents=2, n_actions=2)
 
     # Analyze Prisoner's Dilemma
     pd_analysis = analyzer.analyze_game("prisoners_dilemma")

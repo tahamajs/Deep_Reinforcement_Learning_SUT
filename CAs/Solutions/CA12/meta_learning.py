@@ -265,7 +265,7 @@ class PopulationBasedTraining:
                 **{
                     k: v
                     for k, v in parent["agent"].__dict__.items()
-                    if k not in ["lr", "gamma", "hidden_dim"]
+                    if k not in ["lr", "gamma", "hidden_dim", "fitness"]
                 },
                 **mutated_hyperparams,
             )
@@ -327,7 +327,7 @@ class SelfPlayTraining:
 
         for _ in range(n_episodes):
             # Create environment (simplified)
-            env = MultiAgentEnvironment(n_agents=2, obs_dim=10, action_dim=4)
+            env = MultiAgentEnvironment(n_agents=2, state_dim=10, action_dim=4)
 
             obs = env.reset()
             done = False
@@ -381,7 +381,7 @@ class SelfPlayTraining:
 
     def collect_episode_data(self, agent, opponent):
         """Collect episode data for training."""
-        env = MultiAgentEnvironment(n_agents=2, obs_dim=10, action_dim=4)
+        env = MultiAgentEnvironment(n_agents=2, state_dim=10, action_dim=4)
 
         obs = env.reset()
         episode_data = {
@@ -415,7 +415,7 @@ class SelfPlayTraining:
         # Convert to tensors
         for key in episode_data:
             if key != "total_reward":
-                episode_data[key] = torch.stack(episode_data[key])
+                episode_data[key] = torch.stack([torch.tensor(x) for x in episode_data[key]])
 
         return episode_data
 
@@ -511,11 +511,11 @@ def demonstrate_population_training():
 
     # Initialize population (simplified)
     class DummyAgent:
-        def __init__(self, lr=0.001, gamma=0.99, hidden_dim=64):
+        def __init__(self, lr=0.001, gamma=0.99, hidden_dim=64, fitness=None):
             self.lr = lr
             self.gamma = gamma
             self.hidden_dim = hidden_dim
-            self.fitness = np.random.random()
+            self.fitness = fitness if fitness is not None else np.random.random()
 
     pbt.initialize_population(DummyAgent, {})
 
@@ -543,7 +543,7 @@ def demonstrate_self_play():
             self.fitness = 0.5
 
         def select_action(self, obs):
-            return np.random.randint(0, self.action_dim)
+            return torch.randn(self.action_dim)  # Return tensor action vector
 
         def update(self, data):
             self.fitness += 0.01  # Simulate improvement
@@ -561,11 +561,12 @@ def demonstrate_self_play():
 
 
 # Run demonstrations
-print("🔄 Meta-Learning and Adaptation Systems")
-meta_demo = demonstrate_meta_learning()
-opponent_demo = demonstrate_opponent_modeling()
-pbt_demo = demonstrate_population_training()
-self_play_demo = demonstrate_self_play()
+if __name__ == "__main__":
+    print("🔄 Meta-Learning and Adaptation Systems")
+    meta_demo = demonstrate_meta_learning()
+    opponent_demo = demonstrate_opponent_modeling()
+    pbt_demo = demonstrate_population_training()
+    self_play_demo = demonstrate_self_play()
 
-print("\n🚀 Meta-learning and adaptation implementations ready!")
-print("✅ MAML, opponent modeling, population training, and self-play implemented!")
+    print("\n🚀 Meta-learning and adaptation implementations ready!")
+    print("✅ MAML, opponent modeling, population training, and self-play implemented!")

@@ -134,17 +134,29 @@ class MultiAgentEnvironment:
         """Execute joint action and return next states, rewards, dones."""
         self.step_count += 1
 
+        # Convert actions to numpy arrays
+        actions_np = [action.detach().numpy() if hasattr(action, 'detach') else np.array(action) for action in actions]
+
         # Simple dynamics: state evolves based on joint action
-        joint_action = np.mean(actions, axis=0)
+        joint_action = np.mean(actions_np, axis=0)
         noise = np.random.randn(self.state_dim) * 0.1
-        self.state = 0.9 * self.state + 0.1 * joint_action[: self.state_dim] + noise
+        
+        # Handle case where action_dim != state_dim
+        if len(joint_action) >= self.state_dim:
+            action_effect = joint_action[:self.state_dim]
+        else:
+            # Pad with zeros if action is smaller than state
+            action_effect = np.zeros(self.state_dim)
+            action_effect[:len(joint_action)] = joint_action
+            
+        self.state = 0.9 * self.state + 0.1 * action_effect + noise
 
         # Compute rewards
         if self.cooperative:
             # Cooperative: shared reward based on coordination
             coordination_bonus = -np.mean(
                 [
-                    np.linalg.norm(actions[i] - joint_action)
+                    np.linalg.norm(actions_np[i] - joint_action)
                     for i in range(self.n_agents)
                 ]
             )
@@ -154,13 +166,18 @@ class MultiAgentEnvironment:
             # Competitive: individual rewards with competition
             rewards = []
             for i in range(self.n_agents):
-                individual_reward = -np.linalg.norm(
-                    self.state - actions[i][: self.state_dim]
-                )
+                # Handle case where action_dim != state_dim
+                if len(actions_np[i]) >= self.state_dim:
+                    action_effect_i = actions_np[i][:self.state_dim]
+                else:
+                    action_effect_i = np.zeros(self.state_dim)
+                    action_effect_i[:len(actions_np[i])] = actions_np[i]
+                    
+                individual_reward = -np.linalg.norm(self.state - action_effect_i)
                 competition_penalty = (
                     sum(
                         [
-                            np.linalg.norm(actions[i] - actions[j])
+                            np.linalg.norm(actions_np[i] - actions_np[j])
                             for j in range(self.n_agents)
                             if j != i
                         ]
@@ -172,7 +189,7 @@ class MultiAgentEnvironment:
         done = self.step_count >= self.max_steps
         next_states = [self.state.copy() for _ in range(self.n_agents)]
 
-        return next_states, rewards, done
+        return next_states, rewards, done, {}
 
     def render(self):
         """Visualize current environment state."""
@@ -234,7 +251,7 @@ def test_multi_agent_env():
 
     # Random actions
     actions = [np.random.randn(coop_env.action_dim) for _ in range(coop_env.n_agents)]
-    next_states, rewards, done = coop_env.step(actions)
+    next_states, rewards, done, _ = coop_env.step(actions)
 
     print(f"Rewards (cooperative): {rewards}")
     print(f"All agents get same reward: {len(set(rewards)) == 1}")
@@ -245,7 +262,7 @@ def test_multi_agent_env():
         n_agents=3, state_dim=4, action_dim=4, cooperative=False
     )
     states = comp_env.reset()
-    next_states, rewards, done = comp_env.step(actions)
+    next_states, rewards, done, _ = comp_env.step(actions)
 
     print(f"Rewards (competitive): {rewards}")
     print(f"Agents get different rewards: {len(set(rewards)) > 1}")
