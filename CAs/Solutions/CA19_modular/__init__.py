@@ -37,21 +37,21 @@ from .hybrid_quantum_classical_rl import (
     HybridQuantumClassicalAgent,
     QuantumStateSimulator,
     QuantumFeatureMap,
-    VariationalQuantumCircuit
+    VariationalQuantumCircuit,
 )
 
 from .neuromorphic_rl import (
     NeuromorphicActorCritic,
     SpikingNeuron,
     STDPSynapse,
-    SpikingNetwork
+    SpikingNetwork,
 )
 
 from .quantum_rl import (
     QuantumEnhancedAgent,
     QuantumRLCircuit,
     SpaceStationEnvironment,
-    MissionTrainer
+    MissionTrainer,
 )
 
 from .environments import (
@@ -59,7 +59,7 @@ from .environments import (
     HybridQuantumClassicalEnvironment,
     MetaLearningEnvironment,
     ContinualLearningEnvironment,
-    HierarchicalEnvironment
+    HierarchicalEnvironment,
 )
 
 from .experiments import (
@@ -69,7 +69,7 @@ from .experiments import (
     ExperimentRunner,
     run_quick_comparison,
     run_ablation_study,
-    benchmark_scalability
+    benchmark_scalability,
 )
 
 from .utils import (
@@ -80,67 +80,88 @@ from .utils import (
     save_config,
     load_config,
     setup_experiment_logging,
-    benchmark_quantum_vs_classical
+    benchmark_quantum_vs_classical,
 )
+
 
 # Package-level utilities
 def get_available_modules():
     """Get list of available modules in the package"""
     return [
-        'hybrid_quantum_classical_rl',
-        'neuromorphic_rl',
-        'quantum_rl',
-        'environments',
-        'experiments',
-        'utils'
+        "hybrid_quantum_classical_rl",
+        "neuromorphic_rl",
+        "quantum_rl",
+        "environments",
+        "experiments",
+        "utils",
     ]
 
 
 def get_module_info(module_name: str) -> dict:
     """Get information about a specific module"""
     module_info = {
-        'hybrid_quantum_classical_rl': {
-            'description': 'Hybrid quantum-classical reinforcement learning agents',
-            'classes': ['HybridQuantumClassicalAgent', 'QuantumStateSimulator',
-                       'QuantumFeatureMap', 'VariationalQuantumCircuit'],
-            'purpose': 'Fusion of quantum circuits with classical neural networks'
+        "hybrid_quantum_classical_rl": {
+            "description": "Hybrid quantum-classical reinforcement learning agents",
+            "classes": [
+                "HybridQuantumClassicalAgent",
+                "QuantumStateSimulator",
+                "QuantumFeatureMap",
+                "VariationalQuantumCircuit",
+            ],
+            "purpose": "Fusion of quantum circuits with classical neural networks",
         },
-        'neuromorphic_rl': {
-            'description': 'Brain-inspired neuromorphic reinforcement learning',
-            'classes': ['NeuromorphicActorCritic', 'SpikingNeuron',
-                       'STDPSynapse', 'SpikingNetwork'],
-            'purpose': 'Event-driven learning with spiking neural networks'
+        "neuromorphic_rl": {
+            "description": "Brain-inspired neuromorphic reinforcement learning",
+            "classes": [
+                "NeuromorphicActorCritic",
+                "SpikingNeuron",
+                "STDPSynapse",
+                "SpikingNetwork",
+            ],
+            "purpose": "Event-driven learning with spiking neural networks",
         },
-        'quantum_rl': {
-            'description': 'Quantum-enhanced reinforcement learning',
-            'classes': ['QuantumEnhancedAgent', 'QuantumRLCircuit',
-                       'SpaceStationEnvironment', 'MissionTrainer'],
-            'purpose': 'Quantum algorithms for complex control tasks'
+        "quantum_rl": {
+            "description": "Quantum-enhanced reinforcement learning",
+            "classes": [
+                "QuantumEnhancedAgent",
+                "QuantumRLCircuit",
+                "SpaceStationEnvironment",
+                "MissionTrainer",
+            ],
+            "purpose": "Quantum algorithms for complex control tasks",
         },
-        'environments': {
-            'description': 'Advanced environments for RL evaluation',
-            'classes': ['NeuromorphicEnvironment', 'HybridQuantumClassicalEnvironment',
-                       'MetaLearningEnvironment', 'ContinualLearningEnvironment',
-                       'HierarchicalEnvironment'],
-            'purpose': 'Testbeds for different RL paradigms'
+        "environments": {
+            "description": "Advanced environments for RL evaluation",
+            "classes": [
+                "NeuromorphicEnvironment",
+                "HybridQuantumClassicalEnvironment",
+                "MetaLearningEnvironment",
+                "ContinualLearningEnvironment",
+                "HierarchicalEnvironment",
+            ],
+            "purpose": "Testbeds for different RL paradigms",
         },
-        'experiments': {
-            'description': 'Experiment frameworks and evaluation tools',
-            'classes': ['QuantumNeuromorphicComparison', 'AblationStudy',
-                       'ScalabilityAnalysis', 'ExperimentRunner'],
-            'purpose': 'Systematic evaluation and comparison of RL systems'
+        "experiments": {
+            "description": "Experiment frameworks and evaluation tools",
+            "classes": [
+                "QuantumNeuromorphicComparison",
+                "AblationStudy",
+                "ScalabilityAnalysis",
+                "ExperimentRunner",
+            ],
+            "purpose": "Systematic evaluation and comparison of RL systems",
         },
-        'utils': {
-            'description': 'Utility functions and configuration management',
-            'classes': ['MissionConfig', 'PerformanceTracker', 'ExperimentManager'],
-            'purpose': 'Configuration, tracking, and helper utilities'
-        }
+        "utils": {
+            "description": "Utility functions and configuration management",
+            "classes": ["MissionConfig", "PerformanceTracker", "ExperimentManager"],
+            "purpose": "Configuration, tracking, and helper utilities",
+        },
     }
 
-    return module_info.get(module_name, {'error': f'Module {module_name} not found'})
+    return module_info.get(module_name, {"error": f"Module {module_name} not found"})
 
 
-def create_quick_experiment(agent_type: str = 'hybrid', env_type: str = 'neuromorphic'):
+def create_quick_experiment(agent_type: str = "hybrid", env_type: str = "neuromorphic"):
     """
     Create a quick experiment setup for testing
 
@@ -154,63 +175,56 @@ def create_quick_experiment(agent_type: str = 'hybrid', env_type: str = 'neuromo
     config = MissionConfig()
 
     # Agent selection
-    if agent_type == 'hybrid':
+    if agent_type == "hybrid":
         agent = HybridQuantumClassicalAgent(
             state_dim=config.state_dim,
             action_dim=config.action_dim,
             quantum_dim=config.n_qubits,
-            hidden_dim=config.state_dim
+            hidden_dim=config.state_dim,
         )
-    elif agent_type == 'neuromorphic':
+    elif agent_type == "neuromorphic":
         agent = NeuromorphicActorCritic(
             state_dim=config.state_dim,
             action_dim=config.action_dim,
             neuron_count=config.state_dim * 2,
-            synapse_count=config.state_dim * 4
+            synapse_count=config.state_dim * 4,
         )
-    elif agent_type == 'quantum':
+    elif agent_type == "quantum":
         agent = QuantumEnhancedAgent(
             state_dim=config.state_dim,
             action_dim=config.action_dim,
-            quantum_dim=config.n_qubits
+            quantum_dim=config.n_qubits,
         )
     else:
         raise ValueError(f"Unknown agent type: {agent_type}")
 
     # Environment selection
-    if env_type == 'neuromorphic':
+    if env_type == "neuromorphic":
         env = NeuromorphicEnvironment(
-            state_dim=config.state_dim,
-            action_dim=config.action_dim
+            state_dim=config.state_dim, action_dim=config.action_dim
         )
-    elif env_type == 'hybrid':
+    elif env_type == "hybrid":
         env = HybridQuantumClassicalEnvironment(
-            state_dim=config.state_dim * 2,
-            action_dim=config.action_dim * 2
+            state_dim=config.state_dim * 2, action_dim=config.action_dim * 2
         )
-    elif env_type == 'meta':
-        env = MetaLearningEnvironment(
-            base_state_dim=config.state_dim,
-            num_tasks=5
-        )
-    elif env_type == 'continual':
-        env = ContinualLearningEnvironment(
-            state_dim=config.state_dim,
-            num_phases=3
-        )
-    elif env_type == 'hierarchical':
-        env = HierarchicalEnvironment(
-            state_dim=config.state_dim,
-            num_levels=3
-        )
+    elif env_type == "meta":
+        env = MetaLearningEnvironment(base_state_dim=config.state_dim, num_tasks=5)
+    elif env_type == "continual":
+        env = ContinualLearningEnvironment(state_dim=config.state_dim, num_phases=3)
+    elif env_type == "hierarchical":
+        env = HierarchicalEnvironment(state_dim=config.state_dim, num_levels=3)
     else:
         raise ValueError(f"Unknown environment type: {env_type}")
 
     return agent, env, config
 
 
-def run_demo_experiment(episodes: int = 10, agent_type: str = 'hybrid',
-                       env_type: str = 'neuromorphic', verbose: bool = True):
+def run_demo_experiment(
+    episodes: int = 10,
+    agent_type: str = "hybrid",
+    env_type: str = "neuromorphic",
+    verbose: bool = True,
+):
     """
     Run a quick demo experiment to showcase the modular RL systems
 
@@ -240,7 +254,7 @@ def run_demo_experiment(episodes: int = 10, agent_type: str = 'hybrid',
             next_state, reward, done, info = env.step(action)
 
             # Training step (simplified)
-            if hasattr(agent, 'train_step'):
+            if hasattr(agent, "train_step"):
                 agent.train_step(state, action, reward, next_state, done)
 
             state = next_state
@@ -251,8 +265,10 @@ def run_demo_experiment(episodes: int = 10, agent_type: str = 'hybrid',
         tracker.update_episode(episode_reward, episode_length, info or {})
 
         if verbose:
-            print(f"Episode {episode + 1:2d}: Reward = {episode_reward:7.2f}, "
-                  f"Length = {episode_length:3d}")
+            print(
+                f"Episode {episode + 1:2d}: Reward = {episode_reward:7.2f}, "
+                f"Length = {episode_length:3d}"
+            )
 
     # Final results
     stats = tracker.get_summary_stats()
@@ -262,19 +278,19 @@ def run_demo_experiment(episodes: int = 10, agent_type: str = 'hybrid',
     print(f"Average Episode Length: {stats.get('avg_episode_length', 0):.1f}")
 
     return {
-        'agent_type': agent_type,
-        'env_type': env_type,
-        'episodes': episodes,
-        'stats': stats,
-        'tracker': tracker
+        "agent_type": agent_type,
+        "env_type": env_type,
+        "episodes": episodes,
+        "stats": stats,
+        "tracker": tracker,
     }
 
 
 # Version and compatibility info
 def check_dependencies():
     """Check if required dependencies are available"""
-    required_packages = ['numpy', 'torch', 'matplotlib', 'seaborn']
-    optional_packages = ['qiskit', 'scipy']
+    required_packages = ["numpy", "torch", "matplotlib", "seaborn"]
+    optional_packages = ["qiskit", "scipy"]
 
     missing_required = []
     missing_optional = []
@@ -292,9 +308,9 @@ def check_dependencies():
             missing_optional.append(package)
 
     return {
-        'required_missing': missing_required,
-        'optional_missing': missing_optional,
-        'all_available': len(missing_required) == 0
+        "required_missing": missing_required,
+        "optional_missing": missing_optional,
+        "all_available": len(missing_required) == 0,
     }
 
 
@@ -309,13 +325,13 @@ def print_package_info():
 
     # Check dependencies
     deps = check_dependencies()
-    if deps['all_available']:
+    if deps["all_available"]:
         print("✅ All required dependencies available")
     else:
-        print("⚠️  Missing required dependencies:", deps['required_missing'])
+        print("⚠️  Missing required dependencies:", deps["required_missing"])
 
-    if deps['optional_missing']:
-        print("ℹ️  Optional dependencies not available:", deps['optional_missing'])
+    if deps["optional_missing"]:
+        print("ℹ️  Optional dependencies not available:", deps["optional_missing"])
 
     print()
     print("Available Modules:")
@@ -332,28 +348,24 @@ def print_package_info():
 # Make key classes available at package level for convenience
 __all__ = [
     # Core agents
-    'HybridQuantumClassicalAgent',
-    'NeuromorphicActorCritic',
-    'QuantumEnhancedAgent',
-
+    "HybridQuantumClassicalAgent",
+    "NeuromorphicActorCritic",
+    "QuantumEnhancedAgent",
     # Environments
-    'NeuromorphicEnvironment',
-    'HybridQuantumClassicalEnvironment',
-    'SpaceStationEnvironment',
-
+    "NeuromorphicEnvironment",
+    "HybridQuantumClassicalEnvironment",
+    "SpaceStationEnvironment",
     # Experiments
-    'QuantumNeuromorphicComparison',
-    'ExperimentRunner',
-
+    "QuantumNeuromorphicComparison",
+    "ExperimentRunner",
     # Utilities
-    'MissionConfig',
-    'PerformanceTracker',
-    'ExperimentManager',
-
+    "MissionConfig",
+    "PerformanceTracker",
+    "ExperimentManager",
     # Helper functions
-    'create_quick_experiment',
-    'run_demo_experiment',
-    'print_package_info',
-    'get_available_modules',
-    'get_module_info'
+    "create_quick_experiment",
+    "run_demo_experiment",
+    "print_package_info",
+    "get_available_modules",
+    "get_module_info",
 ]

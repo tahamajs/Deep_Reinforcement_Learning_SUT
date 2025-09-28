@@ -115,6 +115,7 @@ agent = HybridQuantumClassicalAgent(
 ```
 
 **Key Classes:**
+
 - `HybridQuantumClassicalAgent`: Main agent class
 - `QuantumStateSimulator`: Quantum state encoding
 - `QuantumFeatureMap`: Feature mapping circuits
@@ -136,6 +137,7 @@ agent = NeuromorphicActorCritic(
 ```
 
 **Key Classes:**
+
 - `NeuromorphicActorCritic`: Main neuromorphic agent
 - `SpikingNeuron`: Leaky integrate-and-fire neurons
 - `STDPSynapse`: Plastic synapses with STDP
@@ -158,6 +160,7 @@ env = SpaceStationEnvironment(difficulty_level="EXTREME")
 ```
 
 **Key Classes:**
+
 - `QuantumEnhancedAgent`: Quantum-enhanced agent
 - `QuantumRLCircuit`: Variational quantum circuits for RL
 - `SpaceStationEnvironment`: Critical infrastructure control
@@ -250,16 +253,19 @@ results = benchmark_quantum_vs_classical(
 ## 🔬 Research Applications
 
 ### Quantum Advantage Studies
+
 - Compare quantum vs classical performance
 - Analyze entanglement effects on learning
 - Study quantum state preparation efficiency
 
 ### Neuromorphic Intelligence
+
 - Event-driven learning in dynamic environments
 - Energy-efficient computation models
 - Biological plausibility validation
 
 ### Hybrid Systems
+
 - Optimal quantum-classical integration
 - Adaptive computation allocation
 - Multi-paradigm learning strategies

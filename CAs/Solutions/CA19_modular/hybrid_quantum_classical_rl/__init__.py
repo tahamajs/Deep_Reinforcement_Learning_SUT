@@ -19,13 +19,15 @@ from typing import Dict, List, Tuple, Optional, Union
 import random
 from collections import deque
 import warnings
-warnings.filterwarnings('ignore')
+
+warnings.filterwarnings("ignore")
 
 # Quantum computing simulation (representing real quantum hardware)
 try:
     from qiskit import QuantumCircuit, execute, Aer
     from qiskit.circuit import Parameter
     from qiskit.quantum_info import Statevector, partial_trace, DensityMatrix
+
     QISKIT_AVAILABLE = True
 except ImportError:
     QISKIT_AVAILABLE = False
@@ -51,9 +53,9 @@ class QuantumStateSimulator:
 
         # Initialize quantum circuit for state encoding
         self.state_circuit = QuantumCircuit(n_qubits)
-        self.parameters = [Parameter(f'θ_{i}') for i in range(n_qubits * state_dim)]
+        self.parameters = [Parameter(f"θ_{i}") for i in range(n_qubits * state_dim)]
 
-    def encode_state(self, classical_state: np.ndarray) -> 'Statevector':
+    def encode_state(self, classical_state: np.ndarray) -> "Statevector":
         """
         Encode classical RL state into quantum state
 
@@ -76,12 +78,12 @@ class QuantumStateSimulator:
 
                 # Add entanglement between qubits
                 if i > 0:
-                    self.state_circuit.cx(i-1, i)
+                    self.state_circuit.cx(i - 1, i)
 
                 param_idx += 1
 
         # Execute circuit to get quantum state
-        backend = Aer.get_backend('statevector_simulator')
+        backend = Aer.get_backend("statevector_simulator")
         job = execute(self.state_circuit, backend)
         self.quantum_state = job.result().get_statevector()
 
@@ -91,9 +93,9 @@ class QuantumStateSimulator:
         """Get quantum state amplitudes"""
         if self.quantum_state is None:
             return np.zeros(2**self.n_qubits)
-        return np.abs(self.quantum_state.data)**2
+        return np.abs(self.quantum_state.data) ** 2
 
-    def measure_in_basis(self, basis: str = 'computational') -> Dict[str, float]:
+    def measure_in_basis(self, basis: str = "computational") -> Dict[str, float]:
         """
         Measure quantum state in specified basis
 
@@ -104,26 +106,28 @@ class QuantumStateSimulator:
             Measurement outcomes and probabilities
         """
         if self.quantum_state is None:
-            return {'00': 1.0}
+            return {"00": 1.0}
 
         # Create measurement circuit
         measure_circuit = self.state_circuit.copy()
 
-        if basis == 'x':
+        if basis == "x":
             # Measure in X basis (Hadamard before measurement)
             for i in range(self.n_qubits):
                 measure_circuit.h(i)
-        elif basis == 'y':
+        elif basis == "y":
             # Measure in Y basis (rotation before measurement)
             for i in range(self.n_qubits):
-                measure_circuit.rx(np.pi/2, i)
+                measure_circuit.rx(np.pi / 2, i)
 
         # Add measurement
-        measure_circuit.add_register(measure_circuit.classical_register(self.n_qubits, 'c'))
+        measure_circuit.add_register(
+            measure_circuit.classical_register(self.n_qubits, "c")
+        )
         measure_circuit.measure_all()
 
         # Execute measurement
-        backend = Aer.get_backend('qasm_simulator')
+        backend = Aer.get_backend("qasm_simulator")
         job = execute(measure_circuit, backend, shots=1024)
         result = job.result()
         counts = result.get_counts()
@@ -162,7 +166,7 @@ class QuantumFeatureMap:
     potentially providing quantum advantage through kernel methods.
     """
 
-    def __init__(self, n_qubits: int, encoding_type: str = 'ZZFeatureMap'):
+    def __init__(self, n_qubits: int, encoding_type: str = "ZZFeatureMap"):
         self.n_qubits = n_qubits
         self.encoding_type = encoding_type
 
@@ -170,9 +174,11 @@ class QuantumFeatureMap:
             raise ImportError("Qiskit required for quantum feature mapping")
 
         # Initialize parameters for variational encoding
-        self.parameters = [Parameter(f'φ_{i}') for i in range(n_qubits * 2)]
+        self.parameters = [Parameter(f"φ_{i}") for i in range(n_qubits * 2)]
 
-    def map_features(self, x: np.ndarray, y: Optional[np.ndarray] = None) -> Union[np.ndarray, float]:
+    def map_features(
+        self, x: np.ndarray, y: Optional[np.ndarray] = None
+    ) -> Union[np.ndarray, float]:
         """
         Map classical features to quantum feature space
 
@@ -186,9 +192,9 @@ class QuantumFeatureMap:
         # Create feature map circuit
         qc = QuantumCircuit(self.n_qubits)
 
-        if self.encoding_type == 'ZZFeatureMap':
+        if self.encoding_type == "ZZFeatureMap":
             self._apply_zz_feature_map(qc, x)
-        elif self.encoding_type == 'PauliFeatureMap':
+        elif self.encoding_type == "PauliFeatureMap":
             self._apply_pauli_feature_map(qc, x)
         else:
             # Default to simple rotation encoding
@@ -199,10 +205,10 @@ class QuantumFeatureMap:
             return self._compute_quantum_kernel(qc, x, y)
         else:
             # Return quantum state representation
-            backend = Aer.get_backend('statevector_simulator')
+            backend = Aer.get_backend("statevector_simulator")
             job = execute(qc, backend)
             statevector = job.result().get_statevector()
-            return np.abs(statevector.data)**2
+            return np.abs(statevector.data) ** 2
 
     def _apply_zz_feature_map(self, qc: QuantumCircuit, x: np.ndarray):
         """Apply ZZ feature map encoding"""
@@ -212,7 +218,7 @@ class QuantumFeatureMap:
 
         # Two-qubit entangling gates
         for i in range(self.n_qubits):
-            for j in range(i+1, self.n_qubits):
+            for j in range(i + 1, self.n_qubits):
                 if i < len(x) and j < len(x):
                     interaction = 2 * x[i] * x[j]
                     qc.cx(i, j)
@@ -231,7 +237,9 @@ class QuantumFeatureMap:
         for i in range(min(self.n_qubits, len(x))):
             qc.ry(np.pi * x[i], i)
 
-    def _compute_quantum_kernel(self, qc: QuantumCircuit, x: np.ndarray, y: np.ndarray) -> float:
+    def _compute_quantum_kernel(
+        self, qc: QuantumCircuit, x: np.ndarray, y: np.ndarray
+    ) -> float:
         """
         Compute quantum kernel between two classical vectors
 
@@ -250,7 +258,7 @@ class QuantumFeatureMap:
             # This is a simplified computation - in practice would need
             # more sophisticated quantum kernel estimation
             similarity = np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
-            return abs(similarity)**2
+            return abs(similarity) ** 2
         except:
             return 0.5  # Default similarity
 
@@ -272,13 +280,19 @@ class VariationalQuantumCircuit:
             raise ImportError("Qiskit required for variational quantum circuits")
 
         # Initialize variational parameters
-        self.theta = [[Parameter(f'θ_{l}_{q}') for q in range(n_qubits)] for l in range(n_layers)]
-        self.phi = [[Parameter(f'φ_{l}_{q}') for q in range(n_qubits)] for l in range(n_layers)]
+        self.theta = [
+            [Parameter(f"θ_{l}_{q}") for q in range(n_qubits)] for l in range(n_layers)
+        ]
+        self.phi = [
+            [Parameter(f"φ_{l}_{q}") for q in range(n_qubits)] for l in range(n_layers)
+        ]
 
         # Flatten parameters for optimization
         self.all_parameters = [p for layer in self.theta + self.phi for p in layer]
 
-    def construct_circuit(self, input_data: Optional[np.ndarray] = None) -> QuantumCircuit:
+    def construct_circuit(
+        self, input_data: Optional[np.ndarray] = None
+    ) -> QuantumCircuit:
         """
         Construct the variational quantum circuit
 
@@ -308,8 +322,12 @@ class VariationalQuantumCircuit:
 
         return qc
 
-    def execute_circuit(self, parameters: List[float], input_data: Optional[np.ndarray] = None,
-                       shots: int = 1024) -> Dict:
+    def execute_circuit(
+        self,
+        parameters: List[float],
+        input_data: Optional[np.ndarray] = None,
+        shots: int = 1024,
+    ) -> Dict:
         """
         Execute the variational quantum circuit
 
@@ -325,24 +343,26 @@ class VariationalQuantumCircuit:
         qc = self.construct_circuit(input_data)
 
         # Bind parameters
-        param_dict = {self.all_parameters[i]: parameters[i] for i in range(len(parameters))}
+        param_dict = {
+            self.all_parameters[i]: parameters[i] for i in range(len(parameters))
+        }
         qc_bound = qc.bind_parameters(param_dict)
 
         # Execute circuit
-        backend = Aer.get_backend('qasm_simulator')
+        backend = Aer.get_backend("qasm_simulator")
         job = execute(qc_bound, backend, shots=shots)
         result = job.result()
         counts = result.get_counts()
 
         # Also get statevector for analysis
-        sv_backend = Aer.get_backend('statevector_simulator')
+        sv_backend = Aer.get_backend("statevector_simulator")
         sv_job = execute(qc_bound, sv_backend)
         statevector = sv_job.result().get_statevector()
 
         return {
-            'counts': counts,
-            'statevector': statevector,
-            'probabilities': self._counts_to_probs(counts, shots)
+            "counts": counts,
+            "statevector": statevector,
+            "probabilities": self._counts_to_probs(counts, shots),
         }
 
     def _counts_to_probs(self, counts: Dict, shots: int) -> np.ndarray:
@@ -367,8 +387,14 @@ class HybridQuantumClassicalAgent:
     neural networks for stable learning and temporal processing.
     """
 
-    def __init__(self, state_dim: int, action_dim: int, quantum_qubits: int = 4,
-                 quantum_layers: int = 2, learning_rate: float = 1e-3):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        quantum_qubits: int = 4,
+        quantum_layers: int = 2,
+        learning_rate: float = 1e-3,
+    ):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.quantum_qubits = quantum_qubits
@@ -376,17 +402,23 @@ class HybridQuantumClassicalAgent:
         # Quantum components
         self.quantum_simulator = QuantumStateSimulator(quantum_qubits, state_dim)
         self.quantum_feature_map = QuantumFeatureMap(quantum_qubits)
-        self.quantum_circuit = VariationalQuantumCircuit(quantum_qubits, quantum_layers, action_dim)
+        self.quantum_circuit = VariationalQuantumCircuit(
+            quantum_qubits, quantum_layers, action_dim
+        )
 
         # Classical neural network
         self.classical_network = self._build_classical_network()
         self.target_network = self._build_classical_network()
-        self.optimizer = optim.Adam(self.classical_network.parameters(), lr=learning_rate)
+        self.optimizer = optim.Adam(
+            self.classical_network.parameters(), lr=learning_rate
+        )
 
         # Quantum parameter optimization
         quantum_params = self.quantum_circuit.get_parameter_count()
         self.quantum_params = nn.Parameter(torch.randn(quantum_params) * 0.1)
-        self.quantum_optimizer = optim.Adam([self.quantum_params], lr=learning_rate * 0.1)
+        self.quantum_optimizer = optim.Adam(
+            [self.quantum_params], lr=learning_rate * 0.1
+        )
 
         # Experience replay
         self.memory = deque(maxlen=10000)
@@ -405,10 +437,12 @@ class HybridQuantumClassicalAgent:
             nn.Linear(128, 256),
             nn.ReLU(),
             nn.BatchNorm1d(256),
-            nn.Linear(256, self.action_dim)
+            nn.Linear(256, self.action_dim),
         )
 
-    def select_action(self, state: np.ndarray, epsilon: float = 0.1) -> Tuple[int, Dict]:
+    def select_action(
+        self, state: np.ndarray, epsilon: float = 0.1
+    ) -> Tuple[int, Dict]:
         """
         Select action using hybrid quantum-classical decision making
 
@@ -435,9 +469,9 @@ class HybridQuantumClassicalAgent:
             )
 
             # Convert quantum output to Q-values
-            quantum_probs = quantum_result['probabilities']
+            quantum_probs = quantum_result["probabilities"]
             # Map quantum probabilities to action values (simplified)
-            quantum_q = torch.FloatTensor(quantum_probs[:self.action_dim] * 10 - 5)
+            quantum_q = torch.FloatTensor(quantum_probs[: self.action_dim] * 10 - 5)
 
             # Adaptive quantum-classical fusion
             if self.adaptive_hybrid:
@@ -445,36 +479,42 @@ class HybridQuantumClassicalAgent:
                 self.quantum_weight = 0.3 + 0.7 * entanglement
 
             # Fuse predictions
-            fused_q = self.quantum_weight * quantum_q + (1 - self.quantum_weight) * classical_q
+            fused_q = (
+                self.quantum_weight * quantum_q
+                + (1 - self.quantum_weight) * classical_q
+            )
 
             decision_info = {
-                'method': 'hybrid_fusion',
-                'quantum_weight': self.quantum_weight,
-                'entanglement': entanglement,
-                'quantum_probs': quantum_probs[:self.action_dim],
-                'classical_q': classical_q.numpy()
+                "method": "hybrid_fusion",
+                "quantum_weight": self.quantum_weight,
+                "entanglement": entanglement,
+                "quantum_probs": quantum_probs[: self.action_dim],
+                "classical_q": classical_q.numpy(),
             }
 
         except Exception as e:
             # Fallback to classical only
             fused_q = classical_q
-            decision_info = {
-                'method': 'classical_fallback',
-                'error': str(e)
-            }
+            decision_info = {"method": "classical_fallback", "error": str(e)}
 
         # Epsilon-greedy action selection
         if np.random.random() < epsilon:
             action = np.random.randint(self.action_dim)
-            decision_info['exploration'] = True
+            decision_info["exploration"] = True
         else:
             action = torch.argmax(fused_q).item()
-            decision_info['exploration'] = False
+            decision_info["exploration"] = False
 
         return action, decision_info
 
-    def store_experience(self, state: np.ndarray, action: int, reward: float,
-                        next_state: np.ndarray, done: bool):
+    def store_experience(
+        self,
+        state: np.ndarray,
+        action: int,
+        reward: float,
+        next_state: np.ndarray,
+        done: bool,
+    ):
         """Store experience in replay buffer"""
         self.memory.append((state, action, reward, next_state, done))
 
@@ -486,7 +526,7 @@ class HybridQuantumClassicalAgent:
             Learning metrics
         """
         if len(self.memory) < self.batch_size:
-            return {'loss': 0.0}
+            return {"loss": 0.0}
 
         # Sample batch
         batch = random.sample(self.memory, self.batch_size)
@@ -519,14 +559,16 @@ class HybridQuantumClassicalAgent:
                     grad_scale = classical_loss.item()
                     self.quantum_optimizer.zero_grad()
                     # Simplified quantum gradient (in practice would use parameter-shift rule)
-                    self.quantum_params.grad = torch.randn_like(self.quantum_params) * grad_scale * 0.01
+                    self.quantum_params.grad = (
+                        torch.randn_like(self.quantum_params) * grad_scale * 0.01
+                    )
                     self.quantum_optimizer.step()
                     quantum_loss = grad_scale
         except:
             pass
 
         # Update target network
-        if hasattr(self, 'update_counter'):
+        if hasattr(self, "update_counter"):
             self.update_counter += 1
         else:
             self.update_counter = 1
@@ -535,17 +577,19 @@ class HybridQuantumClassicalAgent:
             self.target_network.load_state_dict(self.classical_network.state_dict())
 
         return {
-            'classical_loss': classical_loss.item(),
-            'quantum_loss': quantum_loss,
-            'quantum_weight': self.quantum_weight
+            "classical_loss": classical_loss.item(),
+            "quantum_loss": quantum_loss,
+            "quantum_weight": self.quantum_weight,
         }
 
     def get_performance_metrics(self) -> Dict:
         """Get agent performance metrics"""
         return {
-            'memory_size': len(self.memory),
-            'quantum_weight': self.quantum_weight,
-            'quantum_entanglement': self.quantum_simulator.calculate_entanglement(),
-            'classical_param_count': sum(p.numel() for p in self.classical_network.parameters()),
-            'quantum_param_count': len(self.quantum_params)
+            "memory_size": len(self.memory),
+            "quantum_weight": self.quantum_weight,
+            "quantum_entanglement": self.quantum_simulator.calculate_entanglement(),
+            "classical_param_count": sum(
+                p.numel() for p in self.classical_network.parameters()
+            ),
+            "quantum_param_count": len(self.quantum_params),
         }

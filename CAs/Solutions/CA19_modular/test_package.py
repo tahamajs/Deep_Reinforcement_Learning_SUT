@@ -8,7 +8,9 @@ Run with: python test_package.py
 
 import sys
 import os
+
 sys.path.insert(0, os.path.dirname(__file__))
+
 
 def test_imports():
     """Test that all modules can be imported"""
@@ -16,6 +18,7 @@ def test_imports():
 
     try:
         import ca19_modular
+
         print("✅ Main package imported successfully")
     except ImportError as e:
         print(f"❌ Failed to import main package: {e}")
@@ -23,12 +26,12 @@ def test_imports():
 
     # Test individual modules
     modules_to_test = [
-        'ca19_modular.hybrid_quantum_classical_rl',
-        'ca19_modular.neuromorphic_rl',
-        'ca19_modular.quantum_rl',
-        'ca19_modular.environments',
-        'ca19_modular.experiments',
-        'ca19_modular.utils'
+        "ca19_modular.hybrid_quantum_classical_rl",
+        "ca19_modular.neuromorphic_rl",
+        "ca19_modular.quantum_rl",
+        "ca19_modular.environments",
+        "ca19_modular.experiments",
+        "ca19_modular.utils",
     ]
 
     for module in modules_to_test:
@@ -41,12 +44,14 @@ def test_imports():
 
     return True
 
+
 def test_basic_functionality():
     """Test basic functionality without heavy dependencies"""
     print("\nTesting basic functionality...")
 
     try:
         from ca19_modular.utils import MissionConfig, create_default_config
+
         config = create_default_config()
         print(f"✅ MissionConfig created: state_dim={config.state_dim}")
     except Exception as e:
@@ -55,6 +60,7 @@ def test_basic_functionality():
 
     try:
         from ca19_modular.utils import get_available_modules, get_module_info
+
         modules = get_available_modules()
         print(f"✅ Available modules: {len(modules)} found")
 
@@ -67,12 +73,14 @@ def test_basic_functionality():
 
     return True
 
+
 def test_package_info():
     """Test package information functions"""
     print("\nTesting package information...")
 
     try:
         import ca19_modular
+
         ca19_modular.print_package_info()
         print("✅ Package info printed successfully")
     except Exception as e:
@@ -80,6 +88,7 @@ def test_package_info():
         return False
 
     return True
+
 
 def main():
     """Main test function"""
@@ -107,6 +116,7 @@ def main():
     else:
         print("❌ Some tests failed. Please check the errors above.")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

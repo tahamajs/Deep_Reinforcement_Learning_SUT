@@ -7,13 +7,15 @@ import os
 
 # Read the contents of README file
 this_directory = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
+
 
 # Read requirements
 def read_requirements(filename):
-    with open(filename, 'r') as f:
-        return [line.strip() for line in f if line.strip() and not line.startswith('#')]
+    with open(filename, "r") as f:
+        return [line.strip() for line in f if line.strip() and not line.startswith("#")]
+
 
 setup(
     name="ca19-modular",
@@ -41,7 +43,7 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     python_requires=">=3.7",
-    install_requires=read_requirements('requirements.txt'),
+    install_requires=read_requirements("requirements.txt"),
     extras_require={
         "quantum": ["qiskit>=0.39.0", "qiskit-aer>=0.11.0"],
         "dev": [

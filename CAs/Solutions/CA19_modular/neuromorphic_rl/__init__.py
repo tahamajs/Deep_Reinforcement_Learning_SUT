@@ -19,7 +19,8 @@ from typing import Dict, List, Tuple, Optional, Union
 import random
 from collections import deque
 import warnings
-warnings.filterwarnings('ignore')
+
+warnings.filterwarnings("ignore")
 
 
 class SpikingNeuron:
@@ -30,8 +31,13 @@ class SpikingNeuron:
     when membrane potential exceeds a threshold.
     """
 
-    def __init__(self, membrane_time_constant: float = 0.01, threshold: float = 1.0,
-                 reset_potential: float = 0.0, refractory_period: float = 0.002):
+    def __init__(
+        self,
+        membrane_time_constant: float = 0.01,
+        threshold: float = 1.0,
+        reset_potential: float = 0.0,
+        refractory_period: float = 0.002,
+    ):
         self.tau = membrane_time_constant  # Membrane time constant
         self.threshold = threshold
         self.reset = reset_potential
@@ -86,12 +92,17 @@ class STDPSynapse:
     of pre- and post-synaptic spikes, implementing Hebbian learning.
     """
 
-    def __init__(self, initial_weight: float = 0.5, a_plus: float = 0.05,
-                 a_minus: float = 0.03, tau_plus: float = 0.02,
-                 tau_minus: float = 0.02):
+    def __init__(
+        self,
+        initial_weight: float = 0.5,
+        a_plus: float = 0.05,
+        a_minus: float = 0.03,
+        tau_plus: float = 0.02,
+        tau_minus: float = 0.02,
+    ):
         self.weight = initial_weight
-        self.a_plus = a_plus      # LTP amplitude
-        self.a_minus = a_minus    # LTD amplitude
+        self.a_plus = a_plus  # LTP amplitude
+        self.a_minus = a_minus  # LTD amplitude
         self.tau_plus = tau_plus  # LTP time constant
         self.tau_minus = tau_minus  # LTD time constant
 
@@ -138,8 +149,14 @@ class SpikingNetwork:
     implementing event-driven processing for energy-efficient computation.
     """
 
-    def __init__(self, n_input: int, n_hidden: int, n_output: int,
-                 dt: float = 0.001, connectivity: float = 0.1):
+    def __init__(
+        self,
+        n_input: int,
+        n_hidden: int,
+        n_output: int,
+        dt: float = 0.001,
+        connectivity: float = 0.1,
+    ):
         self.n_input = n_input
         self.n_hidden = n_hidden
         self.n_output = n_output
@@ -174,7 +191,9 @@ class SpikingNetwork:
         for neuron in self.input_neurons + self.hidden_neurons + self.output_neurons:
             neuron.reset_state()
 
-    def forward(self, input_spikes: np.ndarray, n_steps: int = 50) -> Tuple[np.ndarray, np.ndarray]:
+    def forward(
+        self, input_spikes: np.ndarray, n_steps: int = 50
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Forward pass through the spiking network
 
@@ -197,7 +216,9 @@ class SpikingNetwork:
             for i, spike in enumerate(input_spikes):
                 if spike > 0.5:  # Input spike
                     for j in range(self.n_hidden):
-                        input_currents[j] += self.input_hidden_synapses[i][j].get_weight()
+                        input_currents[j] += self.input_hidden_synapses[i][
+                            j
+                        ].get_weight()
 
             # Hidden layer
             hidden_currents = np.zeros(self.n_output)
@@ -214,11 +235,16 @@ class SpikingNetwork:
 
                 # Accumulate currents to output layer
                 for k in range(self.n_output):
-                    hidden_currents[k] += self.hidden_output_synapses[j][k].get_weight() * hidden_spikes[t, j]
+                    hidden_currents[k] += (
+                        self.hidden_output_synapses[j][k].get_weight()
+                        * hidden_spikes[t, j]
+                    )
 
             # Output layer
             for k in range(self.n_output):
-                spike_fired, _ = self.output_neurons[k].step(hidden_currents[k], self.dt)
+                spike_fired, _ = self.output_neurons[k].step(
+                    hidden_currents[k], self.dt
+                )
                 output_spikes[t, k] = 1.0 if spike_fired else 0.0
 
                 if spike_fired:
@@ -237,21 +263,33 @@ class SpikingNetwork:
         rates = []
         for k in range(self.n_output):
             # Count spikes over recent history (simplified)
-            spike_count = sum(1 for t in range(len(self.output_neurons[k].last_spike_time > 0)))
+            spike_count = sum(
+                1 for t in range(len(self.output_neurons[k].last_spike_time > 0))
+            )
             rate = spike_count / max(1, len(self.output_neurons[k].last_spike_time > 0))
             rates.append(rate)
         return np.array(rates)
 
     def get_synaptic_weights(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get current synaptic weight matrices"""
-        input_hidden_weights = np.array([
-            [self.input_hidden_synapses[i][j].get_weight()
-             for j in range(self.n_hidden)] for i in range(self.n_input)
-        ])
-        hidden_output_weights = np.array([
-            [self.hidden_output_synapses[j][k].get_weight()
-             for k in range(self.n_output)] for j in range(self.n_hidden)
-        ])
+        input_hidden_weights = np.array(
+            [
+                [
+                    self.input_hidden_synapses[i][j].get_weight()
+                    for j in range(self.n_hidden)
+                ]
+                for i in range(self.n_input)
+            ]
+        )
+        hidden_output_weights = np.array(
+            [
+                [
+                    self.hidden_output_synapses[j][k].get_weight()
+                    for k in range(self.n_output)
+                ]
+                for j in range(self.n_hidden)
+            ]
+        )
         return input_hidden_weights, hidden_output_weights
 
 
@@ -263,8 +301,14 @@ class NeuromorphicActorCritic:
     learning and event-driven processing for energy-efficient reinforcement learning.
     """
 
-    def __init__(self, obs_dim: int, action_dim: int, hidden_dim: int = 32,
-                 dt: float = 0.01, dopamine_baseline: float = 0.1):
+    def __init__(
+        self,
+        obs_dim: int,
+        action_dim: int,
+        hidden_dim: int = 32,
+        dt: float = 0.01,
+        dopamine_baseline: float = 0.1,
+    ):
         self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.hidden_dim = hidden_dim
@@ -273,7 +317,9 @@ class NeuromorphicActorCritic:
 
         # Spiking neural networks
         self.actor_network = SpikingNetwork(obs_dim, hidden_dim, action_dim, dt)
-        self.critic_network = SpikingNetwork(obs_dim, hidden_dim, 1, dt)  # Single value output
+        self.critic_network = SpikingNetwork(
+            obs_dim, hidden_dim, 1, dt
+        )  # Single value output
 
         # Dopamine system for reward modulation
         self.dopamine_level = dopamine_baseline
@@ -309,7 +355,9 @@ class NeuromorphicActorCritic:
         spike_input = self._encode_observation(observation)
 
         # Forward pass through actor network
-        output_spikes, hidden_spikes = self.actor_network.forward(spike_input, n_steps=10)
+        output_spikes, hidden_spikes = self.actor_network.forward(
+            spike_input, n_steps=10
+        )
 
         # Decode action from output firing rates
         firing_rates = self.actor_network.get_output_rates()
@@ -320,11 +368,11 @@ class NeuromorphicActorCritic:
         value_estimate = self.critic_network.get_output_rates()[0]
 
         action_info = {
-            'firing_rates': firing_rates,
-            'value_estimate': value_estimate,
-            'dopamine_level': self.dopamine_level,
-            'td_error': self.td_error,
-            'method': 'neuromorphic'
+            "firing_rates": firing_rates,
+            "value_estimate": value_estimate,
+            "dopamine_level": self.dopamine_level,
+            "td_error": self.td_error,
+            "method": "neuromorphic",
         }
 
         return action, action_info
@@ -336,7 +384,9 @@ class NeuromorphicActorCritic:
         Uses rate coding: higher values -> higher firing rates
         """
         # Normalize observation
-        obs_norm = (observation - np.min(observation)) / (np.max(observation) - np.min(observation) + 1e-6)
+        obs_norm = (observation - np.min(observation)) / (
+            np.max(observation) - np.min(observation) + 1e-6
+        )
 
         # Rate encoding: probability of spike proportional to value
         spike_probs = np.clip(obs_norm, 0, 1)
@@ -360,13 +410,21 @@ class NeuromorphicActorCritic:
         dopamine_release = self.dopamine_baseline + self.td_error * 0.1
 
         # Update dopamine level with temporal dynamics
-        self.dopamine_level += (dopamine_release - self.dopamine_level) / self.dopamine_tau * self.dt
+        self.dopamine_level += (
+            (dopamine_release - self.dopamine_level) / self.dopamine_tau * self.dt
+        )
 
         # Clip dopamine to reasonable range
         self.dopamine_level = np.clip(self.dopamine_level, 0.0, 1.0)
 
-    def learn(self, observation: np.ndarray, action: int, reward: float,
-              next_observation: np.ndarray, done: bool) -> Dict:
+    def learn(
+        self,
+        observation: np.ndarray,
+        action: int,
+        reward: float,
+        next_observation: np.ndarray,
+        done: bool,
+    ) -> Dict:
         """
         Learn from experience using neuromorphic plasticity
 
@@ -409,10 +467,10 @@ class NeuromorphicActorCritic:
         # Here we could implement additional supervised learning if needed
 
         learning_info = {
-            'td_error': self.td_error,
-            'dopamine_level': self.dopamine_level,
-            'avg_firing_rate': np.mean(firing_rates),
-            'value_estimate': current_value
+            "td_error": self.td_error,
+            "dopamine_level": self.dopamine_level,
+            "avg_firing_rate": np.mean(firing_rates),
+            "value_estimate": current_value,
         }
 
         return learning_info
@@ -420,13 +478,17 @@ class NeuromorphicActorCritic:
     def get_performance_metrics(self) -> Dict:
         """Get agent performance metrics"""
         return {
-            'avg_td_error': np.mean(self.td_errors[-100:]) if self.td_errors else 0.0,
-            'avg_dopamine': np.mean(self.dopamine_levels[-100:]) if self.dopamine_levels else 0.0,
-            'avg_firing_rate': np.mean(self.firing_rates[-100:]) if self.firing_rates else 0.0,
-            'current_dopamine': self.dopamine_level,
-            'network_complexity': {
-                'input_neurons': self.obs_dim,
-                'hidden_neurons': self.hidden_dim,
-                'output_neurons': self.action_dim
-            }
+            "avg_td_error": np.mean(self.td_errors[-100:]) if self.td_errors else 0.0,
+            "avg_dopamine": (
+                np.mean(self.dopamine_levels[-100:]) if self.dopamine_levels else 0.0
+            ),
+            "avg_firing_rate": (
+                np.mean(self.firing_rates[-100:]) if self.firing_rates else 0.0
+            ),
+            "current_dopamine": self.dopamine_level,
+            "network_complexity": {
+                "input_neurons": self.obs_dim,
+                "hidden_neurons": self.hidden_dim,
+                "output_neurons": self.action_dim,
+            },
         }

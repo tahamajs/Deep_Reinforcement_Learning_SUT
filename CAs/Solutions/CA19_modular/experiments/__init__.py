@@ -16,7 +16,8 @@ import json
 import os
 from pathlib import Path
 import warnings
-warnings.filterwarnings('ignore')
+
+warnings.filterwarnings("ignore")
 
 # Import from other modules
 from ..utils import PerformanceTracker, ExperimentManager, MissionConfig
@@ -25,7 +26,7 @@ from ..environments import (
     HybridQuantumClassicalEnvironment,
     MetaLearningEnvironment,
     ContinualLearningEnvironment,
-    HierarchicalEnvironment
+    HierarchicalEnvironment,
 )
 from ..hybrid_quantum_classical_rl import HybridQuantumClassicalAgent
 from ..neuromorphic_rl import NeuromorphicActorCritic
@@ -46,27 +47,23 @@ class QuantumNeuromorphicComparison:
     def _setup_environments(self) -> Dict[str, Any]:
         """Setup test environments"""
         return {
-            'neuromorphic': NeuromorphicEnvironment(
-                state_dim=self.config.state_dim,
-                action_dim=self.config.action_dim
+            "neuromorphic": NeuromorphicEnvironment(
+                state_dim=self.config.state_dim, action_dim=self.config.action_dim
             ),
-            'hybrid': HybridQuantumClassicalEnvironment(
+            "hybrid": HybridQuantumClassicalEnvironment(
                 state_dim=self.config.state_dim * 2,
                 action_dim=self.config.action_dim * 2,
-                quantum_complexity=0.8
+                quantum_complexity=0.8,
             ),
-            'meta_learning': MetaLearningEnvironment(
-                base_state_dim=self.config.state_dim,
-                num_tasks=5
+            "meta_learning": MetaLearningEnvironment(
+                base_state_dim=self.config.state_dim, num_tasks=5
             ),
-            'continual': ContinualLearningEnvironment(
-                state_dim=self.config.state_dim,
-                num_phases=3
+            "continual": ContinualLearningEnvironment(
+                state_dim=self.config.state_dim, num_phases=3
             ),
-            'hierarchical': HierarchicalEnvironment(
-                state_dim=self.config.state_dim,
-                num_levels=3
-            )
+            "hierarchical": HierarchicalEnvironment(
+                state_dim=self.config.state_dim, num_levels=3
+            ),
         }
 
     def _setup_agents(self) -> Dict[str, Any]:
@@ -74,32 +71,33 @@ class QuantumNeuromorphicComparison:
         agents = {}
 
         # Hybrid Quantum-Classical Agent
-        agents['hybrid_qc'] = HybridQuantumClassicalAgent(
+        agents["hybrid_qc"] = HybridQuantumClassicalAgent(
             state_dim=self.config.state_dim,
             action_dim=self.config.action_dim,
             quantum_dim=self.config.quantum_dim,
-            hidden_dim=self.config.hidden_dim
+            hidden_dim=self.config.hidden_dim,
         )
 
         # Neuromorphic Agent
-        agents['neuromorphic'] = NeuromorphicActorCritic(
+        agents["neuromorphic"] = NeuromorphicActorCritic(
             state_dim=self.config.state_dim,
             action_dim=self.config.action_dim,
             neuron_count=self.config.neuron_count,
-            synapse_count=self.config.synapse_count
+            synapse_count=self.config.synapse_count,
         )
 
         # Quantum-Enhanced Agent
-        agents['quantum_enhanced'] = QuantumEnhancedAgent(
+        agents["quantum_enhanced"] = QuantumEnhancedAgent(
             state_dim=self.config.state_dim,
             action_dim=self.config.action_dim,
-            quantum_dim=self.config.quantum_dim
+            quantum_dim=self.config.quantum_dim,
         )
 
         return agents
 
-    def run_comparison_experiment(self, num_episodes: int = 100,
-                                max_steps: int = 200) -> Dict[str, Any]:
+    def run_comparison_experiment(
+        self, num_episodes: int = 100, max_steps: int = 200
+    ) -> Dict[str, Any]:
         """Run comprehensive comparison across all agent-environment pairs"""
 
         print("Starting Quantum-Neuromorphic Comparison Experiment")
@@ -125,12 +123,14 @@ class QuantumNeuromorphicComparison:
                 )
 
                 env_results[agent_name] = {
-                    'training_rewards': training_rewards,
-                    'training_lengths': training_lengths,
-                    'eval_rewards': eval_rewards,
-                    'eval_lengths': eval_lengths,
-                    'final_performance': np.mean(eval_rewards[-10:]),
-                    'convergence_episode': self._find_convergence_episode(training_rewards)
+                    "training_rewards": training_rewards,
+                    "training_lengths": training_lengths,
+                    "eval_rewards": eval_rewards,
+                    "eval_lengths": eval_lengths,
+                    "final_performance": np.mean(eval_rewards[-10:]),
+                    "convergence_episode": self._find_convergence_episode(
+                        training_rewards
+                    ),
                 }
 
             results[env_name] = env_results
@@ -138,8 +138,9 @@ class QuantumNeuromorphicComparison:
         self.results = results
         return results
 
-    def _train_agent(self, agent: Any, env: Any, num_episodes: int,
-                    max_steps: int) -> Tuple[List[float], List[int]]:
+    def _train_agent(
+        self, agent: Any, env: Any, num_episodes: int, max_steps: int
+    ) -> Tuple[List[float], List[int]]:
         """Train an agent in an environment"""
         rewards_history = []
         lengths_history = []
@@ -155,9 +156,9 @@ class QuantumNeuromorphicComparison:
                 next_state, reward, done, info = env.step(action)
 
                 # Agent-specific training
-                if hasattr(agent, 'train_step'):
+                if hasattr(agent, "train_step"):
                     agent.train_step(state, action, reward, next_state, done)
-                elif hasattr(agent, 'update'):
+                elif hasattr(agent, "update"):
                     agent.update(state, action, reward, next_state, done)
 
                 state = next_state
@@ -168,13 +169,16 @@ class QuantumNeuromorphicComparison:
             lengths_history.append(episode_length)
 
             if (episode + 1) % 20 == 0:
-                print(f"    Episode {episode + 1}/{num_episodes}, "
-                      f"Avg Reward: {np.mean(rewards_history[-20:]):.2f}")
+                print(
+                    f"    Episode {episode + 1}/{num_episodes}, "
+                    f"Avg Reward: {np.mean(rewards_history[-20:]):.2f}"
+                )
 
         return rewards_history, lengths_history
 
-    def _evaluate_agent(self, agent: Any, env: Any, num_episodes: int = 20,
-                       max_steps: int = 200) -> Tuple[List[float], List[int]]:
+    def _evaluate_agent(
+        self, agent: Any, env: Any, num_episodes: int = 20, max_steps: int = 200
+    ) -> Tuple[List[float], List[int]]:
         """Evaluate trained agent"""
         rewards_history = []
         lengths_history = []
@@ -198,21 +202,24 @@ class QuantumNeuromorphicComparison:
 
         return rewards_history, lengths_history
 
-    def _find_convergence_episode(self, rewards: List[float],
-                                window_size: int = 20) -> Optional[int]:
+    def _find_convergence_episode(
+        self, rewards: List[float], window_size: int = 20
+    ) -> Optional[int]:
         """Find episode where agent converged (stable performance)"""
         if len(rewards) < window_size * 2:
             return None
 
         for i in range(window_size, len(rewards) - window_size):
-            early_window = rewards[i-window_size:i]
-            late_window = rewards[i:i+window_size]
+            early_window = rewards[i - window_size : i]
+            late_window = rewards[i : i + window_size]
 
             early_std = np.std(early_window)
             late_std = np.std(late_window)
 
             # Convergence if recent performance is stable and improved
-            if late_std < early_std * 0.5 and np.mean(late_window) > np.mean(early_window):
+            if late_std < early_std * 0.5 and np.mean(late_window) > np.mean(
+                early_window
+            ):
                 return i
 
         return None
@@ -224,7 +231,7 @@ class QuantumNeuromorphicComparison:
             return
 
         fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-        fig.suptitle('Quantum-Neuromorphic RL Systems Comparison', fontsize=16)
+        fig.suptitle("Quantum-Neuromorphic RL Systems Comparison", fontsize=16)
 
         environments = list(self.results.keys())
         agents = list(self.results[environments[0]].keys())
@@ -235,18 +242,18 @@ class QuantumNeuromorphicComparison:
 
             for agent_name in agents:
                 if agent_name in env_data:
-                    rewards = env_data[agent_name]['training_rewards']
+                    rewards = env_data[agent_name]["training_rewards"]
                     ax.plot(rewards, label=agent_name, alpha=0.7)
 
             ax.set_title(f'{env_name.replace("_", " ").title()}')
-            ax.set_xlabel('Episode')
-            ax.set_ylabel('Reward')
+            ax.set_xlabel("Episode")
+            ax.set_ylabel("Reward")
             ax.legend()
             ax.grid(True, alpha=0.3)
 
         plt.tight_layout()
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=300, bbox_inches="tight")
         plt.show()
 
     def generate_performance_report(self) -> str:
@@ -266,20 +273,25 @@ class QuantumNeuromorphicComparison:
             # Create performance table
             table_data = []
             for agent_name, agent_data in env_results.items():
-                table_data.append({
-                    'Agent': agent_name,
-                    'Final Performance': ".2f",
-                    'Convergence Episode': agent_data.get('convergence_episode', 'N/A'),
-                    'Training Episodes': len(agent_data['training_rewards'])
-                })
+                table_data.append(
+                    {
+                        "Agent": agent_name,
+                        "Final Performance": ".2f",
+                        "Convergence Episode": agent_data.get(
+                            "convergence_episode", "N/A"
+                        ),
+                        "Training Episodes": len(agent_data["training_rewards"]),
+                    }
+                )
 
             df = pd.DataFrame(table_data)
             report.append(df.to_markdown(index=False))
             report.append("")
 
             # Best performing agent
-            best_agent = max(env_results.keys(),
-                           key=lambda x: env_results[x]['final_performance'])
+            best_agent = max(
+                env_results.keys(), key=lambda x: env_results[x]["final_performance"]
+            )
             report.append(f"**Best Performing Agent:** {best_agent}")
             report.append(".2f")
             report.append("")
@@ -301,10 +313,10 @@ class AblationStudy:
         print("Running Quantum Component Ablation Study")
 
         variants = {
-            'full_quantum': {'use_quantum': True, 'use_classical': True},
-            'quantum_only': {'use_quantum': True, 'use_classical': False},
-            'classical_only': {'use_quantum': False, 'use_classical': True},
-            'no_quantum': {'use_quantum': False, 'use_classical': False}
+            "full_quantum": {"use_quantum": True, "use_classical": True},
+            "quantum_only": {"use_quantum": True, "use_classical": False},
+            "classical_only": {"use_quantum": False, "use_classical": True},
+            "no_quantum": {"use_quantum": False, "use_classical": False},
         }
 
         results = {}
@@ -316,12 +328,12 @@ class AblationStudy:
             agent = HybridQuantumClassicalAgent(
                 state_dim=self.config.state_dim,
                 action_dim=self.config.action_dim,
-                quantum_dim=self.config.quantum_dim if params['use_quantum'] else 0,
-                hidden_dim=self.config.hidden_dim
+                quantum_dim=self.config.quantum_dim if params["use_quantum"] else 0,
+                hidden_dim=self.config.hidden_dim,
             )
 
             # Override quantum usage if needed
-            if not params['use_quantum']:
+            if not params["use_quantum"]:
                 agent.quantum_circuit = None
 
             # Train and evaluate
@@ -329,23 +341,37 @@ class AblationStudy:
             eval_reward = self._evaluate_agent_simple(agent, env)
 
             results[variant_name] = {
-                'training_rewards': training_rewards,
-                'final_performance': eval_reward,
-                'parameters': params
+                "training_rewards": training_rewards,
+                "final_performance": eval_reward,
+                "parameters": params,
             }
 
-        self.ablation_results['quantum'] = results
+        self.ablation_results["quantum"] = results
         return results
 
-    def run_neuromorphic_ablation(self, env: Any, num_episodes: int = 50) -> Dict[str, Any]:
+    def run_neuromorphic_ablation(
+        self, env: Any, num_episodes: int = 50
+    ) -> Dict[str, Any]:
         """Ablation study for neuromorphic components"""
         print("Running Neuromorphic Component Ablation Study")
 
         variants = {
-            'full_neuromorphic': {'use_stdp': True, 'use_spiking': True, 'use_dopamine': True},
-            'no_stdp': {'use_stdp': False, 'use_spiking': True, 'use_dopamine': True},
-            'no_spiking': {'use_stdp': True, 'use_spiking': False, 'use_dopamine': True},
-            'no_dopamine': {'use_stdp': True, 'use_spiking': True, 'use_dopamine': False}
+            "full_neuromorphic": {
+                "use_stdp": True,
+                "use_spiking": True,
+                "use_dopamine": True,
+            },
+            "no_stdp": {"use_stdp": False, "use_spiking": True, "use_dopamine": True},
+            "no_spiking": {
+                "use_stdp": True,
+                "use_spiking": False,
+                "use_dopamine": True,
+            },
+            "no_dopamine": {
+                "use_stdp": True,
+                "use_spiking": True,
+                "use_dopamine": False,
+            },
         }
 
         results = {}
@@ -357,19 +383,19 @@ class AblationStudy:
                 state_dim=self.config.state_dim,
                 action_dim=self.config.action_dim,
                 neuron_count=self.config.neuron_count,
-                synapse_count=self.config.synapse_count
+                synapse_count=self.config.synapse_count,
             )
 
             # Apply ablation modifications
-            if not params['use_stdp']:
+            if not params["use_stdp"]:
                 for synapse in agent.network.synapses:
                     synapse.stdp_enabled = False
 
-            if not params['use_spiking']:
+            if not params["use_spiking"]:
                 for neuron in agent.network.neurons:
                     neuron.spiking_enabled = False
 
-            if not params['use_dopamine']:
+            if not params["use_dopamine"]:
                 agent.dopamine_modulation = 0.0
 
             # Train and evaluate
@@ -377,15 +403,17 @@ class AblationStudy:
             eval_reward = self._evaluate_agent_simple(agent, env)
 
             results[variant_name] = {
-                'training_rewards': training_rewards,
-                'final_performance': eval_reward,
-                'parameters': params
+                "training_rewards": training_rewards,
+                "final_performance": eval_reward,
+                "parameters": params,
             }
 
-        self.ablation_results['neuromorphic'] = results
+        self.ablation_results["neuromorphic"] = results
         return results
 
-    def _train_agent_simple(self, agent: Any, env: Any, num_episodes: int) -> Tuple[List[float], List[int]]:
+    def _train_agent_simple(
+        self, agent: Any, env: Any, num_episodes: int
+    ) -> Tuple[List[float], List[int]]:
         """Simplified training for ablation studies"""
         rewards = []
 
@@ -399,7 +427,7 @@ class AblationStudy:
                 action = agent.select_action(state)
                 next_state, reward, done, _ = env.step(action)
 
-                if hasattr(agent, 'train_step'):
+                if hasattr(agent, "train_step"):
                     agent.train_step(state, action, reward, next_state, done)
 
                 state = next_state
@@ -442,7 +470,9 @@ class ScalabilityAnalysis:
         self.config = config
         self.scalability_results = {}
 
-    def run_scalability_test(self, problem_sizes: List[int] = [4, 8, 16, 32]) -> Dict[str, Any]:
+    def run_scalability_test(
+        self, problem_sizes: List[int] = [4, 8, 16, 32]
+    ) -> Dict[str, Any]:
         """Test scalability across different problem sizes"""
         print("Running Scalability Analysis")
 
@@ -453,24 +483,27 @@ class ScalabilityAnalysis:
 
             # Create environment and agents for this size
             env = HybridQuantumClassicalEnvironment(
-                state_dim=size,
-                action_dim=min(size * 2, 16),
-                quantum_complexity=0.8
+                state_dim=size, action_dim=min(size * 2, 16), quantum_complexity=0.8
             )
 
             agents = {
-                'hybrid_qc': HybridQuantumClassicalAgent(
-                    state_dim=size, action_dim=min(size * 2, 16),
-                    quantum_dim=min(size, 8), hidden_dim=size
+                "hybrid_qc": HybridQuantumClassicalAgent(
+                    state_dim=size,
+                    action_dim=min(size * 2, 16),
+                    quantum_dim=min(size, 8),
+                    hidden_dim=size,
                 ),
-                'neuromorphic': NeuromorphicActorCritic(
-                    state_dim=size, action_dim=min(size * 2, 16),
-                    neuron_count=size * 2, synapse_count=size * 4
+                "neuromorphic": NeuromorphicActorCritic(
+                    state_dim=size,
+                    action_dim=min(size * 2, 16),
+                    neuron_count=size * 2,
+                    synapse_count=size * 4,
                 ),
-                'quantum_enhanced': QuantumEnhancedAgent(
-                    state_dim=size, action_dim=min(size * 2, 16),
-                    quantum_dim=min(size, 8)
-                )
+                "quantum_enhanced": QuantumEnhancedAgent(
+                    state_dim=size,
+                    action_dim=min(size * 2, 16),
+                    quantum_dim=min(size, 8),
+                ),
             }
 
             size_results = {}
@@ -482,24 +515,23 @@ class ScalabilityAnalysis:
                     eval_reward = self._quick_evaluate(agent, env)
 
                     size_results[agent_name] = {
-                        'training_rewards': training_rewards,
-                        'final_performance': eval_reward,
-                        'training_time': len(training_rewards) * 0.1,  # Estimated
-                        'success': True
+                        "training_rewards": training_rewards,
+                        "final_performance": eval_reward,
+                        "training_time": len(training_rewards) * 0.1,  # Estimated
+                        "success": True,
                     }
 
                 except Exception as e:
-                    size_results[agent_name] = {
-                        'error': str(e),
-                        'success': False
-                    }
+                    size_results[agent_name] = {"error": str(e), "success": False}
 
             results[size] = size_results
 
         self.scalability_results = results
         return results
 
-    def _quick_train(self, agent: Any, env: Any, num_episodes: int) -> Tuple[List[float], List[int]]:
+    def _quick_train(
+        self, agent: Any, env: Any, num_episodes: int
+    ) -> Tuple[List[float], List[int]]:
         """Very quick training for scalability testing"""
         rewards = []
 
@@ -513,7 +545,7 @@ class ScalabilityAnalysis:
                 action = agent.select_action(state)
                 next_state, reward, done, _ = env.step(action)
 
-                if hasattr(agent, 'train_step'):
+                if hasattr(agent, "train_step"):
                     agent.train_step(state, action, reward, next_state, done)
 
                 state = next_state
@@ -553,51 +585,62 @@ class ScalabilityAnalysis:
             return
 
         fig, axes = plt.subplots(1, 2, figsize=(15, 6))
-        fig.suptitle('Scalability Analysis: Performance vs Problem Size', fontsize=14)
+        fig.suptitle("Scalability Analysis: Performance vs Problem Size", fontsize=14)
 
         sizes = list(self.scalability_results.keys())
-        agents = ['hybrid_qc', 'neuromorphic', 'quantum_enhanced']
+        agents = ["hybrid_qc", "neuromorphic", "quantum_enhanced"]
 
         # Performance plot
         ax1 = axes[0]
         for agent in agents:
             performances = []
             for size in sizes:
-                if agent in self.scalability_results[size] and self.scalability_results[size][agent]['success']:
-                    performances.append(self.scalability_results[size][agent]['final_performance'])
+                if (
+                    agent in self.scalability_results[size]
+                    and self.scalability_results[size][agent]["success"]
+                ):
+                    performances.append(
+                        self.scalability_results[size][agent]["final_performance"]
+                    )
                 else:
                     performances.append(0)
 
-            ax1.plot(sizes, performances, 'o-', label=agent, markersize=8)
+            ax1.plot(sizes, performances, "o-", label=agent, markersize=8)
 
-        ax1.set_xlabel('Problem Size (State Dimension)')
-        ax1.set_ylabel('Final Performance (Reward)')
-        ax1.set_title('Performance Scaling')
+        ax1.set_xlabel("Problem Size (State Dimension)")
+        ax1.set_ylabel("Final Performance (Reward)")
+        ax1.set_title("Performance Scaling")
         ax1.legend()
         ax1.grid(True, alpha=0.3)
-        ax1.set_xscale('log', base=2)
+        ax1.set_xscale("log", base=2)
 
         # Success rate plot
         ax2 = axes[1]
         for agent in agents:
             success_rates = []
             for size in sizes:
-                success = 1 if (agent in self.scalability_results[size] and
-                              self.scalability_results[size][agent]['success']) else 0
+                success = (
+                    1
+                    if (
+                        agent in self.scalability_results[size]
+                        and self.scalability_results[size][agent]["success"]
+                    )
+                    else 0
+                )
                 success_rates.append(success)
 
-            ax2.plot(sizes, success_rates, 's-', label=agent, markersize=8)
+            ax2.plot(sizes, success_rates, "s-", label=agent, markersize=8)
 
-        ax2.set_xlabel('Problem Size (State Dimension)')
-        ax2.set_ylabel('Success Rate')
-        ax2.set_title('Training Success Rate')
+        ax2.set_xlabel("Problem Size (State Dimension)")
+        ax2.set_ylabel("Success Rate")
+        ax2.set_title("Training Success Rate")
         ax2.legend()
         ax2.grid(True, alpha=0.3)
-        ax2.set_xscale('log', base=2)
+        ax2.set_xscale("log", base=2)
 
         plt.tight_layout()
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=300, bbox_inches="tight")
         plt.show()
 
 
@@ -612,9 +655,9 @@ class ExperimentRunner:
         self.save_dir.mkdir(exist_ok=True)
 
         self.experiments = {
-            'comparison': QuantumNeuromorphicComparison(config),
-            'ablation': AblationStudy(config),
-            'scalability': ScalabilityAnalysis(config)
+            "comparison": QuantumNeuromorphicComparison(config),
+            "ablation": AblationStudy(config),
+            "scalability": ScalabilityAnalysis(config),
         }
 
     def run_all_experiments(self) -> Dict[str, Any]:
@@ -625,39 +668,38 @@ class ExperimentRunner:
         all_results = {}
 
         # Main comparison experiment
-        print("\n" + "="*50)
+        print("\n" + "=" * 50)
         print("PHASE 1: Quantum-Neuromorphic Comparison")
-        print("="*50)
+        print("=" * 50)
 
-        comparison_results = self.experiments['comparison'].run_comparison_experiment(
-            num_episodes=self.config.num_episodes,
-            max_steps=self.config.max_steps
+        comparison_results = self.experiments["comparison"].run_comparison_experiment(
+            num_episodes=self.config.num_episodes, max_steps=self.config.max_steps
         )
-        all_results['comparison'] = comparison_results
+        all_results["comparison"] = comparison_results
 
         # Ablation studies
-        print("\n" + "="*50)
+        print("\n" + "=" * 50)
         print("PHASE 2: Ablation Studies")
-        print("="*50)
+        print("=" * 50)
 
         ablation_results = {}
         env = NeuromorphicEnvironment()  # Use simple environment for ablation
 
-        ablation_results['quantum'] = self.experiments['ablation'].run_quantum_ablation(
+        ablation_results["quantum"] = self.experiments["ablation"].run_quantum_ablation(
             env, num_episodes=30
         )
-        ablation_results['neuromorphic'] = self.experiments['ablation'].run_neuromorphic_ablation(
-            env, num_episodes=30
-        )
-        all_results['ablation'] = ablation_results
+        ablation_results["neuromorphic"] = self.experiments[
+            "ablation"
+        ].run_neuromorphic_ablation(env, num_episodes=30)
+        all_results["ablation"] = ablation_results
 
         # Scalability analysis
-        print("\n" + "="*50)
+        print("\n" + "=" * 50)
         print("PHASE 3: Scalability Analysis")
-        print("="*50)
+        print("=" * 50)
 
-        scalability_results = self.experiments['scalability'].run_scalability_test()
-        all_results['scalability'] = scalability_results
+        scalability_results = self.experiments["scalability"].run_scalability_test()
+        all_results["scalability"] = scalability_results
 
         # Save results
         self._save_results(all_results)
@@ -665,9 +707,9 @@ class ExperimentRunner:
         # Generate reports
         self._generate_reports(all_results)
 
-        print("\n" + "="*50)
+        print("\n" + "=" * 50)
         print("EXPERIMENT SUITE COMPLETED")
-        print("="*50)
+        print("=" * 50)
 
         return all_results
 
@@ -677,7 +719,7 @@ class ExperimentRunner:
 
         # Save as JSON
         json_path = self.save_dir / f"experiment_results_{timestamp}.json"
-        with open(json_path, 'w') as f:
+        with open(json_path, "w") as f:
             # Convert numpy arrays to lists for JSON serialization
             json_results = self._make_json_serializable(results)
             json.dump(json_results, f, indent=2)
@@ -689,7 +731,9 @@ class ExperimentRunner:
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         elif isinstance(obj, dict):
-            return {key: self._make_json_serializable(value) for key, value in obj.items()}
+            return {
+                key: self._make_json_serializable(value) for key, value in obj.items()
+            }
         elif isinstance(obj, list):
             return [self._make_json_serializable(item) for item in obj]
         elif isinstance(obj, (int, float, str, bool)) or obj is None:
@@ -703,15 +747,15 @@ class ExperimentRunner:
 
         # Performance report
         report_path = self.save_dir / f"performance_report_{timestamp}.md"
-        with open(report_path, 'w') as f:
-            f.write(self.experiments['comparison'].generate_performance_report())
+        with open(report_path, "w") as f:
+            f.write(self.experiments["comparison"].generate_performance_report())
 
         # Generate plots
         try:
-            self.experiments['comparison'].plot_comparison_results(
+            self.experiments["comparison"].plot_comparison_results(
                 save_path=str(self.save_dir / f"comparison_plot_{timestamp}.png")
             )
-            self.experiments['scalability'].plot_scalability_results(
+            self.experiments["scalability"].plot_scalability_results(
                 save_path=str(self.save_dir / f"scalability_plot_{timestamp}.png")
             )
         except Exception as e:
@@ -745,8 +789,8 @@ def run_ablation_study(config: Optional[MissionConfig] = None) -> Dict[str, Any]
     env = NeuromorphicEnvironment()
 
     results = {
-        'quantum': study.run_quantum_ablation(env, num_episodes=30),
-        'neuromorphic': study.run_neuromorphic_ablation(env, num_episodes=30)
+        "quantum": study.run_quantum_ablation(env, num_episodes=30),
+        "neuromorphic": study.run_neuromorphic_ablation(env, num_episodes=30),
     }
 
     return results
