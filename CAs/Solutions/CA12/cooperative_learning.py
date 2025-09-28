@@ -1,5 +1,14 @@
 # Multi-Agent Deep Deterministic Policy Gradient (MADDPG) Implementation
 
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+import numpy as np
+from collections import deque
+import random
+from setup import device, ma_config
+
 
 class Actor(nn.Module):
     """Actor network for MADDPG."""
