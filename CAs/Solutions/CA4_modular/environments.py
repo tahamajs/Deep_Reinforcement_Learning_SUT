@@ -22,8 +22,10 @@ class EnvironmentWrapper:
             self.env = gym.make(env_name)
             self.env_name = env_name
             self.state_size = self.env.observation_space.shape[0]
-            self.action_size = self.env.action_space.n if hasattr(self.env.action_space, 'n') else None
-            self.is_continuous = not hasattr(self.env.action_space, 'n')
+            self.action_size = (
+                self.env.action_space.n if hasattr(self.env.action_space, "n") else None
+            )
+            self.is_continuous = not hasattr(self.env.action_space, "n")
         except Exception as e:
             print(f"Environment {env_name} not available: {e}")
             self.env = None
@@ -85,7 +87,9 @@ class PolicyDemoEnvironment:
 
         # Define transition dynamics
         self.transitions = np.random.rand(n_states, n_actions, n_states)
-        self.transitions = self.transitions / self.transitions.sum(axis=2, keepdims=True)
+        self.transitions = self.transitions / self.transitions.sum(
+            axis=2, keepdims=True
+        )
 
         # Define rewards
         self.rewards = np.random.randn(n_states, n_actions)
@@ -138,11 +142,11 @@ def get_environment_info(env: EnvironmentWrapper) -> dict:
         Dictionary with environment information
     """
     return {
-        'name': env.env_name if env.env else 'Mock',
-        'state_size': env.state_size,
-        'action_size': env.action_size,
-        'is_continuous': env.is_continuous,
-        'action_space_type': 'continuous' if env.is_continuous else 'discrete'
+        "name": env.env_name if env.env else "Mock",
+        "state_size": env.state_size,
+        "action_size": env.action_size,
+        "is_continuous": env.is_continuous,
+        "action_space_type": "continuous" if env.is_continuous else "discrete",
     }
 
 
@@ -180,8 +184,8 @@ def test_environment(env: EnvironmentWrapper, n_steps: int = 10) -> dict:
     env.close()
 
     return {
-        'total_reward': total_reward,
-        'states_visited': len(states_visited),
-        'actions_taken': actions_taken,
-        'final_state': state
+        "total_reward": total_reward,
+        "states_visited": len(states_visited),
+        "actions_taken": actions_taken,
+        "final_state": state,
     }
