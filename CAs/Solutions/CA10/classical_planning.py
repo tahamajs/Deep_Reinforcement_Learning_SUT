@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from models import TabularModel, NeuralModel, device
+from models import TabularModel, NeuralModel, ModelTrainer, device
+from environments import SimpleGridWorld
 import torch
 
 
@@ -178,7 +179,10 @@ class UncertaintyAwarePlanner:
         policy = np.zeros(self.num_states, dtype=int)
 
         print(f"Running Pessimistic Value Iteration (beta={beta})")
-
+        
+        # Set model to eval mode to avoid gradient computation
+        self.ensemble_model.eval()
+        
         for iteration in range(max_iterations):
             old_V = V.copy()
 
@@ -207,7 +211,7 @@ class UncertaintyAwarePlanner:
                     )
 
                     # For simplicity, assume deterministic next state (can be extended)
-                    next_state_pred = next_state_mean.cpu().numpy()[0]
+                    next_state_pred = next_state_mean.cpu().detach().numpy()[0]
                     next_state_idx = np.argmax(
                         next_state_pred
                     )  # Most likely next state
@@ -232,6 +236,9 @@ class UncertaintyAwarePlanner:
         policy = np.zeros(self.num_states, dtype=int)
 
         print(f"Running Optimistic Value Iteration (beta={beta})")
+
+        # Set model to eval mode to avoid gradient computation
+        self.ensemble_model.eval()
 
         for iteration in range(max_iterations):
             old_V = V.copy()
@@ -261,7 +268,7 @@ class UncertaintyAwarePlanner:
                     )
 
                     # For simplicity, assume deterministic next state
-                    next_state_pred = next_state_mean.cpu().numpy()[0]
+                    next_state_pred = next_state_mean.cpu().detach().numpy()[0]
                     next_state_idx = np.argmax(next_state_pred)
 
                     q_values[action] = (
@@ -380,51 +387,85 @@ class ModelBasedPolicySearch:
         return best_sequence, best_value
 
 
-def demonstrate_classical_planning(
-    env, tabular_model, neural_model, ensemble_model=None
-):
+def demonstrate_classical_planning():
     """Demonstrate classical planning with learned models"""
 
     print("Classical Planning with Learned Models")
     print("=" * 50)
+
+    # Create environment and collect data
+    env = SimpleGridWorld(size=4)
+    tabular_model = TabularModel(env.num_states, env.num_actions)
+
+    # Collect experience
+    n_episodes = 1000
+    experience_data = []
+
+    print("\n1. Collecting experience for model learning...")
+    for episode in range(n_episodes):
+        state = env.reset()
+        done = False
+
+        while not done:
+            action = np.random.randint(env.num_actions)  # Random policy
+            next_state, reward, done = env.step(action)
+
+            # Update tabular model
+            tabular_model.update(state, action, next_state, reward)
+
+            # Store for neural model
+            experience_data.append((state, action, next_state, reward))
+
+            state = next_state
+
+    print(f"Collected {len(experience_data)} transitions")
+
+    # Prepare data for neural model
+    states = np.array([exp[0] for exp in experience_data])
+    actions = np.array([exp[1] for exp in experience_data])
+    next_states = np.array([exp[2] for exp in experience_data])
+    rewards = np.array([exp[3] for exp in experience_data])
+
+    # Convert states to one-hot for neural model
+    states_onehot = np.eye(env.num_states)[states]
+    next_states_onehot = np.eye(env.num_states)[next_states]
+
+    # Train neural model
+    print("\n2. Training neural model...")
+    neural_model = NeuralModel(
+        env.num_states, env.num_actions, hidden_dim=64, ensemble_size=3
+    ).to(device)
+    trainer = ModelTrainer(neural_model, lr=1e-3)
+
+    trainer.train_batch(
+        (states_onehot, actions, next_states_onehot, rewards), epochs=50, batch_size=64
+    )
 
     # Use the tabular model we learned earlier
     planner = ModelBasedPlanner(
         tabular_model, env.num_states, env.num_actions, gamma=0.95
     )
 
-    print("\n1. Value Iteration with Learned Model:")
+    print("\n3. Value Iteration with Learned Model:")
     vi_values, vi_policy = planner.value_iteration(max_iterations=50)
 
-    print("\n2. Policy Iteration with Learned Model:")
+    print("\n4. Policy Iteration with Learned Model:")
     planner_pi = ModelBasedPlanner(
         tabular_model, env.num_states, env.num_actions, gamma=0.95
     )
     pi_values, pi_policy = planner_pi.policy_iteration(max_iterations=20)
 
     # Compare with uncertainty-aware planning
-    print("\n3. Uncertainty-Aware Planning:")
-    if ensemble_model is not None:
-        uncertainty_planner = UncertaintyAwarePlanner(
-            ensemble_model, env.num_states, env.num_actions
-        )
-        pessimistic_V, pessimistic_policy = (
-            uncertainty_planner.pessimistic_value_iteration(beta=0.5)
-        )
-        optimistic_V, optimistic_policy = (
-            uncertainty_planner.optimistic_value_iteration(beta=0.5)
-        )
-    else:
-        # Fallback to neural model if no ensemble
-        uncertainty_planner = UncertaintyAwarePlanner(
-            neural_model, env.num_states, env.num_actions
-        )
-        pessimistic_V, pessimistic_policy = (
-            uncertainty_planner.pessimistic_value_iteration(beta=0.5)
-        )
-        optimistic_V, optimistic_policy = (
-            uncertainty_planner.optimistic_value_iteration(beta=0.5)
-        )
+    print("\n5. Uncertainty-Aware Planning:")
+    uncertainty_planner = UncertaintyAwarePlanner(
+        neural_model, env.num_states, env.num_actions
+    )
+    pessimistic_V, pessimistic_policy = uncertainty_planner.pessimistic_value_iteration(
+        beta=0.5
+    )
+    optimistic_V, optimistic_policy = uncertainty_planner.optimistic_value_iteration(
+        beta=0.5
+    )
 
     # Visualization
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
@@ -474,10 +515,11 @@ def demonstrate_classical_planning(
     plot_policy(axes[1, 2], pessimistic_policy, "Pessimistic Planning - Policy")
 
     plt.tight_layout()
+    plt.savefig("visualizations/classical_planning.png", dpi=300, bbox_inches="tight")
     plt.show()
 
     # Compare planning methods
-    print("\n4. Planning Method Comparison:")
+    print("\n6. Planning Method Comparison:")
     print(
         f"Value Iteration - Max Value: {np.max(vi_values):.3f}, Policy Changes: {len(planner.value_history)}"
     )
@@ -488,7 +530,7 @@ def demonstrate_classical_planning(
     print(f"Optimistic Planning - Max Value: {np.max(optimistic_V):.3f}")
 
     # Test policy search methods
-    print("\n5. Model-Based Policy Search:")
+    print("\n7. Model-Based Policy Search:")
     policy_searcher = ModelBasedPolicySearch(
         tabular_model, env.num_states, env.num_actions
     )

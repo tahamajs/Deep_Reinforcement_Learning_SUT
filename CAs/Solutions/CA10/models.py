@@ -116,11 +116,11 @@ class TabularModel:
         return R
 
 
-class NeuralModel(nn.Module):
+class NeuralModel:
     """Neural network environment model"""
 
     def __init__(self, state_dim, action_dim, hidden_dim=256, ensemble_size=1):
-        super(NeuralModel, self).__init__()
+        # super().__init__()
 
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -175,29 +175,34 @@ class NeuralModel(nn.Module):
 
     def predict_with_uncertainty(self, state, action):
         """Predict with uncertainty from ensemble"""
-        outputs = []
+        with torch.no_grad():
+            outputs = []
 
-        for i in range(self.ensemble_size):
-            next_state, reward = self.forward(state, action, model_idx=i)
-            outputs.append(torch.cat([next_state, reward.unsqueeze(1)], dim=1))
+            for i in range(self.ensemble_size):
+                next_state, reward = self.forward(state, action, model_idx=i)
+                outputs.append(torch.cat([next_state, reward.unsqueeze(1)], dim=1))
 
-        outputs = torch.stack(outputs)  # (ensemble_size, batch_size, state_dim + 1)
+            outputs = torch.stack(outputs)  # (ensemble_size, batch_size, state_dim + 1)
 
-        # Compute mean and uncertainty
-        mean = outputs.mean(dim=0)
-        uncertainty = outputs.std(dim=0)
+            # Compute mean and uncertainty
+            mean = outputs.mean(dim=0)
+            uncertainty = outputs.std(dim=0)
 
-        next_state_mean = mean[:, : self.state_dim]
-        reward_mean = mean[:, self.state_dim]
-        next_state_std = uncertainty[:, : self.state_dim]
-        reward_std = uncertainty[:, self.state_dim]
+            next_state_mean = mean[:, : self.state_dim]
+            reward_mean = mean[:, self.state_dim]
+            next_state_std = uncertainty[:, : self.state_dim]
+            reward_std = uncertainty[:, self.state_dim]
 
-        return next_state_mean, reward_mean, next_state_std, reward_std
+            return next_state_mean, reward_mean, next_state_std, reward_std
 
     def sample_from_model(self, state, action):
         """Sample transition from one random model in ensemble"""
         model_idx = np.random.randint(self.ensemble_size)
         return self.forward(state, action, model_idx=model_idx)
+
+    def sample_transition(self, state, action):
+        """Sample next state and reward from model (alias for sample_from_model)"""
+        return self.sample_from_model(state, action)
 
 
 class ModelTrainer:
