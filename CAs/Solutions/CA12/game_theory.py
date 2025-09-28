@@ -135,20 +135,23 @@ class MultiAgentEnvironment:
         self.step_count += 1
 
         # Convert actions to numpy arrays
-        actions_np = [action.detach().numpy() if hasattr(action, 'detach') else np.array(action) for action in actions]
+        actions_np = [
+            action.detach().numpy() if hasattr(action, "detach") else np.array(action)
+            for action in actions
+        ]
 
         # Simple dynamics: state evolves based on joint action
         joint_action = np.mean(actions_np, axis=0)
         noise = np.random.randn(self.state_dim) * 0.1
-        
+
         # Handle case where action_dim != state_dim
         if len(joint_action) >= self.state_dim:
-            action_effect = joint_action[:self.state_dim]
+            action_effect = joint_action[: self.state_dim]
         else:
             # Pad with zeros if action is smaller than state
             action_effect = np.zeros(self.state_dim)
-            action_effect[:len(joint_action)] = joint_action
-            
+            action_effect[: len(joint_action)] = joint_action
+
         self.state = 0.9 * self.state + 0.1 * action_effect + noise
 
         # Compute rewards
@@ -168,11 +171,11 @@ class MultiAgentEnvironment:
             for i in range(self.n_agents):
                 # Handle case where action_dim != state_dim
                 if len(actions_np[i]) >= self.state_dim:
-                    action_effect_i = actions_np[i][:self.state_dim]
+                    action_effect_i = actions_np[i][: self.state_dim]
                 else:
                     action_effect_i = np.zeros(self.state_dim)
-                    action_effect_i[:len(actions_np[i])] = actions_np[i]
-                    
+                    action_effect_i[: len(actions_np[i])] = actions_np[i]
+
                 individual_reward = -np.linalg.norm(self.state - action_effect_i)
                 competition_penalty = (
                     sum(

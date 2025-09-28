@@ -415,7 +415,9 @@ class SelfPlayTraining:
         # Convert to tensors
         for key in episode_data:
             if key != "total_reward":
-                episode_data[key] = torch.stack([torch.tensor(x) for x in episode_data[key]])
+                episode_data[key] = torch.stack(
+                    [torch.tensor(x) for x in episode_data[key]]
+                )
 
         return episode_data
 

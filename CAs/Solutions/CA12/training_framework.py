@@ -604,4 +604,6 @@ if __name__ == "__main__":
     training_demo = demonstrate_training_orchestrator()
     eval_demo = demonstrate_comprehensive_evaluation()
     print("\n🚀 Training framework and evaluation ready!")
-    print("✅ Multi-agent training orchestrator and comprehensive evaluation implemented!")
+    print(
+        "✅ Multi-agent training orchestrator and comprehensive evaluation implemented!"
+    )

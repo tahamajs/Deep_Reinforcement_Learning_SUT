@@ -1,5 +1,3 @@
-# Multi-Agent Deep Deterministic Policy Gradient (MADDPG) Implementation
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -67,21 +65,17 @@ class MADDPGAgent:
         self.gamma = gamma
         self.tau = tau
 
-        # Networks
         self.actor = Actor(obs_dim, action_dim).to(device)
         self.critic = Critic(total_obs_dim, total_action_dim).to(device)
         self.target_actor = Actor(obs_dim, action_dim).to(device)
         self.target_critic = Critic(total_obs_dim, total_action_dim).to(device)
 
-        # Copy parameters to target networks
         self.target_actor.load_state_dict(self.actor.state_dict())
         self.target_critic.load_state_dict(self.critic.state_dict())
 
-        # Optimizers
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr_actor)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr_critic)
 
-        # Noise for exploration
         self.noise_scale = 0.1
         self.noise_decay = 0.9999
 
@@ -106,15 +100,12 @@ class MADDPGAgent:
         next_actions = torch.FloatTensor(next_actions).to(device)
         dones = torch.BoolTensor(dones).to(device)
 
-        # Current Q-values
         current_q = self.critic(obs, actions).squeeze()
 
-        # Target Q-values
         with torch.no_grad():
             target_q = self.target_critic(next_obs, next_actions).squeeze()
             target_q = rewards + self.gamma * target_q * ~dones
 
-        # Critic loss
         critic_loss = F.mse_loss(current_q, target_q)
 
         self.critic_optimizer.zero_grad()
@@ -129,12 +120,10 @@ class MADDPGAgent:
         obs = torch.FloatTensor(obs).to(device)
         actions = torch.FloatTensor(actions).to(device)
 
-        # Replace this agent's action with current policy
         actions_pred = actions.clone()
-        agent_obs = obs[:, self.agent_id]  # This agent's observations
+        agent_obs = obs[:, self.agent_id]
         actions_pred[:, self.agent_id] = self.actor(agent_obs)
 
-        # Actor loss: maximize Q-value
         actor_loss = -self.critic(
             obs.view(obs.size(0), -1), actions_pred.view(actions_pred.size(0), -1)
         ).mean()
@@ -170,13 +159,11 @@ class MADDPG:
         total_obs_dim = n_agents * obs_dim
         total_action_dim = n_agents * action_dim
 
-        # Create agents
         self.agents = [
             MADDPGAgent(i, obs_dim, action_dim, total_obs_dim, total_action_dim)
             for i in range(n_agents)
         ]
 
-        # Replay buffer
         self.replay_buffer = ReplayBuffer(buffer_size)
 
     def act(self, observations, add_noise=True):
@@ -189,10 +176,9 @@ class MADDPG:
 
     def step(self, states, actions, rewards, next_states, dones):
         """Store experience and update agents."""
-        # Store experience
+
         self.replay_buffer.push(states, actions, rewards, next_states, dones)
 
-        # Update agents if enough samples
         if len(self.replay_buffer) > ma_config.batch_size:
             self.update()
 
@@ -201,12 +187,10 @@ class MADDPG:
         batch = self.replay_buffer.sample(ma_config.batch_size)
         states, actions, rewards, next_states, dones = batch
 
-        # Prepare data for centralized training
         states_flat = np.array(states).reshape(len(states), -1)
         actions_flat = np.array(actions).reshape(len(actions), -1)
         next_states_flat = np.array(next_states).reshape(len(next_states), -1)
 
-        # Get next actions from target actors
         next_actions = []
         for i, agent in enumerate(self.agents):
             next_obs = torch.FloatTensor(next_states).to(device)[:, i]
@@ -215,13 +199,11 @@ class MADDPG:
 
         next_actions_flat = torch.cat(next_actions, dim=-1).cpu().data.numpy()
 
-        # Update each agent
         losses = {"actor": [], "critic": []}
         for i, agent in enumerate(self.agents):
             agent_rewards = np.array(rewards)[:, i]
             agent_dones = np.array(dones)
 
-            # Update critic
             critic_loss = agent.update_critic(
                 states_flat,
                 actions_flat,
@@ -232,11 +214,9 @@ class MADDPG:
             )
             losses["critic"].append(critic_loss)
 
-            # Update actor
             actor_loss = agent.update_actor(states, actions)
             losses["actor"].append(actor_loss)
 
-            # Soft update target networks
             agent.soft_update()
 
         return losses
@@ -262,7 +242,6 @@ class ReplayBuffer:
         return len(self.buffer)
 
 
-# Value Decomposition Network (VDN) Implementation
 class VDNAgent(nn.Module):
     """Individual agent network for VDN."""
 
@@ -293,7 +272,6 @@ class VDN:
             VDNAgent(obs_dim, action_dim).to(device) for _ in range(n_agents)
         ]
 
-        # Copy parameters
         for agent, target in zip(self.agents, self.target_agents):
             target.load_state_dict(agent.state_dict())
 
@@ -325,7 +303,6 @@ class VDN:
 
         total_loss = 0
 
-        # Convert to tensors
         team_rewards = torch.FloatTensor([sum(r) for r in rewards]).to(device)
         team_dones = torch.BoolTensor([any(d) for d in dones]).to(device)
 
@@ -338,11 +315,9 @@ class VDN:
                 device
             )
 
-            # Current Q-values
             q_values = agent(agent_states)
             q_values = q_values.gather(1, agent_actions.unsqueeze(1)).squeeze()
 
-            # Target Q-values
             with torch.no_grad():
                 next_q_values = target_agent(agent_next_states).max(1)[0]
                 target_q = team_rewards + 0.99 * next_q_values * ~team_dones
@@ -355,7 +330,6 @@ class VDN:
 
             total_loss += loss.item()
 
-        # Soft update target networks
         tau = 0.005
         for agent, target_agent in zip(self.agents, self.target_agents):
             for param, target_param in zip(

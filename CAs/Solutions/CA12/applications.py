@@ -317,8 +317,12 @@ class SmartGridEnvironment:
         # Time of day encoding
         time_of_day = torch.tensor(
             [
-                torch.sin(torch.tensor(2 * torch.pi * self.current_step / self.n_time_steps)),
-                torch.cos(torch.tensor(2 * torch.pi * self.current_step / self.n_time_steps)),
+                torch.sin(
+                    torch.tensor(2 * torch.pi * self.current_step / self.n_time_steps)
+                ),
+                torch.cos(
+                    torch.tensor(2 * torch.pi * self.current_step / self.n_time_steps)
+                ),
             ]
         )
 
