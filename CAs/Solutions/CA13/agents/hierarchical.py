@@ -23,7 +23,7 @@ class OptionsCriticNetwork(nn.Module):
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU()
+            nn.ReLU(),
         )
 
         # Option selection network (high-level policy)
@@ -31,34 +31,40 @@ class OptionsCriticNetwork(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, num_options),
-            nn.Softmax(dim=-1)
+            nn.Softmax(dim=-1),
         )
 
         # Intra-option policies (low-level policies for each option)
-        self.intra_option_nets = nn.ModuleList([
-            nn.Sequential(
-                nn.Linear(hidden_dim, hidden_dim),
-                nn.ReLU(),
-                nn.Linear(hidden_dim, action_dim),
-                nn.Softmax(dim=-1)
-            ) for _ in range(num_options)
-        ])
+        self.intra_option_nets = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.Linear(hidden_dim, hidden_dim),
+                    nn.ReLU(),
+                    nn.Linear(hidden_dim, action_dim),
+                    nn.Softmax(dim=-1),
+                )
+                for _ in range(num_options)
+            ]
+        )
 
         # Termination functions for each option
-        self.termination_nets = nn.ModuleList([
-            nn.Sequential(
-                nn.Linear(hidden_dim, hidden_dim // 2),
-                nn.ReLU(),
-                nn.Linear(hidden_dim // 2, 1),
-                nn.Sigmoid()
-            ) for _ in range(num_options)
-        ])
+        self.termination_nets = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.Linear(hidden_dim, hidden_dim // 2),
+                    nn.ReLU(),
+                    nn.Linear(hidden_dim // 2, 1),
+                    nn.Sigmoid(),
+                )
+                for _ in range(num_options)
+            ]
+        )
 
         # Value function over options
         self.value_net = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, num_options)
+            nn.Linear(hidden_dim, num_options),
         )
 
     def forward(self, state):
@@ -69,10 +75,14 @@ class OptionsCriticNetwork(nn.Module):
         option_probs = self.option_net(features)
 
         # Intra-option policies
-        action_probs = torch.stack([net(features) for net in self.intra_option_nets], dim=1)
+        action_probs = torch.stack(
+            [net(features) for net in self.intra_option_nets], dim=1
+        )
 
         # Termination probabilities
-        termination_probs = torch.stack([net(features) for net in self.termination_nets], dim=1).squeeze(-1)
+        termination_probs = torch.stack(
+            [net(features) for net in self.termination_nets], dim=1
+        ).squeeze(-1)
 
         # Value function
         option_values = self.value_net(features)
@@ -129,8 +139,11 @@ class OptionsCriticAgent:
     def act(self, state):
         """Full action selection with option management."""
         # Initialize or check option termination
-        if self.current_option is None or self.should_terminate(state, self.current_option) or \
-           self.option_length >= self.max_option_length:
+        if (
+            self.current_option is None
+            or self.should_terminate(state, self.current_option)
+            or self.option_length >= self.max_option_length
+        ):
             self.current_option = self.select_option(state)
             self.option_usage[self.current_option] += 1
             if self.option_length > 0:
@@ -155,7 +168,9 @@ class OptionsCriticAgent:
         options = torch.LongTensor(options)
 
         # Forward pass
-        option_probs, action_probs, termination_probs, option_values = self.network(states)
+        option_probs, action_probs, termination_probs, option_values = self.network(
+            states
+        )
 
         # Compute returns
         returns = torch.zeros_like(rewards)
@@ -193,17 +208,19 @@ class OptionsCriticAgent:
         self.losses.append(total_loss.item())
 
         return {
-            'total_loss': total_loss.item(),
-            'value_loss': value_loss.item(),
-            'policy_loss': policy_loss.item(),
-            'termination_reg': termination_reg.item()
+            "total_loss": total_loss.item(),
+            "value_loss": value_loss.item(),
+            "policy_loss": policy_loss.item(),
+            "termination_reg": termination_reg.item(),
         }
 
 
 class FeudalNetwork(nn.Module):
     """Feudal Network with Manager-Worker hierarchy."""
 
-    def __init__(self, state_dim, action_dim, goal_dim=8, hidden_dim=128, temporal_horizon=10):
+    def __init__(
+        self, state_dim, action_dim, goal_dim=8, hidden_dim=128, temporal_horizon=10
+    ):
         super().__init__()
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -225,20 +242,18 @@ class FeudalNetwork(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, action_dim),
-            nn.Softmax(dim=-1)
+            nn.Softmax(dim=-1),
         )
 
         # Value networks
         self.manager_value_net = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, 1)
         )
 
         self.worker_value_net = nn.Sequential(
             nn.Linear(state_dim + goal_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, 1),
         )
 
         # Initialize LSTM hidden state
@@ -258,7 +273,7 @@ class FeudalNetwork(nn.Module):
         if self.manager_hidden is None or self.manager_hidden[0].size(1) != batch_size:
             self.manager_hidden = (
                 torch.zeros(1, batch_size, self.manager_net[2].hidden_size),
-                torch.zeros(1, batch_size, self.manager_net[2].hidden_size)
+                torch.zeros(1, batch_size, self.manager_net[2].hidden_size),
             )
 
         lstm_out, self.manager_hidden = self.manager_net[2](
@@ -297,7 +312,9 @@ class FeudalAgent:
         self.goal_dim = goal_dim
         self.temporal_horizon = temporal_horizon
 
-        self.network = FeudalNetwork(state_dim, action_dim, goal_dim, temporal_horizon=temporal_horizon)
+        self.network = FeudalNetwork(
+            state_dim, action_dim, goal_dim, temporal_horizon=temporal_horizon
+        )
         self.optimizer = optim.Adam(self.network.parameters(), lr=lr)
 
         # Current goal and step counter
@@ -321,7 +338,9 @@ class FeudalAgent:
 
         # Goal direction similarity
         if state_diff_norm > 1e-6:
-            cosine_sim = np.dot(state_diff, goal) / (state_diff_norm * np.linalg.norm(goal))
+            cosine_sim = np.dot(state_diff, goal) / (
+                state_diff_norm * np.linalg.norm(goal)
+            )
             return self.intrinsic_reward_scale * cosine_sim * state_diff_norm
         return 0.0
 
@@ -331,7 +350,10 @@ class FeudalAgent:
             state_tensor = torch.FloatTensor(state).unsqueeze(0)
 
             # Get new goal if needed
-            if self.current_goal is None or self.goal_step_count >= self.temporal_horizon:
+            if (
+                self.current_goal is None
+                or self.goal_step_count >= self.temporal_horizon
+            ):
                 goals, _, _, _ = self.network(state_tensor)
                 self.current_goal = goals[0].numpy()
                 self.goal_step_count = 0
@@ -373,7 +395,7 @@ class FeudalAgent:
 
             # Compute intrinsic rewards
             intrinsic_rewards = []
-            for i in range(len(states)-1):
+            for i in range(len(states) - 1):
                 intrinsic_reward = self.compute_intrinsic_reward(
                     states[i].numpy(), next_states[i].numpy(), goals[i].numpy()
                 )
@@ -388,7 +410,7 @@ class FeudalAgent:
                 manager_returns[t] = G
 
             manager_advantages = manager_returns - manager_values.squeeze()
-            manager_loss = (manager_advantages ** 2).mean()
+            manager_loss = (manager_advantages**2).mean()
 
             # Worker loss (intrinsic + external rewards)
             total_rewards = rewards[:-1] + intrinsic_rewards
@@ -401,9 +423,13 @@ class FeudalAgent:
             worker_advantages = worker_returns - worker_values[:-1].squeeze()
 
             # Policy loss for worker
-            selected_action_probs = action_probs[:-1].gather(1, actions[:-1].unsqueeze(1)).squeeze()
-            worker_policy_loss = -(torch.log(selected_action_probs) * worker_advantages.detach()).mean()
-            worker_value_loss = (worker_advantages ** 2).mean()
+            selected_action_probs = (
+                action_probs[:-1].gather(1, actions[:-1].unsqueeze(1)).squeeze()
+            )
+            worker_policy_loss = -(
+                torch.log(selected_action_probs) * worker_advantages.detach()
+            ).mean()
+            worker_value_loss = (worker_advantages**2).mean()
             worker_loss = worker_policy_loss + 0.5 * worker_value_loss
 
             total_manager_loss += manager_loss
@@ -428,7 +454,7 @@ class FeudalAgent:
         self.worker_losses.append(avg_worker_loss.item())
 
         return {
-            'manager_loss': avg_manager_loss.item(),
-            'worker_loss': avg_worker_loss.item(),
-            'total_loss': total_loss.item()
+            "manager_loss": avg_manager_loss.item(),
+            "worker_loss": avg_worker_loss.item(),
+            "total_loss": total_loss.item(),
         }

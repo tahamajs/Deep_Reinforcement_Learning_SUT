@@ -24,6 +24,7 @@ hw4/
 ## Components
 
 ### `src/model_based_rl.py`
+
 Contains the main modular components:
 
 - **`Dataset`**: Manages transition data storage and iteration
@@ -33,6 +34,7 @@ Contains the main modular components:
 - **`RandomPolicy`**: Random action policy for data collection
 
 ### `run_mbrl.py`
+
 Modular training script that supports:
 
 - **Q1**: Dynamics model training and prediction evaluation
@@ -48,6 +50,7 @@ pip install -r requirements.txt
 ## Usage
 
 ### Question 1: Dynamics Model Training
+
 Train a dynamics model on random data and evaluate predictions:
 
 ```bash
@@ -55,6 +58,7 @@ python run_mbrl.py q1 --exp_name my_experiment_q1
 ```
 
 ### Question 2: MPC with Random Shooting
+
 Train dynamics model and evaluate MPC policy:
 
 ```bash
@@ -62,6 +66,7 @@ python run_mbrl.py q2 --exp_name my_experiment_q2 --render
 ```
 
 ### Question 3: On-policy MBRL
+
 Run iterative on-policy model-based RL:
 
 ```bash

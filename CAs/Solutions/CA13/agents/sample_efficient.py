@@ -22,20 +22,20 @@ class DataAugmentationDQN(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, action_dim)
+            nn.Linear(hidden_dim, action_dim),
         )
 
         # Auxiliary networks for sample efficiency
         self.reward_predictor = nn.Sequential(
             nn.Linear(state_dim + action_dim, hidden_dim // 2),
             nn.ReLU(),
-            nn.Linear(hidden_dim // 2, 1)
+            nn.Linear(hidden_dim // 2, 1),
         )
 
         self.next_state_predictor = nn.Sequential(
             nn.Linear(state_dim + action_dim, hidden_dim // 2),
             nn.ReLU(),
-            nn.Linear(hidden_dim // 2, state_dim)
+            nn.Linear(hidden_dim // 2, state_dim),
         )
 
     def forward(self, state, action=None):
@@ -58,19 +58,19 @@ class DataAugmentationDQN(nn.Module):
 
         return q_values
 
-    def apply_augmentation(self, state, augmentation_type='noise'):
+    def apply_augmentation(self, state, augmentation_type="noise"):
         """Apply data augmentation to state."""
-        if augmentation_type == 'noise':
+        if augmentation_type == "noise":
             # Add Gaussian noise
             noise = torch.randn_like(state) * 0.1
             return state + noise
 
-        elif augmentation_type == 'dropout':
+        elif augmentation_type == "dropout":
             # Random feature dropout
             dropout_mask = torch.rand_like(state) > 0.1
             return state * dropout_mask.float()
 
-        elif augmentation_type == 'scaling':
+        elif augmentation_type == "scaling":
             # Random scaling
             scale = torch.rand(1).item() * 0.4 + 0.8  # Scale between 0.8 and 1.2
             return state * scale
@@ -135,7 +135,7 @@ class SampleEfficientAgent:
 
         # Apply data augmentation
         if augmentation:
-            aug_type = np.random.choice(['noise', 'dropout', 'scaling'])
+            aug_type = np.random.choice(["noise", "dropout", "scaling"])
             states = self.network.apply_augmentation(states, aug_type)
             next_states = self.network.apply_augmentation(next_states, aug_type)
 
@@ -150,7 +150,10 @@ class SampleEfficientAgent:
         td_errors = (current_q_values.squeeze() - target_q_values).detach().numpy()
 
         # Weighted MSE loss (importance sampling)
-        q_loss = (weights * F.mse_loss(current_q_values.squeeze(), target_q_values, reduction='none')).mean()
+        q_loss = (
+            weights
+            * F.mse_loss(current_q_values.squeeze(), target_q_values, reduction="none")
+        ).mean()
 
         total_loss = q_loss
 
@@ -184,8 +187,8 @@ class SampleEfficientAgent:
         self.td_errors.extend(td_errors.tolist())
 
         return {
-            'total_loss': total_loss.item(),
-            'q_loss': q_loss.item(),
-            'aux_reward_loss': aux_reward_loss.item() if use_aux_tasks else 0,
-            'aux_dynamics_loss': aux_dynamics_loss.item() if use_aux_tasks else 0
+            "total_loss": total_loss.item(),
+            "q_loss": q_loss.item(),
+            "aux_reward_loss": aux_reward_loss.item() if use_aux_tasks else 0,
+            "aux_dynamics_loss": aux_dynamics_loss.item() if use_aux_tasks else 0,
         }

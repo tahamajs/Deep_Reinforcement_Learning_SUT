@@ -2,6 +2,4 @@
 
 from .grid_world import SimpleGridWorld
 
-__all__ = [
-    'SimpleGridWorld'
-]
+__all__ = ["SimpleGridWorld"]

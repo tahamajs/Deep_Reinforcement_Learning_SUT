@@ -19,7 +19,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Add src directory to path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 from model_based_rl import ModelBasedRLAgent, RandomPolicy
 from half_cheetah_env import HalfCheetahEnv
@@ -28,10 +28,10 @@ from logger import logger
 
 def create_experiment_dir(exp_name):
     """Create experiment directory and setup logging."""
-    data_dir = os.path.join(os.path.dirname(__file__), 'data')
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
     exp_dir = os.path.join(data_dir, exp_name)
     os.makedirs(exp_dir, exist_ok=True)
-    logger.setup(exp_name, os.path.join(exp_dir, 'log.txt'), 'debug')
+    logger.setup(exp_name, os.path.join(exp_dir, "log.txt"), "debug")
     return exp_dir
 
 
@@ -48,7 +48,7 @@ def run_q1(env, args):
         training_batch_size=args.training_batch_size,
         mpc_horizon=args.mpc_horizon,
         num_random_action_selection=args.num_random_action_selection,
-        nn_layers=args.nn_layers
+        nn_layers=args.nn_layers,
     )
 
     # Initialize TensorFlow session
@@ -70,10 +70,10 @@ def run_q1(env, args):
         start_idx = 0
 
         # Extract rollout data
-        for i in range(len(data['dones'])):
-            if data['dones'][i] or i == len(data['dones']) - 1:
-                rollout_states = data['states'][start_idx:i+1]
-                rollout_actions = data['actions'][start_idx:i+1]
+        for i in range(len(data["dones"])):
+            if data["dones"][i] or i == len(data["dones"]) - 1:
+                rollout_states = data["states"][start_idx : i + 1]
+                rollout_actions = data["actions"][start_idx : i + 1]
 
                 if len(rollout_states) > 1:
                     # Predict states using dynamics model
@@ -84,7 +84,7 @@ def run_q1(env, args):
                         next_state = agent.dynamics_model.predict(
                             current_state.reshape(1, -1),
                             action.reshape(1, -1),
-                            agent.sess
+                            agent.sess,
                         )[0]
                         pred_states.append(next_state)
                         current_state = next_state
@@ -97,20 +97,25 @@ def run_q1(env, args):
                     rows = int(np.sqrt(state_dim))
                     cols = state_dim // rows
 
-                    fig, axes = plt.subplots(rows, cols, figsize=(3*cols, 3*rows))
-                    fig.suptitle('Model predictions (red) vs ground truth (black)')
+                    fig, axes = plt.subplots(rows, cols, figsize=(3 * cols, 3 * rows))
+                    fig.suptitle("Model predictions (red) vs ground truth (black)")
 
                     for i, (ax, true_state, pred_state) in enumerate(
-                        zip(axes.ravel(), states_array.T, pred_states_array.T)):
-                        ax.set_title(f'State {i}')
-                        ax.plot(true_state, color='k', label='True')
-                        ax.plot(pred_state, color='r', label='Predicted')
+                        zip(axes.ravel(), states_array.T, pred_states_array.T)
+                    ):
+                        ax.set_title(f"State {i}")
+                        ax.plot(true_state, color="k", label="True")
+                        ax.plot(pred_state, color="r", label="Predicted")
                         if i == 0:
                             ax.legend()
 
                     plt.tight_layout()
-                    plt.savefig(os.path.join(logger.dir, f'prediction_rollout_{rollout_idx:03d}.jpg'),
-                              bbox_inches='tight')
+                    plt.savefig(
+                        os.path.join(
+                            logger.dir, f"prediction_rollout_{rollout_idx:03d}.jpg"
+                        ),
+                        bbox_inches="tight",
+                    )
                     plt.close()
 
                 start_idx = i + 1
@@ -133,7 +138,7 @@ def run_q2(env, args):
         training_batch_size=args.training_batch_size,
         mpc_horizon=args.mpc_horizon,
         num_random_action_selection=args.num_random_action_selection,
-        nn_layers=args.nn_layers
+        nn_layers=args.nn_layers,
     )
 
     # Initialize TensorFlow session
@@ -144,16 +149,18 @@ def run_q2(env, args):
 
     # Evaluate MPC policy
     print("Evaluating MPC policy...")
-    eval_dataset = agent.gather_rollouts(agent.policy, args.num_eval_rollouts, render=args.render)
+    eval_dataset = agent.gather_rollouts(
+        agent.policy, args.num_eval_rollouts, render=args.render
+    )
 
     # Log results
     returns = []
     rollout_data = eval_dataset.get_all()
     start_idx = 0
 
-    for i in range(len(rollout_data['dones'])):
-        if rollout_data['dones'][i] or i == len(rollout_data['dones']) - 1:
-            rewards = rollout_data['rewards'][start_idx:i+1]
+    for i in range(len(rollout_data["dones"])):
+        if rollout_data["dones"][i] or i == len(rollout_data["dones"]) - 1:
+            rewards = rollout_data["rewards"][start_idx : i + 1]
             returns.append(np.sum(rewards))
             start_idx = i + 1
 
@@ -179,7 +186,7 @@ def run_q3(env, args):
         training_batch_size=args.training_batch_size,
         mpc_horizon=args.mpc_horizon,
         num_random_action_selection=args.num_random_action_selection,
-        nn_layers=args.nn_layers
+        nn_layers=args.nn_layers,
     )
 
     # Initialize TensorFlow session
@@ -190,16 +197,18 @@ def run_q3(env, args):
 
     # Final evaluation
     print("Final evaluation...")
-    eval_dataset = agent.gather_rollouts(agent.policy, args.num_eval_rollouts, render=args.render)
+    eval_dataset = agent.gather_rollouts(
+        agent.policy, args.num_eval_rollouts, render=args.render
+    )
 
     # Log final results
     returns = []
     rollout_data = eval_dataset.get_all()
     start_idx = 0
 
-    for i in range(len(rollout_data['dones'])):
-        if rollout_data['dones'][i] or i == len(rollout_data['dones']) - 1:
-            rewards = rollout_data['rewards'][start_idx:i+1]
+    for i in range(len(rollout_data["dones"])):
+        if rollout_data["dones"][i] or i == len(rollout_data["dones"]) - 1:
+            rewards = rollout_data["rewards"][start_idx : i + 1]
             returns.append(np.sum(rewards))
             start_idx = i + 1
 
@@ -211,47 +220,86 @@ def run_q3(env, args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Model-Based Reinforcement Learning')
+    parser = argparse.ArgumentParser(description="Model-Based Reinforcement Learning")
 
     # Question selection
-    parser.add_argument('question', type=str, choices=['q1', 'q2', 'q3'],
-                       help='Question to run (q1, q2, or q3)')
+    parser.add_argument(
+        "question",
+        type=str,
+        choices=["q1", "q2", "q3"],
+        help="Question to run (q1, q2, or q3)",
+    )
 
     # Experiment settings
-    parser.add_argument('--exp_name', type=str, default=None,
-                       help='Experiment name (default: auto-generated)')
-    parser.add_argument('--env', type=str, default='HalfCheetah', choices=['HalfCheetah'],
-                       help='Environment to use')
-    parser.add_argument('--render', action='store_true',
-                       help='Render environment during evaluation')
+    parser.add_argument(
+        "--exp_name",
+        type=str,
+        default=None,
+        help="Experiment name (default: auto-generated)",
+    )
+    parser.add_argument(
+        "--env",
+        type=str,
+        default="HalfCheetah",
+        choices=["HalfCheetah"],
+        help="Environment to use",
+    )
+    parser.add_argument(
+        "--render", action="store_true", help="Render environment during evaluation"
+    )
 
     # Model hyperparameters
-    parser.add_argument('--nn_layers', type=int, default=1,
-                       help='Number of layers in dynamics model')
-    parser.add_argument('--training_epochs', type=int, default=60,
-                       help='Number of training epochs for dynamics model')
-    parser.add_argument('--training_batch_size', type=int, default=512,
-                       help='Training batch size')
+    parser.add_argument(
+        "--nn_layers", type=int, default=1, help="Number of layers in dynamics model"
+    )
+    parser.add_argument(
+        "--training_epochs",
+        type=int,
+        default=60,
+        help="Number of training epochs for dynamics model",
+    )
+    parser.add_argument(
+        "--training_batch_size", type=int, default=512, help="Training batch size"
+    )
 
     # MPC hyperparameters
-    parser.add_argument('--mpc_horizon', type=int, default=15,
-                       help='MPC planning horizon')
-    parser.add_argument('--num_random_action_selection', type=int, default=4096,
-                       help='Number of random actions for MPC')
+    parser.add_argument(
+        "--mpc_horizon", type=int, default=15, help="MPC planning horizon"
+    )
+    parser.add_argument(
+        "--num_random_action_selection",
+        type=int,
+        default=4096,
+        help="Number of random actions for MPC",
+    )
 
     # Data collection
-    parser.add_argument('--num_init_random_rollouts', type=int, default=10,
-                       help='Number of initial random rollouts')
-    parser.add_argument('--max_rollout_length', type=int, default=500,
-                       help='Maximum rollout length')
-    parser.add_argument('--num_eval_rollouts', type=int, default=5,
-                       help='Number of evaluation rollouts')
+    parser.add_argument(
+        "--num_init_random_rollouts",
+        type=int,
+        default=10,
+        help="Number of initial random rollouts",
+    )
+    parser.add_argument(
+        "--max_rollout_length", type=int, default=500, help="Maximum rollout length"
+    )
+    parser.add_argument(
+        "--num_eval_rollouts", type=int, default=5, help="Number of evaluation rollouts"
+    )
 
     # On-policy settings (for Q3)
-    parser.add_argument('--num_onpolicy_iters', type=int, default=10,
-                       help='Number of on-policy iterations')
-    parser.add_argument('--num_onpolicy_rollouts', type=int, default=10,
-                       help='Number of on-policy rollouts per iteration')
+    parser.add_argument(
+        "--num_onpolicy_iters",
+        type=int,
+        default=10,
+        help="Number of on-policy iterations",
+    )
+    parser.add_argument(
+        "--num_onpolicy_rollouts",
+        type=int,
+        default=10,
+        help="Number of on-policy rollouts per iteration",
+    )
 
     args = parser.parse_args()
 
@@ -267,11 +315,7 @@ def main():
     env = HalfCheetahEnv()
 
     # Run selected question
-    run_functions = {
-        'q1': run_q1,
-        'q2': run_q2,
-        'q3': run_q3
-    }
+    run_functions = {"q1": run_q1, "q2": run_q2, "q3": run_q3}
 
     try:
         run_functions[args.question](env, args)
@@ -284,5 +328,5 @@ def main():
         env.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
