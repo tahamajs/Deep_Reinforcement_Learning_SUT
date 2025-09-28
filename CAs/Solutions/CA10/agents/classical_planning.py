@@ -179,10 +179,10 @@ class UncertaintyAwarePlanner:
         policy = np.zeros(self.num_states, dtype=int)
 
         print(f"Running Pessimistic Value Iteration (beta={beta})")
-        
+
         # Set model to eval mode to avoid gradient computation
         self.ensemble_model.eval()
-        
+
         for iteration in range(max_iterations):
             old_V = V.copy()
 

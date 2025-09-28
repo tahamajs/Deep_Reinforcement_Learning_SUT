@@ -391,7 +391,6 @@ def demonstrate_comparison():
         model="tabular",
     )
 
-
     framework.run_comparison(n_episodes=30, n_runs=2)
 
     framework.visualize_results(save_path="visualizations")

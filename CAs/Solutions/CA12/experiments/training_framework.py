@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from torch.distributions import Categorical
-from game_theory import MultiAgentEnvironment
+from .game_theory import MultiAgentEnvironment
 
 
 class MultiAgentTrainingOrchestrator:

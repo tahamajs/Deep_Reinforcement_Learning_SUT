@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 from collections import deque
 import random
-from setup import device, ma_config
+from ..utils.setup import device, ma_config
 
 
 class Actor(nn.Module):

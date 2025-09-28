@@ -59,7 +59,6 @@ class ContinuousActorNetwork(nn.Module):
 
         action_tanh = torch.tanh(action)
 
-
         scaled_action = action_tanh * self.action_bound
 
         return scaled_action, log_prob
@@ -395,7 +394,6 @@ class ContinuousControlAnalyzer:
         print("=" * 70)
         print("Discrete vs Continuous Control Comparison")
         print("=" * 70)
-
 
         comparison_data = {
             "Discrete Control (CartPole)": {
