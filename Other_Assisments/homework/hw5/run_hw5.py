@@ -21,9 +21,9 @@ import matplotlib.pyplot as plt
 # Add src directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
-from sac_agent import SACAgent
-from exploration_agent import ExplorationAgent, DiscreteExplorationAgent
-from meta_agent import MetaLearningAgent, MAMLAgent
+from agents.sac_agent import SACAgent
+from agents.exploration_agent import ExplorationAgent, DiscreteExplorationAgent
+from agents.meta_agent import MetaLearningAgent, MAMLAgent
 
 
 def create_experiment_dir(exp_name):
