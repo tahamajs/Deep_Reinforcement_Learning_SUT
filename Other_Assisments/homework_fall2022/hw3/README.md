@@ -1,5 +1,7 @@
 # Homework 3: Q-Learning and Actor-Critic Methods
 
+**Author:** Taha Majlesi - 810101504, University of Tehran
+
 ## Overview
 
 This assignment covers value-based and actor-critic reinforcement learning algorithms. You will implement Deep Q-Networks (DQN) for discrete action spaces, explore experience replay and target networks, and develop actor-critic methods for continuous control. The assignment is divided into three parts: Q-learning, actor-critic, and soft actor-critic.

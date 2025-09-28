@@ -1,5 +1,7 @@
 # Homework 5: Offline and Advanced Deep Reinforcement Learning
 
+**Author:** Taha Majlesi - 810101504, University of Tehran
+
 ## Overview
 
 This assignment focuses on offline reinforcement learning and advanced exploration techniques. You will implement and analyze algorithms that learn from fixed datasets without environment interaction, including Conservative Q-Learning (CQL), Advantage-Weighted Actor-Critic (AWAC), and Implicit Q-Learning (IQL). Additionally, you'll explore Random Network Distillation (RND) for intrinsic motivation and curiosity-driven exploration.

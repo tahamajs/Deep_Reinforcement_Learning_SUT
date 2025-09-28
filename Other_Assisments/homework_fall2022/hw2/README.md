@@ -1,5 +1,7 @@
 # Homework 2: Policy Gradient Methods
 
+**Author:** Taha Majlesi - 810101504, University of Tehran
+
 ## Overview
 
 This assignment explores policy gradient methods, a class of reinforcement learning algorithms that directly optimize the policy using gradient ascent on expected returns. You will implement REINFORCE (Monte Carlo policy gradients), analyze variance reduction techniques like reward-to-go and baselines, and experiment with generalized advantage estimation (GAE).

@@ -1,5 +1,7 @@
 # Homework 4: Model-Based Reinforcement Learning
 
+**Author:** Taha Majlesi - 810101504, University of Tehran
+
 ## Overview
 
 This assignment introduces model-based reinforcement learning, where agents learn a model of the environment's dynamics and use it for planning and policy improvement. You will implement model-based agents using neural network dynamics models, explore model predictive control (MPC), and investigate model-based policy optimization (MBPO) for sample-efficient learning.
