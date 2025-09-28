@@ -66,7 +66,6 @@ __all__ = [
     "utils",
     "environments",
     "experiments",
-
     # Key classes
     "QuantumQLearning",
     "QuantumActorCritic",
@@ -90,6 +89,7 @@ __all__ = [
     "ComparativeExperimentRunner",
 ]
 
+
 def get_available_modules():
     """Get list of available modules in CA18 package"""
     return [
@@ -104,6 +104,7 @@ def get_available_modules():
         "experiments",
     ]
 
+
 def create_experiment_runner(algorithm_type: str, **kwargs):
     """
     Factory function to create experiment runners for different algorithm types
@@ -116,17 +117,20 @@ def create_experiment_runner(algorithm_type: str, **kwargs):
         Appropriate experiment runner instance
     """
     runners = {
-        'quantum': experiments.QuantumRLExperiment,
-        'causal': experiments.CausalRLExperiment,
-        'multi_agent': experiments.MultiAgentRLExperiment,
-        'federated': experiments.FederatedRLExperiment,
+        "quantum": experiments.QuantumRLExperiment,
+        "causal": experiments.CausalRLExperiment,
+        "multi_agent": experiments.MultiAgentRLExperiment,
+        "federated": experiments.FederatedRLExperiment,
     }
 
     if algorithm_type not in runners:
-        raise ValueError(f"Unknown algorithm type: {algorithm_type}. "
-                        f"Available types: {list(runners.keys())}")
+        raise ValueError(
+            f"Unknown algorithm type: {algorithm_type}. "
+            f"Available types: {list(runners.keys())}"
+        )
 
     return runners[algorithm_type](**kwargs)
+
 
 def run_quick_test(module_name: str = "quantum_rl"):
     """
@@ -138,34 +142,45 @@ def run_quick_test(module_name: str = "quantum_rl"):
     try:
         if module_name == "quantum_rl":
             from .quantum_rl import QuantumState
+
             # Test basic quantum state creation
             state = QuantumState(n_qubits=2)
-            print(f"✅ {module_name} test passed: Created quantum state with {state.n_qubits} qubits")
+            print(
+                f"✅ {module_name} test passed: Created quantum state with {state.n_qubits} qubits"
+            )
 
         elif module_name == "causal_rl":
             from .causal_rl import CausalGraph
+
             # Test basic causal graph creation
             graph = CausalGraph(n_variables=3)
-            print(f"✅ {module_name} test passed: Created causal graph with {graph.n_variables} variables")
+            print(
+                f"✅ {module_name} test passed: Created causal graph with {graph.n_variables} variables"
+            )
 
         elif module_name == "world_models":
             from .world_models import RSSMCore
+
             # Test RSSM core creation
             rssm = RSSMCore(state_dim=10, action_dim=4, hidden_dim=32)
             print(f"✅ {module_name} test passed: Created RSSM core")
 
         elif module_name == "utils":
             from .utils import QuantumRNG
+
             # Test quantum RNG
             rng = QuantumRNG()
             random_val = rng.quantum_random()
-            print(f"✅ {module_name} test passed: Generated quantum random value {random_val}")
+            print(
+                f"✅ {module_name} test passed: Generated quantum random value {random_val}"
+            )
 
         else:
             print(f"⚠️  No quick test defined for {module_name}")
 
     except Exception as e:
         print(f"❌ {module_name} test failed: {e}")
+
 
 def print_package_info():
     """Print information about the CA18 package"""
@@ -183,6 +198,7 @@ def print_package_info():
     print("  from CA18 import quantum_rl, experiments")
     print("  # Create and run experiments with advanced RL algorithms")
     print("=" * 60)
+
 
 # Run package info on import
 if __name__ != "__main__":

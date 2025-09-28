@@ -5,15 +5,15 @@ from .multi_agent_rl import (
     AttentionCritic,
     CommunicationNetwork,
     MADDPGAgent,
-    MultiAgentEnvironment
+    MultiAgentEnvironment,
 )
 
 __all__ = [
-    'MultiAgentReplayBuffer',
-    'Actor',
-    'Critic',
-    'AttentionCritic',
-    'CommunicationNetwork',
-    'MADDPGAgent',
-    'MultiAgentEnvironment'
+    "MultiAgentReplayBuffer",
+    "Actor",
+    "Critic",
+    "AttentionCritic",
+    "CommunicationNetwork",
+    "MADDPGAgent",
+    "MultiAgentEnvironment",
 ]

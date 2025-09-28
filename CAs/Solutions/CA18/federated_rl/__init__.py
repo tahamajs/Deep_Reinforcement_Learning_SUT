@@ -2,12 +2,12 @@ from .federated_rl import (
     DifferentialPrivacy,
     GradientCompression,
     FederatedRLClient,
-    FederatedRLServer
+    FederatedRLServer,
 )
 
 __all__ = [
-    'DifferentialPrivacy',
-    'GradientCompression',
-    'FederatedRLClient',
-    'FederatedRLServer'
+    "DifferentialPrivacy",
+    "GradientCompression",
+    "FederatedRLClient",
+    "FederatedRLServer",
 ]

@@ -28,8 +28,14 @@ class MultiAgentReplayBuffer:
         self.position = 0
         self.size = 0
 
-    def add(self, obs: np.ndarray, actions: np.ndarray, rewards: np.ndarray,
-            next_obs: np.ndarray, dones: np.ndarray):
+    def add(
+        self,
+        obs: np.ndarray,
+        actions: np.ndarray,
+        rewards: np.ndarray,
+        next_obs: np.ndarray,
+        dones: np.ndarray,
+    ):
         """Add experience to buffer"""
 
         self.observations[self.position] = obs
@@ -47,11 +53,13 @@ class MultiAgentReplayBuffer:
         indices = np.random.choice(self.size, batch_size, replace=False)
 
         return {
-            'observations': torch.FloatTensor(self.observations[indices]).to(device),
-            'actions': torch.FloatTensor(self.actions[indices]).to(device),
-            'rewards': torch.FloatTensor(self.rewards[indices]).to(device),
-            'next_observations': torch.FloatTensor(self.next_observations[indices]).to(device),
-            'dones': torch.FloatTensor(self.dones[indices]).to(device)
+            "observations": torch.FloatTensor(self.observations[indices]).to(device),
+            "actions": torch.FloatTensor(self.actions[indices]).to(device),
+            "rewards": torch.FloatTensor(self.rewards[indices]).to(device),
+            "next_observations": torch.FloatTensor(self.next_observations[indices]).to(
+                device
+            ),
+            "dones": torch.FloatTensor(self.dones[indices]).to(device),
         }
 
     @property
@@ -71,7 +79,7 @@ class Actor(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, action_dim),
-            nn.Tanh()  # Actions in [-1, 1]
+            nn.Tanh(),  # Actions in [-1, 1]
         )
 
     def forward(self, obs: torch.Tensor) -> torch.Tensor:
@@ -92,7 +100,7 @@ class Critic(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, 1),
         )
 
     def forward(self, obs: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
@@ -104,7 +112,9 @@ class Critic(nn.Module):
 class AttentionCritic(nn.Module):
     """Attention-based critic for selective agent focus"""
 
-    def __init__(self, obs_dim: int, action_dim: int, n_agents: int, hidden_dim: int = 128):
+    def __init__(
+        self, obs_dim: int, action_dim: int, n_agents: int, hidden_dim: int = 128
+    ):
         super().__init__()
 
         self.obs_dim = obs_dim
@@ -113,26 +123,30 @@ class AttentionCritic(nn.Module):
         self.hidden_dim = hidden_dim
 
         # Individual agent encoders
-        self.agent_encoders = nn.ModuleList([
-            nn.Sequential(
-                nn.Linear(obs_dim + action_dim, hidden_dim),
-                nn.ReLU(),
-                nn.Linear(hidden_dim, hidden_dim)
-            ) for _ in range(n_agents)
-        ])
+        self.agent_encoders = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.Linear(obs_dim + action_dim, hidden_dim),
+                    nn.ReLU(),
+                    nn.Linear(hidden_dim, hidden_dim),
+                )
+                for _ in range(n_agents)
+            ]
+        )
 
         # Attention mechanism
-        self.attention = nn.MultiheadAttention(hidden_dim, num_heads=4, batch_first=True)
+        self.attention = nn.MultiheadAttention(
+            hidden_dim, num_heads=4, batch_first=True
+        )
 
         # Final critic network
         self.critic_network = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, 1)
         )
 
-    def forward(self, obs: torch.Tensor, actions: torch.Tensor,
-                agent_idx: int) -> torch.Tensor:
+    def forward(
+        self, obs: torch.Tensor, actions: torch.Tensor, agent_idx: int
+    ) -> torch.Tensor:
         """
         obs: [batch, n_agents, obs_dim]
         actions: [batch, n_agents, action_dim]
@@ -150,10 +164,12 @@ class AttentionCritic(nn.Module):
             agent_emb = self.agent_encoders[i](agent_input)  # [batch, hidden_dim]
             agent_embeddings.append(agent_emb)
 
-        agent_embeddings = torch.stack(agent_embeddings, dim=1)  # [batch, n_agents, hidden_dim]
+        agent_embeddings = torch.stack(
+            agent_embeddings, dim=1
+        )  # [batch, n_agents, hidden_dim]
 
         # Apply attention (query is the target agent's embedding)
-        query = agent_embeddings[:, agent_idx:agent_idx+1]  # [batch, 1, hidden_dim]
+        query = agent_embeddings[:, agent_idx : agent_idx + 1]  # [batch, 1, hidden_dim]
         attended_features, _ = self.attention(query, agent_embeddings, agent_embeddings)
 
         # Final Q-value prediction
@@ -175,22 +191,23 @@ class CommunicationNetwork(nn.Module):
         self.message_encoder = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, message_dim)
+            nn.Linear(hidden_dim, message_dim),
         )
 
         # Message processing
         self.message_processor = nn.Sequential(
             nn.Linear(obs_dim + message_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, obs_dim)
+            nn.Linear(hidden_dim, obs_dim),
         )
 
     def generate_message(self, obs: torch.Tensor) -> torch.Tensor:
         """Generate message from observation"""
         return self.message_encoder(obs)
 
-    def process_messages(self, obs: torch.Tensor,
-                        messages: torch.Tensor) -> torch.Tensor:
+    def process_messages(
+        self, obs: torch.Tensor, messages: torch.Tensor
+    ) -> torch.Tensor:
         """Process received messages with observation"""
         # Average messages from other agents
         avg_message = messages.mean(dim=1)
@@ -207,9 +224,17 @@ class CommunicationNetwork(nn.Module):
 class MADDPGAgent:
     """Multi-Agent Deep Deterministic Policy Gradient Agent"""
 
-    def __init__(self, agent_idx: int, obs_dim: int, action_dim: int,
-                 n_agents: int, lr_actor: float = 1e-3, lr_critic: float = 1e-3,
-                 use_attention: bool = False, use_communication: bool = False):
+    def __init__(
+        self,
+        agent_idx: int,
+        obs_dim: int,
+        action_dim: int,
+        n_agents: int,
+        lr_actor: float = 1e-3,
+        lr_critic: float = 1e-3,
+        use_attention: bool = False,
+        use_communication: bool = False,
+    ):
 
         self.agent_idx = agent_idx
         self.obs_dim = obs_dim
@@ -224,7 +249,9 @@ class MADDPGAgent:
 
         if use_attention:
             self.critic = AttentionCritic(obs_dim, action_dim, n_agents).to(device)
-            self.critic_target = AttentionCritic(obs_dim, action_dim, n_agents).to(device)
+            self.critic_target = AttentionCritic(obs_dim, action_dim, n_agents).to(
+                device
+            )
         else:
             total_obs_dim = obs_dim * n_agents
             total_action_dim = action_dim * n_agents
@@ -240,7 +267,9 @@ class MADDPGAgent:
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=lr_critic)
 
         if use_communication:
-            self.comm_optimizer = torch.optim.Adam(self.comm_network.parameters(), lr=lr_actor)
+            self.comm_optimizer = torch.optim.Adam(
+                self.comm_network.parameters(), lr=lr_actor
+            )
 
         # Initialize targets
         self.hard_update(self.actor_target, self.actor)
@@ -251,8 +280,9 @@ class MADDPGAgent:
         self.noise_decay = 0.995
         self.min_noise = 0.01
 
-    def act(self, obs: torch.Tensor, messages: torch.Tensor = None,
-            explore: bool = True) -> Tuple[torch.Tensor, torch.Tensor]:
+    def act(
+        self, obs: torch.Tensor, messages: torch.Tensor = None, explore: bool = True
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Select action and generate message"""
 
         # Process messages if communication is enabled
@@ -274,15 +304,20 @@ class MADDPGAgent:
 
         return action, message
 
-    def update(self, batch: Dict[str, torch.Tensor], other_actors: List[nn.Module],
-               gamma: float = 0.99, tau: float = 0.01):
+    def update(
+        self,
+        batch: Dict[str, torch.Tensor],
+        other_actors: List[nn.Module],
+        gamma: float = 0.99,
+        tau: float = 0.01,
+    ):
         """Update actor and critic networks"""
 
-        obs = batch['observations']  # [batch, n_agents, obs_dim]
-        actions = batch['actions']  # [batch, n_agents, action_dim]
-        rewards = batch['rewards']  # [batch, n_agents, 1]
-        next_obs = batch['next_observations']  # [batch, n_agents, obs_dim]
-        dones = batch['dones']  # [batch, n_agents, 1]
+        obs = batch["observations"]  # [batch, n_agents, obs_dim]
+        actions = batch["actions"]  # [batch, n_agents, action_dim]
+        rewards = batch["rewards"]  # [batch, n_agents, 1]
+        next_obs = batch["next_observations"]  # [batch, n_agents, obs_dim]
+        dones = batch["dones"]  # [batch, n_agents, 1]
 
         batch_size = obs.shape[0]
 
@@ -304,7 +339,10 @@ class MADDPGAgent:
                 next_actions_flat = next_actions.view(batch_size, -1)
                 target_q = self.critic_target(next_obs_flat, next_actions_flat)
 
-            target_q = rewards[:, self.agent_idx] + gamma * (1 - dones[:, self.agent_idx]) * target_q
+            target_q = (
+                rewards[:, self.agent_idx]
+                + gamma * (1 - dones[:, self.agent_idx]) * target_q
+            )
 
         # Current Q-value
         if self.use_attention:
@@ -350,10 +388,10 @@ class MADDPGAgent:
         self.noise_std = max(self.noise_std * self.noise_decay, self.min_noise)
 
         return {
-            'critic_loss': critic_loss.item(),
-            'actor_loss': actor_loss.item(),
-            'q_value': current_q.mean().item(),
-            'noise_std': self.noise_std
+            "critic_loss": critic_loss.item(),
+            "actor_loss": actor_loss.item(),
+            "q_value": current_q.mean().item(),
+            "noise_std": self.noise_std,
         }
 
     def soft_update(self, target: nn.Module, source: nn.Module, tau: float):
@@ -369,8 +407,13 @@ class MADDPGAgent:
 class MultiAgentEnvironment:
     """Multi-agent environment for testing"""
 
-    def __init__(self, n_agents: int = 3, obs_dim: int = 6, action_dim: int = 2,
-                 env_type: str = 'cooperative'):
+    def __init__(
+        self,
+        n_agents: int = 3,
+        obs_dim: int = 6,
+        action_dim: int = 2,
+        env_type: str = "cooperative",
+    ):
 
         self.n_agents = n_agents
         self.obs_dim = obs_dim
@@ -402,7 +445,9 @@ class MultiAgentEnvironment:
 
         return observations
 
-    def step(self, actions: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict]:
+    def step(
+        self, actions: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict]:
         """Environment step"""
         actions = np.clip(actions, -1, 1)
 
@@ -443,7 +488,7 @@ class MultiAgentEnvironment:
         """Compute rewards based on environment type"""
         rewards = np.zeros(self.n_agents)
 
-        if self.env_type == 'cooperative':
+        if self.env_type == "cooperative":
             # Cooperative task: agents should stay close to each other and center
             center = np.mean(self.agent_states[:, :2], axis=0)
 
@@ -455,17 +500,21 @@ class MultiAgentEnvironment:
                 cohesion_reward = 0
                 for j in range(self.n_agents):
                     if i != j:
-                        dist = np.linalg.norm(self.agent_states[i, :2] - self.agent_states[j, :2])
+                        dist = np.linalg.norm(
+                            self.agent_states[i, :2] - self.agent_states[j, :2]
+                        )
                         cohesion_reward += -0.1 * dist
 
                 rewards[i] = center_reward + 0.5 * cohesion_reward
 
-        elif self.env_type == 'competitive':
+        elif self.env_type == "competitive":
             # Competitive task: agents compete for resources
             target = np.array([0, 0])  # Shared resource at origin
 
-            distances = [np.linalg.norm(self.agent_states[i, :2] - target)
-                        for i in range(self.n_agents)]
+            distances = [
+                np.linalg.norm(self.agent_states[i, :2] - target)
+                for i in range(self.n_agents)
+            ]
             closest_agent = np.argmin(distances)
 
             for i in range(self.n_agents):
@@ -474,7 +523,7 @@ class MultiAgentEnvironment:
                 else:
                     rewards[i] = -0.1  # Others get penalty
 
-        elif self.env_type == 'mixed':
+        elif self.env_type == "mixed":
             # Mixed task: some cooperation, some competition
             # Agents form teams and compete against each other
             team_size = self.n_agents // 2
@@ -486,15 +535,21 @@ class MultiAgentEnvironment:
                 team_reward = 0
                 for j in range(self.n_agents):
                     if j // team_size == team_id and i != j:
-                        dist = np.linalg.norm(self.agent_states[i, :2] - self.agent_states[j, :2])
+                        dist = np.linalg.norm(
+                            self.agent_states[i, :2] - self.agent_states[j, :2]
+                        )
                         team_reward += -0.1 * dist
 
                 # Inter-team competition
                 comp_reward = 0
                 for j in range(self.n_agents):
                     if j // team_size != team_id:
-                        dist = np.linalg.norm(self.agent_states[i, :2] - self.agent_states[j, :2])
-                        comp_reward += 0.05 * max(0, 2 - dist)  # Reward for keeping distance
+                        dist = np.linalg.norm(
+                            self.agent_states[i, :2] - self.agent_states[j, :2]
+                        )
+                        comp_reward += 0.05 * max(
+                            0, 2 - dist
+                        )  # Reward for keeping distance
 
                 rewards[i] = team_reward + comp_reward
 

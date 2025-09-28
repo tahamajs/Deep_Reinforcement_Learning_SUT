@@ -65,6 +65,7 @@ CA18/
 ## Key Components
 
 ### Quantum RL Module
+
 ```python
 from CA18.quantum_rl import QuantumQLearning, QuantumActorCritic
 
@@ -76,6 +77,7 @@ agent = QuantumActorCritic(state_dim=8, action_dim=4, n_qubits=4)
 ```
 
 ### Causal RL Module
+
 ```python
 from CA18.causal_rl import CausalDiscovery, CausalWorldModel
 
@@ -88,6 +90,7 @@ world_model = CausalWorldModel(state_dim=10, action_dim=4, causal_graph=graph)
 ```
 
 ### Multi-Agent RL Module
+
 ```python
 from CA18.multi_agent_rl import MADDPGAgent, MultiAgentEnvironment
 
@@ -104,6 +107,7 @@ agent = MADDPGAgent(
 ```
 
 ### Advanced Safety Module
+
 ```python
 from CA18.advanced_safety import QuantumConstrainedPolicyOptimization
 
@@ -119,6 +123,7 @@ agent = QuantumConstrainedPolicyOptimization(
 ## Experiment Frameworks
 
 ### Running Comparative Experiments
+
 ```python
 from CA18.experiments import ComparativeExperimentRunner
 
@@ -142,6 +147,7 @@ runner.run_comparison(algorithms, environment_class, n_runs=3)
 ```
 
 ### Custom Experiments
+
 ```python
 from CA18.experiments import BaseExperiment
 
@@ -158,6 +164,7 @@ experiment.plot_results()
 ## Advanced Features
 
 ### Quantum-Inspired Utilities
+
 ```python
 from CA18.utils import QuantumPrioritizedReplayBuffer, QuantumRNG
 
@@ -170,6 +177,7 @@ random_action = rng.quantum_choice(actions)
 ```
 
 ### Specialized Environments
+
 ```python
 from CA18.environments import QuantumEnvironment, CausalBanditEnvironment
 
