@@ -6,16 +6,6 @@ including Recurrent State Space Models (RSSM), Model Predictive Control (MPC),
 and Imagination-Augmented Agents (I2A).
 """
 
-from .world_models import (
-    RSSMCore,
-    WorldModel,
-    MPCPlanner,
-    ImaginationAugmentedAgent
-)
+from .world_models import RSSMCore, WorldModel, MPCPlanner, ImaginationAugmentedAgent
 
-__all__ = [
-    'RSSMCore',
-    'WorldModel',
-    'MPCPlanner',
-    'ImaginationAugmentedAgent'
-]
+__all__ = ["RSSMCore", "WorldModel", "MPCPlanner", "ImaginationAugmentedAgent"]

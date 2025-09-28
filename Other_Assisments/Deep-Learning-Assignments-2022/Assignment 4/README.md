@@ -1,13 +1,13 @@
-```markdown
-# Author: Mohammad taha majlesi - 810101504, University of Tehran
 # Assignment 4
 
-This folder contains three notebooks for Assignment 4. See the per-question README files for details and how to run each experiment.
+Author: Mohammad taha majlesi - 810101504, University of Tehran
 
-- `README_q1.md` — Question 1 (notebook explanation)
-- `README_q2.md` — Question 2 (notebook explanation)
-- `README_q3.md` — Question 3 (notebook explanation)
+This folder contains three notebooks for Assignment 4. See per-question READMEs for details and how to run each experiment:
 
-Open `q1.ipynb`, `q2.ipynb`, or `q3.ipynb` to run the experiments.
+- `README_q1.md` — Question 1 (open `q1.ipynb`)
+- `README_q2.md` — Question 2 (open `q2.ipynb`)
+- `README_q3.md` — Question 3 (open `q3.ipynb`)
 
-```
+How to run
+----------
+Create a Python virtual environment, install dependencies, and open the desired notebook in Jupyter. Use a GPU kernel if available for faster training.
