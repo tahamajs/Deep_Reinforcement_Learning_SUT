@@ -144,6 +144,8 @@ class QuantumRLCircuit:
             print("Warning: Using classical fallback for QuantumRLCircuit")
             self.classical_fallback = True
             self.parameters = np.random.randn(n_qubits * n_layers * 3) * np.pi
+            # Add dummy circuit attributes for compatibility
+            self.circuit = QuantumCircuit(n_qubits)
         else:
             self.classical_fallback = False
             self.theta = [
@@ -377,12 +379,8 @@ class QuantumEnhancedAgent:
         return nn.Sequential(
             nn.Linear(self.state_dim, 128),
             nn.ReLU(),
-            nn.BatchNorm1d(128),
-            nn.Dropout(0.1),
             nn.Linear(128, 256),
             nn.ReLU(),
-            nn.BatchNorm1d(256),
-            nn.Dropout(0.1),
             nn.Linear(256, 128),
             nn.ReLU(),
             nn.Linear(128, self.action_dim),
@@ -635,6 +633,7 @@ class SpaceStationEnvironment:
     """
 
     def __init__(self, difficulty_level: str = "EXTREME"):
+        self.difficulty_level = difficulty_level
         self.difficulty = difficulty_level
         self.mission_time = 0
         self.crew_safety_score = 100.0

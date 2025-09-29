@@ -36,6 +36,12 @@ class MissionConfig:
     gamma: float = 0.99
     batch_size: int = 32
 
+    # Additional dimensions for advanced algorithms
+    quantum_dim: int = 8
+    hidden_dim: int = 64
+    neuron_count: int = 100
+    synapse_count: int = 500
+
     max_episodes: int = 500
     max_steps_per_episode: int = 1000
     epsilon_start: float = 0.3
