@@ -20,11 +20,13 @@ from collections import deque
 import time
 from typing import Dict, List, Tuple, Optional, Any
 import warnings
-warnings.filterwarnings('ignore')
+
+warnings.filterwarnings("ignore")
 
 # Set random seeds for reproducibility
 torch.manual_seed(42)
 np.random.seed(42)
+
 
 class PolicyNetwork(nn.Module):
     """Neural network policy for discrete action spaces"""
@@ -41,6 +43,7 @@ class PolicyNetwork(nn.Module):
         x = self.fc3(x)
         return F.softmax(x, dim=-1)
 
+
 class ValueNetwork(nn.Module):
     """Value function network for baseline and actor-critic"""
 
@@ -54,6 +57,7 @@ class ValueNetwork(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         return self.fc3(x)
+
 
 class ContinuousPolicyNetwork(nn.Module):
     """Policy network for continuous action spaces using Gaussian distribution"""
@@ -83,11 +87,18 @@ class ContinuousPolicyNetwork(nn.Module):
         log_prob = dist.log_prob(action).sum(dim=-1, keepdim=True)
         return action, log_prob
 
+
 class REINFORCEAgent:
     """REINFORCE (Monte Carlo Policy Gradient) Agent"""
 
-    def __init__(self, state_dim: int, action_dim: int, lr: float = 1e-3,
-                 gamma: float = 0.99, hidden_dim: int = 128):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        lr: float = 1e-3,
+        gamma: float = 0.99,
+        hidden_dim: int = 128,
+    ):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.gamma = gamma
@@ -143,11 +154,19 @@ class REINFORCEAgent:
 
         return policy_loss.item()
 
+
 class REINFORCEBaselineAgent:
     """REINFORCE with Baseline Agent"""
 
-    def __init__(self, state_dim: int, action_dim: int, lr_policy: float = 1e-3,
-                 lr_value: float = 1e-3, gamma: float = 0.99, hidden_dim: int = 128):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        lr_policy: float = 1e-3,
+        lr_value: float = 1e-3,
+        gamma: float = 0.99,
+        hidden_dim: int = 128,
+    ):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.gamma = gamma
@@ -172,7 +191,9 @@ class REINFORCEBaselineAgent:
 
         return action.item(), log_prob
 
-    def store_transition(self, state: np.ndarray, log_prob: torch.Tensor, reward: float):
+    def store_transition(
+        self, state: np.ndarray, log_prob: torch.Tensor, reward: float
+    ):
         """Store transition for later policy update"""
         self.states.append(state)
         self.log_probs.append(log_prob)
@@ -220,11 +241,19 @@ class REINFORCEBaselineAgent:
 
         return policy_loss.item(), value_loss.item()
 
+
 class ActorCriticAgent:
     """Actor-Critic Agent with TD learning"""
 
-    def __init__(self, state_dim: int, action_dim: int, lr_actor: float = 1e-4,
-                 lr_critic: float = 1e-3, gamma: float = 0.99, hidden_dim: int = 128):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        lr_actor: float = 1e-4,
+        lr_critic: float = 1e-3,
+        gamma: float = 0.99,
+        hidden_dim: int = 128,
+    ):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.gamma = gamma
@@ -245,8 +274,15 @@ class ActorCriticAgent:
 
         return action.item(), log_prob
 
-    def update(self, state: np.ndarray, action: int, reward: float,
-               next_state: np.ndarray, done: bool, log_prob: torch.Tensor) -> Tuple[float, float]:
+    def update(
+        self,
+        state: np.ndarray,
+        action: int,
+        reward: float,
+        next_state: np.ndarray,
+        done: bool,
+        log_prob: torch.Tensor,
+    ) -> Tuple[float, float]:
         """Update actor and critic using TD learning"""
         state = torch.FloatTensor(state).unsqueeze(0)
         next_state = torch.FloatTensor(next_state).unsqueeze(0)
@@ -272,12 +308,20 @@ class ActorCriticAgent:
 
         return actor_loss.item(), critic_loss.item()
 
+
 class PPOAgent:
     """Proximal Policy Optimization (PPO) Agent"""
 
-    def __init__(self, state_dim: int, action_dim: int, lr: float = 3e-4,
-                 gamma: float = 0.99, eps_clip: float = 0.2, k_epochs: int = 4,
-                 hidden_dim: int = 128):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        lr: float = 3e-4,
+        gamma: float = 0.99,
+        eps_clip: float = 0.2,
+        k_epochs: int = 4,
+        hidden_dim: int = 128,
+    ):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.lr = lr
@@ -294,7 +338,9 @@ class PPOAgent:
 
         self.memory = []
 
-    def select_action(self, state: np.ndarray) -> Tuple[int, torch.Tensor, torch.Tensor]:
+    def select_action(
+        self, state: np.ndarray
+    ) -> Tuple[int, torch.Tensor, torch.Tensor]:
         """Select action and return log prob and state value"""
         state = torch.FloatTensor(state).unsqueeze(0)
         probs = self.policy_old(state)
@@ -327,7 +373,9 @@ class PPOAgent:
             discounted_rewards.insert(0, reward)
 
         discounted_rewards = torch.FloatTensor(discounted_rewards)
-        discounted_rewards = (discounted_rewards - discounted_rewards.mean()) / (discounted_rewards.std() + 1e-8)
+        discounted_rewards = (discounted_rewards - discounted_rewards.mean()) / (
+            discounted_rewards.std() + 1e-8
+        )
 
         # Update policy for K epochs
         total_policy_loss = 0
@@ -338,14 +386,18 @@ class PPOAgent:
             probs = self.policy(states)
             dist = Categorical(probs)
             log_probs = dist.log_prob(actions)
-            state_values = self.policy(states)  # Note: This should be a separate value network
+            state_values = self.policy(
+                states
+            )  # Note: This should be a separate value network
 
             # Calculate ratios and surrogate losses
             ratios = torch.exp(log_probs - log_probs_old)
             advantages = discounted_rewards - state_values.detach()
 
             surr1 = ratios * advantages
-            surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
+            surr2 = (
+                torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
+            )
 
             policy_loss = -torch.min(surr1, surr2).mean()
             value_loss = self.mse_loss(state_values, discounted_rewards)
@@ -366,12 +418,20 @@ class PPOAgent:
 
         return total_policy_loss / self.k_epochs, total_value_loss / self.k_epochs
 
+
 class ContinuousPPOAgent:
     """PPO Agent for Continuous Action Spaces"""
 
-    def __init__(self, state_dim: int, action_dim: int, lr: float = 3e-4,
-                 gamma: float = 0.99, eps_clip: float = 0.2, k_epochs: int = 4,
-                 hidden_dim: int = 128):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        lr: float = 3e-4,
+        gamma: float = 0.99,
+        eps_clip: float = 0.2,
+        k_epochs: int = 4,
+        hidden_dim: int = 128,
+    ):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.lr = lr
@@ -415,7 +475,9 @@ class ContinuousPPOAgent:
             discounted_rewards.insert(0, reward)
 
         discounted_rewards = torch.FloatTensor(discounted_rewards)
-        discounted_rewards = (discounted_rewards - discounted_rewards.mean()) / (discounted_rewards.std() + 1e-8)
+        discounted_rewards = (discounted_rewards - discounted_rewards.mean()) / (
+            discounted_rewards.std() + 1e-8
+        )
 
         # Update policy for K epochs
         total_loss = 0
@@ -429,10 +491,14 @@ class ContinuousPPOAgent:
 
             # Calculate ratios and surrogate losses
             ratios = torch.exp(log_probs - log_probs_old)
-            advantages = discounted_rewards.unsqueeze(-1)  # Add dimension for broadcasting
+            advantages = discounted_rewards.unsqueeze(
+                -1
+            )  # Add dimension for broadcasting
 
             surr1 = ratios * advantages
-            surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
+            surr2 = (
+                torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
+            )
 
             loss = -torch.min(surr1, surr2).mean()
 
@@ -451,10 +517,16 @@ class ContinuousPPOAgent:
 
         return total_loss / self.k_epochs
 
+
 # Training Functions
 
-def train_reinforce_agent(env_name: str = 'CartPole-v1', episodes: int = 1000,
-                         lr: float = 1e-3, gamma: float = 0.99) -> Dict[str, List[float]]:
+
+def train_reinforce_agent(
+    env_name: str = "CartPole-v1",
+    episodes: int = 1000,
+    lr: float = 1e-3,
+    gamma: float = 0.99,
+) -> Dict[str, List[float]]:
     """Train REINFORCE agent"""
 
     print(f"Training REINFORCE on {env_name}")
@@ -489,14 +561,21 @@ def train_reinforce_agent(env_name: str = 'CartPole-v1', episodes: int = 1000,
 
         if (episode + 1) % 100 == 0:
             avg_score = np.mean(scores[-100:])
-            print(f"Episode {episode+1:4d} | Average Score: {avg_score:6.1f} | Loss: {loss:.4f}")
+            print(
+                f"Episode {episode+1:4d} | Average Score: {avg_score:6.1f} | Loss: {loss:.4f}"
+            )
 
     env.close()
-    return {'scores': scores, 'losses': losses}
+    return {"scores": scores, "losses": losses}
 
-def train_reinforce_baseline_agent(env_name: str = 'CartPole-v1', episodes: int = 1000,
-                                  lr_policy: float = 1e-3, lr_value: float = 1e-3,
-                                  gamma: float = 0.99) -> Dict[str, List[float]]:
+
+def train_reinforce_baseline_agent(
+    env_name: str = "CartPole-v1",
+    episodes: int = 1000,
+    lr_policy: float = 1e-3,
+    lr_value: float = 1e-3,
+    gamma: float = 0.99,
+) -> Dict[str, List[float]]:
     """Train REINFORCE with baseline agent"""
 
     print(f"Training REINFORCE+Baseline on {env_name}")
@@ -533,14 +612,25 @@ def train_reinforce_baseline_agent(env_name: str = 'CartPole-v1', episodes: int 
 
         if (episode + 1) % 100 == 0:
             avg_score = np.mean(scores[-100:])
-            print(f"Episode {episode+1:4d} | Average Score: {avg_score:6.1f} | P-Loss: {policy_loss:.4f} | V-Loss: {value_loss:.4f}")
+            print(
+                f"Episode {episode+1:4d} | Average Score: {avg_score:6.1f} | P-Loss: {policy_loss:.4f} | V-Loss: {value_loss:.4f}"
+            )
 
     env.close()
-    return {'scores': scores, 'policy_losses': policy_losses, 'value_losses': value_losses}
+    return {
+        "scores": scores,
+        "policy_losses": policy_losses,
+        "value_losses": value_losses,
+    }
 
-def train_actor_critic_agent(env_name: str = 'CartPole-v1', episodes: int = 1000,
-                            lr_actor: float = 1e-4, lr_critic: float = 1e-3,
-                            gamma: float = 0.99) -> Dict[str, List[float]]:
+
+def train_actor_critic_agent(
+    env_name: str = "CartPole-v1",
+    episodes: int = 1000,
+    lr_actor: float = 1e-4,
+    lr_critic: float = 1e-3,
+    gamma: float = 0.99,
+) -> Dict[str, List[float]]:
     """Train Actor-Critic agent"""
 
     print(f"Training Actor-Critic on {env_name}")
@@ -566,7 +656,9 @@ def train_actor_critic_agent(env_name: str = 'CartPole-v1', episodes: int = 1000
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
 
-            actor_loss, critic_loss = agent.update(state, action, reward, next_state, done, log_prob)
+            actor_loss, critic_loss = agent.update(
+                state, action, reward, next_state, done, log_prob
+            )
 
             actor_losses.append(actor_loss)
             critic_losses.append(critic_loss)
@@ -580,11 +672,21 @@ def train_actor_critic_agent(env_name: str = 'CartPole-v1', episodes: int = 1000
             print(f"Episode {episode+1:4d} | Average Score: {avg_score:6.1f}")
 
     env.close()
-    return {'scores': scores, 'actor_losses': actor_losses, 'critic_losses': critic_losses}
+    return {
+        "scores": scores,
+        "actor_losses": actor_losses,
+        "critic_losses": critic_losses,
+    }
 
-def train_ppo_agent(env_name: str = 'CartPole-v1', episodes: int = 1000,
-                   lr: float = 3e-4, gamma: float = 0.99, eps_clip: float = 0.2,
-                   k_epochs: int = 4) -> Dict[str, List[float]]:
+
+def train_ppo_agent(
+    env_name: str = "CartPole-v1",
+    episodes: int = 1000,
+    lr: float = 3e-4,
+    gamma: float = 0.99,
+    eps_clip: float = 0.2,
+    k_epochs: int = 4,
+) -> Dict[str, List[float]]:
     """Train PPO agent"""
 
     print(f"Training PPO on {env_name}")
@@ -632,11 +734,21 @@ def train_ppo_agent(env_name: str = 'CartPole-v1', episodes: int = 1000,
             print(f"Episode {episode+1:4d} | Average Score: {avg_score:6.1f}")
 
     env.close()
-    return {'scores': scores, 'policy_losses': policy_losses, 'value_losses': value_losses}
+    return {
+        "scores": scores,
+        "policy_losses": policy_losses,
+        "value_losses": value_losses,
+    }
 
-def train_continuous_ppo_agent(env_name: str = 'Pendulum-v1', episodes: int = 1000,
-                              lr: float = 3e-4, gamma: float = 0.99, eps_clip: float = 0.2,
-                              k_epochs: int = 4) -> Dict[str, List[float]]:
+
+def train_continuous_ppo_agent(
+    env_name: str = "Pendulum-v1",
+    episodes: int = 1000,
+    lr: float = 3e-4,
+    gamma: float = 0.99,
+    eps_clip: float = 0.2,
+    k_epochs: int = 4,
+) -> Dict[str, List[float]]:
     """Train PPO agent for continuous control"""
 
     print(f"Training PPO on {env_name} (Continuous)")
@@ -682,11 +794,15 @@ def train_continuous_ppo_agent(env_name: str = 'Pendulum-v1', episodes: int = 10
             print(f"Episode {episode+1:4d} | Average Score: {avg_score:6.1f}")
 
     env.close()
-    return {'scores': scores, 'losses': losses}
+    return {"scores": scores, "losses": losses}
+
 
 # Analysis and Visualization Functions
 
-def compare_policy_gradient_variants(env_name: str = 'CartPole-v1', episodes: int = 500) -> Dict[str, Dict]:
+
+def compare_policy_gradient_variants(
+    env_name: str = "CartPole-v1", episodes: int = 500
+) -> Dict[str, Dict]:
     """Compare different policy gradient variants"""
 
     print(f"Comparing Policy Gradient Variants on {env_name}")
@@ -696,62 +812,67 @@ def compare_policy_gradient_variants(env_name: str = 'CartPole-v1', episodes: in
 
     # Train REINFORCE
     print("\n1. Training REINFORCE...")
-    results['REINFORCE'] = train_reinforce_agent(env_name, episodes)
+    results["REINFORCE"] = train_reinforce_agent(env_name, episodes)
 
     # Train REINFORCE + Baseline
     print("\n2. Training REINFORCE + Baseline...")
-    results['REINFORCE_Baseline'] = train_reinforce_baseline_agent(env_name, episodes)
+    results["REINFORCE_Baseline"] = train_reinforce_baseline_agent(env_name, episodes)
 
     # Train Actor-Critic
     print("\n3. Training Actor-Critic...")
-    results['Actor_Critic'] = train_actor_critic_agent(env_name, episodes)
+    results["Actor_Critic"] = train_actor_critic_agent(env_name, episodes)
 
     # Train PPO
     print("\n4. Training PPO...")
-    results['PPO'] = train_ppo_agent(env_name, episodes)
+    results["PPO"] = train_ppo_agent(env_name, episodes)
 
     return results
 
-def plot_policy_gradient_comparison(results: Dict[str, Dict], save_path: Optional[str] = None):
+
+def plot_policy_gradient_comparison(
+    results: Dict[str, Dict], save_path: Optional[str] = None
+):
     """Plot comparison of policy gradient variants"""
 
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
 
     methods = list(results.keys())
-    colors = ['blue', 'green', 'red', 'purple']
+    colors = ["blue", "green", "red", "purple"]
 
     # Learning curves
     for method, color in zip(methods, colors):
-        scores = results[method]['scores']
-        smoothed_scores = np.convolve(scores, np.ones(50)/50, mode='valid')
-        axes[0,0].plot(smoothed_scores, label=method, color=color, linewidth=2)
+        scores = results[method]["scores"]
+        smoothed_scores = np.convolve(scores, np.ones(50) / 50, mode="valid")
+        axes[0, 0].plot(smoothed_scores, label=method, color=color, linewidth=2)
 
-    axes[0,0].set_xlabel('Episode')
-    axes[0,0].set_ylabel('Smoothed Score')
-    axes[0,0].set_title('Learning Curves Comparison')
-    axes[0,0].legend()
-    axes[0,0].grid(True, alpha=0.3)
+    axes[0, 0].set_xlabel("Episode")
+    axes[0, 0].set_ylabel("Smoothed Score")
+    axes[0, 0].set_title("Learning Curves Comparison")
+    axes[0, 0].legend()
+    axes[0, 0].grid(True, alpha=0.3)
 
     # Final performance comparison
-    final_scores = [np.mean(results[method]['scores'][-100:]) for method in methods]
-    axes[0,1].bar(methods, final_scores, alpha=0.7, edgecolor='black')
-    axes[0,1].set_ylabel('Final Average Score')
-    axes[0,1].set_title('Final Performance Comparison')
-    axes[0,1].grid(True, alpha=0.3)
+    final_scores = [np.mean(results[method]["scores"][-100:]) for method in methods]
+    axes[0, 1].bar(methods, final_scores, alpha=0.7, edgecolor="black")
+    axes[0, 1].set_ylabel("Final Average Score")
+    axes[0, 1].set_title("Final Performance Comparison")
+    axes[0, 1].grid(True, alpha=0.3)
 
     # Training stability (variance of scores)
-    score_variances = [np.var(results[method]['scores'][-200:]) for method in methods]
-    axes[1,0].bar(methods, score_variances, alpha=0.7, edgecolor='black', color='orange')
-    axes[1,0].set_ylabel('Score Variance')
-    axes[1,0].set_title('Training Stability (Lower is Better)')
-    axes[1,0].grid(True, alpha=0.3)
+    score_variances = [np.var(results[method]["scores"][-200:]) for method in methods]
+    axes[1, 0].bar(
+        methods, score_variances, alpha=0.7, edgecolor="black", color="orange"
+    )
+    axes[1, 0].set_ylabel("Score Variance")
+    axes[1, 0].set_title("Training Stability (Lower is Better)")
+    axes[1, 0].grid(True, alpha=0.3)
 
     # Sample efficiency (episodes to reach threshold)
     threshold = 195  # For CartPole
     sample_efficiencies = []
 
     for method in methods:
-        scores = results[method]['scores']
+        scores = results[method]["scores"]
         episodes_to_threshold = len(scores)
         for i, score in enumerate(scores):
             if score >= threshold:
@@ -759,17 +880,22 @@ def plot_policy_gradient_comparison(results: Dict[str, Dict], save_path: Optiona
                 break
         sample_efficiencies.append(episodes_to_threshold)
 
-    axes[1,1].bar(methods, sample_efficiencies, alpha=0.7, edgecolor='black', color='green')
-    axes[1,1].set_ylabel('Episodes to Threshold')
-    axes[1,1].set_title('Sample Efficiency (Lower is Better)')
-    axes[1,1].grid(True, alpha=0.3)
+    axes[1, 1].bar(
+        methods, sample_efficiencies, alpha=0.7, edgecolor="black", color="green"
+    )
+    axes[1, 1].set_ylabel("Episodes to Threshold")
+    axes[1, 1].set_title("Sample Efficiency (Lower is Better)")
+    axes[1, 1].grid(True, alpha=0.3)
 
     plt.tight_layout()
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.show()
 
-def hyperparameter_sensitivity_analysis(env_name: str = 'CartPole-v1', episodes: int = 300):
+
+def hyperparameter_sensitivity_analysis(
+    env_name: str = "CartPole-v1", episodes: int = 300
+):
     """Analyze sensitivity to hyperparameters"""
 
     print("Policy Gradient Hyperparameter Sensitivity Analysis")
@@ -783,7 +909,7 @@ def hyperparameter_sensitivity_analysis(env_name: str = 'CartPole-v1', episodes:
     for lr in learning_rates:
         print(f"  Learning Rate: {lr}")
         result = train_reinforce_baseline_agent(env_name, episodes, lr_policy=lr)
-        lr_results[lr] = np.mean(result['scores'][-100:])
+        lr_results[lr] = np.mean(result["scores"][-100:])
 
     # Test different gamma values
     gamma_values = [0.9, 0.95, 0.99, 0.995]
@@ -793,7 +919,7 @@ def hyperparameter_sensitivity_analysis(env_name: str = 'CartPole-v1', episodes:
     for gamma in gamma_values:
         print(f"  Gamma: {gamma}")
         result = train_reinforce_baseline_agent(env_name, episodes, gamma=gamma)
-        gamma_results[gamma] = np.mean(result['scores'][-100:])
+        gamma_results[gamma] = np.mean(result["scores"][-100:])
 
     # Plot results
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
@@ -801,29 +927,32 @@ def hyperparameter_sensitivity_analysis(env_name: str = 'CartPole-v1', episodes:
     # Learning rate sensitivity
     lrs = list(lr_results.keys())
     scores = list(lr_results.values())
-    axes[0].plot(lrs, scores, 'o-', linewidth=2, markersize=8)
-    axes[0].set_xlabel('Learning Rate')
-    axes[0].set_ylabel('Final Average Score')
-    axes[0].set_title('Learning Rate Sensitivity')
-    axes[0].set_xscale('log')
+    axes[0].plot(lrs, scores, "o-", linewidth=2, markersize=8)
+    axes[0].set_xlabel("Learning Rate")
+    axes[0].set_ylabel("Final Average Score")
+    axes[0].set_title("Learning Rate Sensitivity")
+    axes[0].set_xscale("log")
     axes[0].grid(True, alpha=0.3)
 
     # Gamma sensitivity
     gammas = list(gamma_results.keys())
     scores = list(gamma_results.values())
-    axes[1].plot(gammas, scores, 'o-', linewidth=2, markersize=8, color='green')
-    axes[1].set_xlabel('Gamma (Discount Factor)')
-    axes[1].set_ylabel('Final Average Score')
-    axes[1].set_title('Discount Factor Sensitivity')
+    axes[1].plot(gammas, scores, "o-", linewidth=2, markersize=8, color="green")
+    axes[1].set_xlabel("Gamma (Discount Factor)")
+    axes[1].set_ylabel("Final Average Score")
+    axes[1].set_title("Discount Factor Sensitivity")
     axes[1].grid(True, alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig('policy_gradient_hyperparameter_sensitivity.png', dpi=300, bbox_inches='tight')
+    plt.savefig(
+        "policy_gradient_hyperparameter_sensitivity.png", dpi=300, bbox_inches="tight"
+    )
     plt.show()
 
-    return {'learning_rates': lr_results, 'gamma_values': gamma_results}
+    return {"learning_rates": lr_results, "gamma_values": gamma_results}
 
-def curriculum_learning_demo(env_name: str = 'CartPole-v1', episodes: int = 1000):
+
+def curriculum_learning_demo(env_name: str = "CartPole-v1", episodes: int = 1000):
     """Demonstrate curriculum learning with policy gradients"""
 
     print("Curriculum Learning Demonstration")
@@ -831,9 +960,27 @@ def curriculum_learning_demo(env_name: str = 'CartPole-v1', episodes: int = 1000
 
     # Create modified environments with different difficulties
     env_configs = [
-        {'name': 'Easy', 'gravity': 9.8, 'length': 0.5, 'masscart': 1.0, 'masspole': 0.1},
-        {'name': 'Medium', 'gravity': 9.8, 'length': 0.5, 'masscart': 1.0, 'masspole': 0.1},
-        {'name': 'Hard', 'gravity': 9.8, 'length': 0.5, 'masscart': 1.0, 'masspole': 0.1}
+        {
+            "name": "Easy",
+            "gravity": 9.8,
+            "length": 0.5,
+            "masscart": 1.0,
+            "masspole": 0.1,
+        },
+        {
+            "name": "Medium",
+            "gravity": 9.8,
+            "length": 0.5,
+            "masscart": 1.0,
+            "masspole": 0.1,
+        },
+        {
+            "name": "Hard",
+            "gravity": 9.8,
+            "length": 0.5,
+            "masscart": 1.0,
+            "masspole": 0.1,
+        },
     ]
 
     curriculum_results = {}
@@ -866,27 +1013,28 @@ def curriculum_learning_demo(env_name: str = 'CartPole-v1', episodes: int = 1000
             agent.update_policy()
             scores.append(episode_reward)
 
-        curriculum_results[config['name']] = scores
+        curriculum_results[config["name"]] = scores
         env.close()
 
     # Plot curriculum learning results
     fig, ax = plt.subplots(figsize=(10, 6))
 
     for env_type, scores in curriculum_results.items():
-        smoothed_scores = np.convolve(scores, np.ones(20)/20, mode='valid')
+        smoothed_scores = np.convolve(scores, np.ones(20) / 20, mode="valid")
         ax.plot(smoothed_scores, label=env_type, linewidth=2)
 
-    ax.set_xlabel('Episode')
-    ax.set_ylabel('Smoothed Score')
-    ax.set_title('Curriculum Learning Progress')
+    ax.set_xlabel("Episode")
+    ax.set_ylabel("Smoothed Score")
+    ax.set_title("Curriculum Learning Progress")
     ax.legend()
     ax.grid(True, alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig('curriculum_learning_demo.png', dpi=300, bbox_inches='tight')
+    plt.savefig("curriculum_learning_demo.png", dpi=300, bbox_inches="tight")
     plt.show()
 
     return curriculum_results
+
 
 # Main execution examples
 if __name__ == "__main__":
@@ -895,19 +1043,19 @@ if __name__ == "__main__":
 
     # Example 1: Compare policy gradient variants
     print("\nExample 1: Comparing Policy Gradient Variants")
-    results = compare_policy_gradient_variants('CartPole-v1', episodes=200)
-    plot_policy_gradient_comparison(results, 'policy_gradient_comparison.png')
+    results = compare_policy_gradient_variants("CartPole-v1", episodes=200)
+    plot_policy_gradient_comparison(results, "policy_gradient_comparison.png")
 
     # Example 2: Hyperparameter sensitivity
     print("\nExample 2: Hyperparameter Sensitivity Analysis")
-    hyper_results = hyperparameter_sensitivity_analysis('CartPole-v1', episodes=150)
+    hyper_results = hyperparameter_sensitivity_analysis("CartPole-v1", episodes=150)
 
     # Example 3: Curriculum learning
     print("\nExample 3: Curriculum Learning Demonstration")
-    curriculum_results = curriculum_learning_demo('CartPole-v1', episodes=300)
+    curriculum_results = curriculum_learning_demo("CartPole-v1", episodes=300)
 
     # Example 4: Continuous control
     print("\nExample 4: Continuous Control with PPO")
-    continuous_results = train_continuous_ppo_agent('Pendulum-v1', episodes=200)
+    continuous_results = train_continuous_ppo_agent("Pendulum-v1", episodes=200)
 
     print("\nAll examples completed! Check the generated plots and results.")

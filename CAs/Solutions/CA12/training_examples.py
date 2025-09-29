@@ -1194,14 +1194,14 @@ def comprehensive_multi_agent_analysis(save_path: Optional[str] = None) -> Dict[
         avg_perf = np.mean([performance_by_env[env][method] for env in env_names])
         print(f"{method:18} | Average Performance: {avg_perf:6.1f}")
 
-    print("
-💡 Key Insights for Multi-Agent RL:"    print("• Value decomposition methods excel in cooperative settings")
+#     print("
+# 💡 Key Insights for Multi-Agent RL:"    print("• Value decomposition methods excel in cooperative settings")
     print("• Communication improves coordination but reduces scalability")
     print("• Centralized training with decentralized execution is effective")
     print("• Credit assignment remains a key challenge")
 
-    print("
-🎯 Recommendations:"    print("• Use VDN/QMIX for cooperative multi-agent tasks")
+#     print("
+# 🎯 Recommendations:"    print("• Use VDN/QMIX for cooperative multi-agent tasks")
     print("• Choose MADDPG for competitive or mixed environments")
     print("• Consider communication for complex coordination tasks")
     print("• Start with independent learning for simple problems")
