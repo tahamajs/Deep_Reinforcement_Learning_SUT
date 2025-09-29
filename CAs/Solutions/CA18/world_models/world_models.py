@@ -29,7 +29,7 @@ class RSSMCore(nn.Module):
         self.action_dim = action_dim
         self.embed_dim = embed_dim
 
-        self.rnn = nn.GRUCell(embed_dim + state_dim + action_dim, hidden_dim)
+        self.rnn = nn.GRUCell(input_size=self.state_dim + self.action_dim + self.embed_dim, hidden_size=self.hidden_dim)
 
         self.prior_net = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
@@ -57,11 +57,11 @@ class RSSMCore(nn.Module):
         Update state using observation (posterior update)
         """
         hidden = self.rnn(
-            torch.cat([state['stoch'], action], dim=1),
+            torch.cat([state['stoch'], action, embed], dim=1),
             state['hidden']
         )
 
-        posterior_input = torch.cat([hidden, embed], dim=1)
+        posterior_input = hidden  # embed is already in RNN input
         posterior_params = self.posterior_net(posterior_input)
         posterior_mean, posterior_logstd = posterior_params.chunk(2, dim=1)
         posterior_std = torch.exp(posterior_logstd)
@@ -86,8 +86,10 @@ class RSSMCore(nn.Module):
         """
         Predict next state using action (prior update)
         """
+        # Use zero embed for imagination
+        zero_embed = torch.zeros(action.shape[0], self.embed_dim, device=action.device)
         hidden = self.rnn(
-            torch.cat([state['stoch'], action], dim=1),
+            torch.cat([state['stoch'], action, zero_embed], dim=1),
             state['hidden']
         )
 

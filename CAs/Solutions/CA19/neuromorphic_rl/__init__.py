@@ -242,13 +242,26 @@ class SpikingNetwork:
 
     def get_output_rates(self) -> np.ndarray:
         """Get average firing rates of output neurons"""
+        # NOTE: SpikingNeuron currently only tracks the time of the last spike
+        # (self.last_spike_time). The previous implementation attempted to call
+        # len(...) on a boolean expression (last_spike_time > 0) which raised
+        # a TypeError. Here we provide a safe, minimal approximation of firing
+        # rates based on whether a neuron has spiked recently. This avoids
+        # runtime errors in demos. A more accurate implementation should
+        # maintain spike counts or spike-history buffers per neuron.
+
         rates = []
         for k in range(self.n_output):
-            spike_count = sum(
-                1 for t in range(len(self.output_neurons[k].last_spike_time > 0))
-            )
-            rate = spike_count / max(1, len(self.output_neurons[k].last_spike_time > 0))
-            rates.append(rate)
+            last_spike = self.output_neurons[k].last_spike_time
+
+            # If the neuron never spiked, last_spike == -np.inf
+            if last_spike == -np.inf or not np.isfinite(last_spike):
+                rates.append(0.0)
+            else:
+                # Minimal rate estimate: report a single recent spike as rate=1.0
+                # (demo-friendly and avoids division by non-iterables).
+                rates.append(1.0)
+
         return np.array(rates)
 
     def get_synaptic_weights(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -423,7 +436,6 @@ class NeuromorphicActorCritic:
 
         firing_rates = self.actor_network.get_output_rates()
         self.firing_rates.append(np.mean(firing_rates))
-
 
         learning_info = {
             "td_error": self.td_error,

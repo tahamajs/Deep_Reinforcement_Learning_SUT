@@ -32,7 +32,7 @@ except ImportError:
     QISKIT_AVAILABLE = False
     print("Warning: Qiskit not available. Quantum simulations will be limited.")
 
-    # Define dummy classes for fallback
+    
     class QuantumCircuit:
         def __init__(self, n_qubits):
             self.n_qubits = n_qubits
@@ -132,8 +132,10 @@ class QuantumStateSimulator:
             Quantum statevector representing the encoded state
         """
         if self.classical_fallback:
-            # Classical fallback: return dummy statevector
-            dummy_data = np.random.randn(2**self.n_qubits) + 1j * np.random.randn(2**self.n_qubits)
+            
+            dummy_data = np.random.randn(2**self.n_qubits) + 1j * np.random.randn(
+                2**self.n_qubits
+            )
             dummy_data = dummy_data / np.linalg.norm(dummy_data)
             self.quantum_state = Statevector(dummy_data)
             return self.quantum_state
@@ -207,13 +209,13 @@ class QuantumStateSimulator:
             rho_A = partial_trace(rho, list(range(1, self.n_qubits)))
 
             eigenvals = np.real(np.linalg.eigvals(rho_A.data))
-            eigenvals = eigenvals[eigenvals > 1e-10]  # Remove numerical zeros
+            eigenvals = eigenvals[eigenvals > 1e-10]  
 
             if len(eigenvals) == 0:
                 return 0.0
 
             entropy = -np.sum(eigenvals * np.log2(eigenvals))
-            return min(entropy, 1.0)  # Normalized entanglement measure
+            return min(entropy, 1.0)  
 
         except Exception:
             return 0.0
@@ -253,12 +255,12 @@ class QuantumFeatureMap:
             Quantum feature representation or kernel value
         """
         if self.classical_fallback:
-            # Classical fallback: return normalized features
+            
             if y is not None:
-                # Compute classical kernel
+                
                 return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
             else:
-                # Return normalized features
+                
                 return x / np.linalg.norm(x) if np.linalg.norm(x) > 0 else x
 
         qc = QuantumCircuit(self.n_qubits)
@@ -321,7 +323,7 @@ class QuantumFeatureMap:
             similarity = np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
             return abs(similarity) ** 2
         except:
-            return 0.5  # Default similarity
+            return 0.5  
 
 
 class VariationalQuantumCircuit:
@@ -366,7 +368,7 @@ class VariationalQuantumCircuit:
             Complete variational quantum circuit
         """
         if self.classical_fallback:
-            # Classical fallback: return dummy circuit
+            
             return QuantumCircuit(self.n_qubits)
 
         qc = QuantumCircuit(self.n_qubits)
@@ -403,14 +405,16 @@ class VariationalQuantumCircuit:
             Execution results
         """
         if self.classical_fallback:
-            # Classical fallback: return dummy results
+            
             n_actions = min(2**self.n_qubits, 64)
             action_probs = np.random.rand(n_actions)
             action_probs = action_probs / np.sum(action_probs)
 
             return {
                 "counts": {f"{i:06b}": shots // n_actions for i in range(n_actions)},
-                "statevector": Statevector(np.ones(2**self.n_qubits) / np.sqrt(2**self.n_qubits)),
+                "statevector": Statevector(
+                    np.ones(2**self.n_qubits) / np.sqrt(2**self.n_qubits)
+                ),
                 "probabilities": action_probs,
             }
 
@@ -448,7 +452,7 @@ class VariationalQuantumCircuit:
     def get_parameter_count(self) -> int:
         """Get total number of variational parameters"""
         if self.classical_fallback:
-            return 10  # Dummy parameter count
+            return 10  
         return len(self.all_parameters)
 
 
@@ -493,7 +497,7 @@ class HybridQuantumClassicalAgent:
         self.memory = deque(maxlen=10000)
         self.batch_size = 32
 
-        self.quantum_weight = 0.6  # Balance between quantum and classical
+        self.quantum_weight = 0.6  
         self.adaptive_hybrid = True
 
     def _build_classical_network(self) -> nn.Module:
@@ -605,7 +609,7 @@ class HybridQuantumClassicalAgent:
         quantum_loss = 0.0
         try:
             if len(self.memory) > self.batch_size * 2:
-                if np.random.random() < 0.1:  # 10% of updates
+                if np.random.random() < 0.1:  
                     grad_scale = classical_loss.item()
                     self.quantum_optimizer.zero_grad()
                     self.quantum_params.grad = (
