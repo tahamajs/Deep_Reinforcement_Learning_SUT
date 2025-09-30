@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def create_quantum_environment():
+def create_quantum_environment(n_qubits=2):
     """Create a simple environment suitable for quantum RL demonstration"""
 
     class QuantumInspiredEnvironment:
@@ -32,13 +32,21 @@ def create_quantum_environment():
 
         def reset(self):
             # Start with |00...0> state
-            self.quantum_state = np.zeros(2**self.n_qubits)
+            self.quantum_state = np.zeros(2**self.n_qubits, dtype=complex)
             self.quantum_state[0] = 1.0
 
             self.steps = 0
-            return self.quantum_state.copy()
+            return self.quantum_state.real.copy()
 
         def step(self, action):
+            # Handle both int and array actions
+            if isinstance(action, (int, np.integer)):
+                action = np.array([action] * self.n_qubits)
+            elif isinstance(action, (float, np.floating)):
+                action = np.array([action] * self.n_qubits)
+            else:
+                action = np.array(action)
+
             # Apply quantum gates (simplified)
             action = np.clip(action, -np.pi, np.pi)
 
@@ -56,7 +64,7 @@ def create_quantum_environment():
             self.steps += 1
             done = self.steps >= self.max_steps
 
-            return self.quantum_state.copy(), reward, done, {}
+            return self.quantum_state.real.copy(), reward, done, {}
 
         def apply_rotation(self, qubit_idx, theta):
             """Apply a rotation gate to a specific qubit"""
@@ -87,7 +95,7 @@ def create_quantum_environment():
             noise_strength = 0.01
             phase_noise = np.random.normal(0, noise_strength, len(self.quantum_state))
             self.quantum_state *= np.exp(1j * phase_noise)
-            self.quantum_state = np.real(self.quantum_state)  # Keep real for simplicity
+            # Keep complex for internal dynamics
 
         def compute_quantum_reward(self):
             """Compute reward based on quantum state properties"""
@@ -107,7 +115,7 @@ def create_quantum_environment():
 
             return reward
 
-    return QuantumInspiredEnvironment()
+    return QuantumInspiredEnvironment(n_qubits)
 
 
 def demonstrate_quantum_circuit():
@@ -119,31 +127,27 @@ def demonstrate_quantum_circuit():
     circuit = QuantumCircuit(n_qubits=2)
 
     print("Initial state: |00>")
-    print(f"State vector: {circuit.get_state_vector()}")
+    print(f"State vector: {circuit.get_amplitudes()}")
 
     # Apply Hadamard gates
-    circuit.apply_gate(QuantumGate.hadamard(), 0)
-    circuit.apply_gate(QuantumGate.hadamard(), 1)
+    circuit.apply_single_gate(QuantumGate.hadamard(), 0)
+    circuit.apply_single_gate(QuantumGate.hadamard(), 1)
 
     print("\nAfter H⊗H: (|00> + |01> + |10> + |11>)/2")
-    print(f"State vector: {circuit.get_state_vector()}")
+    print(f"State vector: {circuit.get_amplitudes()}")
 
     # Apply CNOT gate
-    circuit.apply_cnot(0, 1)
+    cnot_gate, _ = QuantumGate.cnot()
+    circuit.apply_two_gate(cnot_gate, 0, 1)
 
     print("\nAfter CNOT(0,1): Creates entanglement")
-    print(f"State vector: {circuit.get_state_vector()}")
+    print(f"State vector: {circuit.get_amplitudes()}")
 
-    # Measure
-    measurements = []
-    for _ in range(1000):
-        result = circuit.measure()
-        measurements.append(result)
-
-    print(f"\nMeasurement statistics (1000 shots):")
-    unique, counts = np.unique(measurements, return_counts=True)
-    for state, count in zip(unique, counts):
-        print(f"  |{state:02b}>: {count/10:.1f}%")
+    # Get probabilities
+    probabilities = circuit.get_probabilities()
+    print(f"\nMeasurement probabilities:")
+    for i, prob in enumerate(probabilities):
+        print(f"  |{i:02b}>: {prob:.3f}")
 
     return circuit
 
@@ -156,9 +160,9 @@ def train_quantum_q_learning(env, n_episodes=200):
     # Create quantum Q-learning agent
     agent = QuantumQLearning(
         n_qubits=env.n_qubits,
-        action_dim=env.action_dim,
+        n_actions=env.action_dim,
         learning_rate=0.1,
-        discount_factor=0.95,
+        gamma=0.95,
         exploration_rate=1.0,
         exploration_decay=0.995,
     )
@@ -207,13 +211,8 @@ def demonstrate_quantum_actor_critic(env):
     # Create quantum actor-critic agent
     agent = QuantumActorCritic(
         n_qubits=env.n_qubits,
-        action_dim=env.action_dim,
-        actor_hidden_dim=32,
-        critic_hidden_dim=32,
-        learning_rate=1e-3,
+        n_actions=env.action_dim,
     )
-
-    optimizer = torch.optim.Adam(agent.parameters(), lr=1e-3)
 
     n_episodes = 100
     episode_rewards = []
@@ -222,54 +221,22 @@ def demonstrate_quantum_actor_critic(env):
         obs = env.reset()
         episode_reward = 0
         done = False
-        log_probs = []
-        values = []
-        rewards = []
 
         while not done:
-            obs_tensor = torch.FloatTensor(obs).to(device)
+            # Select action using quantum policy
+            action = agent.select_action(obs)
 
-            # Get action and value from quantum actor-critic
-            action_dist, value = agent(obs_tensor)
-            action = action_dist.sample()
-            next_obs, reward, done, _ = env.step(action.cpu().numpy())
+            next_obs, reward, done, _ = env.step(action)
 
-            log_probs.append(action_dist.log_prob(action))
-            values.append(value)
-            rewards.append(reward)
+            # Update quantum actor and critic
+            agent.update(obs, action, reward, next_obs, done)
 
             obs = next_obs
             episode_reward += reward
 
-        # Compute returns and advantages
-        returns = []
-        G = 0
-        for r in reversed(rewards):
-            G = r + 0.99 * G
-            returns.insert(0, G)
-
-        returns = torch.FloatTensor(returns).to(device)
-        values = torch.cat(values)
-        log_probs = torch.cat(log_probs)
-
-        advantages = returns - values
-
-        # Compute losses
-        actor_loss = -(log_probs * advantages.detach()).mean()
-        critic_loss = F.mse_loss(values, returns)
-        total_loss = actor_loss + critic_loss
-
-        # Update
-        optimizer.zero_grad()
-        total_loss.backward()
-        optimizer.step()
-
         episode_rewards.append(episode_reward)
 
         if episode % 20 == 0:
-            print(
-                f"Episode {episode}: Reward={episode_reward:.2f}, "
-                f"Actor Loss={actor_loss:.4f}, Critic Loss={critic_loss:.4f}"
-            )
+            print(f"Episode {episode}: Reward={episode_reward:.2f}")
 
     return agent, episode_rewards

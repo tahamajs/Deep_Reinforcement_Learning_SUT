@@ -69,7 +69,7 @@ class RSSMCore(nn.Module):
             torch.cat([state["stoch"], action, embed], dim=1), state["hidden"]
         )
 
-        posterior_input = hidden  # embed is already in RNN input
+        posterior_input = torch.cat([hidden, embed], dim=1)
         posterior_params = self.posterior_net(posterior_input)
         posterior_mean, posterior_logstd = posterior_params.chunk(2, dim=1)
         posterior_std = torch.exp(posterior_logstd)

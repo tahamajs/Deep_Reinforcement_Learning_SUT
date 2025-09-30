@@ -259,12 +259,16 @@ class VariationalQuantumCircuit(nn.Module):
         amplitudes = self.forward()
         return np.abs(amplitudes) ** 2
 
-    def measure_expectation(self, observable: np.ndarray, input_state: Optional[np.ndarray] = None) -> float:
+    def measure_expectation(
+        self, observable: np.ndarray, input_state: Optional[np.ndarray] = None
+    ) -> float:
         """Measure expectation value of observable"""
         state = self.forward(input_state)
         return np.real(np.conj(state) @ observable @ state)
 
-    def gradient(self, observable: np.ndarray, input_state: np.ndarray, param_idx: int) -> float:
+    def gradient(
+        self, observable: np.ndarray, input_state: np.ndarray, param_idx: int
+    ) -> float:
         """Compute gradient of expectation value w.r.t. parameter"""
         # Simple finite difference approximation
         eps = 1e-6
@@ -518,12 +522,16 @@ class QuantumQLearning:
         n_layers: int = 3,
         learning_rate: float = 0.1,
         gamma: float = 0.95,
+        exploration_rate: float = 1.0,
+        exploration_decay: float = 0.995,
     ):
 
         self.n_qubits = n_qubits
         self.n_actions = n_actions
         self.learning_rate = learning_rate
         self.gamma = gamma
+        self.exploration_rate = exploration_rate
+        self.exploration_decay = exploration_decay
 
         self.q_circuits = {}
         for action in range(n_actions):

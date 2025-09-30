@@ -2,14 +2,18 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from multi_agent_rl.multi_agent_rl import MADDPGAgent, MultiAgentEnvironment
+from multi_agent_rl.multi_agent_rl import (
+    MADDPGAgent,
+    MultiAgentEnvironment,
+    MultiAgentReplayBuffer,
+)
 import matplotlib.pyplot as plt
 
 # Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def create_multi_agent_environment():
+def create_multi_agent_environment(n_agents=2, obs_dim=4, action_dim=2):
     """Create a cooperative multi-agent environment for demonstration"""
 
     class CooperativeMultiAgentEnv:
@@ -96,9 +100,14 @@ def create_multi_agent_environment():
             self.steps += 1
             done = self.steps >= self.max_steps
 
-            return self.get_observations(), np.array(rewards), done, {}
+            return (
+                self.get_observations(),
+                np.array(rewards),
+                np.array([done] * self.n_agents),
+                {},
+            )
 
-    return CooperativeMultiAgentEnv()
+    return CooperativeMultiAgentEnv(n_agents, obs_dim, action_dim)
 
 
 def train_maddpg_agents(env, n_episodes=200):
@@ -114,11 +123,18 @@ def train_maddpg_agents(env, n_episodes=200):
             obs_dim=env.obs_dim,
             action_dim=env.action_dim,
             n_agents=env.n_agents,
-            hidden_dim=64,
             use_attention=True,
             use_communication=True,
         )
         agents.append(agent)
+
+    # Create shared replay buffer
+    buffer = MultiAgentReplayBuffer(
+        capacity=100000,
+        n_agents=env.n_agents,
+        obs_dim=env.obs_dim,
+        action_dim=env.action_dim,
+    )
 
     episode_rewards = []
     attention_weights_history = []
@@ -129,31 +145,23 @@ def train_maddpg_agents(env, n_episodes=200):
         done = False
         episode_attention = []
 
-        while not done:
+        while not np.any(done):
             # Get actions from all agents
             actions = []
             for i, agent in enumerate(agents):
                 obs_tensor = torch.FloatTensor(obs[i]).unsqueeze(0).to(device)
                 action_tensor, attention_weights = agent.act(obs_tensor, explore=True)
-                action = action_tensor.cpu().numpy()[0]
+                action = action_tensor.cpu().detach().numpy()[0]
                 actions.append(action)
 
                 if attention_weights is not None:
-                    episode_attention.append(attention_weights.cpu().numpy())
+                    episode_attention.append(attention_weights.cpu().detach().numpy())
 
             # Environment step
             next_obs, rewards, done, _ = env.step(actions)
 
-            # Store experiences
-            for i, agent in enumerate(agents):
-                agent.store_experience(
-                    obs[i], actions[i], rewards[i], next_obs[i], done
-                )
-
-            # Update agents
-            if episode > 10:  # Start updating after some exploration
-                for agent in enumerate(agents):
-                    agent.update()
+            # Store experiences in buffer
+            buffer.add(obs, actions, rewards, next_obs, done)
 
             obs = next_obs
             episode_reward += np.mean(rewards)
@@ -161,6 +169,12 @@ def train_maddpg_agents(env, n_episodes=200):
         episode_rewards.append(episode_reward)
         if episode_attention:
             attention_weights_history.append(np.mean(episode_attention, axis=0))
+
+        # Update agents
+        if episode > 10 and buffer.size > 64:  # Start updating after some exploration
+            batch = buffer.sample(64)
+            for agent in agents:
+                agent.update(batch, [a.actor for a in agents])
 
         if episode % 50 == 0:
             print(f"Episode {episode}: Avg Reward = {episode_reward:.2f}")
@@ -183,11 +197,13 @@ def demonstrate_attention_mechanism(agents, env):
         for i, agent in enumerate(agents):
             obs_tensor = torch.FloatTensor(obs[i]).unsqueeze(0).to(device)
             action_tensor, attention_weights = agent.act(obs_tensor, explore=False)
-            action = action_tensor.cpu().numpy()[0]
+            action = action_tensor.cpu().detach().numpy()[0]
             actions.append(action)
 
             if attention_weights is not None:
-                step_attention.append(attention_weights.cpu().numpy().flatten())
+                step_attention.append(
+                    attention_weights.cpu().detach().numpy().flatten()
+                )
 
         next_obs, rewards, done, _ = env.step(actions)
         obs = next_obs
@@ -215,7 +231,7 @@ def evaluate_multi_agent_performance(agents, env, n_episodes=10):
             for i, agent in enumerate(agents):
                 obs_tensor = torch.FloatTensor(obs[i]).unsqueeze(0).to(device)
                 action_tensor, _ = agent.act(obs_tensor, explore=False)
-                action = action_tensor.cpu().numpy()[0]
+                action = action_tensor.cpu().detach().numpy()[0]
                 actions.append(action)
 
             next_obs, rewards, done, _ = env.step(actions)

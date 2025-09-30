@@ -6,7 +6,10 @@ from world_models.world_models import RSSMCore, WorldModel, MPCPlanner
 from multi_agent_rl.multi_agent_rl import MADDPGAgent, MultiAgentEnvironment
 from causal_rl.causal_rl import CausalGraph, CausalDiscovery, CausalWorldModel
 from quantum_rl.quantum_rl import QuantumState, QuantumCircuit, QuantumQLearning
-from federated_rl.federated_rl import FederatedRLClient as FederatedAgent, FederatedRLServer as FederatedServer
+from federated_rl.federated_rl import (
+    FederatedRLClient as FederatedAgent,
+    FederatedRLServer as FederatedServer,
+)
 import matplotlib.pyplot as plt
 
 # Device configuration
@@ -46,11 +49,13 @@ def create_integrated_environment():
             """Get observation for all agents"""
             obs = []
             for i in range(self.n_agents):
-                agent_obs = np.concatenate([
-                    self.shared_state,
-                    self.agent_states[i],
-                    [0.0, 0.0]  # Placeholder for causal effects
-                ])
+                agent_obs = np.concatenate(
+                    [
+                        self.shared_state,
+                        self.agent_states[i],
+                        [0.0, 0.0],  # Placeholder for causal effects
+                    ]
+                )
                 obs.append(agent_obs)
             return np.array(obs)
 
@@ -91,7 +96,9 @@ def create_integrated_environment():
     return IntegratedEnvironment()
 
 
-def demonstrate_paradigm_integration():
+def demonstrate_paradigm_integration(
+    n_episodes=10, n_qubits=2, learning_rate=0.1, gamma=0.95, n_layers=1
+):
     """Demonstrate integration of multiple RL paradigms"""
 
     print("🔗 Demonstrating Paradigm Integration")
@@ -119,12 +126,15 @@ def demonstrate_paradigm_integration():
 
     # Agent 2: Quantum-enhanced agent
     agent2 = QuantumQLearning(
-        n_qubits=2, n_actions=env.action_dim, learning_rate=0.1, gamma=0.95, n_layers=1
+        n_qubits=n_qubits,
+        n_actions=env.action_dim,
+        learning_rate=learning_rate,
+        gamma=gamma,
+        n_layers=n_layers,
     )
     agents.append(("Quantum Q-Learning", agent2))
 
     # Training loop
-    n_episodes = 10
     results = {name: [] for name, _ in agents}
 
     for episode in range(n_episodes):
@@ -178,24 +188,26 @@ def demonstrate_paradigm_integration():
     return results
 
 
-def demonstrate_federated_learning():
+def demonstrate_federated_learning(
+    n_clients=3, n_rounds=10, local_epochs=5, episodes_per_client=20
+):
     """Demonstrate federated RL across distributed agents"""
 
     print("\n🌐 Demonstrating Federated Reinforcement Learning")
     print("=" * 50)
 
     # Create federated setup
-    n_clients = 3
     clients = []
 
     for i in range(n_clients):
-        client = FederatedAgent(client_id=i, state_dim=4, action_dim=2, local_epochs=5)
+        client = FederatedAgent(
+            client_id=i, state_dim=6, action_dim=2, local_epochs=local_epochs
+        )
         clients.append(client)
 
-    server = FederatedServer(state_dim=4, action_dim=2, n_clients=n_clients)
+    server = FederatedServer(state_dim=6, action_dim=2)
 
     # Simulate federated training
-    n_rounds = 10
     global_rewards = []
 
     for round_num in range(n_rounds):
@@ -211,19 +223,19 @@ def demonstrate_federated_learning():
             local_env.n_agents = 1  # Single agent per client
 
             # Local training
-            local_reward = client.train_local(local_env, episodes=20)
+            local_reward = client.collect_experience(
+                local_env, n_episodes=episodes_per_client
+            )
             client_rewards.append(local_reward)
 
+            client.local_update(server.global_actor, server.global_critic)
+
             # Generate update
-            update = client.generate_update()
+            update = client.get_model_updates(server.global_actor, server.global_critic)
             client_updates.append(update)
 
         # Server aggregation
         global_model = server.aggregate_updates(client_updates)
-
-        # Distribute to clients
-        for client in clients:
-            client.receive_global_model(global_model)
 
         avg_reward = np.mean(client_rewards)
         global_rewards.append(avg_reward)
@@ -233,7 +245,9 @@ def demonstrate_federated_learning():
     return global_rewards
 
 
-def create_hybrid_agent():
+def create_hybrid_agent(
+    obs_dim=6, action_dim=2, state_dim=16, hidden_dim=32, embed_dim=64
+):
     """Create a hybrid agent combining multiple paradigms"""
 
     class HybridAgent:
@@ -245,24 +259,20 @@ def create_hybrid_agent():
             self.world_model = WorldModel(
                 obs_dim=obs_dim,
                 action_dim=action_dim,
-                state_dim=16,
-                hidden_dim=32,
-                embed_dim=64,
+                state_dim=state_dim,
+                hidden_dim=hidden_dim,
+                embed_dim=embed_dim,
             )
 
-            self.causal_reasoner = CausalDiscovery(
-                variables=[f"obs_{i}" for i in range(obs_dim)]
-                + [f"action_{i}" for i in range(action_dim)],
-                alpha=0.1,
-            )
+            # self.causal_reasoner = CausalDiscovery(alpha=0.1)
 
             self.quantum_processor = QuantumCircuit(n_qubits=2)
 
             # Classical policy network
             self.policy_net = nn.Sequential(
-                nn.Linear(obs_dim + 16, 64),  # obs + world model state
+                nn.Linear(obs_dim + state_dim, hidden_dim),  # obs + world model state
                 nn.ReLU(),
-                nn.Linear(64, action_dim),
+                nn.Linear(hidden_dim, action_dim),
                 nn.Tanh(),
             ).to(device)
 
@@ -295,4 +305,4 @@ def create_hybrid_agent():
             data = np.array([exp["obs"] + exp["action"] for exp in experience_batch])
             self.causal_reasoner.discover_structure(data)
 
-    return HybridAgent(obs_dim=6, action_dim=2)
+    return HybridAgent(obs_dim=obs_dim, action_dim=action_dim)

@@ -85,17 +85,16 @@ def demonstrate_causal_discovery(env, n_samples=1000):
     actions = np.array(actions)
 
     # Create causal discovery object
-    causal_discovery = CausalDiscovery(variables=["X", "Y", "Z", "A"], alpha=0.05)
+    causal_discovery = CausalDiscovery(alpha=0.05)
 
     # Prepare data for causal discovery
     data = np.column_stack([observations, actions])
 
     # Learn causal graph
-    graph = causal_discovery.discover_structure(data)
+    graph = causal_discovery.pc_algorithm(data, ["X", "Y", "Z", "A"])
 
-    print(f"Discovered causal graph with {len(graph.edges)} edges:")
-    for edge in graph.edges:
-        print(f"  {edge[0]} → {edge[1]}")
+    print("Discovered causal graph:")
+    graph.visualize()
 
     return graph, data
 
@@ -106,19 +105,28 @@ def train_causal_world_model(env, graph, data, n_epochs=100):
     print("🏗️ Training Causal World Model")
 
     # Create causal world model
+    state_dims = {"X": 1, "Y": 1, "Z": 1}
+    # Filter graph to only state variables
+    state_vars = ["X", "Y", "Z"]
+    filtered_graph = CausalGraph(state_vars)
+    for var in state_vars:
+        for child in graph.get_children(var):
+            if child in state_vars:
+                filtered_graph.add_edge(var, child)
+
     world_model = CausalWorldModel(
-        graph=graph, obs_dim=3, action_dim=1, hidden_dim=64, latent_dim=16
+        causal_graph=filtered_graph, state_dims=state_dims, action_dim=1, hidden_dim=64
     )
 
     optimizer = torch.optim.Adam(world_model.parameters(), lr=1e-3)
 
-    losses = {"total": [], "reconstruction": [], "causal": []}
+    losses = {"total": [], "reconstruction": []}
 
     batch_size = 32
     n_batches = len(data) // batch_size
 
     for epoch in range(n_epochs):
-        epoch_losses = {"total": 0, "reconstruction": 0, "causal": 0}
+        epoch_losses = {"total": 0, "reconstruction": 0}
 
         # Shuffle data
         indices = np.random.permutation(len(data))
@@ -130,13 +138,24 @@ def train_causal_world_model(env, graph, data, n_epochs=100):
             obs_batch = torch.FloatTensor(batch_data[:, :3]).to(device)
             action_batch = torch.FloatTensor(batch_data[:, 3:]).to(device)
 
-            # Forward pass
-            output = world_model(obs_batch, action_batch)
+            # Convert to dict format
+            states = {
+                "X": obs_batch[:, 0:1],
+                "Y": obs_batch[:, 1:2],
+                "Z": obs_batch[:, 2:3],
+            }
 
-            # Losses
-            recon_loss = F.mse_loss(output["reconstruction"], obs_batch)
-            causal_loss = output["causal_constraint"]
-            total_loss = recon_loss + 0.1 * causal_loss
+            # Forward pass
+            predictions = world_model(states, action_batch)
+
+            # Reconstruction loss
+            recon_loss = sum(
+                F.mse_loss(predictions[var], states[var]) for var in states.keys()
+            )
+
+            # No causal loss in this simple model
+            causal_loss = torch.tensor(0.0)
+            total_loss = recon_loss
 
             # Backward pass
             optimizer.zero_grad()
@@ -145,7 +164,6 @@ def train_causal_world_model(env, graph, data, n_epochs=100):
 
             epoch_losses["total"] += total_loss.item()
             epoch_losses["reconstruction"] += recon_loss.item()
-            epoch_losses["causal"] += causal_loss.item()
 
         # Average losses
         for key in epoch_losses:
@@ -155,8 +173,7 @@ def train_causal_world_model(env, graph, data, n_epochs=100):
         if epoch % 20 == 0:
             print(
                 f"Epoch {epoch}: Total={epoch_losses['total']:.4f}, "
-                f"Recon={epoch_losses['reconstruction']:.4f}, "
-                f"Causal={epoch_losses['causal']:.4f}"
+                f"Recon={epoch_losses['reconstruction']:.4f}"
             )
 
     return world_model, losses
@@ -184,20 +201,43 @@ def demonstrate_interventional_reasoning(world_model, env):
         obs_tensor = torch.FloatTensor(obs).unsqueeze(0).to(device)
         action_tensor = torch.zeros(1, 1).to(device)
 
+        states = {
+            "X": obs_tensor[:, 0:1],
+            "Y": obs_tensor[:, 1:2],
+            "Z": obs_tensor[:, 2:3],
+        }
+
         with torch.no_grad():
+            baseline_pred = world_model(states, action_tensor)
             baseline_pred = (
-                world_model(obs_tensor, action_tensor)["reconstruction"]
+                torch.cat(
+                    [baseline_pred["X"], baseline_pred["Y"], baseline_pred["Z"]], dim=-1
+                )
                 .cpu()
                 .numpy()[0]
             )
 
         # Apply intervention
         intervened_obs = intervention_fn(obs)
-        intervened_tensor = torch.FloatTensor(intervened_obs).unsqueeze(0).to(device)
+
+        # Create interventions dict
+        interventions = {}
+        if var == "X":
+            interventions["X"] = torch.FloatTensor([[intervened_obs[0]]]).to(device)
+        elif var == "Y":
+            interventions["Y"] = torch.FloatTensor([[intervened_obs[1]]]).to(device)
+        elif var == "Z":
+            interventions["Z"] = torch.FloatTensor([[intervened_obs[2]]]).to(device)
 
         with torch.no_grad():
+            intervened_pred = world_model.intervene(
+                states, action_tensor, interventions
+            )
             intervened_pred = (
-                world_model.predict_intervention(intervened_tensor, action_tensor)
+                torch.cat(
+                    [intervened_pred["X"], intervened_pred["Y"], intervened_pred["Z"]],
+                    dim=-1,
+                )
                 .cpu()
                 .numpy()[0]
             )
