@@ -15,6 +15,12 @@ from .experiments import (
     SafetyExperiment,
     ComparativeExperiment,
     create_default_configs,
+    demonstrate_world_models,
+    demonstrate_multi_agent_rl,
+    demonstrate_causal_rl,
+    demonstrate_quantum_rl,
+    demonstrate_federated_rl,
+    comprehensive_rl_showcase,
 )
 
 __all__ = [
@@ -27,4 +33,10 @@ __all__ = [
     "SafetyExperiment",
     "ComparativeExperiment",
     "create_default_configs",
+    "demonstrate_world_models",
+    "demonstrate_multi_agent_rl",
+    "demonstrate_causal_rl",
+    "demonstrate_quantum_rl",
+    "demonstrate_federated_rl",
+    "comprehensive_rl_showcase",
 ]

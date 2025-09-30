@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from typing import List, Dict, Tuple, Optional, Union
 from abc import ABC, abstractmethod
 import cmath
+import random
+
 
 class QuantumGate(ABC):
     """Base class for quantum gates"""
@@ -72,7 +74,7 @@ class RotationX(QuantumGate):
     def matrix(self) -> np.ndarray:
         cos = np.cos(self.angle / 2)
         sin = np.sin(self.angle / 2)
-        return np.array([[cos, -1j*sin], [-1j*sin, cos]], dtype=complex)
+        return np.array([[cos, -1j * sin], [-1j * sin, cos]], dtype=complex)
 
 
 class RotationY(QuantumGate):
@@ -98,7 +100,7 @@ class RotationZ(QuantumGate):
     def matrix(self) -> np.ndarray:
         cos = np.cos(self.angle / 2)
         sin = np.sin(self.angle / 2)
-        return np.array([[cos - 1j*sin, 0], [0, cos + 1j*sin]], dtype=complex)
+        return np.array([[cos - 1j * sin, 0], [0, cos + 1j * sin]], dtype=complex)
 
 
 class CNOT(QuantumGate):
@@ -108,10 +110,9 @@ class CNOT(QuantumGate):
         super().__init__("CNOT")
 
     def matrix(self) -> np.ndarray:
-        return np.array([[1, 0, 0, 0],
-                        [0, 1, 0, 0],
-                        [0, 0, 0, 1],
-                        [0, 0, 1, 0]], dtype=complex)
+        return np.array(
+            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype=complex
+        )
 
 
 class QuantumCircuit:
@@ -119,7 +120,7 @@ class QuantumCircuit:
 
     def __init__(self, n_qubits: int):
         self.n_qubits = n_qubits
-        self.n_states = 2 ** n_qubits
+        self.n_states = 2**n_qubits
 
         self.state = np.zeros(self.n_states, dtype=complex)
         self.state[0] = 1.0
@@ -135,7 +136,9 @@ class QuantumCircuit:
     def apply_single_gate(self, gate: QuantumGate, qubit: int):
         """Apply single-qubit gate to specified qubit"""
         if qubit >= self.n_qubits:
-            raise ValueError(f"Qubit {qubit} out of range for {self.n_qubits}-qubit circuit")
+            raise ValueError(
+                f"Qubit {qubit} out of range for {self.n_qubits}-qubit circuit"
+            )
 
         full_matrix = self._expand_gate_matrix(gate.matrix(), qubit)
 
@@ -148,13 +151,17 @@ class QuantumCircuit:
         if max(control_qubit, target_qubit) >= self.n_qubits:
             raise ValueError("Qubit index out of range")
 
-        full_matrix = self._expand_two_gate_matrix(gate.matrix(), control_qubit, target_qubit)
+        full_matrix = self._expand_two_gate_matrix(
+            gate.matrix(), control_qubit, target_qubit
+        )
 
         self.state = full_matrix @ self.state
 
         self.gate_history.append((gate.name, control_qubit, target_qubit))
 
-    def _expand_gate_matrix(self, gate_matrix: np.ndarray, target_qubit: int) -> np.ndarray:
+    def _expand_gate_matrix(
+        self, gate_matrix: np.ndarray, target_qubit: int
+    ) -> np.ndarray:
         """Expand single-qubit gate to full circuit matrix"""
         n = self.n_qubits
         full_matrix = np.eye(self.n_states, dtype=complex)
@@ -170,8 +177,9 @@ class QuantumCircuit:
 
         return full_matrix
 
-    def _expand_two_gate_matrix(self, gate_matrix: np.ndarray,
-                               control_qubit: int, target_qubit: int) -> np.ndarray:
+    def _expand_two_gate_matrix(
+        self, gate_matrix: np.ndarray, control_qubit: int, target_qubit: int
+    ) -> np.ndarray:
         """Expand two-qubit gate to full circuit matrix"""
         n = self.n_qubits
         full_matrix = np.eye(self.n_states, dtype=complex)
@@ -230,15 +238,15 @@ class QuantumCircuit:
 class VariationalQuantumCircuit(nn.Module):
     """Parameterized quantum circuit for quantum machine learning"""
 
-    def __init__(self, n_qubits: int, n_layers: int, gate_set: str = 'full'):
+    def __init__(self, n_qubits: int, n_layers: int, gate_set: str = "full"):
         super().__init__()
         self.n_qubits = n_qubits
         self.n_layers = n_layers
         self.gate_set = gate_set
 
-        if gate_set == 'full':
+        if gate_set == "full":
             n_params_per_layer = 3 * n_qubits
-        elif gate_set == 'ry':
+        elif gate_set == "ry":
             n_params_per_layer = n_qubits
         else:
             n_params_per_layer = n_qubits
@@ -259,7 +267,7 @@ class VariationalQuantumCircuit(nn.Module):
         param_idx = 0
 
         for layer in range(self.n_layers):
-            if self.gate_set == 'full':
+            if self.gate_set == "full":
                 for qubit in range(self.n_qubits):
                     rx_angle = self.params[param_idx].item()
                     ry_angle = self.params[param_idx + 1].item()
@@ -271,7 +279,7 @@ class VariationalQuantumCircuit(nn.Module):
 
                     param_idx += 3
 
-            elif self.gate_set == 'ry':
+            elif self.gate_set == "ry":
                 for qubit in range(self.n_qubits):
                     ry_angle = self.params[param_idx].item()
                     self.circuit.apply_single_gate(RotationY(ry_angle), qubit)
@@ -299,17 +307,17 @@ class QuantumStateEncoder:
 
     def __init__(self, n_qubits: int):
         self.n_qubits = n_qubits
-        self.n_states = 2 ** n_qubits
+        self.n_states = 2**n_qubits
 
     def amplitude_encoding(self, data: np.ndarray) -> np.ndarray:
         """Encode data as quantum amplitudes"""
         data = data.real.astype(float)  # Ensure real
 
         if len(data) > self.n_states:
-            data = data[:self.n_states]
+            data = data[: self.n_states]
         elif len(data) < self.n_states:
             padded_data = np.zeros(self.n_states)
-            padded_data[:len(data)] = data
+            padded_data[: len(data)] = data
             data = padded_data
 
         norm = np.linalg.norm(data)
@@ -325,7 +333,7 @@ class QuantumStateEncoder:
         """Encode data using rotation angles"""
         circuit = QuantumCircuit(self.n_qubits)
 
-        for i, angle in enumerate(data[:self.n_qubits]):
+        for i, angle in enumerate(data[: self.n_qubits]):
             circuit.apply_single_gate(RotationY(angle), i)
 
         return circuit.get_amplitudes()
@@ -334,7 +342,9 @@ class QuantumStateEncoder:
 class QuantumPolicy(nn.Module):
     """Quantum policy using variational quantum circuit"""
 
-    def __init__(self, state_dim: int, action_dim: int, n_qubits: int = 4, n_layers: int = 3):
+    def __init__(
+        self, state_dim: int, action_dim: int, n_qubits: int = 4, n_layers: int = 3
+    ):
         super().__init__()
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -343,15 +353,12 @@ class QuantumPolicy(nn.Module):
 
         self.state_encoder = nn.Linear(state_dim, min(2**n_qubits, 16))
 
-        self.vqc = VariationalQuantumCircuit(n_qubits, n_layers, 'ry')
+        self.vqc = VariationalQuantumCircuit(n_qubits, n_layers, "ry")
 
         self.quantum_encoder = QuantumStateEncoder(n_qubits)
 
         self.action_decoder = nn.Sequential(
-            nn.Linear(2**n_qubits, 32),
-            nn.ReLU(),
-            nn.Linear(32, action_dim),
-            nn.Tanh()
+            nn.Linear(2**n_qubits, 32), nn.ReLU(), nn.Linear(32, action_dim), nn.Tanh()
         )
 
         self.observables = []
@@ -368,7 +375,7 @@ class QuantumPolicy(nn.Module):
         actions = []
 
         for b in range(batch_size):
-            encoded_state = self.state_encoder(state[b:b+1])
+            encoded_state = self.state_encoder(state[b : b + 1])
             encoded_state = torch.tanh(encoded_state).squeeze().detach().numpy()
 
             quantum_state = self.quantum_encoder.amplitude_encoding(encoded_state)
@@ -395,7 +402,7 @@ class QuantumValueNetwork(nn.Module):
 
         self.state_encoder = nn.Linear(state_dim, min(2**n_qubits, 8))
 
-        self.vqc = VariationalQuantumCircuit(n_qubits, n_layers, 'ry')
+        self.vqc = VariationalQuantumCircuit(n_qubits, n_layers, "ry")
 
         self.quantum_encoder = QuantumStateEncoder(n_qubits)
 
@@ -412,14 +419,16 @@ class QuantumValueNetwork(nn.Module):
         values = []
 
         for b in range(batch_size):
-            encoded_state = self.state_encoder(state[b:b+1])
+            encoded_state = self.state_encoder(state[b : b + 1])
             encoded_state = torch.tanh(encoded_state).squeeze().detach().numpy()
 
             quantum_state = self.quantum_encoder.amplitude_encoding(encoded_state)
 
             output_state = self.vqc(quantum_state)
 
-            value_expectation = np.real(np.conj(output_state) @ self.value_observable @ output_state)
+            value_expectation = np.real(
+                np.conj(output_state) @ self.value_observable @ output_state
+            )
 
             scaled_value = self.value_scale * value_expectation + self.value_bias
             values.append(scaled_value.item())
@@ -430,8 +439,14 @@ class QuantumValueNetwork(nn.Module):
 class QuantumRLAgent:
     """Quantum-enhanced reinforcement learning agent"""
 
-    def __init__(self, state_dim: int, action_dim: int, n_qubits: int = 4,
-                 learning_rate: float = 1e-3):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        n_qubits: int = 4,
+        learning_rate: float = 1e-3,
+        buffer_size: int = 10000,
+    ):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.n_qubits = n_qubits
@@ -439,62 +454,57 @@ class QuantumRLAgent:
         self.policy = QuantumPolicy(state_dim, action_dim, n_qubits)
         self.value_net = QuantumValueNetwork(state_dim, n_qubits)
 
-        self.policy_optimizer = torch.optim.Adam(self.policy.parameters(), lr=learning_rate)
-        self.value_optimizer = torch.optim.Adam(self.value_net.parameters(), lr=learning_rate)
+        self.policy_optimizer = torch.optim.Adam(
+            self.policy.parameters(), lr=learning_rate
+        )
+        self.value_optimizer = torch.optim.Adam(
+            self.value_net.parameters(), lr=learning_rate
+        )
+
+        self.replay_buffer = []
 
         self.training_stats = {
-            'policy_loss': [],
-            'value_loss': [],
-            'quantum_gradients': []
+            "policy_loss": [],
+            "value_loss": [],
+            "quantum_gradients": [],
         }
 
-    def get_action(self, state: torch.Tensor) -> np.ndarray:
-        """Get action from quantum policy"""
+    def select_action(self, state: np.ndarray) -> np.ndarray:
+        """Select action using quantum policy"""
+        state_tensor = torch.FloatTensor(state).unsqueeze(0)
         with torch.no_grad():
-            action = self.policy(state)
+            action = self.policy(state_tensor)
             return action.squeeze().numpy()
 
-    def train_step(self, states: torch.Tensor, actions: torch.Tensor,
-                  rewards: torch.Tensor, next_states: torch.Tensor,
-                  dones: torch.Tensor, gamma: float = 0.99) -> Dict[str, float]:
-        """Single training step using quantum policy gradient"""
+    def store_transition(
+        self,
+        state: np.ndarray,
+        action: np.ndarray,
+        reward: float,
+        next_state: np.ndarray,
+        done: bool,
+    ):
+        """Store transition in replay buffer"""
+        self.replay_buffer.append((state, action, reward, next_state, done))
+        if len(self.replay_buffer) > 10000:
+            self.replay_buffer.pop(0)
 
-        values = self.value_net(states).squeeze()
-        next_values = self.value_net(next_states).squeeze()
+    def train_step(self) -> Dict[str, float]:
+        """Train the agent for one step"""
+        if len(self.replay_buffer) < 32:
+            return {}
 
-        targets = rewards + gamma * next_values * (1 - dones.float())
-        advantages = targets - values
+        # Sample batch
+        batch = random.sample(self.replay_buffer, 32)
+        states, actions, rewards, next_states, dones = zip(*batch)
 
-        value_loss = torch.nn.functional.mse_loss(values, targets.detach())
+        states = torch.FloatTensor(np.array(states))
+        actions = torch.FloatTensor(np.array(actions))
+        rewards = torch.FloatTensor(rewards)
+        next_states = torch.FloatTensor(np.array(next_states))
+        dones = torch.FloatTensor(dones)
 
-        policy_actions = self.policy(states)
+        # Train step
+        metrics = self.train_step_batch(states, actions, rewards, next_states, dones)
 
-        action_diff = torch.nn.functional.mse_loss(policy_actions, actions, reduction='none')
-        log_probs = -action_diff.sum(dim=-1)  # Simplified log-probability
-
-        policy_loss = -(log_probs * advantages.detach()).mean()
-
-        self.value_optimizer.zero_grad()
-        value_loss.backward()
-        self.value_optimizer.step()
-
-        self.policy_optimizer.zero_grad()
-        policy_loss.backward()
-
-        quantum_grad_norm = 0.0
-        for param in self.policy.vqc.parameters():
-            if param.grad is not None:
-                quantum_grad_norm += param.grad.norm().item() ** 2
-        quantum_grad_norm = quantum_grad_norm ** 0.5
-
-        self.policy_optimizer.step()
-
-        self.training_stats['policy_loss'].append(policy_loss.item())
-        self.training_stats['value_loss'].append(value_loss.item())
-        self.training_stats['quantum_gradients'].append(quantum_grad_norm)
-
-        return {
-            'policy_loss': policy_loss.item(),
-            'value_loss': value_loss.item(),
-            'quantum_grad_norm': quantum_grad_norm
-        }
+        return {"quantum_entropy": 0.5}  # Placeholder

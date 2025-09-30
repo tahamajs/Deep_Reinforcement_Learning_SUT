@@ -10,6 +10,7 @@ from typing import List, Dict, Tuple, Optional
 import matplotlib.pyplot as plt
 import networkx as nx
 
+
 class MultiAgentReplayBuffer:
     """Replay buffer for multi-agent systems"""
 
@@ -28,8 +29,14 @@ class MultiAgentReplayBuffer:
         self.ptr = 0
         self.size = 0
 
-    def add(self, obs: np.ndarray, actions: np.ndarray, rewards: np.ndarray,
-            next_obs: np.ndarray, dones: np.ndarray):
+    def add(
+        self,
+        obs: np.ndarray,
+        actions: np.ndarray,
+        rewards: np.ndarray,
+        next_obs: np.ndarray,
+        dones: np.ndarray,
+    ):
         """Add experience to buffer"""
         self.observations[self.ptr] = obs
         self.actions[self.ptr] = actions
@@ -45,11 +52,11 @@ class MultiAgentReplayBuffer:
         indices = np.random.choice(self.size, batch_size, replace=False)
 
         return {
-            'observations': torch.FloatTensor(self.observations[indices]),
-            'actions': torch.FloatTensor(self.actions[indices]),
-            'rewards': torch.FloatTensor(self.rewards[indices]),
-            'next_observations': torch.FloatTensor(self.next_observations[indices]),
-            'dones': torch.BoolTensor(self.dones[indices])
+            "observations": torch.FloatTensor(self.observations[indices]),
+            "actions": torch.FloatTensor(self.actions[indices]),
+            "rewards": torch.FloatTensor(self.rewards[indices]),
+            "next_observations": torch.FloatTensor(self.next_observations[indices]),
+            "dones": torch.BoolTensor(self.dones[indices]),
         }
 
     def __len__(self):
@@ -68,7 +75,7 @@ class MADDPGActor(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, action_dim),
-            nn.Tanh()  # Assume actions are bounded [-1, 1]
+            nn.Tanh(),  # Assume actions are bounded [-1, 1]
         )
 
     def forward(self, obs: torch.Tensor) -> torch.Tensor:
@@ -78,7 +85,9 @@ class MADDPGActor(nn.Module):
 class MADDPGCritic(nn.Module):
     """Critic network for MADDPG - centralized value function"""
 
-    def __init__(self, obs_dim: int, action_dim: int, n_agents: int, hidden_dim: int = 128):
+    def __init__(
+        self, obs_dim: int, action_dim: int, n_agents: int, hidden_dim: int = 128
+    ):
         super().__init__()
 
         input_dim = (obs_dim + action_dim) * n_agents
@@ -90,7 +99,7 @@ class MADDPGCritic(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, 1),
         )
 
     def forward(self, obs: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
@@ -110,12 +119,125 @@ class MADDPGCritic(nn.Module):
 
 
 class MADDPGAgent:
-    """Multi-Agent Deep Deterministic Policy Gradient Agent"""
+    """Multi-Agent Deep Deterministic Policy Gradient Agent - Multi-agent manager"""
 
-    def __init__(self, agent_id: int, obs_dim: int, action_dim: int, n_agents: int,
-                 lr_actor: float = 1e-3, lr_critic: float = 1e-3, gamma: float = 0.99,
-                 tau: float = 0.01, noise_std: float = 0.1):
+    def __init__(
+        self,
+        n_predators: int,
+        n_prey: int,
+        obs_dim: int,
+        action_dim: int,
+        hidden_dim: int = 64,
+        learning_rate: float = 1e-3,
+        buffer_size: int = 10000,
+    ):
+        self.n_predators = n_predators
+        self.n_prey = n_prey
+        self.n_agents = n_predators + n_prey
+        self.obs_dim = obs_dim
+        self.action_dim = action_dim
 
+        # Create individual agents
+        self.agents = []
+        for i in range(self.n_agents):
+            agent = SingleMADDPGAgent(
+                agent_id=i,
+                obs_dim=obs_dim,
+                action_dim=action_dim,
+                n_agents=self.n_agents,
+                hidden_dim=hidden_dim,
+                learning_rate=learning_rate,
+            )
+            self.agents.append(agent)
+
+        # Shared replay buffer
+        self.replay_buffer = MultiAgentReplayBuffer(
+            capacity=buffer_size,
+            n_agents=self.n_agents,
+            obs_dim=obs_dim,
+            action_dim=action_dim,
+        )
+
+    def select_actions(self, obs: np.ndarray) -> np.ndarray:
+        """Select actions for all agents"""
+        actions = []
+        for i, agent in enumerate(self.agents):
+            agent_obs = torch.FloatTensor(obs[i]).unsqueeze(0)
+            action = agent.act(agent_obs, add_noise=True)
+            actions.append(action.squeeze(0).numpy())
+        return np.array(actions)
+
+    def store_transition(
+        self,
+        obs: np.ndarray,
+        actions: np.ndarray,
+        rewards: np.ndarray,
+        next_obs: np.ndarray,
+        done: bool,
+    ):
+        """Store transition in replay buffer"""
+        dones = np.array([done] * self.n_agents)
+        self.replay_buffer.add(obs, actions, rewards, next_obs, dones)
+
+    def train_step(self):
+        """Train all agents"""
+        if self.replay_buffer.size < 64:
+            return
+
+        batch = self.replay_buffer.sample(64)
+
+        # Get target actions for all agents
+        target_actions = []
+        for i, agent in enumerate(self.agents):
+            next_obs_i = batch["next_observations"][:, i]
+            target_action = agent.target_actor(next_obs_i)
+            target_actions.append(target_action)
+
+        # Update critics
+        critic_losses = []
+        for i, agent in enumerate(self.agents):
+            loss = agent.update_critic(batch, torch.stack(target_actions, dim=1))
+            critic_losses.append(loss)
+
+        # Update actors
+        actor_losses = []
+        agent_actions = []
+        for i, agent in enumerate(self.agents):
+            obs_i = batch["observations"][:, i]
+            agent_action = agent.actor(obs_i)
+            agent_actions.append(agent_action)
+
+        for i, agent in enumerate(self.agents):
+            loss = agent.update_actor(batch, agent_actions)
+            actor_losses.append(loss)
+
+        # Soft updates
+        for agent in self.agents:
+            agent.soft_update()
+
+        return {
+            "critic_loss": np.mean(critic_losses),
+            "actor_loss": np.mean(actor_losses),
+        }
+
+
+class SingleMADDPGAgent(nn.Module):
+    """Single agent in MADDPG system"""
+
+    def __init__(
+        self,
+        agent_id: int,
+        obs_dim: int,
+        action_dim: int,
+        n_agents: int,
+        hidden_dim: int = 64,
+        learning_rate: float = 1e-3,
+        gamma: float = 0.99,
+        tau: float = 0.01,
+        noise_std: float = 0.1,
+    ):
+
+        super().__init__()
         self.agent_id = agent_id
         self.obs_dim = obs_dim
         self.action_dim = action_dim
@@ -132,8 +254,8 @@ class MADDPGAgent:
         self.target_actor.load_state_dict(self.actor.state_dict())
         self.target_critic.load_state_dict(self.critic.state_dict())
 
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr_actor)
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr_critic)
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=learning_rate)
+        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=learning_rate)
 
         self.noise = Normal(0, noise_std)
 
@@ -148,14 +270,15 @@ class MADDPGAgent:
         self.actor.train()
         return action
 
-    def update_critic(self, batch: Dict[str, torch.Tensor],
-                     target_actions: torch.Tensor) -> float:
+    def update_critic(
+        self, batch: Dict[str, torch.Tensor], target_actions: torch.Tensor
+    ) -> float:
         """Update critic network"""
-        obs = batch['observations']
-        actions = batch['actions']
-        rewards = batch['rewards'][:, self.agent_id].unsqueeze(1)
-        next_obs = batch['next_observations']
-        dones = batch['dones'][:, self.agent_id].unsqueeze(1)
+        obs = batch["observations"]
+        actions = batch["actions"]
+        rewards = batch["rewards"][:, self.agent_id].unsqueeze(1)
+        next_obs = batch["next_observations"]
+        dones = batch["dones"][:, self.agent_id].unsqueeze(1)
 
         current_q = self.critic(obs, actions)
 
@@ -172,10 +295,11 @@ class MADDPGAgent:
 
         return critic_loss.item()
 
-    def update_actor(self, batch: Dict[str, torch.Tensor],
-                    agent_actions: List[torch.Tensor]) -> float:
+    def update_actor(
+        self, batch: Dict[str, torch.Tensor], agent_actions: List[torch.Tensor]
+    ) -> float:
         """Update actor network"""
-        obs = batch['observations']
+        obs = batch["observations"]
 
         actions = torch.stack(agent_actions, dim=1)  # [batch, n_agents, action_dim]
         actions[:, self.agent_id] = self.actor(obs[:, self.agent_id])
@@ -191,11 +315,19 @@ class MADDPGAgent:
 
     def soft_update(self):
         """Soft update of target networks"""
-        for target_param, param in zip(self.target_actor.parameters(), self.actor.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+        for target_param, param in zip(
+            self.target_actor.parameters(), self.actor.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
 
-        for target_param, param in zip(self.target_critic.parameters(), self.critic.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+        for target_param, param in zip(
+            self.target_critic.parameters(), self.critic.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
 
 
 class CommunicationNetwork(nn.Module):
@@ -211,21 +343,23 @@ class CommunicationNetwork(nn.Module):
             nn.Linear(obs_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, comm_dim),
-            nn.Tanh()
+            nn.Tanh(),
         )
 
         self.msg_processor = nn.Sequential(
             nn.Linear(obs_dim + comm_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU()
+            nn.ReLU(),
         )
 
     def generate_message(self, obs: torch.Tensor) -> torch.Tensor:
         """Generate message from observation"""
         return self.msg_generator(obs)
 
-    def process_messages(self, obs: torch.Tensor, messages: torch.Tensor) -> torch.Tensor:
+    def process_messages(
+        self, obs: torch.Tensor, messages: torch.Tensor
+    ) -> torch.Tensor:
         """Process received messages with observation"""
         avg_message = messages.mean(dim=1)  # Average over senders
 
@@ -237,8 +371,14 @@ class CommunicationNetwork(nn.Module):
 class CommMADDPG(nn.Module):
     """MADDPG with learned communication"""
 
-    def __init__(self, n_agents: int, obs_dim: int, action_dim: int,
-                 comm_dim: int = 16, hidden_dim: int = 128):
+    def __init__(
+        self,
+        n_agents: int,
+        obs_dim: int,
+        action_dim: int,
+        comm_dim: int = 16,
+        hidden_dim: int = 128,
+    ):
         super().__init__()
 
         self.n_agents = n_agents
@@ -246,19 +386,24 @@ class CommMADDPG(nn.Module):
         self.action_dim = action_dim
         self.comm_dim = comm_dim
 
-        self.comm_nets = nn.ModuleList([
-            CommunicationNetwork(obs_dim, comm_dim, hidden_dim)
-            for _ in range(n_agents)
-        ])
+        self.comm_nets = nn.ModuleList(
+            [
+                CommunicationNetwork(obs_dim, comm_dim, hidden_dim)
+                for _ in range(n_agents)
+            ]
+        )
 
-        self.actors = nn.ModuleList([
-            nn.Sequential(
-                nn.Linear(hidden_dim, hidden_dim),
-                nn.ReLU(),
-                nn.Linear(hidden_dim, action_dim),
-                nn.Tanh()
-            ) for _ in range(n_agents)
-        ])
+        self.actors = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.Linear(hidden_dim, hidden_dim),
+                    nn.ReLU(),
+                    nn.Linear(hidden_dim, action_dim),
+                    nn.Tanh(),
+                )
+                for _ in range(n_agents)
+            ]
+        )
 
         total_input_dim = (obs_dim + action_dim) * n_agents + comm_dim * n_agents
         self.critic = nn.Sequential(
@@ -266,10 +411,12 @@ class CommMADDPG(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, 1),
         )
 
-    def forward(self, observations: torch.Tensor, training: bool = True) -> Dict[str, torch.Tensor]:
+    def forward(
+        self, observations: torch.Tensor, training: bool = True
+    ) -> Dict[str, torch.Tensor]:
         """
         Forward pass with communication
 
@@ -292,9 +439,11 @@ class CommMADDPG(nn.Module):
         actions = []
 
         for i in range(self.n_agents):
-            other_messages = torch.cat([messages[:, :i], messages[:, i+1:]], dim=1)
+            other_messages = torch.cat([messages[:, :i], messages[:, i + 1 :]], dim=1)
 
-            features = self.comm_nets[i].process_messages(observations[:, i], other_messages)
+            features = self.comm_nets[i].process_messages(
+                observations[:, i], other_messages
+            )
             processed_features.append(features)
 
             action = self.actors[i](features)
@@ -304,17 +453,22 @@ class CommMADDPG(nn.Module):
         processed_features = torch.stack(processed_features, dim=1)
 
         return {
-            'actions': actions,
-            'messages': messages,
-            'features': processed_features
+            "actions": actions,
+            "messages": messages,
+            "features": processed_features,
         }
 
 
 class PredatorPreyEnvironment:
     """Multi-agent predator-prey environment"""
 
-    def __init__(self, n_predators: int = 2, n_prey: int = 1, grid_size: int = 10,
-                 max_steps: int = 100):
+    def __init__(
+        self,
+        n_predators: int = 2,
+        n_prey: int = 1,
+        grid_size: int = 10,
+        max_steps: int = 100,
+    ):
         self.n_predators = n_predators
         self.n_prey = n_prey
         self.n_agents = n_predators + n_prey
@@ -329,13 +483,15 @@ class PredatorPreyEnvironment:
 
         self.action_map = {
             0: (-1, 0),  # up
-            1: (1, 0),   # down
+            1: (1, 0),  # down
             2: (0, -1),  # left
-            3: (0, 1),   # right
-            4: (0, 0)    # stay
+            3: (0, 1),  # right
+            4: (0, 0),  # stay
         }
 
-        self.observation_dim = 4 + 2 * (n_predators + n_prey - 1)  # position + relative positions
+        self.observation_dim = 4 + 2 * (
+            n_predators + n_prey - 1
+        )  # position + relative positions
         self.action_dim = 5
 
     def reset(self) -> np.ndarray:
@@ -345,12 +501,18 @@ class PredatorPreyEnvironment:
 
         self.predator_positions = []
         for _ in range(self.n_predators):
-            pos = (np.random.randint(0, self.grid_size), np.random.randint(0, self.grid_size))
+            pos = (
+                np.random.randint(0, self.grid_size),
+                np.random.randint(0, self.grid_size),
+            )
             self.predator_positions.append(pos)
 
         self.prey_positions = []
         for _ in range(self.n_prey):
-            pos = (np.random.randint(0, self.grid_size), np.random.randint(0, self.grid_size))
+            pos = (
+                np.random.randint(0, self.grid_size),
+                np.random.randint(0, self.grid_size),
+            )
             self.prey_positions.append(pos)
 
         return self._get_observations()
@@ -359,7 +521,7 @@ class PredatorPreyEnvironment:
         """Take environment step"""
         self.step_count += 1
 
-        for i, action in enumerate(actions[:self.n_predators]):
+        for i, action in enumerate(actions[: self.n_predators]):
             dx, dy = self.action_map[action]
             x, y = self.predator_positions[i]
             new_x = np.clip(x + dx, 0, self.grid_size - 1)
@@ -376,8 +538,7 @@ class PredatorPreyEnvironment:
 
         rewards = self._calculate_rewards()
 
-        self.done = (self.step_count >= self.max_steps or
-                    self._check_capture())
+        self.done = self.step_count >= self.max_steps or self._check_capture()
 
         observations = self._get_observations()
 
@@ -401,11 +562,15 @@ class PredatorPreyEnvironment:
         """Get observation for single agent"""
         if is_predator:
             agent_pos = self.predator_positions[agent_idx]
-            other_predators = [pos for i, pos in enumerate(self.predator_positions) if i != agent_idx]
+            other_predators = [
+                pos for i, pos in enumerate(self.predator_positions) if i != agent_idx
+            ]
             other_agents = other_predators + self.prey_positions
         else:
             agent_pos = self.prey_positions[agent_idx]
-            other_prey = [pos for i, pos in enumerate(self.prey_positions) if i != agent_idx]
+            other_prey = [
+                pos for i, pos in enumerate(self.prey_positions) if i != agent_idx
+            ]
             other_agents = self.predator_positions + other_prey
 
         obs = [agent_pos[0] / self.grid_size, agent_pos[1] / self.grid_size]
@@ -420,7 +585,7 @@ class PredatorPreyEnvironment:
         while len(obs) < self.observation_dim:
             obs.append(0.0)
 
-        return np.array(obs[:self.observation_dim])
+        return np.array(obs[: self.observation_dim])
 
     def _calculate_rewards(self) -> np.ndarray:
         """Calculate rewards for all agents"""
@@ -429,9 +594,11 @@ class PredatorPreyEnvironment:
         for i in range(self.n_predators):
             pred_pos = self.predator_positions[i]
 
-            min_distance = float('inf')
+            min_distance = float("inf")
             for prey_pos in self.prey_positions:
-                distance = abs(pred_pos[0] - prey_pos[0]) + abs(pred_pos[1] - prey_pos[1])
+                distance = abs(pred_pos[0] - prey_pos[0]) + abs(
+                    pred_pos[1] - prey_pos[1]
+                )
                 min_distance = min(min_distance, distance)
 
             rewards[i] = 1.0 / (min_distance + 1)  # Closer = higher reward
@@ -439,7 +606,7 @@ class PredatorPreyEnvironment:
             if self._check_capture():
                 rewards[i] += 10.0
 
-        prey_reward = -np.mean(rewards[:self.n_predators])
+        prey_reward = -np.mean(rewards[: self.n_predators])
         for i in range(self.n_predators, self.n_agents):
             rewards[i] = prey_reward
 
@@ -464,7 +631,7 @@ class PredatorPreyEnvironment:
             grid[pos] = 2
 
         plt.figure(figsize=(6, 6))
-        plt.imshow(grid, cmap='viridis')
-        plt.colorbar(label='Agent Type (0: Empty, 1: Predator, 2: Prey)')
-        plt.title(f'Predator-Prey Environment (Step: {self.step_count})')
+        plt.imshow(grid, cmap="viridis")
+        plt.colorbar(label="Agent Type (0: Empty, 1: Predator, 2: Prey)")
+        plt.title(f"Predator-Prey Environment (Step: {self.step_count})")
         plt.show()

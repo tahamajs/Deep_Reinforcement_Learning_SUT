@@ -7,11 +7,18 @@ import numpy as np
 from typing import Dict, Tuple, Optional, List
 import random
 
+
 class RSSMCore(nn.Module):
     """Core RSSM architecture for world modeling"""
 
-    def __init__(self, obs_dim: int, action_dim: int, state_dim: int = 32,
-                 hidden_dim: int = 256, min_std: float = 0.1):
+    def __init__(
+        self,
+        obs_dim: int,
+        action_dim: int,
+        state_dim: int = 32,
+        hidden_dim: int = 256,
+        min_std: float = 0.1,
+    ):
         super().__init__()
 
         self.obs_dim = obs_dim
@@ -23,13 +30,13 @@ class RSSMCore(nn.Module):
         self.prior_net = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 2 * state_dim)  # mean and std
+            nn.Linear(hidden_dim, 2 * state_dim),  # mean and std
         )
 
         self.posterior_net = nn.Sequential(
             nn.Linear(hidden_dim + obs_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 2 * state_dim)  # mean and std
+            nn.Linear(hidden_dim, 2 * state_dim),  # mean and std
         )
 
         self.rnn = nn.GRUCell(hidden_dim + state_dim + action_dim, hidden_dim)
@@ -37,27 +44,27 @@ class RSSMCore(nn.Module):
         self.obs_decoder = nn.Sequential(
             nn.Linear(hidden_dim + state_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, obs_dim)
+            nn.Linear(hidden_dim, obs_dim),
         )
 
         self.reward_decoder = nn.Sequential(
             nn.Linear(hidden_dim + state_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, 1),
         )
 
         self.cont_decoder = nn.Sequential(
             nn.Linear(hidden_dim + state_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def get_initial_state(self, batch_size: int) -> Dict[str, torch.Tensor]:
         """Get initial hidden and stochastic states"""
         return {
-            'hidden': torch.zeros(1, batch_size, self.hidden_dim),
-            'stoch': torch.zeros(batch_size, self.state_dim)
+            "hidden": torch.zeros(1, batch_size, self.hidden_dim),
+            "stoch": torch.zeros(batch_size, self.state_dim),
         }
 
     def prior(self, hidden: torch.Tensor) -> Independent:
@@ -69,26 +76,40 @@ class RSSMCore(nn.Module):
 
     def posterior(self, hidden: torch.Tensor, obs: torch.Tensor) -> Independent:
         """Compute posterior distribution q(z_t | h_t, o_t)"""
-        stats = self.posterior_net(torch.cat([hidden, obs], dim=-1))
+        # hidden should be (batch_size, hidden_dim), obs should be (batch_size, obs_dim)
+        # Squeeze any extra sequence dimensions
+        if hidden.dim() == 3:
+            hidden = hidden.squeeze(0)  # Remove sequence dimension if present
+        if obs.dim() == 1:
+            obs = obs.unsqueeze(0)  # Add batch dimension if missing
+
+        combined = torch.cat([hidden, obs], dim=-1)
+        stats = self.posterior_net(combined)
         mean, std = torch.chunk(stats, 2, dim=-1)
         std = F.softplus(std) + self.min_std
         return Independent(Normal(mean, std), 1)
 
-    def transition(self, prev_state: Dict[str, torch.Tensor],
-                   action: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def transition(
+        self, prev_state: Dict[str, torch.Tensor], action: torch.Tensor
+    ) -> Dict[str, torch.Tensor]:
         """Compute deterministic transition h_t = f(h_{t-1}, z_{t-1}, a_{t-1})"""
-        prev_hidden = prev_state['hidden']
-        prev_stoch = prev_state['stoch']
+        prev_hidden = prev_state["hidden"]
+        prev_stoch = prev_state["stoch"]
 
-        rnn_input = torch.cat([prev_stoch, action], dim=-1)
-        rnn_input = rnn_input.unsqueeze(0)  # Add sequence dimension
+        # GRUCell expects 2D input: (batch_size, input_size)
+        # Squeeze the sequence dimension from prev_hidden for GRUCell
+        prev_hidden_2d = prev_hidden.squeeze(0)  # (batch_size, hidden_dim)
 
-        hidden, _ = self.rnn(rnn_input, prev_hidden)
+        # Concatenate along feature dimension: hidden + stoch + action
+        rnn_input = torch.cat([prev_hidden_2d, prev_stoch, action], dim=-1)
 
-        return {
-            'hidden': hidden,
-            'stoch': prev_stoch  # Will be updated separately
-        }
+        # rnn_input should now be (batch_size, hidden_dim + state_dim + action_dim)
+        hidden_new = self.rnn(rnn_input, prev_hidden_2d)
+
+        # Add back sequence dimension for consistency
+        hidden_new = hidden_new.unsqueeze(0)
+
+        return {"hidden": hidden_new, "stoch": prev_stoch}  # Will be updated separately
 
     def observe(self, hidden: torch.Tensor, obs: torch.Tensor) -> torch.Tensor:
         """Update stochastic state using observation"""
@@ -125,8 +146,12 @@ class WorldModel(nn.Module):
         self.obs_dim = obs_dim
         self.action_dim = action_dim
 
-    def forward(self, obs_seq: torch.Tensor, action_seq: torch.Tensor,
-                initial_state: Optional[Dict] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        obs_seq: torch.Tensor,
+        action_seq: torch.Tensor,
+        initial_state: Optional[Dict] = None,
+    ) -> Dict[str, torch.Tensor]:
         """Forward pass through sequence of observations and actions"""
         batch_size, seq_len = obs_seq.shape[:2]
 
@@ -145,9 +170,9 @@ class WorldModel(nn.Module):
 
         for t in range(seq_len):
             if t > 0:
-                state = self.rssm.transition(state, action_seq[:, t-1])
+                state = self.rssm.transition(state, action_seq[:, t - 1])
 
-            hidden = state['hidden']
+            hidden = state["hidden"]
             stoch = self.rssm.observe(hidden, obs_seq[:, t])
 
             prior_dist = self.rssm.prior(hidden.squeeze(0))
@@ -164,25 +189,26 @@ class WorldModel(nn.Module):
             pred_reward_seq.append(pred_reward)
             pred_cont_seq.append(pred_cont)
 
-            state['stoch'] = stoch
+            state["stoch"] = stoch
 
         return {
-            'hidden': torch.stack(hidden_seq, dim=1),
-            'stoch': torch.stack(stoch_seq, dim=1),
-            'prior': prior_seq,
-            'posterior': posterior_seq,
-            'pred_obs': torch.stack(pred_obs_seq, dim=1),
-            'pred_reward': torch.stack(pred_reward_seq, dim=1),
-            'pred_cont': torch.stack(pred_cont_seq, dim=1)
+            "hidden": torch.stack(hidden_seq, dim=1),
+            "stoch": torch.stack(stoch_seq, dim=1),
+            "prior": prior_seq,
+            "posterior": posterior_seq,
+            "pred_obs": torch.stack(pred_obs_seq, dim=1),
+            "pred_reward": torch.stack(pred_reward_seq, dim=1),
+            "pred_cont": torch.stack(pred_cont_seq, dim=1),
         }
 
-    def imagine_rollout(self, initial_state: Dict[str, torch.Tensor],
-                       actions: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def imagine_rollout(
+        self, initial_state: Dict[str, torch.Tensor], actions: torch.Tensor
+    ) -> Dict[str, torch.Tensor]:
         """Imagine rollout using learned dynamics"""
         batch_size, rollout_len = actions.shape[:2]
 
-        hidden_seq = [initial_state['hidden'].squeeze(0)]
-        stoch_seq = [initial_state['stoch']]
+        hidden_seq = [initial_state["hidden"].squeeze(0)]
+        stoch_seq = [initial_state["stoch"]]
         pred_obs_seq = []
         pred_reward_seq = []
         pred_cont_seq = []
@@ -191,7 +217,7 @@ class WorldModel(nn.Module):
 
         for t in range(rollout_len):
             state = self.rssm.transition(state, actions[:, t])
-            hidden = state['hidden']
+            hidden = state["hidden"]
 
             stoch = self.rssm.imagine(hidden)
 
@@ -205,23 +231,29 @@ class WorldModel(nn.Module):
             pred_reward_seq.append(pred_reward)
             pred_cont_seq.append(pred_cont)
 
-            state['stoch'] = stoch
+            state["stoch"] = stoch
 
         return {
-            'hidden': torch.stack(hidden_seq[1:], dim=1),  # Exclude initial
-            'stoch': torch.stack(stoch_seq[1:], dim=1),
-            'pred_obs': torch.stack(pred_obs_seq, dim=1),
-            'pred_reward': torch.stack(pred_reward_seq, dim=1),
-            'pred_cont': torch.stack(pred_cont_seq, dim=1)
+            "hidden": torch.stack(hidden_seq[1:], dim=1),  # Exclude initial
+            "stoch": torch.stack(stoch_seq[1:], dim=1),
+            "pred_obs": torch.stack(pred_obs_seq, dim=1),
+            "pred_reward": torch.stack(pred_reward_seq, dim=1),
+            "pred_cont": torch.stack(pred_cont_seq, dim=1),
         }
 
 
 class MPCPlanner:
     """Model Predictive Control using learned world model"""
 
-    def __init__(self, world_model: WorldModel, action_dim: int,
-                 horizon: int = 15, num_samples: int = 1000,
-                 top_k: int = 100, iterations: int = 10):
+    def __init__(
+        self,
+        world_model: WorldModel,
+        action_dim: int,
+        horizon: int = 15,
+        num_samples: int = 1000,
+        top_k: int = 100,
+        iterations: int = 10,
+    ):
         self.world_model = world_model
         self.action_dim = action_dim
         self.horizon = horizon
@@ -231,50 +263,72 @@ class MPCPlanner:
 
     def plan(self, state: Dict[str, torch.Tensor]) -> torch.Tensor:
         """Plan using Cross-Entropy Method (CEM)"""
-        batch_size = state['hidden'].shape[1] if len(state['hidden'].shape) > 2 else state['hidden'].shape[0]
+        batch_size = (
+            state["hidden"].shape[1]
+            if len(state["hidden"].shape) > 2
+            else state["hidden"].shape[0]
+        )
 
         mean = torch.zeros(batch_size, self.horizon, self.action_dim)
         std = torch.ones(batch_size, self.horizon, self.action_dim)
 
         for iteration in range(self.iterations):
-            actions = torch.normal(mean.unsqueeze(1).expand(-1, self.num_samples, -1, -1),
-                                 std.unsqueeze(1).expand(-1, self.num_samples, -1, -1))
+            actions = torch.normal(
+                mean.unsqueeze(1).expand(-1, self.num_samples, -1, -1),
+                std.unsqueeze(1).expand(-1, self.num_samples, -1, -1),
+            )
             actions = torch.tanh(actions)  # Bound actions
 
             values = self._evaluate_sequences(state, actions)
 
             _, top_indices = torch.topk(values, self.top_k, dim=1)
 
-            top_actions = actions.gather(1, top_indices.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, self.horizon, self.action_dim))
+            top_actions = actions.gather(
+                1,
+                top_indices.unsqueeze(-1)
+                .unsqueeze(-1)
+                .expand(-1, -1, self.horizon, self.action_dim),
+            )
             mean = top_actions.mean(dim=1)
             std = top_actions.std(dim=1) + 1e-4
 
         best_idx = torch.argmax(values, dim=1)
-        best_actions = actions.gather(1, best_idx.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).expand(-1, 1, self.horizon, self.action_dim))
+        best_actions = actions.gather(
+            1,
+            best_idx.unsqueeze(-1)
+            .unsqueeze(-1)
+            .unsqueeze(-1)
+            .expand(-1, 1, self.horizon, self.action_dim),
+        )
 
         return best_actions.squeeze(1)[:, 0]  # First action
 
-    def _evaluate_sequences(self, state: Dict[str, torch.Tensor],
-                          actions: torch.Tensor) -> torch.Tensor:
+    def _evaluate_sequences(
+        self, state: Dict[str, torch.Tensor], actions: torch.Tensor
+    ) -> torch.Tensor:
         """Evaluate action sequences using world model"""
         batch_size, num_samples = actions.shape[:2]
 
         expanded_state = {
-            'hidden': state['hidden'].unsqueeze(1).expand(-1, num_samples, -1),
-            'stoch': state['stoch'].unsqueeze(1).expand(-1, num_samples, -1)
+            "hidden": state["hidden"].unsqueeze(1).expand(-1, num_samples, -1),
+            "stoch": state["stoch"].unsqueeze(1).expand(-1, num_samples, -1),
         }
 
         flat_state = {
-            'hidden': expanded_state['hidden'].reshape(-1, expanded_state['hidden'].shape[-1]).unsqueeze(0),
-            'stoch': expanded_state['stoch'].reshape(-1, expanded_state['stoch'].shape[-1])
+            "hidden": expanded_state["hidden"]
+            .reshape(-1, expanded_state["hidden"].shape[-1])
+            .unsqueeze(0),
+            "stoch": expanded_state["stoch"].reshape(
+                -1, expanded_state["stoch"].shape[-1]
+            ),
         }
         flat_actions = actions.reshape(-1, self.horizon, self.action_dim)
 
         with torch.no_grad():
             rollout = self.world_model.imagine_rollout(flat_state, flat_actions)
 
-            rewards = rollout['pred_reward'].squeeze(-1)  # [batch*samples, horizon]
-            continues = rollout['pred_cont'].squeeze(-1)
+            rewards = rollout["pred_reward"].squeeze(-1)  # [batch*samples, horizon]
+            continues = rollout["pred_cont"].squeeze(-1)
 
             discount = torch.cumprod(continues, dim=-1)
             discount = F.pad(discount[:, :-1], (1, 0), value=1.0)
@@ -289,33 +343,42 @@ class MPCPlanner:
 class ImaginationAugmentedAgent(nn.Module):
     """I2A-style agent combining model-free and model-based paths"""
 
-    def __init__(self, obs_dim: int, action_dim: int, hidden_dim: int = 256,
-                 num_rollouts: int = 5, rollout_length: int = 10):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        hidden_dim: int = 256,
+        imagination_horizon: int = 5,
+        learning_rate: float = 1e-3,
+        num_rollouts: int = 5,
+        rollout_length: int = 10,
+        buffer_size: int = 10000,
+    ):
         super().__init__()
 
-        self.obs_dim = obs_dim
+        self.state_dim = state_dim
         self.action_dim = action_dim
+        self.imagination_horizon = imagination_horizon
         self.num_rollouts = num_rollouts
         self.rollout_length = rollout_length
 
         self.world_model = None
 
         self.model_free_net = nn.Sequential(
-            nn.Linear(obs_dim, hidden_dim),
+            nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU()
+            nn.ReLU(),
         )
 
         self.rollout_encoder = nn.Sequential(
-            nn.Linear(obs_dim + 1 + 1, hidden_dim // 2),  # obs + reward + continue
+            nn.Linear(state_dim + 1 + 1, hidden_dim // 2),  # state + reward + continue
             nn.ReLU(),
-            nn.LSTM(hidden_dim // 2, hidden_dim // 2, batch_first=True)
+            nn.LSTM(hidden_dim // 2, hidden_dim // 2, batch_first=True),
         )
 
         self.imagination_core = nn.Sequential(
-            nn.Linear(hidden_dim // 2, hidden_dim // 4),
-            nn.ReLU()
+            nn.Linear(hidden_dim // 2, hidden_dim // 4), nn.ReLU()
         )
 
         agg_input_dim = hidden_dim + num_rollouts * (hidden_dim // 4)
@@ -323,17 +386,89 @@ class ImaginationAugmentedAgent(nn.Module):
             nn.Linear(agg_input_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU()
+            nn.ReLU(),
         )
 
         self.policy_head = nn.Linear(hidden_dim, action_dim)
         self.value_head = nn.Linear(hidden_dim, 1)
 
+        self.optimizer = optim.Adam(self.parameters(), lr=learning_rate)
+        self.replay_buffer = []
+
     def set_world_model(self, world_model: WorldModel):
         """Set the world model for imagination"""
         self.world_model = world_model
 
-    def forward(self, obs: torch.Tensor, state: Optional[Dict] = None) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
+    def select_action(self, state: np.ndarray) -> np.ndarray:
+        """Select action using imagination-augmented policy"""
+        state_tensor = torch.FloatTensor(state).unsqueeze(0)
+
+        # Get current world model state (simplified - in practice would track state)
+        current_state = {"hidden": torch.zeros(1, 1, 256), "stoch": torch.zeros(1, 32)}
+
+        with torch.no_grad():
+            action_logits, _, _ = self.forward(state_tensor, current_state)
+            action = torch.tanh(action_logits).squeeze(0).numpy()
+
+        return action
+
+    def store_transition(
+        self,
+        state: np.ndarray,
+        action: np.ndarray,
+        reward: float,
+        next_state: np.ndarray,
+        done: bool,
+    ):
+        """Store transition in replay buffer"""
+        self.replay_buffer.append((state, action, reward, next_state, done))
+        if len(self.replay_buffer) > 10000:  # Simple buffer limit
+            self.replay_buffer.pop(0)
+
+    def train_step(self) -> Dict[str, float]:
+        """Train the agent for one step"""
+        if len(self.replay_buffer) < 32:
+            return {}
+
+        # Sample batch
+        batch = random.sample(self.replay_buffer, 32)
+        states, actions, rewards, next_states, dones = zip(*batch)
+
+        states = torch.FloatTensor(np.array(states))
+        actions = torch.FloatTensor(np.array(actions))
+        rewards = torch.FloatTensor(rewards).unsqueeze(-1)
+        next_states = torch.FloatTensor(np.array(next_states))
+        dones = torch.FloatTensor(dones).unsqueeze(-1)
+
+        # Get current world model state (simplified)
+        current_state = {
+            "hidden": torch.zeros(1, 32, 256),
+            "stoch": torch.zeros(32, 32),
+        }
+
+        # Forward pass
+        action_logits, values, _ = self.forward(states, current_state)
+
+        # Simple policy loss (placeholder - would need proper RL loss)
+        policy_loss = F.mse_loss(torch.tanh(action_logits), actions)
+
+        # Simple value loss
+        value_loss = F.mse_loss(values, rewards)
+
+        total_loss = policy_loss + value_loss
+
+        self.optimizer.zero_grad()
+        total_loss.backward()
+        self.optimizer.step()
+
+        return {
+            "imagination_error": policy_loss.item(),
+            "prediction_error": value_loss.item(),
+        }
+
+    def forward(
+        self, obs: torch.Tensor, state: Optional[Dict] = None
+    ) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
         """Forward pass with imagination augmentation"""
         batch_size = obs.shape[0]
 
@@ -342,7 +477,10 @@ class ImaginationAugmentedAgent(nn.Module):
         if self.world_model is not None and state is not None:
             imagination_features = self._imagine_trajectories(state, batch_size)
         else:
-            imagination_features = torch.zeros(batch_size, self.num_rollouts * (self.model_free_net[0].out_features // 4))
+            imagination_features = torch.zeros(
+                batch_size,
+                self.num_rollouts * (self.model_free_net[0].out_features // 4),
+            )
 
         combined_features = torch.cat([mf_features, imagination_features], dim=-1)
         agg_features = self.aggregator(combined_features)
@@ -352,7 +490,9 @@ class ImaginationAugmentedAgent(nn.Module):
 
         return action_logits, values, {}
 
-    def _imagine_trajectories(self, state: Dict[str, torch.Tensor], batch_size: int) -> torch.Tensor:
+    def _imagine_trajectories(
+        self, state: Dict[str, torch.Tensor], batch_size: int
+    ) -> torch.Tensor:
         """Generate and encode imagined trajectories"""
         rollout_features = []
 
@@ -363,14 +503,16 @@ class ImaginationAugmentedAgent(nn.Module):
             with torch.no_grad():
                 rollout = self.world_model.imagine_rollout(state, actions)
 
-                obs_seq = rollout['pred_obs']
-                reward_seq = rollout['pred_reward']
-                cont_seq = rollout['pred_cont']
+                obs_seq = rollout["pred_obs"]
+                reward_seq = rollout["pred_reward"]
+                cont_seq = rollout["pred_cont"]
 
                 rollout_seq = torch.cat([obs_seq, reward_seq, cont_seq], dim=-1)
 
                 encoded, (hidden, _) = self.rollout_encoder(rollout_seq)
-                rollout_feature = self.imagination_core(hidden[-1])  # Use final hidden state
+                rollout_feature = self.imagination_core(
+                    hidden[-1]
+                )  # Use final hidden state
                 rollout_features.append(rollout_feature)
 
         return torch.cat(rollout_features, dim=-1)
