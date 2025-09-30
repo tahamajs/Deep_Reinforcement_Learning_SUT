@@ -59,10 +59,8 @@ class CausalGraph:
             visited.add(current)
 
             for next_node in range(self.n_vars):
-                if (
-                    self.adj_matrix[current][next_node] == 1
-                    or self.adj_matrix[next_node][current] == 1
-                ):
+                if (self.adj_matrix[current][next_node] == 1 or
+                    self.adj_matrix[next_node][current] == 1):
                     if next_node == end:
                         return True
                     stack.append(next_node)
@@ -106,15 +104,11 @@ class CausalDiscovery:
                     if skeleton[i][j] == 0:
                         continue
 
-                    neighbors = [
-                        k
-                        for k in range(n_vars)
-                        if k != i and k != j and skeleton[i][k] == 1
-                    ]
+                    neighbors = [k for k in range(n_vars)
+                                if k != i and k != j and skeleton[i][k] == 1]
 
                     if len(neighbors) >= order:
                         from itertools import combinations
-
                         for cond_set in combinations(neighbors, order):
                             if self._test_independence(data, i, j, list(cond_set)):
                                 skeleton[i][j] = skeleton[j][i] = 0
@@ -130,9 +124,8 @@ class CausalDiscovery:
 
         return graph
 
-    def _test_independence(
-        self, data: np.ndarray, i: int, j: int, cond_set: List[int]
-    ) -> bool:
+    def _test_independence(self, data: np.ndarray, i: int, j: int,
+                          cond_set: List[int]) -> bool:
         """Test conditional independence using correlation (simplified)"""
 
         if len(cond_set) == 0:
@@ -194,13 +187,8 @@ class InterventionalDataset:
 class CausalWorldModel(nn.Module):
     """World model with causal structure"""
 
-    def __init__(
-        self,
-        causal_graph: CausalGraph,
-        state_dims: Dict[str, int],
-        action_dim: int,
-        hidden_dim: int = 128,
-    ):
+    def __init__(self, causal_graph: CausalGraph, state_dims: Dict[str, int],
+                 action_dim: int, hidden_dim: int = 128):
         super().__init__()
 
         self.causal_graph = causal_graph
@@ -222,12 +210,11 @@ class CausalWorldModel(nn.Module):
                 nn.ReLU(),
                 nn.Linear(hidden_dim, hidden_dim),
                 nn.ReLU(),
-                nn.Linear(hidden_dim, output_dim),
+                nn.Linear(hidden_dim, output_dim)
             )
 
-    def forward(
-        self, states: Dict[str, torch.Tensor], actions: torch.Tensor
-    ) -> Dict[str, torch.Tensor]:
+    def forward(self, states: Dict[str, torch.Tensor],
+                actions: torch.Tensor) -> Dict[str, torch.Tensor]:
         """Predict next states following causal structure"""
 
         predictions = {}
@@ -249,12 +236,8 @@ class CausalWorldModel(nn.Module):
 
         return predictions
 
-    def intervene(
-        self,
-        states: Dict[str, torch.Tensor],
-        actions: torch.Tensor,
-        interventions: Dict[str, torch.Tensor],
-    ) -> Dict[str, torch.Tensor]:
+    def intervene(self, states: Dict[str, torch.Tensor], actions: torch.Tensor,
+                  interventions: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Predict under interventions"""
 
         modified_states = {k: v.clone() for k, v in states.items()}
@@ -284,26 +267,16 @@ class CausalWorldModel(nn.Module):
 class CausalPolicyGradient:
     """Policy gradient with causal regularization"""
 
-    def __init__(
-        self,
-        policy: nn.Module,
-        causal_graph: CausalGraph,
-        lr: float = 3e-4,
-        causal_weight: float = 0.1,
-    ):
+    def __init__(self, policy: nn.Module, causal_graph: CausalGraph,
+                 lr: float = 3e-4, causal_weight: float = 0.1):
 
         self.policy = policy
         self.causal_graph = causal_graph
         self.causal_weight = causal_weight
         self.optimizer = torch.optim.Adam(policy.parameters(), lr=lr)
 
-    def update(
-        self,
-        states: Dict[str, torch.Tensor],
-        actions: torch.Tensor,
-        rewards: torch.Tensor,
-        causal_world_model: CausalWorldModel,
-    ):
+    def update(self, states: Dict[str, torch.Tensor], actions: torch.Tensor,
+               rewards: torch.Tensor, causal_world_model: CausalWorldModel):
         """Update policy with causal regularization"""
 
         log_probs = self.policy.get_log_prob(states, actions)
@@ -320,17 +293,14 @@ class CausalPolicyGradient:
         self.optimizer.step()
 
         return {
-            "policy_loss": policy_loss.item(),
-            "causal_loss": causal_loss.item(),
-            "total_loss": total_loss.item(),
+            'policy_loss': policy_loss.item(),
+            'causal_loss': causal_loss.item(),
+            'total_loss': total_loss.item()
         }
 
-    def _compute_causal_regularization(
-        self,
-        states: Dict[str, torch.Tensor],
-        actions: torch.Tensor,
-        causal_world_model: CausalWorldModel,
-    ) -> torch.Tensor:
+    def _compute_causal_regularization(self, states: Dict[str, torch.Tensor],
+                                     actions: torch.Tensor,
+                                     causal_world_model: CausalWorldModel) -> torch.Tensor:
         """Compute causal regularization term"""
 
         consistency_loss = 0
@@ -340,9 +310,7 @@ class CausalPolicyGradient:
             intervention_value = torch.randn_like(states[var])
             interventions = {var: intervention_value}
 
-            pred_intervened = causal_world_model.intervene(
-                states, actions, interventions
-            )
+            pred_intervened = causal_world_model.intervene(states, actions, interventions)
 
             modified_states = {k: v.clone() for k, v in states.items()}
             modified_states[var] = intervention_value
@@ -351,7 +319,8 @@ class CausalPolicyGradient:
             for other_var in self.causal_graph.variables:
                 if other_var != var and not self._is_descendant(var, other_var):
                     consistency_loss += F.mse_loss(
-                        pred_intervened[other_var], pred_modified[other_var]
+                        pred_intervened[other_var],
+                        pred_modified[other_var]
                     )
                     n_interventions += 1
 
@@ -389,8 +358,8 @@ def create_synthetic_causal_data(n_samples: int = 1000):
     X2 = 0.7 * X1 + 0.5 * actions[:, 0] + e2
     X3 = 0.8 * X2 + 0.3 * X1 + e3
 
-    data["X1"] = X1.reshape(-1, 1)
-    data["X2"] = X2.reshape(-1, 1)
-    data["X3"] = X3.reshape(-1, 1)
+    data['X1'] = X1.reshape(-1, 1)
+    data['X2'] = X2.reshape(-1, 1)
+    data['X3'] = X3.reshape(-1, 1)
 
     return data, actions

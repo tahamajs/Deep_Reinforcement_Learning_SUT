@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 
+
 class QuantumPrioritizedReplayBuffer:
     """Prioritized replay buffer with quantum-inspired state representation"""
 
@@ -69,8 +70,8 @@ class QuantumPrioritizedReplayBuffer:
         if self.size < batch_size:
             return None
 
-        priorities = self.priorities[:self.size]
-        probs = priorities ** self.alpha
+        priorities = self.priorities[: self.size]
+        probs = priorities**self.alpha
         probs /= probs.sum()
 
         indices = np.random.choice(self.size, batch_size, p=probs, replace=False)
@@ -84,20 +85,22 @@ class QuantumPrioritizedReplayBuffer:
         states, actions, rewards, next_states, dones, quantum_states = zip(*batch)
 
         return {
-            'states': torch.FloatTensor(np.array(states)),
-            'actions': torch.FloatTensor(np.array(actions)),
-            'rewards': torch.FloatTensor(rewards),
-            'next_states': torch.FloatTensor(np.array(next_states)),
-            'dones': torch.FloatTensor(dones),
-            'quantum_states': torch.complex64(torch.from_numpy(np.array(quantum_states))),
-            'weights': torch.FloatTensor(weights),
-            'indices': indices,
+            "states": torch.FloatTensor(np.array(states)),
+            "actions": torch.FloatTensor(np.array(actions)),
+            "rewards": torch.FloatTensor(rewards),
+            "next_states": torch.FloatTensor(np.array(next_states)),
+            "dones": torch.FloatTensor(dones),
+            "quantum_states": torch.complex64(
+                torch.from_numpy(np.array(quantum_states))
+            ),
+            "weights": torch.FloatTensor(weights),
+            "indices": indices,
         }
 
     def update_priorities(self, indices: np.ndarray, priorities: np.ndarray):
         """Update priorities for sampled experiences"""
         for idx, priority in zip(indices, priorities):
-            self.priorities[idx] = priority + 1e-6  # Small epsilon to avoid zero
+            self.priorities[idx] = priority + 1e-6
 
     def _classical_to_quantum(self, state: np.ndarray) -> np.ndarray:
         """Convert classical state to quantum representation"""
@@ -114,6 +117,7 @@ class QuantumPrioritizedReplayBuffer:
     def __len__(self):
         return self.size
 
+
 class QuantumMetricsTracker:
     """Advanced metrics tracking with quantum uncertainty quantification"""
 
@@ -123,9 +127,11 @@ class QuantumMetricsTracker:
         self.quantum_uncertainty = defaultdict(float)
 
         self.quantum_dim = 16
-        self.quantum_state = np.random.uniform(0, 2*np.pi, self.quantum_dim)
+        self.quantum_state = np.random.uniform(0, 2 * np.pi, self.quantum_dim)
 
-    def update(self, metric_name: str, value: float, uncertainty: Optional[float] = None):
+    def update(
+        self, metric_name: str, value: float, uncertainty: Optional[float] = None
+    ):
         """Update metric with quantum uncertainty tracking"""
 
         self.metrics[metric_name].append(value)
@@ -148,14 +154,14 @@ class QuantumMetricsTracker:
         uncertainty = self.quantum_uncertainty[metric_name]
 
         return {
-            'mean': np.mean(values),
-            'std': np.std(values),
-            'min': np.min(values),
-            'max': np.max(values),
-            'median': np.median(values),
-            'quantum_uncertainty': uncertainty,
-            'coherence': self._compute_coherence(),
-            'stability': 1.0 / (1.0 + np.var(values)),
+            "mean": np.mean(values),
+            "std": np.std(values),
+            "min": np.min(values),
+            "max": np.max(values),
+            "median": np.median(values),
+            "quantum_uncertainty": uncertainty,
+            "coherence": self._compute_coherence(),
+            "stability": 1.0 / (1.0 + np.var(values)),
         }
 
     def _compute_quantum_uncertainty(self, value: float) -> float:
@@ -176,7 +182,7 @@ class QuantumMetricsTracker:
             return
 
         n_metrics = len(self.metrics)
-        fig, axes = plt.subplots(n_metrics, 1, figsize=(12, 4*n_metrics))
+        fig, axes = plt.subplots(n_metrics, 1, figsize=(12, 4 * n_metrics))
 
         if n_metrics == 1:
             axes = [axes]
@@ -186,20 +192,23 @@ class QuantumMetricsTracker:
             values_list = list(values)
 
             ax.plot(values_list, label=metric_name, alpha=0.7)
-            ax.set_title(f'{metric_name} (Quantum Uncertainty: {self.quantum_uncertainty[metric_name]:.3f})')
-            ax.set_xlabel('Steps')
-            ax.set_ylabel('Value')
+            ax.set_title(
+                f"{metric_name} (Quantum Uncertainty: {self.quantum_uncertainty[metric_name]:.3f})"
+            )
+            ax.set_xlabel("Steps")
+            ax.set_ylabel("Value")
             ax.grid(True, alpha=0.3)
             ax.legend()
 
         plt.tight_layout()
 
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=300, bbox_inches="tight")
         else:
             plt.show()
 
         plt.close()
+
 
 class QuantumLogger:
     """Advanced logging with quantum state persistence and uncertainty tracking"""
@@ -216,39 +225,44 @@ class QuantumLogger:
         self.quantum_state_history = []
 
         self.quantum_dim = 8
-        self.quantum_state = np.random.uniform(0, 2*np.pi, self.quantum_dim)
+        self.quantum_state = np.random.uniform(0, 2 * np.pi, self.quantum_dim)
 
     def log_episode(self, episode_data: Dict[str, Any]):
         """Log episode data with quantum state"""
 
         coherence = self._compute_coherence()
-        episode_data['quantum_coherence'] = coherence
-        episode_data['episode'] = self.current_episode
-        episode_data['timestamp'] = time.time()
+        episode_data["quantum_coherence"] = coherence
+        episode_data["episode"] = self.current_episode
+        episode_data["timestamp"] = time.time()
 
-        with open(self.metrics_file, 'a') as f:
+        with open(self.metrics_file, "a") as f:
             json.dump(episode_data, f)
-            f.write('\n')
+            f.write("\n")
 
-        reward = episode_data.get('total_reward', 0)
-        length = episode_data.get('episode_length', 1)
+        reward = episode_data.get("total_reward", 0)
+        length = episode_data.get("episode_length", 1)
         phase_shift = (reward / length) * 0.1
         self.quantum_state = (self.quantum_state + phase_shift) % (2 * np.pi)
 
         self.quantum_state_history.append(self.quantum_state.copy())
         self.current_episode += 1
 
-    def save_checkpoint(self, model: nn.Module, optimizer: torch.optim.Optimizer,
-                       episode: int, additional_data: Optional[Dict] = None):
+    def save_checkpoint(
+        self,
+        model: nn.Module,
+        optimizer: torch.optim.Optimizer,
+        episode: int,
+        additional_data: Optional[Dict] = None,
+    ):
         """Save model checkpoint with quantum state"""
 
         checkpoint = {
-            'episode': episode,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'quantum_state': self.quantum_state,
-            'quantum_state_history': self.quantum_state_history[-100:],  # Last 100 states
-            'timestamp': time.time(),
+            "episode": episode,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "quantum_state": self.quantum_state,
+            "quantum_state_history": self.quantum_state_history[-100:],
+            "timestamp": time.time(),
         }
 
         if additional_data:
@@ -264,10 +278,10 @@ class QuantumLogger:
 
         checkpoint = torch.load(checkpoint_path)
 
-        if 'quantum_state' in checkpoint:
-            self.quantum_state = checkpoint['quantum_state']
-            if 'quantum_state_history' in checkpoint:
-                self.quantum_state_history = checkpoint['quantum_state_history']
+        if "quantum_state" in checkpoint:
+            self.quantum_state = checkpoint["quantum_state"]
+            if "quantum_state_history" in checkpoint:
+                self.quantum_state_history = checkpoint["quantum_state_history"]
 
         return checkpoint
 
@@ -282,27 +296,28 @@ class QuantumLogger:
             return {}
 
         episodes = []
-        with open(self.metrics_file, 'r') as f:
+        with open(self.metrics_file, "r") as f:
             for line in f:
                 episodes.append(json.loads(line))
 
         if not episodes:
             return {}
 
-        rewards = [ep.get('total_reward', 0) for ep in episodes]
-        lengths = [ep.get('episode_length', 1) for ep in episodes]
-        coherences = [ep.get('quantum_coherence', 0) for ep in episodes]
+        rewards = [ep.get("total_reward", 0) for ep in episodes]
+        lengths = [ep.get("episode_length", 1) for ep in episodes]
+        coherences = [ep.get("quantum_coherence", 0) for ep in episodes]
 
         return {
-            'total_episodes': len(episodes),
-            'avg_reward': np.mean(rewards),
-            'std_reward': np.std(rewards),
-            'max_reward': np.max(rewards),
-            'min_reward': np.min(rewards),
-            'avg_episode_length': np.mean(lengths),
-            'avg_quantum_coherence': np.mean(coherences),
-            'experiment_duration': episodes[-1]['timestamp'] - episodes[0]['timestamp'],
+            "total_episodes": len(episodes),
+            "avg_reward": np.mean(rewards),
+            "std_reward": np.std(rewards),
+            "max_reward": np.max(rewards),
+            "min_reward": np.min(rewards),
+            "avg_episode_length": np.mean(lengths),
+            "avg_quantum_coherence": np.mean(coherences),
+            "experiment_duration": episodes[-1]["timestamp"] - episodes[0]["timestamp"],
         }
+
 
 class QuantumRNG:
     """Quantum-inspired random number generator for exploration"""
@@ -313,7 +328,7 @@ class QuantumRNG:
             torch.manual_seed(seed)
 
         self.quantum_dim = quantum_dim
-        self.quantum_state = np.random.uniform(0, 2*np.pi, quantum_dim)
+        self.quantum_state = np.random.uniform(0, 2 * np.pi, quantum_dim)
         self.phase_history = []
 
     def quantum_random(self, shape: Tuple = ()) -> np.ndarray:
@@ -327,12 +342,16 @@ class QuantumRNG:
         probabilities /= np.sum(probabilities)
 
         if shape == ():
-            return np.random.choice(self.quantum_dim, p=probabilities) / self.quantum_dim
+            return (
+                np.random.choice(self.quantum_dim, p=probabilities) / self.quantum_dim
+            )
         else:
             indices = np.random.choice(self.quantum_dim, size=shape, p=probabilities)
             return indices.astype(float) / self.quantum_dim
 
-    def quantum_choice(self, options: List[Any], size: Optional[int] = None) -> Union[Any, List[Any]]:
+    def quantum_choice(
+        self, options: List[Any], size: Optional[int] = None
+    ) -> Union[Any, List[Any]]:
         """Make quantum-inspired choice from options"""
 
         n_options = len(options)
@@ -350,17 +369,28 @@ class QuantumRNG:
         """Get quantum coherence measure"""
         return 1.0 / (1.0 + np.var(self.quantum_state))
 
+
 def soft_update(target_net: nn.Module, source_net: nn.Module, tau: float):
     """Soft update target network parameters"""
-    for target_param, source_param in zip(target_net.parameters(), source_net.parameters()):
+    for target_param, source_param in zip(
+        target_net.parameters(), source_net.parameters()
+    ):
         target_param.data.copy_(tau * source_param.data + (1 - tau) * target_param.data)
+
 
 def hard_update(target_net: nn.Module, source_net: nn.Module):
     """Hard update target network parameters"""
     target_net.load_state_dict(source_net.state_dict())
 
-def compute_gae(rewards: torch.Tensor, values: torch.Tensor, next_values: torch.Tensor,
-               dones: torch.Tensor, gamma: float = 0.99, lambda_: float = 0.95) -> torch.Tensor:
+
+def compute_gae(
+    rewards: torch.Tensor,
+    values: torch.Tensor,
+    next_values: torch.Tensor,
+    dones: torch.Tensor,
+    gamma: float = 0.99,
+    lambda_: float = 0.95,
+) -> torch.Tensor:
     """Compute Generalized Advantage Estimation (GAE)"""
 
     advantages = torch.zeros_like(rewards)
@@ -378,14 +408,19 @@ def compute_gae(rewards: torch.Tensor, values: torch.Tensor, next_values: torch.
 
     return advantages
 
+
 def normalize_tensor(tensor: torch.Tensor, epsilon: float = 1e-8) -> torch.Tensor:
     """Normalize tensor to have zero mean and unit variance"""
     mean = tensor.mean(dim=0, keepdim=True)
     std = tensor.std(dim=0, keepdim=True) + epsilon
     return (tensor - mean) / std
 
-def create_mlp_network(layer_sizes: List[int], activation: nn.Module = nn.ReLU,
-                      output_activation: Optional[nn.Module] = None) -> nn.Sequential:
+
+def create_mlp_network(
+    layer_sizes: List[int],
+    activation: nn.Module = nn.ReLU,
+    output_activation: Optional[nn.Module] = None,
+) -> nn.Sequential:
     """Create multi-layer perceptron network"""
 
     layers = []
@@ -398,27 +433,36 @@ def create_mlp_network(layer_sizes: List[int], activation: nn.Module = nn.ReLU,
 
     return nn.Sequential(*layers)
 
-def save_model_checkpoint(model: nn.Module, optimizer: torch.optim.Optimizer,
-                         epoch: int, loss: float, filepath: str):
+
+def save_model_checkpoint(
+    model: nn.Module,
+    optimizer: torch.optim.Optimizer,
+    epoch: int,
+    loss: float,
+    filepath: str,
+):
     """Save model checkpoint"""
     checkpoint = {
-        'epoch': epoch,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'loss': loss,
+        "epoch": epoch,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "loss": loss,
     }
     torch.save(checkpoint, filepath)
 
-def load_model_checkpoint(filepath: str, model: nn.Module,
-                         optimizer: Optional[torch.optim.Optimizer] = None) -> Dict:
+
+def load_model_checkpoint(
+    filepath: str, model: nn.Module, optimizer: Optional[torch.optim.Optimizer] = None
+) -> Dict:
     """Load model checkpoint"""
     checkpoint = torch.load(filepath)
-    model.load_state_dict(checkpoint['model_state_dict'])
+    model.load_state_dict(checkpoint["model_state_dict"])
 
     if optimizer is not None:
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
     return checkpoint
+
 
 print("✅ Advanced Utils implementations complete!")
 print("Components implemented:")
@@ -426,4 +470,6 @@ print("- QuantumPrioritizedReplayBuffer: Prioritized replay with quantum states"
 print("- QuantumMetricsTracker: Metrics tracking with quantum uncertainty")
 print("- QuantumLogger: Advanced logging with quantum state persistence")
 print("- QuantumRNG: Quantum-inspired random number generation")
-print("- Utility functions: soft_update, hard_update, compute_gae, normalize_tensor, create_mlp_network, save/load checkpoints")
+print(
+    "- Utility functions: soft_update, hard_update, compute_gae, normalize_tensor, create_mlp_network, save/load checkpoints"
+)

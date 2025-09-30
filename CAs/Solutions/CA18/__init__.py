@@ -186,8 +186,7 @@ def print_package_info():
     print()
     print("Quick Start:")
     print("  from CA18 import quantum_rl, experiments")
-    print("  # Create and run experiments with advanced RL algorithms")
-    print("=" * 60)
+    # print("=" * 60)
 
 
 if __name__ != "__main__":

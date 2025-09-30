@@ -113,7 +113,7 @@ def train_causal_world_model(env, graph, data, n_epochs=100):
         for child in graph.get_children(var):
             if child in state_vars:
                 filtered_graph.add_edge(var, child)
-
+    
     world_model = CausalWorldModel(
         causal_graph=filtered_graph, state_dims=state_dims, action_dim=1, hidden_dim=64
     )
@@ -141,18 +141,16 @@ def train_causal_world_model(env, graph, data, n_epochs=100):
             # Convert to dict format
             states = {
                 "X": obs_batch[:, 0:1],
-                "Y": obs_batch[:, 1:2],
-                "Z": obs_batch[:, 2:3],
+                "Y": obs_batch[:, 1:2], 
+                "Z": obs_batch[:, 2:3]
             }
 
             # Forward pass
             predictions = world_model(states, action_batch)
 
             # Reconstruction loss
-            recon_loss = sum(
-                F.mse_loss(predictions[var], states[var]) for var in states.keys()
-            )
-
+            recon_loss = sum(F.mse_loss(predictions[var], states[var]) for var in states.keys())
+            
             # No causal loss in this simple model
             causal_loss = torch.tensor(0.0)
             total_loss = recon_loss
@@ -204,22 +202,16 @@ def demonstrate_interventional_reasoning(world_model, env):
         states = {
             "X": obs_tensor[:, 0:1],
             "Y": obs_tensor[:, 1:2],
-            "Z": obs_tensor[:, 2:3],
+            "Z": obs_tensor[:, 2:3]
         }
 
         with torch.no_grad():
             baseline_pred = world_model(states, action_tensor)
-            baseline_pred = (
-                torch.cat(
-                    [baseline_pred["X"], baseline_pred["Y"], baseline_pred["Z"]], dim=-1
-                )
-                .cpu()
-                .numpy()[0]
-            )
+            baseline_pred = torch.cat([baseline_pred["X"], baseline_pred["Y"], baseline_pred["Z"]], dim=-1).cpu().numpy()[0]
 
         # Apply intervention
         intervened_obs = intervention_fn(obs)
-
+        
         # Create interventions dict
         interventions = {}
         if var == "X":
@@ -230,17 +222,8 @@ def demonstrate_interventional_reasoning(world_model, env):
             interventions["Z"] = torch.FloatTensor([[intervened_obs[2]]]).to(device)
 
         with torch.no_grad():
-            intervened_pred = world_model.intervene(
-                states, action_tensor, interventions
-            )
-            intervened_pred = (
-                torch.cat(
-                    [intervened_pred["X"], intervened_pred["Y"], intervened_pred["Z"]],
-                    dim=-1,
-                )
-                .cpu()
-                .numpy()[0]
-            )
+            intervened_pred = world_model.intervene(states, action_tensor, interventions)
+            intervened_pred = torch.cat([intervened_pred["X"], intervened_pred["Y"], intervened_pred["Z"]], dim=-1).cpu().numpy()[0]
 
         print(f"  Baseline: {baseline_pred}")
         print(f"  After intervention: {intervened_pred}")
