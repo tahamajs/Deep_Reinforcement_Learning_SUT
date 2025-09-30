@@ -34,8 +34,12 @@ def create_world_model_environment():
             action = np.clip(action, -1, 1)
 
             next_state = np.zeros_like(self.state)
-            next_state[0] = self.state[0] + 0.1 * action[0] + 0.05 * np.sin(self.state[1])
-            next_state[1] = self.state[1] + 0.1 * action[1] + 0.02 * self.state[0] * self.state[2]
+            next_state[0] = (
+                self.state[0] + 0.1 * action[0] + 0.05 * np.sin(self.state[1])
+            )
+            next_state[1] = (
+                self.state[1] + 0.1 * action[1] + 0.02 * self.state[0] * self.state[2]
+            )
             next_state[2] = 0.9 * self.state[2] + 0.1 * np.tanh(action[0] + action[1])
             next_state[3] = 0.95 * self.state[3] + 0.1 * np.random.normal(0, 0.1)
 
@@ -55,12 +59,7 @@ def create_world_model_environment():
 def collect_random_data(env, n_episodes=100):
     """Collect random interaction data for world model training"""
 
-    data = {
-        'observations': [],
-        'actions': [],
-        'rewards': [],
-        'dones': []
-    }
+    data = {"observations": [], "actions": [], "rewards": [], "dones": []}
 
     print(f"Collecting {n_episodes} episodes of random data...")
 
@@ -83,10 +82,10 @@ def collect_random_data(env, n_episodes=100):
             if done:
                 break
 
-        data['observations'].append(np.array(episode_obs))
-        data['actions'].append(np.array(episode_actions))
-        data['rewards'].append(np.array(episode_rewards))
-        data['dones'].append(np.array(episode_dones))
+        data["observations"].append(np.array(episode_obs))
+        data["actions"].append(np.array(episode_actions))
+        data["rewards"].append(np.array(episode_rewards))
+        data["dones"].append(np.array(episode_dones))
 
         if episode % 20 == 0:
             print(f"Episode {episode}/{n_episodes}")
@@ -100,37 +99,43 @@ def create_training_batches(data, batch_size=32, seq_length=20):
     batches = []
 
     for episode_obs, episode_actions, episode_rewards in zip(
-        data['observations'], data['actions'], data['rewards']
+        data["observations"], data["actions"], data["rewards"]
     ):
         episode_length = len(episode_actions)
 
         for start_idx in range(0, episode_length - seq_length + 1, seq_length // 2):
             end_idx = start_idx + seq_length
 
-            batch_obs = episode_obs[start_idx:end_idx+1]  # +1 for next obs
+            batch_obs = episode_obs[start_idx : end_idx + 1]  # +1 for next obs
             batch_actions = episode_actions[start_idx:end_idx]
             batch_rewards = episode_rewards[start_idx:end_idx]
 
-            batches.append({
-                'observations': torch.FloatTensor(batch_obs).to(device),
-                'actions': torch.FloatTensor(batch_actions).to(device),
-                'rewards': torch.FloatTensor(batch_rewards).unsqueeze(-1).to(device)
-            })
+            batches.append(
+                {
+                    "observations": torch.FloatTensor(batch_obs).to(device),
+                    "actions": torch.FloatTensor(batch_actions).to(device),
+                    "rewards": torch.FloatTensor(batch_rewards)
+                    .unsqueeze(-1)
+                    .to(device),
+                }
+            )
 
     grouped_batches = []
     for i in range(0, len(batches), batch_size):
-        batch_group = batches[i:i+batch_size]
+        batch_group = batches[i : i + batch_size]
         if len(batch_group) == batch_size:
 
-            obs_batch = torch.stack([b['observations'] for b in batch_group])
-            action_batch = torch.stack([b['actions'] for b in batch_group])
-            reward_batch = torch.stack([b['rewards'] for b in batch_group])
+            obs_batch = torch.stack([b["observations"] for b in batch_group])
+            action_batch = torch.stack([b["actions"] for b in batch_group])
+            reward_batch = torch.stack([b["rewards"] for b in batch_group])
 
-            grouped_batches.append({
-                'observations': obs_batch,
-                'actions': action_batch,
-                'rewards': reward_batch
-            })
+            grouped_batches.append(
+                {
+                    "observations": obs_batch,
+                    "actions": action_batch,
+                    "rewards": reward_batch,
+                }
+            )
 
     return grouped_batches
 
@@ -140,28 +145,29 @@ def train_world_model(world_model, batches, n_epochs=50, lr=1e-3):
 
     optimizer = torch.optim.Adam(world_model.parameters(), lr=lr)
 
-    losses = {'total': [], 'reconstruction': [], 'kl': [], 'reward': []}
+    losses = {"total": [], "reconstruction": [], "kl": [], "reward": []}
 
     print(f"Training world model for {n_epochs} epochs...")
 
     for epoch in range(n_epochs):
-        epoch_losses = {'total': 0, 'reconstruction': 0, 'kl': 0, 'reward': 0}
+        epoch_losses = {"total": 0, "reconstruction": 0, "kl": 0, "reward": 0}
 
         for batch_idx, batch in enumerate(batches):
-            obs_seq = batch['observations']  # [batch, seq_len+1, obs_dim]
-            action_seq = batch['actions']    # [batch, seq_len, action_dim]
-            reward_seq = batch['rewards']    # [batch, seq_len, 1]
+            obs_seq = batch["observations"]  # [batch, seq_len+1, obs_dim]
+            action_seq = batch["actions"]  # [batch, seq_len, action_dim]
+            reward_seq = batch["rewards"]  # [batch, seq_len, 1]
 
             output = world_model.observe_sequence(obs_seq[:, :-1], action_seq)
 
             recon_loss = F.mse_loss(
-                output['reconstructions'],
-                obs_seq[:, 1:]  # Target is next observations
+                output["reconstructions"], obs_seq[:, 1:]  # Target is next observations
             )
 
-            kl_loss = output['kl_losses'].mean() if output['kl_losses'] is not None else 0
+            kl_loss = (
+                output["kl_losses"].mean() if output["kl_losses"] is not None else 0
+            )
 
-            reward_loss = F.mse_loss(output['rewards'], reward_seq)
+            reward_loss = F.mse_loss(output["rewards"], reward_seq)
 
             total_loss = recon_loss + 0.1 * kl_loss + reward_loss
 
@@ -170,20 +176,24 @@ def train_world_model(world_model, batches, n_epochs=50, lr=1e-3):
             torch.nn.utils.clip_grad_norm_(world_model.parameters(), 1.0)
             optimizer.step()
 
-            epoch_losses['total'] += total_loss.item()
-            epoch_losses['reconstruction'] += recon_loss.item()
-            epoch_losses['kl'] += kl_loss.item() if isinstance(kl_loss, torch.Tensor) else kl_loss
-            epoch_losses['reward'] += reward_loss.item()
+            epoch_losses["total"] += total_loss.item()
+            epoch_losses["reconstruction"] += recon_loss.item()
+            epoch_losses["kl"] += (
+                kl_loss.item() if isinstance(kl_loss, torch.Tensor) else kl_loss
+            )
+            epoch_losses["reward"] += reward_loss.item()
 
         for key in epoch_losses:
             epoch_losses[key] /= len(batches)
             losses[key].append(epoch_losses[key])
 
         if epoch % 10 == 0:
-            print(f"Epoch {epoch}: Total={epoch_losses['total']:.4f}, "
-                  f"Recon={epoch_losses['reconstruction']:.4f}, "
-                  f"KL={epoch_losses['kl']:.4f}, "
-                  f"Reward={epoch_losses['reward']:.4f}")
+            print(
+                f"Epoch {epoch}: Total={epoch_losses['total']:.4f}, "
+                f"Recon={epoch_losses['reconstruction']:.4f}, "
+                f"KL={epoch_losses['kl']:.4f}, "
+                f"Reward={epoch_losses['reward']:.4f}"
+            )
 
     return losses
 
@@ -227,9 +237,15 @@ def evaluate_world_model_planning(env, world_model, planner, n_episodes=10):
         episode_lengths.append(episode_length)
 
         if episode % 5 == 0:
-            print(f"Episode {episode}: Reward={episode_reward:.2f}, Length={episode_length}")
+            print(
+                f"Episode {episode}: Reward={episode_reward:.2f}, Length={episode_length}"
+            )
 
-    print(f"Average reward: {np.mean(episode_rewards):.2f} ± {np.std(episode_rewards):.2f}")
-    print(f"Average length: {np.mean(episode_lengths):.1f} ± {np.std(episode_lengths):.1f}")
+    print(
+        f"Average reward: {np.mean(episode_rewards):.2f} ± {np.std(episode_rewards):.2f}"
+    )
+    print(
+        f"Average length: {np.mean(episode_lengths):.1f} ± {np.std(episode_lengths):.1f}"
+    )
 
     return episode_rewards

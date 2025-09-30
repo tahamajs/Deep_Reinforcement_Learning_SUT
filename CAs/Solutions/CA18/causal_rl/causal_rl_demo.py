@@ -2,11 +2,18 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from causal_rl.causal_rl import CausalGraph, CausalDiscovery, CausalWorldModel, InterventionalDataset, CausalPolicyGradient
+from causal_rl.causal_rl import (
+    CausalGraph,
+    CausalDiscovery,
+    CausalWorldModel,
+    InterventionalDataset,
+    CausalPolicyGradient,
+)
 import matplotlib.pyplot as plt
 
 # Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def create_causal_environment():
     """Create a simple environment with causal structure for demonstration"""
@@ -52,6 +59,7 @@ def create_causal_environment():
 
     return CausalEnvironment()
 
+
 def demonstrate_causal_discovery(env, n_samples=1000):
     """Demonstrate causal structure learning from observational data"""
 
@@ -77,10 +85,7 @@ def demonstrate_causal_discovery(env, n_samples=1000):
     actions = np.array(actions)
 
     # Create causal discovery object
-    causal_discovery = CausalDiscovery(
-        variables=['X', 'Y', 'Z', 'A'],
-        alpha=0.05
-    )
+    causal_discovery = CausalDiscovery(variables=["X", "Y", "Z", "A"], alpha=0.05)
 
     # Prepare data for causal discovery
     data = np.column_stack([observations, actions])
@@ -94,6 +99,7 @@ def demonstrate_causal_discovery(env, n_samples=1000):
 
     return graph, data
 
+
 def train_causal_world_model(env, graph, data, n_epochs=100):
     """Train a world model that respects causal structure"""
 
@@ -101,28 +107,24 @@ def train_causal_world_model(env, graph, data, n_epochs=100):
 
     # Create causal world model
     world_model = CausalWorldModel(
-        graph=graph,
-        obs_dim=3,
-        action_dim=1,
-        hidden_dim=64,
-        latent_dim=16
+        graph=graph, obs_dim=3, action_dim=1, hidden_dim=64, latent_dim=16
     )
 
     optimizer = torch.optim.Adam(world_model.parameters(), lr=1e-3)
 
-    losses = {'total': [], 'reconstruction': [], 'causal': []}
+    losses = {"total": [], "reconstruction": [], "causal": []}
 
     batch_size = 32
     n_batches = len(data) // batch_size
 
     for epoch in range(n_epochs):
-        epoch_losses = {'total': 0, 'reconstruction': 0, 'causal': 0}
+        epoch_losses = {"total": 0, "reconstruction": 0, "causal": 0}
 
         # Shuffle data
         indices = np.random.permutation(len(data))
 
         for i in range(n_batches):
-            batch_indices = indices[i*batch_size:(i+1)*batch_size]
+            batch_indices = indices[i * batch_size : (i + 1) * batch_size]
             batch_data = data[batch_indices]
 
             obs_batch = torch.FloatTensor(batch_data[:, :3]).to(device)
@@ -132,8 +134,8 @@ def train_causal_world_model(env, graph, data, n_epochs=100):
             output = world_model(obs_batch, action_batch)
 
             # Losses
-            recon_loss = F.mse_loss(output['reconstruction'], obs_batch)
-            causal_loss = output['causal_constraint']
+            recon_loss = F.mse_loss(output["reconstruction"], obs_batch)
+            causal_loss = output["causal_constraint"]
             total_loss = recon_loss + 0.1 * causal_loss
 
             # Backward pass
@@ -141,9 +143,9 @@ def train_causal_world_model(env, graph, data, n_epochs=100):
             total_loss.backward()
             optimizer.step()
 
-            epoch_losses['total'] += total_loss.item()
-            epoch_losses['reconstruction'] += recon_loss.item()
-            epoch_losses['causal'] += causal_loss.item()
+            epoch_losses["total"] += total_loss.item()
+            epoch_losses["reconstruction"] += recon_loss.item()
+            epoch_losses["causal"] += causal_loss.item()
 
         # Average losses
         for key in epoch_losses:
@@ -151,11 +153,14 @@ def train_causal_world_model(env, graph, data, n_epochs=100):
             losses[key].append(epoch_losses[key])
 
         if epoch % 20 == 0:
-            print(f"Epoch {epoch}: Total={epoch_losses['total']:.4f}, "
-                  f"Recon={epoch_losses['reconstruction']:.4f}, "
-                  f"Causal={epoch_losses['causal']:.4f}")
+            print(
+                f"Epoch {epoch}: Total={epoch_losses['total']:.4f}, "
+                f"Recon={epoch_losses['reconstruction']:.4f}, "
+                f"Causal={epoch_losses['causal']:.4f}"
+            )
 
     return world_model, losses
+
 
 def demonstrate_interventional_reasoning(world_model, env):
     """Demonstrate interventional reasoning capabilities"""
@@ -164,9 +169,9 @@ def demonstrate_interventional_reasoning(world_model, env):
 
     # Test interventions on different variables
     interventions = {
-        'X': lambda obs: np.array([1.0, obs[1], obs[2]]),  # Force X to 1.0
-        'Y': lambda obs: np.array([obs[0], 0.5, obs[2]]),  # Force Y to 0.5
-        'Z': lambda obs: np.array([obs[0], obs[1], -0.2])   # Force Z to -0.2
+        "X": lambda obs: np.array([1.0, obs[1], obs[2]]),  # Force X to 1.0
+        "Y": lambda obs: np.array([obs[0], 0.5, obs[2]]),  # Force Y to 0.5
+        "Z": lambda obs: np.array([obs[0], obs[1], -0.2]),  # Force Z to -0.2
     }
 
     results = {}
@@ -180,25 +185,31 @@ def demonstrate_interventional_reasoning(world_model, env):
         action_tensor = torch.zeros(1, 1).to(device)
 
         with torch.no_grad():
-            baseline_pred = world_model(obs_tensor, action_tensor)['reconstruction'].cpu().numpy()[0]
+            baseline_pred = (
+                world_model(obs_tensor, action_tensor)["reconstruction"]
+                .cpu()
+                .numpy()[0]
+            )
 
         # Apply intervention
         intervened_obs = intervention_fn(obs)
         intervened_tensor = torch.FloatTensor(intervened_obs).unsqueeze(0).to(device)
 
         with torch.no_grad():
-            intervened_pred = world_model.predict_intervention(
-                intervened_tensor, action_tensor
-            ).cpu().numpy()[0]
+            intervened_pred = (
+                world_model.predict_intervention(intervened_tensor, action_tensor)
+                .cpu()
+                .numpy()[0]
+            )
 
         print(f"  Baseline: {baseline_pred}")
         print(f"  After intervention: {intervened_pred}")
         print(f"  Change: {intervened_pred - baseline_pred}")
 
         results[var] = {
-            'baseline': baseline_pred,
-            'intervened': intervened_pred,
-            'change': intervened_pred - baseline_pred
+            "baseline": baseline_pred,
+            "intervened": intervened_pred,
+            "change": intervened_pred - baseline_pred,
         }
 
     return results

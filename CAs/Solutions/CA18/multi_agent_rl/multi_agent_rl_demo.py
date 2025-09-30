@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 # Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 def create_multi_agent_environment():
     """Create a cooperative multi-agent environment for demonstration"""
 
@@ -39,12 +40,16 @@ def create_multi_agent_environment():
 
             for i in range(self.n_agents):
                 # Agent sees its own position, velocity, target, and other agents
-                obs = np.concatenate([
-                    self.agent_positions[i],
-                    self.agent_velocities[i],
-                    self.target_position,
-                    self.agent_positions[(i+1) % self.n_agents]  # Other agent position
-                ])
+                obs = np.concatenate(
+                    [
+                        self.agent_positions[i],
+                        self.agent_velocities[i],
+                        self.target_position,
+                        self.agent_positions[
+                            (i + 1) % self.n_agents
+                        ],  # Other agent position
+                    ]
+                )
                 observations.append(obs)
 
             return np.array(observations)
@@ -69,13 +74,20 @@ def create_multi_agent_environment():
             rewards = []
             for i in range(self.n_agents):
                 # Distance to target
-                dist_to_target = np.linalg.norm(self.agent_positions[i] - self.target_position)
+                dist_to_target = np.linalg.norm(
+                    self.agent_positions[i] - self.target_position
+                )
 
                 # Cooperation bonus: closer agents get bonus
-                min_dist_to_others = min([
-                    np.linalg.norm(self.agent_positions[i] - self.agent_positions[j])
-                    for j in range(self.n_agents) if j != i
-                ])
+                min_dist_to_others = min(
+                    [
+                        np.linalg.norm(
+                            self.agent_positions[i] - self.agent_positions[j]
+                        )
+                        for j in range(self.n_agents)
+                        if j != i
+                    ]
+                )
 
                 # Reward = -distance + cooperation_bonus
                 reward = -dist_to_target - 0.1 * min_dist_to_others
@@ -87,6 +99,7 @@ def create_multi_agent_environment():
             return self.get_observations(), np.array(rewards), done, {}
 
     return CooperativeMultiAgentEnv()
+
 
 def train_maddpg_agents(env, n_episodes=200):
     """Train MADDPG agents in the multi-agent environment"""
@@ -103,7 +116,7 @@ def train_maddpg_agents(env, n_episodes=200):
             n_agents=env.n_agents,
             hidden_dim=64,
             use_attention=True,
-            use_communication=True
+            use_communication=True,
         )
         agents.append(agent)
 
@@ -133,7 +146,9 @@ def train_maddpg_agents(env, n_episodes=200):
 
             # Store experiences
             for i, agent in enumerate(agents):
-                agent.store_experience(obs[i], actions[i], rewards[i], next_obs[i], done)
+                agent.store_experience(
+                    obs[i], actions[i], rewards[i], next_obs[i], done
+                )
 
             # Update agents
             if episode > 10:  # Start updating after some exploration
@@ -151,6 +166,7 @@ def train_maddpg_agents(env, n_episodes=200):
             print(f"Episode {episode}: Avg Reward = {episode_reward:.2f}")
 
     return agents, episode_rewards, attention_weights_history
+
 
 def demonstrate_attention_mechanism(agents, env):
     """Demonstrate the attention mechanism in multi-agent coordination"""
@@ -180,6 +196,7 @@ def demonstrate_attention_mechanism(agents, env):
             attention_patterns.append(np.array(step_attention))
 
     return attention_patterns
+
 
 def evaluate_multi_agent_performance(agents, env, n_episodes=10):
     """Evaluate trained multi-agent system"""

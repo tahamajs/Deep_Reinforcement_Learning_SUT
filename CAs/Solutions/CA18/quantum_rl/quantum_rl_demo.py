@@ -2,11 +2,20 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from quantum_rl.quantum_rl import QuantumState, QuantumGate, QuantumCircuit, VariationalQuantumCircuit, QuantumQLearning, QuantumActorCritic, QuantumEnvironment
+from quantum_rl.quantum_rl import (
+    QuantumState,
+    QuantumGate,
+    QuantumCircuit,
+    VariationalQuantumCircuit,
+    QuantumQLearning,
+    QuantumActorCritic,
+    QuantumEnvironment,
+)
 import matplotlib.pyplot as plt
 
 # Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def create_quantum_environment():
     """Create a simple environment suitable for quantum RL demonstration"""
@@ -15,7 +24,7 @@ def create_quantum_environment():
         def __init__(self, n_qubits=2):
             self.n_qubits = n_qubits
             self.state_dim = 2**n_qubits  # Full quantum state representation
-            self.action_dim = n_qubits    # Actions are rotations on each qubit
+            self.action_dim = n_qubits  # Actions are rotations on each qubit
             self.max_steps = 50
 
             # Initialize quantum state (simplified classical representation)
@@ -51,8 +60,8 @@ def create_quantum_environment():
 
         def apply_rotation(self, qubit_idx, theta):
             """Apply a rotation gate to a specific qubit"""
-            cos_theta = np.cos(theta/2)
-            sin_theta = np.sin(theta/2)
+            cos_theta = np.cos(theta / 2)
+            sin_theta = np.sin(theta / 2)
 
             # Simplified single-qubit rotation (affects computational basis)
             new_state = np.zeros_like(self.quantum_state)
@@ -83,7 +92,7 @@ def create_quantum_environment():
         def compute_quantum_reward(self):
             """Compute reward based on quantum state properties"""
             # Reward for creating superposition and entanglement-like states
-            probabilities = np.abs(self.quantum_state)**2
+            probabilities = np.abs(self.quantum_state) ** 2
 
             # Entropy (reward for mixed states)
             entropy = -np.sum(probabilities * np.log(probabilities + 1e-10))
@@ -92,13 +101,14 @@ def create_quantum_environment():
             n_nonzero = np.sum(probabilities > 0.01)
 
             # Penalty for being in computational basis states
-            basis_penalty = -np.sum(probabilities[[0, -1]]**2)
+            basis_penalty = -np.sum(probabilities[[0, -1]] ** 2)
 
             reward = entropy + 0.1 * n_nonzero + basis_penalty
 
             return reward
 
     return QuantumInspiredEnvironment()
+
 
 def demonstrate_quantum_circuit():
     """Demonstrate basic quantum circuit operations"""
@@ -137,6 +147,7 @@ def demonstrate_quantum_circuit():
 
     return circuit
 
+
 def train_quantum_q_learning(env, n_episodes=200):
     """Train quantum-enhanced Q-learning"""
 
@@ -149,7 +160,7 @@ def train_quantum_q_learning(env, n_episodes=200):
         learning_rate=0.1,
         discount_factor=0.95,
         exploration_rate=1.0,
-        exploration_decay=0.995
+        exploration_decay=0.995,
     )
 
     episode_rewards = []
@@ -180,10 +191,13 @@ def train_quantum_q_learning(env, n_episodes=200):
         agent.exploration_rate *= agent.exploration_decay
 
         if episode % 50 == 0:
-            print(f"Episode {episode}: Reward={episode_reward:.2f}, "
-                  f"Exploration={agent.exploration_rate:.3f}")
+            print(
+                f"Episode {episode}: Reward={episode_reward:.2f}, "
+                f"Exploration={agent.exploration_rate:.3f}"
+            )
 
     return agent, episode_rewards, exploration_rates
+
 
 def demonstrate_quantum_actor_critic(env):
     """Demonstrate quantum actor-critic algorithm"""
@@ -196,7 +210,7 @@ def demonstrate_quantum_actor_critic(env):
         action_dim=env.action_dim,
         actor_hidden_dim=32,
         critic_hidden_dim=32,
-        learning_rate=1e-3
+        learning_rate=1e-3,
     )
 
     optimizer = torch.optim.Adam(agent.parameters(), lr=1e-3)
@@ -253,7 +267,9 @@ def demonstrate_quantum_actor_critic(env):
         episode_rewards.append(episode_reward)
 
         if episode % 20 == 0:
-            print(f"Episode {episode}: Reward={episode_reward:.2f}, "
-                  f"Actor Loss={actor_loss:.4f}, Critic Loss={critic_loss:.4f}")
+            print(
+                f"Episode {episode}: Reward={episode_reward:.2f}, "
+                f"Actor Loss={actor_loss:.4f}, Critic Loss={critic_loss:.4f}"
+            )
 
     return agent, episode_rewards

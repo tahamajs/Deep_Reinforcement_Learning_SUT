@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 # Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 def create_integrated_environment():
     """Create an environment that combines multiple paradigms"""
 
@@ -23,7 +24,7 @@ def create_integrated_environment():
             self.action_dim = 2
 
             # Causal structure
-            self.causal_graph = CausalGraph(['x1', 'x2', 'y1', 'y2', 'z'])
+            self.causal_graph = CausalGraph(["x1", "x2", "y1", "y2", "z"])
 
             # Quantum state representation
             self.quantum_state = QuantumState(n_qubits=3)
@@ -37,13 +38,15 @@ def create_integrated_environment():
             self.agent_states = np.random.normal(0, 1, (self.n_agents, 2))
 
             # Update causal graph
-            self.causal_graph.update_state({
-                'x1': self.shared_state[0],
-                'x2': self.shared_state[1],
-                'y1': self.agent_states[0, 0],
-                'y2': self.agent_states[1, 0],
-                'z': np.mean(self.agent_states[:, 1])
-            })
+            self.causal_graph.update_state(
+                {
+                    "x1": self.shared_state[0],
+                    "x2": self.shared_state[1],
+                    "y1": self.agent_states[0, 0],
+                    "y2": self.agent_states[1, 0],
+                    "z": np.mean(self.agent_states[:, 1]),
+                }
+            )
 
             self.steps = 0
             return self.get_global_observation()
@@ -52,11 +55,13 @@ def create_integrated_environment():
             """Get observation for all agents"""
             obs = []
             for i in range(self.n_agents):
-                agent_obs = np.concatenate([
-                    self.shared_state,
-                    self.agent_states[i],
-                    [self.causal_graph.get_effect('z', f'y{i+1}')]
-                ])
+                agent_obs = np.concatenate(
+                    [
+                        self.shared_state,
+                        self.agent_states[i],
+                        [self.causal_graph.get_effect("z", f"y{i+1}")],
+                    ]
+                )
                 obs.append(agent_obs)
             return np.array(obs)
 
@@ -74,20 +79,28 @@ def create_integrated_environment():
                 self.agent_states[i] += action_effect + np.random.normal(0, 0.1, 2)
 
             # Update causal graph
-            self.causal_graph.update_state({
-                'x1': self.shared_state[0],
-                'x2': self.shared_state[1],
-                'y1': self.agent_states[0, 0],
-                'y2': self.agent_states[1, 0],
-                'z': np.mean(self.agent_states[:, 1])
-            })
+            self.causal_graph.update_state(
+                {
+                    "x1": self.shared_state[0],
+                    "x2": self.shared_state[1],
+                    "y1": self.agent_states[0, 0],
+                    "y2": self.agent_states[1, 0],
+                    "z": np.mean(self.agent_states[:, 1]),
+                }
+            )
 
             # Compute rewards (cooperative objective)
             coordination_reward = -np.linalg.norm(self.shared_state)
-            individual_rewards = [-np.linalg.norm(actions[i]) * 0.1 for i in range(self.n_agents)]
+            individual_rewards = [
+                -np.linalg.norm(actions[i]) * 0.1 for i in range(self.n_agents)
+            ]
 
-            rewards = np.array([coordination_reward + individual_rewards[i]
-                              for i in range(self.n_agents)])
+            rewards = np.array(
+                [
+                    coordination_reward + individual_rewards[i]
+                    for i in range(self.n_agents)
+                ]
+            )
 
             self.steps += 1
             done = self.steps >= self.max_steps
@@ -96,15 +109,18 @@ def create_integrated_environment():
 
     return IntegratedEnvironment()
 
+
 def demonstrate_paradigm_integration():
     """Demonstrate integration of multiple RL paradigms"""
 
     print("🔗 Demonstrating Paradigm Integration")
-    print("="*50)
+    print("=" * 50)
 
     # Create integrated environment
     env = create_integrated_environment()
-    print(f"Integrated Environment: {env.n_agents} agents, {env.obs_dim}D obs, {env.action_dim}D actions")
+    print(
+        f"Integrated Environment: {env.n_agents} agents, {env.obs_dim}D obs, {env.action_dim}D actions"
+    )
 
     # Initialize agents with different paradigms
     agents = []
@@ -116,18 +132,15 @@ def demonstrate_paradigm_integration():
         action_dim=env.action_dim,
         n_agents=env.n_agents,
         use_attention=True,
-        use_communication=True
+        use_communication=True,
     )
-    agents.append(('MADDPG+Causal', agent1))
+    agents.append(("MADDPG+Causal", agent1))
 
     # Agent 2: Quantum-enhanced agent
     agent2 = QuantumQLearning(
-        n_qubits=2,
-        action_dim=env.action_dim,
-        learning_rate=0.1,
-        discount_factor=0.95
+        n_qubits=2, action_dim=env.action_dim, learning_rate=0.1, discount_factor=0.95
     )
-    agents.append(('Quantum Q-Learning', agent2))
+    agents.append(("Quantum Q-Learning", agent2))
 
     # Training loop
     n_episodes = 50
@@ -141,7 +154,7 @@ def demonstrate_paradigm_integration():
         while not done:
             actions = []
             for i, (name, agent) in enumerate(agents):
-                if name == 'MADDPG+Causal':
+                if name == "MADDPG+Causal":
                     # Multi-agent action selection
                     obs_tensor = torch.FloatTensor(obs[i]).unsqueeze(0).to(device)
                     action_tensor, _ = agent.act(obs_tensor, explore=True)
@@ -157,11 +170,13 @@ def demonstrate_paradigm_integration():
 
             # Update agents
             for i, (name, agent) in enumerate(agents):
-                if name == 'MADDPG+Causal':
+                if name == "MADDPG+Causal":
                     # Store experience for MADDPG
                     pass  # Would need full replay buffer implementation
                 else:  # Quantum agent
-                    agent.update(obs[i][:2], actions[i], rewards[i], next_obs[i][:2], done)
+                    agent.update(
+                        obs[i][:2], actions[i], rewards[i], next_obs[i][:2], done
+                    )
 
             episode_reward += np.mean(rewards)
             obs = next_obs
@@ -171,33 +186,28 @@ def demonstrate_paradigm_integration():
             results[name].append(episode_reward)
 
         if episode % 10 == 0:
-            print(f"Episode {episode}: Agent1={results['MADDPG+Causal'][-1]:.2f}, Agent2={results['Quantum Q-Learning'][-1]:.2f}")
+            print(
+                f"Episode {episode}: Agent1={results['MADDPG+Causal'][-1]:.2f}, Agent2={results['Quantum Q-Learning'][-1]:.2f}"
+            )
 
     return results
+
 
 def demonstrate_federated_learning():
     """Demonstrate federated RL across distributed agents"""
 
     print("\n🌐 Demonstrating Federated Reinforcement Learning")
-    print("="*50)
+    print("=" * 50)
 
     # Create federated setup
     n_clients = 3
     clients = []
 
     for i in range(n_clients):
-        client = FederatedAgent(
-            client_id=i,
-            obs_dim=4,
-            action_dim=2,
-            local_epochs=5
-        )
+        client = FederatedAgent(client_id=i, obs_dim=4, action_dim=2, local_epochs=5)
         clients.append(client)
 
-    server = FederatedServer(
-        global_model_dim=100,  # Simplified
-        n_clients=n_clients
-    )
+    server = FederatedServer(global_model_dim=100, n_clients=n_clients)  # Simplified
 
     # Simulate federated training
     n_rounds = 10
@@ -237,6 +247,7 @@ def demonstrate_federated_learning():
 
     return global_rewards
 
+
 def create_hybrid_agent():
     """Create a hybrid agent combining multiple paradigms"""
 
@@ -251,13 +262,13 @@ def create_hybrid_agent():
                 action_dim=action_dim,
                 state_dim=16,
                 hidden_dim=32,
-                embed_dim=64
+                embed_dim=64,
             )
 
             self.causal_reasoner = CausalDiscovery(
-                variables=[f'obs_{i}' for i in range(obs_dim)] +
-                         [f'action_{i}' for i in range(action_dim)],
-                alpha=0.1
+                variables=[f"obs_{i}" for i in range(obs_dim)]
+                + [f"action_{i}" for i in range(action_dim)],
+                alpha=0.1,
             )
 
             self.quantum_processor = QuantumCircuit(n_qubits=2)
@@ -267,7 +278,7 @@ def create_hybrid_agent():
                 nn.Linear(obs_dim + 16, 64),  # obs + world model state
                 nn.ReLU(),
                 nn.Linear(64, action_dim),
-                nn.Tanh()
+                nn.Tanh(),
             ).to(device)
 
         def select_action(self, obs, explore=True):
@@ -275,9 +286,10 @@ def create_hybrid_agent():
 
             # Get world model prediction
             with torch.no_grad():
-                wm_output = self.world_model.observe_sequence(obs_tensor,
-                    torch.zeros(1, self.action_dim).to(device))
-                wm_state = wm_output['states'][:, -1]  # Last state
+                wm_output = self.world_model.observe_sequence(
+                    obs_tensor, torch.zeros(1, self.action_dim).to(device)
+                )
+                wm_state = wm_output["states"][:, -1]  # Last state
 
             # Combine with observation
             combined_input = torch.cat([obs_tensor, wm_state], dim=-1)
@@ -295,7 +307,7 @@ def create_hybrid_agent():
         def update_causal_model(self, experience_batch):
             """Update causal understanding from experience"""
             # Extract causal relationships from recent experiences
-            data = np.array([exp['obs'] + exp['action'] for exp in experience_batch])
+            data = np.array([exp["obs"] + exp["action"] for exp in experience_batch])
             self.causal_reasoner.discover_structure(data)
 
     return HybridAgent(obs_dim=6, action_dim=2)
