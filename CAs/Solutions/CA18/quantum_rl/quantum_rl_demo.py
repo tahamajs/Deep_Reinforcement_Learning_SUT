@@ -46,7 +46,7 @@ def create_quantum_environment(n_qubits=2):
                 action = np.array([action] * self.n_qubits)
             else:
                 action = np.array(action)
-            
+
             # Apply quantum gates (simplified)
             action = np.clip(action, -np.pi, np.pi)
 
