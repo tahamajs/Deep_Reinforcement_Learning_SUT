@@ -259,10 +259,29 @@ class VariationalQuantumCircuit(nn.Module):
         amplitudes = self.forward()
         return np.abs(amplitudes) ** 2
 
-    def measure_expectation(self, observable: np.ndarray) -> float:
+    def measure_expectation(self, observable: np.ndarray, input_state: Optional[np.ndarray] = None) -> float:
         """Measure expectation value of observable"""
-        state = self.forward()
+        state = self.forward(input_state)
         return np.real(np.conj(state) @ observable @ state)
+
+    def gradient(self, observable: np.ndarray, input_state: np.ndarray, param_idx: int) -> float:
+        """Compute gradient of expectation value w.r.t. parameter"""
+        # Simple finite difference approximation
+        eps = 1e-6
+        original_param = self.params[param_idx].item()
+
+        # Positive perturbation
+        self.params.data[param_idx] = original_param + eps
+        exp_plus = self.measure_expectation(observable, input_state)
+
+        # Negative perturbation
+        self.params.data[param_idx] = original_param - eps
+        exp_minus = self.measure_expectation(observable, input_state)
+
+        # Restore original
+        self.params.data[param_idx] = original_param
+
+        return (exp_plus - exp_minus) / (2 * eps)
 
 
 class QuantumStateEncoder:
@@ -510,7 +529,11 @@ class QuantumQLearning:
         for action in range(n_actions):
             self.q_circuits[action] = VariationalQuantumCircuit(n_qubits, n_layers)
 
-        self.q_observable = QuantumGate.pauli_z()
+        self.q_observable = np.eye(2**n_qubits, dtype=complex)
+        # Z observable on first qubit (Z ⊗ I ⊗ I ⊗ ...)
+        for i in range(2**n_qubits):
+            if (i >> 0) & 1:  # If first qubit is |1⟩
+                self.q_observable[i, i] = -1.0
 
     def state_to_quantum(self, state: np.ndarray) -> QuantumState:
         """Encode classical state to quantum state"""
@@ -533,7 +556,7 @@ class QuantumQLearning:
 
         for action in range(self.n_actions):
             q_values[action] = self.q_circuits[action].measure_expectation(
-                self.q_observable, quantum_state
+                self.q_observable, quantum_state.amplitudes
             )
 
         return q_values
@@ -558,7 +581,7 @@ class QuantumQLearning:
         quantum_state = self.state_to_quantum(state)
 
         current_q = self.q_circuits[action].measure_expectation(
-            self.q_observable, quantum_state
+            self.q_observable, quantum_state.amplitudes
         )
 
         if done:
@@ -569,12 +592,12 @@ class QuantumQLearning:
 
         td_error = target_q - current_q
 
-        for param_idx in range(self.q_circuits[action].n_parameters):
+        for param_idx in range(self.q_circuits[action].n_params):
             gradient = self.q_circuits[action].gradient(
-                self.q_observable, quantum_state, param_idx
+                self.q_observable, quantum_state.amplitudes, param_idx
             )
 
-            self.q_circuits[action].parameters[param_idx] += (
+            self.q_circuits[action].params.data[param_idx] += (
                 self.learning_rate * td_error * gradient
             )
 
@@ -589,8 +612,19 @@ class QuantumActorCritic:
         self.actor_circuit = VariationalQuantumCircuit(n_qubits, n_layers)
         self.critic_circuit = VariationalQuantumCircuit(n_qubits, n_layers)
 
-        self.policy_observables = [QuantumGate.pauli_z() for _ in range(n_actions)]
-        self.value_observable = QuantumGate.pauli_z()
+        self.policy_observables = []
+        for action in range(n_actions):
+            obs = np.eye(2**self.n_qubits, dtype=complex)
+            qubit_idx = action % self.n_qubits
+            for j in range(2**self.n_qubits):
+                if (j >> qubit_idx) & 1:  # If qubit is |1⟩
+                    obs[j, j] = -1.0
+            self.policy_observables.append(obs)
+
+        self.value_observable = np.eye(2**self.n_qubits, dtype=complex)
+        for i in range(2**self.n_qubits):
+            if (i >> 0) & 1:  # If first qubit is |1⟩
+                self.value_observable[i, i] = -1.0
 
         self.learning_rate = 0.01
         self.gamma = 0.95
@@ -615,7 +649,7 @@ class QuantumActorCritic:
         expectations = np.zeros(self.n_actions)
         for action in range(self.n_actions):
             expectations[action] = self.actor_circuit.measure_expectation(
-                self.policy_observables[action], quantum_state
+                self.policy_observables[action], quantum_state.amplitudes
             )
 
         exp_vals = np.exp(expectations)
@@ -627,7 +661,7 @@ class QuantumActorCritic:
         """Get state value from quantum critic"""
         quantum_state = self.state_to_quantum(state)
         return self.critic_circuit.measure_expectation(
-            self.value_observable, quantum_state
+            self.value_observable, quantum_state.amplitudes
         )
 
     def select_action(self, state: np.ndarray) -> int:
@@ -655,19 +689,19 @@ class QuantumActorCritic:
 
         td_error = target_value - current_value
 
-        for param_idx in range(self.critic_circuit.n_parameters):
+        for param_idx in range(self.critic_circuit.n_params):
             gradient = self.critic_circuit.gradient(
-                self.value_observable, quantum_state, param_idx
+                self.value_observable, quantum_state.amplitudes, param_idx
             )
-            self.critic_circuit.parameters[param_idx] += (
+            self.critic_circuit.params.data[param_idx] += (
                 self.learning_rate * td_error * gradient
             )
 
-        for param_idx in range(self.actor_circuit.n_parameters):
+        for param_idx in range(self.actor_circuit.n_params):
             gradient = self.actor_circuit.gradient(
-                self.policy_observables[action], quantum_state, param_idx
+                self.policy_observables[action], quantum_state.amplitudes, param_idx
             )
-            self.actor_circuit.parameters[param_idx] += (
+            self.actor_circuit.params.data[param_idx] += (
                 self.learning_rate * td_error * gradient
             )
 

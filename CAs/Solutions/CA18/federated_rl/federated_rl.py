@@ -448,3 +448,7 @@ class FederatedRLServer:
         global_actor_copy = copy.deepcopy(self.global_actor)
         global_critic_copy = copy.deepcopy(self.global_critic)
         return global_actor_copy, global_critic_copy
+
+# Add aliases for compatibility with demo
+FederatedAgent = FederatedRLClient
+FederatedServer = FederatedRLServer
