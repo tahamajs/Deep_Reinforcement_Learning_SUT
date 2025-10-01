@@ -11,102 +11,119 @@ from ..utils.utils import device
 
 
 class ContinuousActorNetwork(nn.Module):
-    """Policy network for continuous action spaces using Gaussian distribution"""
+    """Continuous policy network using Gaussian distribution"""
 
-    def __init__(self, state_dim, action_dim, action_bound=1.0, hidden_dim=128):
+    def __init__(self, state_dim, action_dim, hidden_dim=128, action_bound=1.0):
         super(ContinuousActorNetwork, self).__init__()
         self.action_bound = action_bound
 
-        self.shared_network = nn.Sequential(
+        # Shared layers
+        self.shared = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
+            nn.ReLU()
         )
-
-        self.mean_head = nn.Sequential(
-            nn.Linear(hidden_dim, action_dim),
-            nn.Tanh(),  # Bound mean between -1 and 1
-        )
-
-        self.log_std_head = nn.Sequential(
-            nn.Linear(hidden_dim, action_dim),
-        )
-
-        nn.init.constant_(self.log_std_head[0].bias, -0.5)  # exp(-0.5) ≈ 0.6
+        
+        # Mean head
+        self.mean_head = nn.Linear(hidden_dim, action_dim)
+        
+        # Log standard deviation (learnable parameter or network)
+        self.log_std_head = nn.Linear(hidden_dim, action_dim)
+        
+        # Initialize to small values for stability
+        self.log_std_head.weight.data.uniform_(-1e-3, 1e-3)
+        self.log_std_head.bias.data.uniform_(-1e-3, 1e-3)
 
     def forward(self, state):
-        """Forward pass returning mean and std"""
-        shared_features = self.shared_network(state)
-
-        mean = self.mean_head(shared_features) * self.action_bound
+        """Forward pass returns mean and std of action distribution"""
+        shared_features = self.shared(state)
+        
+        # Mean of action distribution
+        mean = self.mean_head(shared_features)
+        mean = torch.tanh(mean) * self.action_bound  # Bound actions
+        
+        # Standard deviation (always positive)
         log_std = self.log_std_head(shared_features)
-
-        log_std = torch.clamp(log_std, min=-20, max=2)
+        log_std = torch.clamp(log_std, min=-20, max=2)  # Numerical stability
         std = torch.exp(log_std)
 
         return mean, std
 
-    def get_action_and_log_prob(self, state):
-        """Sample action and compute log probability"""
+    def sample_action(self, state):
+        """Sample action from the policy"""
         mean, std = self.forward(state)
+        dist = Normal(mean, std)
+        action = dist.sample()
+        log_prob = dist.log_prob(action).sum(dim=-1)  # Sum over action dimensions
+        
+        return action, log_prob, mean, std
+    
+    def get_log_prob(self, state, action):
+        """Get log probability of an action"""
+        mean, std = self.forward(state)
+        dist = Normal(mean, std)
+        log_prob = dist.log_prob(action).sum(dim=-1)
+        
+        return log_prob
 
-        normal_dist = Normal(mean, std)
 
-        action = normal_dist.rsample()  # Use rsample for reparameterization
-
-        log_prob = normal_dist.log_prob(action).sum(dim=-1, keepdim=True)
-
-        action_tanh = torch.tanh(action)
-
-        scaled_action = action_tanh * self.action_bound
-
-        return scaled_action, log_prob
-
-    def get_deterministic_action(self, state):
-        """Get deterministic action (mean) for evaluation"""
-        mean, _ = self.forward(state)
-        return torch.tanh(mean) * self.action_bound
+class ContinuousCriticNetwork(nn.Module):
+    """Continuous value network"""
+    
+    def __init__(self, state_dim, hidden_dim=128):
+        super(ContinuousCriticNetwork, self).__init__()
+        self.network = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1)
+        )
+    
+    def forward(self, state):
+        return self.network(state).squeeze()
 
 
 class ContinuousREINFORCEAgent:
-    """REINFORCE Algorithm for Continuous Action Spaces"""
+    """REINFORCE for continuous action spaces"""
 
-    def __init__(self, state_dim, action_dim, action_bound=1.0, lr=1e-3, gamma=0.99):
+    def __init__(self, state_dim, action_dim, lr=1e-3, gamma=0.99, action_bound=1.0):
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.action_bound = action_bound
-        self.lr = lr
         self.gamma = gamma
-
-        self.policy_network = ContinuousActorNetwork(
-            state_dim, action_dim, action_bound
-        ).to(device)
-        self.optimizer = optim.Adam(self.policy_network.parameters(), lr=lr)
-
+        self.action_bound = action_bound
+        
+        # Policy network
+        self.policy = ContinuousActorNetwork(state_dim, action_dim, action_bound=action_bound).to(device)
+        self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
+        
+        # Episode storage
         self.episode_log_probs = []
         self.episode_rewards = []
 
+        # Training history
         self.episode_rewards_history = []
         self.policy_losses = []
-        self.gradient_norms = []
 
     def select_action(self, state):
-        """Select action based on current policy"""
+        """Select continuous action"""
         if not isinstance(state, torch.Tensor):
             state = torch.FloatTensor(state).unsqueeze(0).to(device)
 
-        action, log_prob = self.policy_network.get_action_and_log_prob(state)
+        with torch.no_grad():
+            action, log_prob, mean, std = self.policy.sample_action(state)
+        
         self.episode_log_probs.append(log_prob)
 
-        return action.detach().cpu().numpy().flatten()
+        return action.cpu().numpy()[0]
 
     def store_reward(self, reward):
-        """Store reward for current episode"""
+        """Store reward"""
         self.episode_rewards.append(reward)
 
     def calculate_returns(self):
-        """Calculate discounted returns for the episode"""
+        """Calculate discounted returns"""
         returns = []
         discounted_sum = 0
 
@@ -116,43 +133,37 @@ class ContinuousREINFORCEAgent:
 
         returns = torch.FloatTensor(returns).to(device)
 
+        # Normalize returns
         if len(returns) > 1:
             returns = (returns - returns.mean()) / (returns.std() + 1e-8)
 
         return returns
 
     def update_policy(self):
-        """Update policy using REINFORCE algorithm"""
+        """Update policy using REINFORCE"""
         if len(self.episode_log_probs) == 0:
             return
 
         returns = self.calculate_returns()
 
+        # Calculate policy loss
         policy_loss = []
         for log_prob, G_t in zip(self.episode_log_probs, returns):
-            policy_loss.append(-log_prob * G_t)  # Negative for gradient ascent
+            policy_loss.append(-log_prob * G_t)
 
         policy_loss = torch.stack(policy_loss).sum()
 
+        # Update policy
         self.optimizer.zero_grad()
         policy_loss.backward()
-
-        total_norm = 0
-        for param in self.policy_network.parameters():
-            if param.grad is not None:
-                param_norm = param.grad.data.norm(2)
-                total_norm += param_norm.item() ** 2
-        total_norm = total_norm ** (1.0 / 2)
-        self.gradient_norms.append(total_norm)
-
-        torch.nn.utils.clip_grad_norm_(self.policy_network.parameters(), max_norm=1.0)
-
+        torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=1.0)
         self.optimizer.step()
 
         self.policy_losses.append(policy_loss.item())
 
-        self.episode_log_probs = []
-        self.episode_rewards = []
+        # Clear episode data
+        self.episode_log_probs.clear()
+        self.episode_rewards.clear()
 
     def train_episode(self, env, max_steps=1000):
         """Train for one episode"""
@@ -175,14 +186,13 @@ class ContinuousREINFORCEAgent:
             state = next_state
 
         self.update_policy()
-
         self.episode_rewards_history.append(total_reward)
 
         return total_reward, steps
 
     def evaluate(self, env, num_episodes=10):
         """Evaluate current policy"""
-        self.policy_network.eval()
+        self.policy.eval()
         rewards = []
 
         for _ in range(num_episodes):
@@ -192,10 +202,10 @@ class ContinuousREINFORCEAgent:
             for _ in range(1000):
                 with torch.no_grad():
                     state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
-                    action = self.policy_network.get_deterministic_action(state_tensor)
+                    mean, _ = self.policy(state_tensor)
+                    action = mean.cpu().numpy()[0]  # Use mean for deterministic evaluation
 
-                action_np = action.detach().cpu().numpy().flatten()
-                next_state, reward, terminated, truncated, _ = env.step(action_np)
+                next_state, reward, terminated, truncated, _ = env.step(action)
                 done = terminated or truncated
                 total_reward += reward
 
@@ -206,254 +216,305 @@ class ContinuousREINFORCEAgent:
 
             rewards.append(total_reward)
 
-        self.policy_network.train()
+        self.policy.train()
 
         return {
             "mean_reward": np.mean(rewards),
             "std_reward": np.std(rewards),
             "min_reward": np.min(rewards),
-            "max_reward": np.max(rewards),
+            "max_reward": np.max(rewards)
+        }
+
+
+class ContinuousActorCriticAgent:
+    """Actor-Critic for continuous actions"""
+    
+    def __init__(self, state_dim, action_dim, lr_actor=1e-4, lr_critic=1e-3, 
+                 gamma=0.99, action_bound=1.0, entropy_coeff=0.01):
+        self.gamma = gamma
+        self.entropy_coeff = entropy_coeff
+        
+        # Networks
+        self.actor = ContinuousActorNetwork(state_dim, action_dim, action_bound=action_bound).to(device)
+        self.critic = ContinuousCriticNetwork(state_dim).to(device)
+        
+        # Optimizers
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr_actor)
+        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr_critic)
+        
+        # Training history
+        self.episode_rewards = []
+        self.actor_losses = []
+        self.critic_losses = []
+    
+    def select_action(self, state):
+        """Select action and get value estimate"""
+        if not isinstance(state, torch.Tensor):
+            state = torch.FloatTensor(state).unsqueeze(0).to(device)
+        
+        action, log_prob, mean, std = self.actor.sample_action(state)
+        value = self.critic(state)
+        
+        # Calculate entropy for exploration bonus
+        entropy = -0.5 * (torch.log(2 * np.pi * std**2) + 1).sum()
+        
+        return action.cpu().numpy()[0], log_prob, value, entropy
+    
+    def update(self, state, action, reward, next_state, done, log_prob, value, entropy):
+        """Update actor and critic"""
+        if not isinstance(state, torch.Tensor):
+            state = torch.FloatTensor(state).unsqueeze(0).to(device)
+        if not isinstance(next_state, torch.Tensor):
+            next_state = torch.FloatTensor(next_state).unsqueeze(0).to(device)
+        
+        # Calculate TD target and error
+        with torch.no_grad():
+            next_value = self.critic(next_state) if not done else 0
+            td_target = reward + self.gamma * next_value
+            td_error = td_target - value
+        
+        # Update critic
+        value_pred = self.critic(state)
+        critic_loss = F.mse_loss(value_pred, td_target)
+        
+        self.critic_optimizer.zero_grad()
+        critic_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=1.0)
+        self.critic_optimizer.step()
+        
+        # Update actor
+        actor_loss = -log_prob * td_error.detach() - self.entropy_coeff * entropy
+        
+        self.actor_optimizer.zero_grad()
+        actor_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=1.0)
+        self.actor_optimizer.step()
+        
+        self.actor_losses.append(actor_loss.item())
+        self.critic_losses.append(critic_loss.item())
+    
+    def train_episode(self, env, max_steps=1000):
+        """Train for one episode"""
+        state, _ = env.reset()
+        total_reward = 0
+        steps = 0
+        
+        for step in range(max_steps):
+            action, log_prob, value, entropy = self.select_action(state)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
+            
+            self.update(state, action, reward, next_state, done, log_prob, value, entropy)
+            
+            total_reward += reward
+            steps += 1
+            
+            if done:
+                break
+            
+            state = next_state
+        
+        self.episode_rewards.append(total_reward)
+        return total_reward, steps
+    
+    def evaluate(self, env, num_episodes=10):
+        """Evaluate current policy"""
+        self.actor.eval()
+        self.critic.eval()
+        rewards = []
+        
+        for _ in range(num_episodes):
+            state, _ = env.reset()
+            total_reward = 0
+            
+            for _ in range(1000):
+                with torch.no_grad():
+                    state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
+                    mean, _ = self.actor(state_tensor)
+                    action = mean.cpu().numpy()[0]
+                
+                next_state, reward, terminated, truncated, _ = env.step(action)
+                done = terminated or truncated
+                total_reward += reward
+                
+                if done:
+                    break
+                
+                state = next_state
+            
+            rewards.append(total_reward)
+        
+        self.actor.train()
+        self.critic.train()
+        
+        return {
+            "mean_reward": np.mean(rewards),
+            "std_reward": np.std(rewards),
+            "min_reward": np.min(rewards),
+            "max_reward": np.max(rewards)
         }
 
 
 class ContinuousControlAnalyzer:
-    """Analysis and demonstration tools for continuous control with policy gradients"""
-
-    def __init__(self):
-        self.continuous_agents = {}
-
-    def demonstrate_continuous_policy_network(self):
-        """Demonstrate continuous policy network architecture and sampling"""
+    """Analyze continuous control methods"""
+    
+    def compare_continuous_methods(self, env_name="Pendulum-v1", num_episodes=300):
+        """Compare continuous control methods"""
 
         print("=" * 70)
-        print("Continuous Policy Network Demonstration")
-        print("=" * 70)
-
-        state_dim = 3  # Pendulum state: [cos(theta), sin(theta), theta_dot]
-        action_dim = 1  # Pendulum action: torque
-        action_bound = 2.0  # Pendulum action bound
-
-        network = ContinuousActorNetwork(state_dim, action_dim, action_bound)
-
-        print(f"Network Architecture:")
-        print(f"  Input dimension: {state_dim}")
-        print(f"  Output dimension: {action_dim} (mean) + {action_dim} (std)")
-        print(f"  Action bound: ±{action_bound}")
-        print(f"  Total parameters: {sum(p.numel() for p in network.parameters())}")
-
-        print(f"\nSampling Demonstration:")
-        network.eval()
-
-        with torch.no_grad():
-            sample_states = [
-                torch.randn(1, state_dim),  # Random state
-                torch.FloatTensor([[1.0, 0.0, 0.0]]),  # Upright pendulum
-                torch.FloatTensor([[0.0, 1.0, 1.0]]),  # Swinging pendulum
-            ]
-
-            for i, state in enumerate(sample_states):
-                mean, std = network(state)
-                action, log_prob = network.get_action_and_log_prob(state)
-
-                print(f"\nState {i+1}: {state.numpy().flatten()}")
-                print(f"  Mean: {mean.numpy().flatten()}")
-                print(f"  Std: {std.numpy().flatten()}")
-                print(f"  Sampled action: {action.numpy().flatten()}")
-                print(f"  Log probability: {log_prob.item():.4f}")
-
-        return network
-
-    def train_continuous_reinforce(self, env_name="Pendulum-v1", num_episodes=100):
-        """Train REINFORCE on a continuous control task"""
-
-        print("=" * 70)
-        print(f"Training Continuous REINFORCE on {env_name}")
+        print(f"Continuous Control Methods Comparison - {env_name}")
         print("=" * 70)
 
         env = gym.make(env_name)
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.shape[0]
+        
+        # Get action bounds
+        if hasattr(env.action_space, 'high'):
         action_bound = float(env.action_space.high[0])
-
-        agent = ContinuousREINFORCEAgent(
-            state_dim, action_dim, action_bound, lr=3e-4, gamma=0.99
-        )
-
-        print(f"Environment: {env_name}")
-        print(
-            f"State dim: {state_dim}, Action dim: {action_dim}, Action bound: ±{action_bound}"
-        )
-        print("Training...")
+        else:
+            action_bound = 1.0
+        
+        # Create agents
+        agents = {
+            'REINFORCE': ContinuousREINFORCEAgent(
+                state_dim, action_dim, lr=1e-3, action_bound=action_bound
+            ),
+            'Actor-Critic': ContinuousActorCriticAgent(
+                state_dim, action_dim, lr_actor=1e-4, lr_critic=1e-3, action_bound=action_bound
+            )
+        }
+        
+        results = {}
+        
+        for name, agent in agents.items():
+            print(f"\nTraining {name}...")
 
         for episode in range(num_episodes):
             reward, steps = agent.train_episode(env)
 
-            if (episode + 1) % 10 == 0:
-                eval_results = agent.evaluate(env, 5)
-                print(
-                    f"Episode {episode+1}: "
-                    f"Train Reward = {reward:.1f}, "
-                    f"Eval Reward = {eval_results['mean_reward']:.1f} ± {eval_results['std_reward']:.1f}"
-                )
+                if (episode + 1) % 50 == 0:
+                    avg_reward = np.mean(agent.episode_rewards[-20:])
+                    print(f"  Episode {episode+1}: Avg Reward = {avg_reward:.1f}")
+            
+            eval_results = agent.evaluate(env, 20)
+            
+            results[name] = {
+                'agent': agent,
+                'eval_results': eval_results,
+                'final_performance': np.mean(agent.episode_rewards[-20:])
+            }
 
         env.close()
 
-        self.continuous_agents["reinforce"] = agent
-
-        self.analyze_continuous_training(agent, env_name)
-
-        return agent
-
-    def analyze_continuous_training(self, agent, env_name):
-        """Analyze continuous control training"""
+        self._visualize_continuous_comparison(results)
+        
+        return results
+    
+    def _visualize_continuous_comparison(self, results):
+        """Visualize continuous control comparison"""
 
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+        colors = ['blue', 'red']
 
+        # Learning curves
         ax = axes[0, 0]
-        rewards = agent.episode_rewards_history
-
-        if len(rewards) > 5:
-            smoothed_rewards = pd.Series(rewards).rolling(window=10).mean()
-            ax.plot(rewards, alpha=0.3, color="lightblue", label="Episode Rewards")
-            ax.plot(
-                smoothed_rewards,
-                color="blue",
-                linewidth=2,
-                label="Smoothed (10-episode avg)",
-            )
-        else:
-            ax.plot(rewards, color="blue", linewidth=2, label="Episode Rewards")
-
-        ax.set_title(f"Continuous REINFORCE Learning Curve - {env_name}")
-        ax.set_xlabel("Episode")
-        ax.set_ylabel("Episode Reward")
+        for i, (name, data) in enumerate(results.items()):
+            agent = data['agent']
+            rewards = agent.episode_rewards
+            
+            if len(rewards) > 10:
+                smoothed = pd.Series(rewards).rolling(window=20).mean()
+                ax.plot(smoothed, label=name, color=colors[i], linewidth=2)
+        
+        ax.set_title('Learning Curves - Continuous Control')
+        ax.set_xlabel('Episode')
+        ax.set_ylabel('Episode Reward (Smoothed)')
         ax.legend()
         ax.grid(True, alpha=0.3)
 
+        # Final performance
         ax = axes[0, 1]
-        if agent.policy_losses:
-            losses = agent.policy_losses
-            ax.plot(losses, color="red", alpha=0.7)
-            if len(losses) > 10:
-                smoothed_losses = pd.Series(losses).rolling(window=10).mean()
-                ax.plot(smoothed_losses, color="darkred", linewidth=2, label="Smoothed")
+        method_names = list(results.keys())
+        final_performances = [data['final_performance'] for data in results.values()]
+        eval_means = [data['eval_results']['mean_reward'] for data in results.values()]
+        eval_stds = [data['eval_results']['std_reward'] for data in results.values()]
+        
+        x = np.arange(len(method_names))
+        width = 0.35
+        
+        bars1 = ax.bar(x - width/2, final_performances, width, 
+                      label='Training', alpha=0.7, color=colors)
+        bars2 = ax.bar(x + width/2, eval_means, width, 
+                      yerr=eval_stds, label='Evaluation', alpha=0.7)
+        
+        ax.set_xlabel('Method')
+        ax.set_ylabel('Average Reward')
+        ax.set_title('Final Performance Comparison')
+        ax.set_xticks(x)
+        ax.set_xticklabels(method_names)
                 ax.legend()
-
-            ax.set_title("Policy Loss Evolution")
-            ax.set_xlabel("Episode")
-            ax.set_ylabel("Policy Loss")
             ax.grid(True, alpha=0.3)
 
+        # Policy losses
         ax = axes[1, 0]
-        if agent.gradient_norms:
-            grad_norms = agent.gradient_norms
-            ax.plot(grad_norms, color="green", alpha=0.7)
-            if len(grad_norms) > 10:
-                smoothed_norms = pd.Series(grad_norms).rolling(window=10).mean()
-                ax.plot(
-                    smoothed_norms, color="darkgreen", linewidth=2, label="Smoothed"
-                )
+        for i, (name, data) in enumerate(results.items()):
+            agent = data['agent']
+            if hasattr(agent, 'policy_losses') and agent.policy_losses:
+                losses = agent.policy_losses
+                if len(losses) > 20:
+                    smoothed = pd.Series(losses).rolling(window=20).mean()
+                    ax.plot(smoothed, label=name, color=colors[i], linewidth=2)
+            elif hasattr(agent, 'actor_losses') and agent.actor_losses:
+                losses = agent.actor_losses
+                if len(losses) > 20:
+                    smoothed = pd.Series(losses).rolling(window=20).mean()
+                    ax.plot(smoothed, label=name, color=colors[i], linewidth=2)
+        
+        ax.set_title('Policy/Actor Loss Evolution')
+        ax.set_xlabel('Update Step')
+        ax.set_ylabel('Loss')
                 ax.legend()
-
-            ax.set_title("Gradient Norms")
-            ax.set_xlabel("Episode")
-            ax.set_ylabel("Gradient L2 Norm")
             ax.grid(True, alpha=0.3)
 
+        # Summary text
         ax = axes[1, 1]
-        ax.text(
-            0.5,
-            0.5,
-            "Action Distribution\nEvolution\n(Not implemented)",
-            transform=ax.transAxes,
-            ha="center",
-            va="center",
-            fontsize=12,
-            alpha=0.7,
-        )
-        ax.set_title("Action Distribution Evolution")
-        ax.grid(True, alpha=0.3)
+        ax.axis('off')
+        
+        summary_text = "Continuous Control Summary:\n\n"
+        for name, data in results.items():
+            final_perf = data['final_performance']
+            eval_perf = data['eval_results']['mean_reward']
+            eval_std = data['eval_results']['std_reward']
+            
+            summary_text += f"{name}:\n"
+            summary_text += f"  Training: {final_perf:.1f}\n"
+            summary_text += f"  Evaluation: {eval_perf:.1f} ± {eval_std:.1f}\n\n"
+        
+        ax.text(0.1, 0.9, summary_text, transform=ax.transAxes,
+               fontsize=12, verticalalignment='top',
+               fontfamily='monospace',
+               bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.5))
 
         plt.tight_layout()
         plt.show()
 
-        print(f"\nContinuous Control Training Statistics:")
-        print(f"  Total Episodes: {len(rewards)}")
-        print(f"  Final Average Reward (last 20): {np.mean(rewards[-20:]):.2f}")
-        print(f"  Best Episode Reward: {np.max(rewards):.2f}")
-        print(
-            f"  Average Policy Loss: {np.mean(agent.policy_losses) if agent.policy_losses else 'N/A':.4f}"
-        )
-        print(
-            f"  Average Gradient Norm: {np.mean(agent.gradient_norms) if agent.gradient_norms else 'N/A':.4f}"
-        )
+        # Print summary
+        print("\n" + "=" * 50)
+        print("CONTINUOUS CONTROL SUMMARY")
+        print("=" * 50)
+        
+        for name, data in results.items():
+            final_perf = data['final_performance']
+            eval_perf = data['eval_results']['mean_reward']
+            eval_std = data['eval_results']['std_reward']
+            
+            print(f"\n{name}:")
+            print(f"  Final Training Performance: {final_perf:.2f}")
+            print(f"  Evaluation Performance: {eval_perf:.2f} ± {eval_std:.2f}")
 
-    def compare_discrete_vs_continuous(self):
-        """Compare discrete and continuous control performance"""
 
-        print("=" * 70)
-        print("Discrete vs Continuous Control Comparison")
-        print("=" * 70)
-
-        comparison_data = {
-            "Discrete Control (CartPole)": {
-                "Environment": "CartPole-v1",
-                "Action Space": "Discrete (2 actions)",
-                "Policy": "Categorical",
-                "Challenges": "Balance binary actions",
-                "Typical Reward": "~200-500",
-            },
-            "Continuous Control (Pendulum)": {
-                "Environment": "Pendulum-v1",
-                "Action Space": "Continuous (torque)",
-                "Policy": "Gaussian",
-                "Challenges": "Action bounds, exploration",
-                "Typical Reward": "-200 to 0",
-            },
-        }
-
-        for env_type, data in comparison_data.items():
-            print(f"\n{env_type}:")
-            for key, value in data.items():
-                print(f"  {key}: {value}")
-
-        print(f"\nKey Differences:")
-        print(f"• Policy parameterization: Categorical vs Gaussian")
-        print(f"• Action selection: argmax vs sampling")
-        print(f"• Log probability computation: Different for each distribution")
-        print(f"• Exploration: ε-greedy vs stochastic policy")
-        print(f"• Gradient flow: Through softmax vs through distribution parameters")
-
-    def demonstrate_action_scaling(self):
-        """Demonstrate action scaling and bounds handling"""
-
-        print("=" * 70)
-        print("Action Scaling and Bounds Handling")
-        print("=" * 70)
-
-        state_dim, action_dim, action_bound = 2, 1, 2.0
-        actor = ContinuousActorNetwork(state_dim, action_dim, action_bound)
-
-        print(f"Action bound: ±{action_bound}")
-        print(f"Network outputs mean in range [-{action_bound}, {action_bound}]")
-
-        actor.eval()
-        with torch.no_grad():
-            state = torch.randn(1, state_dim)
-
-            mean_raw, std_raw = actor.shared_network(state), actor.log_std_head(
-                actor.shared_network(state)
-            )
-            mean_raw = actor.mean_head(actor.shared_network(state))
-            std_raw = torch.exp(
-                torch.clamp(actor.log_std_head(actor.shared_network(state)), -20, 2)
-            )
-
-            action, _ = actor.get_action_and_log_prob(state)
-
-            print(f"\nRaw mean output: {mean_raw.item():.4f}")
-            print(f"Scaled mean: {mean_raw.item() * action_bound:.4f}")
-            print(f"Tanh scaled action: {action.item():.4f}")
-            print(f"Action within bounds: {abs(action.item()) <= action_bound}")
-
-        return actor
+# Example usage
+if __name__ == "__main__":
+    analyzer = ContinuousControlAnalyzer()
+    results = analyzer.compare_continuous_methods('Pendulum-v1', num_episodes=300)

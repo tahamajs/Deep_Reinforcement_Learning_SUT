@@ -652,4 +652,3 @@ if __name__ == "__main__":
     # Run examples
     lr_results, ppo_results = run_hyperparameter_tuning_example()
     benchmark_results = run_benchmark_example()
-

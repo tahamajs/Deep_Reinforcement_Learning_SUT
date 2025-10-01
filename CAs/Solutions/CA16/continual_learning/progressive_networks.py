@@ -1,430 +1,305 @@
 """
 Progressive Networks for Continual Learning
 
-This module implements Progressive Networks, which add new neural network columns
-for each new task while keeping previous columns frozen.
+This module implements progressive networks that grow with each new task.
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Tuple, Optional, Any, Union
+import torch.optim as optim
 import numpy as np
-from collections import OrderedDict
+from typing import Dict, List, Tuple, Optional, Any, Union
+from collections import defaultdict
 
 
 class ProgressiveColumn(nn.Module):
-    """
-    A single column in a progressive network.
-
-    Each column specializes in one task and can leverage knowledge
-    from previous columns through lateral connections.
-    """
-
-    def __init__(
-        self,
-        input_size: int,
-        hidden_sizes: List[int],
-        output_size: int,
-        prev_columns: List["ProgressiveColumn"] = None,
-    ):
+    """A single column in a progressive network."""
+    
+    def __init__(self, input_dim: int, output_dim: int, hidden_dims: List[int] = [128, 128]):
         super().__init__()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.hidden_dims = hidden_dims
 
-        self.input_size = input_size
-        self.output_size = output_size
-        self.prev_columns = prev_columns or []
-
+        # Build network layers
         layers = []
-        prev_size = input_size
-
-        for hidden_size in hidden_sizes:
-            layers.extend(
-                [
-                    nn.Linear(prev_size, hidden_size),
+        prev_dim = input_dim
+        
+        for hidden_dim in hidden_dims:
+            layers.extend([
+                nn.Linear(prev_dim, hidden_dim),
                     nn.ReLU(),
-                    nn.BatchNorm1d(hidden_size),
-                ]
-            )
-            prev_size = hidden_size
-
-        layers.append(nn.Linear(prev_size, output_size))
+                nn.Dropout(0.1)
+            ])
+            prev_dim = hidden_dim
+        
+        layers.append(nn.Linear(prev_dim, output_dim))
 
         self.network = nn.Sequential(*layers)
 
-        self.lateral_weights = nn.ModuleList()
-        if self.prev_columns:
-            for prev_col in self.prev_columns:
-                self.lateral_weights.append(nn.Linear(prev_col.output_size, prev_size))
+        # Lateral connections (will be added by ProgressiveNetwork)
+        self.lateral_connections = nn.ModuleList()
+    
+    def forward(self, x: torch.Tensor, lateral_inputs: List[torch.Tensor] = None) -> torch.Tensor:
+        """Forward pass with optional lateral inputs."""
+        if lateral_inputs is None:
+            lateral_inputs = []
+        
+        # Combine input with lateral connections
+        if lateral_inputs:
+            # Concatenate lateral inputs
+            lateral_concat = torch.cat(lateral_inputs, dim=-1)
+            x = torch.cat([x, lateral_concat], dim=-1)
+        
+        return self.network(x)
+    
+    def add_lateral_connection(self, input_dim: int):
+        """Add a lateral connection from another column."""
+        lateral_layer = nn.Linear(input_dim, self.input_dim)
+        self.lateral_connections.append(lateral_layer)
+        return lateral_layer
+
+
+class LateralConnection(nn.Module):
+    """Lateral connection between progressive network columns."""
+    
+    def __init__(self, input_dim: int, output_dim: int, connection_type: str = 'linear'):
+        super().__init__()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.connection_type = connection_type
+        
+        if connection_type == 'linear':
+            self.connection = nn.Linear(input_dim, output_dim)
+        elif connection_type == 'attention':
+            self.connection = nn.MultiheadAttention(
+                embed_dim=input_dim, num_heads=4, dropout=0.1, batch_first=True
+            )
+        else:
+            raise ValueError(f"Unknown connection type: {connection_type}")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through the column."""
-        output = self.network(x)
-
-        if self.prev_columns and self.lateral_weights:
-            lateral_output = 0
-            for i, prev_col in enumerate(self.prev_columns):
-                prev_output = prev_col(x)
-                lateral_contrib = self.lateral_weights[i](prev_output)
-                lateral_output += lateral_contrib
-
-            output = output + lateral_output
-
-        return output
+        """Forward pass through lateral connection."""
+        if self.connection_type == 'linear':
+            return self.connection(x)
+        elif self.connection_type == 'attention':
+            # For attention, we need to add sequence dimension
+            x = x.unsqueeze(1)  # Add sequence dimension
+            output, _ = self.connection(x, x, x)
+            return output.squeeze(1)  # Remove sequence dimension
 
 
 class ProgressiveNetwork(nn.Module):
-    """
-    Progressive Network that grows by adding new columns for each task.
-
-    The network maintains separate columns for each task while allowing
-    knowledge transfer through lateral connections.
-    """
-
-    def __init__(
-        self,
-        input_size: int,
-        hidden_sizes: List[int],
-        num_tasks: int = 10,
-        shared_representation: bool = True,
-    ):
+    """Progressive network that grows with each new task."""
+    
+    def __init__(self, input_dim: int, output_dim: int, hidden_dims: List[int] = [128, 128]):
         super().__init__()
-
-        self.input_size = input_size
-        self.hidden_sizes = hidden_sizes
-        self.num_tasks = num_tasks
-        self.shared_representation = shared_representation
-
-        if shared_representation:
-            shared_layers = []
-            prev_size = input_size
-            for hidden_size in hidden_sizes[:-1]:  # All but last hidden layer
-                shared_layers.extend(
-                    [
-                        nn.Linear(prev_size, hidden_size),
-                        nn.ReLU(),
-                        nn.BatchNorm1d(hidden_size),
-                    ]
-                )
-                prev_size = hidden_size
-
-            self.shared_network = nn.Sequential(*shared_layers)
-            column_input_size = prev_size
-        else:
-            self.shared_network = None
-            column_input_size = input_size
-
-        self.columns: nn.ModuleList = nn.ModuleList()
-
-        self.task_output_sizes: Dict[int, int] = {}
-
-        self.current_tasks = 0
-
-    def add_task(self, task_id: int, output_size: int):
-        """
-        Add a new task column to the network.
-
-        Args:
-            task_id: Unique identifier for the task
-            output_size: Output dimension for this task
-        """
-        if task_id in self.task_output_sizes:
-            raise ValueError(f"Task {task_id} already exists")
-
-        if self.shared_representation:
-            column_input_size = (
-                self.hidden_sizes[-2] if len(self.hidden_sizes) > 1 else self.input_size
-            )
-        else:
-            column_input_size = self.input_size
-
-        prev_columns = list(self.columns) if self.current_tasks > 0 else []
-
-        new_column = ProgressiveColumn(
-            input_size=column_input_size,
-            hidden_sizes=(
-                [self.hidden_sizes[-1]]
-                if self.shared_representation
-                else self.hidden_sizes
-            ),
-            output_size=output_size,
-            prev_columns=prev_columns,
-        )
-
-        self.columns.append(new_column)
-        self.task_output_sizes[task_id] = output_size
-        self.current_tasks += 1
-
-        return new_column
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.hidden_dims = hidden_dims
+        
+        # Columns for each task
+        self.columns = nn.ModuleList()
+        self.lateral_connections = nn.ModuleList()
+        
+        # Task-specific information
+        self.task_columns = {}  # Maps task_id to column index
+        self.column_output_dims = {}  # Maps column index to output dimension
+        
+        # Training history
+        self.training_history = {
+            'task_losses': defaultdict(list),
+            'column_performances': defaultdict(list),
+            'lateral_connection_weights': defaultdict(list)
+        }
+    
+    def add_task_column(self, task_id: int, output_dim: int = None) -> int:
+        """Add a new column for a task."""
+        if output_dim is None:
+            output_dim = self.output_dim
+        
+        # Create new column
+        column = ProgressiveColumn(self.input_dim, output_dim, self.hidden_dims)
+        self.columns.append(column)
+        
+        # Add lateral connections from previous columns
+        if len(self.columns) > 1:
+            lateral_connections = []
+            for i in range(len(self.columns) - 1):
+                prev_output_dim = self.column_output_dims.get(i, self.output_dim)
+                lateral_conn = LateralConnection(prev_output_dim, self.input_dim)
+                lateral_connections.append(lateral_conn)
+            
+            self.lateral_connections.append(nn.ModuleList(lateral_connections))
+        
+        # Update tracking
+        column_idx = len(self.columns) - 1
+        self.task_columns[task_id] = column_idx
+        self.column_output_dims[column_idx] = output_dim
+        
+        return column_idx
 
     def forward(self, x: torch.Tensor, task_id: int) -> torch.Tensor:
-        """
-        Forward pass for a specific task.
-
-        Args:
-            x: Input tensor
-            task_id: Task identifier
-
-        Returns:
-            Output for the specified task
-        """
-        if task_id not in self.task_output_sizes:
-            raise ValueError(
-                f"Task {task_id} not found. Available tasks: {list(self.task_output_sizes.keys())}"
-            )
-
-        task_idx = list(self.task_output_sizes.keys()).index(task_id)
-
-        if self.shared_representation:
-            shared_repr = self.shared_network(x)
-        else:
-            shared_repr = x
-
-        return self.columns[task_idx](shared_repr)
-
-    def get_task_columns(self) -> Dict[int, ProgressiveColumn]:
-        """Get mapping of task IDs to their columns."""
-        return dict(zip(self.task_output_sizes.keys(), self.columns))
-
-    def freeze_previous_tasks(self, current_task_id: int):
-        """
-        Freeze all columns except the current task's column.
-
-        Args:
-            current_task_id: The task that should remain trainable
-        """
-        for task_id, column in zip(self.task_output_sizes.keys(), self.columns):
-            if task_id != current_task_id:
-                for param in column.parameters():
-                    param.requires_grad = False
+        """Forward pass for a specific task."""
+        if task_id not in self.task_columns:
+            raise ValueError(f"Task {task_id} not found. Add task column first.")
+        
+        column_idx = self.task_columns[task_id]
+        column = self.columns[column_idx]
+        
+        # Get lateral inputs from previous columns
+        lateral_inputs = []
+        if column_idx > 0 and column_idx - 1 < len(self.lateral_connections):
+            lateral_conns = self.lateral_connections[column_idx - 1]
+            for i, lateral_conn in enumerate(lateral_conns):
+                prev_output = self.columns[i](x, lateral_inputs=[])
+                lateral_output = lateral_conn(prev_output)
+                lateral_inputs.append(lateral_output)
+        
+        # Forward pass through target column
+        output = column(x, lateral_inputs)
+        
+        return output
+    
+    def train_task(self, dataloader, task_id: int, num_epochs: int = 10, 
+                   lr: float = 1e-3, freeze_previous: bool = True) -> List[float]:
+        """Train network on a specific task."""
+        if task_id not in self.task_columns:
+            raise ValueError(f"Task {task_id} not found. Add task column first.")
+        
+        # Setup optimizer
+        if freeze_previous:
+            # Only train the current task's column and its lateral connections
+            current_column_idx = self.task_columns[task_id]
+            trainable_params = list(self.columns[current_column_idx].parameters())
+            
+            if current_column_idx > 0 and current_column_idx - 1 < len(self.lateral_connections):
+                trainable_params.extend(list(self.lateral_connections[current_column_idx - 1].parameters()))
             else:
-                for param in column.parameters():
-                    param.requires_grad = True
-
-    def get_trainable_parameters(self, task_id: int) -> List[torch.Tensor]:
-        """
-        Get trainable parameters for a specific task.
-
-        Args:
-            task_id: Task identifier
-
-        Returns:
-            List of trainable parameters
-        """
-        task_idx = list(self.task_output_sizes.keys()).index(task_id)
-        column = self.columns[task_idx]
-
-        trainable_params = []
-        for param in column.parameters():
-            if param.requires_grad:
-                trainable_params.append(param)
-
-        return trainable_params
-
-    def get_parameter_count(self) -> Dict[str, int]:
-        """Get parameter count breakdown."""
-        total_params = sum(p.numel() for p in self.parameters())
-
-        shared_params = 0
-        if self.shared_representation:
-            shared_params = sum(p.numel() for p in self.shared_network.parameters())
-
-        column_params = 0
-        for column in self.columns:
-            column_params += sum(p.numel() for p in column.parameters())
-
-        return {
-            "total": total_params,
-            "shared": shared_params,
-            "columns": column_params,
-            "num_columns": len(self.columns),
-        }
-
-
-class ProgressiveNetworkTrainer:
-    """
-    Trainer for Progressive Networks.
-
-    Manages the training process for progressive networks across multiple tasks.
-    """
-
-    def __init__(self, network: ProgressiveNetwork, device: str = "cpu"):
-        self.network = network
-        self.device = device
-        self.task_optimizers: Dict[int, torch.optim.Optimizer] = {}
-        self.task_schedulers: Dict[int, Any] = {}
-
-        self.training_history: Dict[int, List[Dict[str, float]]] = {}
-
-    def add_task_optimizer(
-        self,
-        task_id: int,
-        optimizer_class: type = torch.optim.Adam,
-        lr: float = 1e-3,
-        **optimizer_kwargs,
-    ):
-        """
-        Add optimizer for a specific task.
-
-        Args:
-            task_id: Task identifier
-            optimizer_class: Optimizer class (e.g., torch.optim.Adam)
-            lr: Learning rate
-            **optimizer_kwargs: Additional optimizer arguments
-        """
-        if task_id not in self.network.task_output_sizes:
-            raise ValueError(f"Task {task_id} not found in network")
-
-        task_params = self.network.get_trainable_parameters(task_id)
-
-        optimizer = optimizer_class(task_params, lr=lr, **optimizer_kwargs)
-        self.task_optimizers[task_id] = optimizer
-
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
-        self.task_schedulers[task_id] = scheduler
-
-    def train_task(
-        self,
-        task_id: int,
-        train_loader: torch.utils.data.DataLoader,
-        val_loader: Optional[torch.utils.data.DataLoader] = None,
-        epochs: int = 10,
-        criterion: callable = F.cross_entropy,
-    ) -> Dict[str, Any]:
-        """
-        Train the network on a specific task.
-
-        Args:
-            task_id: Task identifier
-            train_loader: Training data loader
-            val_loader: Validation data loader (optional)
-            epochs: Number of training epochs
-            criterion: Loss function
-
-        Returns:
-            Training metrics
-        """
-        if task_id not in self.task_optimizers:
-            raise ValueError(f"No optimizer configured for task {task_id}")
-
-        optimizer = self.task_optimizers[task_id]
-        scheduler = self.task_schedulers.get(task_id)
-
-        self.network.freeze_previous_tasks(task_id)
-
-        self.network.train()
-        history = []
-
-        for epoch in range(epochs):
-            train_loss = 0.0
-            train_correct = 0
-            train_total = 0
-
-            for batch in train_loader:
-                inputs, targets = batch
-                inputs = inputs.to(self.device)
-                targets = targets.to(self.device)
-
+            # Train all parameters
+            trainable_params = list(self.parameters())
+        
+        optimizer = optim.Adam(trainable_params, lr=lr)
+        losses = []
+        
+        for epoch in range(num_epochs):
+            epoch_loss = 0.0
+            num_batches = 0
+            
+            for states, actions, rewards in dataloader:
+                states = states.to(next(self.parameters()).device)
+                actions = actions.to(next(self.parameters()).device)
+                rewards = rewards.to(next(self.parameters()).device)
+                
+                # Forward pass
+                outputs = self(states, task_id)
+                
+                # Compute loss
+                if actions.dtype == torch.long:
+                    loss = F.cross_entropy(outputs, actions)
+                else:
+                    loss = F.mse_loss(outputs, actions.float())
+                
+                # Backward pass
                 optimizer.zero_grad()
-
-                outputs = self.network(inputs, task_id)
-                loss = criterion(outputs, targets)
-
                 loss.backward()
                 optimizer.step()
 
-                train_loss += loss.item()
-                _, predicted = torch.max(outputs.data, 1)
-                train_total += targets.size(0)
-                train_correct += (predicted == targets).sum().item()
-
-            train_acc = train_correct / train_total
-            avg_train_loss = train_loss / len(train_loader)
-
-            val_acc = 0.0
-            if val_loader is not None:
-                val_acc = self._evaluate_task(task_id, val_loader)
-
-            if scheduler:
-                scheduler.step()
-
-            epoch_metrics = {
-                "epoch": epoch + 1,
-                "train_loss": avg_train_loss,
-                "train_accuracy": train_acc,
-                "val_accuracy": val_acc,
-            }
-
-            history.append(epoch_metrics)
-
-            print(
-                f"Task {task_id}, Epoch {epoch+1}/{epochs}, "
-                f"Train Loss: {avg_train_loss:.4f}, Train Acc: {train_acc:.4f}, "
-                f"Val Acc: {val_acc:.4f}"
-            )
-
-        self.training_history[task_id] = history
-
-        return {
-            "task_id": task_id,
-            "final_train_loss": history[-1]["train_loss"],
-            "final_train_accuracy": history[-1]["train_accuracy"],
-            "final_val_accuracy": history[-1]["val_accuracy"],
-            "epochs": epochs,
-        }
-
-    def _evaluate_task(
-        self, task_id: int, dataloader: torch.utils.data.DataLoader
-    ) -> float:
-        """Evaluate accuracy for a specific task."""
-        self.network.eval()
-        correct = 0
-        total = 0
-
+                epoch_loss += loss.item()
+                num_batches += 1
+            
+            avg_loss = epoch_loss / num_batches
+            losses.append(avg_loss)
+            self.training_history['task_losses'][task_id].append(avg_loss)
+        
+        return losses
+    
+    def evaluate_task(self, dataloader, task_id: int) -> Dict[str, float]:
+        """Evaluate performance on a specific task."""
+        if task_id not in self.task_columns:
+            raise ValueError(f"Task {task_id} not found.")
+        
+        self.eval()
+        total_loss = 0.0
+        correct_predictions = 0
+        total_predictions = 0
+        
         with torch.no_grad():
-            for batch in dataloader:
-                inputs, targets = batch
-                inputs = inputs.to(self.device)
-                targets = targets.to(self.device)
-
-                outputs = self.network(inputs, task_id)
-                _, predicted = torch.max(outputs.data, 1)
-
-                total += targets.size(0)
-                correct += (predicted == targets).sum().item()
-
-        return correct / total
-
-    def evaluate_all_tasks(
-        self, task_loaders: Dict[int, torch.utils.data.DataLoader]
-    ) -> Dict[int, float]:
-        """
-        Evaluate performance on all tasks.
-
-        Args:
-            task_loaders: Dictionary mapping task IDs to their data loaders
-
-        Returns:
-            Dictionary mapping task IDs to accuracy scores
-        """
-        results = {}
-
-        for task_id, loader in task_loaders.items():
-            if task_id in self.network.task_output_sizes:
-                accuracy = self._evaluate_task(task_id, loader)
-                results[task_id] = accuracy
-
-        return results
-
-    def get_network_growth_stats(self) -> Dict[str, Any]:
-        """Get statistics about network growth."""
-        param_counts = self.network.get_parameter_count()
+            for states, actions, rewards in dataloader:
+                states = states.to(next(self.parameters()).device)
+                actions = actions.to(next(self.parameters()).device)
+                
+                outputs = self(states, task_id)
+                
+                # Compute loss
+                if actions.dtype == torch.long:
+                    loss = F.cross_entropy(outputs, actions)
+                    predictions = torch.argmax(outputs, dim=-1)
+                    correct_predictions += (predictions == actions).sum().item()
+                    total_predictions += actions.size(0)
+                else:
+                    loss = F.mse_loss(outputs, actions.float())
+                
+                total_loss += loss.item()
+        
+        avg_loss = total_loss / len(dataloader)
+        accuracy = correct_predictions / total_predictions if total_predictions > 0 else 0.0
+        
+        # Update performance history
+        self.training_history['column_performances'][task_id].append(accuracy)
 
         return {
-            "total_parameters": param_counts["total"],
-            "shared_parameters": param_counts["shared"],
-            "column_parameters": param_counts["columns"],
-            "num_tasks": param_counts["num_columns"],
-            "parameters_per_task": param_counts["columns"]
-            / max(1, param_counts["num_columns"]),
-            "shared_ratio": param_counts["shared"] / max(1, param_counts["total"]),
+            'loss': avg_loss,
+            'accuracy': accuracy
         }
+    
+    def get_column_statistics(self, task_id: int) -> Dict[str, Any]:
+        """Get statistics for a specific column."""
+        if task_id not in self.task_columns:
+            return {}
+        
+        column_idx = self.task_columns[task_id]
+        
+        stats = {
+            'column_index': column_idx,
+            'output_dim': self.column_output_dims[column_idx],
+            'num_lateral_connections': len(self.lateral_connections[column_idx - 1]) if column_idx > 0 else 0,
+            'training_losses': self.training_history['task_losses'][task_id].copy(),
+            'performances': self.training_history['column_performances'][task_id].copy()
+        }
+        
+        return stats
+    
+    def get_network_statistics(self) -> Dict[str, Any]:
+        """Get overall network statistics."""
+        stats = {
+            'num_columns': len(self.columns),
+            'num_tasks': len(self.task_columns),
+            'task_columns': self.task_columns.copy(),
+            'column_output_dims': self.column_output_dims.copy(),
+            'training_history': {
+                'task_losses': dict(self.training_history['task_losses']),
+                'column_performances': dict(self.training_history['column_performances'])
+            }
+        }
+        
+        return stats
+    
+    def freeze_column(self, task_id: int):
+        """Freeze parameters of a specific column."""
+        if task_id not in self.task_columns:
+            raise ValueError(f"Task {task_id} not found.")
+        
+        column_idx = self.task_columns[task_id]
+        for param in self.columns[column_idx].parameters():
+            param.requires_grad = False
+    
+    def unfreeze_column(self, task_id: int):
+        """Unfreeze parameters of a specific column."""
+        if task_id not in self.task_columns:
+            raise ValueError(f"Task {task_id} not found.")
+        
+        column_idx = self.task_columns[task_id]
+        for param in self.columns[column_idx].parameters():
+            param.requires_grad = True
