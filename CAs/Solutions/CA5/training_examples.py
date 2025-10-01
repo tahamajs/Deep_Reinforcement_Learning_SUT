@@ -819,7 +819,7 @@ def dqn_variant_comparison() -> Dict[str, Any]:
     )
     axes[0, 1].set_xlabel("DQN Variant")
     axes[0, 1].set_ylabel("Average Improvement (%)")
-    axes[0, 1].set_title("Performance Improvement Over Vanilla DQN") Vanilla DQN")
+    axes[0, 1].set_title("Performance Improvement Over Vanilla DQN")
     axes[0, 1].set_xticks(range(len(improvement_data)))
     axes[0, 1].set_xticklabels(list(improvement_data.keys()), rotation=45, ha="right")
     axes[0, 1].grid(True, alpha=0.3)
