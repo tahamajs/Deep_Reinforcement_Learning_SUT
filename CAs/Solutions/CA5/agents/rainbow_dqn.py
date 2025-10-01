@@ -4,7 +4,12 @@ Rainbow DQN Implementation
 
 This module implements Rainbow DQN which combines multiple DQN improvements:
 - Double DQN (addresses overestimation)
-- Dueling DQN (separates value and advantage)
+- Dueling DQN (separates value a    def get_action(self, state, training=True):
+        \"\"\"Rainbow action selection with noise reset\"\"\"
+        # Reset noise for exploration
+        self.q_network.reset_noise()
+
+        return super().get_action(state, training)antage)
 - Prioritized Experience Replay (improves sample efficiency)
 - Multi-step learning (bootstrapped n-step returns)
 - Distributional RL (learns value distributions)
@@ -429,7 +434,7 @@ class RainbowAnalysis:
                 episode_q_values.append(q_values)
 
                 # Take action
-                action = agent.act(state)
+                action = agent.get_action(state, training=False)
                 next_state, reward, terminated, truncated, _ = env.step(action)
                 done = terminated or truncated
                 state = next_state

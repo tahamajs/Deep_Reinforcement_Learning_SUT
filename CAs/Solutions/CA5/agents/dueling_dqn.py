@@ -201,7 +201,7 @@ class DuelingAnalysis:
                     episode_q_values.append(value + (advantages - np.mean(advantages)))
 
                 # Take action
-                action = agent.act(state)
+                action = agent.get_action(state, training=False)
                 next_state, reward, terminated, truncated, _ = env.step(action)
                 done = terminated or truncated
                 state = next_state
