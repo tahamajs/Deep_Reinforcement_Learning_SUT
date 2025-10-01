@@ -11,6 +11,7 @@ from .multi_modal_env import (
 
 __all__ = [
     "MultiModalGridWorld",
-    "MultiModalWrapper", 
+    "MultiModalWrapper",
     "PromptTemplate",
 ]
+

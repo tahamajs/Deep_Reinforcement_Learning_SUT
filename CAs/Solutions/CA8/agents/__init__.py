@@ -12,8 +12,9 @@ from .causal_rl_agent import (
 
 __all__ = [
     "CausalGraph",
-    "CausalDiscovery", 
+    "CausalDiscovery",
     "CausalRLAgent",
     "CounterfactualRLAgent",
     "CausalReasoningNetwork",
 ]
+

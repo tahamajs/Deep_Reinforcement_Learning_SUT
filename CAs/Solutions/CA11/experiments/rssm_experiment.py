@@ -1,290 +1,207 @@
 """
-RSSM Training Experiment
+RSSM Experiment Script
+
+This module provides a complete experiment script for training and evaluating
+Recurrent State Space Models on sequence environments.
 """
 
-import torch
 import numpy as np
-from tqdm import tqdm
+import torch
 import matplotlib.pyplot as plt
+from typing import Dict, Any, Optional
+import argparse
+import json
+from pathlib import Path
 
-from ..models.rssm import RecurrentStateSpaceModel
-from ..models.trainers import RSSMTrainer
+from models.rssm import RSSM
+from models.trainers import RSSMTrainer
+
 from environments.sequence_environment import SequenceEnvironment
-from utils.data_collection import collect_sequence_data, prepare_rssm_batch
+
+from utils.data_collection import collect_sequence_data
 from utils.visualization import plot_rssm_training
 
 
-def run_rssm_experiment(config):
-    """Run complete RSSM training experiment"""
+def run_rssm_experiment(config: Dict[str, Any]) -> tuple[RSSM, RSSMTrainer]:
+    """
+    Run a complete RSSM experiment.
 
-    print("=== RSSM Training Experiment ===")
-    print(f"Environment: {config['env_name']}")
-    print(f"Training steps: {config['train_steps']}")
-    print(f"Batch size: {config['batch_size']}")
-    print(f"Sequence length: {config['sequence_length']}")
+    Args:
+        config: Experiment configuration dictionary
 
+    Returns:
+        Tuple of (trained_rssm, trainer)
+    """
+    # Set random seeds
+    np.random.seed(config.get("seed", 42))
+    torch.manual_seed(config.get("seed", 42))
+
+    # Setup device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    if config["env_name"] == "sequence":
-        env = SequenceEnvironment(memory_size=config["memory_size"])
-    else:
-        raise ValueError(f"Unknown environment: {config['env_name']}")
-
-    print("\nCollecting sequence training data...")
-    train_data = collect_sequence_data(
-        env, config["data_collection_episodes"], config["episode_length"]
+    # Create environment
+    env = SequenceEnvironment(
+        memory_size=config.get("memory_size", 5),
+        sequence_length=config.get("sequence_length", 20),
     )
 
+    print(f"Environment: {env.name}")
+    print(f"Observation space: {env.observation_space.shape}")
+    print(f"Action space: {env.action_space.shape}")
+
+    # Collect data
+    print("Collecting sequence data...")
+    seq_data = collect_sequence_data(
+        env=env,
+        episodes=config["data_collection_episodes"],
+        episode_length=config.get("sequence_length", 20),
+        seed=config.get("seed", 42),
+    )
+
+    print(f"Collected {len(seq_data)} episodes")
+
+    # Create RSSM
     obs_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.shape[0]
-    state_dim = config["state_dim"]
+    action_dim = 1  # Discrete actions
+    latent_dim = config["latent_dim"]
     hidden_dim = config["hidden_dim"]
 
-    rssm = RecurrentStateSpaceModel(obs_dim, action_dim, state_dim, hidden_dim).to(
-        device
+    rssm = RSSM(
+        obs_dim=obs_dim,
+        action_dim=action_dim,
+        latent_dim=latent_dim,
+        hidden_dim=hidden_dim,
+        stochastic_size=config.get("stochastic_size", 32),
+        rnn_type=config.get("rnn_type", "gru"),
+    ).to(device)
+
+    print(f"RSSM created:")
+    print(f"- Observation dim: {obs_dim}")
+    print(f"- Action dim: {action_dim}")
+    print(f"- Latent dim: {latent_dim}")
+    print(f"- Hidden dim: {hidden_dim}")
+    print(f"- Stochastic size: {config.get('stochastic_size', 32)}")
+
+    # Create trainer
+    trainer = RSSMTrainer(
+        rssm=rssm, learning_rate=config["learning_rate"], device=device
     )
 
-    trainer = RSSMTrainer(rssm, config["learning_rate"], device)
+    # Training loop
+    print("Starting training...")
+    best_loss = float("inf")
+    patience = config.get("patience", 50)
+    patience_counter = 0
 
-    print("\nTraining RSSM...")
-    pbar = tqdm(range(config["train_steps"]), desc="Training")
-
-    for step in pbar:
-        batch = prepare_rssm_batch(
-            train_data, config["batch_size"], config["sequence_length"]
+    for epoch in range(config["train_epochs"]):
+        # Train epoch
+        train_losses = trainer.train_epoch(
+            data_loader=None,  # We'll use custom training
+            num_batches=config.get("batches_per_epoch", 100),
         )
 
-        for key in batch:
-            batch[key] = batch[key].to(device)
+        # Print progress
+        if (epoch + 1) % config.get("print_interval", 10) == 0:
+            print(f"Epoch {epoch+1}/{config['train_epochs']}:")
+            print(f"  Train Loss: {train_losses['total_loss']:.4f}")
 
-        losses = trainer.train_step(batch)
+        # Early stopping
+        if train_losses["total_loss"] < best_loss:
+            best_loss = train_losses["total_loss"]
+            patience_counter = 0
+        else:
+            patience_counter += 1
 
-        if step % 100 == 0:
-            pbar.set_postfix(
-                {
-                    "Total": f"{losses['total']:.4f}",
-                    "Reconstruction": f"{losses['reconstruction']:.4f}",
-                    "KL": f"{losses['kl_divergence']:.4f}",
-                    "Reward": f"{losses['reward']:.4f}",
-                }
-            )
+        if patience_counter >= patience:
+            print(f"Early stopping at epoch {epoch+1}")
+            break
 
-    print("\nTraining completed!")
+    print("Training completed!")
 
-    print("\nGenerating analysis plots...")
-    plot_rssm_training(trainer, f"RSSM Training - {config['env_name']}")
+    # Generate plots
+    if config.get("save_plots", True):
+        save_dir = Path(config.get("save_dir", "results"))
+        save_dir.mkdir(exist_ok=True)
 
-    print("\nTesting imagination capability...")
-    test_imagination(rssm, env, device, config["imagination_steps"])
+        # Training progress
+        plot_rssm_training(
+            trainer,
+            title=f"RSSM Training - {env.name}",
+            save_path=save_dir / "rssm_training_progress.png",
+        )
+
+    # Save model
+    if config.get("save_model", True):
+        save_dir = Path(config.get("save_dir", "results"))
+        save_dir.mkdir(exist_ok=True)
+
+        torch.save(
+            {
+                "rssm_state_dict": rssm.state_dict(),
+                "config": config,
+                "final_loss": best_loss,
+            },
+            save_dir / "rssm_model.pth",
+        )
 
     return rssm, trainer
 
 
-def test_imagination(rssm, env, device, imagination_steps):
-    """Test RSSM imagination capability"""
-
-    rssm.eval()
-
-    obs, _ = env.reset()
-    obs_tensor = (
-        torch.FloatTensor(obs).unsqueeze(0).unsqueeze(0).to(device)
-    )  # [1, 1, obs_dim]
-
-    hidden = torch.zeros(1, rssm.hidden_dim).to(device)
-
-    imagined_states = [obs]
-    imagined_rewards = []
-    imagined_actions = []
-
-    print(f"Imagining {imagination_steps} steps...")
-
-    for step in range(imagination_steps):
-        action = env.sample_action()
-        action_tensor = torch.FloatTensor(action).unsqueeze(0).unsqueeze(0).to(device)
-
-        with torch.no_grad():
-            next_obs_pred, reward_pred, next_hidden = rssm.imagine(
-                obs_tensor, action_tensor, hidden
-            )
-
-        imagined_states.append(next_obs_pred.squeeze(0).squeeze(0).cpu().numpy())
-        imagined_rewards.append(reward_pred.squeeze(0).squeeze(0).cpu().numpy())
-        imagined_actions.append(action)
-
-        obs_tensor = next_obs_pred
-        hidden = next_hidden
-
-    plt.figure(figsize=(15, 5))
-
-    plt.subplot(1, 3, 1)
-    imagined_states = np.array(imagined_states)
-    for i in range(min(4, imagined_states.shape[1])):
-        plt.plot(imagined_states[:, i], label=f"State {i}")
-    plt.title("Imagined State Trajectory")
-    plt.xlabel("Step")
-    plt.ylabel("State Value")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-
-    plt.subplot(1, 3, 2)
-    plt.plot(imagined_rewards, "g-", linewidth=2)
-    plt.title("Imagined Reward Trajectory")
-    plt.xlabel("Step")
-    plt.ylabel("Reward")
-    plt.grid(True, alpha=0.3)
-
-    plt.subplot(1, 3, 3)
-    imagined_actions = np.array(imagined_actions)
-    for i in range(min(2, imagined_actions.shape[1])):
-        plt.plot(imagined_actions[:, i], label=f"Action {i}")
-    plt.title("Action Trajectory")
-    plt.xlabel("Step")
-    plt.ylabel("Action Value")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    plt.suptitle("RSSM Imagination Test", fontsize=16, y=0.98)
-    plt.show()
-
-    print(
-        f"Imagination completed: {len(imagined_states)-1} steps, total imagined reward: {sum(imagined_rewards):.2f}"
+def main():
+    """Main function for running RSSM experiments."""
+    parser = argparse.ArgumentParser(description="RSSM Experiment")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="configs/rssm_config.json",
+        help="Path to configuration file",
+    )
+    parser.add_argument("--latent_dim", type=int, default=32, help="Latent dimension")
+    parser.add_argument("--hidden_dim", type=int, default=256, help="Hidden dimension")
+    parser.add_argument(
+        "--train_epochs", type=int, default=100, help="Number of training epochs"
+    )
+    parser.add_argument(
+        "--learning_rate", type=float, default=1e-3, help="Learning rate"
+    )
+    parser.add_argument(
+        "--save_dir", type=str, default="results", help="Directory to save results"
     )
 
+    args = parser.parse_args()
 
-def compare_real_vs_imagined(rssm, env, device, steps=50):
-    """Compare real environment trajectory vs RSSM imagination"""
+    # Default configuration
+    config = {
+        "latent_dim": args.latent_dim,
+        "hidden_dim": args.hidden_dim,
+        "stochastic_size": 32,
+        "rnn_type": "gru",
+        "learning_rate": args.learning_rate,
+        "train_epochs": args.train_epochs,
+        "data_collection_episodes": 100,
+        "sequence_length": 20,
+        "memory_size": 5,
+        "batches_per_epoch": 100,
+        "patience": 50,
+        "print_interval": 10,
+        "save_plots": True,
+        "save_model": True,
+        "save_dir": args.save_dir,
+        "seed": 42,
+    }
 
-    rssm.eval()
+    # Load configuration file if provided
+    if args.config and Path(args.config).exists():
+        with open(args.config, "r") as f:
+            file_config = json.load(f)
+            config.update(file_config)
 
-    real_obs_list = []
-    real_actions = []
-    real_rewards = []
+    # Run experiment
+    rssm, trainer = run_rssm_experiment(config)
 
-    obs, _ = env.reset()
-    real_obs_list.append(obs)
-
-    for _ in range(steps):
-        action = env.sample_action()
-        next_obs, reward, terminated, truncated, _ = env.step(action)
-
-        real_actions.append(action)
-        real_rewards.append(reward)
-        real_obs_list.append(next_obs)
-
-        obs = next_obs
-        if terminated or truncated:
-            break
-
-    imagined_obs_list = []
-    imagined_rewards = []
-
-    obs_tensor = (
-        torch.FloatTensor(real_obs_list[0]).unsqueeze(0).unsqueeze(0).to(device)
-    )
-    hidden = torch.zeros(1, rssm.hidden_dim).to(device)
-    imagined_obs_list.append(real_obs_list[0])
-
-    for action in real_actions[: len(imagined_obs_list) - 1]:
-        action_tensor = torch.FloatTensor(action).unsqueeze(0).unsqueeze(0).to(device)
-
-        with torch.no_grad():
-            next_obs_pred, reward_pred, next_hidden = rssm.imagine(
-                obs_tensor, action_tensor, hidden
-            )
-
-        imagined_obs_list.append(next_obs_pred.squeeze(0).squeeze(0).cpu().numpy())
-        imagined_rewards.append(reward_pred.squeeze(0).squeeze(0).cpu().numpy())
-
-        obs_tensor = next_obs_pred
-        hidden = next_hidden
-
-    plt.figure(figsize=(15, 10))
-
-    real_obs_array = np.array(real_obs_list)
-    imagined_obs_array = np.array(imagined_obs_list)
-
-    plt.subplot(2, 2, 1)
-    for i in range(min(4, real_obs_array.shape[1])):
-        plt.plot(
-            real_obs_array[:, i],
-            "b-",
-            alpha=0.7,
-            label=f"Real State {i}" if i == 0 else "",
-        )
-        plt.plot(
-            imagined_obs_array[:, i],
-            "r--",
-            alpha=0.7,
-            label=f"Imagined State {i}" if i == 0 else "",
-        )
-    plt.title("Real vs Imagined States")
-    plt.xlabel("Step")
-    plt.ylabel("State Value")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-
-    plt.subplot(2, 2, 2)
-    plt.plot(real_rewards, "b-", linewidth=2, label="Real Reward")
-    plt.plot(imagined_rewards, "r--", linewidth=2, label="Imagined Reward")
-    plt.title("Real vs Imagined Rewards")
-    plt.xlabel("Step")
-    plt.ylabel("Reward")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-
-    plt.subplot(2, 2, 3)
-    min_len = min(len(real_obs_array), len(imagined_obs_array))
-    prediction_errors = np.mean(
-        (real_obs_array[:min_len] - imagined_obs_array[:min_len]) ** 2, axis=1
-    )
-    plt.plot(prediction_errors, "g-", linewidth=2)
-    plt.title("State Prediction Error")
-    plt.xlabel("Step")
-    plt.ylabel("MSE")
-    plt.grid(True, alpha=0.3)
-
-    plt.subplot(2, 2, 4)
-    min_reward_len = min(len(real_rewards), len(imagined_rewards))
-    reward_errors = (
-        np.array(real_rewards[:min_reward_len])
-        - np.array(imagined_rewards[:min_reward_len])
-    ) ** 2
-    plt.plot(reward_errors, "orange", linewidth=2)
-    plt.title("Reward Prediction Error")
-    plt.xlabel("Step")
-    plt.ylabel("MSE")
-    plt.grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    plt.suptitle("Real vs Imagined Trajectory Comparison", fontsize=16, y=0.98)
-    plt.show()
-
-    print(f"Comparison completed: {min_len} steps")
-    print(f"Mean state prediction error: {np.mean(prediction_errors):.4f}")
-    print(f"Mean reward prediction error: {np.mean(reward_errors):.4f}")
+    print("Experiment completed successfully!")
 
 
 if __name__ == "__main__":
-    config = {
-        "env_name": "sequence",
-        "state_dim": 32,
-        "hidden_dim": 128,
-        "learning_rate": 1e-3,
-        "batch_size": 32,
-        "sequence_length": 50,
-        "train_steps": 2000,
-        "data_collection_episodes": 100,
-        "episode_length": 100,
-        "memory_size": 5,
-        "imagination_steps": 50,
-    }
-
-    rssm, trainer = run_rssm_experiment(config)
-
-    print("\nRunning real vs imagined comparison...")
-    env = SequenceEnvironment(memory_size=config["memory_size"])
-    compare_real_vs_imagined(
-        rssm, env, torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    )
+    main()

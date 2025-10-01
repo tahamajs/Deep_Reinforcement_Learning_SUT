@@ -18,20 +18,16 @@ class VAEEncoder(nn.Module):
         super().__init__()
         self.obs_dim = obs_dim
         self.latent_dim = latent_dim
-        
+
         # Build encoder network
         layers = []
         prev_dim = obs_dim
         for hidden_dim in hidden_dims:
-            layers.extend([
-                nn.Linear(prev_dim, hidden_dim),
-                nn.ReLU(),
-                nn.Dropout(0.1)
-            ])
+            layers.extend([nn.Linear(prev_dim, hidden_dim), nn.ReLU(), nn.Dropout(0.1)])
             prev_dim = hidden_dim
-        
+
         self.encoder = nn.Sequential(*layers)
-        
+
         # Output layers for mean and log variance
         self.mean_layer = nn.Linear(prev_dim, latent_dim)
         self.log_var_layer = nn.Linear(prev_dim, latent_dim)
@@ -57,18 +53,14 @@ class VAEDecoder(nn.Module):
         super().__init__()
         self.latent_dim = latent_dim
         self.obs_dim = obs_dim
-        
+
         # Build decoder network
         layers = []
         prev_dim = latent_dim
         for hidden_dim in hidden_dims:
-            layers.extend([
-                nn.Linear(prev_dim, hidden_dim),
-                nn.ReLU(),
-                nn.Dropout(0.1)
-            ])
+            layers.extend([nn.Linear(prev_dim, hidden_dim), nn.ReLU(), nn.Dropout(0.1)])
             prev_dim = hidden_dim
-        
+
         layers.append(nn.Linear(prev_dim, obs_dim))
         self.decoder = nn.Sequential(*layers)
 
@@ -84,7 +76,7 @@ class VariationalAutoencoder(nn.Module):
         super().__init__()
         self.obs_dim = obs_dim
         self.latent_dim = latent_dim
-        
+
         self.encoder = VAEEncoder(obs_dim, latent_dim, hidden_dims)
         self.decoder = VAEDecoder(latent_dim, obs_dim, hidden_dims[::-1])
 
@@ -114,15 +106,15 @@ class VariationalAutoencoder(nn.Module):
         obs: torch.Tensor,
         mean: torch.Tensor,
         log_var: torch.Tensor,
-        beta: float = 1.0
+        beta: float = 1.0,
     ) -> torch.Tensor:
         """Compute VAE loss (reconstruction + KL divergence)"""
         # Reconstruction loss (MSE)
-        recon_loss = F.mse_loss(reconstruction, obs, reduction='sum')
-        
+        recon_loss = F.mse_loss(reconstruction, obs, reduction="sum")
+
         # KL divergence loss
         kl_loss = -0.5 * torch.sum(1 + log_var - mean.pow(2) - log_var.exp())
-        
+
         return recon_loss + beta * kl_loss
 
     def kl_divergence(self, mean: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:

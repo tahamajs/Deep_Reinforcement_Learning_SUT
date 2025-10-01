@@ -12,7 +12,8 @@ from .metrics import (
 
 __all__ = [
     "CausalDiscoveryMetrics",
-    "MultiModalMetrics", 
+    "MultiModalMetrics",
     "CausalRLMetrics",
     "IntegratedMetrics",
 ]
+

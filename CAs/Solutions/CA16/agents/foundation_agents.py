@@ -634,3 +634,4 @@ class FoundationModelTrainer:
         self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         self.step_count = checkpoint['step_count']
         return checkpoint.get('metadata', {})
+

@@ -404,7 +404,7 @@ def demonstrate_classical_planning():
     tabular_model = TabularModel(env.num_states, env.num_actions)
 
     # Collect experience
-    n_episodes = 1000
+    n_episodes = 200
     experience_data = []
 
     print("\n1. Collecting experience for model learning...")
@@ -439,12 +439,12 @@ def demonstrate_classical_planning():
     # Train neural model
     print("\n2. Training neural model...")
     neural_model = NeuralModel(
-        env.num_states, env.num_actions, hidden_dim=64, ensemble_size=3
+        env.num_states, env.num_actions, hidden_dim=64, ensemble_size=1
     ).to(device)
     trainer = ModelTrainer(neural_model, lr=1e-3)
 
     trainer.train_batch(
-        (states_onehot, actions, next_states_onehot, rewards), epochs=50, batch_size=64
+        (states_onehot, actions, next_states_onehot, rewards), epochs=15, batch_size=64
     )
 
     # Use the tabular model we learned earlier
