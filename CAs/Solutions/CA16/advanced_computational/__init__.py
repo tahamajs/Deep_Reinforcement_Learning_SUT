@@ -12,36 +12,24 @@ This module contains implementations of advanced computational approaches includ
 from .quantum_rl import (
     QuantumInspiredRL,
     QuantumStateRepresentation,
-    QuantumAmplitudeEstimation
+    QuantumAmplitudeEstimation,
 )
 
-from .neuromorphic import (
-    NeuromorphicNetwork,
-    SpikingNeuralNetwork,
-    STDPLearning
-)
+from .neuromorphic import NeuromorphicNetwork, SpikingNeuralNetwork, STDPLearning
 
-from .federated_rl import (
-    FederatedRLAggregator,
-    FederatedClient,
-    FederatedServer
-)
+from .federated_rl import FederatedRLAggregator, FederatedClient, FederatedServer
 
-from .energy_efficient import (
-    EnergyEfficientRL,
-    AdaptiveComputation,
-    EarlyExitNetwork
-)
+from .energy_efficient import EnergyEfficientRL, AdaptiveComputation, EarlyExitNetwork
 
 from .hybrid_computing import (
     HybridComputingAgent,
     QuantumClassicalHybrid,
-    NeuromorphicClassicalHybrid
+    NeuromorphicClassicalHybrid,
 )
 
 __all__ = [
     "QuantumInspiredRL",
-    "QuantumStateRepresentation", 
+    "QuantumStateRepresentation",
     "QuantumAmplitudeEstimation",
     "NeuromorphicNetwork",
     "SpikingNeuralNetwork",

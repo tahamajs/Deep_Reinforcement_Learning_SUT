@@ -11,6 +11,6 @@ from .dreamer_experiment import run_dreamer_experiment
 
 __all__ = [
     "run_world_model_experiment",
-    "run_rssm_experiment", 
-    "run_dreamer_experiment"
+    "run_rssm_experiment",
+    "run_dreamer_experiment",
 ]

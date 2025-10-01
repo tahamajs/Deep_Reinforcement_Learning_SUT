@@ -19,7 +19,7 @@ from .comprehensive_demonstrations import (
 
 __all__ = [
     "demonstrate_causal_graph",
-    "demonstrate_causal_discovery", 
+    "demonstrate_causal_discovery",
     "demonstrate_causal_rl",
     "demonstrate_multi_modal_env",
     "demonstrate_integrated_system",

@@ -1,21 +1,11 @@
 """
-Analysis module for CA8: Causal Reasoning and Multi-Modal RL
+Analysis module for CA8: Causal Reasoning and Multi-Modal Reinforcement Learning
 """
 
-from .visualization import (
-    plot_causal_graph_evolution,
-    plot_multi_modal_attention_patterns,
-    plot_causal_intervention_analysis,
-    comprehensive_causal_multi_modal_comparison,
-    causal_discovery_algorithm_comparison,
-    multi_modal_fusion_strategy_comparison,
+from .comprehensive_analysis import (
+    run_comprehensive_analysis,
 )
 
 __all__ = [
-    'plot_causal_graph_evolution',
-    'plot_multi_modal_attention_patterns',
-    'plot_causal_intervention_analysis',
-    'comprehensive_causal_multi_modal_comparison',
-    'causal_discovery_algorithm_comparison',
-    'multi_modal_fusion_strategy_comparison',
+    "run_comprehensive_analysis",
 ]

@@ -14,31 +14,27 @@ from .ewc import ElasticWeightConsolidation, EWCNetwork
 from .progressive_networks import (
     ProgressiveNetwork,
     ProgressiveColumn,
-    LateralConnection
+    LateralConnection,
 )
 
 from .experience_replay import (
     ExperienceReplay,
     PrioritizedExperienceReplay,
-    ContinualExperienceReplay
+    ContinualExperienceReplay,
 )
 
-from .meta_learning import (
-    MAML,
-    Reptile,
-    MetaLearner
-)
+from .meta_learning import MAML, Reptile, MetaLearner
 
 from .dynamic_architectures import (
     DynamicNetwork,
     TaskSpecificHead,
-    KnowledgeDistillation
+    KnowledgeDistillation,
 )
 
 from .continual_agent import (
     ContinualLearningAgent,
     LifelongLearner,
-    TransferLearningAgent
+    TransferLearningAgent,
 )
 
 __all__ = [
