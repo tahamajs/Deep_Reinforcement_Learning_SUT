@@ -1,12 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from ..models.models import TabularModel, NeuralModel, ModelTrainer, device
-from ..environments.environments import SimpleGridWorld
-from ..agents.classical_planning import ModelBasedPlanner
-from ..agents.dyna_q import DynaQAgent
-from ..agents.mcts import MCTSAgent
-from ..agents.mpc import MPCAgent
 import torch
+import pandas as pd
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from models.models import TabularModel, NeuralModel, ModelTrainer, device
+from environments.environments import SimpleGridWorld
+from agents.classical_planning import ModelBasedPlanner
+from agents.dyna_q import DynaQAgent
+from agents.mcts import MCTSAgent
+from agents.mpc import MPCAgent
 
 
 class ModelBasedComparisonFramework:

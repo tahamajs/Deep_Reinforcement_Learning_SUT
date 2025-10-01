@@ -1,427 +1,292 @@
 """
-Collaborative Agents
+Collaborative Agent for Human-AI Interaction
 
-This module provides agents that collaborate with humans:
-- Human-AI partnerships
-- Collaborative decision making
-- Interactive learning agents
+This module implements collaborative agents that work with humans.
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Any, Callable
-from collections import defaultdict, deque
-import threading
-import time
-
-from .preference_model import PreferenceRewardModel, HumanPreference
-from .feedback_collector import HumanFeedbackCollector
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from typing import Dict, List, Tuple, Optional, Any, Union
+from .preference_model import HumanPreference, PreferenceLearner
+from .feedback_collector import HumanFeedbackCollector, TrustModel
 
 
 class CollaborativeAgent:
-    """Agent that collaborates with humans for decision making."""
-
-    def __init__(
-        self,
-        state_dim: int,
-        action_dim: int,
-        reward_model: PreferenceRewardModel,
-        feedback_collector: HumanFeedbackCollector,
-        exploration_rate: float = 0.1,
-        collaboration_threshold: float = 0.7,
-    ):
+    """Agent that collaborates with humans."""
+    
+    def __init__(self, state_dim: int, action_dim: int, lr: float = 1e-3):
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.reward_model = reward_model
-        self.feedback_collector = feedback_collector
-        self.exploration_rate = exploration_rate
-        self.collaboration_threshold = collaboration_threshold
 
-        self.policy_network = nn.Sequential(
+        # Policy network
+        self.policy = nn.Sequential(
             nn.Linear(state_dim, 128),
             nn.ReLU(),
             nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(128, action_dim),
-        ).to(device)
-
-        self.value_network = nn.Sequential(
-            nn.Linear(state_dim, 128), nn.ReLU(), nn.Linear(128, 1)
-        ).to(device)
-
-        self.human_trust_level = 0.5
-        self.collaboration_history = deque(maxlen=100)
-        self.pending_feedback_requests = []
-
-        self.optimizer = torch.optim.Adam(
-            list(self.policy_network.parameters())
-            + list(self.value_network.parameters()),
-            lr=1e-3,
+            nn.Linear(128, action_dim)
         )
-
-        self.experience_buffer = deque(maxlen=10000)
-
-    def act(
-        self, state: np.ndarray, request_human_input: bool = True
-    ) -> Tuple[int, Dict]:
-        """Select action with potential human collaboration."""
-        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
-
-        ai_action, ai_info = self._get_ai_action(state_tensor)
-
-        should_collaborate = self._should_collaborate(state, ai_info)
-
-        if should_collaborate and request_human_input:
-            human_action = self._request_human_action(state, ai_action)
-            if human_action is not None:
-                action = human_action
-                collaboration_info = {
-                    "collaborated": True,
-                    "ai_suggestion": ai_action,
-                    "human_override": True,
-                    "trust_level": self.human_trust_level,
-                }
-            else:
-                action = ai_action
-                collaboration_info = {
-                    "collaborated": True,
-                    "ai_suggestion": ai_action,
-                    "human_override": False,
-                    "trust_level": self.human_trust_level,
-                }
-        else:
-            action = ai_action
-            collaboration_info = {
-                "collaborated": False,
-                "ai_suggestion": ai_action,
-                "trust_level": self.human_trust_level,
-            }
-
-        self.collaboration_history.append(collaboration_info)
-
-        return action, {**ai_info, **collaboration_info}
-
-    def _get_ai_action(self, state_tensor: torch.Tensor) -> Tuple[int, Dict]:
-        """Get action from AI policy."""
-        self.policy_network.eval()
-        self.value_network.eval()
-
-        with torch.no_grad():
-            action_logits = self.policy_network(state_tensor)
-            value = self.value_network(state_tensor)
-
-            if np.random.random() < self.exploration_rate:
-                action = np.random.randint(self.action_dim)
-            else:
-                action = torch.argmax(action_logits, dim=-1).item()
-
-            action_probs = F.softmax(action_logits, dim=-1).squeeze().cpu().numpy()
-
-        info = {
-            "action_logits": action_logits.squeeze().cpu().numpy(),
-            "action_probs": action_probs,
-            "value": value.item(),
-            "entropy": -np.sum(action_probs * np.log(action_probs + 1e-8)),
+        
+        self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
+        
+        # Human collaboration components
+        self.preference_learner = PreferenceLearner(state_dim, action_dim, lr)
+        self.feedback_collector = HumanFeedbackCollector()
+        self.trust_model = TrustModel(state_dim, action_dim)
+        
+        # Collaboration parameters
+        self.collaboration_threshold = 0.3  # When to ask for human help
+        self.confidence_history = []
+        
+        # Training history
+        self.training_history = {
+            'losses': [],
+            'rewards': [],
+            'collaboration_events': []
         }
-
-        return action, info
-
-    def _should_collaborate(self, state: np.ndarray, ai_info: Dict) -> bool:
-        """Decide whether to request human collaboration."""
-        entropy = ai_info["entropy"]
-        high_uncertainty = entropy > 1.0  # Threshold for high uncertainty
-
-        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
+    
+    def select_action(self, state: torch.Tensor, human_available: bool = False) -> Tuple[int, float]:
+        """Select action with optional human collaboration."""
         with torch.no_grad():
-            reward_pred = self.reward_model.predict_reward(
-                state_tensor, torch.zeros(1, self.action_dim).to(device)
-            )
-            novelty_score = 1.0 / (
-                1.0 + abs(reward_pred.item())
-            )  # Higher when reward is close to 0
-
-        trust_factor = (
-            1.0 - self.human_trust_level
-        )  # More collaboration when trust is low
-
-        recent_success_rate = self._get_recent_collaboration_success()
-
-        collaboration_score = (
-            0.4 * (entropy / 2.0)  # Normalized entropy
-            + 0.3 * novelty_score
-            + 0.2 * trust_factor
-            + 0.1 * (1.0 - recent_success_rate)
-        )
-
-        return collaboration_score > self.collaboration_threshold
-
-    def _request_human_action(
-        self, state: np.ndarray, ai_suggestion: int
-    ) -> Optional[int]:
-        """Request human action input."""
-        print(
-            f"Requesting human input for state: {state[:5]}... AI suggests action {ai_suggestion}"
-        )
-
-        return None
-
-    def _get_recent_collaboration_success(self) -> float:
-        """Get success rate of recent collaborations."""
-        if len(self.collaboration_history) == 0:
-            return 0.5
-
-        recent = list(self.collaboration_history)[-10:]  # Last 10 collaborations
-        successful = sum(1 for c in recent if c.get("human_override", False))
-        return successful / len(recent) if recent else 0.5
-
-    def learn_from_feedback(self, feedback_batch: List[HumanFeedback]):
-        """Learn from human feedback."""
-        for feedback in feedback_batch:
-            if feedback.feedback_type == "preference":
-                self._learn_from_preference(feedback.content)
-            elif feedback.feedback_type == "correction":
-                self._learn_from_correction(feedback.content)
-            elif feedback.feedback_type == "demonstration":
-                self._learn_from_demonstration(feedback.content)
-
-    def _learn_from_preference(self, preference: HumanPreference):
-        """Learn from preference feedback."""
-        self.reward_model.loss_function(
-            self.reward_model.forward([preference.option_a], [preference.option_b]),
-            [preference],
-        )
-
-        self.human_trust_level = min(1.0, self.human_trust_level + 0.01)
-
-    def _learn_from_correction(self, correction: Dict):
-        """Learn from correction feedback."""
-        incorrect_action = correction.get("incorrect_action")
-        correct_action = correction.get("correct_action")
-
-        if incorrect_action is not None and correct_action is not None:
-            self.human_trust_level = min(1.0, self.human_trust_level + 0.05)
-
-    def _learn_from_demonstration(self, demonstration: Dict):
-        """Learn from human demonstration."""
-        states = demonstration.get("states", [])
-        actions = demonstration.get("actions", [])
-        rewards = demonstration.get("rewards", [])
-
-        for s, a, r in zip(states, actions, rewards):
-            self.experience_buffer.append(
-                {"state": s, "action": a, "reward": r, "demonstration": True}
-            )
-
-        self.human_trust_level = min(1.0, self.human_trust_level + 0.02)
-
-    def update_policy(self, batch_size: int = 32, gamma: float = 0.99):
-        """Update policy using experience replay."""
-        if len(self.experience_buffer) < batch_size:
-            return
-
-        batch_indices = np.random.choice(
-            len(self.experience_buffer), batch_size, replace=False
-        )
-        batch = [self.experience_buffer[i] for i in batch_indices]
-
-        states = torch.FloatTensor([exp["state"] for exp in batch]).to(device)
-        actions = torch.LongTensor([exp["action"] for exp in batch]).to(device)
-        rewards = torch.FloatTensor([exp["reward"] for exp in batch]).to(device)
-
-        with torch.no_grad():
-            next_values = self.value_network(states).squeeze()
-            targets = rewards + gamma * next_values
-
-        current_values = self.value_network(states).squeeze()
-        value_loss = F.mse_loss(current_values, targets)
-
-        action_logits = self.policy_network(states)
-        action_log_probs = F.log_softmax(action_logits, dim=-1)
-        selected_log_probs = action_log_probs.gather(1, actions.unsqueeze(1)).squeeze()
-
-        advantages = targets - current_values.detach()
-        policy_loss = -(selected_log_probs * advantages).mean()
-
-        total_loss = policy_loss + 0.5 * value_loss
-
+            action_logits = self.policy(state.unsqueeze(0))
+            action_probs = F.softmax(action_logits, dim=-1)
+            
+            # Calculate confidence
+            confidence = torch.max(action_probs).item()
+            self.confidence_history.append(confidence)
+            
+            # Decide whether to collaborate with human
+            if human_available and confidence < self.collaboration_threshold:
+                # Request human input
+                return self._request_human_input(state, action_probs)
+            else:
+                # Use AI decision
+                action = torch.multinomial(action_probs, 1)
+                return action.item(), confidence
+    
+    def _request_human_input(self, state: torch.Tensor, action_probs: torch.Tensor) -> Tuple[int, float]:
+        """Request human input for action selection."""
+        # Simulate human providing input
+        human_action = torch.argmax(action_probs).item()
+        human_confidence = 0.8
+        
+        # Record collaboration event
+        self.training_history['collaboration_events'].append({
+            'state': state.cpu().numpy(),
+            'ai_action': torch.argmax(action_probs).item(),
+            'human_action': human_action,
+            'human_confidence': human_confidence
+        })
+        
+        return human_action, human_confidence
+    
+    def update(self, states: torch.Tensor, actions: torch.Tensor, 
+               rewards: torch.Tensor, human_feedbacks: List = None) -> Dict[str, float]:
+        """Update policy using rewards and human feedback."""
+        # Standard policy gradient update
+        action_logits = self.policy(states)
+        action_probs = F.softmax(action_logits, dim=-1)
+        log_probs = torch.log(action_probs.gather(1, actions.unsqueeze(1)))
+        policy_loss = -(log_probs * rewards.unsqueeze(1)).mean()
+        
+        # Human feedback update
+        feedback_loss = 0.0
+        if human_feedbacks:
+            feedback_loss = self.preference_learner.learn_preferences(human_feedbacks)['avg_loss']
+        
+        # Total loss
+        total_loss = policy_loss + 0.1 * feedback_loss
+        
+        # Backward pass
         self.optimizer.zero_grad()
         total_loss.backward()
         self.optimizer.step()
+        
+        # Record training history
+        self.training_history['losses'].append(total_loss.item())
+        self.training_history['rewards'].append(rewards.mean().item())
 
         return {
-            "policy_loss": policy_loss.item(),
-            "value_loss": value_loss.item(),
-            "total_loss": total_loss.item(),
+            'policy_loss': policy_loss.item(),
+            'feedback_loss': feedback_loss,
+            'total_loss': total_loss.item()
         }
-
-
-class HumanAIPartnership:
-    """Manages long-term human-AI collaboration."""
-
-    def __init__(
-        self,
-        agent: CollaborativeAgent,
-        feedback_collector: HumanFeedbackCollector,
-        partnership_goals: List[str] = None,
-    ):
-        self.agent = agent
-        self.feedback_collector = feedback_collector
-        self.partnership_goals = partnership_goals or [
-            "improve_performance",
-            "build_trust",
-            "learn_preferences",
-        ]
-
-        self.partnership_metrics = {
-            "total_interactions": 0,
-            "successful_collaborations": 0,
-            "human_satisfaction": 0.5,
-            "ai_performance": 0.5,
-            "trust_level": 0.5,
-        }
-
-        self.interaction_history = deque(maxlen=1000)
-        self.goal_progress = defaultdict(float)
-
-    def interact(
-        self, state: np.ndarray, human_available: bool = True
-    ) -> Dict[str, Any]:
-        """Handle a single interaction in the partnership."""
-        self.partnership_metrics["total_interactions"] += 1
-
-        action, action_info = self.agent.act(state, request_human_input=human_available)
-
-        next_state = state + np.random.randn(*state.shape) * 0.1
-        reward = np.random.random() - 0.5  # Random reward
-        done = np.random.random() < 0.01  # Small chance of episode end
-
-        interaction = {
-            "state": state,
-            "action": action,
-            "next_state": next_state,
-            "reward": reward,
-            "done": done,
-            "action_info": action_info,
-            "timestamp": time.time(),
-        }
-        self.interaction_history.append(interaction)
-
-        self._update_metrics(interaction)
-
-        if human_available and np.random.random() < 0.3:  # 30% chance of feedback
-            feedback = self._simulate_human_feedback(interaction)
-            self.feedback_collector.collect_feedback(feedback)
-            self.agent.learn_from_feedback([feedback])
-
+    
+    def get_collaboration_statistics(self) -> Dict[str, Any]:
+        """Get collaboration statistics."""
         return {
-            "action": action,
-            "next_state": next_state,
-            "reward": reward,
-            "done": done,
-            "collaboration_info": action_info,
+            'collaboration_events': len(self.training_history['collaboration_events']),
+            'avg_confidence': np.mean(self.confidence_history) if self.confidence_history else 0.0,
+            'feedback_statistics': self.feedback_collector.get_feedback_statistics(),
+            'trust_metrics': self.trust_model.compute_trust_metrics()
         }
 
-    def _update_metrics(self, interaction: Dict):
-        """Update partnership metrics based on interaction."""
-        action_info = interaction["action_info"]
 
-        if action_info.get("collaborated", False):
-            self.partnership_metrics["successful_collaborations"] += 1
-
-        self.partnership_metrics["trust_level"] = self.agent.human_trust_level
-
-        reward = interaction["reward"]
-        self.partnership_metrics["ai_performance"] = 0.9 * self.partnership_metrics[
-            "ai_performance"
-        ] + 0.1 * max(0, reward + 0.5)
-
-    def _simulate_human_feedback(self, interaction: Dict) -> Any:
-        """Simulate human feedback for demonstration."""
-        from .feedback_collector import HumanFeedback
-
-        feedback_types = ["preference", "correction", "demonstration"]
-        feedback_type = np.random.choice(feedback_types, p=[0.5, 0.3, 0.2])
-
-        if feedback_type == "preference":
-            current_traj = {
-                "states": [interaction["state"]],
-                "actions": [interaction["action"]],
-                "rewards": [interaction["reward"]],
-            }
-            alt_action = (interaction["action"] + 1) % self.agent.action_dim
-            alt_traj = {
-                "states": [interaction["state"]],
-                "actions": [alt_action],
-                "rewards": [interaction["reward"] + np.random.randn() * 0.1],
-            }
-
-            preference = HumanPreference(
-                option_a=current_traj,
-                option_b=alt_traj,
-                preferred=(
-                    "A" if interaction["reward"] > alt_traj["rewards"][0] else "B"
-                ),
-                confidence=np.random.random() * 0.5 + 0.5,
-            )
-            feedback = HumanFeedback("preference", preference)
-
-        elif feedback_type == "correction":
-            feedback = HumanFeedback(
-                "correction",
-                {
-                    "state": interaction["state"],
-                    "incorrect_action": interaction["action"],
-                    "correct_action": (interaction["action"] + 1)
-                    % self.agent.action_dim,
-                    "reason": "Better alternative available",
-                },
-            )
-
-        else:  # demonstration
-            feedback = HumanFeedback(
-                "demonstration",
-                {
-                    "states": [interaction["state"]],
-                    "actions": [interaction["action"]],
-                    "rewards": [interaction["reward"]],
-                },
-            )
-
-        return feedback
-
-    def get_partnership_status(self) -> Dict[str, Any]:
-        """Get current status of the human-AI partnership."""
-        collaboration_rate = self.partnership_metrics[
-            "successful_collaborations"
-        ] / max(1, self.partnership_metrics["total_interactions"])
-
-        return {
-            "metrics": self.partnership_metrics,
-            "collaboration_rate": collaboration_rate,
-            "goal_progress": dict(self.goal_progress),
-            "recent_interactions": (
-                list(self.interaction_history)[-5:] if self.interaction_history else []
-            ),
-        }
-
-    def update_goals(self, new_goals: List[str]):
-        """Update partnership goals."""
-        self.partnership_goals = new_goals
-        self.goal_progress.clear()
-
-    def optimize_partnership(self):
-        """Optimize the partnership based on current metrics."""
-        trust = self.partnership_metrics["trust_level"]
-        if trust > 0.8:
-            self.agent.collaboration_threshold = 0.8  # Less collaboration needed
-        elif trust < 0.3:
-            self.agent.collaboration_threshold = 0.5  # More collaboration needed
+class SharedAutonomyController:
+    """Controller for shared autonomy between human and AI."""
+    
+    def __init__(self, state_dim: int, action_dim: int):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        
+        # Arbitration parameters
+        self.human_authority_threshold = 0.7
+        self.ai_authority_threshold = 0.3
+        self.blending_weight = 0.5
+        
+        # Authority history
+        self.authority_history = []
+    
+    def arbitrate(self, ai_action: int, human_action: int, 
+                 ai_confidence: float, human_confidence: float) -> int:
+        """Arbitrate between AI and human actions."""
+        # Determine authority levels
+        ai_authority = self._compute_ai_authority(ai_confidence)
+        human_authority = self._compute_human_authority(human_confidence)
+        
+        # Record authority decision
+        self.authority_history.append({
+            'ai_action': ai_action,
+            'human_action': human_action,
+            'ai_authority': ai_authority,
+            'human_authority': human_authority,
+            'final_action': None
+        })
+        
+        # Make arbitration decision
+        if human_authority > self.human_authority_threshold:
+            final_action = human_action
+        elif ai_authority > self.ai_authority_threshold:
+            final_action = ai_action
         else:
-            self.agent.collaboration_threshold = 0.7  # Default
+            # Blend actions
+            final_action = self._blend_actions(ai_action, human_action, ai_authority, human_authority)
+        
+        # Update history
+        self.authority_history[-1]['final_action'] = final_action
+        
+        return final_action
+    
+    def _compute_ai_authority(self, ai_confidence: float) -> float:
+        """Compute AI authority level."""
+        return ai_confidence
+    
+    def _compute_human_authority(self, human_confidence: float) -> float:
+        """Compute human authority level."""
+        return human_confidence
+    
+    def _blend_actions(self, ai_action: int, human_action: int, 
+                      ai_authority: float, human_authority: float) -> int:
+        """Blend AI and human actions."""
+        # Simple blending - choose action with higher authority
+        if ai_authority > human_authority:
+            return ai_action
+        else:
+            return human_action
+    
+    def get_authority_statistics(self) -> Dict[str, Any]:
+        """Get authority arbitration statistics."""
+        if not self.authority_history:
+            return {'total_decisions': 0, 'ai_wins': 0, 'human_wins': 0, 'blended': 0}
+        
+        ai_wins = sum(1 for entry in self.authority_history 
+                     if entry['final_action'] == entry['ai_action'])
+        human_wins = sum(1 for entry in self.authority_history 
+                        if entry['final_action'] == entry['human_action'])
+        blended = len(self.authority_history) - ai_wins - human_wins
 
-        performance = self.partnership_metrics["ai_performance"]
-        self.agent.exploration_rate = max(0.05, 0.2 - performance * 0.15)
+        return {
+            'total_decisions': len(self.authority_history),
+            'ai_wins': ai_wins,
+            'human_wins': human_wins,
+            'blended': blended,
+            'ai_win_rate': ai_wins / len(self.authority_history),
+            'human_win_rate': human_wins / len(self.authority_history)
+        }
+
+
+class HumanAICoordinator:
+    """Coordinates between human and AI agents."""
+    
+    def __init__(self, state_dim: int, action_dim: int):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        
+        # Coordination components
+        self.collaborative_agent = CollaborativeAgent(state_dim, action_dim)
+        self.shared_autonomy = SharedAutonomyController(state_dim, action_dim)
+        
+        # Coordination parameters
+        self.coordination_mode = 'collaborative'  # 'collaborative', 'autonomous', 'supervised'
+        self.human_availability = True
+        
+        # Coordination history
+        self.coordination_history = []
+    
+    def coordinate_action(self, state: torch.Tensor, human_action: int = None, 
+                         human_confidence: float = 0.5) -> Tuple[int, Dict[str, Any]]:
+        """Coordinate action selection between human and AI."""
+        # Get AI action
+        ai_action, ai_confidence = self.collaborative_agent.select_action(
+            state, human_available=self.human_availability
+        )
+        
+        # Coordinate based on mode
+        if self.coordination_mode == 'collaborative':
+            if human_action is not None:
+                final_action = self.shared_autonomy.arbitrate(
+                    ai_action, human_action, ai_confidence, human_confidence
+                )
+            else:
+                final_action = ai_action
+        elif self.coordination_mode == 'autonomous':
+            final_action = ai_action
+        else:  # supervised
+            final_action = human_action if human_action is not None else ai_action
+        
+        # Record coordination event
+        coordination_info = {
+            'state': state.cpu().numpy(),
+            'ai_action': ai_action,
+            'human_action': human_action,
+            'final_action': final_action,
+            'ai_confidence': ai_confidence,
+            'human_confidence': human_confidence,
+            'coordination_mode': self.coordination_mode
+        }
+        
+        self.coordination_history.append(coordination_info)
+        
+        return final_action, coordination_info
+    
+    def update_coordination(self, states: torch.Tensor, actions: torch.Tensor, 
+                           rewards: torch.Tensor, human_feedbacks: List = None):
+        """Update coordination based on experience."""
+        # Update collaborative agent
+        update_info = self.collaborative_agent.update(states, actions, rewards, human_feedbacks)
+        
+        return update_info
+    
+    def set_coordination_mode(self, mode: str):
+        """Set coordination mode."""
+        if mode in ['collaborative', 'autonomous', 'supervised']:
+            self.coordination_mode = mode
+        else:
+            raise ValueError(f"Invalid coordination mode: {mode}")
+    
+    def set_human_availability(self, available: bool):
+        """Set human availability."""
+        self.human_availability = available
+    
+    def get_coordination_statistics(self) -> Dict[str, Any]:
+        """Get coordination statistics."""
+        return {
+            'coordination_mode': self.coordination_mode,
+            'human_availability': self.human_availability,
+            'total_coordinations': len(self.coordination_history),
+            'collaboration_stats': self.collaborative_agent.get_collaboration_statistics(),
+            'authority_stats': self.shared_autonomy.get_authority_statistics()
+        }

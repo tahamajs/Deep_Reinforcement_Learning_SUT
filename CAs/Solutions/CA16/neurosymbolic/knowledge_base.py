@@ -1,279 +1,208 @@
 """
-Symbolic Knowledge Base
+Symbolic Knowledge Base for Neurosymbolic RL
 
-This module contains symbolic reasoning components for neurosymbolic RL:
-- Logical predicates and rules
-- Knowledge base management
-- Symbolic inference
+This module implements symbolic knowledge representation and reasoning.
 """
 
 import torch
 import torch.nn as nn
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Any, Set
-from collections import defaultdict
-import itertools
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from typing import Dict, List, Tuple, Optional, Any, Union
+from abc import ABC, abstractmethod
 
 
 class LogicalPredicate:
-    """Represents a logical predicate in first-order logic."""
+    """Represents a logical predicate."""
 
-    def __init__(self, name: str, arity: int, domain: Optional[List[Any]] = None):
+    def __init__(self, name: str, arity: int, domain: List[str] = None):
         self.name = name
         self.arity = arity
         self.domain = domain or []
+        self.truth_values = {}
 
-        if domain:
-            self.groundings = list(itertools.product(domain, repeat=arity))
-        else:
-            self.groundings = []
-
-    def __call__(self, *args):
-        """Evaluate predicate on given arguments."""
+    def add_truth_value(self, args: Tuple, value: bool):
+        """Add truth value for specific arguments."""
         if len(args) != self.arity:
-            raise ValueError(
-                f"Predicate {self.name} expects {self.arity} arguments, got {len(args)}"
-            )
+            raise ValueError(f"Expected {self.arity} arguments, got {len(args)}")
+        self.truth_values[args] = value
 
-        return SymbolicAtom(self, args)
+    def evaluate(self, args: Tuple) -> bool:
+        """Evaluate predicate for given arguments."""
+        return self.truth_values.get(args, False)
 
-    def __str__(self):
-        return f"{self.name}/{self.arity}"
-
-    def __repr__(self):
-        return f"LogicalPredicate({self.name}, {self.arity})"
-
-
-class SymbolicAtom:
-    """Represents a ground atom (predicate applied to constants)."""
-
-    def __init__(self, predicate: LogicalPredicate, args: Tuple):
-        self.predicate = predicate
-        self.args = tuple(args)
-
-        if len(args) != predicate.arity:
-            raise ValueError(f"Atom arity mismatch: {len(args)} vs {predicate.arity}")
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, SymbolicAtom)
-            and self.predicate.name == other.predicate.name
-            and self.args == other.args
-        )
-
-    def __hash__(self):
-        return hash((self.predicate.name, self.args))
-
-    def __str__(self):
-        args_str = ", ".join(str(arg) for arg in self.args)
-        return f"{self.predicate.name}({args_str})"
-
-    def __repr__(self):
-        return f"SymbolicAtom({self.predicate.name}, {self.args})"
+    def __str__(self) -> str:
+        return f"{self.name}({', '.join(['x' + str(i) for i in range(self.arity)])})"
 
 
 class LogicalRule:
-    """Represents a logical rule (Horn clause)."""
+    """Represents a logical rule."""
 
-    def __init__(self, head: SymbolicAtom, body: List[SymbolicAtom]):
+    def __init__(
+        self, head: LogicalPredicate, body: List[LogicalPredicate], weight: float = 1.0
+    ):
         self.head = head
         self.body = body
+        self.weight = weight
+        self.activation_count = 0
 
-    def __str__(self):
-        body_str = " ∧ ".join(str(atom) for atom in self.body)
+    def can_apply(self, facts: Dict[Tuple, bool]) -> bool:
+        """Check if rule can be applied given current facts."""
+        for predicate in self.body:
+            # Check if all body predicates are satisfied
+            for args, truth_value in facts.items():
+                if predicate.name == args[0] and truth_value:
+                    continue
+                elif predicate.name == args[0] and not truth_value:
+                    return False
+        return True
+
+    def apply(self, facts: Dict[Tuple, bool]) -> Dict[Tuple, bool]:
+        """Apply rule to derive new facts."""
+        if not self.can_apply(facts):
+            return {}
+
+        new_facts = {}
+        # This is a simplified implementation
+        # In practice, you'd need proper unification and variable binding
+        if self.can_apply(facts):
+            # Add head predicate as true
+            new_facts[(self.head.name,)] = True
+            self.activation_count += 1
+
+        return new_facts
+
+    def __str__(self) -> str:
+        body_str = " ∧ ".join([str(p) for p in self.body])
         return f"{self.head} ← {body_str}"
-
-    def __repr__(self):
-        return f"LogicalRule({self.head}, {self.body})"
 
 
 class SymbolicKnowledgeBase:
-    """Symbolic knowledge base with inference capabilities."""
+    """Symbolic knowledge base for storing and reasoning with logical rules."""
 
     def __init__(self):
-        self.predicates: Dict[str, LogicalPredicate] = {}
-        self.facts: Set[SymbolicAtom] = set()
-        self.rules: List[LogicalRule] = []
-
-        self.derived_facts: Set[SymbolicAtom] = set()
+        self.predicates = {}
+        self.rules = []
+        self.facts = {}
+        self.inference_history = []
 
     def add_predicate(self, predicate: LogicalPredicate):
         """Add a predicate to the knowledge base."""
         self.predicates[predicate.name] = predicate
 
-    def add_fact(self, fact: SymbolicAtom):
-        """Add a ground fact to the knowledge base."""
-        self.facts.add(fact)
-
     def add_rule(self, rule: LogicalRule):
-        """Add a logical rule to the knowledge base."""
+        """Add a rule to the knowledge base."""
         self.rules.append(rule)
 
-    def query(self, atom: SymbolicAtom) -> bool:
-        """Query whether an atom is true in the knowledge base."""
-        if atom in self.facts:
-            return True
+    def add_fact(self, predicate_name: str, args: Tuple, value: bool):
+        """Add a fact to the knowledge base."""
+        if predicate_name not in self.predicates:
+            raise ValueError(f"Predicate {predicate_name} not found")
 
-        if atom in self.derived_facts:
-            return True
+        predicate = self.predicates[predicate_name]
+        predicate.add_truth_value(args, value)
+        self.facts[(predicate_name, *args)] = value
 
-        return self._infer(atom)
+    def forward_chaining(self, max_iterations: int = 100) -> Dict[Tuple, bool]:
+        """Perform forward chaining inference."""
+        current_facts = self.facts.copy()
+        iteration = 0
 
-    def _infer(self, query_atom: SymbolicAtom) -> bool:
+        while iteration < max_iterations:
+            new_facts = {}
+
+            for rule in self.rules:
+                derived_facts = rule.apply(current_facts)
+                new_facts.update(derived_facts)
+
+            if not new_facts:
+                break  # No new facts derived
+
+            current_facts.update(new_facts)
+            iteration += 1
+
+        self.inference_history.append(
+            {
+                "iteration": iteration,
+                "facts_derived": len(new_facts),
+                "total_facts": len(current_facts),
+            }
+        )
+
+        return current_facts
+
+    def backward_chaining(self, goal: Tuple) -> bool:
         """Perform backward chaining inference."""
+        goal_predicate = goal[0]
+
+        if goal in self.facts:
+            return self.facts[goal]
+
+        # Find rules that can derive the goal
+        applicable_rules = []
         for rule in self.rules:
-            if rule.head.predicate.name == query_atom.predicate.name:
-                if self._unify_atoms(rule.head, query_atom):
-                    if all(self.query(atom) for atom in rule.body):
-                        self.derived_facts.add(query_atom)
-                        return True
+            if rule.head.name == goal_predicate:
+                applicable_rules.append(rule)
+
+        for rule in applicable_rules:
+            # Check if all body predicates can be proven
+            can_prove_body = True
+            for body_predicate in rule.body:
+                body_goal = (body_predicate.name,)
+                if not self.backward_chaining(body_goal):
+                    can_prove_body = False
+                    break
+
+            if can_prove_body:
+                return True
 
         return False
 
-    def _unify_atoms(self, atom1: SymbolicAtom, atom2: SymbolicAtom) -> bool:
-        """Check if two atoms can be unified."""
-        if atom1.predicate.name != atom2.predicate.name:
-            return False
+    def query(self, predicate_name: str, args: Tuple) -> bool:
+        """Query the knowledge base for a specific fact."""
+        return self.facts.get((predicate_name, *args), False)
 
-        return atom1.args == atom2.args
+    def get_all_facts(self) -> Dict[Tuple, bool]:
+        """Get all facts in the knowledge base."""
+        return self.facts.copy()
 
-    def get_all_facts(self) -> Set[SymbolicAtom]:
-        """Get all facts (direct + derived)."""
-        all_facts = self.facts.union(self.derived_facts)
-        return all_facts
+    def clear_facts(self):
+        """Clear all facts from the knowledge base."""
+        self.facts.clear()
+        for predicate in self.predicates.values():
+            predicate.truth_values.clear()
 
-    def clear_derived_facts(self):
-        """Clear derived facts (useful for incremental inference)."""
-        self.derived_facts.clear()
+    def get_rule_statistics(self) -> Dict[str, Any]:
+        """Get statistics about rule usage."""
+        stats = {
+            "total_rules": len(self.rules),
+            "active_rules": sum(1 for rule in self.rules if rule.activation_count > 0),
+            "total_activations": sum(rule.activation_count for rule in self.rules),
+            "rule_usage": {str(rule): rule.activation_count for rule in self.rules},
+        }
+        return stats
 
-    def __str__(self):
-        lines = ["Knowledge Base:"]
-        lines.append("Predicates:")
-        for pred in self.predicates.values():
-            lines.append(f"  {pred}")
+    def export_rules(self) -> List[str]:
+        """Export rules as strings."""
+        return [str(rule) for rule in self.rules]
 
-        lines.append("Facts:")
-        for fact in self.facts:
-            lines.append(f"  {fact}")
+    def import_rules(self, rule_strings: List[str]):
+        """Import rules from strings (simplified implementation)."""
+        # This is a simplified implementation
+        # In practice, you'd need a proper parser
+        for rule_str in rule_strings:
+            if "←" in rule_str:
+                parts = rule_str.split("←")
+                head_str = parts[0].strip()
+                body_str = parts[1].strip()
 
-        lines.append("Rules:")
-        for rule in self.rules:
-            lines.append(f"  {rule}")
+                # Create predicates (simplified)
+                head_predicate = LogicalPredicate(head_str.split("(")[0], 1)
+                body_predicates = []
 
-        return "\n".join(lines)
+                for body_part in body_str.split("∧"):
+                    body_part = body_part.strip()
+                    body_predicate = LogicalPredicate(body_part.split("(")[0], 1)
+                    body_predicates.append(body_predicate)
 
-
-class PrologStyleKB:
-    """Prolog-style knowledge base with more advanced inference."""
-
-    def __init__(self):
-        self.kb = SymbolicKnowledgeBase()
-        self.variable_counter = 0
-
-    def assert_fact(self, predicate_name: str, *args):
-        """Assert a fact in Prolog style: assert_fact('parent', 'alice', 'bob')."""
-        if predicate_name not in self.kb.predicates:
-            arity = len(args)
-            predicate = LogicalPredicate(predicate_name, arity)
-            self.kb.add_predicate(predicate)
-
-        predicate = self.kb.predicates[predicate_name]
-        atom = SymbolicAtom(predicate, args)
-        self.kb.add_fact(atom)
-
-    def assert_rule(
-        self, head_pred: str, head_args: List, body: List[Tuple[str, List]]
-    ):
-        """Assert a rule in Prolog style.
-
-        Example: assert_rule('ancestor', ['X', 'Y'], [('parent', ['X', 'Y']), ('parent', ['X', 'Z'])])
-        """
-        if head_pred not in self.kb.predicates:
-            arity = len(head_args)
-            predicate = LogicalPredicate(head_pred, arity)
-            self.kb.add_predicate(predicate)
-
-        head_predicate = self.kb.predicates[head_pred]
-        head_atom = SymbolicAtom(head_predicate, head_args)
-
-        body_atoms = []
-        for body_pred, body_args in body:
-            if body_pred not in self.kb.predicates:
-                arity = len(body_args)
-                predicate = LogicalPredicate(body_pred, arity)
-                self.kb.add_predicate(predicate)
-
-            body_predicate = self.kb.predicates[body_pred]
-            body_atom = SymbolicAtom(body_predicate, body_args)
-            body_atoms.append(body_atom)
-
-        rule = LogicalRule(head_atom, body_atoms)
-        self.kb.add_rule(rule)
-
-    def query(self, predicate_name: str, *args) -> List[Dict]:
-        """Query the knowledge base and return variable bindings."""
-        if predicate_name not in self.kb.predicates:
-            return []
-
-        predicate = self.kb.predicates[predicate_name]
-        query_atom = SymbolicAtom(predicate, args)
-
-        if self.kb.query(query_atom):
-            return [{}]  # Empty binding dict for ground queries
-        else:
-            return []
-
-
-class RLKnowledgeBase(SymbolicKnowledgeBase):
-    """Knowledge base specialized for RL domains."""
-
-    def __init__(self):
-        super().__init__()
-
-        self._init_rl_predicates()
-
-    def _init_rl_predicates(self):
-        """Initialize common RL predicates."""
-        self.add_predicate(LogicalPredicate("at", 2))  # at(agent, location)
-        self.add_predicate(LogicalPredicate("has", 2))  # has(agent, object)
-        self.add_predicate(LogicalPredicate("adjacent", 2))  # adjacent(loc1, loc2)
-
-        self.add_predicate(LogicalPredicate("safe", 1))  # safe(action)
-        self.add_predicate(LogicalPredicate("legal", 2))  # legal(action, state)
-
-        self.add_predicate(LogicalPredicate("goal", 1))  # goal(state)
-        self.add_predicate(LogicalPredicate("rewarding", 2))  # rewarding(action, state)
-
-    def add_state_facts(self, state_dict: Dict):
-        """Add facts from a state dictionary."""
-        for key, value in state_dict.items():
-            if isinstance(value, list):
-                for item in value:
-                    self.add_fact(self.predicates["has"](key, item))
-            else:
-                self.add_fact(self.predicates["at"](key, value))
-
-    def is_safe_action(self, action, state_dict: Dict) -> bool:
-        """Check if an action is safe in the given state."""
-        self.clear_derived_facts()
-        self.add_state_facts(state_dict)
-
-        safe_atom = self.predicates["safe"](action)
-        return self.query(safe_atom)
-
-    def get_legal_actions(self, state_dict: Dict) -> List[str]:
-        """Get all legal actions in the given state."""
-        self.clear_derived_facts()
-        self.add_state_facts(state_dict)
-
-        legal_actions = []
-        possible_actions = ["move", "pickup", "drop", "use"]
-
-        for action in possible_actions:
-            legal_atom = self.predicates["legal"](action, "current_state")
-            if self.query(legal_atom):
-                legal_actions.append(action)
-
-        return legal_actions
+                rule = LogicalRule(head_predicate, body_predicates)
+                self.add_rule(rule)

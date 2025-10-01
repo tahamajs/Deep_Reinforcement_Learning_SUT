@@ -7,6 +7,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 import copy
 
+from ..buffers.replay_buffer import PrioritizedReplayBuffer
+
 
 class DataAugmentationDQN(nn.Module):
     """DQN with data augmentation and auxiliary tasks for sample efficiency."""

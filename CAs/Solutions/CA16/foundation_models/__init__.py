@@ -1,52 +1,28 @@
 """
-Foundation Models for RL
+Foundation Models for Deep Reinforcement Learning
 
-This module provides foundation model implementations for reinforcement learning:
-- Decision Transformers for sequence-based decision making
-- Multi-task foundation models
+This module contains implementations of foundation models including:
+- Decision Transformers
+- Positional Encoding
+- Multi-task learning components
 - In-context learning capabilities
-- Training and evaluation utilities
 """
 
 from .algorithms import (
+    PositionalEncoding,
     DecisionTransformer,
-    MultiTaskRLFoundationModel,
-    InContextLearningRL,
-    FoundationModelTrainer as BaseFoundationModelTrainer,
+    MultiTaskDecisionTransformer,
+    InContextLearner,
 )
 
-from .training import (
-    TrajectoryDataset,
-    MultiTaskTrajectoryDataset,
-    FoundationModelEvaluator,
-    FoundationModelTrainer,
-    create_trajectory_dataset_from_env,
-    plot_training_curves,
-)
+from .training import FoundationModelTrainer, MultiTaskTrainer, ScalingAnalyzer
 
 __all__ = [
+    "PositionalEncoding",
     "DecisionTransformer",
-    "MultiTaskRLFoundationModel",
-    "InContextLearningRL",
-    "BaseFoundationModelTrainer",
-    "TrajectoryDataset",
-    "MultiTaskTrajectoryDataset",
-    "FoundationModelEvaluator",
+    "MultiTaskDecisionTransformer",
+    "InContextLearner",
     "FoundationModelTrainer",
-    "create_trajectory_dataset_from_env",
-    "plot_training_curves",
-]
-
-from .algorithms import (
-    DecisionTransformer,
-    MultiTaskRLFoundationModel,
-    InContextLearningRL,
-    FoundationModelTrainer,
-)
-
-__all__ = [
-    "DecisionTransformer",
-    "MultiTaskRLFoundationModel",
-    "InContextLearningRL",
-    "FoundationModelTrainer",
+    "MultiTaskTrainer",
+    "ScalingAnalyzer",
 ]

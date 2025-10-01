@@ -1756,6 +1756,195 @@ def train_latent_space_planner(env, world_model, planner, num_episodes: int = 50
 
 
 # ============================================================================
+# BASELINE DQN AGENT (for comparison)
+# ============================================================================
+
+
+class QNetwork(nn.Module):
+    """Q-Network for DQN baseline."""
+
+    def __init__(self, state_dim: int, action_dim: int, hidden_dim: int = 128):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, action_dim),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class DQNAgent:
+    """Deep Q-Network agent for baseline comparison."""
+
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        hidden_dim: int = 128,
+        gamma: float = 0.99,
+        lr: float = 1e-3,
+        epsilon_start: float = 1.0,
+        epsilon_end: float = 0.05,
+        epsilon_decay: int = 500,
+        device_name: str = "cpu",
+    ):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.gamma = gamma
+        self.device_obj = torch.device(device_name)
+
+        self.policy_net = QNetwork(state_dim, action_dim, hidden_dim).to(self.device_obj)
+        self.target_net = QNetwork(state_dim, action_dim, hidden_dim).to(self.device_obj)
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
+
+        self.buffer = ReplayBuffer(capacity=100000)
+        self.batch_size = 64
+
+        self.epsilon_start = epsilon_start
+        self.epsilon_end = epsilon_end
+        self.epsilon_decay = epsilon_decay
+        self.total_steps = 0
+
+    def epsilon(self):
+        """Compute current epsilon for epsilon-greedy."""
+        return self.epsilon_end + (self.epsilon_start - self.epsilon_end) * np.exp(
+            -1.0 * self.total_steps / self.epsilon_decay
+        )
+
+    def get_action(self, state, training: bool = True):
+        """Select action using epsilon-greedy policy."""
+        if training and random.random() < self.epsilon():
+            return random.randrange(self.action_dim)
+
+        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device_obj)
+        with torch.no_grad():
+            q_values = self.policy_net(state_tensor)
+        return int(torch.argmax(q_values).item())
+
+    def store_transition(self, state, action, reward, next_state, done):
+        """Store transition in replay buffer."""
+        self.buffer.push(state, action, reward, next_state, done)
+
+    def update(self):
+        """Update Q-network using experience replay."""
+        if len(self.buffer) < self.batch_size:
+            return None
+
+        transitions = self.buffer.sample(self.batch_size)
+        batch = self.buffer.Transition(*zip(*transitions))
+
+        states = torch.FloatTensor(batch.state).to(self.device_obj)
+        actions = torch.LongTensor(batch.action).unsqueeze(1).to(self.device_obj)
+        rewards = torch.FloatTensor(batch.reward).to(self.device_obj)
+        next_states = torch.FloatTensor(batch.next_state).to(self.device_obj)
+        dones = torch.FloatTensor(batch.done).to(self.device_obj)
+
+        current_q = self.policy_net(states).gather(1, actions).squeeze(1)
+
+        with torch.no_grad():
+            next_q = self.target_net(next_states).max(1)[0]
+            target_q = rewards + self.gamma * next_q * (1 - dones)
+
+        loss = nn.MSELoss()(current_q, target_q)
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(self.policy_net.parameters(), max_norm=5.0)
+        self.optimizer.step()
+
+        return float(loss.item())
+
+    def update_target(self):
+        """Update target network."""
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+
+
+def train_dqn_agent(
+    env,
+    agent: DQNAgent,
+    num_episodes: int = 250,
+    max_steps: int = 500,
+    target_update_freq: int = 200,
+):
+    """Train DQN agent with detailed metrics logging."""
+    episode_rewards = []
+    episode_lengths = []
+    episode_logs = []
+    losses = []
+    total_steps = 0
+
+    for episode in range(1, num_episodes + 1):
+        state, reset_info = env_reset(env)
+        done = False
+        ep_reward = 0.0
+        ep_length = 0
+        ep_losses = []
+        start_time = time.time()
+        last_info = reset_info
+
+        while not done and ep_length < max_steps:
+            action = agent.get_action(state, training=True)
+            next_state, reward, done, info = env_step(env, action)
+
+            agent.store_transition(state, action, reward, next_state, done)
+            agent.total_steps += 1
+            total_steps += 1
+
+            loss = agent.update()
+            if loss is not None:
+                ep_losses.append(loss)
+                losses.append(loss)
+
+            if total_steps % target_update_freq == 0:
+                agent.update_target()
+
+            state = next_state
+            ep_reward += reward
+            ep_length += 1
+            last_info = info if isinstance(info, dict) else {}
+
+        elapsed = time.time() - start_time
+        success = ep_reward >= 195.0
+
+        metrics = EpisodeMetrics(
+            episode=episode,
+            return_=ep_reward,
+            length=ep_length,
+            elapsed_sec=elapsed,
+            mean_q_loss=float(np.mean(ep_losses)) if ep_losses else None,
+            success=success,
+            notes={"reset_info": reset_info, "last_info": last_info},
+        )
+        episode_logs.append(asdict(metrics))
+
+        episode_rewards.append(ep_reward)
+        episode_lengths.append(ep_length)
+
+        if episode % max(1, num_episodes // 10) == 0:
+            mean_return = np.mean(episode_rewards[-max(1, num_episodes // 10):])
+            print(
+                f"Episode {episode:04d} | Avg Return (window) = {mean_return:.2f} | Length = {ep_length}"
+            )
+
+    results = {
+        "rewards": episode_rewards,
+        "lengths": episode_lengths,
+        "losses": losses,
+        "episode_logs": episode_logs,
+    }
+
+    if episode_logs:
+        results["episode_dataframe"] = pd.DataFrame(episode_logs)
+
+    return results
+
+
+# ============================================================================
 # ANALYSIS AND VISUALIZATION FUNCTIONS
 # ============================================================================
 

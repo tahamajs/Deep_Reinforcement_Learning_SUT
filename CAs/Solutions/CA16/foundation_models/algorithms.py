@@ -1,33 +1,28 @@
 """
-Foundation Models Algorithms
+Foundation Model Algorithms
 
-This module contains implementations of foundation model approaches for RL:
-- Decision Transformers for sequence-based RL
-- Multi-task foundation models
-- In-context learning
-- Foundation model training framework
+This module implements core foundation model algorithms for reinforcement learning.
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 import numpy as np
-import math
-from collections import deque
 from typing import Dict, List, Tuple, Optional, Any
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+import math
 
 
 class PositionalEncoding(nn.Module):
-    """Positional encoding for transformer-based RL models."""
+    """Positional encoding for transformer models."""
 
-    def __init__(self, d_model, max_len=5000):
+    def __init__(self, d_model: int, max_len: int = 5000):
         super().__init__()
+        self.d_model = d_model
 
+        # Create positional encoding matrix
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+
         div_term = torch.exp(
             torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)
         )
@@ -38,329 +33,276 @@ class PositionalEncoding(nn.Module):
 
         self.register_buffer("pe", pe)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Add positional encoding to input tensor."""
         return x + self.pe[: x.size(0), :]
 
 
 class DecisionTransformer(nn.Module):
-    """Decision Transformer for sequence-based RL."""
+    """Decision Transformer for reinforcement learning."""
 
     def __init__(
         self,
-        state_dim,
-        action_dim,
-        model_dim=512,
-        num_heads=8,
-        num_layers=6,
-        max_length=1024,
-        dropout=0.1,
+        state_dim: int,
+        action_dim: int,
+        model_dim: int = 512,
+        num_heads: int = 8,
+        num_layers: int = 6,
+        context_length: int = 1024,
+        dropout: float = 0.1,
     ):
         super().__init__()
-
-        self.state_dim = state_dim
-        self.action_dim = action_dim
         self.model_dim = model_dim
-        self.max_length = max_length
+        self.context_length = context_length
 
+        # Embeddings
         self.state_embedding = nn.Linear(state_dim, model_dim)
         self.action_embedding = nn.Linear(action_dim, model_dim)
         self.return_embedding = nn.Linear(1, model_dim)
-        self.timestep_embedding = nn.Embedding(max_length, model_dim)
+        self.timestep_embedding = nn.Embedding(1000, model_dim)
 
-        self.pos_encoding = PositionalEncoding(
-            model_dim, max_length * 3
-        )  # 3x for s,a,r tokens
+        # Positional encoding
+        self.pos_encoding = PositionalEncoding(model_dim)
 
+        # Transformer
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=model_dim,
-            nhead=num_heads,
-            dim_feedforward=4 * model_dim,
-            dropout=dropout,
-            batch_first=True,
+            d_model=model_dim, nhead=num_heads, dropout=dropout, batch_first=True
         )
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
 
-        self.layer_norm = nn.LayerNorm(model_dim)
-
+        # Output heads
         self.action_head = nn.Linear(model_dim, action_dim)
         self.value_head = nn.Linear(model_dim, 1)
-        self.return_head = nn.Linear(model_dim, 1)
 
-        self.dropout = nn.Dropout(dropout)
-
-        self.apply(self._init_weights)
-
-    def _init_weights(self, module):
-        """Initialize transformer weights."""
-        if isinstance(module, (nn.Linear, nn.Embedding)):
-            module.weight.data.normal_(mean=0.0, std=0.02)
-            if isinstance(module, nn.Linear) and module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
-
-    def forward(self, states, actions, returns_to_go, timesteps, attention_mask=None):
-        """
-        Forward pass through Decision Transformer.
-
-        Args:
-            states: (batch_size, seq_len, state_dim)
-            actions: (batch_size, seq_len, action_dim)
-            returns_to_go: (batch_size, seq_len, 1)
-            timesteps: (batch_size, seq_len)
-            attention_mask: (batch_size, seq_len * 3)
-        """
+    def forward(
+        self,
+        states: torch.Tensor,
+        actions: torch.Tensor,
+        returns_to_go: torch.Tensor,
+        timesteps: torch.Tensor,
+    ) -> torch.Tensor:
+        """Forward pass of Decision Transformer."""
         batch_size, seq_len = states.shape[0], states.shape[1]
 
-        state_embeddings = self.state_embedding(states)
-        action_embeddings = self.action_embedding(actions)
-        return_embeddings = self.return_embedding(returns_to_go)
-        time_embeddings = self.timestep_embedding(timesteps)
+        # Embeddings
+        state_emb = self.state_embedding(states)
+        action_emb = self.action_embedding(actions)
+        return_emb = self.return_embedding(returns_to_go.unsqueeze(-1))
+        timestep_emb = self.timestep_embedding(timesteps)
 
-        state_embeddings += time_embeddings
-        action_embeddings += time_embeddings
-        return_embeddings += time_embeddings
+        # Stack embeddings
+        stacked_inputs = torch.stack((state_emb, action_emb, return_emb), dim=1)
+        stacked_inputs = stacked_inputs.permute(0, 2, 1, 3).reshape(
+            batch_size, 3 * seq_len, self.model_dim
+        )
 
-        stacked_inputs = torch.stack(
-            [return_embeddings, state_embeddings, action_embeddings], dim=2
-        ).reshape(batch_size, 3 * seq_len, self.model_dim)
+        # Add timestep embeddings
+        stacked_inputs = stacked_inputs + timestep_emb.repeat_interleave(3, dim=1)
 
+        # Add positional encoding
         stacked_inputs = self.pos_encoding(stacked_inputs.transpose(0, 1)).transpose(
             0, 1
         )
-        stacked_inputs = self.layer_norm(stacked_inputs)
-        stacked_inputs = self.dropout(stacked_inputs)
 
-        transformer_output = self.transformer(
-            stacked_inputs, src_key_padding_mask=attention_mask
-        )
+        # Transformer
+        transformer_outputs = self.transformer(stacked_inputs)
 
-        transformer_output = transformer_output.reshape(
-            batch_size, seq_len, 3, self.model_dim
-        )
+        # Extract action predictions
+        action_outputs = transformer_outputs[
+            :, 1::3
+        ]  # Actions are at positions 1, 4, 7, ...
+        actions_pred = self.action_head(action_outputs)
 
-        return_preds = self.return_head(transformer_output[:, :, 0])  # Return tokens
-        state_preds = transformer_output[:, :, 1]  # State tokens (for representation)
-        action_preds = self.action_head(transformer_output[:, :, 2])  # Action tokens
-        value_preds = self.value_head(
-            transformer_output[:, :, 1]
-        )  # Value from state tokens
-
-        return {
-            "action_preds": action_preds,
-            "value_preds": value_preds,
-            "return_preds": return_preds,
-            "state_representations": state_preds,
-        }
-
-    def get_action(self, states, actions, returns_to_go, timesteps, temperature=1.0):
-        """Get action for inference."""
-        self.eval()
-        with torch.no_grad():
-            outputs = self.forward(states, actions, returns_to_go, timesteps)
-            action_logits = outputs["action_preds"][:, -1] / temperature
-
-            if self.action_dim > 1:
-                action_probs = F.softmax(action_logits, dim=-1)
-                action = torch.multinomial(action_probs, 1)
-            else:
-                action = torch.tanh(action_logits)  # For continuous actions
-
-            return action
+        return actions_pred
 
 
-class MultiTaskRLFoundationModel(nn.Module):
-    """Multi-task foundation model for RL."""
+class MultiTaskDecisionTransformer(nn.Module):
+    """Multi-task Decision Transformer for learning across multiple tasks."""
 
     def __init__(
-        self, state_dim, action_dim, task_dim, model_dim=512, num_heads=8, num_layers=6
+        self,
+        state_dim: int,
+        action_dim: int,
+        num_tasks: int,
+        model_dim: int = 512,
+        num_heads: int = 8,
+        num_layers: int = 6,
+        context_length: int = 1024,
+        dropout: float = 0.1,
     ):
         super().__init__()
+        self.num_tasks = num_tasks
 
-        self.state_dim = state_dim
-        self.action_dim = action_dim
-        self.task_dim = task_dim
-        self.model_dim = model_dim
-
-        self.task_embedding = nn.Embedding(task_dim, model_dim)
-
-        self.decision_transformer = DecisionTransformer(
-            state_dim, action_dim, model_dim, num_heads, num_layers
+        # Shared transformer backbone
+        self.shared_transformer = DecisionTransformer(
+            state_dim,
+            action_dim,
+            model_dim,
+            num_heads,
+            num_layers,
+            context_length,
+            dropout,
         )
 
-        self.task_heads = nn.ModuleDict(
-            {f"task_{i}": nn.Linear(model_dim, action_dim) for i in range(task_dim)}
+        # Task-specific heads
+        self.task_heads = nn.ModuleList(
+            [nn.Linear(model_dim, action_dim) for _ in range(num_tasks)]
         )
 
-        self.context_encoder = nn.LSTM(model_dim, model_dim, batch_first=True)
-        self.adaptation_network = nn.Sequential(
-            nn.Linear(model_dim, model_dim), nn.ReLU(), nn.Linear(model_dim, model_dim)
-        )
+        # Task embedding
+        self.task_embedding = nn.Embedding(num_tasks, model_dim)
 
     def forward(
-        self, states, actions, returns_to_go, timesteps, task_ids, context_length=10
-    ):
-        """Forward pass with task conditioning."""
+        self,
+        states: torch.Tensor,
+        actions: torch.Tensor,
+        returns_to_go: torch.Tensor,
+        timesteps: torch.Tensor,
+        task_ids: torch.Tensor,
+    ) -> torch.Tensor:
+        """Forward pass with task-specific heads."""
+        # Get shared representations
+        shared_outputs = self.shared_transformer(
+            states, actions, returns_to_go, timesteps
+        )
+
+        # Apply task-specific heads
         batch_size = states.shape[0]
+        task_outputs = []
 
-        task_embeds = self.task_embedding(task_ids)  # (batch_size, model_dim)
-        task_embeds = task_embeds.unsqueeze(1).expand(-1, states.shape[1], -1)
+        for i in range(batch_size):
+            task_id = task_ids[i].item()
+            task_output = self.task_heads[task_id](shared_outputs[i])
+            task_outputs.append(task_output)
 
-        conditioned_states = states + task_embeds[:, :, : self.state_dim]
+        return torch.stack(task_outputs, dim=0)
 
-        outputs = self.decision_transformer(
-            conditioned_states, actions, returns_to_go, timesteps
+
+class InContextLearner(nn.Module):
+    """In-context learning for few-shot adaptation."""
+
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        model_dim: int = 512,
+        num_heads: int = 8,
+        num_layers: int = 6,
+        dropout: float = 0.1,
+    ):
+        super().__init__()
+        self.model_dim = model_dim
+
+        # Embeddings
+        self.state_embedding = nn.Linear(state_dim, model_dim)
+        self.action_embedding = nn.Linear(action_dim, model_dim)
+        self.return_embedding = nn.Linear(1, model_dim)
+
+        # Context encoder
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=model_dim, nhead=num_heads, dropout=dropout, batch_first=True
+        )
+        self.context_encoder = nn.TransformerEncoder(
+            encoder_layer, num_layers=num_layers
         )
 
-        state_representations = outputs["state_representations"]
-        task_specific_actions = []
+        # Query encoder
+        self.query_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
 
-        for i, task_id in enumerate(task_ids):
-            task_head = self.task_heads[f"task_{task_id.item()}"]
-            task_action = task_head(state_representations[i])
-            task_specific_actions.append(task_action)
-
-        outputs["task_specific_actions"] = torch.stack(task_specific_actions)
-
-        return outputs
-
-    def adapt_to_new_task(self, context_trajectories, num_adaptation_steps=5):
-        """Few-shot adaptation to new task using in-context learning."""
-        context_features = []
-
-        for trajectory in context_trajectories:
-            states, actions, returns = (
-                trajectory["states"],
-                trajectory["actions"],
-                trajectory["returns"],
-            )
-            timesteps = torch.arange(len(states))
-
-            with torch.no_grad():
-                outputs = self.decision_transformer(states, actions, returns, timesteps)
-                context_features.append(outputs["state_representations"].mean(dim=1))
-
-        context_features = torch.stack(context_features)
-        context_encoding, _ = self.context_encoder(context_features.unsqueeze(0))
-
-        adaptation_params = self.adaptation_network(
-            context_encoding.squeeze(0).mean(dim=0)
+        # Cross-attention for context-query interaction
+        self.cross_attention = nn.MultiheadAttention(
+            embed_dim=model_dim, num_heads=num_heads, dropout=dropout, batch_first=True
         )
 
-        return adaptation_params
+        # Output head
+        self.action_head = nn.Linear(model_dim, action_dim)
 
+    def forward(
+        self,
+        context_states: torch.Tensor,
+        context_actions: torch.Tensor,
+        context_returns: torch.Tensor,
+        query_states: torch.Tensor,
+    ) -> torch.Tensor:
+        """Forward pass for in-context learning."""
+        # Encode context
+        context_state_emb = self.state_embedding(context_states)
+        context_action_emb = self.action_embedding(context_actions)
+        context_return_emb = self.return_embedding(context_returns.unsqueeze(-1))
 
-class InContextLearningRL:
-    """In-context learning for RL foundation models."""
+        context_inputs = torch.cat(
+            [context_state_emb, context_action_emb, context_return_emb], dim=1
+        )
+        context_features = self.context_encoder(context_inputs)
 
-    def __init__(self, foundation_model, context_length=50):
-        self.foundation_model = foundation_model
-        self.context_length = context_length
-        self.context_buffer = deque(maxlen=context_length)
+        # Encode query
+        query_state_emb = self.state_embedding(query_states)
+        query_features = self.query_encoder(query_state_emb)
 
-    def add_context(self, state, action, reward, next_state, done):
-        """Add experience to context buffer."""
-        self.context_buffer.append(
-            {
-                "state": state,
-                "action": action,
-                "reward": reward,
-                "next_state": next_state,
-                "done": done,
-            }
+        # Cross-attention
+        attended_features, _ = self.cross_attention(
+            query_features, context_features, context_features
         )
 
-    def get_action(self, current_state, desired_return, temperature=1.0):
-        """Get action using in-context learning."""
-        if len(self.context_buffer) == 0:
-            return np.random.randint(self.foundation_model.action_dim)
+        # Predict actions
+        actions_pred = self.action_head(attended_features)
 
-        context_states = []
-        context_actions = []
-        context_returns = []
-        context_timesteps = []
-
-        cumulative_return = 0
-        for i, exp in enumerate(reversed(list(self.context_buffer))):
-            context_states.append(exp["state"])
-            context_actions.append(exp["action"])
-            cumulative_return += exp["reward"]
-            context_returns.append([cumulative_return])
-            context_timesteps.append(len(self.context_buffer) - i - 1)
-
-        context_states.reverse()
-        context_actions.reverse()
-        context_returns.reverse()
-        context_timesteps.reverse()
-
-        context_states.append(current_state)
-        context_actions.append(
-            np.zeros(self.foundation_model.action_dim)
-        )  # Placeholder
-        context_returns.append([desired_return])
-        context_timesteps.append(len(self.context_buffer))
-
-        states = torch.FloatTensor(context_states).unsqueeze(0).to(device)
-        actions = torch.FloatTensor(context_actions).unsqueeze(0).to(device)
-        returns_to_go = torch.FloatTensor(context_returns).unsqueeze(0).to(device)
-        timesteps = torch.LongTensor(context_timesteps).unsqueeze(0).to(device)
-
-        with torch.no_grad():
-            action = self.foundation_model.get_action(
-                states, actions, returns_to_go, timesteps, temperature
-            )
-
-        return action.cpu().numpy().flatten()
+        return actions_pred
 
 
-class FoundationModelTrainer:
-    """Training framework for RL foundation models."""
+class ScalingAnalyzer:
+    """Analyzer for scaling laws in foundation models."""
 
-    def __init__(self, model, learning_rate=1e-4, weight_decay=1e-2):
-        self.model = model
-        self.optimizer = optim.AdamW(
-            model.parameters(), lr=learning_rate, weight_decay=weight_decay
-        )
-        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
-            self.optimizer, T_max=1000
-        )
+    def __init__(self):
+        self.results = {}
 
-        self.training_stats = {
-            "losses": [],
-            "action_losses": [],
-            "value_losses": [],
-            "return_losses": [],
-        }
+    def analyze_scaling(
+        self,
+        model_sizes: List[int],
+        performances: List[float],
+        dataset_sizes: List[int] = None,
+        compute_budgets: List[float] = None,
+    ) -> Dict[str, float]:
+        """Analyze scaling relationships."""
+        # Model size scaling
+        if len(model_sizes) > 1:
+            log_sizes = np.log(model_sizes)
+            log_perfs = np.log(performances)
+            beta = np.polyfit(log_sizes, log_perfs, 1)[0]
+            self.results["model_scaling_exponent"] = beta
 
-    def train_step(self, batch):
-        """Single training step."""
-        self.model.train()
-        self.optimizer.zero_grad()
+        # Dataset size scaling
+        if dataset_sizes is not None and len(dataset_sizes) > 1:
+            log_data = np.log(dataset_sizes)
+            log_perfs = np.log(performances)
+            gamma = np.polyfit(log_data, log_perfs, 1)[0]
+            self.results["data_scaling_exponent"] = gamma
 
-        states = batch["states"].to(device)
-        actions = batch["actions"].to(device)
-        returns_to_go = batch["returns_to_go"].to(device)
-        timesteps = batch["timesteps"].to(device)
-        target_actions = batch["target_actions"].to(device)
-        target_returns = batch["target_returns"].to(device)
+        # Compute scaling
+        if compute_budgets is not None and len(compute_budgets) > 1:
+            log_compute = np.log(compute_budgets)
+            log_perfs = np.log(performances)
+            delta = np.polyfit(log_compute, log_perfs, 1)[0]
+            self.results["compute_scaling_exponent"] = delta
 
-        outputs = self.model(states, actions, returns_to_go, timesteps)
+        return self.results
 
-        action_loss = F.mse_loss(outputs["action_preds"], target_actions)
-        value_loss = F.mse_loss(outputs["value_preds"], target_returns)
-        return_loss = F.mse_loss(outputs["return_preds"], target_returns)
+    def predict_performance(
+        self, model_size: int, dataset_size: int = None, compute_budget: float = None
+    ) -> float:
+        """Predict performance based on scaling laws."""
+        if not self.results:
+            raise ValueError("Must run analyze_scaling first")
 
-        total_loss = action_loss + 0.5 * value_loss + 0.1 * return_loss
+        performance = 1.0
 
-        total_loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-        self.optimizer.step()
-        self.scheduler.step()
+        if "model_scaling_exponent" in self.results:
+            performance *= model_size ** self.results["model_scaling_exponent"]
 
-        self.training_stats["losses"].append(total_loss.item())
-        self.training_stats["action_losses"].append(action_loss.item())
-        self.training_stats["value_losses"].append(value_loss.item())
-        self.training_stats["return_losses"].append(return_loss.item())
+        if dataset_size is not None and "data_scaling_exponent" in self.results:
+            performance *= dataset_size ** self.results["data_scaling_exponent"]
 
-        return total_loss.item()
+        if compute_budget is not None and "compute_scaling_exponent" in self.results:
+            performance *= compute_budget ** self.results["compute_scaling_exponent"]
+
+        return performance

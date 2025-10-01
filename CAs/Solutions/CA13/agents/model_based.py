@@ -12,45 +12,63 @@ import random
 class ModelBasedAgent:
     """Model-based RL agent using learned dynamics."""
 
-    def __init__(self, state_dim, action_dim, lr=1e-3, planning_horizon=5):
+    def __init__(
+        self,
+        state_dim,
+        action_dim,
+        hidden_dim=128,
+        learning_rate=1e-3,
+        gamma=0.99,
+        planning_horizon=5,
+    ):
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.lr = lr
+        self.hidden_dim = hidden_dim
+        self.lr = learning_rate
+        self.gamma = gamma
         self.planning_horizon = planning_horizon
 
         self.dynamics_model = nn.Sequential(
-            nn.Linear(state_dim + action_dim, 128),
+            nn.Linear(state_dim + action_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(128, 128),
+            nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(128, state_dim),
+            nn.Linear(hidden_dim, state_dim),
         )
 
         self.reward_model = nn.Sequential(
-            nn.Linear(state_dim + action_dim, 128),
+            nn.Linear(state_dim + action_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(128, 64),
+            nn.Linear(hidden_dim, 64),
             nn.ReLU(),
             nn.Linear(64, 1),
         )
 
         self.value_network = nn.Sequential(
-            nn.Linear(state_dim, 128),
+            nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(128, 64),
+            nn.Linear(hidden_dim, 64),
             nn.ReLU(),
             nn.Linear(64, 1),
         )
 
-        self.dynamics_optimizer = optim.Adam(self.dynamics_model.parameters(), lr=lr)
-        self.reward_optimizer = optim.Adam(self.reward_model.parameters(), lr=lr)
-        self.value_optimizer = optim.Adam(self.value_network.parameters(), lr=lr)
+        self.dynamics_optimizer = optim.Adam(
+            self.dynamics_model.parameters(), lr=learning_rate
+        )
+        self.reward_optimizer = optim.Adam(
+            self.reward_model.parameters(), lr=learning_rate
+        )
+        self.value_optimizer = optim.Adam(
+            self.value_network.parameters(), lr=learning_rate
+        )
 
-        self.model_buffer = None  # Will be set to ReplayBuffer
-        self.planning_buffer = None  # Will be set to ReplayBuffer
+        # Initialize replay buffer
+        from ..buffers.replay_buffer import ReplayBuffer
+        self.replay_buffer = ReplayBuffer(capacity=10000)
 
         self.model_losses = []
         self.value_losses = []
+        self.epsilon = 0.1  # For epsilon-greedy exploration
 
     def act(self, state, epsilon=0.1):
         """Select action using model-based planning."""

@@ -1,23 +1,51 @@
 """
-Human-AI Collaboration
+Human-AI Collaboration for Deep Reinforcement Learning
 
-This module provides implementations for human-AI collaborative learning:
-- Preference reward models
-- Human feedback collection
-- Collaborative agents
-- Interactive learning systems
+This module contains implementations of human-AI collaboration components including:
+- Preference-based learning
+- Interactive imitation learning
+- Shared autonomy and control
+- Trust and calibration
+- Human feedback integration
 """
 
-from .preference_model import PreferenceRewardModel, HumanPreference, HumanFeedback
-from .feedback_collector import HumanFeedbackCollector, InteractiveFeedbackCollector
-from .collaborative_agent import CollaborativeAgent, HumanAIPartnership
+from .preference_model import (
+    HumanPreference,
+    HumanFeedback,
+    PreferenceRewardModel,
+    BradleyTerryModel
+)
+
+from .feedback_collector import (
+    HumanFeedbackCollector,
+    InteractiveLearner,
+    TrustModel
+)
+
+from .collaborative_agent import (
+    CollaborativeAgent,
+    SharedAutonomyController,
+    HumanAICoordinator
+)
+
+from .communication import (
+    CommunicationProtocol,
+    AdviceSystem,
+    DemonstrationCollector
+)
 
 __all__ = [
-    "PreferenceRewardModel",
-    "HumanPreference",
-    "HumanFeedback",
-    "HumanFeedbackCollector",
-    "InteractiveFeedbackCollector",
-    "CollaborativeAgent",
-    "HumanAIPartnership",
+    'HumanPreference',
+    'HumanFeedback',
+    'PreferenceRewardModel',
+    'BradleyTerryModel',
+    'HumanFeedbackCollector',
+    'InteractiveLearner',
+    'TrustModel',
+    'CollaborativeAgent',
+    'SharedAutonomyController',
+    'HumanAICoordinator',
+    'CommunicationProtocol',
+    'AdviceSystem',
+    'DemonstrationCollector'
 ]

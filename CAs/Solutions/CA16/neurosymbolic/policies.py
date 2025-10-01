@@ -1,383 +1,294 @@
 """
-Neurosymbolic Policies and Agents
+Neurosymbolic Policy Components
 
-This module contains policy networks and agents that combine neural and symbolic approaches:
-- Neurosymbolic policy networks
-- Hybrid agents
-- Symbolic constraint satisfaction
+This module implements neural-symbolic policy learning and integration.
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Any
-from .knowledge_base import SymbolicKnowledgeBase, SymbolicAtom
-from .neural_components import (
-    NeuralPerceptionModule,
-    SymbolicReasoningModule,
-    NeuralSymbolicInterface,
-)
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from typing import Dict, List, Tuple, Optional, Any, Union
+from .knowledge_base import SymbolicKnowledgeBase, LogicalPredicate, LogicalRule
 
 
-class NeurosymbolicPolicy(nn.Module):
-    """Policy network that combines neural and symbolic reasoning."""
-
-    def __init__(
-        self,
-        state_dim: int,
-        action_dim: int,
-        perception_module: NeuralPerceptionModule,
-        reasoning_module: SymbolicReasoningModule,
-        knowledge_base: SymbolicKnowledgeBase,
-        hidden_dim: int = 128,
-    ):
+class NeuralPerceptionModule(nn.Module):
+    """Neural module for perceiving and processing raw observations."""
+    
+    def __init__(self, input_dim: int, hidden_dim: int = 128, output_dim: int = 64):
         super().__init__()
-
-        self.state_dim = state_dim
-        self.action_dim = action_dim
-
-        self.perception = perception_module
-        self.reasoning = reasoning_module
-        self.interface = NeuralSymbolicInterface(
-            perception_module, reasoning_module, knowledge_base
-        )
-
-        self.neural_policy = nn.Sequential(
-            nn.Linear(state_dim, hidden_dim),
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.output_dim = output_dim
+        
+        # Feature extraction layers
+        self.feature_extractor = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, action_dim),
+            nn.Linear(hidden_dim, output_dim)
         )
+        
+        # Attention mechanism for focusing on relevant features
+        self.attention = nn.MultiheadAttention(
+            embed_dim=output_dim, num_heads=4, dropout=0.1, batch_first=True
+        )
+        
+        # Layer normalization
+        self.layer_norm = nn.LayerNorm(output_dim)
+    
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        """Process raw observations into neural features."""
+        batch_size = observations.shape[0]
+        
+        # Extract features
+        features = self.feature_extractor(observations)
+        
+        # Apply attention (treating each feature as a sequence)
+        features = features.unsqueeze(1)  # Add sequence dimension
+        attended_features, attention_weights = self.attention(features, features, features)
+        attended_features = attended_features.squeeze(1)  # Remove sequence dimension
+        
+        # Layer normalization
+        output = self.layer_norm(attended_features)
+        
+        return output, attention_weights
 
-        self.symbolic_policy = nn.Sequential(
-            nn.Linear(reasoning_module.symbol_dim, hidden_dim),
+
+class SymbolicReasoningModule(nn.Module):
+    """Symbolic module for logical reasoning and rule application."""
+    
+    def __init__(self, knowledge_base: SymbolicKnowledgeBase, 
+                 neural_dim: int = 64, symbolic_dim: int = 32):
+        super().__init__()
+        self.knowledge_base = knowledge_base
+        self.neural_dim = neural_dim
+        self.symbolic_dim = symbolic_dim
+        
+        # Neural to symbolic mapping
+        self.neural_to_symbolic = nn.Sequential(
+            nn.Linear(neural_dim, symbolic_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, action_dim),
+            nn.Linear(symbolic_dim, symbolic_dim)
         )
-
-        self.fusion_network = nn.Sequential(
-            nn.Linear(action_dim * 2, hidden_dim),
+        
+        # Symbolic reasoning layers
+        self.reasoning_layers = nn.Sequential(
+            nn.Linear(symbolic_dim, symbolic_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, action_dim),
+            nn.Linear(symbolic_dim, symbolic_dim)
         )
+        
+        # Rule application weights
+        self.rule_weights = nn.Parameter(torch.ones(len(knowledge_base.rules)))
+        
+    def forward(self, neural_features: torch.Tensor) -> torch.Tensor:
+        """Perform symbolic reasoning on neural features."""
+        batch_size = neural_features.shape[0]
+        
+        # Map neural features to symbolic space
+        symbolic_features = self.neural_to_symbolic(neural_features)
+        
+        # Apply symbolic reasoning
+        reasoned_features = self.reasoning_layers(symbolic_features)
+        
+        # Apply rule-based reasoning
+        rule_applications = self._apply_rules(symbolic_features)
+        
+        # Combine neural and symbolic reasoning
+        combined_features = reasoned_features + rule_applications
+        
+        return combined_features
+    
+    def _apply_rules(self, symbolic_features: torch.Tensor) -> torch.Tensor:
+        """Apply symbolic rules to features."""
+        batch_size = symbolic_features.shape[0]
+        rule_outputs = torch.zeros_like(symbolic_features)
+        
+        # Apply each rule with its weight
+        for i, rule in enumerate(self.knowledge_base.rules):
+            if i < len(self.rule_weights):
+                weight = torch.sigmoid(self.rule_weights[i])
+                # Simplified rule application
+                rule_output = weight * symbolic_features
+                rule_outputs += rule_output
+        
+        return rule_outputs
 
-        self.value_network = nn.Sequential(
-            nn.Linear(state_dim + reasoning_module.symbol_dim, hidden_dim),
+
+class NeurosymbolicPolicy(nn.Module):
+    """Neurosymbolic policy combining neural perception and symbolic reasoning."""
+    
+    def __init__(self, state_dim: int, action_dim: int, 
+                 knowledge_base: SymbolicKnowledgeBase,
+                 hidden_dim: int = 128, symbolic_dim: int = 32):
+        super().__init__()
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.knowledge_base = knowledge_base
+        
+        # Neural perception module
+        self.neural_perception = NeuralPerceptionModule(
+            input_dim=state_dim, hidden_dim=hidden_dim, output_dim=hidden_dim
+        )
+        
+        # Symbolic reasoning module
+        self.symbolic_reasoning = SymbolicReasoningModule(
+            knowledge_base=knowledge_base, neural_dim=hidden_dim, symbolic_dim=symbolic_dim
+        )
+        
+        # Policy head
+        self.policy_head = nn.Sequential(
+            nn.Linear(hidden_dim + symbolic_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1),
+            nn.Linear(hidden_dim, action_dim)
         )
-
-        self.symbolic_constraints = self._init_symbolic_constraints()
-
-    def _init_symbolic_constraints(self) -> Dict[str, List[SymbolicAtom]]:
-        """Initialize symbolic constraints for safe actions."""
-        constraints = {
-            "safe_actions": [],  # Actions that are always safe
-            "forbidden_actions": [],  # Actions that are never allowed
-            "conditional_actions": [],  # Actions allowed under certain conditions
+        
+        # Value head
+        self.value_head = nn.Sequential(
+            nn.Linear(hidden_dim + symbolic_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1)
+        )
+        
+        # Attention weights for combining neural and symbolic features
+        self.attention_weights = nn.Parameter(torch.tensor([0.5, 0.5]))
+    
+    def forward(self, states: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, Any]]:
+        """Forward pass of neurosymbolic policy."""
+        batch_size = states.shape[0]
+        
+        # Neural perception
+        neural_features, attention_weights = self.neural_perception(states)
+        
+        # Symbolic reasoning
+        symbolic_features = self.symbolic_reasoning(neural_features)
+        
+        # Combine neural and symbolic features
+        attention_probs = F.softmax(self.attention_weights, dim=0)
+        combined_features = (attention_probs[0] * neural_features + 
+                           attention_probs[1] * symbolic_features)
+        
+        # Policy and value outputs
+        action_logits = self.policy_head(combined_features)
+        values = self.value_head(combined_features)
+        
+        # Additional outputs for interpretability
+        interpretability_info = {
+            'neural_features': neural_features,
+            'symbolic_features': symbolic_features,
+            'attention_weights': attention_weights,
+            'attention_probs': attention_probs,
+            'rule_weights': self.symbolic_reasoning.rule_weights
         }
-        return constraints
-
-    def forward(
-        self, state: torch.Tensor, symbolic_queries: Optional[List[SymbolicAtom]] = None
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Forward pass through neurosymbolic policy."""
-        if symbolic_queries:
-            reasoning_results = self.interface.perceive_and_reason(
-                state, symbolic_queries
-            )
-            symbolic_features = reasoning_results["reasoned_features"]
-        else:
-            symbolic_features = self.perception(state)
-
-        neural_action_logits = self.neural_policy(state)
-
-        symbolic_action_logits = self.symbolic_policy(symbolic_features)
-
-        combined_logits = torch.cat(
-            [neural_action_logits, symbolic_action_logits], dim=-1
-        )
-        fused_action_logits = self.fusion_network(combined_logits)
-
-        constrained_logits = self._apply_symbolic_constraints(
-            fused_action_logits, symbolic_queries
-        )
-
-        value_input = torch.cat([state, symbolic_features], dim=-1)
-        value = self.value_network(value_input)
-
-        return constrained_logits, value
-
-    def _apply_symbolic_constraints(
-        self,
-        action_logits: torch.Tensor,
-        symbolic_queries: Optional[List[SymbolicAtom]] = None,
-    ) -> torch.Tensor:
-        """Apply symbolic constraints to action logits."""
-        constrained_logits = action_logits.clone()
-
-        if symbolic_queries is None:
-            return constrained_logits
-
-        for i, query in enumerate(symbolic_queries):
-            if str(query).startswith("forbidden("):
-                action_name = str(query).split("(")[1].split(")")[0]
-                if action_name.isdigit():
-                    action_idx = int(action_name)
-                    if action_idx < self.action_dim:
-                        constrained_logits[0, action_idx] = -float("inf")
-
-        return constrained_logits
-
-    def get_action(
-        self,
-        state: torch.Tensor,
-        symbolic_queries: Optional[List[SymbolicAtom]] = None,
-        deterministic: bool = False,
-    ) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
-        """Get action from policy."""
-        self.eval()
-        with torch.no_grad():
-            action_logits, value = self.forward(state, symbolic_queries)
-
-            if deterministic:
-                action = torch.argmax(action_logits, dim=-1)
-            else:
-                action_dist = torch.distributions.Categorical(logits=action_logits)
-                action = action_dist.sample()
-
-            log_prob = torch.log_softmax(action_logits, dim=-1)[0, action]
-
-            info = {
-                "log_prob": log_prob,
-                "value": value,
-                "action_logits": action_logits,
-            }
-
-        return action, value, info
-
-    def get_action_probabilities(
-        self, state: torch.Tensor, symbolic_queries: Optional[List[SymbolicAtom]] = None
-    ) -> torch.Tensor:
+        
+        return action_logits, values, interpretability_info
+    
+    def get_action_probs(self, states: torch.Tensor) -> torch.Tensor:
         """Get action probabilities."""
-        self.eval()
-        with torch.no_grad():
-            action_logits, _ = self.forward(state, symbolic_queries)
-            action_probs = torch.softmax(action_logits, dim=-1)
-
-        return action_probs
+        action_logits, _, _ = self.forward(states)
+        return F.softmax(action_logits, dim=-1)
+    
+    def get_value(self, states: torch.Tensor) -> torch.Tensor:
+        """Get state values."""
+        _, values, _ = self.forward(states)
+        return values.squeeze(-1)
 
 
 class NeurosymbolicAgent:
-    """Agent that uses neurosymbolic reasoning for decision making."""
-
-    def __init__(
-        self,
-        policy: NeurosymbolicPolicy,
-        knowledge_base: SymbolicKnowledgeBase,
-        learning_rate: float = 1e-3,
-        gamma: float = 0.99,
-        gae_lambda: float = 0.95,
-    ):
-        self.policy = policy
-        self.kb = knowledge_base
-
-        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=learning_rate)
-        self.gamma = gamma
-        self.gae_lambda = gae_lambda
-
-        self.states = []
-        self.actions = []
-        self.rewards = []
-        self.values = []
-        self.log_probs = []
-        self.dones = []
-        self.symbolic_queries = []
-
-    def act(
-        self, state: np.ndarray, symbolic_queries: Optional[List[SymbolicAtom]] = None
-    ) -> Tuple[int, Dict]:
-        """Select action based on current state."""
-        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
-
-        action, value, info = self.policy.get_action(state_tensor, symbolic_queries)
-
-        action_scalar = action.item()
-        log_prob = info["log_prob"].item()
-        value_scalar = value.item()
-
-        self.states.append(state)
-        self.actions.append(action_scalar)
-        self.values.append(value_scalar)
-        self.log_probs.append(log_prob)
-        self.symbolic_queries.append(symbolic_queries or [])
-
-        return action_scalar, info
-
-    def store_reward(self, reward: float, done: bool):
-        """Store reward and done flag."""
-        self.rewards.append(reward)
-        self.dones.append(done)
-
-    def update_policy(self, next_value: float = 0.0):
-        """Update policy using PPO-style algorithm."""
-        if len(self.states) == 0:
-            return
-
-        states = torch.FloatTensor(self.states).to(device)
-        actions = torch.LongTensor(self.actions).to(device)
-        old_log_probs = torch.FloatTensor(self.log_probs).to(device)
-        rewards = torch.FloatTensor(self.rewards).to(device)
-        dones = torch.FloatTensor(self.dones).to(device)
-        values = torch.FloatTensor(self.values).to(device)
-
-        advantages, returns = self._compute_advantages(
-            rewards, values, dones, next_value
-        )
-
-        for _ in range(4):  # PPO epochs
-            action_logits, current_values = self.policy(states)
-
-            current_log_probs = torch.log_softmax(action_logits, dim=-1)
-            current_log_probs = current_log_probs.gather(
-                1, actions.unsqueeze(1)
-            ).squeeze(1)
-            ratios = torch.exp(current_log_probs - old_log_probs)
-
-            surr1 = ratios * advantages
-            surr2 = torch.clamp(ratios, 0.8, 1.2) * advantages
-            policy_loss = -torch.min(surr1, surr2).mean()
-
-            value_loss = F.mse_loss(current_values.squeeze(), returns)
-
-            total_loss = policy_loss + 0.5 * value_loss
-
-            self.optimizer.zero_grad()
-            total_loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=0.5)
-            self.optimizer.step()
-
-        self._clear_buffer()
-
-        return {
-            "policy_loss": policy_loss.item(),
-            "value_loss": value_loss.item(),
-            "total_loss": total_loss.item(),
+    """Neurosymbolic RL agent."""
+    
+    def __init__(self, state_dim: int, action_dim: int, 
+                 knowledge_base: SymbolicKnowledgeBase, lr: float = 1e-3):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.knowledge_base = knowledge_base
+        
+        # Policy network
+        self.policy = NeurosymbolicPolicy(state_dim, action_dim, knowledge_base)
+        self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
+        
+        # Training history
+        self.training_history = {
+            'losses': [],
+            'rewards': [],
+            'rule_activations': []
         }
-
-    def _compute_advantages(
-        self,
-        rewards: torch.Tensor,
-        values: torch.Tensor,
-        dones: torch.Tensor,
-        next_value: float,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Compute advantages and returns using GAE."""
-        advantages = torch.zeros_like(rewards)
-        returns = torch.zeros_like(rewards)
-
-        next_value_tensor = torch.tensor(next_value).to(device)
-
-        gae = 0
-        for t in reversed(range(len(rewards))):
-            if t == len(rewards) - 1:
-                next_val = next_value_tensor
+    
+    def select_action(self, state: torch.Tensor, deterministic: bool = False) -> int:
+        """Select action using neurosymbolic policy."""
+        with torch.no_grad():
+            action_probs = self.policy.get_action_probs(state.unsqueeze(0))
+            
+            if deterministic:
+                action = torch.argmax(action_probs, dim=-1)
             else:
-                next_val = values[t + 1]
-
-            delta = rewards[t] + self.gamma * next_val * (1 - dones[t]) - values[t]
-            gae = delta + self.gamma * self.gae_lambda * (1 - dones[t]) * gae
-            advantages[t] = gae
-            returns[t] = gae + values[t]
-
-        return advantages, returns
-
-    def _clear_buffer(self):
-        """Clear experience buffer."""
-        self.states = []
-        self.actions = []
-        self.rewards = []
-        self.values = []
-        self.log_probs = []
-        self.dones = []
-        self.symbolic_queries = []
-
-    def save_model(self, path: str):
-        """Save agent model."""
-        torch.save(
-            {
-                "policy_state_dict": self.policy.state_dict(),
-                "optimizer_state_dict": self.optimizer.state_dict(),
-                "kb": self.kb,  # This might need special handling for pickle
-            },
-            path,
-        )
-
-    def load_model(self, path: str):
-        """Load agent model."""
-        checkpoint = torch.load(path)
-        self.policy.load_state_dict(checkpoint["policy_state_dict"])
-        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-
-
-class SafeNeurosymbolicAgent(NeurosymbolicAgent):
-    """Neurosymbolic agent with safety constraints."""
-
-    def __init__(
-        self,
-        policy: NeurosymbolicPolicy,
-        knowledge_base: SymbolicKnowledgeBase,
-        safety_threshold: float = 0.8,
-    ):
-        super().__init__(policy, knowledge_base)
-        self.safety_threshold = safety_threshold
-
-    def act(
-        self, state: np.ndarray, symbolic_queries: Optional[List[SymbolicAtom]] = None
-    ) -> Tuple[int, Dict]:
-        """Select safe action."""
-        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
-        action_probs = self.policy.get_action_probabilities(
-            state_tensor, symbolic_queries
-        )
-
-        safe_actions = []
-        for action_idx in range(self.policy.action_dim):
-            safety_query = SymbolicAtom(
-                self.kb.predicates.get(
-                    "safe", self.kb.predicates["at"]
-                ),  # Fallback predicate
-                (f"action_{action_idx}", "current_state"),
-            )
-
-            if self.kb.query(safety_query):
-                safe_actions.append(action_idx)
-
-        if safe_actions:
-            safe_probs = action_probs[0, safe_actions]
-            safe_probs = safe_probs / safe_probs.sum()  # Renormalize
-
-            safe_action_idx = torch.multinomial(safe_probs, 1).item()
-            action = safe_actions[safe_action_idx]
-        else:
-            action, info = super().act(state, symbolic_queries)
-            return action, info
-
-        log_prob = torch.log(action_probs[0, action])
-
-        info = {
-            "log_prob": log_prob.item(),
-            "safe_actions": safe_actions,
-            "action_probs": action_probs,
+                action = torch.multinomial(action_probs, 1)
+            
+            return action.item()
+    
+    def update(self, states: torch.Tensor, actions: torch.Tensor, 
+               rewards: torch.Tensor, advantages: torch.Tensor) -> Dict[str, float]:
+        """Update policy using policy gradient."""
+        # Forward pass
+        action_logits, values, interpretability_info = self.policy(states)
+        action_probs = F.softmax(action_logits, dim=-1)
+        
+        # Compute policy loss
+        log_probs = torch.log(action_probs.gather(1, actions.unsqueeze(1)))
+        policy_loss = -(log_probs * advantages.unsqueeze(1)).mean()
+        
+        # Compute value loss
+        value_loss = F.mse_loss(values.squeeze(-1), rewards)
+        
+        # Compute total loss
+        total_loss = policy_loss + 0.5 * value_loss
+        
+        # Backward pass
+        self.optimizer.zero_grad()
+        total_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=1.0)
+        self.optimizer.step()
+        
+        # Record training history
+        self.training_history['losses'].append(total_loss.item())
+        self.training_history['rewards'].append(rewards.mean().item())
+        
+        # Record rule activations
+        rule_stats = self.knowledge_base.get_rule_statistics()
+        self.training_history['rule_activations'].append(rule_stats['total_activations'])
+        
+        return {
+            'policy_loss': policy_loss.item(),
+            'value_loss': value_loss.item(),
+            'total_loss': total_loss.item()
         }
-
-        self.states.append(state)
-        self.actions.append(action)
-        self.log_probs.append(log_prob.item())
-        self.symbolic_queries.append(symbolic_queries or [])
-
-        return action, info
+    
+    def get_interpretability_info(self, states: torch.Tensor) -> Dict[str, Any]:
+        """Get interpretability information for states."""
+        with torch.no_grad():
+            _, _, interpretability_info = self.policy(states)
+            return interpretability_info
+    
+    def add_rule(self, rule: LogicalRule):
+        """Add a new rule to the knowledge base."""
+        self.knowledge_base.add_rule(rule)
+        # Update rule weights parameter
+        new_weights = torch.cat([
+            self.policy.symbolic_reasoning.rule_weights,
+            torch.tensor([1.0])
+        ])
+        self.policy.symbolic_reasoning.rule_weights = nn.Parameter(new_weights)
+    
+    def get_rule_importance(self) -> Dict[str, float]:
+        """Get importance scores for rules."""
+        rule_weights = torch.sigmoid(self.policy.symbolic_reasoning.rule_weights)
+        rule_importance = {}
+        
+        for i, rule in enumerate(self.knowledge_base.rules):
+            if i < len(rule_weights):
+                rule_importance[str(rule)] = rule_weights[i].item()
+        
+        return rule_importance

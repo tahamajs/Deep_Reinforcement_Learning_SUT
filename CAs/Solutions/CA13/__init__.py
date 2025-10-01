@@ -19,20 +19,64 @@ from .agents import (
     ModelFreeAgent,
     DQNAgent,
     ModelBasedAgent,
+    HybridDynaAgent,
+    SampleEfficientAgent,
+    DataAugmentationDQN,
+    OptionsCriticAgent,
+    FeudalAgent,
 )
 
-from .buffers import ReplayBuffer
+from .buffers import ReplayBuffer, PrioritizedReplayBuffer
 
 from .utils import (
     set_seed,
     get_device,
 )
 
+# Import training utilities
+from .training_examples import (
+    train_dqn_agent,
+    train_model_based_agent,
+    evaluate_agent,
+    env_reset,
+    env_step,
+    EpisodeMetrics,
+)
+
+# Import evaluation framework
+from .evaluation.advanced_evaluator import (
+    AdvancedRLEvaluator,
+    IntegratedAdvancedAgent,
+)
+
+# Import visualization utilities
+from .utils import visualization
+
+def get_version():
+    """Get package version."""
+    return __version__
+
 __all__ = [
     "ModelFreeAgent",
     "DQNAgent",
     "ModelBasedAgent",
+    "HybridDynaAgent",
+    "SampleEfficientAgent",
+    "DataAugmentationDQN",
+    "OptionsCriticAgent",
+    "FeudalAgent",
     "ReplayBuffer",
+    "PrioritizedReplayBuffer",
     "set_seed",
     "get_device",
+    "train_dqn_agent",
+    "train_model_based_agent",
+    "evaluate_agent",
+    "env_reset",
+    "env_step",
+    "EpisodeMetrics",
+    "AdvancedRLEvaluator",
+    "IntegratedAdvancedAgent",
+    "visualization",
+    "get_version",
 ]

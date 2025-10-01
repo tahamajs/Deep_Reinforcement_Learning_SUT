@@ -1,23 +1,39 @@
 """
-Neurosymbolic RL
+Neurosymbolic Reinforcement Learning
 
-This module provides neurosymbolic reinforcement learning implementations:
-- Symbolic knowledge bases and reasoning
-- Neural-symbolic policy networks
-- Logical predicates and rules
-- Hybrid learning approaches
+This module contains implementations of neurosymbolic RL components including:
+- Symbolic knowledge representation
+- Neural-symbolic integration
+- Logical policy learning
+- Interpretability and explainability
 """
 
-from .knowledge_base import SymbolicKnowledgeBase, LogicalPredicate, LogicalRule
-from .neural_components import NeuralPerceptionModule, SymbolicReasoningModule
-from .policies import NeurosymbolicPolicy, NeurosymbolicAgent
+from .knowledge_base import LogicalPredicate, LogicalRule, SymbolicKnowledgeBase
+
+from .policies import (
+    NeuralPerceptionModule,
+    SymbolicReasoningModule,
+    NeurosymbolicPolicy,
+    NeurosymbolicAgent,
+)
+
+from .interpretability import (
+    AttentionExplainer,
+    RuleExtractor,
+    CausalAnalyzer,
+    CounterfactualReasoner,
+)
 
 __all__ = [
-    "SymbolicKnowledgeBase",
     "LogicalPredicate",
     "LogicalRule",
+    "SymbolicKnowledgeBase",
     "NeuralPerceptionModule",
     "SymbolicReasoningModule",
     "NeurosymbolicPolicy",
     "NeurosymbolicAgent",
+    "AttentionExplainer",
+    "RuleExtractor",
+    "CausalAnalyzer",
+    "CounterfactualReasoner",
 ]

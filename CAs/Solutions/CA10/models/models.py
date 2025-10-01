@@ -116,11 +116,11 @@ class TabularModel:
         return R
 
 
-class NeuralModel:
-    """Neural network environment model"""
+class NeuralModel(nn.Module):
+    """Neural network environment model built as an ensemble of MLPs"""
 
     def __init__(self, state_dim, action_dim, hidden_dim=256, ensemble_size=1):
-        # super().__init__()
+        super().__init__()
 
         self.state_dim = state_dim
         self.action_dim = action_dim

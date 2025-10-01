@@ -30,34 +30,87 @@ class ModelFreeAgent(ABC):
 class DQNAgent(ModelFreeAgent):
     """Deep Q-Network agent (model-free)."""
 
-    def __init__(self, state_dim, action_dim, lr=1e-3, gamma=0.99):
-        super().__init__(state_dim, action_dim, lr)
+    def __init__(
+        self,
+        state_dim,
+        action_dim,
+        hidden_dim=128,
+        learning_rate=1e-3,
+        gamma=0.99,
+        epsilon_start=1.0,
+        epsilon_end=0.01,
+        epsilon_decay=500,
+    ):
+        super().__init__(state_dim, action_dim, learning_rate)
         self.gamma = gamma
+        self.hidden_dim = hidden_dim
 
-        self.q_network = nn.Sequential(
-            nn.Linear(state_dim, 128),
+        # Epsilon-greedy parameters
+        self.epsilon_start = epsilon_start
+        self.epsilon_end = epsilon_end
+        self.epsilon_decay = epsilon_decay
+        self.epsilon = epsilon_start
+        self.steps_done = 0
+
+        # Q-Network
+        self.network = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(128, 128),
+            nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(128, action_dim),
+            nn.Linear(hidden_dim, action_dim),
         )
+        self.q_network = self.network  # Alias for compatibility
 
-        self.target_network = self.q_network.__class__(*self.q_network.parameters())
-        self.target_network.load_state_dict(self.q_network.state_dict())
-        self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
+        # Target Network
+        self.target_network = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, action_dim),
+        )
+        self.target_network.load_state_dict(self.network.state_dict())
+
+        self.optimizer = optim.Adam(self.network.parameters(), lr=learning_rate)
 
         self.update_count = 0
         self.losses = []
+
+        # Initialize replay buffer (will be set externally if needed)
+        from ..buffers.replay_buffer import ReplayBuffer
+        self.replay_buffer = ReplayBuffer(capacity=10000)
+
+    def act(self, state, epsilon=None):
+        """Select action using epsilon-greedy policy."""
+        if epsilon is None:
+            # Use decaying epsilon
+            self.epsilon = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * \
+                          np.exp(-1.0 * self.steps_done / self.epsilon_decay)
+            self.steps_done += 1
+            epsilon = self.epsilon
+
+        if np.random.random() < epsilon:
+            return np.random.randint(self.action_dim)
+
+        return self.get_best_action(state)
 
     def get_best_action(self, state):
         """Get action with highest Q-value."""
         with torch.no_grad():
             state_tensor = torch.FloatTensor(state).unsqueeze(0)
-            q_values = self.q_network(state_tensor)
+            q_values = self.network(state_tensor)
             return q_values.argmax().item()
 
-    def update(self, batch):
+    def update(self, batch_size=32):
         """Update Q-network using DQN loss."""
+        if len(self.replay_buffer) < batch_size:
+            return None
+
+        batch = self.replay_buffer.sample(batch_size)
+        if batch is None:
+            return None
+
         states, actions, rewards, next_states, dones = batch
 
         states = torch.FloatTensor(states)
@@ -66,7 +119,7 @@ class DQNAgent(ModelFreeAgent):
         next_states = torch.FloatTensor(next_states)
         dones = torch.BoolTensor(dones)
 
-        current_q = self.q_network(states).gather(1, actions.unsqueeze(1))
+        current_q = self.network(states).gather(1, actions.unsqueeze(1))
 
         with torch.no_grad():
             next_q = self.target_network(next_states).max(1)[0]
@@ -76,12 +129,13 @@ class DQNAgent(ModelFreeAgent):
 
         self.optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=1.0)
         self.optimizer.step()
 
         self.losses.append(loss.item())
         self.update_count += 1
 
         if self.update_count % 100 == 0:
-            self.target_network.load_state_dict(self.q_network.state_dict())
+            self.target_network.load_state_dict(self.network.state_dict())
 
         return loss.item()

@@ -1,350 +1,289 @@
 """
-Preference Reward Models
+Preference Models for Human-AI Collaboration
 
-This module contains models for learning from human preferences:
-- Preference reward models
-- Human preference representation
-- Bradley-Terry preference learning
+This module implements preference-based learning and reward modeling.
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Any, Union
-from collections import defaultdict
-import itertools
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from dataclasses import dataclass
+from abc import ABC, abstractmethod
 
 
+@dataclass
 class HumanPreference:
-    """Represents a human preference between two options."""
-
-    def __init__(
-        self,
-        option_a: Any,
-        option_b: Any,
-        preferred: str,
-        confidence: float = 1.0,
-        context: Optional[Dict] = None,
-    ):
-        """
-        Initialize human preference.
-
-        Args:
-            option_a: First option (could be trajectory, state, action, etc.)
-            option_b: Second option
-            preferred: 'A', 'B', or 'equal'
-            confidence: Confidence in preference (0-1)
-            context: Additional context information
-        """
-        self.option_a = option_a
-        self.option_b = option_b
-        self.preferred = preferred
-        self.confidence = confidence
-        self.context = context or {}
-
-        if preferred not in ["A", "B", "equal"]:
-            raise ValueError("Preferred must be 'A', 'B', or 'equal'")
-
-    def get_preference_vector(self) -> torch.Tensor:
-        """Convert preference to vector representation."""
-        if self.preferred == "A":
-            return torch.tensor([1.0, 0.0, 0.0], device=device)  # A > B
-        elif self.preferred == "B":
-            return torch.tensor([0.0, 1.0, 0.0], device=device)  # B > A
-        else:
-            return torch.tensor([0.0, 0.0, 1.0], device=device)  # A == B
-
-    def __str__(self):
-        return f"Preference({self.preferred}): A vs B (confidence: {self.confidence})"
+    """Represents a human preference between two actions or trajectories."""
+    state: torch.Tensor
+    action1: torch.Tensor
+    action2: torch.Tensor
+    preference: int  # 0 for action1, 1 for action2
+    confidence: float = 1.0
+    timestamp: float = 0.0
 
 
+@dataclass
 class HumanFeedback:
-    """Represents various types of human feedback."""
-
-    def __init__(
-        self,
-        feedback_type: str,
-        content: Any,
-        timestamp: Optional[float] = None,
-        user_id: Optional[str] = None,
-    ):
-        """
-        Initialize human feedback.
-
-        Args:
-            feedback_type: Type of feedback ('preference', 'correction', 'demonstration', etc.)
-            content: The actual feedback content
-            timestamp: When feedback was given
-            user_id: Identifier for the human providing feedback
-        """
-        self.feedback_type = feedback_type
-        self.content = content
-        self.timestamp = timestamp or torch.tensor(0.0)
-        self.user_id = user_id
-
-        valid_types = ["preference", "correction", "demonstration", "rating", "comment"]
-        if feedback_type not in valid_types:
-            raise ValueError(f"Invalid feedback type. Must be one of {valid_types}")
-
-    def __str__(self):
-        return f"Feedback({self.feedback_type}): {type(self.content).__name__}"
+    """Represents human feedback on an action or trajectory."""
+    state: torch.Tensor
+    action: torch.Tensor
+    feedback_type: str  # 'positive', 'negative', 'neutral'
+    feedback_value: float  # -1 to 1
+    explanation: str = ""
+    timestamp: float = 0.0
 
 
 class PreferenceRewardModel(nn.Module):
-    """Neural network for learning reward functions from human preferences."""
-
-    def __init__(
-        self,
-        state_dim: int,
-        action_dim: int,
-        hidden_dim: int = 128,
-        preference_dim: int = 64,
-    ):
+    """Neural network for modeling human preferences."""
+    
+    def __init__(self, state_dim: int, action_dim: int, hidden_dim: int = 128):
         super().__init__()
-
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.preference_dim = preference_dim
-
-        self.trajectory_encoder = nn.LSTM(
-            state_dim + action_dim + 1,  # state + action + reward
-            hidden_dim,
-            batch_first=True,
-            bidirectional=True,
-        )
-
-        self.preference_network = nn.Sequential(
-            nn.Linear(
-                hidden_dim * 2 * 2, hidden_dim
-            ),  # Concatenated trajectory encodings
+        self.hidden_dim = hidden_dim
+        
+        # State encoder
+        self.state_encoder = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, preference_dim),
+            nn.ReLU()
         )
-
-        self.bt_model = nn.Sequential(
-            nn.Linear(preference_dim, hidden_dim),
+        
+        # Action encoder
+        self.action_encoder = nn.Sequential(
+            nn.Linear(action_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1),  # Logit for A > B
-            nn.Sigmoid(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU()
         )
-
+        
+        # Reward predictor
         self.reward_predictor = nn.Sequential(
-            nn.Linear(state_dim + action_dim, hidden_dim),
+            nn.Linear(hidden_dim * 2, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
+            nn.Linear(hidden_dim, 1)
+        )
+        
+        # Confidence predictor
+        self.confidence_predictor = nn.Sequential(
+            nn.Linear(hidden_dim * 2, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 1),
+            nn.Sigmoid()
         )
-
-        self.uncertainty_head = nn.Sequential(
-            nn.Linear(preference_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1),
-            nn.Softplus(),  # Positive uncertainty
-        )
-
-    def encode_trajectory(self, trajectory: Dict[str, torch.Tensor]) -> torch.Tensor:
-        """Encode a trajectory into a fixed-dimensional representation."""
-        states = trajectory["states"]  # (seq_len, state_dim)
-        actions = trajectory["actions"]  # (seq_len, action_dim)
-        rewards = trajectory["rewards"]  # (seq_len, 1)
-
-        traj_input = torch.cat([states, actions, rewards], dim=-1)
-
-        outputs, (h_n, c_n) = self.trajectory_encoder(traj_input)
-
-        final_hidden = torch.cat(
-            [h_n[-2], h_n[-1]], dim=-1
-        )  # Last layer, both directions
-
-        return final_hidden
-
-    def compare_trajectories(
-        self, traj_a: Dict[str, torch.Tensor], traj_b: Dict[str, torch.Tensor]
-    ) -> torch.Tensor:
-        """Compare two trajectories and predict preference."""
-        encoding_a = self.encode_trajectory(traj_a)
-        encoding_b = self.encode_trajectory(traj_b)
-
-        combined = torch.cat([encoding_a, encoding_b], dim=-1)
-
-        preference_features = self.preference_network(combined)
-
-        preference_prob = self.bt_model(preference_features)
-
-        return preference_prob.squeeze(), preference_features
-
-    def predict_reward(self, state: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
-        """Predict reward for a state-action pair."""
-        sa_input = torch.cat([state, action], dim=-1)
-        reward = self.reward_predictor(sa_input)
-        return reward.squeeze()
-
-    def estimate_uncertainty(self, preference_features: torch.Tensor) -> torch.Tensor:
-        """Estimate uncertainty in preference prediction."""
-        uncertainty = self.uncertainty_head(preference_features)
-        return uncertainty.squeeze()
-
-    def forward(
-        self, batch_trajectories_a: List[Dict], batch_trajectories_b: List[Dict]
-    ) -> Dict[str, torch.Tensor]:
-        """Forward pass for batch of trajectory pairs."""
-        batch_size = len(batch_trajectories_a)
-
-        encodings_a = []
-        encodings_b = []
-
-        for traj_a, traj_b in zip(batch_trajectories_a, batch_trajectories_b):
-            enc_a = self.encode_trajectory(traj_a)
-            enc_b = self.encode_trajectory(traj_b)
-            encodings_a.append(enc_a)
-            encodings_b.append(enc_b)
-
-        encodings_a = torch.stack(encodings_a)
-        encodings_b = torch.stack(encodings_b)
-
-        combined = torch.cat([encodings_a, encodings_b], dim=-1)
-        preference_features = self.preference_network(combined)
-        preference_logits = self.bt_model(preference_features)
-
-        uncertainties = self.uncertainty_head(preference_features)
-
-        return {
-            "preference_logits": preference_logits.squeeze(),
-            "preference_features": preference_features,
-            "uncertainties": uncertainties.squeeze(),
-            "trajectory_encodings_a": encodings_a,
-            "trajectory_encodings_b": encodings_b,
-        }
-
-    def loss_function(
-        self, predictions: Dict[str, torch.Tensor], preferences: List[HumanPreference]
-    ) -> torch.Tensor:
-        """Compute loss for preference learning."""
-        preference_logits = predictions["preference_logits"]
-
-        targets = []
-        weights = []
-
-        for pref in preferences:
-            if pref.preferred == "A":
-                targets.append(1.0)  # A preferred over B
-            elif pref.preferred == "B":
-                targets.append(0.0)  # B preferred over A
-            else:  # equal
-                targets.append(0.5)  # Neutral
-
-            weights.append(pref.confidence)
-
-        targets = torch.tensor(targets, device=device)
-        weights = torch.tensor(weights, device=device)
-
-        bce_loss = F.binary_cross_entropy(preference_logits, targets, reduction="none")
-        weighted_loss = (bce_loss * weights).mean()
-
-        uncertainty_loss = predictions["uncertainties"].mean() * 0.1
-
-        total_loss = weighted_loss + uncertainty_loss
-
-        return total_loss
-
-
-class ActivePreferenceLearner:
-    """Active learning for preference collection."""
-
-    def __init__(
-        self, reward_model: PreferenceRewardModel, uncertainty_threshold: float = 0.5
-    ):
-        self.reward_model = reward_model
-        self.uncertainty_threshold = uncertainty_threshold
-
-        self.queried_pairs = set()
-
-    def select_query_pair(
-        self, candidate_trajectories: List[Dict]
-    ) -> Tuple[Dict, Dict]:
-        """Select most informative trajectory pair to query."""
-        max_uncertainty = -float("inf")
-        best_pair = None
-
-        for traj_a, traj_b in itertools.combinations(candidate_trajectories, 2):
-            pair_key = (id(traj_a), id(traj_b))
-
-            if pair_key in self.queried_pairs:
-                continue
-
-            with torch.no_grad():
-                pred_a_b, _ = self.reward_model.compare_trajectories(traj_a, traj_b)
-                uncertainty = self._compute_uncertainty(pred_a_b)
-
-            if uncertainty > max_uncertainty:
-                max_uncertainty = uncertainty
-                best_pair = (traj_a, traj_b)
-
-        if best_pair:
-            self.queried_pairs.add((id(best_pair[0]), id(best_pair[1])))
-
-        return best_pair
-
-    def _compute_uncertainty(self, preference_prob: torch.Tensor) -> float:
-        """Compute uncertainty from preference probability."""
-        if preference_prob.dim() == 0:
-            preference_prob = preference_prob.unsqueeze(0)
-
-        entropy = -(
-            preference_prob * torch.log(preference_prob + 1e-8)
-            + (1 - preference_prob) * torch.log(1 - preference_prob + 1e-8)
-        )
-
-        return entropy.item()
-
-    def should_query_human(self, trajectory_pair: Tuple[Dict, Dict]) -> bool:
-        """Decide whether to query human for this pair."""
-        traj_a, traj_b = trajectory_pair
-
+    
+    def forward(self, states: torch.Tensor, actions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Forward pass to predict rewards and confidence."""
+        # Encode states and actions
+        state_features = self.state_encoder(states)
+        action_features = self.action_encoder(actions)
+        
+        # Combine features
+        combined_features = torch.cat([state_features, action_features], dim=-1)
+        
+        # Predict rewards and confidence
+        rewards = self.reward_predictor(combined_features)
+        confidence = self.confidence_predictor(combined_features)
+        
+        return rewards.squeeze(-1), confidence.squeeze(-1)
+    
+    def predict_reward(self, state: torch.Tensor, action: torch.Tensor) -> float:
+        """Predict reward for a single state-action pair."""
         with torch.no_grad():
-            preference_prob, _ = self.reward_model.compare_trajectories(traj_a, traj_b)
-            uncertainty = self._compute_uncertainty(preference_prob)
-
-        return uncertainty > self.uncertainty_threshold
+            reward, _ = self.forward(state.unsqueeze(0), action.unsqueeze(0))
+            return reward.item()
 
 
-class PreferenceDataset:
-    """Dataset for preference learning."""
+class BradleyTerryModel(nn.Module):
+    """Bradley-Terry model for pairwise preference learning."""
+    
+    def __init__(self, state_dim: int, action_dim: int, hidden_dim: int = 128):
+        super().__init__()
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.hidden_dim = hidden_dim
+        
+        # Preference model
+        self.preference_model = PreferenceRewardModel(state_dim, action_dim, hidden_dim)
+        
+        # Temperature parameter for softmax
+        self.temperature = nn.Parameter(torch.tensor(1.0))
+    
+    def forward(self, states: torch.Tensor, actions1: torch.Tensor, 
+                actions2: torch.Tensor) -> torch.Tensor:
+        """Forward pass for pairwise preference prediction."""
+        # Get rewards for both actions
+        rewards1, _ = self.preference_model(states, actions1)
+        rewards2, _ = self.preference_model(states, actions2)
+        
+        # Compute preference probabilities using Bradley-Terry model
+        logits = (rewards1 - rewards2) / self.temperature
+        preference_probs = torch.sigmoid(logits)
+        
+        return preference_probs
+    
+    def predict_preference(self, state: torch.Tensor, action1: torch.Tensor, 
+                          action2: torch.Tensor) -> float:
+        """Predict preference probability for two actions."""
+        with torch.no_grad():
+            prob = self.forward(state.unsqueeze(0), action1.unsqueeze(0), action2.unsqueeze(0))
+            return prob.item()
+    
+    def compute_loss(self, states: torch.Tensor, actions1: torch.Tensor, 
+                    actions2: torch.Tensor, preferences: torch.Tensor) -> torch.Tensor:
+        """Compute Bradley-Terry loss."""
+        preference_probs = self.forward(states, actions1, actions2)
+        
+        # Binary cross-entropy loss
+        loss = F.binary_cross_entropy(preference_probs, preferences.float())
+        
+        return loss
 
-    def __init__(self, preferences: List[HumanPreference]):
-        self.preferences = preferences
 
-    def __len__(self):
-        return len(self.preferences)
-
-    def __getitem__(self, idx):
-        pref = self.preferences[idx]
-
-        traj_a = self._trajectory_to_tensor(pref.option_a)
-        traj_b = self._trajectory_to_tensor(pref.option_b)
-
+class PreferenceLearner:
+    """Learner for human preferences."""
+    
+    def __init__(self, state_dim: int, action_dim: int, lr: float = 1e-3):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        
+        # Bradley-Terry model
+        self.model = BradleyTerryModel(state_dim, action_dim)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
+        
+        # Training history
+        self.training_history = {
+            'losses': [],
+            'accuracies': [],
+            'preferences_learned': 0
+        }
+    
+    def learn_preference(self, preference: HumanPreference) -> float:
+        """Learn from a single preference."""
+        # Prepare data
+        state = preference.state.unsqueeze(0)
+        action1 = preference.action1.unsqueeze(0)
+        action2 = preference.action2.unsqueeze(0)
+        target = torch.tensor([preference.preference], dtype=torch.float32)
+        
+        # Forward pass
+        self.model.train()
+        preference_prob = self.model(state, action1, action2)
+        
+        # Compute loss
+        loss = F.binary_cross_entropy(preference_prob, target)
+        
+        # Backward pass
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+        
+        # Record training history
+        self.training_history['losses'].append(loss.item())
+        self.training_history['preferences_learned'] += 1
+        
+        # Compute accuracy
+        predicted_preference = 1 if preference_prob.item() > 0.5 else 0
+        accuracy = 1.0 if predicted_preference == preference.preference else 0.0
+        self.training_history['accuracies'].append(accuracy)
+        
+        return loss.item()
+    
+    def learn_preferences(self, preferences: List[HumanPreference]) -> Dict[str, float]:
+        """Learn from multiple preferences."""
+        total_loss = 0.0
+        total_accuracy = 0.0
+        
+        for preference in preferences:
+            loss = self.learn_preference(preference)
+            total_loss += loss
+        
+        # Compute average metrics
+        avg_loss = total_loss / len(preferences)
+        avg_accuracy = np.mean(self.training_history['accuracies'][-len(preferences):])
+        
         return {
-            "trajectory_a": traj_a,
-            "trajectory_b": traj_b,
-            "preference": pref.get_preference_vector(),
-            "confidence": pref.confidence,
+            'avg_loss': avg_loss,
+            'avg_accuracy': avg_accuracy,
+            'total_preferences': len(preferences)
+        }
+    
+    def predict_preference(self, state: torch.Tensor, action1: torch.Tensor, 
+                          action2: torch.Tensor) -> float:
+        """Predict preference between two actions."""
+        return self.model.predict_preference(state, action1, action2)
+    
+    def get_reward_model(self) -> PreferenceRewardModel:
+        """Get the underlying reward model."""
+        return self.model.preference_model
+    
+    def evaluate(self, test_preferences: List[HumanPreference]) -> Dict[str, float]:
+        """Evaluate on test preferences."""
+        self.model.eval()
+        total_loss = 0.0
+        correct_predictions = 0
+        
+        with torch.no_grad():
+            for preference in test_preferences:
+                state = preference.state.unsqueeze(0)
+                action1 = preference.action1.unsqueeze(0)
+                action2 = preference.action2.unsqueeze(0)
+                target = torch.tensor([preference.preference], dtype=torch.float32)
+                
+                preference_prob = self.model(state, action1, action2)
+                loss = F.binary_cross_entropy(preference_prob, target)
+                total_loss += loss.item()
+                
+                predicted_preference = 1 if preference_prob.item() > 0.5 else 0
+                if predicted_preference == preference.preference:
+                    correct_predictions += 1
+        
+        accuracy = correct_predictions / len(test_preferences)
+        avg_loss = total_loss / len(test_preferences)
+        
+        return {
+            'accuracy': accuracy,
+            'avg_loss': avg_loss,
+            'total_predictions': len(test_preferences)
         }
 
-    def _trajectory_to_tensor(self, trajectory: Dict) -> Dict[str, torch.Tensor]:
-        """Convert trajectory dict to tensor format."""
-        tensor_traj = {}
-        for key, value in trajectory.items():
-            if isinstance(value, np.ndarray):
-                tensor_traj[key] = torch.FloatTensor(value)
-            elif isinstance(value, list):
-                tensor_traj[key] = torch.FloatTensor(value)
-            else:
-                tensor_traj[key] = value
 
-        return tensor_traj
+class ActivePreferenceLearner(PreferenceLearner):
+    """Active learning for human preferences."""
+    
+    def __init__(self, state_dim: int, action_dim: int, lr: float = 1e-3):
+        super().__init__(state_dim, action_dim, lr)
+        self.uncertainty_threshold = 0.1
+    
+    def select_informative_pairs(self, states: List[torch.Tensor], 
+                                actions: List[torch.Tensor], 
+                                num_pairs: int = 10) -> List[Tuple[int, int]]:
+        """Select most informative action pairs for preference queries."""
+        informative_pairs = []
+        
+        for i, state in enumerate(states):
+            for j, action1 in enumerate(actions):
+                for k, action2 in enumerate(actions):
+                    if j >= k:  # Avoid duplicate pairs
+                        continue
+                    
+                    # Compute uncertainty
+                    preference_prob = self.predict_preference(state, action1, action2)
+                    uncertainty = abs(preference_prob - 0.5)  # Distance from 0.5
+                    
+                    if uncertainty < self.uncertainty_threshold:
+                        informative_pairs.append((j, k))
+        
+        # Sort by uncertainty and return top pairs
+        informative_pairs.sort(key=lambda x: abs(self.predict_preference(
+            states[0], actions[x[0]], actions[x[1]]) - 0.5))
+        
+        return informative_pairs[:num_pairs]
+    
+    def update_uncertainty_threshold(self, new_threshold: float):
+        """Update uncertainty threshold for active learning."""
+        self.uncertainty_threshold = new_threshold

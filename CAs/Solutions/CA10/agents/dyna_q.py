@@ -1,9 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from ..models.models import TabularModel
-from ..environments.environments import SimpleGridWorld, BlockingMaze
 import random
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from models.models import TabularModel
+from environments.environments import SimpleGridWorld, BlockingMaze
 
 
 class DynaQAgent:
