@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from collections import defaultdict
 from typing import Dict, List, Tuple, Optional
-from .algorithms import QLearningAgent
+from agents.algorithms import QLearningAgent
 
 
 class ExplorationStrategies:

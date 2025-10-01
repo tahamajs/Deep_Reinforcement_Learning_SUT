@@ -154,6 +154,7 @@ class DQNAgent:
         self.state_size = state_size
         self.action_size = action_size
         self.lr = lr
+        self.agent_type = "DQN"
         self.gamma = gamma
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay

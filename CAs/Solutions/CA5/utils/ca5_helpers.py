@@ -5,6 +5,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import gymnasium as gym
+import matplotlib.pyplot as plt
 
 
 Transition = namedtuple(
@@ -321,6 +323,36 @@ def _smoke_test():
         )
     loss = a.train_step()
     print("smoke train loss", loss)
+
+
+def create_test_environment():
+    """Create a test environment for DQN"""
+    try:
+        env = gym.make("CartPole-v1")
+        return env, env.observation_space.shape[0], env.action_space.n
+    except:
+        print("CartPole environment not available")
+        return None, 4, 2
+
+
+def plot_learning_curves(scores, title="Learning Curve", window=50):
+    """Plot learning curves with rolling average"""
+    plt.figure(figsize=(10, 6))
+    plt.plot(scores, alpha=0.6, label="Episode Scores")
+    if len(scores) >= window:
+        rolling_avg = np.convolve(scores, np.ones(window) / window, mode="valid")
+        plt.plot(
+            range(window - 1, len(scores)),
+            rolling_avg,
+            linewidth=2,
+            label=f"{window}-episode Average",
+        )
+    plt.xlabel("Episode")
+    plt.ylabel("Score")
+    plt.title(title)
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.show()
 
 
 if __name__ == "__main__":

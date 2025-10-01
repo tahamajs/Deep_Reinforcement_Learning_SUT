@@ -2,25 +2,26 @@
 
 ## Overview
 
-This project implements and analyzes various Deep Q-Network (DQN) algorithms, focusing on value-based reinforcement learning methods. The implementation includes basic DQN, Double DQN, and Dueling DQN, along with comprehensive analysis tools.
+This project presents a comprehensive study of Deep Q-Networks (DQN) and advanced value-based reinforcement learning methods in IEEE format. The implementation includes basic DQN, Double DQN, and Dueling DQN, with all code modularized into separate Python files for better organization and reusability. The notebook uses clean imports and focuses on theoretical foundations, experimental analysis, and performance comparisons.
 
 ## Project Structure
 
 ```
 CA7/
-├── CA7.ipynb              # Main educational notebook
-├── dqn/                   # Core DQN implementations
+├── CA7.ipynb              # Clean notebook with IEEE format
+├── agents/                # Core DQN implementations
 │   ├── __init__.py
 │   ├── core.py           # Basic DQN, ReplayBuffer, DQNAgent
 │   ├── double_dqn.py     # Double DQN implementation
 │   ├── dueling_dqn.py    # Dueling DQN architecture
 │   └── utils.py          # Visualization and analysis utilities
-├── experiments/          # Experiment scripts
+├── experiments/           # Experiment scripts
 │   ├── __init__.py
 │   ├── basic_dqn_experiment.py
-│   └── ...               # Additional experiments
-├── requirements.txt      # Python dependencies
-└── README.md            # This file
+│   └── comprehensive_dqn_analysis.py
+├── training_examples.py   # Example training scripts
+├── requirements.txt       # Python dependencies
+└── README.md             # This file
 ```
 
 ## Key Features
@@ -80,7 +81,9 @@ python experiments/basic_dqn_experiment.py
 ### Using the DQN Package
 
 ```python
-from dqn import DQNAgent, DoubleDQNAgent, DuelingDQNAgent
+from agents.core import DQNAgent
+from agents.double_dqn import DoubleDQNAgent
+from agents.dueling_dqn import DuelingDQNAgent
 import gymnasium as gym
 
 # Create environment
@@ -89,13 +92,17 @@ env = gym.make('CartPole-v1')
 # Create agent
 agent = DQNAgent(
     state_dim=env.observation_space.shape[0],
-    action_dim=env.action_space.n
+    action_dim=env.action_space.n,
+    lr=1e-3,
+    gamma=0.99,
+    epsilon_decay=0.995
 )
 
 # Train
 for episode in range(100):
     reward, steps = agent.train_episode(env)
-    print(f"Episode {episode}: Reward = {reward}")
+    if (episode + 1) % 25 == 0:
+        print(f"Episode {episode}: Reward = {reward}")
 
 # Evaluate
 results = agent.evaluate(env, num_episodes=10)
@@ -106,10 +113,12 @@ print(f"Mean reward: {results['mean_reward']:.2f}")
 
 The main `CA7.ipynb` notebook provides:
 
-- Theoretical foundations
-- Step-by-step implementation walkthrough
-- Interactive visualizations
-- Comparative analysis
+- **IEEE Format**: Structured as an academic paper with proper sections
+- **Theoretical Foundations**: Mathematical formulations and problem definitions
+- **Clean Imports**: All code imported from modular Python files
+- **Interactive Visualizations**: Q-learning concepts and performance analysis
+- **Comprehensive Comparisons**: Side-by-side evaluation of all DQN variants
+- **IEEE-Style References**: Properly cited academic references
 
 ## Key Concepts Covered
 

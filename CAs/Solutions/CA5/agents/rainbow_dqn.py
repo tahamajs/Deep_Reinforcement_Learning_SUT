@@ -26,10 +26,10 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-from dqn_base import DQNAgent, device
-from double_dqn import DoubleDQNAgent
-from dueling_dqn import DuelingDQN
-from prioritized_replay import PrioritizedReplayBuffer
+from .dqn_base import DQNAgent, device
+from .double_dqn import DoubleDQNAgent
+from .dueling_dqn import DuelingDQN
+from .prioritized_replay import PrioritizedReplayBuffer
 import random
 import math
 import warnings

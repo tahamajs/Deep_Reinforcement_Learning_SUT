@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from ..utils.setup import device, Categorical
+from utils.setup import device, Categorical
 import gymnasium as gym
 
 
@@ -312,17 +312,17 @@ class ControlVariatesAgent:
             cv_values = []
             for state in states:
                 state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
-                cv_val = cv(state_tensor).item()
+                cv_val = cv(state_tensor)
                 cv_values.append(cv_val)
 
-            cv_tensor = torch.FloatTensor(cv_values).to(device)
+            cv_tensor = torch.cat(cv_values, dim=0).squeeze()
             returns_tensor = torch.FloatTensor(returns).to(device)
 
             cv_loss = F.mse_loss(cv_tensor, returns_tensor)
             cv_losses.append(cv_loss.item())
 
             self.cv_optimizers[i].zero_grad()
-            cv_loss.backward()
+            cv_loss.backward(retain_graph=True)
             self.cv_optimizers[i].step()
 
         advantages = []

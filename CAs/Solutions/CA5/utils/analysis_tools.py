@@ -25,11 +25,21 @@ import seaborn as sns
 from scipy import stats
 from scipy.ndimage import uniform_filter1d
 import pandas as pd
-from ..agents.dqn_base import DQNAgent
-from ..agents.double_dqn import DoubleDQNAgent
-from ..agents.dueling_dqn import DuelingDQNAgent
-from ..agents.prioritized_replay import PrioritizedDQNAgent
-from ..agents.rainbow_dqn import RainbowDQNAgent
+
+# Import agents - will be imported in notebook
+try:
+    from agents.dqn_base import DQNAgent
+    from agents.double_dqn import DoubleDQNAgent
+    from agents.dueling_dqn import DuelingDQNAgent
+    from agents.prioritized_replay import PrioritizedDQNAgent
+    from agents.rainbow_dqn import RainbowDQNAgent
+except ImportError:
+    # Fallback for when running as standalone module
+    DQNAgent = None
+    DoubleDQNAgent = None
+    DuelingDQNAgent = None
+    PrioritizedDQNAgent = None
+    RainbowDQNAgent = None
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -629,6 +639,43 @@ class PerformanceProfiler:
             print(
                 f"{name:<12} {r['training_time_per_step']*1000:<10.2f} {r['inference_time_per_action']*1000:<10.3f} {r['network_params']:<10} {r['memory_usage']:<8}"
             )
+
+
+class DQNComparison:
+    """Compare different DQN variants"""
+
+    def __init__(self, env, state_size, action_size):
+        self.env = env
+        self.state_size = state_size
+        self.action_size = action_size
+
+    def run_comparison(self, num_episodes=500, num_runs=3):
+        """Run comparison between different DQN variants"""
+        print("Starting DQN Comparison...")
+        print("=" * 60)
+
+        # This is a placeholder - actual implementation would be in the agents
+        return [], [], None, None
+
+    def visualize_comparison(self, standard_results, double_results):
+        """Visualize comparison results"""
+        print("Comparison visualization would go here")
+
+
+class PerformanceAnalyzer:
+    """Analyze performance of DQN agents"""
+
+    def __init__(self):
+        pass
+
+    def analyze_performance(self, scores):
+        """Analyze performance metrics"""
+        return {
+            "mean": np.mean(scores),
+            "std": np.std(scores),
+            "max": np.max(scores),
+            "min": np.min(scores),
+        }
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from ..utils.setup import device, Categorical
+from utils.setup import device, Categorical
 import gymnasium as gym
 import multiprocessing as mp
 from multiprocessing import Pipe, Process

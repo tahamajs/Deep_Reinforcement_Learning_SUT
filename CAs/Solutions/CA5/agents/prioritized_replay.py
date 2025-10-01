@@ -21,7 +21,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-from dqn_base import DQNAgent, ReplayBuffer, device
+from .dqn_base import DQNAgent, ReplayBuffer, device
 import random
 import warnings
 
