@@ -284,15 +284,18 @@ class AdversarialRobustAgent:
             all_returns.extend(returns)
 
         returns = torch.FloatTensor(all_returns).to(device)
-        values = torch.FloatTensor(all_values).to(device)
-        advantages = returns - values
+        old_values = torch.FloatTensor(all_values).to(device)
+        advantages = returns - old_values
 
         action_probs = self.policy_network(observations)
         action_dist = Categorical(action_probs)
         log_probs = action_dist.log_prob(actions)
 
         policy_loss = -(log_probs * advantages.detach()).mean()
-        value_loss = F.mse_loss(values, returns)
+
+        # Compute new values from value network for gradient computation
+        new_values = self.value_network(observations).squeeze()
+        value_loss = F.mse_loss(new_values, returns)
 
         adversarial_loss = 0
         for i in range(min(32, len(observations))):  # Subsample for efficiency

@@ -4,4 +4,4 @@ from .policies import (
     AdvancedActorCritic,
     ContinuousActorCriticAgent,
 )
-from .algorithms import REINFORCEAgent, ActorCriticAgent, PPOAgent
+from .algorithms import REINFORCEAgent, ActorCriticAgent

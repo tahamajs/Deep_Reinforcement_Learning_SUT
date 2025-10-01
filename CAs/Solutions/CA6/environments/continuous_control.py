@@ -569,7 +569,7 @@ def compare_continuous_control():
 
             if (episode + 1) % log_interval == 0:
                 avg_reward = np.mean(agent.episode_rewards[-log_interval:])
-                print(".2f")
+                print(f"Episode {episode + 1}, Avg Reward: {avg_reward:.2f}")
 
         results[name] = {
             "rewards": agent.episode_rewards.copy(),

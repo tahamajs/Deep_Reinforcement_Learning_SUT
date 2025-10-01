@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from setup import device, Categorical
+from ..utils.setup import device, Categorical
 import gymnasium as gym
 import multiprocessing as mp
 from multiprocessing import Pipe, Process
@@ -726,7 +726,7 @@ def compare_advanced_pg():
 
             if (episode + 1) % log_interval == 0:
                 avg_reward = np.mean(agent.episode_rewards[-log_interval:])
-                print(".2f")
+                print(f"Episode {episode + 1}, Avg Reward: {avg_reward:.2f}")
 
         results[name] = {
             "rewards": agent.episode_rewards.copy(),

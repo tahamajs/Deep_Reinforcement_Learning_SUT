@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 from collections import deque, namedtuple
+from dataclasses import dataclass, field, asdict
 import random
 import copy
 import math
@@ -143,6 +144,47 @@ class RunningStats:
     @property
     def std(self):
         return math.sqrt(self.variance)
+
+
+@dataclass
+class EpisodeMetrics:
+    """Container for per-episode statistics across training loops."""
+
+    episode: int
+    return_: float
+    length: int
+    elapsed_sec: float
+    mean_q_loss: Optional[float] = None
+    mean_model_loss: Optional[float] = None
+    mean_planning_reward: Optional[float] = None
+    success: Optional[bool] = None
+    final_distance: Optional[float] = None
+    notes: Dict[str, Any] = field(default_factory=dict)
+
+
+def env_reset(env):
+    """Wrapper for gym/gymnasium reset API to ensure consistent outputs."""
+
+    result = env.reset()
+    if isinstance(result, tuple) and len(result) == 2:
+        observation, info = result
+    else:
+        observation, info = result, {}
+    return observation, info
+
+
+def env_step(env, action):
+    """Wrapper around env.step supporting both Gym and Gymnasium signatures."""
+
+    result = env.step(action)
+    if isinstance(result, tuple) and len(result) == 5:
+        observation, reward, terminated, truncated, info = result
+        done = terminated or truncated
+    elif isinstance(result, tuple) and len(result) == 4:
+        observation, reward, done, info = result
+    else:
+        raise ValueError("Unexpected env.step return format")
+    return observation, reward, done, info
 
 
 # ============================================================================
@@ -1348,58 +1390,123 @@ def train_model_based_rl_agent(
     num_episodes: int = 500,
     model_update_freq: int = 10,
     planning_steps: int = 10,
+    max_steps: int = 1000,
+    success_fn: Optional[Any] = None,
 ):
-    """Train a model-based RL agent."""
-    episode_rewards = []
-    episode_lengths = []
-    model_losses = []
+    """Train a model-based RL agent with rich metric logging."""
+
+    episode_rewards: List[float] = []
+    episode_lengths: List[int] = []
+    model_losses: List[float] = []
+    q_losses: List[float] = []
+    planning_rewards: List[float] = []
+    episode_logs: List[Dict[str, Any]] = []
+
+    if hasattr(agent, "planning_steps") and planning_steps is not None:
+        agent.planning_steps = planning_steps
 
     for episode in range(num_episodes):
-        state = env.reset()
-        episode_reward = 0
+        state, reset_info = env_reset(env)
+        episode_reward = 0.0
         episode_length = 0
         done = False
+        start_time = time.time()
+        last_reward = 0.0
 
-        while not done:
-            # Select action
+        episode_q_losses: List[float] = []
+        episode_model_losses: List[float] = []
+        episode_plan_rewards: List[float] = []
+        last_info: Dict[str, Any] = reset_info
+
+        while not done and episode_length < max_steps:
+            # Select and execute action
             action = agent.get_action(state)
+            next_state, reward, done, info = env_step(env, action)
+            last_info = info or {}
+            last_reward = reward
 
-            # Take action
-            next_state, reward, done, _ = env.step(action)
-
-            # Store experience
+            # Store transition
             agent.store_experience(state, action, reward, next_state, done)
 
-            # Update Q-function
+            # Q-function update (model-free component)
             q_loss = agent.update_q_function()
+            if q_loss is not None and q_loss != 0:
+                episode_q_losses.append(q_loss)
+                q_losses.append(q_loss)
 
-            # Update model periodically
+            # Model update
             if episode_length % model_update_freq == 0:
                 model_loss = agent.update_model()
-                model_losses.append(model_loss)
+                if model_loss is not None and model_loss != 0:
+                    episode_model_losses.append(model_loss)
+                    model_losses.append(model_loss)
 
-            # Planning step
-            agent.planning_step()
+            # Planning step with learned model
+            plan_reward = agent.planning_step()
+            if plan_reward is not None and plan_reward != 0:
+                episode_plan_rewards.append(plan_reward)
+                planning_rewards.append(plan_reward)
 
             state = next_state
             episode_reward += reward
             episode_length += 1
 
-            if episode_length > 1000:  # Timeout
-                break
+        elapsed = time.time() - start_time
 
+        # Determine success criteria
+        final_distance = (
+            last_info.get("distance") if isinstance(last_info, dict) else None
+        )
+        if success_fn is not None:
+            success = success_fn(last_info)
+        else:
+            success = (
+                bool(final_distance == 0)
+                if final_distance is not None
+                else last_reward > 0
+            )
+
+        metrics = EpisodeMetrics(
+            episode=episode + 1,
+            return_=episode_reward,
+            length=episode_length,
+            elapsed_sec=elapsed,
+            mean_q_loss=float(np.mean(episode_q_losses)) if episode_q_losses else None,
+            mean_model_loss=(
+                float(np.mean(episode_model_losses)) if episode_model_losses else None
+            ),
+            mean_planning_reward=(
+                float(np.mean(episode_plan_rewards)) if episode_plan_rewards else None
+            ),
+            success=success,
+            final_distance=final_distance,
+            notes={"reset_info": reset_info, "last_info": last_info},
+        )
+
+        episode_logs.append(asdict(metrics))
         episode_rewards.append(episode_reward)
         episode_lengths.append(episode_length)
 
-        if (episode + 1) % 50 == 0:
-            avg_reward = np.mean(episode_rewards[-50:])
-            print(f"Episode {episode + 1}: Avg Reward = {avg_reward:.2f}")
+        if (episode + 1) % max(1, num_episodes // 10) == 0:
+            recent_mean = np.mean(episode_rewards[-max(1, num_episodes // 10) :])
+            print(
+                f"Episode {episode + 1:04d} | Avg Return (window) = {recent_mean:.2f} | "
+                f"Length = {episode_length} | Success = {success}"
+            )
 
-    return {
+    results = {
         "rewards": episode_rewards,
         "lengths": episode_lengths,
         "model_losses": model_losses,
+        "q_losses": q_losses,
+        "planning_rewards": planning_rewards,
+        "episode_logs": episode_logs,
     }
+
+    if episode_logs:
+        results["episode_dataframe"] = pd.DataFrame(episode_logs)
+
+    return results
 
 
 def train_hierarchical_rl_agent(env, agent, num_episodes: int = 500):

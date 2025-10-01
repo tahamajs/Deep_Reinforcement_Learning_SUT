@@ -9,15 +9,15 @@ from typing import Dict, List, Any, Optional, Tuple
 
 
 try:
-    from ..environments import EnvironmentWrapper
-    from ..agents.algorithms import REINFORCEAgent, ActorCriticAgent, compare_algorithms
-    from ..utils.visualization import TrainingVisualizer, print_training_comparison
-    from ..agents.exploration import ExplorationScheduler, EntropyBonusExploration
+    from environments.environments import EnvironmentWrapper
+    from agents.algorithms import REINFORCEAgent, ActorCriticAgent, compare_algorithms
+    from utils.visualization import TrainingVisualizer, print_training_comparison
+    from agents.exploration import ExplorationScheduler, EntropyBonusExploration
 except ImportError:
-    from ..environments import EnvironmentWrapper
-    from ..agents.algorithms import REINFORCEAgent, ActorCriticAgent, compare_algorithms
-    from ..utils.visualization import TrainingVisualizer, print_training_comparison
-    from ..agents.exploration import ExplorationScheduler, EntropyBonusExploration
+    from environments.environments import EnvironmentWrapper
+    from agents.algorithms import REINFORCEAgent, ActorCriticAgent, compare_algorithms
+    from utils.visualization import TrainingVisualizer, print_training_comparison
+    from agents.exploration import ExplorationScheduler, EntropyBonusExploration
 
 import time
 

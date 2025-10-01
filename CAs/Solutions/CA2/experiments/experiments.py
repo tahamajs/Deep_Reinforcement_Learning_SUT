@@ -11,20 +11,20 @@ from typing import Dict, List, Tuple, Optional
 from collections import defaultdict
 import pandas as pd
 
-from ..environments import GridWorld, create_custom_environment
-from ..agents.policies import (
+from environments.environments import GridWorld, create_custom_environment
+from agents.policies import (
     RandomPolicy,
     GreedyPolicy,
     CustomPolicy,
     GreedyActionPolicy,
 )
-from ..agents.algorithms import (
+from agents.algorithms import (
     policy_evaluation,
     policy_iteration,
     value_iteration,
     q_learning,
 )
-from ..utils.visualization import plot_value_function, plot_policy, plot_learning_curve
+from utils.visualization import plot_value_function, plot_policy, plot_learning_curve
 
 np.random.seed(42)
 
@@ -119,7 +119,7 @@ def experiment_policy_comparison(env, gamma=0.9):
     optimal_values = policy_evaluation(env, policies[2], gamma=gamma)
     policies[2] = GreedyActionPolicy(env, optimal_values, gamma=gamma)
 
-    from ..utils.visualization import compare_policies
+    from utils.visualization import compare_policies
 
     compare_policies(env, policies, policy_names, gamma)
 
@@ -165,7 +165,7 @@ def experiment_value_iteration(env, gamma=0.9):
     print(f"\nValue iteration completed in {len(history)} iterations")
     print(f"Final value of start state: {optimal_values[(0,0)]:.3f}")
 
-    from ..utils.visualization import plot_value_iteration_convergence
+    from utils.visualization import plot_value_iteration_convergence
 
     plot_value_iteration_convergence([h["values"] for h in history])
 
@@ -195,7 +195,7 @@ def experiment_q_learning(env, num_episodes=1000, alpha=0.1, gamma=0.9, epsilon=
 
     plot_learning_curve(episode_rewards, "Q-Learning Learning Curve")
 
-    from ..agents.algorithms import compute_v_from_q
+    from agents.algorithms import compute_v_from_q
 
     values = compute_v_from_q(Q, env)
     policy = GreedyPolicy(env, Q)

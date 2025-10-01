@@ -587,7 +587,9 @@ def demonstrate_advanced_applications():
     for episode in range(50):
         extrinsic_reward, intrinsic_reward, loss = curiosity_agent.train_episode(env)
         if (episode + 1) % 10 == 0:
-            print(".2f" ".2f")
+            print(
+                f"Episode {episode + 1}, Extrinsic: {extrinsic_reward:.2f}, Intrinsic: {intrinsic_reward:.2f}"
+            )
 
     print("\n🛡️ Safe Reinforcement Learning")
     safe_agent = SafeRLAgent(state_dim, action_dim, cost_limit=5.0)
@@ -596,7 +598,7 @@ def demonstrate_advanced_applications():
     for episode in range(50):
         reward, cost, loss = safe_agent.train_episode_safe(env)
         if (episode + 1) % 10 == 0:
-            print(".2f" ".2f")
+            print(f"Episode {episode + 1}, Reward: {reward:.2f}, Cost: {cost:.2f}")
 
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
 

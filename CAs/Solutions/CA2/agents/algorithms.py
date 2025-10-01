@@ -9,7 +9,7 @@ import numpy as np
 from typing import Dict, List, Tuple, Optional, Callable
 from collections import defaultdict
 import copy
-from policies import RandomPolicy, GreedyActionPolicy
+from .policies import RandomPolicy, GreedyActionPolicy
 
 np.random.seed(42)
 

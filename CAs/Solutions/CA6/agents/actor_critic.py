@@ -360,7 +360,9 @@ def compare_actor_critic_agents():
                 avg_actor_loss = np.mean(agent.actor_losses[-log_interval:])
                 avg_critic_loss = np.mean(agent.critic_losses[-log_interval:])
 
-                print(".2f" ".4f" ".4f")
+                print(
+                    f"Episode {episode + 1}, Avg Reward: {avg_reward:.2f}, Actor Loss: {avg_actor_loss:.4f}, Critic Loss: {avg_critic_loss:.4f}"
+                )
 
         results[name] = {
             "rewards": agent.episode_rewards.copy(),

@@ -95,10 +95,10 @@ class PolicyEvaluator:
             results[name] = self.evaluate_policy(agent, deterministic=True)
             eval_time = time.time() - start_time
 
-            print(".2f")
-            print(".2f")
-            print(".1f")
-            print(".3f")
+            print(f"Mean Reward: {results[name]['mean_reward']:.2f}")
+            print(f"Std Reward: {results[name]['std_reward']:.2f}")
+            print(f"Success Rate: {results[name]['success_rate']:.1%}")
+            print(f"Evaluation Time: {eval_time:.3f}s")
 
         return results
 
@@ -328,20 +328,20 @@ def create_comprehensive_report(training_results, evaluation_results):
     print("\n📈 LEARNING CURVE ANALYSIS:")
     for method, analysis in learning_analysis.items():
         print(f"\n{method}:")
-        print(".2f")
+        print(f"  Final Performance: {analysis['final_performance']:.2f}")
         print(f"  Peak Performance: {analysis['peak_performance']:.2f}")
         print(f"  Convergence Episode: {analysis['convergence_episode']}")
-        print(".4f")
-        print(".4f")
+        print(f"  Final Stability: {analysis['final_stability']:.4f}")
+        print(f"  Variability: {analysis['variability']:.4f}")
 
     print("\n🏆 STATISTICAL COMPARISON:")
     print(f"Best Method: {stats_comparison['best_method']}")
-    print(".2f")
+    print(f"Best Score: {stats_comparison['best_score']:.2f}")
 
     print("\n📊 CONFIDENCE INTERVALS (95%):")
     for method in evaluation_results.keys():
         ci_lower, ci_upper = stats_comparison[f"{method}_ci"]
-        print(".2f")
+        print(f"{method:15} | CI: [{ci_lower:.2f}, {ci_upper:.2f}]")
 
     efficiency = analyzer.sample_efficiency_analysis(training_results)
     print("\n⚡ SAMPLE EFFICIENCY:")

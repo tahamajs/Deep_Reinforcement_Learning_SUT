@@ -340,7 +340,7 @@ def compare_policies(env, policies, policy_names, gamma=0.9, title="Policy Compa
         gamma: Discount factor
         title: Plot title
     """
-    from ..agents.algorithms import policy_evaluation
+    from agents.algorithms import policy_evaluation
 
     fig, axes = plt.subplots(1, len(policies), figsize=(5 * len(policies), 4))
 

@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from ..utils.setup import device, Categorical
+from utils.setup import device, Categorical
 import gymnasium as gym
 
 
@@ -193,15 +193,17 @@ def test_reinforce():
             avg_loss = np.mean(agent.policy_losses[-log_interval:])
             avg_entropy = np.mean(agent.entropy_history[-log_interval:])
 
-            print(".2f" ".4f" ".4f")
+            print(
+                f"Episode {episode + 1}, Avg Reward: {avg_reward:.2f}, Avg Loss: {avg_loss:.4f}, Avg Entropy: {avg_entropy:.4f}"
+            )
 
     print("\n=== Variance Analysis ===")
     gradient_estimates = agent.analyze_variance(env, num_episodes=50)
 
     print("Gradient estimate statistics:")
-    print(".4f")
-    print(".4f")
-    print(".4f")
+    print(f"Mean: {np.mean(gradient_estimates):.4f}")
+    print(f"Std: {np.std(gradient_estimates):.4f}")
+    print(f"Min: {np.min(gradient_estimates):.4f}")
 
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
 
@@ -237,7 +239,10 @@ def test_reinforce():
 
     axes[1, 1].hist(gradient_estimates, bins=30, alpha=0.7, density=True)
     axes[1, 1].axvline(
-        np.mean(gradient_estimates), color="red", linestyle="--", label=".3f"
+        np.mean(gradient_estimates),
+        color="red",
+        linestyle="--",
+        label=f"Mean: {np.mean(gradient_estimates):.3f}",
     )
     axes[1, 1].set_title("Distribution of Gradient Estimates")
     axes[1, 1].set_xlabel("Gradient Value")

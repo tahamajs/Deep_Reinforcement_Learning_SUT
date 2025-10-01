@@ -53,8 +53,8 @@ class EnvironmentWrapper:
             return (
                 np.array(next_state),
                 float(reward),
-                np.bool_(done),
-                np.bool_(truncated),
+                bool(done),
+                bool(truncated),
                 info,
             )
 
@@ -63,7 +63,7 @@ class EnvironmentWrapper:
         done = np.random.rand() > 0.95
         truncated = False
         info = {}
-        return next_state, reward, np.bool_(done), np.bool_(truncated), info
+        return next_state, reward, bool(done), bool(truncated), info
 
     def close(self):
         """Close environment"""
@@ -118,7 +118,7 @@ class PolicyDemoEnvironment:
 
         self.current_state = next_state
 
-        return next_state, reward, np.bool_(done), np.bool_(truncated), {}
+        return next_state, reward, bool(done), bool(truncated), {}
 
 
 def create_environment(env_name: str = "CartPole-v1") -> EnvironmentWrapper:
