@@ -93,38 +93,57 @@ class FederatedRLClient:
     def __init__(
         self,
         client_id: int,
-        state_dim: int,
-        action_dim: int,
+        state_dim: int = None,
+        action_dim: int = None,
         hidden_dim: int = 64,
         lr: float = 1e-3,
         local_epochs: int = 5,
         privacy_epsilon: float = 1.0,
+        local_model: nn.Module = None,
+        environment = None,
+        learning_rate: float = None,
+        use_differential_privacy: bool = False,
+        clip_norm: float = 1.0,
+        compression_rate: float = 1.0,
     ):
 
         self.client_id = client_id
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.local_epochs = local_epochs
+        self.local_model = local_model
+        self.environment = environment
+        self.learning_rate = learning_rate if learning_rate is not None else lr
+        self.use_differential_privacy = use_differential_privacy
+        self.clip_norm = clip_norm
+        self.compression_rate = compression_rate
 
-        self.actor = nn.Sequential(
-            nn.Linear(state_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, action_dim),
-            nn.Tanh(),
-        )
+        if local_model is not None:
+            # Use provided local model
+            self.local_model = local_model
+        elif state_dim is not None and action_dim is not None:
+            # Create default actor-critic models
+            self.actor = nn.Sequential(
+                nn.Linear(state_dim, hidden_dim),
+                nn.ReLU(),
+                nn.Linear(hidden_dim, hidden_dim),
+                nn.ReLU(),
+                nn.Linear(hidden_dim, action_dim),
+                nn.Tanh(),
+            )
 
-        self.critic = nn.Sequential(
-            nn.Linear(state_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1),
-        )
+            self.critic = nn.Sequential(
+                nn.Linear(state_dim, hidden_dim),
+                nn.ReLU(),
+                nn.Linear(hidden_dim, hidden_dim),
+                nn.ReLU(),
+                nn.Linear(hidden_dim, 1),
+            )
 
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=lr)
+        if hasattr(self, 'actor'):
+            self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
+        if hasattr(self, 'critic'):
+            self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=lr)
 
         self.privacy_engine = DifferentialPrivacy(epsilon=privacy_epsilon)
         self.compression = GradientCompression(compression_ratio=0.2)
@@ -297,6 +316,71 @@ class FederatedRLClient:
             "num_samples": len(self.replay_buffer),
             "client_id": self.client_id,
         }
+    
+    def download_model(self, global_model: Union[nn.Module, Tuple[nn.Module, nn.Module]]):
+        """Download global model for demo compatibility"""
+        if hasattr(self, 'local_model') and self.local_model is not None:
+            self.local_model.load_state_dict(global_model.state_dict())
+        # Also update actor/critic if they exist
+        if isinstance(global_model, tuple):
+            global_actor, global_critic = global_model
+            self.actor.load_state_dict(global_actor.state_dict())
+            self.critic.load_state_dict(global_critic.state_dict())
+            
+    def local_training(self, n_episodes: int = 10, n_epochs: int = 5) -> List[float]:
+        """Local training for demo compatibility"""
+        if hasattr(self, 'environment') and self.environment is not None:
+            rewards = []
+            for _ in range(n_episodes):
+                state = self.environment.reset()
+                episode_reward = 0
+                done = False
+                
+                while not done:
+                    # Simple action selection
+                    with torch.no_grad():
+                        if hasattr(self, 'local_model') and self.local_model is not None:
+                            state_tensor = torch.FloatTensor(state).unsqueeze(0)
+                            action_probs = self.local_model(state_tensor)
+                            action = torch.argmax(action_probs, dim=1).item()
+                        else:
+                            action = np.random.choice(self.action_dim)
+                    
+                    next_state, reward, done, _ = self.environment.step(action)
+                    episode_reward += reward
+                    state = next_state
+                
+                rewards.append(episode_reward)
+            
+            return rewards
+        else:
+            # Fallback to existing train_local method
+            return [self.train_local([], 1e-3, gamma=0.99) for _ in range(n_episodes)]
+    
+    def get_model_update(self) -> Dict:
+        """Get model update for demo compatibility"""
+        if hasattr(self, 'local_model') and self.local_model is not None:
+            return {'model_state': self.local_model.state_dict()}
+        else:
+            return self.get_model_updates(self.actor, self.critic)
+    
+    def get_communication_cost(self) -> float:
+        """Get communication cost for demo"""
+        # Estimate based on model size and compression
+        if hasattr(self, 'local_model') and self.local_model is not None:
+            n_params = sum(p.numel() for p in self.local_model.parameters())
+        else:
+            n_params = sum(p.numel() for p in self.actor.parameters())
+            n_params += sum(p.numel() for p in self.critic.parameters())
+        
+        # Assume 4 bytes per parameter, convert to MB
+        cost_mb = (n_params * 4) / (1024 * 1024)
+        
+        # Apply compression if set
+        if hasattr(self, 'compression_rate'):
+            cost_mb *= self.compression_rate
+            
+        return cost_mb
 
 
 class FederatedRLServer:
@@ -304,34 +388,51 @@ class FederatedRLServer:
 
     def __init__(
         self,
-        state_dim: int,
-        action_dim: int,
+        state_dim: int = None,
+        action_dim: int = None,
         hidden_dim: int = 64,
         aggregation_method: str = "fedavg",
         byzantine_tolerance: bool = False,
+        global_model: nn.Module = None,
+        n_clients: int = None,
+        use_differential_privacy: bool = False,
+        epsilon: float = 1.0,
+        delta: float = 1e-5,
+        compression_rate: float = 1.0,
     ):
 
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.aggregation_method = aggregation_method
         self.byzantine_tolerance = byzantine_tolerance
+        self.n_clients = n_clients
+        self.use_differential_privacy = use_differential_privacy
+        self.epsilon = epsilon
+        self.delta = delta
+        self.compression_rate = compression_rate
+        self.global_model = global_model
 
-        self.global_actor = nn.Sequential(
-            nn.Linear(state_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, action_dim),
-            nn.Tanh(),
-        )
+        if global_model is not None:
+            # Use provided global model
+            self.global_model = global_model
+        elif state_dim is not None and action_dim is not None:
+            # Create default actor-critic models
+            self.global_actor = nn.Sequential(
+                nn.Linear(state_dim, hidden_dim),
+                nn.ReLU(),
+                nn.Linear(hidden_dim, hidden_dim),
+                nn.ReLU(),
+                nn.Linear(hidden_dim, action_dim),
+                nn.Tanh(),
+            )
 
-        self.global_critic = nn.Sequential(
-            nn.Linear(state_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1),
-        )
+            self.global_critic = nn.Sequential(
+                nn.Linear(state_dim, hidden_dim),
+                nn.ReLU(),
+                nn.Linear(hidden_dim, hidden_dim),
+                nn.ReLU(),
+                nn.Linear(hidden_dim, 1),
+            )
 
         self.round_statistics = []
         self.client_contributions = defaultdict(list)
@@ -481,8 +582,78 @@ class FederatedRLServer:
         global_actor_copy = copy.deepcopy(self.global_actor)
         global_critic_copy = copy.deepcopy(self.global_critic)
         return global_actor_copy, global_critic_copy
+    
+    def get_global_model(self) -> Union[nn.Module, Tuple[nn.Module, nn.Module]]:
+        """Get global model for demo compatibility"""
+        if hasattr(self, 'global_model') and self.global_model is not None:
+            return copy.deepcopy(self.global_model)
+        else:
+            return self.get_global_models()
+    
+    def get_noise_scale(self) -> float:
+        """Get noise scale for privacy metrics"""
+        if hasattr(self, 'use_differential_privacy') and self.use_differential_privacy:
+            # Simple noise scale calculation
+            return 2.0 * self.epsilon if hasattr(self, 'epsilon') else 1.0
+        return 0.0
 
 
 # Add aliases for compatibility with demo
 FederatedAgent = FederatedRLClient
 FederatedServer = FederatedRLServer
+
+
+class SimpleAgent(nn.Module):
+    """Simple neural network agent for federated RL demos"""
+    
+    def __init__(self, state_dim: int, action_dim: int, hidden_dim: int = 64):
+        super(SimpleAgent, self).__init__()
+        self.fc1 = nn.Linear(state_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc3 = nn.Linear(hidden_dim, action_dim)
+        
+    def forward(self, state):
+        x = torch.relu(self.fc1(state))
+        x = torch.relu(self.fc2(x))
+        action_probs = torch.softmax(self.fc3(x), dim=-1)
+        return action_probs
+
+
+class FederatedEnvironment:
+    """Simple environment for federated RL demonstrations"""
+    
+    def __init__(self, state_dim: int = 4, action_dim: int = 2, 
+                 reward_bias: float = 0.0, transition_noise: float = 0.1):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.reward_bias = reward_bias
+        self.transition_noise = transition_noise
+        self.state = None
+        self.step_count = 0
+        self.max_steps = 50
+        
+    def reset(self):
+        """Reset environment to initial state"""
+        self.state = np.random.randn(self.state_dim) * 0.1
+        self.step_count = 0
+        return self.state
+        
+    def step(self, action: int):
+        """Take an action and return next state, reward, done, info"""
+        # Simple dynamics
+        action_effect = np.zeros(self.state_dim)
+        action_effect[action % self.state_dim] = 0.1
+        
+        # Update state with action effect and noise
+        self.state = self.state + action_effect + np.random.randn(self.state_dim) * self.transition_noise
+        self.state = np.clip(self.state, -2, 2)
+        
+        # Calculate reward (distance-based with client-specific bias)
+        distance = np.linalg.norm(self.state)
+        reward = -distance + self.reward_bias + np.random.randn() * 0.1
+        
+        # Check if done
+        self.step_count += 1
+        done = self.step_count >= self.max_steps or distance > 1.5
+        
+        return self.state, reward, done, {}

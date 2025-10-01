@@ -20,6 +20,7 @@ jupyter notebook CA7.ipynb
 ```
 
 The notebook is organized into sections that build upon each other:
+
 - **Sections I-III**: Theoretical foundations and setup
 - **Sections IV-VII**: Core DQN implementations and variants
 - **Section VIII**: Comprehensive comparisons
@@ -95,6 +96,7 @@ python experiments/basic_dqn_experiment.py
 ```
 
 This will:
+
 - Train a basic DQN agent on CartPole-v1
 - Display training progress
 - Show performance plots
@@ -107,6 +109,7 @@ python experiments/comprehensive_dqn_analysis.py
 ```
 
 This will:
+
 - Compare all DQN variants
 - Analyze experience replay strategies
 - Test different hyperparameters
@@ -147,6 +150,7 @@ PerformanceAnalyzer.plot_learning_curves(results)
 ### 1. Modular Architecture
 
 All code is organized into logical modules:
+
 - `agents/core.py`: Core DQN components
 - `agents/double_dqn.py`: Double DQN extension
 - `agents/dueling_dqn.py`: Dueling DQN architecture
@@ -155,6 +159,7 @@ All code is organized into logical modules:
 ### 2. Comprehensive Documentation
 
 Every module, class, and function includes:
+
 - Detailed docstrings
 - Type hints
 - Usage examples
@@ -217,6 +222,7 @@ print(f"Using device: {device}")
 ### Issue: Poor performance
 
 **Solutions**:
+
 1. Increase training episodes
 2. Tune hyperparameters (especially learning rate)
 3. Increase replay buffer size
@@ -288,11 +294,11 @@ class MyCustomEnv(gym.Env):
         super().__init__()
         self.observation_space = spaces.Box(low=0, high=1, shape=(4,))
         self.action_space = spaces.Discrete(2)
-    
+
     def reset(self):
         # Return initial state
         return np.random.random(4), {}
-    
+
     def step(self, action):
         # Return next_state, reward, terminated, truncated, info
         return np.random.random(4), 1.0, False, False, {}
@@ -318,13 +324,13 @@ class CustomQNetwork(DQN):
 
 Expected performance on CartPole-v1 (500 episodes):
 
-| Algorithm | Mean Reward | Std | Training Time |
-|-----------|-------------|-----|---------------|
-| Basic DQN | 180-220 | 20-30 | ~30-60s |
-| Double DQN | 200-240 | 15-25 | ~35-65s |
-| Dueling DQN | 210-250 | 10-20 | ~40-70s |
+| Algorithm   | Mean Reward | Std   | Training Time |
+| ----------- | ----------- | ----- | ------------- |
+| Basic DQN   | 180-220     | 20-30 | ~30-60s       |
+| Double DQN  | 200-240     | 15-25 | ~35-65s       |
+| Dueling DQN | 210-250     | 10-20 | ~40-70s       |
 
-*Times are approximate and depend on hardware*
+_Times are approximate and depend on hardware_
 
 ## Additional Resources
 
@@ -337,6 +343,7 @@ Expected performance on CartPole-v1 (500 episodes):
 ## Support
 
 For issues or questions:
+
 1. Check the notebook examples
 2. Review the module docstrings
 3. Run the experiment scripts
@@ -354,4 +361,3 @@ If you use this code for academic work, please cite:
   howpublished={\url{https://github.com/yourusername/DRL}}
 }
 ```
-
