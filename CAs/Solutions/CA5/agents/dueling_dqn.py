@@ -185,13 +185,18 @@ class DuelingAnalysis:
         q_value_history = []
 
         for episode in range(num_episodes):
-            state, _ = env.reset()
+            state = env.reset()
+            if isinstance(state, tuple):
+                state = state[0]
             done = False
             episode_values = []
             episode_advantages = []
             episode_q_values = []
 
-            while not done:
+            step_count = 0
+            max_steps = 500
+
+            while not done and step_count < max_steps:
                 # Get estimates
                 value, advantages = agent.get_value_advantage_estimates(state)
 
@@ -201,10 +206,12 @@ class DuelingAnalysis:
                     episode_q_values.append(value + (advantages - np.mean(advantages)))
 
                 # Take action
-                action = agent.act(state)
-                next_state, reward, terminated, truncated, _ = env.step(action)
-                done = terminated or truncated
+                action = agent.get_action(state, training=False)
+                result = env.step(action)
+                next_state, reward, terminated, truncated, _ = result if len(result) == 5 else (*result, False)
+                done = terminated or (truncated if len(result) == 5 else False)
                 state = next_state
+                step_count += 1
 
             value_history.append(episode_values)
             advantage_history.append(episode_advantages)

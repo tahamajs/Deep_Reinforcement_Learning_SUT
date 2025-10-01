@@ -1,20 +1,27 @@
 """
-Advanced RL Environments Package
+Custom Environments for Deep Reinforcement Learning
 
-This package provides specialized environments for advanced reinforcement learning experiments,
-including multi-modal, symbolic, and collaborative environments.
+This module contains custom environments for testing and demonstrating RL algorithms.
 """
 
-from .multi_modal_env import MultiModalGridWorld, MultiModalGridWorldWithMemory
-
-from .symbolic_env import SymbolicGridWorld, SymbolicGridWorldWithReasoning
+from .symbolic_env import SymbolicGridWorld
 
 from .collaborative_env import CollaborativeGridWorld
 
+from .continual_env import (
+    ContinualLearningEnvironment,
+    TaskSwitchingEnvironment
+)
+
+from .quantum_env import QuantumRLEnvironment
+
+from .neuromorphic_env import NeuromorphicRLEnvironment
+
 __all__ = [
-    "MultiModalGridWorld",
-    "MultiModalGridWorldWithMemory",
     "SymbolicGridWorld",
-    "SymbolicGridWorldWithReasoning",
-    "CollaborativeGridWorld",
+    "CollaborativeGridWorld", 
+    "ContinualLearningEnvironment",
+    "TaskSwitchingEnvironment",
+    "QuantumRLEnvironment",
+    "NeuromorphicRLEnvironment",
 ]

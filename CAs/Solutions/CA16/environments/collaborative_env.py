@@ -1,447 +1,340 @@
 """
-Collaborative Grid World Environment
+Collaborative Environment for Human-AI Collaboration
 
-This module provides a collaborative environment for human-AI interaction.
+This module implements a collaborative grid world environment for testing human-AI collaboration.
 """
 
 import numpy as np
-import gymnasium as gym
-from gymnasium import spaces
-from typing import Dict, List, Tuple, Optional, Any
-import threading
-import time
-import queue
+import torch
+from typing import Dict, List, Tuple, Optional, Any, Union
+from gymnasium import Env
+from gymnasium.spaces import Discrete, Box
 
 
-class CollaborativeGridWorld(gym.Env):
-    """Collaborative grid world where human and AI agents work together."""
-
-    def __init__(self, size: int = 12, num_agents: int = 2, max_steps: int = 100):
+class CollaborativeGridWorld(Env):
+    """Collaborative grid world environment for human-AI collaboration."""
+    
+    def __init__(self, size: int = 8, num_goals: int = 3, num_obstacles: int = 5):
         super().__init__()
-
         self.size = size
-        self.num_agents = num_agents  # AI agents
-        self.max_steps = max_steps
-
-        self.action_space = spaces.Discrete(
-            6
-        )  # up, down, left, right, interact, communicate
-
-        self.observation_space = spaces.Dict(
-            {
-                "ai_state": spaces.Dict(
-                    {
-                        "position": spaces.MultiDiscrete([size, size]),
-                        "inventory": spaces.MultiBinary(5),  # Can hold up to 5 items
-                        "last_communication": spaces.Text(max_length=50),
-                    }
-                ),
-                "human_state": spaces.Dict(
-                    {
-                        "available": spaces.Discrete(2),  # 0=unavailable, 1=available
-                        "last_action": spaces.Discrete(6),
-                        "communication_history": spaces.Sequence(
-                            spaces.Text(max_length=50)
-                        ),
-                    }
-                ),
-                "shared_state": spaces.Dict(
-                    {
-                        "grid_objects": spaces.MultiDiscrete(
-                            [size, size, 4]
-                        ),  # object types
-                        "task_progress": spaces.Box(
-                            low=0, high=1, shape=(3,)
-                        ),  # progress on subtasks
-                        "communication_channel": spaces.Text(max_length=100),
-                    }
-                ),
-            }
+        self.num_goals = num_goals
+        self.num_obstacles = num_obstacles
+        
+        # Action space: 0=up, 1=down, 2=left, 3=right
+        self.action_space = Discrete(4)
+        
+        # Observation space: flattened grid + agent position + goal positions + collaboration info
+        self.observation_space = Box(
+            low=0, high=1, shape=(size * size + 2 + num_goals * 2 + 3,), dtype=np.float32
         )
-
-        self.ai_positions = []
-        self.ai_inventories = []
+        
+        # Environment state
+        self.agent_pos = None
+        self.goals = None
+        self.obstacles = None
+        self.grid = None
+        
+        # Collaboration state
         self.human_available = True
-        self.human_last_action = 0
-        self.step_count = 0
-
-        self.grid_objects = {}  # position -> object_type
-        self.task_progress = np.zeros(3)  # Progress on 3 subtasks
-        self.communication_history = []
-
-        self.object_types = ["resource_a", "resource_b", "tool", "obstacle"]
-
-        self.communication_queue = queue.Queue()
-        self.human_response_queue = queue.Queue()
-        self.communication_thread = None
-        self.is_communicating = False
-
-    def reset(self, seed=None, options=None):
-        """Reset the collaborative environment."""
+        self.collaboration_history = []
+        self.human_confidence = 0.8
+        self.ai_confidence = 0.7
+        
+        # Episode tracking
+        self.episode_length = 0
+        self.max_episode_length = 200
+        
+        # Collaboration metrics
+        self.collaboration_metrics = {
+            'human_interventions': 0,
+            'ai_decisions': 0,
+            'collaborative_decisions': 0,
+            'successful_collaborations': 0
+        }
+    
+    def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict]:
+        """Reset the environment."""
         super().reset(seed=seed)
-
-        positions = [(i, j) for i in range(self.size) for j in range(self.size)]
-        np.random.shuffle(positions)
-
-        self.ai_positions = positions[: self.num_agents]
-        self.ai_inventories = [[] for _ in range(self.num_agents)]
-
-        self.grid_objects = {}
-        for i in range(self.num_agents * 2):  # Some objects per agent
-            obj_type = np.random.choice(self.object_types)
-            self.grid_objects[positions[self.num_agents + i]] = obj_type
-
-        self.human_available = True
-        self.human_last_action = 0
-        self.step_count = 0
-        self.task_progress = np.zeros(3)
-        self.communication_history = []
-
-        self._start_communication()
-
-        return self._get_observation(), {}
-
-    def step(self, action: int) -> Tuple[Dict, float, bool, bool, Dict]:
-        """Execute collaborative step."""
-        self.step_count += 1
-
-        reward = 0
-        terminated = False
-        truncated = self.step_count >= self.max_steps
-
-        ai_reward = self._execute_ai_action(action)
-        reward += ai_reward
-
-        human_action = self._get_human_action()
+        
+        # Initialize agent position
+        self.agent_pos = [0, 0]
+        
+        # Initialize goals
+        self.goals = []
+        while len(self.goals) < self.num_goals:
+            goal = [np.random.randint(0, self.size), np.random.randint(0, self.size)]
+            if goal != self.agent_pos and goal not in self.goals:
+                self.goals.append(goal)
+        
+        # Initialize obstacles
+        self.obstacles = []
+        while len(self.obstacles) < self.num_obstacles:
+            obstacle = [np.random.randint(0, self.size), np.random.randint(0, self.size)]
+            if (obstacle != self.agent_pos and obstacle not in self.goals and 
+                obstacle not in self.obstacles):
+                self.obstacles.append(obstacle)
+        
+        # Initialize grid
+        self.grid = np.zeros((self.size, self.size))
+        for goal in self.goals:
+            self.grid[goal[0], goal[1]] = 2  # Goal
+        for obstacle in self.obstacles:
+            self.grid[obstacle[0], obstacle[1]] = 1  # Obstacle
+        
+        # Reset collaboration state
+        self.collaboration_history = []
+        self.collaboration_metrics = {
+            'human_interventions': 0,
+            'ai_decisions': 0,
+            'collaborative_decisions': 0,
+            'successful_collaborations': 0
+        }
+        
+        # Reset episode tracking
+        self.episode_length = 0
+        
+        return self.get_observation(), {}
+    
+    def step(self, action: int, human_action: Optional[int] = None, 
+             human_confidence: float = 0.5) -> Tuple[np.ndarray, float, bool, bool, Dict]:
+        """Execute one step in the environment."""
+        # Record collaboration
         if human_action is not None:
-            human_reward = self._execute_human_action(human_action)
-            reward += human_reward
-
-        self._update_task_progress()
-
-        self._process_communication()
-
-        if self._check_task_completion():
-            reward += 20.0
-            terminated = True
-
-        observation = self._get_observation()
+            self.collaboration_history.append({
+                'ai_action': action,
+                'human_action': human_action,
+                'human_confidence': human_confidence,
+                'used_human': np.random.random() < human_confidence
+            })
+            
+            # Use human action if confident enough
+            if self.collaboration_history[-1]['used_human']:
+                action = human_action
+                self.collaboration_metrics['human_interventions'] += 1
+            else:
+                self.collaboration_metrics['ai_decisions'] += 1
+        else:
+            self.collaboration_metrics['ai_decisions'] += 1
+        
+        # Execute action
+        new_pos = self.agent_pos.copy()
+        
+        if action == 0:  # up
+            new_pos[0] = max(0, new_pos[0] - 1)
+        elif action == 1:  # down
+            new_pos[0] = min(self.size - 1, new_pos[0] + 1)
+        elif action == 2:  # left
+            new_pos[1] = max(0, new_pos[1] - 1)
+        elif action == 3:  # right
+            new_pos[1] = min(self.size - 1, new_pos[1] + 1)
+        
+        # Check for obstacles
+        if new_pos in self.obstacles:
+            reward = -1
+            done = False
+        else:
+            self.agent_pos = new_pos
+            
+            # Check for goals
+            if new_pos in self.goals:
+                self.goals.remove(new_pos)
+                reward = 10
+                
+                # Bonus for successful collaboration
+                if human_action is not None and self.collaboration_history[-1]['used_human']:
+                    reward += 1.0
+                    self.collaboration_metrics['successful_collaborations'] += 1
+            else:
+                reward = -0.1
+            
+            done = len(self.goals) == 0
+        
+        # Update episode length
+        self.episode_length += 1
+        
+        # Check for episode termination
+        if self.episode_length >= self.max_episode_length:
+            done = True
+        
+        # Create info dictionary
         info = {
-            "ai_reward": ai_reward,
-            "human_action": human_action,
-            "task_progress": self.task_progress.copy(),
-            "communication_count": len(self.communication_history),
-            "collaboration_score": self._calculate_collaboration_score(),
+            'collaboration_used': human_action is not None,
+            'collaboration_history': self.collaboration_history.copy(),
+            'collaboration_metrics': self.collaboration_metrics.copy()
         }
-
-        return observation, reward, terminated, truncated, info
-
-    def _execute_ai_action(self, action: int) -> float:
-        """Execute AI agent action."""
-        reward = 0
-
-        if action < 4:  # Movement
-            reward += self._move_ai_agent(0, action)  # Agent 0 for now
-        elif action == 4:  # Interact
-            reward += self._ai_interact(0)
-        elif action == 5:  # Communicate
-            reward += self._ai_communicate(0)
-
-        return reward
-
-    def _move_ai_agent(self, agent_id: int, direction: int) -> float:
-        """Move AI agent."""
-        dx, dy = [(0, -1), (0, 1), (-1, 0), (1, 0)][direction]
-        current_pos = self.ai_positions[agent_id]
-        new_pos = (current_pos[0] + dx, current_pos[1] + dy)
-
-        if not (0 <= new_pos[0] < self.size and 0 <= new_pos[1] < self.size):
-            return -0.1
-
-        if new_pos in self.grid_objects and self.grid_objects[new_pos] == "obstacle":
-            return -0.1
-
-        self.ai_positions[agent_id] = new_pos
-
-        if new_pos in self.grid_objects:
-            obj_type = self.grid_objects[new_pos]
-            if obj_type in ["resource_a", "resource_b"]:
-                self.ai_inventories[agent_id].append(obj_type)
-                del self.grid_objects[new_pos]
-                return 1.0
-
-        return 0.0
-
-    def _ai_interact(self, agent_id: int) -> float:
-        """AI agent interaction."""
-        pos = self.ai_positions[agent_id]
-
-        if pos in self.grid_objects:
-            obj_type = self.grid_objects[pos]
-            if obj_type == "tool" and len(self.ai_inventories[agent_id]) < 5:
-                self.ai_inventories[agent_id].append(obj_type)
-                del self.grid_objects[pos]
-                return 0.5
-
-        return 0.0
-
-    def _ai_communicate(self, agent_id: int) -> float:
-        """AI agent communication."""
-        message = self._generate_ai_message(agent_id)
-
-        self.communication_queue.put(
-            {
-                "sender": "ai",
-                "agent_id": agent_id,
-                "message": message,
-                "timestamp": time.time(),
-            }
+        
+        return self.get_observation(), reward, done, False, info
+    
+    def get_observation(self) -> np.ndarray:
+        """Get current observation."""
+        # Flatten grid
+        grid_flat = self.grid.flatten()
+        
+        # Agent position
+        agent_pos = np.array(self.agent_pos, dtype=np.float32) / self.size
+        
+        # Goal positions
+        goal_positions = np.zeros(self.num_goals * 2, dtype=np.float32)
+        for i, goal in enumerate(self.goals):
+            if i < self.num_goals:
+                goal_positions[i * 2] = goal[0] / self.size
+                goal_positions[i * 2 + 1] = goal[1] / self.size
+        
+        # Collaboration information
+        collaboration_info = np.array([
+            float(self.human_available),
+            self.human_confidence,
+            self.ai_confidence
+        ], dtype=np.float32)
+        
+        # Combine all observations
+        observation = np.concatenate([grid_flat, agent_pos, goal_positions, collaboration_info])
+        
+        return observation.astype(np.float32)
+    
+    def set_human_availability(self, available: bool):
+        """Set human availability."""
+        self.human_available = available
+    
+    def set_human_confidence(self, confidence: float):
+        """Set human confidence level."""
+        self.human_confidence = max(0.0, min(1.0, confidence))
+    
+    def set_ai_confidence(self, confidence: float):
+        """Set AI confidence level."""
+        self.ai_confidence = max(0.0, min(1.0, confidence))
+    
+    def get_collaboration_statistics(self) -> Dict[str, Any]:
+        """Get collaboration statistics."""
+        total_decisions = (self.collaboration_metrics['human_interventions'] + 
+                          self.collaboration_metrics['ai_decisions'])
+        
+        if total_decisions == 0:
+            return self.collaboration_metrics.copy()
+        
+        stats = self.collaboration_metrics.copy()
+        stats['human_intervention_rate'] = self.collaboration_metrics['human_interventions'] / total_decisions
+        stats['ai_decision_rate'] = self.collaboration_metrics['ai_decisions'] / total_decisions
+        stats['collaboration_success_rate'] = (
+            self.collaboration_metrics['successful_collaborations'] / 
+            max(1, self.collaboration_metrics['human_interventions'])
         )
-
-        return 0.1  # Small reward for communication
-
-    def _generate_ai_message(self, agent_id: int) -> str:
-        """Generate AI communication message."""
-        pos = self.ai_positions[agent_id]
-        inventory = self.ai_inventories[agent_id]
-
-        messages = [
-            f"I'm at position {pos} with inventory {inventory}",
-            f"I see objects nearby: {self._get_nearby_objects(pos)}",
-            f"My progress: {self.task_progress}",
-            "Need help with resource collection",
-            "Task almost complete!",
-        ]
-
-        return np.random.choice(messages)
-
-    def _get_nearby_objects(self, position: Tuple[int, int]) -> List[str]:
-        """Get objects near a position."""
-        nearby = []
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                check_pos = (position[0] + dx, position[1] + dy)
-                if check_pos in self.grid_objects:
-                    nearby.append(self.grid_objects[check_pos])
-        return nearby
-
-    def _get_human_action(self) -> Optional[int]:
-        """Get human action if available."""
-        if not self.human_available:
-            return None
-
-        try:
-            human_input = self.human_response_queue.get_nowait()
-            self.human_last_action = human_input.get("action", 0)
-            return self.human_last_action
-        except queue.Empty:
-            return None
-
-    def _execute_human_action(self, action: int) -> float:
-        """Execute human action (simplified - humans can teleport and collect)."""
-        if action < 4:
-            new_pos = (np.random.randint(self.size), np.random.randint(self.size))
-            nearest_resource = self._find_nearest_resource(new_pos)
-            if nearest_resource:
-                self.ai_positions[0] = nearest_resource  # Help AI agent
-                return 2.0
-        elif action == 4:
-            collected = 0
-            for pos, obj in list(self.grid_objects.items()):
-                if obj in ["resource_a", "resource_b"]:
-                    self.ai_inventories[0].append(obj)
-                    del self.grid_objects[pos]
-                    collected += 1
-                    if collected >= 3:  # Collect up to 3 items
-                        break
-            return collected * 1.5
-        elif action == 5:
-            return 0.5
-
-        return 0.0
-
-    def _find_nearest_resource(
-        self, start_pos: Tuple[int, int]
-    ) -> Optional[Tuple[int, int]]:
-        """Find nearest resource position."""
-        min_dist = float("inf")
-        nearest_pos = None
-
-        for pos, obj in self.grid_objects.items():
-            if obj in ["resource_a", "resource_b"]:
-                dist = abs(pos[0] - start_pos[0]) + abs(pos[1] - start_pos[1])
-                if dist < min_dist:
-                    min_dist = dist
-                    nearest_pos = pos
-
-        return nearest_pos
-
-    def _update_task_progress(self):
-        """Update task progress based on current state."""
-        resource_a_count = sum(
-            1 for inv in self.ai_inventories for item in inv if item == "resource_a"
-        )
-        self.task_progress[0] = min(resource_a_count / 5.0, 1.0)  # Need 5 resource_a
-
-        resource_b_count = sum(
-            1 for inv in self.ai_inventories for item in inv if item == "resource_b"
-        )
-        self.task_progress[1] = min(resource_b_count / 3.0, 1.0)  # Need 3 resource_b
-
-        tool_count = sum(
-            1 for inv in self.ai_inventories for item in inv if item == "tool"
-        )
-        self.task_progress[2] = min(tool_count / 2.0, 1.0)  # Need 2 tools
-
-    def _check_task_completion(self) -> bool:
-        """Check if all tasks are complete."""
-        return np.all(self.task_progress >= 1.0)
-
-    def _process_communication(self):
-        """Process communication messages."""
-        try:
-            while True:
-                message = self.communication_queue.get_nowait()
-                self.communication_history.append(message)
-
-                if len(self.communication_history) > 10:
-                    self.communication_history.pop(0)
-
-        except queue.Empty:
-            pass
-
-    def _calculate_collaboration_score(self) -> float:
-        """Calculate collaboration effectiveness score."""
-        comm_score = min(len(self.communication_history) / 10.0, 1.0)
-        progress_score = np.mean(self.task_progress)
-        human_score = 1.0 if self.human_available else 0.0
-
-        return (comm_score + progress_score + human_score) / 3.0
-
-    def _get_observation(self) -> Dict:
-        """Get collaborative observation."""
+        
+        return stats
+    
+    def render(self, mode: str = 'human') -> Optional[np.ndarray]:
+        """Render the environment."""
+        if mode == 'human':
+            # Create display grid
+            display_grid = np.zeros((self.size, self.size), dtype=str)
+            display_grid.fill('.')
+            
+            # Place obstacles
+            for obstacle in self.obstacles:
+                display_grid[obstacle[0], obstacle[1]] = 'X'
+            
+            # Place goals
+            for goal in self.goals:
+                display_grid[goal[0], goal[1]] = 'G'
+            
+            # Place agent
+            display_grid[self.agent_pos[0], self.agent_pos[1]] = 'A'
+            
+            # Print grid
+            print("\n" + "=" * (self.size * 2 + 1))
+            for row in display_grid:
+                print("|" + " ".join(row) + "|")
+            print("=" * (self.size * 2 + 1))
+            print(f"Agent: {self.agent_pos}, Goals: {self.goals}, Episode: {self.episode_length}")
+            print(f"Human Available: {self.human_available}, Human Confidence: {self.human_confidence:.2f}")
+            print(f"AI Confidence: {self.ai_confidence:.2f}")
+            
+            # Print collaboration statistics
+            stats = self.get_collaboration_statistics()
+            print(f"Collaboration Stats: {stats}")
+            
+        elif mode == 'rgb_array':
+            # Create RGB array
+            rgb_array = np.zeros((self.size, self.size, 3), dtype=np.uint8)
+            
+            # Set colors
+            rgb_array[:, :] = [255, 255, 255]  # White background
+            
+            # Obstacles (black)
+            for obstacle in self.obstacles:
+                rgb_array[obstacle[0], obstacle[1]] = [0, 0, 0]
+            
+            # Goals (green)
+            for goal in self.goals:
+                rgb_array[goal[0], goal[1]] = [0, 255, 0]
+            
+            # Agent (red)
+            rgb_array[self.agent_pos[0], self.agent_pos[1]] = [255, 0, 0]
+            
+            return rgb_array
+        
+        return None
+    
+    def get_environment_info(self) -> Dict[str, Any]:
+        """Get environment information."""
         return {
-            "ai_state": {
-                "position": np.array(self.ai_positions[0]),  # Primary AI agent
-                "inventory": np.array(
-                    [
-                        1 if item in self.ai_inventories[0] else 0
-                        for item in self.object_types[:5]
-                    ]
-                ),
-                "last_communication": (
-                    self.communication_history[-1]["message"]
-                    if self.communication_history
-                    else ""
-                ),
-            },
-            "human_state": {
-                "available": int(self.human_available),
-                "last_action": self.human_last_action,
-                "communication_history": [
-                    msg["message"] for msg in self.communication_history[-3:]
-                ],
-            },
-            "shared_state": {
-                "grid_objects": self._get_grid_object_array(),
-                "task_progress": self.task_progress,
-                "communication_channel": self._get_communication_summary(),
-            },
+            'size': self.size,
+            'num_goals': self.num_goals,
+            'num_obstacles': self.num_obstacles,
+            'agent_pos': self.agent_pos,
+            'goals': self.goals,
+            'obstacles': self.obstacles,
+            'episode_length': self.episode_length,
+            'human_available': self.human_available,
+            'human_confidence': self.human_confidence,
+            'ai_confidence': self.ai_confidence,
+            'collaboration_history': self.collaboration_history.copy(),
+            'collaboration_metrics': self.collaboration_metrics.copy()
         }
-
-    def _get_grid_object_array(self) -> np.ndarray:
-        """Get grid objects as array."""
-        obj_array = np.zeros((self.size, self.size), dtype=int)
-
-        for pos, obj_type in self.grid_objects.items():
-            obj_id = self.object_types.index(obj_type) + 1
-            obj_array[pos[0], pos[1]] = obj_id
-
-        for i, pos in enumerate(self.ai_positions):
-            obj_array[pos[0], pos[1]] = -1 - i  # Negative values for agents
-
-        return obj_array
-
-    def _get_communication_summary(self) -> str:
-        """Get summary of recent communications."""
-        if not self.communication_history:
-            return "No recent communications"
-
-        recent = self.communication_history[-3:]
-        summary = "; ".join([f"{msg['sender']}: {msg['message']}" for msg in recent])
-        return summary
-
-    def _start_communication(self):
-        """Start communication handling thread."""
-        if (
-            self.communication_thread is None
-            or not self.communication_thread.is_alive()
-        ):
-            self.is_communicating = True
-            self.communication_thread = threading.Thread(
-                target=self._communication_handler
-            )
-            self.communication_thread.daemon = True
-            self.communication_thread.start()
-
-    def _communication_handler(self):
-        """Handle communication processing."""
-        while self.is_communicating:
-            self._process_communication()
-            time.sleep(0.1)
-
-    def render(self, mode="human"):
-        """Render the collaborative environment."""
-        if mode == "rgb_array":
-            return self._render_rgb()
-
-        grid = [["." for _ in range(self.size)] for _ in range(self.size)]
-
-        for pos, obj_type in self.grid_objects.items():
-            symbol = obj_type[0].upper()
-            grid[pos[0]][pos[1]] = symbol
-
-        for i, pos in enumerate(self.ai_positions):
-            if grid[pos[0]][pos[1]] == ".":
-                grid[pos[0]][pos[1]] = f"A{i}"
-
-        print("\n".join(" ".join(row) for row in grid))
-        print(f"AI Inventories: {self.ai_inventories}")
-        print(f"Task Progress: {self.task_progress}")
-        print(f"Human Available: {self.human_available}")
-        print(f"Communications: {len(self.communication_history)}")
-
-    def _render_rgb(self) -> np.ndarray:
-        """Render as RGB array."""
-        image = np.zeros((self.size * 10, self.size * 10, 3), dtype=np.uint8)
-
-        colors = {
-            "resource_a": [255, 0, 0],  # Red
-            "resource_b": [0, 255, 0],  # Green
-            "tool": [0, 0, 255],  # Blue
-            "obstacle": [128, 128, 128],  # Gray
-            "ai_agent": [255, 255, 0],  # Yellow
-        }
-
-        for i in range(self.size):
-            for j in range(self.size):
-                color = [255, 255, 255]  # White background
-
-                pos = (i, j)
-                if pos in self.grid_objects:
-                    obj_type = self.grid_objects[pos]
-                    color = colors.get(obj_type, [128, 128, 128])
-
-                for agent_id, agent_pos in enumerate(self.ai_positions):
-                    if agent_pos == pos:
-                        color = colors["ai_agent"]
-
-                image[i * 10 : (i + 1) * 10, j * 10 : (j + 1) * 10] = color
-
-        return image
-
-    def close(self):
-        """Close the environment."""
-        self.is_communicating = False
-        if self.communication_thread:
-            self.communication_thread.join(timeout=2)
+    
+    def simulate_human_action(self, state: np.ndarray) -> Tuple[int, float]:
+        """Simulate human action selection."""
+        # Simple heuristic: move towards nearest goal
+        if not self.goals:
+            return np.random.randint(0, 4), 0.5
+        
+        # Find nearest goal
+        nearest_goal = min(self.goals, key=lambda g: abs(g[0] - self.agent_pos[0]) + abs(g[1] - self.agent_pos[1]))
+        
+        # Determine best action
+        if nearest_goal[0] > self.agent_pos[0]:  # Goal is below
+            action = 1  # down
+        elif nearest_goal[0] < self.agent_pos[0]:  # Goal is above
+            action = 0  # up
+        elif nearest_goal[1] > self.agent_pos[1]:  # Goal is to the right
+            action = 3  # right
+        elif nearest_goal[1] < self.agent_pos[1]:  # Goal is to the left
+            action = 2  # left
+        else:
+            action = np.random.randint(0, 4)
+        
+        # Simulate confidence (higher for closer goals)
+        distance = abs(nearest_goal[0] - self.agent_pos[0]) + abs(nearest_goal[1] - self.agent_pos[1])
+        confidence = max(0.3, 1.0 - distance / (self.size * 2))
+        
+        return action, confidence
+    
+    def get_collaboration_reward(self, ai_action: int, human_action: int, 
+                                human_confidence: float) -> float:
+        """Get reward for collaboration."""
+        # Base reward
+        reward = 0.0
+        
+        # Reward for human intervention
+        if human_confidence > 0.7:
+            reward += 0.1
+        
+        # Reward for agreement
+        if ai_action == human_action:
+            reward += 0.2
+        
+        # Penalty for disagreement
+        if ai_action != human_action:
+            reward -= 0.1
+        
+        return reward

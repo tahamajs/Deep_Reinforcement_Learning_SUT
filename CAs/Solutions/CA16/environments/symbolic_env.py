@@ -1,350 +1,274 @@
 """
-Symbolic Grid World Environment
+Symbolic Environment for Neurosymbolic RL
 
-This module provides a symbolic grid world environment for neurosymbolic RL.
+This module implements a symbolic grid world environment for testing neurosymbolic RL.
 """
 
 import numpy as np
-import gymnasium as gym
-from gymnasium import spaces
-from typing import Dict, List, Tuple, Optional, Any, Set
-from collections import defaultdict
+import torch
+from typing import Dict, List, Tuple, Optional, Any, Union
+from gymnasium import Env
+from gymnasium.spaces import Discrete, Box
 
 
-class SymbolicGridWorld(gym.Env):
-    """Symbolic grid world environment for testing neurosymbolic RL."""
-
-    def __init__(self, size: int = 8, num_symbols: int = 5, max_steps: int = 50):
+class SymbolicGridWorld(Env):
+    """Symbolic grid world environment for neurosymbolic RL."""
+    
+    def __init__(self, size: int = 8, num_goals: int = 3, num_obstacles: int = 5):
         super().__init__()
-
         self.size = size
-        self.num_symbols = num_symbols
-        self.max_steps = max_steps
-
-        self.action_space = spaces.Discrete(5)
-
-        self.observation_space = spaces.Dict(
-            {
-                "agent_pos": spaces.MultiDiscrete([size, size]),
-                "symbol_positions": spaces.MultiDiscrete([size, size, num_symbols + 1]),
-                "facts": spaces.Sequence(spaces.Text(max_length=50)),  # Logical facts
-            }
+        self.num_goals = num_goals
+        self.num_obstacles = num_obstacles
+        
+        # Action space: 0=up, 1=down, 2=left, 3=right
+        self.action_space = Discrete(4)
+        
+        # Observation space: flattened grid + agent position + goal positions
+        self.observation_space = Box(
+            low=0, high=1, shape=(size * size + 2 + num_goals * 2,), dtype=np.float32
         )
-
+        
+        # Environment state
         self.agent_pos = None
-        self.symbol_positions = {}  # symbol_id -> (x, y)
-        self.step_count = 0
-
-        self.symbols = [f"symbol_{i}" for i in range(num_symbols)]
-        self.goals = []  # Goal conditions
-        self.rules = []  # Environment rules
-
-        self._init_goals_and_rules()
-
-    def _init_goals_and_rules(self):
-        """Initialize symbolic goals and rules."""
-        self.goals = [
-            "collected(symbol_0)",
-            "collected(symbol_1)",
-            "at(agent, (7,7))",  # Reach corner
-        ]
-
-        self.rules = [
-            "adjacent(X,Y) -> can_move_to(X,Y)",
-            "has_key(agent) -> can_open_door(door)",
-            "collected(symbol_X) -> goal_achieved(symbol_X)",
-        ]
-
-    def reset(self, seed=None, options=None):
+        self.goals = None
+        self.obstacles = None
+        self.grid = None
+        
+        # Symbolic knowledge
+        self.symbolic_rules = {
+            'near_goal': lambda pos, goals: any(abs(pos[0] - g[0]) + abs(pos[1] - g[1]) <= 1 for g in goals),
+            'near_obstacle': lambda pos, obstacles: any(abs(pos[0] - o[0]) + abs(pos[1] - o[1]) <= 1 for o in obstacles),
+            'at_goal': lambda pos, goals: pos in goals,
+            'at_obstacle': lambda pos, obstacles: pos in obstacles,
+            'can_move_up': lambda pos, obstacles: pos[0] > 0 and (pos[0] - 1, pos[1]) not in obstacles,
+            'can_move_down': lambda pos, obstacles: pos[0] < self.size - 1 and (pos[0] + 1, pos[1]) not in obstacles,
+            'can_move_left': lambda pos, obstacles: pos[1] > 0 and (pos[0], pos[1] - 1) not in obstacles,
+            'can_move_right': lambda pos, obstacles: pos[1] < self.size - 1 and (pos[0], pos[1] + 1) not in obstacles
+        }
+        
+        # Episode tracking
+        self.episode_length = 0
+        self.max_episode_length = 200
+        
+    def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict]:
         """Reset the environment."""
         super().reset(seed=seed)
-
-        self.agent_pos = (np.random.randint(self.size), np.random.randint(self.size))
-
-        positions = [(i, j) for i in range(self.size) for j in range(self.size)]
-        np.random.shuffle(positions)
-
-        self.symbol_positions = {}
-        for i, symbol in enumerate(self.symbols):
-            self.symbol_positions[symbol] = positions[i]
-
-        if self.agent_pos in self.symbol_positions.values():
-            for pos in positions:
-                if pos not in self.symbol_positions.values():
-                    self.agent_pos = pos
-                    break
-
-        self.step_count = 0
-        self.collected_symbols = set()
-
-        return self._get_observation(), {}
-
-    def step(self, action: int) -> Tuple[Dict, float, bool, bool, Dict]:
-        """Execute action in symbolic environment."""
-        self.step_count += 1
-
-        reward = 0
-        terminated = False
-        truncated = self.step_count >= self.max_steps
-
-        if action < 4:  # Movement
-            reward += self._move_agent(action)
-        else:  # Interact
-            reward += self._interact()
-
-        if self._check_symbolic_goals():
-            reward += 10.0
-            terminated = True
-
-        reward -= 0.1  # Step penalty
-
-        observation = self._get_observation()
-        info = {
-            "collected_symbols": list(self.collected_symbols),
-            "remaining_symbols": len(self.symbols) - len(self.collected_symbols),
-            "facts": self._get_current_facts(),
-            "goals_satisfied": self._get_goal_satisfaction(),
-        }
-
-        return observation, reward, terminated, truncated, info
-
-    def _move_agent(self, direction: int) -> float:
-        """Move agent symbolically."""
-        dx, dy = [(0, -1), (0, 1), (-1, 0), (1, 0)][direction]
-        new_pos = (self.agent_pos[0] + dx, self.agent_pos[1] + dy)
-
-        if not (0 <= new_pos[0] < self.size and 0 <= new_pos[1] < self.size):
-            return -0.5  # Boundary penalty
-
-        if not self._can_move_to(new_pos):
-            return -0.5  # Invalid move penalty
-
-        self.agent_pos = new_pos
-
-        for symbol, pos in self.symbol_positions.items():
-            if pos == self.agent_pos and symbol not in self.collected_symbols:
-                self.collected_symbols.add(symbol)
-                return 1.0  # Collection reward
-
-        return 0.0
-
-    def _interact(self) -> float:
-        """Perform symbolic interaction."""
-        current_pos_symbols = [
-            symbol
-            for symbol, pos in self.symbol_positions.items()
-            if pos == self.agent_pos
-        ]
-
-        if current_pos_symbols:
-            symbol = current_pos_symbols[0]
-            if symbol not in self.collected_symbols:
-                self.collected_symbols.add(symbol)
-                return 2.0  # Interaction reward
-
-        return 0.0
-
-    def _can_move_to(self, position: Tuple[int, int]) -> bool:
-        """Check if agent can move to position based on symbolic rules."""
-        if not (0 <= position[0] < self.size and 0 <= position[1] < self.size):
-            return False
-
-        return True
-
-    def _check_symbolic_goals(self) -> bool:
-        """Check if symbolic goals are satisfied."""
-        satisfied_goals = 0
-
+        
+        # Initialize agent position
+        self.agent_pos = [0, 0]
+        
+        # Initialize goals
+        self.goals = []
+        while len(self.goals) < self.num_goals:
+            goal = [np.random.randint(0, self.size), np.random.randint(0, self.size)]
+            if goal != self.agent_pos and goal not in self.goals:
+                self.goals.append(goal)
+        
+        # Initialize obstacles
+        self.obstacles = []
+        while len(self.obstacles) < self.num_obstacles:
+            obstacle = [np.random.randint(0, self.size), np.random.randint(0, self.size)]
+            if (obstacle != self.agent_pos and obstacle not in self.goals and 
+                obstacle not in self.obstacles):
+                self.obstacles.append(obstacle)
+        
+        # Initialize grid
+        self.grid = np.zeros((self.size, self.size))
         for goal in self.goals:
-            if goal.startswith("collected("):
-                symbol = goal.split("(")[1].split(")")[0]
-                if symbol in self.collected_symbols:
-                    satisfied_goals += 1
-            elif goal.startswith("at("):
-                parts = goal.split("(")[1].split(")")[0].split(", ")
-                target_pos = (int(parts[1].strip("()")), int(parts[2].strip("()")))
-                if self.agent_pos == target_pos:
-                    satisfied_goals += 1
-
-        return satisfied_goals >= len(self.goals)
-
-    def _get_observation(self) -> Dict:
-        """Get symbolic observation."""
-        return {
-            "agent_pos": np.array(self.agent_pos),
-            "symbol_positions": self._get_symbol_position_array(),
-            "facts": self._get_current_facts(),
-        }
-
-    def _get_symbol_position_array(self) -> np.ndarray:
-        """Get symbol positions as array."""
-        pos_array = np.zeros((self.size, self.size), dtype=int)
-
-        for symbol, pos in self.symbol_positions.items():
-            symbol_id = int(symbol.split("_")[1]) + 1  # 1-based indexing
-            pos_array[pos[0], pos[1]] = symbol_id
-
-        return pos_array
-
-    def _get_current_facts(self) -> List[str]:
-        """Get current logical facts about the environment."""
-        facts = []
-
-        facts.append(f"at(agent, {self.agent_pos})")
-
-        for symbol, pos in self.symbol_positions.items():
-            facts.append(f"at({symbol}, {pos})")
-
-        for symbol in self.collected_symbols:
-            facts.append(f"collected({symbol})")
-
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
-                    continue
-                adj_pos = (self.agent_pos[0] + dx, self.agent_pos[1] + dy)
-                if 0 <= adj_pos[0] < self.size and 0 <= adj_pos[1] < self.size:
-                    facts.append(f"adjacent({self.agent_pos}, {adj_pos})")
-
-        return facts
-
-    def _get_goal_satisfaction(self) -> Dict[str, bool]:
-        """Get satisfaction status of each goal."""
-        satisfaction = {}
-
-        for goal in self.goals:
-            if goal.startswith("collected("):
-                symbol = goal.split("(")[1].split(")")[0]
-                satisfaction[goal] = symbol in self.collected_symbols
-            elif goal.startswith("at("):
-                parts = goal.split("(")[1].split(")")[0].split(", ")
-                target_pos = (int(parts[1].strip("()")), int(parts[2].strip("()")))
-                satisfaction[goal] = self.agent_pos == target_pos
-            else:
-                satisfaction[goal] = False
-
-        return satisfaction
-
-    def render(self, mode="human"):
-        """Render the symbolic environment."""
-        if mode == "rgb_array":
-            return self._render_rgb()
-
-        grid = [["." for _ in range(self.size)] for _ in range(self.size)]
-
-        for symbol, pos in self.symbol_positions.items():
-            symbol_id = int(symbol.split("_")[1])
-            if symbol in self.collected_symbols:
-                grid[pos[0]][pos[1]] = f"c{symbol_id}"  # Collected
-            else:
-                grid[pos[0]][pos[1]] = f"s{symbol_id}"  # Available
-
-        grid[self.agent_pos[0]][self.agent_pos[1]] = "A"
-
-        print("\n".join(" ".join(row) for row in grid))
-        print(f"Collected: {sorted(self.collected_symbols)}")
-        print(f"Step: {self.step_count}")
-
-        print("Current facts:")
-        for fact in self._get_current_facts()[:5]:  # Show first 5 facts
-            print(f"  {fact}")
-
-    def _render_rgb(self) -> np.ndarray:
-        """Render as RGB array."""
-        image = np.zeros((self.size * 10, self.size * 10, 3), dtype=np.uint8)
-
-        for i in range(self.size):
-            for j in range(self.size):
-                color = [100, 100, 100]  # Gray background
-
-                if (i, j) == self.agent_pos:
-                    color = [255, 255, 255]  # White
-
-                for symbol, pos in self.symbol_positions.items():
-                    if pos == (i, j):
-                        symbol_id = int(symbol.split("_")[1])
-                        if symbol in self.collected_symbols:
-                            color = [0, 255, 0]  # Green for collected
-                        else:
-                            color = [255, 0, 0]  # Red for available
-
-                image[i * 10 : (i + 1) * 10, j * 10 : (j + 1) * 10] = color
-
-        return image
-
-    def close(self):
-        """Close the environment."""
-        pass
-
-
-class SymbolicGridWorldWithReasoning(SymbolicGridWorld):
-    """Symbolic grid world with integrated reasoning capabilities."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.reasoning_steps = []  # Store reasoning traces
-
-    def step(self, action: int) -> Tuple[Dict, float, bool, bool, Dict]:
-        """Step with reasoning trace."""
-        pre_reasoning = self._reason_about_action(action)
-
-        observation, reward, terminated, truncated, info = super().step(action)
-
-        post_reasoning = self._reason_about_state()
-
-        reasoning_trace = {
-            "pre_action": pre_reasoning,
-            "post_action": post_reasoning,
-            "action_taken": action,
-            "reward": reward,
-        }
-        self.reasoning_steps.append(reasoning_trace)
-
-        info["reasoning_trace"] = reasoning_trace
-
-        return observation, reward, terminated, truncated, info
-
-    def _reason_about_action(self, action: int) -> Dict[str, Any]:
-        """Reason about the potential consequences of an action."""
-        reasoning = {
-            "action": action,
-            "expected_outcome": "move" if action < 4 else "interact",
-            "risk_assessment": "low",
-            "expected_reward": 0.0,
-        }
-
-        if action < 4:
-            direction = ["north", "south", "west", "east"][action]
-            reasoning["direction"] = direction
-            reasoning["expected_position"] = self._predict_position(action)
-
-        return reasoning
-
-    def _reason_about_state(self) -> Dict[str, Any]:
-        """Reason about the current state."""
-        return {
-            "collected_symbols": len(self.collected_symbols),
-            "remaining_goals": len(self.goals)
-            - sum(self._get_goal_satisfaction().values()),
-            "current_facts_count": len(self._get_current_facts()),
-            "progress_assessment": self._assess_progress(),
-        }
-
-    def _predict_position(self, action: int) -> Tuple[int, int]:
-        """Predict position after action."""
-        dx, dy = [(0, -1), (0, 1), (-1, 0), (1, 0)][action]
-        return (self.agent_pos[0] + dx, self.agent_pos[1] + dy)
-
-    def _assess_progress(self) -> str:
-        """Assess current progress toward goals."""
-        satisfied = sum(self._get_goal_satisfaction().values())
-        total = len(self.goals)
-
-        if satisfied == total:
-            return "complete"
-        elif satisfied > total * 0.5:
-            return "good_progress"
-        elif satisfied > 0:
-            return "some_progress"
+            self.grid[goal[0], goal[1]] = 2  # Goal
+        for obstacle in self.obstacles:
+            self.grid[obstacle[0], obstacle[1]] = 1  # Obstacle
+        
+        # Reset episode tracking
+        self.episode_length = 0
+        
+        return self.get_observation(), {}
+    
+    def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict]:
+        """Execute one step in the environment."""
+        # Actions: 0=up, 1=down, 2=left, 3=right
+        new_pos = self.agent_pos.copy()
+        
+        if action == 0:  # up
+            new_pos[0] = max(0, new_pos[0] - 1)
+        elif action == 1:  # down
+            new_pos[0] = min(self.size - 1, new_pos[0] + 1)
+        elif action == 2:  # left
+            new_pos[1] = max(0, new_pos[1] - 1)
+        elif action == 3:  # right
+            new_pos[1] = min(self.size - 1, new_pos[1] + 1)
+        
+        # Check for obstacles
+        if new_pos in self.obstacles:
+            reward = -1
+            done = False
         else:
-            return "no_progress"
+            self.agent_pos = new_pos
+            
+            # Check for goals
+            if new_pos in self.goals:
+                self.goals.remove(new_pos)
+                reward = 10
+            else:
+                reward = -0.1
+            
+            done = len(self.goals) == 0
+        
+        # Update episode length
+        self.episode_length += 1
+        
+        # Check for episode termination
+        if self.episode_length >= self.max_episode_length:
+            done = True
+        
+        return self.get_observation(), reward, done, False, {}
+    
+    def get_observation(self) -> np.ndarray:
+        """Get current observation."""
+        # Flatten grid
+        grid_flat = self.grid.flatten()
+        
+        # Agent position
+        agent_pos = np.array(self.agent_pos, dtype=np.float32) / self.size
+        
+        # Goal positions
+        goal_positions = np.zeros(self.num_goals * 2, dtype=np.float32)
+        for i, goal in enumerate(self.goals):
+            if i < self.num_goals:
+                goal_positions[i * 2] = goal[0] / self.size
+                goal_positions[i * 2 + 1] = goal[1] / self.size
+        
+        # Combine all observations
+        observation = np.concatenate([grid_flat, agent_pos, goal_positions])
+        
+        return observation.astype(np.float32)
+    
+    def get_symbolic_state(self) -> Dict[str, bool]:
+        """Get symbolic representation of current state."""
+        symbolic_state = {}
+        
+        for rule_name, rule_func in self.symbolic_rules.items():
+            if 'move' in rule_name:
+                symbolic_state[rule_name] = rule_func(self.agent_pos, self.obstacles)
+            else:
+                symbolic_state[rule_name] = rule_func(self.agent_pos, self.goals)
+        
+        return symbolic_state
+    
+    def render(self, mode: str = 'human') -> Optional[np.ndarray]:
+        """Render the environment."""
+        if mode == 'human':
+            # Create display grid
+            display_grid = np.zeros((self.size, self.size), dtype=str)
+            display_grid.fill('.')
+            
+            # Place obstacles
+            for obstacle in self.obstacles:
+                display_grid[obstacle[0], obstacle[1]] = 'X'
+            
+            # Place goals
+            for goal in self.goals:
+                display_grid[goal[0], goal[1]] = 'G'
+            
+            # Place agent
+            display_grid[self.agent_pos[0], self.agent_pos[1]] = 'A'
+            
+            # Print grid
+            print("\n" + "=" * (self.size * 2 + 1))
+            for row in display_grid:
+                print("|" + " ".join(row) + "|")
+            print("=" * (self.size * 2 + 1))
+            print(f"Agent: {self.agent_pos}, Goals: {self.goals}, Episode: {self.episode_length}")
+            
+        elif mode == 'rgb_array':
+            # Create RGB array
+            rgb_array = np.zeros((self.size, self.size, 3), dtype=np.uint8)
+            
+            # Set colors
+            rgb_array[:, :] = [255, 255, 255]  # White background
+            
+            # Obstacles (black)
+            for obstacle in self.obstacles:
+                rgb_array[obstacle[0], obstacle[1]] = [0, 0, 0]
+            
+            # Goals (green)
+            for goal in self.goals:
+                rgb_array[goal[0], goal[1]] = [0, 255, 0]
+            
+            # Agent (red)
+            rgb_array[self.agent_pos[0], self.agent_pos[1]] = [255, 0, 0]
+            
+            return rgb_array
+        
+        return None
+    
+    def get_environment_info(self) -> Dict[str, Any]:
+        """Get environment information."""
+        return {
+            'size': self.size,
+            'num_goals': self.num_goals,
+            'num_obstacles': self.num_obstacles,
+            'agent_pos': self.agent_pos,
+            'goals': self.goals,
+            'obstacles': self.obstacles,
+            'episode_length': self.episode_length,
+            'symbolic_rules': list(self.symbolic_rules.keys())
+        }
+    
+    def apply_symbolic_action(self, symbolic_action: str) -> Tuple[np.ndarray, float, bool, bool, Dict]:
+        """Apply a symbolic action."""
+        # Map symbolic actions to numeric actions
+        symbolic_to_numeric = {
+            'move_up': 0,
+            'move_down': 1,
+            'move_left': 2,
+            'move_right': 3
+        }
+        
+        if symbolic_action in symbolic_to_numeric:
+            return self.step(symbolic_to_numeric[symbolic_action])
+        else:
+            # Invalid symbolic action
+            return self.get_observation(), -1, False, False, {'error': 'Invalid symbolic action'}
+    
+    def get_valid_actions(self) -> List[int]:
+        """Get list of valid actions from current state."""
+        valid_actions = []
+        
+        # Check each direction
+        if self.symbolic_rules['can_move_up'](self.agent_pos, self.obstacles):
+            valid_actions.append(0)
+        if self.symbolic_rules['can_move_down'](self.agent_pos, self.obstacles):
+            valid_actions.append(1)
+        if self.symbolic_rules['can_move_left'](self.agent_pos, self.obstacles):
+            valid_actions.append(2)
+        if self.symbolic_rules['can_move_right'](self.agent_pos, self.obstacles):
+            valid_actions.append(3)
+        
+        return valid_actions
+    
+    def get_symbolic_reward(self, action: int) -> float:
+        """Get symbolic reward for an action."""
+        # Get symbolic state
+        symbolic_state = self.get_symbolic_state()
+        
+        # Base reward
+        reward = -0.1
+        
+        # Reward for being near goals
+        if symbolic_state['near_goal']:
+            reward += 0.5
+        
+        # Penalty for being near obstacles
+        if symbolic_state['near_obstacle']:
+            reward -= 0.3
+        
+        # Reward for reaching goals
+        if symbolic_state['at_goal']:
+            reward += 10
+        
+        # Penalty for hitting obstacles
+        if symbolic_state['at_obstacle']:
+            reward -= 1
+        
+        return reward
