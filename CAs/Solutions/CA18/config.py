@@ -143,6 +143,7 @@ INTEGRATION_CONFIG = {
     "state_dim_hybrid": 16,  # State dimension for hybrid agent
     "hidden_dim_hybrid": 32,  # Hidden dimension for hybrid agent
     "embed_dim_hybrid": 64,  # Embedding dimension for hybrid agent
+    "n_episodes_hybrid": 10,  # Number of episodes for hybrid agent evaluation
 }
 
 # Advanced Safety Configuration

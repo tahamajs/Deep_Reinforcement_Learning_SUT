@@ -237,6 +237,12 @@ def evaluate_multi_agent_performance(agents, env, n_episodes=10):
             next_obs, rewards, done, _ = env.step(actions)
             obs = next_obs
             episode_reward += np.mean(rewards)
+            
+            # Handle done as array
+            if isinstance(done, np.ndarray):
+                done = done.any()
+            elif isinstance(done, (list, tuple)):
+                done = any(done)
 
         evaluation_rewards.append(episode_reward)
 

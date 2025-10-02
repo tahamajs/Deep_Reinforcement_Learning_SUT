@@ -6,7 +6,7 @@ incorporating quantum-inspired uncertainty quantification, causal safety constra
 and robust policy optimization techniques.
 """
 
-from ..advanced_safety import (
+from .advanced_safety import (
     SafetyConstraints,
     QuantumInspiredRobustPolicy,
     CausalSafetyConstraints,
