@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from .base_critic import BaseCritic
 from torch import nn
 from torch import optim
@@ -29,8 +28,6 @@ class SACCritic(nn.Module, BaseCritic):
         self.size = hparams['size']
         self.n_layers = hparams['n_layers']
         self.learning_rate = hparams['learning_rate']
-
-        # critic parameters
         self.gamma = hparams['gamma']
         self.Q1 = ptu.build_mlp(
             self.ob_dim + self.ac_dim,
@@ -56,9 +53,5 @@ class SACCritic(nn.Module, BaseCritic):
         )
 
     def forward(self, obs: torch.Tensor, action: torch.Tensor):
-        # TODO: return the two q values
+
         return values
-
-
-
-        

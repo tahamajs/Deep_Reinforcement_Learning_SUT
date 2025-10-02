@@ -1,10 +1,6 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import cv2
 import gymnasium as gym
 import numpy as np
-
-
 def preprocess(frame):
     """Preprocess Atari frames for A3C."""
     frame = frame[34 : 34 + 160, :160]

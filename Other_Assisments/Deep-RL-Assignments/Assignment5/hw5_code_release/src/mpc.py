@@ -1,13 +1,12 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import os
-# import tensorflow as tf
+
 import numpy as np
 import gymnasium as gym
 import copy
 import pdb
 
 class RandomOptimizer:
-    def __init__(self, MPC): 
+    def __init__(self, MPC):
         self.MPC = MPC
 
         self.plan_horizon = MPC.plan_horizon
@@ -15,10 +14,10 @@ class RandomOptimizer:
         self.num_trajectories = self.MPC.num_particles if (not self.MPC.use_gt_dynamics) else 1
 
     def act(self, mu, sigma, state):
-        states = np.tile(state, (self.popsize,1)) #check this
+        states = np.tile(state, (self.popsize,1))
         states = np.tile(states, (self.num_trajectories,1))
         cost = np.zeros((self.popsize,1))
-        # 
+
         actions =  np.clip(np.array([np.random.multivariate_normal(mu[i], sigma[i], self.popsize) for i in range(self.plan_horizon)]), self.MPC.ac_lb, self.MPC.ac_ub)
         for j in range(self.plan_horizon):
             action_this_step = actions[j, :, :].squeeze()
@@ -28,13 +27,10 @@ class RandomOptimizer:
                 cost[k%self.popsize] += self.MPC.obs_cost_fn(next_states[k])
             cost = cost/self.num_trajectories
             states = copy.deepcopy(next_states)
-        
+
         best_idx = np.argmin(cost)
 
         return actions[:, best_idx, :]
-
-
-
 class CEMOptimizer:
     def __init__(self, MPC):
         self.MPC = MPC
@@ -45,7 +41,7 @@ class CEMOptimizer:
         self.num_elites = MPC.num_elites
         self.num_trajectories = self.MPC.num_particles if (not self.MPC.use_gt_dynamics) else 1
 
-    def act(self, mu, sigma, state): #check this
+    def act(self, mu, sigma, state):
         for i in range(self.max_iters):
             states = np.tile(state, (self.popsize, 1))
             states = np.tile(states, (self.num_trajectories,1))
@@ -54,7 +50,7 @@ class CEMOptimizer:
             for j in range(self.plan_horizon):
                 action_this_step = actions[j, :, :].squeeze()
                 action_this_step = np.tile(action_this_step, (self.num_trajectories,1))
-                next_states = np.array(self.MPC.predict_next_state(states, action_this_step)) # need to send appropriate action.
+                next_states = np.array(self.MPC.predict_next_state(states, action_this_step))
                 for k in range(len(next_states)):
                     cost[k%self.popsize] += self.MPC.obs_cost_fn(next_states[k])
                 cost = cost/self.num_trajectories
@@ -65,21 +61,16 @@ class CEMOptimizer:
     def get_fit_population(self, cost, actions):
         zipped_pairs = zip(cost, np.swapaxes(actions, 0, 1))
         sorted_cost, sorted_actions = [], []
-        
+
         for (c,a) in sorted(zipped_pairs, key=lambda x: x[0]):
             sorted_cost.append(c)
             sorted_actions.append(a)
-        # pdb.set_trace()
+
         sorted_actions = np.array(sorted_actions)
         mu = np.mean(sorted_actions[:self.num_elites], axis=0)
 
         sigma = np.array([np.cov(sorted_actions[i, :self.num_elites], rowvar=False) for i in range(self.plan_horizon)])
-        # sigma = np.cov(sorted_actions[:self.num_elites], rowvar=False) # + self.noise**2 * np.eye()
-    
         return mu, sigma
-
-
-
 class MPC:
     def __init__(self, env, plan_horizon, model, popsize, num_elites, max_iters,
                  num_particles=6,
@@ -110,10 +101,6 @@ class MPC:
 
         self.state_dim, self.action_dim = 8, env.action_space.shape[0]
         self.ac_ub, self.ac_lb = env.action_space.high, env.action_space.low
-
-
-
-        # Set up optimizer
         self.model = model
 
         self.predict_next_state = None
@@ -122,10 +109,6 @@ class MPC:
             assert num_particles == 1
         else:
             self.predict_next_state = self.predict_next_state_model
-
-        # TODO: write your code here
-        # Initialize your planner with the relevant arguments.
-        # Write different optimizers for cem and random actions respectively
         self.reset()
         if self.use_random_optimizer:
             self.policy=RandomOptimizer(self)
@@ -134,7 +117,7 @@ class MPC:
 
     def obs_cost_fn(self, state):
         """ Cost function of the current state """
-        # Weights for different terms
+
         W_PUSHER = 1
         W_GOAL = 2
         W_DIFF = 5
@@ -148,7 +131,7 @@ class MPC:
         d_box = np.sqrt(np.dot(pusher_box, pusher_box))
         d_goal = np.sqrt(np.dot(box_goal, box_goal))
         diff_coord = np.abs(box_x / box_y - goal_x / goal_y)
-        # the -0.4 is to adjust for the radius of the box and pusher
+
         return W_PUSHER * np.max(d_box - 0.4, 0) + W_GOAL * d_goal + W_DIFF * diff_coord
 
     def predict_next_state_model(self, states, actions):
@@ -182,11 +165,9 @@ class MPC:
         self.model.train(inputs, targets, epochs=epochs)
 
     def reset(self):
-        # TODO: write your code here
+
         self.mean = np.zeros([self.plan_horizon, self.action_dim])
         self.cov = np.tile(0.5*np.eye(self.action_dim), (self.plan_horizon, 1, 1))
-        # self.cov = 0.5*np.ones([self.plan_horizon, self.action_dim])
-
     def act(self, state, t):
         """
         Use model predictive control to find the action give current state.
@@ -195,10 +176,10 @@ class MPC:
           state: current state
           t: current timestep
         """
-        # TODO: write your code here
+
         if not self.use_mpc:
             if t%self.plan_horizon == 0:
-                # self.reset()
+
                 self.planned_actions = self.policy.act(self.mean, self.cov, state)
                 i = 0
             else:
@@ -211,6 +192,3 @@ class MPC:
             self.cov = np.tile(0.5*np.eye(self.action_dim), (self.plan_horizon, 1, 1))
 
             return self.planned_actions[0]
-
-
-    # TODO: write any helper functions that you need

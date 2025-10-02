@@ -1,8 +1,6 @@
 import numpy as np
 import os
 import tensorflow as tf
-
-
 class Logger:
     def __init__(self, log_dir):
         self._summary_writer = tf.summary.FileWriter(
@@ -27,8 +25,6 @@ class Logger:
         print("\n".join(self._rows))
 
         self._rows = []
-
-
 class ReplayPool:
     def __init__(self, max_size, fields):
         max_size = int(max_size)
@@ -94,8 +90,6 @@ class ReplayPool:
         return {
             'PoolSize': self._size,
         }
-
-
 class SimpleReplayPool(ReplayPool):
     def __init__(self, observation_shape, action_shape, *args, **kwargs):
         self._observation_shape = observation_shape
@@ -106,9 +100,6 @@ class SimpleReplayPool(ReplayPool):
                 'shape': self._observation_shape,
                 'dtype': 'float32'
             },
-            # It's a bit memory inefficient to save the observations twice,
-            # but it makes the code *much* easier since you no longer have
-            # to worry about termination conditions.
             'next_observations': {
                 'shape': self._observation_shape,
                 'dtype': 'float32'
@@ -121,7 +112,7 @@ class SimpleReplayPool(ReplayPool):
                 'shape': [],
                 'dtype': 'float32'
             },
-            # self.terminals[i] = a terminal was received at time i
+
             'terminals': {
                 'shape': [],
                 'dtype': 'bool'
@@ -129,8 +120,6 @@ class SimpleReplayPool(ReplayPool):
         }
 
         super(SimpleReplayPool, self).__init__(*args, fields=fields, **kwargs)
-
-
 class Sampler(object):
     def __init__(self, max_episode_length, prefill_steps):
         self._max_episode_length = max_episode_length
@@ -167,8 +156,6 @@ class Sampler(object):
 
     def terminate(self):
         self.env.terminate()
-
-
 class SimpleSampler(Sampler):
     def __init__(self, **kwargs):
         super(SimpleSampler, self).__init__(**kwargs)

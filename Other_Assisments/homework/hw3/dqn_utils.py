@@ -6,7 +6,7 @@ import numpy as np
 import random
 
 def huber_loss(x, delta=1.0):
-    # https://en.wikipedia.org/wiki/Huber_loss
+
     return tf.where(
         tf.abs(x) < delta,
         tf.square(x) * 0.5,
@@ -77,8 +77,6 @@ class PiecewiseSchedule(object):
             if l_t <= t and t < r_t:
                 alpha = float(t - l_t) / (r_t - l_t)
                 return self._interpolation(l, r, alpha)
-
-        # t does not belong to any of the pieces, so doom.
         assert self._outside_value is not None
         return self._outside_value
 
@@ -147,16 +145,10 @@ def initialize_interdependent_variables(session, vars_list, feed_dict):
         new_vars_left = []
         for v in vars_left:
             try:
-                # If using an older version of TensorFlow, uncomment the line
-                # below and comment out the line after it.
-		#session.run(tf.initialize_variables([v]), feed_dict)
                 session.run(tf.variables_initializer([v]), feed_dict)
             except tf.errors.FailedPreconditionError:
                 new_vars_left.append(v)
         if len(new_vars_left) >= len(vars_left):
-            # This can happend if the variables all depend on each other, or more likely if there's
-            # another variable outside of the list, that still needs to be initialized. This could be
-            # detected here, but life's finite.
             raise Exception("Cycle in variable dependencies, or extenrnal precondition unsatisfied.")
         else:
             vars_left = new_vars_left
@@ -223,8 +215,6 @@ class ReplayBuffer(object):
         done_mask      = np.array([1.0 if self.done[idx] else 0.0 for idx in idxes], dtype=np.float32)
 
         return obs_batch, act_batch, rew_batch, next_obs_batch, done_mask
-
-
     def sample(self, batch_size):
         """Sample `batch_size` different transitions.
 
@@ -276,28 +266,24 @@ class ReplayBuffer(object):
         return self._encode_observation((self.next_idx - 1) % self.size)
 
     def _encode_observation(self, idx):
-        end_idx   = idx + 1 # make noninclusive
+        end_idx   = idx + 1
         start_idx = end_idx - self.frame_history_len
-        # this checks if we are using low-dimensional observations, such as RAM
-        # state, in which case we just directly return the latest RAM.
         if len(self.obs.shape) == 2:
             return self.obs[end_idx-1]
-        # if there weren't enough frames ever in the buffer for context
+
         if start_idx < 0 and self.num_in_buffer != self.size:
             start_idx = 0
         for idx in range(start_idx, end_idx - 1):
             if self.done[idx % self.size]:
                 start_idx = idx + 1
         missing_context = self.frame_history_len - (end_idx - start_idx)
-        # if zero padding is needed for missing context
-        # or we are on the boundry of the buffer
         if start_idx < 0 or missing_context > 0:
             frames = [np.zeros_like(self.obs[0]) for _ in range(missing_context)]
             for idx in range(start_idx, end_idx):
                 frames.append(self.obs[idx % self.size])
             return np.concatenate(frames, 2)
         else:
-            # this optimization has potential to saves about 30% compute time \o/
+
             img_h, img_w = self.obs.shape[1], self.obs.shape[2]
             return self.obs[start_idx:end_idx].transpose(1, 2, 0, 3).reshape(img_h, img_w, -1)
 
@@ -349,4 +335,3 @@ class ReplayBuffer(object):
         self.action[idx] = action
         self.reward[idx] = reward
         self.done[idx]   = done
-

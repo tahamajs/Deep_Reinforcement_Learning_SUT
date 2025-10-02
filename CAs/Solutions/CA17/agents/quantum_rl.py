@@ -7,8 +7,6 @@ from typing import List, Dict, Tuple, Optional, Union
 from abc import ABC, abstractmethod
 import cmath
 import random
-
-
 class QuantumGate(ABC):
     """Base class for quantum gates"""
 
@@ -22,8 +20,6 @@ class QuantumGate(ABC):
 
     def __str__(self):
         return f"{self.name} gate"
-
-
 class PauliX(QuantumGate):
     """Pauli-X (NOT) gate"""
 
@@ -32,8 +28,6 @@ class PauliX(QuantumGate):
 
     def matrix(self) -> np.ndarray:
         return np.array([[0, 1], [1, 0]], dtype=complex)
-
-
 class PauliY(QuantumGate):
     """Pauli-Y gate"""
 
@@ -42,8 +36,6 @@ class PauliY(QuantumGate):
 
     def matrix(self) -> np.ndarray:
         return np.array([[0, -1j], [1j, 0]], dtype=complex)
-
-
 class PauliZ(QuantumGate):
     """Pauli-Z gate"""
 
@@ -52,8 +44,6 @@ class PauliZ(QuantumGate):
 
     def matrix(self) -> np.ndarray:
         return np.array([[1, 0], [0, -1]], dtype=complex)
-
-
 class Hadamard(QuantumGate):
     """Hadamard gate"""
 
@@ -62,8 +52,6 @@ class Hadamard(QuantumGate):
 
     def matrix(self) -> np.ndarray:
         return np.array([[1, 1], [1, -1]], dtype=complex) / np.sqrt(2)
-
-
 class RotationX(QuantumGate):
     """Rotation around X-axis"""
 
@@ -75,8 +63,6 @@ class RotationX(QuantumGate):
         cos = np.cos(self.angle / 2)
         sin = np.sin(self.angle / 2)
         return np.array([[cos, -1j * sin], [-1j * sin, cos]], dtype=complex)
-
-
 class RotationY(QuantumGate):
     """Rotation around Y-axis"""
 
@@ -88,8 +74,6 @@ class RotationY(QuantumGate):
         cos = np.cos(self.angle / 2)
         sin = np.sin(self.angle / 2)
         return np.array([[cos, -sin], [sin, cos]], dtype=complex)
-
-
 class RotationZ(QuantumGate):
     """Rotation around Z-axis"""
 
@@ -101,8 +85,6 @@ class RotationZ(QuantumGate):
         cos = np.cos(self.angle / 2)
         sin = np.sin(self.angle / 2)
         return np.array([[cos - 1j * sin, 0], [0, cos + 1j * sin]], dtype=complex)
-
-
 class CNOT(QuantumGate):
     """Controlled-NOT gate"""
 
@@ -113,8 +95,6 @@ class CNOT(QuantumGate):
         return np.array(
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype=complex
         )
-
-
 class QuantumCircuit:
     """Basic quantum circuit simulator"""
 
@@ -192,14 +172,14 @@ class QuantumCircuit:
                 target_bit_j = (j >> target_qubit) & 1
 
                 if control_bit_i == control_bit_j:
-                    if control_bit_i == 1:  # Control is |1⟩
+                    if control_bit_i == 1:
                         if target_bit_i == 0 and target_bit_j == 1:
                             full_matrix[i, j] = 1
                         elif target_bit_i == 1 and target_bit_j == 0:
                             full_matrix[i, j] = 1
                         else:
                             full_matrix[i, j] = 0
-                    else:  # Control is |0⟩, identity on target
+                    else:
                         if i == j:
                             full_matrix[i, j] = 1
                         else:
@@ -233,8 +213,6 @@ class QuantumCircuit:
     def get_amplitudes(self) -> np.ndarray:
         """Get state amplitudes"""
         return self.state.copy()
-
-
 class VariationalQuantumCircuit(nn.Module):
     """Parameterized quantum circuit for quantum machine learning"""
 
@@ -285,7 +263,7 @@ class VariationalQuantumCircuit(nn.Module):
                     self.circuit.apply_single_gate(RotationY(ry_angle), qubit)
                     param_idx += 1
 
-            if layer < self.n_layers - 1:  # No entanglement on last layer
+            if layer < self.n_layers - 1:
                 for qubit in range(self.n_qubits - 1):
                     self.circuit.apply_two_gate(CNOT(), qubit, qubit + 1)
 
@@ -300,8 +278,6 @@ class VariationalQuantumCircuit(nn.Module):
         """Measure expectation value of observable"""
         state = self.forward()
         return np.real(np.conj(state) @ observable @ state)
-
-
 class QuantumStateEncoder:
     """Encode classical data into quantum states"""
 
@@ -311,7 +287,7 @@ class QuantumStateEncoder:
 
     def amplitude_encoding(self, data: np.ndarray) -> np.ndarray:
         """Encode data as quantum amplitudes"""
-        data = data.real.astype(float)  # Ensure real
+        data = data.real.astype(float)
 
         if len(data) > self.n_states:
             data = data[: self.n_states]
@@ -325,7 +301,7 @@ class QuantumStateEncoder:
             data = data / norm
         else:
             data = np.zeros_like(data)
-            data[0] = 1.0  # Default to |0...0⟩
+            data[0] = 1.0
 
         return data.astype(complex)
 
@@ -337,8 +313,6 @@ class QuantumStateEncoder:
             circuit.apply_single_gate(RotationY(angle), i)
 
         return circuit.get_amplitudes()
-
-
 class QuantumPolicy(nn.Module):
     """Quantum policy using variational quantum circuit"""
 
@@ -366,7 +340,7 @@ class QuantumPolicy(nn.Module):
             obs = np.eye(2**n_qubits, dtype=complex)
             qubit_idx = i % n_qubits
             for j in range(2**n_qubits):
-                if (j >> qubit_idx) & 1:  # If qubit is |1⟩
+                if (j >> qubit_idx) & 1:
                     obs[j, j] = -1.0
             self.observables.append(obs)
 
@@ -390,8 +364,6 @@ class QuantumPolicy(nn.Module):
             actions.append(action_values)
 
         return torch.FloatTensor(actions)
-
-
 class QuantumValueNetwork(nn.Module):
     """Quantum value function approximator"""
 
@@ -408,7 +380,7 @@ class QuantumValueNetwork(nn.Module):
 
         self.value_observable = np.eye(2**n_qubits, dtype=complex)
         for i in range(2**n_qubits):
-            if i & 1:  # If first qubit is |1⟩
+            if i & 1:
                 self.value_observable[i, i] = -1.0
 
         self.value_scale = nn.Parameter(torch.tensor(1.0))
@@ -434,8 +406,6 @@ class QuantumValueNetwork(nn.Module):
             values.append(scaled_value.item())
 
         return torch.FloatTensor(values).unsqueeze(-1)
-
-
 class QuantumRLAgent:
     """Quantum-enhanced reinforcement learning agent"""
 
@@ -493,8 +463,6 @@ class QuantumRLAgent:
         """Train the agent for one step"""
         if len(self.replay_buffer) < 32:
             return {}
-
-        # Sample batch
         batch = random.sample(self.replay_buffer, 32)
         states, actions, rewards, next_states, dones = zip(*batch)
 
@@ -503,8 +471,6 @@ class QuantumRLAgent:
         rewards = torch.FloatTensor(rewards)
         next_states = torch.FloatTensor(np.array(next_states))
         dones = torch.FloatTensor(dones)
-
-        # Train step
         metrics = self.train_step_batch(states, actions, rewards, next_states, dones)
 
-        return {"quantum_entropy": 0.5}  # Placeholder
+        return {"quantum_entropy": 0.5}

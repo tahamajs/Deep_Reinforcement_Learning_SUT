@@ -15,7 +15,7 @@ class BootstrappedContinuousCritic:
         self.gamma = hparams['gamma']
 
         self.value_func = MLP(1, self.ob_dim, self.n_layers, self.size, self.device, True)
-        # TODO: use the Adam optimizer to optimize the loss
+
         self.optimizer = torch.optim.Adam(self.value_func.parameters(), lr = self.learning_rate)
 
     def update(self, ob_no, next_ob_no, re_n, terminal_n):
@@ -36,19 +36,6 @@ class BootstrappedContinuousCritic:
             returns:
                 loss
         """
-
-        # TODO: Implement the pseudocode below:
-
-        # do the following (self.num_grad_steps_per_target_update * self.num_target_updates) times:
-            # every self.num_grad_steps_per_target_update steps (which includes the first step),
-                # recompute the target values by
-                    #a) calculating V(s') by querying this critic network (ie calling 'forward') with next_ob_no
-                    #b) and computing the target values as r(s, a) + gamma * V(s')
-                # HINT: don't forget to use terminal_n to cut off the V(s') (ie set it to 0) when a terminal state is reached
-            # every time,
-                # update this critic using the observations and targets
-                # HINT: use nn.MSE()
-
         ob, next_ob, rew, done = map(lambda x: torch.from_numpy(x).to(self.device), [ob_no, next_ob_no, re_n, terminal_n])
 
         for update in range(self.num_grad_steps_per_target_update * self.num_target_updates):

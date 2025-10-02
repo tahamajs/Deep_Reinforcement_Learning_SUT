@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 """This file includes a collection of utility functions that are useful for
 implementing DQN."""
 import random
@@ -13,8 +12,6 @@ from cs285.infrastructure.atari_wrappers import wrap_deepmind
 from gym.envs.registration import register
 
 import torch
-
-
 class Flatten(torch.nn.Module):
     def forward(self, x):
         batch_size = x.shape[0]
@@ -24,8 +21,6 @@ OptimizerSpec = namedtuple(
     "OptimizerSpec",
     ["constructor", "optim_kwargs", "learning_rate_schedule"],
 )
-
-
 def register_custom_envs():
     from gym.envs.registration import registry
     if 'LunarLander-v3' not in registry.env_specs:
@@ -35,8 +30,6 @@ def register_custom_envs():
             max_episode_steps=1000,
             reward_threshold=200,
         )
-
-
 def get_env_kwargs(env_name):
     if env_name in ['MsPacman-v0', 'PongNoFrameskip-v4']:
         kwargs = {
@@ -79,8 +72,6 @@ def get_env_kwargs(env_name):
         raise NotImplementedError
 
     return kwargs
-
-
 def create_lander_q_network(ob_dim, num_actions):
     return nn.Sequential(
         nn.Linear(ob_dim, 64),
@@ -96,14 +87,10 @@ class Ipdb(nn.Module):
     def forward(self, x):
         import ipdb; ipdb.set_trace()
         return x
-
-
 class PreprocessAtari(nn.Module):
     def forward(self, x):
         x = x.permute(0, 3, 1, 2).contiguous()
         return x / 255.
-
-
 def create_atari_q_network(ob_dim, num_actions):
     return nn.Sequential(
         PreprocessAtari(),
@@ -114,7 +101,7 @@ def create_atari_q_network(ob_dim, num_actions):
         nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
         nn.ReLU(),
         Flatten(),
-        nn.Linear(3136, 512),  # 3136 hard-coded based on img size + CNN layers
+        nn.Linear(3136, 512),
         nn.ReLU(),
         nn.Linear(512, num_actions),
     )
@@ -127,8 +114,6 @@ def atari_exploration_schedule(num_timesteps):
             (num_timesteps / 8, 0.01),
         ], outside_value=0.01
     )
-
-
 def atari_ram_exploration_schedule(num_timesteps):
     return PiecewiseSchedule(
         [
@@ -137,8 +122,6 @@ def atari_ram_exploration_schedule(num_timesteps):
             (num_timesteps / 8, 0.01),
         ], outside_value=0.01
     )
-
-
 def atari_optimizer(num_timesteps):
     lr_schedule = PiecewiseSchedule(
         [
@@ -157,18 +140,14 @@ def atari_optimizer(num_timesteps):
         ),
         learning_rate_schedule=lambda t: lr_schedule.value(t),
     )
-
-
 def lander_optimizer():
     return OptimizerSpec(
         constructor=optim.Adam,
         optim_kwargs=dict(
             lr=1,
         ),
-        learning_rate_schedule=lambda epoch: 1e-3,  # keep init learning rate
+        learning_rate_schedule=lambda epoch: 1e-3,
     )
-
-
 def lander_exploration_schedule(num_timesteps):
     return PiecewiseSchedule(
         [
@@ -176,8 +155,6 @@ def lander_exploration_schedule(num_timesteps):
             (num_timesteps * 0.1, 0.02),
         ], outside_value=0.02
     )
-
-
 def sample_n_unique(sampling_f, n):
     """Helper function. Given a function `sampling_f` that returns
     comparable objects, sample n such unique objects.
@@ -188,14 +165,10 @@ def sample_n_unique(sampling_f, n):
         if candidate not in res:
             res.append(candidate)
     return res
-
-
 class Schedule(object):
     def value(self, t):
         """Value of the schedule at time t"""
         raise NotImplementedError()
-
-
 class ConstantSchedule(object):
     def __init__(self, value):
         """Value remains constant over time.
@@ -209,12 +182,8 @@ class ConstantSchedule(object):
     def value(self, t):
         """See Schedule.value"""
         return self._v
-
-
 def linear_interpolation(l, r, alpha):
     return l + alpha * (r - l)
-
-
 class PiecewiseSchedule(object):
     def __init__(self, endpoints, interpolation=linear_interpolation, outside_value=None):
         """Piecewise schedule.
@@ -246,8 +215,6 @@ class PiecewiseSchedule(object):
             if l_t <= t and t < r_t:
                 alpha = float(t - l_t) / (r_t - l_t)
                 return self._interpolation(l, r, alpha)
-
-        # t does not belong to any of the pieces, so doom.
         assert self._outside_value is not None
         return self._outside_value
 
@@ -320,9 +287,6 @@ def initialize_interdependent_variables(session, vars_list, feed_dict):
             except tf.errors.FailedPreconditionError:
                 new_vars_left.append(v)
         if len(new_vars_left) >= len(vars_left):
-            # This can happen if the variables all depend on each other, or more likely if there's
-            # another variable outside of the list, that still needs to be initialized. This could be
-            # detected here, but life's finite.
             raise Exception("Cycle in variable dependencies, or extenrnal precondition unsatisfied.")
         else:
             vars_left = new_vars_left
@@ -389,8 +353,6 @@ class MemoryOptimizedReplayBuffer(object):
         done_mask      = np.array([1.0 if self.done[idx] else 0.0 for idx in idxes], dtype=np.float32)
 
         return obs_batch, act_batch, rew_batch, next_obs_batch, done_mask
-
-
     def sample(self, batch_size):
         """Sample `batch_size` different transitions.
 
@@ -442,28 +404,24 @@ class MemoryOptimizedReplayBuffer(object):
         return self._encode_observation((self.next_idx - 1) % self.size)
 
     def _encode_observation(self, idx):
-        end_idx   = idx + 1 # make noninclusive
+        end_idx   = idx + 1
         start_idx = end_idx - self.frame_history_len
-        # this checks if we are using low-dimensional observations, such as RAM
-        # state, in which case we just directly return the latest RAM.
         if len(self.obs.shape) == 2:
             return self.obs[end_idx-1]
-        # if there weren't enough frames ever in the buffer for context
+
         if start_idx < 0 and self.num_in_buffer != self.size:
             start_idx = 0
         for idx in range(start_idx, end_idx - 1):
             if self.done[idx % self.size]:
                 start_idx = idx + 1
         missing_context = self.frame_history_len - (end_idx - start_idx)
-        # if zero padding is needed for missing context
-        # or we are on the boundry of the buffer
         if start_idx < 0 or missing_context > 0:
             frames = [np.zeros_like(self.obs[0]) for _ in range(missing_context)]
             for idx in range(start_idx, end_idx):
                 frames.append(self.obs[idx % self.size])
             return np.concatenate(frames, 2)
         else:
-            # this optimization has potential to saves about 30% compute time \o/
+
             img_h, img_w = self.obs.shape[1], self.obs.shape[2]
             return self.obs[start_idx:end_idx].transpose(1, 2, 0, 3).reshape(img_h, img_w, -1)
 
@@ -515,4 +473,3 @@ class MemoryOptimizedReplayBuffer(object):
         self.action[idx] = action
         self.reward[idx] = reward
         self.done[idx]   = done
-

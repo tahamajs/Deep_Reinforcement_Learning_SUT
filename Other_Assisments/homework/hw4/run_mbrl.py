@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Model-Based Reinforcement Learning Training Script
 
@@ -17,15 +16,11 @@ import sys
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-
-# Add src directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 from model_based_rl import ModelBasedRLAgent, RandomPolicy
 from half_cheetah_env import HalfCheetahEnv
 from logger import logger
-
-
 def create_experiment_dir(exp_name):
     """Create experiment directory and setup logging."""
     data_dir = os.path.join(os.path.dirname(__file__), "data")
@@ -33,13 +28,9 @@ def create_experiment_dir(exp_name):
     os.makedirs(exp_dir, exist_ok=True)
     logger.setup(exp_name, os.path.join(exp_dir, "log.txt"), "debug")
     return exp_dir
-
-
 def run_q1(env, args):
     """Run Q1: Train dynamics model and evaluate predictions."""
     print("Running Q1: Dynamics Model Training and Evaluation")
-
-    # Create agent
     agent = ModelBasedRLAgent(
         env=env,
         num_init_random_rollouts=args.num_init_random_rollouts,
@@ -50,37 +41,27 @@ def run_q1(env, args):
         num_random_action_selection=args.num_random_action_selection,
         nn_layers=args.nn_layers,
     )
-
-    # Initialize TensorFlow session
     agent.init_tf_sess()
-
-    # Train dynamics model
     agent.run_q1()
-
-    # Evaluate predictions on random rollouts
     print("Evaluating model predictions...")
     random_policy = RandomPolicy(env)
     eval_dataset = agent.gather_rollouts(random_policy, args.num_eval_rollouts)
-
-    # Generate prediction plots
     data = eval_dataset.get_all()
-    for rollout_idx in range(min(args.num_eval_rollouts, 5)):  # Plot first 5 rollouts
+    for rollout_idx in range(min(args.num_eval_rollouts, 5)):
         states = []
         actions = []
         start_idx = 0
-
-        # Extract rollout data
         for i in range(len(data["dones"])):
             if data["dones"][i] or i == len(data["dones"]) - 1:
                 rollout_states = data["states"][start_idx : i + 1]
                 rollout_actions = data["actions"][start_idx : i + 1]
 
                 if len(rollout_states) > 1:
-                    # Predict states using dynamics model
+
                     pred_states = [rollout_states[0]]
                     current_state = rollout_states[0]
 
-                    for action in rollout_actions[:-1]:  # Don't use last action
+                    for action in rollout_actions[:-1]:
                         next_state = agent.dynamics_model.predict(
                             current_state.reshape(1, -1),
                             action.reshape(1, -1),
@@ -88,8 +69,6 @@ def run_q1(env, args):
                         )[0]
                         pred_states.append(next_state)
                         current_state = next_state
-
-                    # Plot comparison
                     states_array = np.array(rollout_states)
                     pred_states_array = np.array(pred_states)
 
@@ -119,17 +98,13 @@ def run_q1(env, args):
                     plt.close()
 
                 start_idx = i + 1
-                if rollout_idx >= 4:  # Only plot first 5 rollouts
+                if rollout_idx >= 4:
                     break
 
     print(f"All prediction plots saved to {logger.dir}")
-
-
 def run_q2(env, args):
     """Run Q2: MPC with random shooting."""
     print("Running Q2: MPC with Random Shooting")
-
-    # Create agent
     agent = ModelBasedRLAgent(
         env=env,
         num_init_random_rollouts=args.num_init_random_rollouts,
@@ -140,20 +115,12 @@ def run_q2(env, args):
         num_random_action_selection=args.num_random_action_selection,
         nn_layers=args.nn_layers,
     )
-
-    # Initialize TensorFlow session
     agent.init_tf_sess()
-
-    # Train dynamics model and create MPC policy
     agent.run_q2()
-
-    # Evaluate MPC policy
     print("Evaluating MPC policy...")
     eval_dataset = agent.gather_rollouts(
         agent.policy, args.num_eval_rollouts, render=args.render
     )
-
-    # Log results
     returns = []
     rollout_data = eval_dataset.get_all()
     start_idx = 0
@@ -169,13 +136,9 @@ def run_q2(env, args):
     print(f"Std Return: {np.std(returns):.2f}")
     print(f"Min Return: {np.min(returns):.2f}")
     print(f"Max Return: {np.max(returns):.2f}")
-
-
 def run_q3(env, args):
     """Run Q3: On-policy MBRL."""
     print("Running Q3: On-policy Model-Based RL")
-
-    # Create agent
     agent = ModelBasedRLAgent(
         env=env,
         num_init_random_rollouts=args.num_init_random_rollouts,
@@ -188,20 +151,12 @@ def run_q3(env, args):
         num_random_action_selection=args.num_random_action_selection,
         nn_layers=args.nn_layers,
     )
-
-    # Initialize TensorFlow session
     agent.init_tf_sess()
-
-    # Run on-policy MBRL
     agent.run_q3()
-
-    # Final evaluation
     print("Final evaluation...")
     eval_dataset = agent.gather_rollouts(
         agent.policy, args.num_eval_rollouts, render=args.render
     )
-
-    # Log final results
     returns = []
     rollout_data = eval_dataset.get_all()
     start_idx = 0
@@ -217,20 +172,14 @@ def run_q3(env, args):
     print(f"Std Return: {np.std(returns):.2f}")
     print(f"Min Return: {np.min(returns):.2f}")
     print(f"Max Return: {np.max(returns):.2f}")
-
-
 def main():
     parser = argparse.ArgumentParser(description="Model-Based Reinforcement Learning")
-
-    # Question selection
     parser.add_argument(
         "question",
         type=str,
         choices=["q1", "q2", "q3"],
         help="Question to run (q1, q2, or q3)",
     )
-
-    # Experiment settings
     parser.add_argument(
         "--exp_name",
         type=str,
@@ -247,8 +196,6 @@ def main():
     parser.add_argument(
         "--render", action="store_true", help="Render environment during evaluation"
     )
-
-    # Model hyperparameters
     parser.add_argument(
         "--nn_layers", type=int, default=1, help="Number of layers in dynamics model"
     )
@@ -261,8 +208,6 @@ def main():
     parser.add_argument(
         "--training_batch_size", type=int, default=512, help="Training batch size"
     )
-
-    # MPC hyperparameters
     parser.add_argument(
         "--mpc_horizon", type=int, default=15, help="MPC planning horizon"
     )
@@ -272,8 +217,6 @@ def main():
         default=4096,
         help="Number of random actions for MPC",
     )
-
-    # Data collection
     parser.add_argument(
         "--num_init_random_rollouts",
         type=int,
@@ -286,8 +229,6 @@ def main():
     parser.add_argument(
         "--num_eval_rollouts", type=int, default=5, help="Number of evaluation rollouts"
     )
-
-    # On-policy settings (for Q3)
     parser.add_argument(
         "--num_onpolicy_iters",
         type=int,
@@ -302,19 +243,11 @@ def main():
     )
 
     args = parser.parse_args()
-
-    # Create experiment name if not provided
     if args.exp_name is None:
         timestamp = time.strftime("%d-%m-%Y_%H-%M-%S")
         args.exp_name = f"{args.env}_{args.question}_{timestamp}"
-
-    # Create experiment directory and setup logging
     exp_dir = create_experiment_dir(args.exp_name)
-
-    # Create environment
     env = HalfCheetahEnv()
-
-    # Run selected question
     run_functions = {"q1": run_q1, "q2": run_q2, "q3": run_q3}
 
     try:
@@ -326,7 +259,5 @@ def main():
         raise
     finally:
         env.close()
-
-
 if __name__ == "__main__":
     main()

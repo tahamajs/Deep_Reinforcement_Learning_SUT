@@ -24,7 +24,7 @@ class HalfCheetahEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             self.sim.data.qpos.flat[1:],
             self.sim.data.qvel.flat,
             self.get_body_com("torso").flat,
-            # self.get_body_comvel("torso").flat,
+
         ])
 
     def reset_model(self):
@@ -49,8 +49,6 @@ class HalfCheetahEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         scores = tf.zeros(actions.get_shape()[0].value) if is_tf else np.zeros(actions.shape[0])
 
         heading_penalty_factor = 10
-
-        # dont move front shin back so far that you tilt forward
         front_leg = states[:, 5]
         my_range = 0.2
         if is_tf:

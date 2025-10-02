@@ -2,8 +2,6 @@ import numpy as np
 import time
 import torch
 from torch import nn
-
-
 class MLP(nn.Module):
     def __init__(
         self,
@@ -18,21 +16,17 @@ class MLP(nn.Module):
         super().__init__()
 
         self.discrete = discrete
-
-        # network architecture
         self.mlp = nn.ModuleList()
-        self.mlp.append(nn.Linear(input_dim, size))  # first hidden layer
+        self.mlp.append(nn.Linear(input_dim, size))
         self.mlp.append(activation)
 
-        for h in range(n_layers - 1):  # additional hidden layers
+        for h in range(n_layers - 1):
             self.mlp.append(nn.Linear(size, size))
             self.mlp.append(activation)
 
         self.mlp.append(
             nn.Linear(size, output_dim)
-        )  # output layer, no activation function
-
-        # if continuous define logstd variable
+        )
         if not self.discrete:
             self.logstd = nn.Parameter(torch.zeros(output_dim))
 
@@ -51,16 +45,14 @@ class MLP(nn.Module):
 
     def restore(self, filepath):
         self.load_state_dict(torch.load(filepath))
-
-
 def sample_trajectories(
     env, policy, min_timesteps_per_batch, max_path_length, animate, itr
 ):
-    # Collect paths until we have enough timesteps
+
     timesteps_this_batch = 0
     paths = []
     while True:
-        # animate_this_episode = (len(paths) == 0 and (itr % 10 == 0) and animate)
+
         animate_this_episode = len(paths) == 0 and animate
         path = sample_trajectory(env, policy, max_path_length, animate_this_episode)
         paths.append(path)
@@ -68,8 +60,6 @@ def sample_trajectories(
         if timesteps_this_batch > min_timesteps_per_batch:
             break
     return paths, timesteps_this_batch
-
-
 def sample_trajectory(env, policy, max_path_length, animate_this_episode):
     ob, _ = env.reset()
     obs, acs, rewards, next_obs, terminals = [], [], [], [], []
@@ -105,8 +95,6 @@ def sample_trajectory(env, policy, max_path_length, animate_this_episode):
     }
 
     return path
-
-
 def convert_listofrollouts(paths):
     """
     Take a list of rollout dictionaries
@@ -127,7 +115,5 @@ def convert_listofrollouts(paths):
         concatenated_rewards,
         unconcatenated_rewards,
     )
-
-
 def get_pathlength(path):
     return len(path["reward"])

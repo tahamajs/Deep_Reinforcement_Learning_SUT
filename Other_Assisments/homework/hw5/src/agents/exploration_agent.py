@@ -9,8 +9,6 @@ Student ID: 400206262
 
 import numpy as np
 import tensorflow as tf
-
-
 class DensityModel:
     """Density model for exploration."""
 
@@ -31,24 +29,16 @@ class DensityModel:
     def _build_model(self):
         """Build the density model network."""
         self.state_ph = tf.placeholder(tf.float32, [None, self.state_dim])
-
-        # Build network
         x = self.state_ph
         for dim in self.hidden_dims:
             x = tf.layers.dense(x, dim, activation=tf.nn.relu)
-
-        # Output log density
         self.log_density = tf.layers.dense(x, 1)
-
-        # Loss (negative log likelihood)
         self.target_ph = tf.placeholder(tf.float32, [None, 1])
         self.loss = tf.reduce_mean(
             tf.nn.sigmoid_cross_entropy_with_logits(
                 logits=self.log_density, labels=self.target_ph
             )
         )
-
-        # Optimizer
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
         self.train_op = self.optimizer.minimize(self.loss)
 
@@ -64,14 +54,12 @@ class DensityModel:
         n_samples = len(states)
 
         for epoch in range(epochs):
-            # Shuffle data
+
             indices = np.random.permutation(n_samples)
 
             for i in range(0, n_samples, batch_size):
                 batch_indices = indices[i : i + batch_size]
                 batch_states = states[batch_indices]
-
-                # Create target labels (1 for real data)
                 targets = np.ones((len(batch_states), 1))
 
                 feed_dict = {self.state_ph: batch_states, self.target_ph: targets}
@@ -90,8 +78,6 @@ class DensityModel:
         """
         feed_dict = {self.state_ph: states}
         return sess.run(self.log_density, feed_dict=feed_dict)
-
-
 class ExplorationAgent:
     """Exploration agent with reward bonuses."""
 
@@ -112,13 +98,9 @@ class ExplorationAgent:
         """
         self.state_dim = state_dim
         self.bonus_coeff = bonus_coeff
-
-        # Density model
         self.density_model = DensityModel(
             state_dim, density_hidden_dims, density_learning_rate
         )
-
-        # TensorFlow session
         self.sess = None
 
     def init_tf_sess(self):
@@ -146,7 +128,7 @@ class ExplorationAgent:
             Reward bonuses
         """
         log_density = self.density_model.predict_log_density(states, self.sess)
-        # Bonus is negative log density (higher bonus for less visited states)
+
         bonus = -log_density.flatten()
         return bonus
 
@@ -163,8 +145,6 @@ class ExplorationAgent:
         bonus = self.compute_reward_bonus(states)
         new_rewards = rewards + self.bonus_coeff * bonus
         return new_rewards
-
-
 class DiscreteExplorationAgent(ExplorationAgent):
     """Discrete exploration agent for discrete action spaces."""
 
@@ -189,8 +169,6 @@ class DiscreteExplorationAgent(ExplorationAgent):
             state_dim, bonus_coeff, density_hidden_dims, density_learning_rate
         )
         self.num_actions = num_actions
-
-        # State-action density model
         self.state_action_dim = state_dim + num_actions
         self.state_action_density = DensityModel(
             self.state_action_dim, density_hidden_dims, density_learning_rate
@@ -205,7 +183,7 @@ class DiscreteExplorationAgent(ExplorationAgent):
             epochs: Training epochs
             batch_size: Batch size
         """
-        # Concatenate states and actions
+
         state_actions = np.concatenate([states, actions], axis=1)
         self.state_action_density.fit(state_actions, self.sess, epochs, batch_size)
 

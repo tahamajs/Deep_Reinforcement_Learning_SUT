@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from .base_critic import BaseCritic
 import torch
 import torch.optim as optim
@@ -8,8 +7,6 @@ import pdb
 import numpy as np
 
 from cs285.infrastructure import pytorch_util as ptu
-
-
 class IQLCritic(BaseCritic):
 
     def __init__(self, hparams, optimizer_spec, **kwargs):
@@ -42,10 +39,6 @@ class IQLCritic(BaseCritic):
         self.mse_loss = nn.MSELoss()
         self.q_net.to(ptu.device)
         self.q_net_target.to(ptu.device)
-
-        # TODO define value function
-        # HINT: see Q_net definition above and optimizer below
-        ### YOUR CODE HERE ###
         self.v_net = network_initializer(self.ob_dim, 1)
         self.v_net.to(ptu.device)
 
@@ -71,8 +64,6 @@ class IQLCritic(BaseCritic):
         """
         ob_no = ptu.from_numpy(ob_no)
         ac_na = ptu.from_numpy(ac_na).to(torch.long)
-
-        ### YOUR CODE HERE ###
         qa_values = self.q_net(ob_no)
         q_values = torch.gather(qa_values, 1, ac_na.unsqueeze(1)).squeeze(1)
         v_values = self.v_net(ob_no).squeeze(1)
@@ -97,8 +88,6 @@ class IQLCritic(BaseCritic):
         next_ob_no = ptu.from_numpy(next_ob_no)
         reward_n = ptu.from_numpy(reward_n)
         terminal_n = ptu.from_numpy(terminal_n)
-
-        ### YOUR CODE HERE ###
         qa_values = self.q_net(ob_no)
         q_values = torch.gather(qa_values, 1, ac_na.unsqueeze(1)).squeeze(1)
         next_v_values = self.v_net(next_ob_no).squeeze(1)

@@ -10,15 +10,11 @@ Student ID: 400206262
 
 import argparse
 import gymnasium as gym
-import envs  # Custom environments
+import envs
 from src.ddpg_agent import DDPGAgent
-
-
 def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="DDPG Training Script")
-
-    # Training parameters
     parser.add_argument(
         "--num-episodes",
         dest="num_episodes",
@@ -33,8 +29,6 @@ def parse_arguments():
         choices=["ddpg", "td3", "her"],
         help="Training algorithm (ddpg | td3 | her)",
     )
-
-    # Network parameters
     parser.add_argument(
         "--actor_lr",
         dest="actor_lr",
@@ -59,8 +53,6 @@ def parse_arguments():
     parser.add_argument(
         "--gamma", dest="gamma", type=float, default=0.98, help="Discount factor"
     )
-
-    # Training hyperparameters
     parser.add_argument(
         "--buffer_size",
         dest="buffer_size",
@@ -89,8 +81,6 @@ def parse_arguments():
         default=0.1,
         help="Epsilon for action noise",
     )
-
-    # TD3 specific parameters
     parser.add_argument(
         "--target_action_sigma",
         dest="target_action_sigma",
@@ -112,8 +102,6 @@ def parse_arguments():
         default=2,
         help="How often to update policy wrt critic in TD3",
     )
-
-    # Training updates
     parser.add_argument(
         "--num_update_iters",
         dest="num_update_iters",
@@ -121,8 +109,6 @@ def parse_arguments():
         default=4,
         help="How many times to update networks per episode",
     )
-
-    # Logging and saving
     parser.add_argument(
         "--save_interval",
         dest="save_interval",
@@ -151,21 +137,15 @@ def parse_arguments():
         default=None,
         help="Path to pretrained weights",
     )
-
-    # Training mode
     parser.add_argument(
         "--train", action="store_true", default=True, help="Do training"
     )
-
-    # Network initialization
     parser.add_argument(
         "--custom_init",
         action="store_true",
         default=False,
         help="Use custom weight initialization",
     )
-
-    # Rendering
     parser_group = parser.add_mutually_exclusive_group(required=False)
     parser_group.add_argument(
         "--render", dest="render", action="store_true", help="Render the environment"
@@ -179,24 +159,12 @@ def parse_arguments():
     parser.set_defaults(render=False)
 
     return parser.parse_args()
-
-
 def main():
     """Main training function."""
     args = parse_arguments()
-
-    # Create environment
     env = gym.make("Pushing2D-v0")
-
-    # Create output filename
     outfile_name = f"{args.algorithm}_log.txt"
-
-    # Initialize DDPG agent
     agent = DDPGAgent(args, env, outfile_name)
-
-    # Train the agent
     agent.train(args.num_episodes)
-
-
 if __name__ == "__main__":
     main()

@@ -10,8 +10,6 @@ Student ID: 400206262
 import numpy as np
 import tensorflow as tf
 from collections import deque
-
-
 class ReplayBuffer:
     """Replay buffer for meta-learning."""
 
@@ -39,8 +37,6 @@ class ReplayBuffer:
     def size(self):
         """Return buffer size."""
         return len(self.buffer)
-
-
 class MetaLearningAgent:
     """Meta-learning agent for few-shot adaptation."""
 
@@ -68,54 +64,34 @@ class MetaLearningAgent:
         self.env = env
         self.state_dim = env.observation_space.shape[0]
         self.action_dim = env.action_space.shape[0]
-
-        # Hyperparameters
         self.hidden_sizes = hidden_sizes
         self.learning_rate = learning_rate
         self.meta_learning_rate = meta_learning_rate
         self.adaptation_steps = adaptation_steps
         self.meta_batch_size = meta_batch_size
         self.discount = discount
-
-        # Replay buffer for tasks
         self.replay_buffer = ReplayBuffer()
-
-        # Build networks
         self._build_networks()
-
-        # TensorFlow session
         self.sess = None
 
     def _build_networks(self):
         """Build policy network and meta-learning components."""
-        # Placeholders
+
         self.state_ph = tf.placeholder(tf.float32, [None, self.state_dim])
         self.action_ph = tf.placeholder(tf.float32, [None, self.action_dim])
         self.advantage_ph = tf.placeholder(tf.float32, [None])
         self.old_log_prob_ph = tf.placeholder(tf.float32, [None])
-
-        # Policy network
         self.action_logits, self.value = self._build_policy(self.state_ph)
-
-        # Sample action
         self.action_dist = tf.distributions.Categorical(logits=self.action_logits)
         self.sampled_action = self.action_dist.sample()
         self.log_prob = self.action_dist.log_prob(self.sampled_action)
-
-        # Policy loss (PPO-style)
         ratio = tf.exp(self.log_prob - self.old_log_prob_ph)
         clipped_ratio = tf.clip_by_value(ratio, 0.8, 1.2)
         self.policy_loss = -tf.reduce_mean(
             tf.minimum(ratio * self.advantage_ph, clipped_ratio * self.advantage_ph)
         )
-
-        # Value loss
         self.value_loss = tf.reduce_mean((self.value - self.advantage_ph) ** 2)
-
-        # Total loss
         self.total_loss = self.policy_loss + 0.5 * self.value_loss
-
-        # Optimizer
         self.optimizer = tf.train.AdamOptimizer(self.meta_learning_rate)
         self.train_op = self.optimizer.minimize(self.total_loss)
 
@@ -125,11 +101,7 @@ class MetaLearningAgent:
             x = state
             for size in self.hidden_sizes:
                 x = tf.layers.dense(x, size, activation=tf.nn.tanh)
-
-            # Action logits
             action_logits = tf.layers.dense(x, self.action_dim)
-
-            # Value function
             value = tf.layers.dense(x, 1)
 
             return action_logits, tf.squeeze(value)
@@ -196,29 +168,19 @@ class MetaLearningAgent:
         """
         if adaptation_steps is None:
             adaptation_steps = self.adaptation_steps
-
-        # Store original parameters
         original_params = self._get_policy_params()
-
-        # Adaptation loop
         for step in range(adaptation_steps):
-            # Sample batch from task data
+
             states = task_data["states"]
             actions = task_data["actions"]
             rewards = task_data["rewards"]
             dones = task_data["dones"]
-
-            # Compute values and advantages
             feed_dict = {self.state_ph: states}
             values = self.sess.run(self.value, feed_dict=feed_dict)
 
             advantages = self.compute_advantages(rewards, values, dones, self.discount)
-
-            # Compute old log probabilities
             feed_dict = {self.state_ph: states, self.action_ph: actions}
             old_log_probs = self.sess.run(self.log_prob, feed_dict=feed_dict)
-
-            # Update policy
             feed_dict = {
                 self.state_ph: states,
                 self.action_ph: actions,
@@ -227,11 +189,7 @@ class MetaLearningAgent:
             }
 
             self.sess.run(self.train_op, feed_dict=feed_dict)
-
-        # Get adapted parameters
         adapted_params = self._get_policy_params()
-
-        # Restore original parameters
         self._set_policy_params(original_params)
 
         return adapted_params
@@ -251,22 +209,15 @@ class MetaLearningAgent:
         """Perform one meta-training step."""
         if self.replay_buffer.size() < self.meta_batch_size:
             return
-
-        # Sample meta batch of tasks
         task_batch = self.replay_buffer.sample(self.meta_batch_size)
 
         meta_gradients = []
         original_params = self._get_policy_params()
 
         for task_data in task_batch:
-            # Adapt to task
+
             adapted_params = self.adapt_to_task(task_data)
-
-            # Compute meta-gradient (simplified - in practice would compute loss on test data)
-            # For now, just accumulate gradients from adaptation
             pass
-
-        # Restore original parameters
         self._set_policy_params(original_params)
 
     def add_task_trajectory(self, trajectory):
@@ -276,8 +227,6 @@ class MetaLearningAgent:
             trajectory: Dictionary with trajectory data
         """
         self.replay_buffer.add(trajectory)
-
-
 class MAMLAgent(MetaLearningAgent):
     """Model-Agnostic Meta-Learning agent."""
 
@@ -306,29 +255,19 @@ class MAMLAgent(MetaLearningAgent):
         """MAML adaptation with second-order gradients."""
         if adaptation_steps is None:
             adaptation_steps = self.adaptation_steps
-
-        # Store original parameters
         original_params = self._get_policy_params()
-
-        # Adaptation loop
         for step in range(adaptation_steps):
-            # Compute gradients on task data
+
             states = task_data["states"]
             actions = task_data["actions"]
             rewards = task_data["rewards"]
             dones = task_data["dones"]
-
-            # Compute values and advantages
             feed_dict = {self.state_ph: states}
             values = self.sess.run(self.value, feed_dict=feed_dict)
 
             advantages = self.compute_advantages(rewards, values, dones, self.discount)
-
-            # Compute old log probabilities
             feed_dict = {self.state_ph: states, self.action_ph: actions}
             old_log_probs = self.sess.run(self.log_prob, feed_dict=feed_dict)
-
-            # Compute gradients
             feed_dict = {
                 self.state_ph: states,
                 self.action_ph: actions,
@@ -341,8 +280,6 @@ class MAMLAgent(MetaLearningAgent):
                 tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "policy"),
             )
             computed_grads = self.sess.run(grads, feed_dict=feed_dict)
-
-            # Update parameters manually
             policy_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "policy")
             current_params = self.sess.run(policy_vars)
 
@@ -354,11 +291,7 @@ class MAMLAgent(MetaLearningAgent):
                     new_params.append(param)
 
             self._set_policy_params(new_params)
-
-        # Get adapted parameters
         adapted_params = self._get_policy_params()
-
-        # Restore original parameters
         self._set_policy_params(original_params)
 
         return adapted_params

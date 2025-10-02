@@ -16,12 +16,8 @@ class ReplayBuffer(object):
         self.terminals = None
 
     def add_rollouts(self, paths, noised=False):
-
-        # add new rollouts into our list of rollouts
         for path in paths:
             self.paths.append(path)
-
-        # convert new rollouts into their component arrays, and append them onto our arrays
         observations, actions, next_observations, terminals, concatenated_rews, unconcatenated_rews = convert_listofrollouts(paths)
 
         if noised:
@@ -45,20 +41,12 @@ class ReplayBuffer(object):
                 self.unconcatenated_rews += unconcatenated_rews
             else:
                 self.unconcatenated_rews.append(unconcatenated_rews)
-
-    ########################################
-    ########################################
-
     def sample_random_rollouts(self, num_rollouts):
         rand_indices = np.random.permutation(len(self.paths))[:num_rollouts]
         return self.paths[rand_indices]
 
     def sample_recent_rollouts(self, num_rollouts=1):
         return self.paths[-num_rollouts:]
-
-    ########################################
-    ########################################
-
     def sample_random_data(self, batch_size):
 
         assert self.obs.shape[0] == self.acs.shape[0] == self.concatenated_rews.shape[0] == self.next_obs.shape[0] == self.terminals.shape[0]

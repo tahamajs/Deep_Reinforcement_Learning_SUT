@@ -2,8 +2,6 @@
 
 import numpy as np
 from scipy.linalg import solve_continuous_are
-
-
 def simulate_dynamics(env, x, u, dt=1e-5):
     """Step simulator to see how state changes.
 
@@ -29,17 +27,13 @@ def simulate_dynamics(env, x, u, dt=1e-5):
       If you return x you will need to solve a different equation in
       your LQR controller.
     """
-    # Step simulator with perturbed state/action
+
     env.state = x.copy()
     next_state, _, _, _ = env.step(u, dt)
-
-    # Compute derivative approximation
     diff = next_state - x
     xdot = diff / dt
 
     return xdot
-
-
 def approximate_A(env, x, u, dynamics, delta=1e-5, dt=1e-5):
     """Approximate A matrix using finite differences.
 
@@ -66,18 +60,14 @@ def approximate_A(env, x, u, dynamics, delta=1e-5, dt=1e-5):
     A = np.zeros((x.shape[0], x.shape[0]))
 
     for i in range(len(x)):
-        # Perturb states element-wise
+
         delta_vector = np.zeros_like(x)
         delta_vector[i] = delta
-
-        # Compute A using finite differences
         A1 = dynamics(env, x + delta_vector, u, dt)
         A2 = dynamics(env, x - delta_vector, u, dt)
         A[:, i] = (A1 - A2) / (2 * delta)
 
     return A
-
-
 def approximate_B(env, x, u, dynamics, delta=1e-5, dt=1e-5):
     """Approximate B matrix using finite differences.
 
@@ -104,18 +94,14 @@ def approximate_B(env, x, u, dynamics, delta=1e-5, dt=1e-5):
     B = np.zeros((x.shape[0], u.shape[0]))
 
     for i in range(len(u)):
-        # Perturb actions element-wise
+
         delta_vector = np.zeros_like(u)
         delta_vector[i] = delta
-
-        # Compute B using finite differences
         B1 = dynamics(env, x, u + delta_vector, dt)
         B2 = dynamics(env, x, u - delta_vector, dt)
         B[:, i] = (B1 - B2) / (2 * delta)
 
     return B
-
-
 def calc_lqr_input(env, sim_env, tN=None, max_iter=None):
     """Calculate the optimal control input for the given state.
 
@@ -138,21 +124,15 @@ def calc_lqr_input(env, sim_env, tN=None, max_iter=None):
     u: np.array
       The command to execute at this point.
     """
-    # State and action
+
     x = env.state.copy()
     u = np.zeros(env.action_space.shape[0])
-
-    # Inputs for Ricatti solver
     A = approximate_A(sim_env, x, u, simulate_dynamics)
     B = approximate_B(sim_env, x, u, simulate_dynamics)
     Q = env.Q.copy()
     R = env.R.copy()
-
-    # Solve Ricatti equation and compute gain
     P = solve_continuous_are(A, B, Q, R)
     K = np.linalg.inv(R) @ B.T @ P
-
-    # Compute optimal control
     u = -K @ (x - env.goal)
     u = np.clip(u, env.action_space.low, env.action_space.high)
 

@@ -10,11 +10,11 @@ class Replay_Buffer(object):
     def adjust_size(self):
         if len(self.memory) > self.max_size:
             diff = int(len(self.memory) - self.max_size)
-            self.memory = self.memory[:-diff]  # FIFO
+            self.memory = self.memory[:-diff]
             print('Adjusted replay size')
 
     def prepend(self, x):
-        # assume x is a list of states
+
         self.memory = list(x) + self.memory
         self.adjust_size()
 

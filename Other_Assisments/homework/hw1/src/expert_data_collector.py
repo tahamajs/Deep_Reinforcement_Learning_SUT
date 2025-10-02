@@ -13,8 +13,6 @@ import numpy as np
 import gym
 import tensorflow as tf
 from tf_util import initialize
-
-
 class ExpertDataCollector:
     """Class for collecting expert demonstration data."""
 
@@ -97,8 +95,6 @@ class ExpertDataCollector:
             pickle.dump(expert_data, f, pickle.HIGHEST_PROTOCOL)
 
         print(f"Data saved to {filename}")
-
-
 def load_expert_policy(policy_file):
     """Load expert policy from pickle file.
 

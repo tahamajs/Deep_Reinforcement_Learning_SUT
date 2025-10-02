@@ -10,8 +10,6 @@ Student ID: 400206262
 import tensorflow as tf
 import tensorflow.contrib.layers as layers
 from dqn_utils import huber_loss
-
-
 def build_q_network(input_shape, num_actions, scope, reuse=False):
     """Build a Q-network for DQN.
 
@@ -26,13 +24,11 @@ def build_q_network(input_shape, num_actions, scope, reuse=False):
         network_vars: List of network variables
     """
     with tf.variable_scope(scope, reuse=reuse):
-        # Convolutional layers for image inputs (Atari)
+
         if len(input_shape) == 3:
-            # Input: (height, width, channels * frame_history)
+
             obs_t_ph = tf.placeholder(tf.uint8, [None] + list(input_shape))
             obs_t_float = tf.cast(obs_t_ph, tf.float32) / 255.0
-
-            # Convolutional layers
             conv1 = layers.conv2d(
                 obs_t_float, 32, 8, 4, activation_fn=tf.nn.relu, scope="conv1"
             )
@@ -42,8 +38,6 @@ def build_q_network(input_shape, num_actions, scope, reuse=False):
             conv3 = layers.conv2d(
                 conv2, 64, 3, 1, activation_fn=tf.nn.relu, scope="conv3"
             )
-
-            # Flatten and fully connected layers
             flattened = layers.flatten(conv3)
             fc1 = layers.fully_connected(
                 flattened, 512, activation_fn=tf.nn.relu, scope="fc1"
@@ -51,8 +45,6 @@ def build_q_network(input_shape, num_actions, scope, reuse=False):
             q_values = layers.fully_connected(
                 fc1, num_actions, activation_fn=None, scope="q_values"
             )
-
-        # Fully connected layers for low-dimensional inputs (LunarLander)
         else:
             obs_t_ph = tf.placeholder(tf.float32, [None] + list(input_shape))
             fc1 = layers.fully_connected(
@@ -66,8 +58,6 @@ def build_q_network(input_shape, num_actions, scope, reuse=False):
         network_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)
 
     return obs_t_ph, q_values, network_vars
-
-
 class DQNAgent:
     """Deep Q-Learning agent with experience replay and target networks."""
 
@@ -117,39 +107,31 @@ class DQNAgent:
         self.target_update_freq = target_update_freq
         self.grad_norm_clipping = grad_norm_clipping
         self.double_q = double_q
-
-        # Environment properties
         if len(self.env.observation_space.shape) == 1:
-            # Low-dimensional observations (LunarLander)
+
             input_shape = self.env.observation_space.shape
         else:
-            # Image observations (Atari)
+
             img_h, img_w, img_c = self.env.observation_space.shape
             input_shape = (img_h, img_w, frame_history_len * img_c)
 
         self.num_actions = self.env.action_space.n
-
-        # Build Q-networks
         self.obs_t_ph, self.q_t, self.q_func_vars = build_q_network(
             input_shape, self.num_actions, "q_func"
         )
         self.obs_tp1_ph, self.q_tp1, self.target_q_func_vars = build_q_network(
             input_shape, self.num_actions, "target_q_func"
         )
-
-        # Placeholders for training
         self.act_t_ph = tf.placeholder(tf.int32, [None])
         self.rew_t_ph = tf.placeholder(tf.float32, [None])
         self.done_mask_ph = tf.placeholder(tf.float32, [None])
-
-        # Q-learning target computation
         if self.double_q:
-            # Double Q-learning: use online network to select actions
-            q_tp1_online = self.q_tp1  # This is from target network scope
+
+            q_tp1_online = self.q_tp1
             q_tp1_online_vars = tf.get_collection(
                 tf.GraphKeys.GLOBAL_VARIABLES, scope="q_func"
             )
-            # We need to compute q_tp1 using online network for action selection
+
             _, q_tp1_online_values, _ = build_q_network(
                 input_shape, self.num_actions, "q_func", reuse=True
             )
@@ -158,19 +140,13 @@ class DQNAgent:
                 self.q_tp1 * tf.one_hot(best_actions, self.num_actions), axis=1
             )
         else:
-            # Standard Q-learning
-            q_tp1_best = tf.reduce_max(self.q_tp1, axis=1)
 
-        # Target Q-values
+            q_tp1_best = tf.reduce_max(self.q_tp1, axis=1)
         q_t_selected = tf.reduce_sum(
             self.q_t * tf.one_hot(self.act_t_ph, self.num_actions), axis=1
         )
         q_tp1_target = self.rew_t_ph + self.gamma * q_tp1_best * (1 - self.done_mask_ph)
-
-        # Bellman error and loss
         self.total_error = tf.reduce_mean(huber_loss(q_t_selected - q_tp1_target))
-
-        # Optimization
         self.learning_rate = tf.placeholder(tf.float32, (), name="learning_rate")
         optimizer = self.optimizer_spec.constructor(
             learning_rate=self.learning_rate, **self.optimizer_spec.kwargs
@@ -184,8 +160,6 @@ class DQNAgent:
             if grad is not None
         ]
         self.train_fn = optimizer.apply_gradients(clipped_gradients)
-
-        # Target network update
         update_target_fn = []
         for var, var_target in zip(
             sorted(self.q_func_vars, key=lambda v: v.name),
@@ -193,8 +167,6 @@ class DQNAgent:
         ):
             update_target_fn.append(var_target.assign(var))
         self.update_target_fn = tf.group(*update_target_fn)
-
-        # Initialize replay buffer
         from dqn_utils import ReplayBuffer
 
         self.replay_buffer = ReplayBuffer(
@@ -202,8 +174,6 @@ class DQNAgent:
             frame_history_len,
             lander=(len(env.observation_space.shape) == 1),
         )
-
-        # Training state
         self.model_initialized = False
         self.num_param_updates = 0
         self.t = 0
@@ -229,13 +199,9 @@ class DQNAgent:
             and self.t % self.learning_freq == 0
             and self.replay_buffer.can_sample(self.batch_size)
         ):
-
-            # Sample batch from replay buffer
             obs_t_batch, act_t_batch, rew_t_batch, obs_tp1_batch, done_mask_batch = (
                 self.replay_buffer.sample(self.batch_size)
             )
-
-            # Initialize model if needed
             if not self.model_initialized:
                 from dqn_utils import initialize_interdependent_variables
 
@@ -248,8 +214,6 @@ class DQNAgent:
                     },
                 )
                 self.model_initialized = True
-
-            # Train the network
             self.sess.run(
                 self.train_fn,
                 feed_dict={
@@ -261,8 +225,6 @@ class DQNAgent:
                     self.learning_rate: self.optimizer_spec.lr_schedule.value(self.t),
                 },
             )
-
-            # Update target network periodically
             if self.num_param_updates % self.target_update_freq == 0:
                 self.sess.run(self.update_target_fn)
 
@@ -270,17 +232,11 @@ class DQNAgent:
 
     def step_env(self):
         """Take one step in the environment and store transition."""
-        # Select action
+
         encoded_obs = self.replay_buffer.encode_recent_observation()
         action = self.select_action(encoded_obs)
-
-        # Take step in environment
         obs, reward, done, _ = self.env.step(action)
-
-        # Store transition in replay buffer
         self.replay_buffer.store_effect(self.replay_buffer_idx, action, reward, done)
-
-        # Reset if episode ended
         if done:
             self.last_obs = self.env.reset()
             self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)

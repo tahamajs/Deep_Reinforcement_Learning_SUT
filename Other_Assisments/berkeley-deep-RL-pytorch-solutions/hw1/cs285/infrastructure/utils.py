@@ -1,27 +1,16 @@
 import numpy as np
 import time
 import scipy
-
-############################################
-############################################
-
-
 def sample_trajectory(
     env, policy, max_path_length, render=False, render_mode=("rgb_array")
 ):
 
     if render:
         env.render(mode="human")
-
-    # initialize env for the beginning of a new rollout
-    ob, _ = env.reset()  # HINT: should be the output of resetting the env
-
-    # init vars
+    ob, _ = env.reset()
     obs, acs, rewards, next_obs, terminals, image_obs = [], [], [], [], [], []
     steps = 0
     while True:
-
-        # render image of the simulated env
         if render:
             if "rgb_array" in render_mode:
                 if hasattr(env, "sim"):
@@ -33,33 +22,22 @@ def sample_trajectory(
             if "human" in render_mode:
                 env.render(mode=render_mode)
                 time.sleep(env.model.opt.timestep)
-
-        # use the most recent ob to decide what to do
         obs.append(ob)
-        ac = policy.get_action(ob)  # HINT: query the policy's get_action function
+        ac = policy.get_action(ob)
         ac = ac[0]
         acs.append(ac)
-
-        # take that action and record results
         ob, rew, terminated, truncated, _ = env.step(ac)
         done = terminated or truncated
-
-        # record result of taking that action
         steps += 1
         next_obs.append(ob)
         rewards.append(rew)
-
-        # end the rollout if the rollout ended
-        # HINT: rollout can end due to done, or due to max_path_length
-        rollout_done = done or (steps == max_path_length)  # HINT: this is either 0 or 1
+        rollout_done = done or (steps == max_path_length)
         terminals.append(rollout_done)
 
         if rollout_done:
             break
 
     return Path(obs, image_obs, acs, rewards, next_obs, terminals)
-
-
 def sample_trajectories(
     env,
     policy,
@@ -85,8 +63,6 @@ def sample_trajectories(
         timesteps_this_batch += get_pathlength(paths[-1])
 
     return paths, timesteps_this_batch
-
-
 def sample_n_trajectories(
     env, policy, ntraj, max_path_length, render=False, render_mode=("rgb_array")
 ):
@@ -103,12 +79,6 @@ def sample_n_trajectories(
         )
 
     return paths
-
-
-############################################
-############################################
-
-
 def Path(obs, image_obs, acs, rewards, next_obs, terminals):
     """
     Take info (separate arrays) from a single rollout
@@ -124,8 +94,6 @@ def Path(obs, image_obs, acs, rewards, next_obs, terminals):
         "next_observation": np.array(next_obs, dtype=np.float32),
         "terminal": np.array(terminals, dtype=np.float32),
     }
-
-
 def convert_listofrollouts(paths, concat_rew=True):
     """
     Take a list of rollout dictionaries
@@ -141,11 +109,5 @@ def convert_listofrollouts(paths, concat_rew=True):
     next_observations = np.concatenate([path["next_observation"] for path in paths])
     terminals = np.concatenate([path["terminal"] for path in paths])
     return observations, actions, rewards, next_observations, terminals
-
-
-############################################
-############################################
-
-
 def get_pathlength(path):
     return len(path["reward"])

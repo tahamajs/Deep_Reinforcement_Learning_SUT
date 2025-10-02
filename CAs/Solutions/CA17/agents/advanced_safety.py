@@ -7,8 +7,6 @@ from typing import List, Dict, Tuple, Optional, Union
 from collections import deque
 import copy
 import random
-
-
 class SafetyConstraints:
     """Safety constraints for reinforcement learning"""
 
@@ -39,8 +37,6 @@ class SafetyConstraints:
         if self.action_bounds is not None:
             return np.clip(action, -self.action_bounds, self.action_bounds)
         return action
-
-
 class RobustPolicy:
     """Robust policy that handles adversarial perturbations"""
 
@@ -98,8 +94,6 @@ class RobustPolicy:
         robustness_loss = F.mse_loss(robust_actions, main_actions.detach())
 
         return robustness_loss
-
-
 class ConstrainedPolicyOptimization:
     """Constrained policy optimization with safety constraints"""
 
@@ -224,8 +218,6 @@ class ConstrainedPolicyOptimization:
         policy_output = self.policy(states)
         dist = torch.distributions.Normal(policy_output, 0.1)
         return dist.log_prob(actions).sum(dim=-1)
-
-
 class RiskSensitiveRL:
     """Risk-sensitive reinforcement learning"""
 
@@ -311,8 +303,6 @@ class RiskSensitiveRL:
         policy_output = self.policy(states)
         dist = torch.distributions.Normal(policy_output, 0.1)
         return dist.log_prob(actions).sum(dim=-1)
-
-
 class AdversarialTraining:
     """Adversarial training for robustness"""
 
@@ -389,8 +379,6 @@ class AdversarialTraining:
             "policy_loss": policy_loss.item(),
             "adversary_loss": adversary_loss.item(),
         }
-
-
 class SafetyMonitor:
     """Real-time safety monitoring and intervention"""
 
@@ -412,9 +400,9 @@ class SafetyMonitor:
         state_change = np.linalg.norm(next_state - state)
 
         violation = (
-            state_norm > 5  # State too extreme
-            or action_norm > 1  # Action too extreme
-            or state_change > 2  # Too much state change
+            state_norm > 5
+            or action_norm > 1
+            or state_change > 2
         )
 
         self.safety_violations.append(violation)
@@ -451,8 +439,6 @@ class SafetyMonitor:
             "intervention_rate": intervention_rate,
             "safety_score": 1 - violation_rate,
         }
-
-
 print("✅ Advanced Safety implementations complete!")
 print("Components implemented:")
 print("- SafetyConstraints: Safety bounds and constraints")

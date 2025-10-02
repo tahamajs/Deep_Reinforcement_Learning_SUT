@@ -10,13 +10,9 @@ Student ID: 400206262
 import numpy as np
 import tensorflow as tf
 from .networks import PolicyNetwork, ValueNetwork
-
-
 def pathlength(path):
     """Get the length of a trajectory path."""
     return len(path["reward"])
-
-
 class PolicyGradientAgent:
     """Policy Gradient agent with optional neural network baseline."""
 
@@ -63,15 +59,11 @@ class PolicyGradientAgent:
         self.min_timesteps_per_batch = min_timesteps_per_batch
         self.max_path_length = max_path_length
         self.animate = animate
-
-        # Create networks
         self.policy_net = PolicyNetwork(
             ob_dim, ac_dim, discrete, n_layers, size, learning_rate
         )
         if nn_baseline:
             self.value_net = ValueNetwork(ob_dim, n_layers, size, learning_rate)
-
-        # TensorFlow session
         self.sess = None
 
     def init_tf_sess(self):
@@ -126,8 +118,6 @@ class PolicyGradientAgent:
                 time.sleep(0.1)
 
             obs.append(ob)
-
-            # Sample action from policy
             ac = self.sess.run(
                 self.policy_net.sy_sampled_ac,
                 feed_dict={self.policy_net.sy_ob_no: [ob]},
@@ -162,7 +152,7 @@ class PolicyGradientAgent:
 
         for re in re_n:
             if self.reward_to_go:
-                # Reward-to-go: Q_t = sum_{t'=t}^T gamma^(t'-t) * r_{t'}
+
                 q_path = []
                 for t in range(len(re)):
                     q_t = 0
@@ -171,7 +161,7 @@ class PolicyGradientAgent:
                     q_path.append(q_t)
                 q_n.extend(q_path)
             else:
-                # Trajectory-based: Q_t = sum_{t'=0}^T gamma^t' * r_{t'}
+
                 total_return = sum(
                     self.gamma**t_prime * re[t_prime] for t_prime in range(len(re))
                 )
@@ -190,13 +180,11 @@ class PolicyGradientAgent:
             adv_n: advantages
         """
         if self.nn_baseline:
-            # Use neural network baseline
+
             b_n = self.sess.run(
                 self.value_net.baseline_prediction,
                 feed_dict={self.value_net.sy_ob_no: ob_no},
             )
-
-            # Rescale baseline to match Q-value statistics
             b_n = b_n * np.std(q_n) + np.mean(q_n)
             adv_n = q_n - b_n
         else:
@@ -217,8 +205,6 @@ class PolicyGradientAgent:
         """
         q_n = self.sum_of_rewards(re_n)
         adv_n = self.compute_advantage(ob_no, q_n)
-
-        # Normalize advantages
         if self.normalize_advantages:
             adv_n = (adv_n - np.mean(adv_n)) / (np.std(adv_n) + 1e-8)
 
@@ -233,9 +219,9 @@ class PolicyGradientAgent:
             q_n: Q-values
             adv_n: advantages
         """
-        # Update baseline if using neural network baseline
+
         if self.nn_baseline:
-            target_n = (q_n - np.mean(q_n)) / (np.std(q_n) + 1e-8)  # Normalize targets
+            target_n = (q_n - np.mean(q_n)) / (np.std(q_n) + 1e-8)
             self.sess.run(
                 self.value_net.baseline_update_op,
                 feed_dict={
@@ -243,8 +229,6 @@ class PolicyGradientAgent:
                     self.value_net.sy_target_n: target_n,
                 },
             )
-
-        # Update policy
         self.sess.run(
             self.policy_net.update_op,
             feed_dict={

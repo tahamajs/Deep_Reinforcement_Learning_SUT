@@ -1,5 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-# coding: utf-8
 """Defines some frozen lake maps."""
 
 from __future__ import (absolute_import, division, print_function,
@@ -66,8 +64,6 @@ register(
 class NegRewardFrozenLake(frozen_lake.FrozenLakeEnv):
     def __init__(self, **kwargs):
         super(NegRewardFrozenLake, self).__init__(**kwargs)
-
-        # modify the rewards
         for state in range(self.nS):
             for action in range(self.nA):
                 new_transitions = []
@@ -85,8 +81,6 @@ class NegRewardFrozenLake(frozen_lake.FrozenLakeEnv):
                     new_transitions.append(
                         (prob, nextstate, reward, is_terminal))
                 self.P[state][action] = new_transitions
-
-
 register(
     id='Deterministic-4x4-neg-reward-FrozenLake-v0',
     entry_point='deeprl_hw1.lake_envs:NegRewardFrozenLake',
@@ -118,4 +112,3 @@ register(
             'is_slippery': True,
             'desc' : MAPS['8x8']
     })
-

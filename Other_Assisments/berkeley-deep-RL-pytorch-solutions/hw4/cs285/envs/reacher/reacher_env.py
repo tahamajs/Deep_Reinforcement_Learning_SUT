@@ -4,12 +4,8 @@ from gymnasium import utils
 from gymnasium.envs.mujoco import mujoco_env
 from mujoco_py import MjViewer
 import os
-
-
 class Reacher7DOFEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(self):
-
-        # placeholder
         self.hand_sid = -2
         self.target_sid = -1
 
@@ -26,10 +22,10 @@ class Reacher7DOFEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def _get_obs(self):
         return np.concatenate(
             [
-                self.data.qpos.flat,  # [7]
-                self.data.qvel.flatten() / 10.0,  # [7]
-                self.data.site_xpos[self.hand_sid],  # [3]
-                self.model.site_pos[self.target_sid],  # [3]
+                self.data.qpos.flat,
+                self.data.qvel.flatten() / 10.0,
+                self.data.site_xpos[self.hand_sid],
+                self.model.site_pos[self.target_sid],
             ]
         )
 
@@ -40,8 +36,6 @@ class Reacher7DOFEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         reward, done = self.get_reward(ob, a)
 
         score = self.get_score(ob)
-
-        # finalize step
         env_info = {"ob": ob, "rewards": self.reward_dict, "score": score}
 
         return ob, reward, done, env_info
@@ -63,8 +57,6 @@ class Reacher7DOFEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             r_total: reward of this (o,a) pair, dimension is (batchsize,1) or (1,)
             done: True if env reaches terminal state, dimension is (batchsize,1) or (1,)
         """
-
-        # initialize and reshape as needed, for batch mode
         self.reward_dict = {}
         if len(observations.shape) == 1:
             observations = np.expand_dims(observations, axis=0)
@@ -72,19 +64,11 @@ class Reacher7DOFEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             batch_mode = False
         else:
             batch_mode = True
-
-        # get vars
         hand_pos = observations[:, -6:-3]
         target_pos = observations[:, -3:]
-
-        # calc rew
         dist = np.linalg.norm(hand_pos - target_pos, axis=1)
         self.reward_dict["r_total"] = -10 * dist
-
-        # done is always false for this env
         dones = np.zeros((observations.shape[0],))
-
-        # return
         if not batch_mode:
             return self.reward_dict["r_total"][0], dones[0]
         return self.reward_dict["r_total"], dones
@@ -116,11 +100,7 @@ class Reacher7DOFEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def do_reset(self, reset_pose, reset_vel, reset_goal):
 
         self.set_state(reset_pose, reset_vel)
-
-        # reset target
         self.reset_goal = reset_goal.copy()
         self.model.site_pos[self.target_sid] = self.reset_goal
         self.sim.forward()
-
-        # return
         return self._get_obs()

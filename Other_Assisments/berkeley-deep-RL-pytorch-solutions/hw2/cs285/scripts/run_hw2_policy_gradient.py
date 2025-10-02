@@ -1,23 +1,12 @@
-# If you aren't using anaconda use next two lines:
-# import sys
-# sys.path.append(r'<Your Path to HW2')
-
 import torch
 import os
 import time
 
 from cs285.infrastructure.rl_trainer import RL_Trainer
 from cs285.agents.pg_agent import PGAgent
-
-
 class PG_Trainer(object):
 
     def __init__(self, params):
-
-        #####################
-        ## SET AGENT PARAMS
-        #####################
-
         computation_graph_args = {
             "n_layers": params["n_layers"],
             "size": params["size"],
@@ -47,11 +36,6 @@ class PG_Trainer(object):
         self.params["agent_class"] = PGAgent
         self.params["agent_params"] = agent_params
         self.params["batch_size_initial"] = self.params["batch_size"]
-
-        ################
-        ## RL TRAINER
-        ################
-
         self.rl_trainer = RL_Trainer(self.params)
 
     def run_training_loop(self):
@@ -61,8 +45,6 @@ class PG_Trainer(object):
             collect_policy=self.rl_trainer.agent.actor,
             eval_policy=self.rl_trainer.agent.actor,
         )
-
-
 def main():
 
     import argparse
@@ -77,10 +59,10 @@ def main():
     parser.add_argument("--dont_standardize_advantages", "-dsa", action="store_true")
     parser.add_argument(
         "--batch_size", "-b", type=int, default=1000
-    )  # steps collected per train iteration
+    )
     parser.add_argument(
         "--eval_batch_size", "-eb", type=int, default=400
-    )  # steps collected per eval iteration
+    )
 
     parser.add_argument("--num_agent_train_steps_per_iter", type=int, default=1)
     parser.add_argument("--discount", type=float, default=1)
@@ -91,18 +73,16 @@ def main():
 
     parser.add_argument(
         "--ep_len", type=int
-    )  # students shouldn't change this away from env's default
+    )
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--use_gpu", "-gpu", default=True)
     parser.add_argument("--which_gpu", "-gpu_id", default=0)
-    parser.add_argument("--video_log_freq", type=int, default=-1)  # video log disabled
+    parser.add_argument("--video_log_freq", type=int, default=-1)
     parser.add_argument("--scalar_log_freq", type=int, default=1)
 
     parser.add_argument("--save_params", action="store_true")
 
     args = parser.parse_args()
-
-    # convert to dictionary
     params = vars(args)
 
     if params["lambda"] < 1:
@@ -115,15 +95,7 @@ def main():
     else:
         params["device"] = torch.device("cpu")
         print("Pytorch is running on the CPU")
-
-    # for this assignment, we train on everything we recently collected
-    # so making train_batch_size=batch_size
     params["train_batch_size"] = params["batch_size"]
-
-    ##################################
-    ### CREATE DIRECTORY FOR LOGGING
-    ##################################
-
     logdir_prefix = "pg_"
 
     data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../results")
@@ -143,14 +115,7 @@ def main():
     params["logdir"] = logdir
     if not (os.path.exists(logdir)):
         os.makedirs(logdir)
-
-    ###################
-    ### RUN TRAINING
-    ###################
-
     trainer = PG_Trainer(params)
     trainer.run_training_loop()
-
-
 if __name__ == "__main__":
     main()

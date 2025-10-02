@@ -1,12 +1,4 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-# Some of the code from the following sources:
-# https://github.com/joschu/modular_rl
-# https://github.com/Khrylx/PyTorch-RL
-# http://www.johndcook.com/blog/standard_deviation
-
 import numpy as np
-
-
 def estimate_advantages(rewards, masks, values, gamma, tau):
     deltas = np.zeros(len(rewards))
     advantages = np.zeros(len(rewards))
@@ -24,8 +16,6 @@ def estimate_advantages(rewards, masks, values, gamma, tau):
     advantages = (advantages - np.mean(advantages)) / np.std(advantages)
 
     return advantages, returns
-
-
 class RunningStat(object):
     def __init__(self, shape):
         self._n = 0
@@ -62,8 +52,6 @@ class RunningStat(object):
     @property
     def shape(self):
         return self._M.shape
-
-
 class ZFilter:
     """
     y = (x-mean)/std

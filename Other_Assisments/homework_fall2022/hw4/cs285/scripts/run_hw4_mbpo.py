@@ -1,21 +1,11 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-# Homework 4: MBPO Script
-
 import os
 import time
 
 from cs285.infrastructure.rl_trainer import RL_Trainer
 from cs285.agents.mbpo_agent import MBPOAgent
-
-
 class MBPO_Trainer(object):
 
     def __init__(self, params):
-
-        #####################
-        ## SET AGENT PARAMS
-        #####################
-
         mb_computation_graph_args = {
             "ensemble_size": params["ensemble_size"],
             "n_layers": params["n_layers"],
@@ -81,11 +71,6 @@ class MBPO_Trainer(object):
         self.params = params
         self.params["agent_class"] = MBPOAgent
         self.params["agent_params"] = agent_params
-
-        ################
-        ## RL TRAINER
-        ################
-
         self.rl_trainer = RL_Trainer(self.params)
 
     def run_training_loop(self):
@@ -95,34 +80,30 @@ class MBPO_Trainer(object):
             collect_policy=self.rl_trainer.agent.actor,
             eval_policy=self.rl_trainer.agent.actor,
         )
-
-
 def main():
 
     import argparse
 
     parser = argparse.ArgumentParser()
-    # Common parameters
+
     parser.add_argument(
         "--env_name", type=str
-    )  # reacher-cs285-v0, ant-cs285-v0, cheetah-cs285-v0, obstacles-cs285-v0
+    )
     parser.add_argument("--ep_len", type=int, default=200)
     parser.add_argument("--exp_name", type=str, default="todo")
     parser.add_argument("--n_iter", "-n", type=int, default=20)
     parser.add_argument(
         "--eval_batch_size", "-eb", type=int, default=400
-    )  # steps collected per eval iteration
+    )
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--no_gpu", "-ngpu", action="store_true")
     parser.add_argument("--which_gpu", "-gpu_id", default=0)
-    parser.add_argument("--video_log_freq", type=int, default=-1)  # -1 to disable
-    parser.add_argument("--scalar_log_freq", type=int, default=1)  # -1 to disable
+    parser.add_argument("--video_log_freq", type=int, default=-1)
+    parser.add_argument("--scalar_log_freq", type=int, default=1)
     parser.add_argument("--save_params", action="store_true")
-
-    # Model learning parameters
     parser.add_argument(
         "--train_batch_size", "-tb", type=int, default=512
-    )  # steps used per gradient step (used for training)
+    )
     parser.add_argument("--ensemble_size", type=int, default=3)
     parser.add_argument("--mpc_horizon", type=int, default=10)
     parser.add_argument("--mpc_num_action_sequences", type=int, default=1000)
@@ -134,15 +115,13 @@ def main():
     parser.add_argument("--num_agent_train_steps_per_iter", type=int, default=1000)
     parser.add_argument(
         "--batch_size_initial", type=int, default=20000
-    )  # (random) steps collected on 1st iteration (put into replay buffer)
+    )
     parser.add_argument(
         "--batch_size", type=int, default=8000
-    )  # steps collected per train iteration (put into replay buffer)
+    )
     parser.add_argument("--learning_rate", type=float, default=0.001)
     parser.add_argument("--n_layers", type=int, default=2)
     parser.add_argument("--size", type=int, default=250)
-
-    # SAC parameters
     parser.add_argument("--sac_num_agent_train_steps_per_iter", type=int, default=1)
     parser.add_argument(
         "--sac_num_critic_updates_per_agent_update", type=int, default=1
@@ -152,38 +131,27 @@ def main():
     parser.add_argument("--sac_critic_target_update_frequency", type=int, default=1)
     parser.add_argument(
         "--sac_train_batch_size", type=int, default=256
-    )  ##steps used per gradient step
+    )
     parser.add_argument(
         "--sac_batch_size", type=int, default=1000
-    )  # steps collected per train iteration
+    )
     parser.add_argument("--sac_discount", type=float, default=0.99)
     parser.add_argument("--sac_init_temperature", type=float, default=1.0)
     parser.add_argument("--sac_learning_rate", type=float, default=3e-4)
     parser.add_argument("--sac_n_layers", type=int, default=2)
     parser.add_argument("--sac_size", type=int, default=64)
     parser.add_argument("--sac_n_iter", type=int, default=200)
-
-    # MBPO parameters
     parser.add_argument("--mbpo_rollout_length", type=int, default=1)
 
     args = parser.parse_args()
-
-    # convert to dictionary
     params = vars(args)
-
-    # HARDCODE EPISODE LENGTHS FOR THE ENVS USED IN THIS MB ASSIGNMENT
     if params["env_name"] == "reacher-cs285-v0":
         params["ep_len"] = 200
     if params["env_name"] == "cheetah-cs285-v0":
         params["ep_len"] = 500
     if params["env_name"] == "obstacles-cs285-v0":
         params["ep_len"] = 100
-
-    ##################################
-    ### CREATE DIRECTORY FOR LOGGING
-    ##################################
-
-    logdir_prefix = "hw4_"  # keep for autograder
+    logdir_prefix = "hw4_"
 
     data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../data")
 
@@ -203,14 +171,7 @@ def main():
     if not (os.path.exists(logdir)):
         os.makedirs(logdir)
     print("\n\n\nLOGGING TO: ", logdir, "\n\n\n")
-
-    ###################
-    ### RUN TRAINING
-    ###################
-
     trainer = MBPO_Trainer(params)
     trainer.run_training_loop()
-
-
 if __name__ == "__main__":
     main()

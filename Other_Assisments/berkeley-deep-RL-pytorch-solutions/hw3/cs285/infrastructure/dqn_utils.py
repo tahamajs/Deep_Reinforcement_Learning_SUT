@@ -12,8 +12,6 @@ from torch import nn
 from cs285.infrastructure.atari_wrappers import wrap_deepmind
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedule"])
-
-
 def get_env_kwargs(env_name):
     if env_name == "PongNoFrameskip-v4":
         kwargs = {
@@ -60,8 +58,6 @@ def get_env_kwargs(env_name):
         raise NotImplementedError
 
     return kwargs
-
-
 def atari_exploration_schedule(num_timesteps):
     return PiecewiseSchedule(
         [
@@ -71,8 +67,6 @@ def atari_exploration_schedule(num_timesteps):
         ],
         outside_value=0.01,
     )
-
-
 def atari_ram_exploration_schedule(num_timesteps):
     return PiecewiseSchedule(
         [
@@ -82,8 +76,6 @@ def atari_ram_exploration_schedule(num_timesteps):
         ],
         outside_value=0.01,
     )
-
-
 def atari_optimizer(num_timesteps):
     num_iterations = num_timesteps / 4
     lr_multiplier = 1.0
@@ -101,16 +93,12 @@ def atari_optimizer(num_timesteps):
         kwargs=dict(eps=1e-4),
         lr_schedule=lambda t: lr_schedule.value(t),
     )
-
-
 def lander_optimizer():
     return OptimizerSpec(
         constructor=torch.optim.Adam,
         lr_schedule=lambda t: ConstantSchedule(1e-3).value(t),
         kwargs={},
     )
-
-
 def lander_exploration_schedule(num_timesteps):
     return PiecewiseSchedule(
         [
@@ -119,8 +107,6 @@ def lander_exploration_schedule(num_timesteps):
         ],
         outside_value=0.02,
     )
-
-
 def sample_n_unique(sampling_f, n):
     """Helper function. Given a function `sampling_f` that returns
     comparable objects, sample n such unique objects.
@@ -131,14 +117,10 @@ def sample_n_unique(sampling_f, n):
         if candidate not in res:
             res.append(candidate)
     return res
-
-
 class Schedule(object):
     def value(self, t):
         """Value of the schedule at time t"""
         raise NotImplementedError()
-
-
 class ConstantSchedule(object):
     def __init__(self, value):
         """Value remains constant over time.
@@ -152,12 +134,8 @@ class ConstantSchedule(object):
     def value(self, t):
         """See Schedule.value"""
         return self._v
-
-
 def linear_interpolation(l, r, alpha):
     return l + alpha * (r - l)
-
-
 class PiecewiseSchedule(object):
     def __init__(
         self, endpoints, interpolation=linear_interpolation, outside_value=None
@@ -191,12 +169,8 @@ class PiecewiseSchedule(object):
             if l_t <= t and t < r_t:
                 alpha = float(t - l_t) / (r_t - l_t)
                 return self._interpolation(l, r, alpha)
-
-        # t does not belong to any of the pieces, so doom.
         assert self._outside_value is not None
         return self._outside_value
-
-
 class LinearSchedule(object):
     def __init__(self, schedule_timesteps, final_p, initial_p=1.0):
         """Linear interpolation between initial_p and final_p over
@@ -220,8 +194,6 @@ class LinearSchedule(object):
         """See Schedule.value"""
         fraction = min(float(t) / self.schedule_timesteps, 1.0)
         return self.initial_p + fraction * (self.final_p - self.initial_p)
-
-
 '''
 def compute_exponential_averages(variables, decay):
     """Given a list of tensorflow scalar variables
@@ -264,8 +236,6 @@ def initialize_interdependent_variables(session, vars_list, feed_dict):
         else:
             vars_left = new_vars_left
 '''
-
-
 def get_wrapper_by_name(env, classname):
     currentenv = env
     while True:
@@ -275,8 +245,6 @@ def get_wrapper_by_name(env, classname):
             currentenv = currentenv.env
         else:
             return None
-
-
 class MemoryOptimizedReplayBuffer(object):
     def __init__(self, size, frame_history_len, lander=False):
         """This is a memory efficient implementation of the replay buffer.
@@ -389,28 +357,24 @@ class MemoryOptimizedReplayBuffer(object):
         return self._encode_observation((self.next_idx - 1) % self.size)
 
     def _encode_observation(self, idx):
-        end_idx = idx + 1  # make noninclusive
+        end_idx = idx + 1
         start_idx = end_idx - self.frame_history_len
-        # this checks if we are using low-dimensional observations, such as RAM
-        # state, in which case we just directly return the latest RAM.
         if len(self.obs.shape) == 2:
             return self.obs[end_idx - 1]
-        # if there weren't enough frames ever in the buffer for context
+
         if start_idx < 0 and self.num_in_buffer != self.size:
             start_idx = 0
         for idx in range(start_idx, end_idx - 1):
             if self.done[idx % self.size]:
                 start_idx = idx + 1
         missing_context = self.frame_history_len - (end_idx - start_idx)
-        # if zero padding is needed for missing context
-        # or we are on the boundry of the buffer
         if start_idx < 0 or missing_context > 0:
             frames = [np.zeros_like(self.obs[0]) for _ in range(missing_context)]
             for idx in range(start_idx, end_idx):
                 frames.append(self.obs[idx % self.size])
             return np.concatenate(frames, 2)
         else:
-            # this optimization has potential to saves about 30% compute time \o/
+
             img_h, img_w = self.obs.shape[1], self.obs.shape[2]
             return (
                 self.obs[start_idx:end_idx]

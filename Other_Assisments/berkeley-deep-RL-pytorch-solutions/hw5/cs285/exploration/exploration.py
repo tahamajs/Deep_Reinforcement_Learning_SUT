@@ -10,15 +10,15 @@ class Exploration:
         self.bonus_coeff = bonus_coeff
 
     def bonus_function(self, x):
-        # You do not need to do anything here
+
         raise NotImplementedError
 
     def fit_density_model(self, states):
-        # You do not need to do anything here
+
         raise NotImplementedError
 
     def compute_reward_bonus(self, states):
-        # You do not need to do anything here
+
         raise NotImplementedError
 
     def modify_reward(self, rewards, states):
@@ -76,15 +76,13 @@ class DiscreteExploration(Exploration):
         count = self.density_model.get_count(states)
         bonus = self.bonus_function(count)
         return bonus
-
-
 class ContinuousExploration(Exploration):
     def __init__(self, density_model, bonus_coeff, replay_buffer):
         self.replay_buffer = replay_buffer
         super().__init__(density_model, bonus_coeff)
 
     def fit_density_model(self, states):
-        # You do not need to do anything here
+
         raise NotImplementedError
 
     def bonus_function(self, prob):
@@ -108,8 +106,6 @@ class ContinuousExploration(Exploration):
         prob = self.density_model.get_prob(states)
         bonus = self.bonus_function(prob)
         return bonus
-
-
 class RBFExploration(ContinuousExploration):
     def __init__(self, density_model, bonus_coeff, replay_buffer):
         super().__init__(density_model, bonus_coeff, replay_buffer)
@@ -120,8 +116,6 @@ class RBFExploration(ContinuousExploration):
                 states: (bsize, ob_dim)
         """
         self.density_model.fit_data(self.replay_buffer.get_all_obs())
-
-
 class ExemplarExploration(ContinuousExploration):
     def __init__(self, density_model, bonus_coeff, train_iters, bsize, replay_buffer):
         super().__init__(density_model, bonus_coeff, replay_buffer)

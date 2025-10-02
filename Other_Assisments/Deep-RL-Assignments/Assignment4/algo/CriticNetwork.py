@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import copy
 import math
 import pdb
@@ -10,8 +9,6 @@ import torch.nn.functional as F
 
 HIDDEN1_UNITS = 400
 HIDDEN2_UNITS = 300
-
-
 class Critic(nn.Module):
     """Creates an critic network.
 
@@ -39,12 +36,9 @@ class Critic(nn.Module):
         x = torch.cat((x, action), 1)
         x = F.relu(self.linear1(x))
         x = F.relu(self.linear2(x))
-        
+
         x = self.output(x)
         return x
-        
-
-
 class CriticNetwork(object):
     def __init__(self, state_size, action_size, batch_size,
                  tau, learning_rate, gamma, device, custom_init):
@@ -64,8 +58,6 @@ class CriticNetwork(object):
         self.gamma = gamma
         self.batch_size = batch_size
         self.critic = Critic(state_size, action_size, custom_init).to(device)
-        # self.critic.apply(self.initialize_weights)
-
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=self.lr)
 
         self.critic_target = copy.deepcopy(self.critic)
@@ -87,17 +79,15 @@ class CriticNetwork(object):
             grads: a batched numpy array storing the gradients.
         """
         return self.critic(states, actions)
-        
+
     def train(self, states, actions, rewards, next_states, done, next_actions):
-        # Pick the next best action from the Q network.
+
         with torch.no_grad():
             Q_target = self.critic_target(next_states, next_actions)
-
-            # Compute the target Q-value for the loss.
-            y = rewards + self.gamma * (1 - done) * Q_target #check this
+            y = rewards + self.gamma * (1 - done) * Q_target
 
         Q_value = self.critic(states, actions)
-        # Network Input - S | Output - Q(S,A) | Error - (Y - Q(S,A))^2
+
         self.critic_optimizer.zero_grad()
         critic_loss =  F.mse_loss(y, Q_value)
         critic_loss.backward()
@@ -109,8 +99,6 @@ class CriticNetwork(object):
         """Updates the target net using an update rate of tau."""
         for target_param, param in zip(self.critic_target.parameters(), self.critic.parameters()):
             target_param.data.copy_(target_param.data * (1.0 - self.tau) + param.data * self.tau)
-
-
 class CriticTD3(nn.Module):
     """Creates an critic network.
 
@@ -140,7 +128,7 @@ class CriticTD3(nn.Module):
     def forward(self, x, action):
 
         x = torch.cat((x, action), 1)
-        
+
         x1 = F.relu(self.linear1(x))
         x1 = F.relu(self.linear2(x1))
 
@@ -155,7 +143,7 @@ class CriticTD3(nn.Module):
     def get_Q(self, x, action):
 
         x = torch.cat((x, action), 1)
-        
+
         x1 = F.relu(self.linear1(x))
         x1 = F.relu(self.linear2(x1))
 
@@ -198,17 +186,15 @@ class CriticNetworkTD3(object):
             grads: a batched numpy array storing the gradients.
         """
         return self.critic.get_Q(states, actions)
-        
+
     def train(self, states, actions, rewards, next_states, done, next_actions):
-        # Pick the next best action from the Q network.
+
         with torch.no_grad():
             Q_target_1, Q_target_2 = self.critic_target(next_states, next_actions)
-
-            # Compute the target Q-value for the loss.
-            y = rewards + self.gamma * (1 - done) * torch.min(Q_target_1, Q_target_2) #check this
+            y = rewards + self.gamma * (1 - done) * torch.min(Q_target_1, Q_target_2)
 
         Q_value_1, Q_value_2 = self.critic(states, actions)
-        # Network Input - S | Output - Q(S,A) | Error - (Y - Q(S,A))^2
+
         self.critic_optimizer.zero_grad()
         critic_loss =  F.mse_loss(y, Q_value_1) + F.mse_loss(y, Q_value_2)
         critic_loss.backward()

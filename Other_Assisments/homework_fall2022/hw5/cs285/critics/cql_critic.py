@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from .base_critic import BaseCritic
 import torch
 import torch.optim as optim
@@ -7,8 +6,6 @@ from torch import nn
 import pdb
 
 from cs285.infrastructure import pytorch_util as ptu
-
-
 class CQLCritic(BaseCritic):
 
     def __init__(self, hparams, optimizer_spec, **kwargs):
@@ -80,15 +77,9 @@ class CQLCritic(BaseCritic):
         next_ob_no = ptu.from_numpy(next_ob_no)
         reward_n = ptu.from_numpy(reward_n)
         terminal_n = ptu.from_numpy(terminal_n)
-
-        # Compute the DQN Loss
         loss, qa_t_values, q_t_values = self.dqn_loss(
             ob_no, ac_na, next_ob_no, reward_n, terminal_n
         )
-
-        # CQL Implementation
-        # TODO: Implement CQL as described in the pdf and paper
-        # Hint: After calculating cql_loss, augment the loss appropriately
         q_t_logsumexp = torch.logsumexp(qa_t_values, dim=1, keepdim=True)
         cql_loss = self.cql_alpha * torch.mean((q_t_logsumexp - q_t_values) ** 2)
         loss = loss + cql_loss
@@ -99,8 +90,6 @@ class CQLCritic(BaseCritic):
         self.optimizer.step()
 
         info = {"Training Loss": ptu.to_numpy(loss)}
-
-        # TODO: Uncomment these lines after implementing CQL
         info["CQL Loss"] = ptu.to_numpy(cql_loss)
         info["Data q-values"] = ptu.to_numpy(q_t_values).mean()
         info["OOD q-values"] = ptu.to_numpy(q_t_logsumexp).mean()

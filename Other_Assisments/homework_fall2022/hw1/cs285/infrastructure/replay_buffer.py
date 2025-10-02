@@ -1,17 +1,10 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from cs285.infrastructure.utils import *
-
-
 class ReplayBuffer(object):
 
     def __init__(self, max_size=1000000):
 
         self.max_size = max_size
-
-        # store each rollout
         self.paths = []
-
-        # store (concatenated) component arrays from each rollout
         self.obs = None
         self.acs = None
         self.rews = None
@@ -25,13 +18,8 @@ class ReplayBuffer(object):
             return 0
 
     def add_rollouts(self, paths, concat_rew=True):
-
-        # add new rollouts into our list of rollouts
         for path in paths:
             self.paths.append(path)
-
-        # convert new rollouts into their component arrays, and append them onto
-        # our arrays
         observations, actions, rewards, next_observations, terminals = (
             convert_listofrollouts(paths, concat_rew))
 
@@ -60,10 +48,6 @@ class ReplayBuffer(object):
             self.terminals = np.concatenate(
                 [self.terminals, terminals]
             )[-self.max_size:]
-
-    ########################################
-    ########################################
-
     def sample_random_data(self, batch_size):
         assert (
                 self.obs.shape[0]
@@ -72,12 +56,6 @@ class ReplayBuffer(object):
                 == self.next_obs.shape[0]
                 == self.terminals.shape[0]
         )
-
-        ## TODO return batch_size number of random entries from each of the 5 component arrays above
-        ## HINT 1: use np.random.permutation to sample random indices
-        ## HINT 2: return corresponding data points from each array (i.e., not different indices from each array)
-        ## HINT 3: look at the sample_recent_data function below
-
         return TODO, TODO, TODO, TODO, TODO
 
     def sample_recent_data(self, batch_size=1):

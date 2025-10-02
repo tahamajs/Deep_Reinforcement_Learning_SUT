@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from collections import OrderedDict
 
 from cs285.infrastructure.replay_buffer import ReplayBuffer
@@ -44,11 +43,11 @@ class SACAgent(BaseAgent):
         self.replay_buffer = ReplayBuffer(max_size=100000)
 
     def update_critic(self):
-        # TODO: get this from previous HW  
+
         return critic_loss
 
     def train(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
-        # TODO: get this from previous HW
+
         return loss
 
     def add_to_replay_buffer(self, paths):

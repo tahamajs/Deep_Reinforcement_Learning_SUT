@@ -1,4 +1,3 @@
-#If not using anaconda use next two lines:
 import sys
 sys.path.append(r'C:\Users\Matt\OneDrive\RL\UCBerkeley-deep-RL\hw4')
 
@@ -7,16 +6,9 @@ import os
 import time
 from cs285.infrastructure.rl_trainer import RL_Trainer
 from cs285.agents.mb_agent import MBAgent
-
-
 class MB_Trainer(object):
 
     def __init__(self, params):
-
-        #####################
-        ## SET AGENT PARAMS
-        #####################
-
         computation_graph_args = {
             'ensemble_size': params['ensemble_size'],
             'n_layers': params['n_layers'],
@@ -39,11 +31,6 @@ class MB_Trainer(object):
         self.params = params
         self.params['agent_class'] = MBAgent
         self.params['agent_params'] = agent_params
-
-        ################
-        ## RL TRAINER
-        ################
-
         self.rl_trainer = RL_Trainer(self.params)
 
     def run_training_loop(self):
@@ -53,13 +40,11 @@ class MB_Trainer(object):
             collect_policy = self.rl_trainer.agent.actor,
             eval_policy = self.rl_trainer.agent.actor,
             )
-
-
 def main():
 
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env_name', type=str) #reacher-cs285-v0, ant-cs285-v0, cheetah-cs285-v0, obstacles-cs285-v0
+    parser.add_argument('--env_name', type=str)
     parser.add_argument('--ep_len', type=int, default=200)
     parser.add_argument('--exp_name', type=str, default='todo')
     parser.add_argument('--n_iter', '-n', type=int, default=20)
@@ -70,10 +55,10 @@ def main():
 
     parser.add_argument('--add_sl_noise', '-noise', action='store_true')
     parser.add_argument('--num_agent_train_steps_per_iter', type=int, default=1000)
-    parser.add_argument('--batch_size_initial', type=int, default=20000) #(random) steps collected on 1st iteration (put into replay buffer)
-    parser.add_argument('--batch_size', '-b', type=int, default=8000) #steps collected per train iteration (put into replay buffer)
-    parser.add_argument('--train_batch_size', '-tb', type=int, default=512) ##steps used per gradient step (used for training)
-    parser.add_argument('--eval_batch_size', '-eb', type=int, default=400) #steps collected per eval iteration
+    parser.add_argument('--batch_size_initial', type=int, default=20000)
+    parser.add_argument('--batch_size', '-b', type=int, default=8000)
+    parser.add_argument('--train_batch_size', '-tb', type=int, default=512)
+    parser.add_argument('--eval_batch_size', '-eb', type=int, default=400)
 
     parser.add_argument('--learning_rate', '-lr', type=float, default=0.001)
     parser.add_argument('--n_layers', '-l', type=int, default=2)
@@ -82,12 +67,10 @@ def main():
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--use_gpu', '-gpu', default = True)
     parser.add_argument('--which_gpu', type=int, default=0)
-    parser.add_argument('--video_log_freq', type=int, default=1) #-1 to disable
-    parser.add_argument('--scalar_log_freq', type=int, default=1) #-1 to disable
+    parser.add_argument('--video_log_freq', type=int, default=1)
+    parser.add_argument('--scalar_log_freq', type=int, default=1)
     parser.add_argument('--save_params', action='store_true')
     args = parser.parse_args()
-
-    # convert to dictionary
     params = vars(args)
 
     if torch.cuda.is_available() and params["use_gpu"]:
@@ -97,19 +80,12 @@ def main():
     else:
         params["device"] = torch.device("cpu")
         print("Pytorch is running on the CPU")
-
-    # HARDCODE EPISODE LENGTHS FOR THE ENVS USED IN THIS MB ASSIGNMENT
     if params['env_name']=='reacher-cs285-v0':
         params['ep_len']=200
     if params['env_name']=='cheetah-cs285-v0':
         params['ep_len']=500
     if params['env_name']=='obstacles-cs285-v0':
         params['ep_len']=100
-
-    ##################################
-    ### CREATE DIRECTORY FOR LOGGING
-    ##################################
-
     logdir_prefix = 'mb_'
 
     data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data')
@@ -124,14 +100,7 @@ def main():
         os.makedirs(logdir)
 
     print("\n\n\nLOGGING TO: ", logdir, "\n\n\n")
-
-    ###################
-    ### RUN TRAINING
-    ###################
-
     trainer = MB_Trainer(params)
     trainer.run_training_loop()
-
-
 if __name__ == "__main__":
     main()

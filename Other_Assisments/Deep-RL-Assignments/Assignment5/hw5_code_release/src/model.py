@@ -1,9 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-    # import tensorflow as tf
-# from keras.layers import Dense, Flatten, Input, Concatenate, Lambda, Activation
-# from keras.models import Model
-# from keras.regularizers import l2
-# import keras.backend as K
 import os
 import sys
 import pdb
@@ -18,8 +12,6 @@ from torch.distributions.normal import Normal
 from torch.utils.data import Dataset, DataLoader, RandomSampler
 
 from util import ZFilter
-
-
 HIDDEN1_UNITS = 400
 HIDDEN2_UNITS = 400
 HIDDEN3_UNITS = 400
@@ -36,14 +28,12 @@ class Model(nn.Module):
         self.linear2 = nn.Linear(HIDDEN1_UNITS, HIDDEN2_UNITS)
         self.linear3 = nn.Linear(HIDDEN2_UNITS, HIDDEN3_UNITS)
         self.output = nn.Linear(HIDDEN3_UNITS, state_size*2)
-
-
     def forward(self, x, action):
         x = torch.cat((x, action), 1)
         x = F.relu(self.linear1(x))
         x = F.relu(self.linear2(x))
         x = F.relu(self.linear3(x))
-        
+
         x = self.output(x)
         return x
 
@@ -75,15 +65,10 @@ class PENN:
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.loading_weights_path = loading_weights_path
-
-        # Log variance bounds
         self.max_logvar = -3*torch.ones((1, self.state_dim), device=self.device).float()
         self.min_logvar = -7*torch.ones((1, self.state_dim), device=self.device).float()
 
         self.total_epochs = 0
-
-        # TODO write your code here
-        # Create and initialize your model
         self.models = []
         self.optimizers = []
         for i in range(self.num_nets):
@@ -93,8 +78,6 @@ class PENN:
         self.weights_path = 'models/%s/%s' % (environment_name, timestamp)
         if self.loading_weights_path: self.load_model()
         self.summary_writer = summary_writer
-        
-
     def save_model(self, epoch):
         '''Helper function to save model state and weights.'''
         if not os.path.exists(self.weights_path): os.makedirs(self.weights_path)
@@ -129,9 +112,9 @@ class PENN:
         """
         mean = output[:, 0:self.state_dim]
         raw_v = output[:, self.state_dim:]
-        # Bounds logvariance from the top
+
         logvar = self.max_logvar - nn.Softplus()(self.max_logvar - raw_v)
-        # Bounds logvariance from the bottom
+
         logvar = self.min_logvar + nn.Softplus()(logvar - self.min_logvar)
 
         return mean, logvar
@@ -147,18 +130,16 @@ class PENN:
         logvars = torch.stack(logvars)
         mean = means[model_idx, torch.arange(state.shape[0]),:]
         logvar = logvars[model_idx, torch.arange(state.shape[0]),:]
-        
+
         normal_dist = Normal(mean.flatten(), torch.exp(logvar).flatten())
         sample_states = normal_dist.sample().view(state.shape)
         return sample_states
-        
-
     def train(self, inputs, targets, batch_size=128, epochs=5):
         """
         Arguments:
             inputs: state and action inputs.  Assumes that inputs are standardized.
             targets: resulting states
-        """     
+        """
         inputs = torch.tensor(inputs, device=self.device).float()
         targets = torch.tensor(targets, device=self.device).float()
         transition_dataset = StoredData(inputs, targets)
@@ -175,7 +156,7 @@ class PENN:
                     mean, logvar = self.get_output(self.models[j](x[:,:8], x[:,-2:]))
                     error_sq = (mean-target)**2
                     loss = torch.mean(torch.sum(error_sq/torch.exp(logvar),1) + torch.log(torch.prod(torch.exp(logvar), 1)))
-                    # loss = torch.t(mean-target)*torch.diag(torch.exp(logvar))*(mean-target) + torch.log(torch.det(torch.exp(logvar)))
+
                     loss.backward()
                     self.optimizers[j].step()
 
@@ -199,19 +180,13 @@ class PENN:
             state: the current state
             action: the current action
         """
-        # using some random model for now. will think about sampling later
-        state = torch.tensor(state[:,:8], device=self.device).float()#.unsqueeze(0)
-        action = torch.tensor(action, device=self.device).float()#.unsqueeze(0)
 
-        # try:
+        state = torch.tensor(state[:,:8], device=self.device).float()
+        action = torch.tensor(action, device=self.device).float()
         with torch.no_grad():
             next_state = self.sample_next_state(state, action).cpu().numpy().squeeze()
-        # except:
+
         return next_state
-
-
-    # TODO: Write any helper functions that you need
-
 """
     def create_network(self):
         I = Input(shape=[self.state_dim + self.action_dim], name='input')

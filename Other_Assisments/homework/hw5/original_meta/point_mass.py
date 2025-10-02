@@ -1,8 +1,6 @@
 import numpy as np
 from gym import spaces
 from gym import Env
-
-
 class PointEnv(Env):
     """
     point mass on a 2-D plane
@@ -23,10 +21,6 @@ class PointEnv(Env):
         if `is_evaluation` is true, sample from the evaluation set,
         otherwise sample from the training set
         '''
-        #====================================================================================#
-        #                           ----------PROBLEM 3----------
-        #====================================================================================#
-        # YOUR CODE HERE
         x = np.random.uniform(-10, 10)
         y = np.random.uniform(-10, 10)
         self._goal = np.array([x, y])
@@ -43,13 +37,13 @@ class PointEnv(Env):
 
     def step(self, action):
         x, y = self._state
-        # compute reward, add penalty for large actions instead of clipping them
+
         x -= self._goal[0]
         y -= self._goal[1]
-        # check if task is complete
+
         done = abs(x) < .01 and abs(y) < .01
         reward = self.reward_function(x, y)
-        # move to next state
+
         self._state = self._state + action
         ob = self._get_obs()
         return ob, reward, done, dict()

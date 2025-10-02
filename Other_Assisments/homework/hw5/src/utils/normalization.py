@@ -8,8 +8,6 @@ Student ID: 400206262
 """
 
 import numpy as np
-
-
 class Normalizer:
     """Running statistics normalizer."""
 
@@ -22,8 +20,6 @@ class Normalizer:
         """
         self.shape = shape
         self.eps = eps
-
-        # Running statistics
         self.mean = np.zeros(shape)
         self.var = np.ones(shape)
         self.std = np.ones(shape)
@@ -45,15 +41,9 @@ class Normalizer:
         batch_mean = np.mean(data, axis=0)
         batch_var = np.var(data, axis=0)
         batch_count = len(data)
-
-        # Update running statistics
         delta = batch_mean - self.mean
         total_count = self.count + batch_count
-
-        # Update mean
         self.mean = (self.count * self.mean + batch_count * batch_mean) / total_count
-
-        # Update variance
         m_a = self.var * self.count
         m_b = batch_var * batch_count
         m_2 = m_a + m_b + delta**2 * self.count * batch_count / total_count
@@ -99,8 +89,6 @@ class Normalizer:
         self.var = np.ones(self.shape)
         self.std = np.ones(self.shape)
         self.count = 0
-
-
 class RewardNormalizer(Normalizer):
     """Reward normalizer with return-based normalization."""
 
@@ -121,7 +109,7 @@ class RewardNormalizer(Normalizer):
         Args:
             rewards: Episode rewards (list or array)
         """
-        # Calculate discounted return
+
         returns = []
         discounted_return = 0
 
@@ -153,8 +141,6 @@ class RewardNormalizer(Normalizer):
             Normalized rewards
         """
         return self.normalize(np.array(rewards))
-
-
 class StateNormalizer(Normalizer):
     """State/observation normalizer."""
 
@@ -180,8 +166,6 @@ class StateNormalizer(Normalizer):
         """
         normalized = super().normalize(obs)
         return np.clip(normalized, self.clip_range[0], self.clip_range[1])
-
-
 class ActionNormalizer:
     """Action normalizer for continuous action spaces."""
 

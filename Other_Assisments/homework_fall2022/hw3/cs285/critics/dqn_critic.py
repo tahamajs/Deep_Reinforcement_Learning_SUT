@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from .base_critic import BaseCritic
 import torch
 import torch.optim as optim
@@ -6,8 +5,6 @@ from torch.nn import utils
 from torch import nn
 
 from cs285.infrastructure import pytorch_util as ptu
-
-
 class DQNCritic(BaseCritic):
 
     def __init__(self, hparams, optimizer_spec, **kwargs):
@@ -37,7 +34,7 @@ class DQNCritic(BaseCritic):
             self.optimizer,
             self.optimizer_spec.learning_rate_schedule,
         )
-        self.loss = nn.SmoothL1Loss()  # AKA Huber loss
+        self.loss = nn.SmoothL1Loss()
         self.q_net.to(ptu.device)
         self.q_net_target.to(ptu.device)
 
@@ -65,23 +62,12 @@ class DQNCritic(BaseCritic):
 
         qa_t_values = self.q_net(ob_no)
         q_t_values = torch.gather(qa_t_values, 1, ac_na.unsqueeze(1)).squeeze(1)
-        
-        # TODO compute the Q-values from the target network 
         qa_tp1_values = TODO
 
         if self.double_q:
-            # You must fill this part for Q2 of the Q-learning portion of the homework.
-            # In double Q-learning, the best action is selected using the Q-network that
-            # is being updated, but the Q-value for this action is obtained from the
-            # target Q-network. Please review Lecture 8 for more details,
-            # and page 4 of https://arxiv.org/pdf/1509.06461.pdf is also a good reference.
             TODO
         else:
             q_tp1, _ = qa_tp1_values.max(dim=1)
-
-        # TODO compute targets for minimizing Bellman error
-        # HINT: as you saw in lecture, this would be:
-            #currentReward + self.gamma * qValuesOfNextTimestep * (not terminal)
         target = TODO
         target = target.detach()
 

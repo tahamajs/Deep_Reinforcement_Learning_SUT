@@ -1,12 +1,9 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from .base_critic import BaseCritic
 from torch import nn
 from torch import optim
 import pdb
 
 from cs285.infrastructure import pytorch_util as ptu
-
-
 class BootstrappedContinuousCritic(nn.Module, BaseCritic):
     """
         Notes on notation:
@@ -29,8 +26,6 @@ class BootstrappedContinuousCritic(nn.Module, BaseCritic):
         self.size = hparams['size']
         self.n_layers = hparams['n_layers']
         self.learning_rate = hparams['learning_rate']
-
-        # critic parameters
         self.num_target_updates = hparams['num_target_updates']
         self.num_grad_steps_per_target_update = hparams['num_grad_steps_per_target_update']
         self.gamma = hparams['gamma']
@@ -75,7 +70,3 @@ class BootstrappedContinuousCritic(nn.Module, BaseCritic):
                 nothing
         """
         raise NotImplementedError
-        # Not needed for this homework
-
-    ####################################
-    ####################################

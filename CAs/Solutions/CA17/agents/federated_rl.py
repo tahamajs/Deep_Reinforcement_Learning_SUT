@@ -10,8 +10,6 @@ import random
 from sklearn.cluster import KMeans
 from scipy import stats
 import hashlib
-
-
 class DifferentialPrivacy:
     """Differential privacy mechanisms for federated learning"""
 
@@ -39,8 +37,6 @@ class DifferentialPrivacy:
         clipped_grads = self.clip_gradients(gradients)
         private_grads = self.add_gaussian_noise(clipped_grads)
         return private_grads
-
-
 class GradientCompression:
     """Compression techniques for efficient communication"""
 
@@ -85,8 +81,6 @@ class GradientCompression:
         sparse_grads, _ = self.sparsify_top_k(gradients)
         compressed_grads = self.quantize(sparse_grads)
         return compressed_grads
-
-
 class FederatedRLClient:
     """Individual client in federated reinforcement learning"""
 
@@ -143,7 +137,7 @@ class FederatedRLClient:
             episode_reward = 0
             episode_data = []
 
-            for step in range(200):  # Max episode length
+            for step in range(200):
                 state_tensor = torch.FloatTensor(state).unsqueeze(0)
 
                 with torch.no_grad():
@@ -297,8 +291,6 @@ class FederatedRLClient:
             "num_samples": len(self.replay_buffer),
             "client_id": self.client_id,
         }
-
-
 class FederatedRLServer:
     """Central server for federated reinforcement learning"""
 
@@ -338,10 +330,8 @@ class FederatedRLServer:
 
     def aggregate_updates(self, selected_clients: np.ndarray, reward: Dict) -> Dict:
         """Aggregate updates from selected clients"""
-        # Simplified aggregation - just update based on reward
-        global_loss = reward.get("global_loss", 0.0)
 
-        # Simple update rule
+        global_loss = reward.get("global_loss", 0.0)
         with torch.no_grad():
             for param in self.global_actor.parameters():
                 param.data += (

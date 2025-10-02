@@ -10,8 +10,6 @@ Student ID: 400206262
 import numpy as np
 import tensorflow as tf
 from collections import namedtuple
-
-
 class Dataset:
     """Dataset for storing transition tuples."""
 
@@ -57,8 +55,6 @@ class Dataset:
                 "rewards": np.array(self._rewards)[batch_indices],
                 "dones": np.array(self._dones)[batch_indices],
             }
-
-
 class DynamicsModel:
     """Neural network dynamics model."""
 
@@ -72,8 +68,6 @@ class DynamicsModel:
         """
         self.state_dim = state_dim
         self.action_dim = action_dim
-
-        # Build model
         self._build_model(hidden_dims)
 
     def _build_model(self, hidden_dims):
@@ -81,25 +75,15 @@ class DynamicsModel:
         self.input_state = tf.placeholder(tf.float32, [None, self.state_dim])
         self.input_action = tf.placeholder(tf.float32, [None, self.action_dim])
         self.target_next_state = tf.placeholder(tf.float32, [None, self.state_dim])
-
-        # Concatenate state and action
         x = tf.concat([self.input_state, self.input_action], axis=1)
-
-        # Hidden layers
         for dim in hidden_dims:
             x = tf.layers.dense(x, dim, activation=tf.nn.relu)
-
-        # Output layer (delta prediction)
         self.predicted_delta = tf.layers.dense(x, self.state_dim, activation=None)
-
-        # Loss
         self.loss = tf.reduce_mean(
             tf.square(
                 self.predicted_delta - (self.target_next_state - self.input_state)
             )
         )
-
-        # Training
         self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
         self.train_op = self.optimizer.minimize(self.loss)
 
@@ -135,7 +119,7 @@ class DynamicsModel:
         losses = []
 
         for epoch in range(epochs):
-            # Shuffle data
+
             indices = np.random.permutation(len(states))
             epoch_losses = []
 
@@ -154,8 +138,6 @@ class DynamicsModel:
             losses.append(np.mean(epoch_losses))
 
         return losses
-
-
 class MPCPolicy:
     """Model Predictive Control policy."""
 
@@ -181,13 +163,11 @@ class MPCPolicy:
         Returns:
             Best action
         """
-        # Sample random action sequences
+
         action_dim = self.dynamics_model.action_dim
         action_sequences = np.random.uniform(
             -1, 1, (self.num_random_actions, self.horizon, action_dim)
         )
-
-        # Evaluate each action sequence
         best_reward = -np.inf
         best_action = None
 
@@ -196,23 +176,19 @@ class MPCPolicy:
             current_state = state.copy()
 
             for action in action_seq:
-                # Predict next state
+
                 next_state = self.dynamics_model.predict(
                     current_state.reshape(1, -1), action.reshape(1, -1), sess
                 )[0]
-
-                # Simple reward function (can be customized)
-                reward = -np.sum(np.square(action))  # Penalize large actions
+                reward = -np.sum(np.square(action))
                 total_reward += reward
                 current_state = next_state
 
             if total_reward > best_reward:
                 best_reward = total_reward
-                best_action = action_seq[0]  # First action in sequence
+                best_action = action_seq[0]
 
         return best_action
-
-
 class ModelBasedRLAgent:
     """Model-Based Reinforcement Learning Agent."""
 
@@ -253,17 +229,11 @@ class ModelBasedRLAgent:
         self.mpc_horizon = mpc_horizon
         self.num_random_action_selection = num_random_action_selection
         self.nn_layers = nn_layers
-
-        # Get environment dimensions
         self.state_dim = env.observation_space.shape[0]
         self.action_dim = env.action_space.shape[0]
-
-        # Initialize components
         self.dataset = Dataset()
         self.dynamics_model = None
         self.policy = None
-
-        # TensorFlow session
         self.sess = None
 
     def init_tf_sess(self):
@@ -304,16 +274,12 @@ class ModelBasedRLAgent:
 
     def train_dynamics_model(self):
         """Train the dynamics model."""
-        # Get training data
-        data = self.dataset.get_all()
 
-        # Create dynamics model
+        data = self.dataset.get_all()
         hidden_dims = [256] * self.nn_layers
         self.dynamics_model = DynamicsModel(
             self.state_dim, self.action_dim, hidden_dims
         )
-
-        # Train model
         losses = self.dynamics_model.train(
             data["states"],
             data["actions"],
@@ -336,57 +302,35 @@ class ModelBasedRLAgent:
     def run_q1(self):
         """Run question 1: Gather random data and train dynamics model."""
         print("Running Q1: Gathering random data and training dynamics model")
-
-        # Gather initial random data
         random_policy = RandomPolicy(self.env)
         random_dataset = self.gather_rollouts(
             random_policy, self.num_init_random_rollouts
         )
         self.dataset = random_dataset
-
-        # Train dynamics model
         losses = self.train_dynamics_model()
         print(f"Training completed. Final loss: {losses[-1]:.6f}")
 
     def run_q2(self):
         """Run question 2: MPC with random shooting."""
         print("Running Q2: MPC with random shooting")
-
-        # Ensure we have a trained dynamics model
         if self.dynamics_model is None:
             self.run_q1()
-
-        # Create MPC policy
         self.create_mpc_policy()
-
-        # Test the policy
         test_rollouts = self.gather_rollouts(self.policy, 5, render=True)
         print(f"Collected {test_rollouts.size()} transitions with MPC policy")
 
     def run_q3(self):
         """Run question 3: On-policy MBRL."""
         print("Running Q3: On-policy MBRL")
-
-        # Start with random data
         if self.dataset.size() == 0:
             self.run_q1()
-
-        # On-policy iterations
         for iteration in range(self.num_onpolicy_iters):
             print(f"On-policy iteration {iteration + 1}/{self.num_onpolicy_iters}")
-
-            # Train dynamics model on current dataset
             losses = self.train_dynamics_model()
-
-            # Create MPC policy
             self.create_mpc_policy()
-
-            # Gather on-policy data
             onpolicy_dataset = self.gather_rollouts(
                 self.policy, self.num_onpolicy_rollouts
             )
-
-            # Add to dataset
             onpolicy_data = onpolicy_dataset.get_all()
             for i in range(onpolicy_dataset.size()):
                 self.dataset.add(
@@ -400,8 +344,6 @@ class ModelBasedRLAgent:
             print(
                 f"Iteration {iteration + 1} completed. Dataset size: {self.dataset.size()}"
             )
-
-
 class RandomPolicy:
     """Random action policy."""
 

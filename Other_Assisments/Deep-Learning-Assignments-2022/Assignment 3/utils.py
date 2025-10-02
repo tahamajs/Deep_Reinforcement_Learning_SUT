@@ -4,8 +4,6 @@ import seaborn as sns
 import torch.nn.functional as F
 from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
-
-
 def train_model(model, train_loader, val_loader, epochs, criterion, optimizer,
                 device, writer=None, verbose=True, teacher_model=None,
                 alpha=0.5, T=10):
@@ -130,8 +128,6 @@ def print_metrics(model, test_loader, device, classes):
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.show()
-
-
 def count_parameters(model):
     """
     Count the number of trainable parameters in a model.

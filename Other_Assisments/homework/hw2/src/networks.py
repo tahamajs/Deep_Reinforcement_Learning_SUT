@@ -9,8 +9,6 @@ Student ID: 400206262
 
 import tensorflow as tf
 import numpy as np
-
-
 def build_mlp(
     input_placeholder,
     output_size,
@@ -52,8 +50,6 @@ def build_mlp(
             kernel_initializer=tf.contrib.layers.xavier_initializer(),
         )
         return output
-
-
 class PolicyNetwork:
     """Policy network for policy gradient methods."""
 
@@ -79,7 +75,7 @@ class PolicyNetwork:
 
     def _build_network(self):
         """Build the policy network."""
-        # Placeholders
+
         self.sy_ob_no = tf.placeholder(
             shape=[None, self.ob_dim], name="ob", dtype=tf.float32
         )
@@ -89,20 +85,12 @@ class PolicyNetwork:
             dtype=tf.int32 if self.discrete else tf.float32,
         )
         self.sy_adv_n = tf.placeholder(shape=[None], name="adv", dtype=tf.float32)
-
-        # Policy forward pass
         if self.discrete:
             self.policy_parameters = self.policy_forward_pass_discrete(self.sy_ob_no)
         else:
             self.policy_parameters = self.policy_forward_pass_continuous(self.sy_ob_no)
-
-        # Sample actions
         self.sy_sampled_ac = self.sample_action(self.policy_parameters)
-
-        # Log probabilities
         self.sy_logprob_n = self.get_log_prob(self.policy_parameters, self.sy_ac_na)
-
-        # Loss and optimizer
         self.loss = -tf.reduce_mean(self.sy_logprob_n * self.sy_adv_n)
         self.update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
 
@@ -151,8 +139,6 @@ class PolicyNetwork:
                 axis=1,
             )
         return sy_logprob_n
-
-
 class ValueNetwork:
     """Value network (baseline) for policy gradient methods."""
 
@@ -178,13 +164,9 @@ class ValueNetwork:
             shape=[None, self.ob_dim], name="ob", dtype=tf.float32
         )
         self.sy_target_n = tf.placeholder(shape=[None], name="target", dtype=tf.float32)
-
-        # Value prediction
         self.baseline_prediction = tf.squeeze(
             build_mlp(self.sy_ob_no, 1, "baseline", self.n_layers, self.size)
         )
-
-        # Loss and optimizer
         self.baseline_loss = tf.reduce_mean(
             tf.square(self.baseline_prediction - self.sy_target_n)
         )

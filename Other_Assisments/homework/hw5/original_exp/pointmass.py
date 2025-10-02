@@ -23,7 +23,7 @@ class Env(object):
 class PointMass(Env):
     def __init__(self, max_episode_steps_coeff=1, scale=20, goal_padding=2.0):
         super(PointMass, self).__init__()
-        # define scale such that the each square in the grid is 1 x 1
+
         self.scale = int(scale)
         self.grid_size = self.scale * self.scale
         self.observation_space = gym.spaces.Box(
@@ -43,8 +43,6 @@ class PointMass(Env):
 
     def step(self, action):
         x, y = action
-
-        # next state
         new_x = self.state[0]+x
         new_y = self.state[1]+y
         if new_x < 0:
@@ -57,8 +55,6 @@ class PointMass(Env):
             new_y = self.scale
         self.state = np.array([new_x, new_y])
         state = self.state/self.scale
-
-        # reward
         reg_term = -0.01*np.sum(action**2)
 
         threshold = self.scale - self.goal_padding
@@ -66,8 +62,6 @@ class PointMass(Env):
             reward = 10 + reg_term
         else:
             reward = 0 + reg_term
-
-        # done
         done = False
 
         return state, reward, done, None
@@ -94,19 +88,19 @@ class PointMass(Env):
         pass
 
     def render(self):
-        # create a grid
+
         states = [self.state/self.scale]
         indices = np.array([int(self.preprocess(s)) for s in states])
         a = np.zeros(self.grid_size)
         for i in indices:
             a[i] += 1
         max_freq = np.max(a)
-        a/=float(max_freq)  # normalize
+        a/=float(max_freq)
         a = np.reshape(a, (self.scale, self.scale))
         ax = sns.heatmap(a)
         plt.draw()
         plt.pause(0.001)
-        plt.clf()        
+        plt.clf()
 
     def visualize(self, states, itr, dirname):
         if states is None:
@@ -116,7 +110,7 @@ class PointMass(Env):
         for i in indices:
             a[i] += 1
         max_freq = np.max(a)
-        a/=float(max_freq)  # normalize
+        a/=float(max_freq)
         a = np.reshape(a, (self.scale, self.scale))
         ax = sns.heatmap(a)
         plt.savefig(os.path.join(dirname, '{}.png'.format(itr)))
@@ -156,17 +150,11 @@ def debug():
             states.append(state)
         env.visualize(np.array(states), epoch, logdir)
     env.create_gif(logdir)
-
-
 if __name__ == "__main__":
-    # debug()  # run this if you want to get a feel for how the PointMass environment works (make sure to comment out the code below)
+
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('dirname', type=str)
     args = parser.parse_args()
     env = PointMass()
     env.create_visualization(args.dirname)
-
-
-
-

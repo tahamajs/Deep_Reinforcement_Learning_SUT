@@ -1,9 +1,5 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import gymnasium as gym
 import numpy as np
-
-
 def env_wrapper(env_name):
     """Create a convinent wrapper for the loaded environment
 
@@ -17,9 +13,6 @@ def env_wrapper(env_name):
         envd8 = env_load('Deterministic-8x8-FrozenLake-v0')
     """
     env = gym.make(env_name)
-
-    # T : the transition probability from s to s’ via action a
-    # R : the reward you get when moving from s to s' via action a
     env.T = np.zeros((env.nS, env.nA, env.nS))
     env.R = np.zeros((env.nS, env.nA, env.nS))
 

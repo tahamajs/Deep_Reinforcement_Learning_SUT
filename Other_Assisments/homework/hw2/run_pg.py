@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Policy Gradient Training Script
 
@@ -18,15 +17,11 @@ import time
 import gym
 import numpy as np
 import tensorflow as tf
-
-# Add src directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 from src.policy_gradient import PolicyGradientAgent
 from src.utils import flatten_list_of_rollouts
 import logz
-
-
 def main():
     """Main training function."""
     parser = argparse.ArgumentParser()
@@ -47,27 +42,15 @@ def main():
     parser.add_argument("--size", "-s", type=int, default=64)
 
     args = parser.parse_args()
-
-    # Set random seeds
     tf.set_random_seed(args.seed)
     np.random.seed(args.seed)
-
-    # Create environment
     env = gym.make(args.env_name)
-
-    # Maximum length for episodes
     max_path_length = args.ep_len if args.ep_len > 0 else env.spec.max_episode_steps
-
-    # Is this env continuous, or discrete?
     discrete = isinstance(env.action_space, gym.spaces.Discrete)
-
-    # Observation and action dimensions
     ob_dim = env.observation_space.shape[0]
     ac_dim = env.action_space.n if discrete else env.action_space.shape[0]
-
-    # Run multiple experiments
     for e in range(args.n_experiments):
-        # Set up logging
+
         logdir = (
             args.exp_name
             + "_"
@@ -76,8 +59,6 @@ def main():
             + time.strftime("%d-%m-%Y_%H-%M-%S")
         )
         logz.configure_output_dir(logdir)
-
-        # Create agent
         agent = PolicyGradientAgent(
             ob_dim=ob_dim,
             ac_dim=ac_dim,
@@ -93,31 +74,17 @@ def main():
             max_path_length=max_path_length,
             animate=args.render,
         )
-
-        # Initialize TensorFlow session
         agent.init_tf_sess()
-
-        # Training loop
         total_timesteps = 0
         for itr in range(args.n_iter):
             print("********** Iteration %i ************" % itr)
-
-            # Sample trajectories
             paths, timesteps_this_batch = agent.sample_trajectories(itr, env)
             total_timesteps += timesteps_this_batch
-
-            # Build arrays for observations, actions, rewards
             ob_no, ac_na, re_n = flatten_list_of_rollouts(paths)
-
-            # Estimate returns and advantages
             q_n, adv_n = agent.estimate_return(
                 ob_no, [path["reward"] for path in paths]
             )
-
-            # Update parameters
             agent.update_parameters(ob_no, ac_na, q_n, adv_n)
-
-            # Log statistics
             returns = [path["reward"].sum() for path in paths]
             ep_lengths = [pathlength(path) for path in paths]
 
@@ -135,7 +102,5 @@ def main():
             logz.save_params()
 
         print("Training completed!")
-
-
 if __name__ == "__main__":
     main()

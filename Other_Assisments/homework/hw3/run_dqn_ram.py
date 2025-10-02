@@ -10,12 +10,10 @@ import tensorflow.contrib.layers as layers
 import dqn
 from dqn_utils import *
 from atari_wrappers import *
-
-
 def atari_model(ram_in, num_actions, scope, reuse=False):
     with tf.variable_scope(scope, reuse=reuse):
         out = ram_in
-        #out = tf.concat(1,(ram_in[:,4:5],ram_in[:,8:9],ram_in[:,11:13],ram_in[:,21:22],ram_in[:,50:51], ram_in[:,60:61],ram_in[:,64:65]))
+
         with tf.variable_scope("action_value"):
             out = layers.fully_connected(out, num_outputs=256, activation_fn=tf.nn.relu)
             out = layers.fully_connected(out, num_outputs=128, activation_fn=tf.nn.relu)
@@ -27,7 +25,7 @@ def atari_model(ram_in, num_actions, scope, reuse=False):
 def atari_learn(env,
                 session,
                 num_timesteps):
-    # This is just a rough estimate
+
     num_iterations = float(num_timesteps) / 4.0
 
     lr_multiplier = 1.0
@@ -44,8 +42,6 @@ def atari_learn(env,
     )
 
     def stopping_criterion(env, t):
-        # notice that here t is the number of steps of the wrapped env,
-        # which is different from the number of steps in the underlying env
         return get_wrapper_by_name(env, "Monitor").get_total_steps() >= num_timesteps
 
     exploration_schedule = PiecewiseSchedule(
@@ -111,8 +107,8 @@ def get_env(seed):
     return env
 
 def main():
-    # Run training
-    seed = 0 # Use a seed of zero (you may want to randomize the seed!)
+
+    seed = 0
     env = get_env(seed)
     session = get_session()
     atari_learn(env, session, num_timesteps=int(4e7))

@@ -1,10 +1,6 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-
 class ActorCritic(nn.Module):
     """Actor-Critic network for A3C algorithm."""
 

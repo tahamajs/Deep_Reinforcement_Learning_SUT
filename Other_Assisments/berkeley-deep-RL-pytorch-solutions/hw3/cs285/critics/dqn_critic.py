@@ -1,8 +1,6 @@
 from cs285.infrastructure.models import *
 import torch
 from torch import nn
-
-
 class DQNCritic:
     def __init__(self, hparams, optimizer_spec, **kwargs):
         super().__init__(**kwargs)
@@ -57,7 +55,7 @@ class DQNCritic:
         best_next_Q = self.target_Q_func(next_ob).gather(-1, max_ac).squeeze()
         calc_Q = rew + (self.gamma * best_next_Q * (1 - done))
 
-        return nn.functional.smooth_l1_loss(curr_Q, calc_Q)  # Huber Loss
+        return nn.functional.smooth_l1_loss(curr_Q, calc_Q)
 
     def update(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
         self.optimizer.zero_grad()
@@ -67,8 +65,8 @@ class DQNCritic:
 
         nn.utils.clip_grad_norm_(
             self.Q_func.parameters(), max_norm=self.grad_norm_clipping
-        )  # perform grad clipping
-        self.optimizer.step()  # take step with optimizer
-        self.lr_scheduler.step()  # move forward learning rate
+        )
+        self.optimizer.step()
+        self.lr_scheduler.step()
 
         return loss

@@ -1,17 +1,7 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import numpy as np
-
-
 class Replay_Memory:
 
     def __init__(self, state_dim, action_dim, memory_size=50000, burn_in=10000):
-        # The memory essentially stores transitions recorder from the agent
-        # taking actions in the environment.
-
-        # Burn in episodes define the number of episodes that are written into the memory from the
-        # randomly initialized agent. Memory size is the maximum size after which old elements in the memory are replaced.
-        # A simple (if not the most efficient) way to implement the memory is as a list of transitions.
         self.memory_size = memory_size
         self.burn_in = burn_in
         self.states = np.zeros((self.memory_size, state_dim))
@@ -39,8 +29,6 @@ class Replay_Memory:
             self.not_full_yet = False
 
     def sample_batch(self, batch_size=32):
-        # This function returns a batch of randomly sampled transitions - i.e. state, action, reward, next state, terminal flag tuples.
-        # You will feed this to your model to train.
         if self.not_full_yet:
             idxs = np.random.choice(self.ptr, batch_size, False)
         else:

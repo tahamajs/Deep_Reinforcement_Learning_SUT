@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Example script for running meta-learning training.
 
@@ -8,17 +7,13 @@ Usage:
 
 import sys
 import os
-
-# Add src directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from configs.meta_config import *
 import run_hw5
-
-
 def main():
     """Run meta-learning training with default configuration."""
-    # Create argument list
+
     args = (
         ["meta", "--env_name", ENV_NAME, "--hidden_sizes"]
         + [str(size) for size in HIDDEN_SIZES]
@@ -43,11 +38,7 @@ def main():
             str(LOG_INTERVAL),
         ]
     )
-
-    # Run training
     sys.argv = ["run_hw5.py"] + args
     run_hw5.main()
-
-
 if __name__ == "__main__":
     main()

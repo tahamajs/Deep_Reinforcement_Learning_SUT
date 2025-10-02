@@ -87,9 +87,6 @@ class ReplayBuffer(object):
 
     def num_steps_can_sample(self):
         return self._size
-
-
-
 class PPOReplayBuffer(object):
     '''
     replay buffer for PPO algorithm

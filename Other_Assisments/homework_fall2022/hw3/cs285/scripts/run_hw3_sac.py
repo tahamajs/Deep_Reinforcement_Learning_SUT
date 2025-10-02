@@ -1,19 +1,11 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import os
 import time
 
 from cs285.agents.sac_agent import SACAgent
 from cs285.infrastructure.rl_trainer import RL_Trainer
-
-
 class SAC_Trainer(object):
 
     def __init__(self, params):
-
-        #####################
-        ## SET AGENT PARAMS
-        #####################
-
         computation_graph_args = {
             'n_layers': params['n_layers'],
             'size': params['size'],
@@ -39,11 +31,6 @@ class SAC_Trainer(object):
         self.params['agent_class'] = SACAgent
         self.params['agent_params'] = agent_params
         self.params['batch_size_initial'] = self.params['batch_size']
-
-        ################
-        ## RL TRAINER
-        ################
-
         self.rl_trainer = RL_Trainer(self.params)
 
     def run_training_loop(self):
@@ -52,8 +39,6 @@ class SAC_Trainer(object):
             collect_policy = self.rl_trainer.agent.actor,
             eval_policy = self.rl_trainer.agent.actor,
             )
-
-
 def main():
 
     import argparse
@@ -68,9 +53,9 @@ def main():
     parser.add_argument('--num_actor_updates_per_agent_update', type=int, default=1)
     parser.add_argument('--actor_update_frequency', type=int, default=1)
     parser.add_argument('--critic_target_update_frequency', type=int, default=1)
-    parser.add_argument('--batch_size', '-b', type=int, default=1000) #steps collected per train iteration
-    parser.add_argument('--eval_batch_size', '-eb', type=int, default=400) #steps collected per eval iteration
-    parser.add_argument('--train_batch_size', '-tb', type=int, default=256) ##steps used per gradient step
+    parser.add_argument('--batch_size', '-b', type=int, default=1000)
+    parser.add_argument('--eval_batch_size', '-eb', type=int, default=400)
+    parser.add_argument('--train_batch_size', '-tb', type=int, default=256)
 
     parser.add_argument('--discount', type=float, default=0.99)
     parser.add_argument('--init_temperature', '-temp', type=float, default=1.0)
@@ -87,14 +72,7 @@ def main():
     parser.add_argument('--save_params', action='store_true')
 
     args = parser.parse_args()
-
-    # convert to dictionary
     params = vars(args)
-
-    ##################################
-    ### CREATE DIRECTORY FOR LOGGING
-    ##################################
-
     data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../data')
 
     if not (os.path.exists(data_path)):
@@ -107,14 +85,7 @@ def main():
         os.makedirs(logdir)
 
     print("\n\n\nLOGGING TO: ", logdir, "\n\n\n")
-
-    ###################
-    ### RUN TRAINING
-    ###################
-
     trainer = SAC_Trainer(params)
     trainer.run_training_loop()
-
-
 if __name__ == "__main__":
     main()

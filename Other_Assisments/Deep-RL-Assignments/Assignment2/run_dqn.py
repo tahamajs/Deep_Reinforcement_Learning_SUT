@@ -1,11 +1,7 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import argparse
 import tensorflow as tf
 import keras
 from src.dqn_agent import DQN_Agent
-
-
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Deep Q Network Argument Parser")
     parser.add_argument("--env", dest="env", type=str, default="CartPole-v0")
@@ -24,10 +20,6 @@ def parse_arguments():
     parser.add_argument("--epsilon", dest="epsilon", type=float, default=1.0)
     parser.add_argument("--model", dest="model_file", type=str)
     return parser.parse_args()
-
-
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import argparse
 import os
 import numpy as np
@@ -35,18 +27,10 @@ import tensorflow as tf
 import keras
 import gymnasium as gym
 from src.dqn_agent import DQN_Agent
-
-
 def test_video(agent, env_name, episodes):
-    # Usage:
-    #   you can pass the arguments within agent.train() as:
-    #       if episode % int(self.num_episodes/3) == 0:
-    #           test_video(self, self.environment_name, episode)
     save_path = "%s/video-%s" % (env_name, episodes)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
-
-    # To create video
     env = gym.wrappers.Monitor(agent.env, save_path, force=True)
     reward_total = []
     state = env.reset()
@@ -64,8 +48,6 @@ def test_video(agent, env_name, episodes):
         state = next_state
     print("reward_total: {}".format(np.sum(reward_total)))
     env.close()
-
-
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Deep Q Network Argument Parser")
     parser.add_argument("--env", dest="env", type=str, default="CartPole-v0")
@@ -84,29 +66,17 @@ def parse_arguments():
     parser.add_argument("--epsilon", dest="epsilon", type=float, default=1.0)
     parser.add_argument("--model", dest="model_file", type=str)
     return parser.parse_args()
-
-
 def main():
     args = parse_arguments()
-
-    # Setting the session to allow growth, so it doesn't allocate all GPU memory.
     gpu_ops = tf.GPUOptions(allow_growth=True)
     config = tf.ConfigProto(gpu_options=gpu_ops)
     sess = tf.Session(config=config)
-
-    # Setting this as the default tensorflow session.
     keras.backend.tensorflow_backend.set_session(sess)
-
-    # You want to create an instance of the DQN_Agent class here, and then train / test it.
     q_agent = DQN_Agent(args)
-
-    # Render output videos using the model loaded from file.
     if args.render:
-        test_video(q_agent, args.env, 0)  # Using 0 as default episode
+        test_video(q_agent, args.env, 0)
     else:
-        q_agent.train()  # Train the model.
-
-
+        q_agent.train()
 if __name__ == "__main__":
     main()
 

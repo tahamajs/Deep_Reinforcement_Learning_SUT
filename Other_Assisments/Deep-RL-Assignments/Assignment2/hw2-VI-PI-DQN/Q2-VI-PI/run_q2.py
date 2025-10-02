@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from builtins import input
@@ -16,8 +15,6 @@ def main():
     parser.add_argument('--env', dest='env', type=str)
     parser.add_argument('--method', dest='method', type=str)
     args = parser.parse_args()
-
-    # create the environment
     env = env_wrapper(args.env)
     gamma = 0.9
     method = args.method

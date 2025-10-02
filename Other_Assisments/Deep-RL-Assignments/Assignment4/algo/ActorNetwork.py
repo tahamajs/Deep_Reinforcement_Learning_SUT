@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import copy
 import math
 import pdb
@@ -10,8 +9,6 @@ import torch.nn.functional as F
 
 HIDDEN1_UNITS = 400
 HIDDEN2_UNITS = 300
-
-
 class Actor(nn.Module):
     """Creates an actor network.
 
@@ -34,15 +31,11 @@ class Actor(nn.Module):
             nn.init.uniform_(self.linear2.bias, a=-1/math.sqrt(HIDDEN1_UNITS), b=1/math.sqrt(HIDDEN1_UNITS))
             nn.init.uniform_(self.output.weight, a=-3*10e-3, b=3*10e-3)
             nn.init.uniform_(self.output.bias, a=-3*10e-3, b=3*10e-3)
-
-
     def forward(self, x):
         x = F.relu(self.linear1(x))
         x = F.relu(self.linear2(x))
         x = torch.tanh(self.output(x))
         return x
-
-
 class ActorNetwork():
     def __init__(self, state_size, action_size, batch_size,
                  tau, learning_rate, device, custom_init):
@@ -61,13 +54,9 @@ class ActorNetwork():
         self.tau = tau
         self.batch_size = batch_size
         self.policy = Actor(state_size, action_size, custom_init).to(device)
-        # self.policy.apply(self.initialize_weights)
-
         self.policy_optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
 
         self.policy_target = copy.deepcopy(self.policy)
-
-
     def initialize_weights(self, layer):
         if isinstance(layer, nn.Linear):
             nn.init.kaiming_uniform_(layer.weight, a=0, mode='fan_in', nonlinearity='relu')

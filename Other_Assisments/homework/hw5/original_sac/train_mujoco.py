@@ -66,7 +66,7 @@ def train_SAC(env_name, exp_name, seed, logdir):
     logz.save_params(params)
 
     env = gym.envs.make(env_name)
-    # Set random seeds
+
     tf.set_random_seed(seed)
     np.random.seed(seed)
     env.seed(seed)
@@ -96,7 +96,7 @@ def train_SAC(env_name, exp_name, seed, logdir):
     algorithm = SAC(**algorithm_params)
 
     tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)
-    tf_config.gpu_options.allow_growth = True  # may need if using GPU
+    tf_config.gpu_options.allow_growth = True
     with tf.Session(config=tf_config):
         algorithm.build(
             env=env,
@@ -144,15 +144,9 @@ def main():
                 seed=seed,
                 logdir=os.path.join(logdir, '%d' % seed),
             )
-        # # Awkward hacky process runs, because Tensorflow does not like
-        # # repeatedly calling train_AC in the same thread.
         p = Process(target=train_func, args=tuple())
         p.start()
         processes.append(p)
-        # if you comment in the line below, then the loop will block
-        # until this process finishes
-        # p.join()
-
     for p in processes:
         p.join()
 

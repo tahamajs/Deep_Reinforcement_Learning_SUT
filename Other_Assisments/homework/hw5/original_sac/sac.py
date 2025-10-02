@@ -104,22 +104,14 @@ class SAC:
 
     def _policy_loss_for(self, policy, q_function, q_function2, value_function):
         if not self._reparameterize:
-            ### Problem 1.3.A
-            ### YOUR CODE HERE
             raise NotImplementedError
         else:
-            ### Problem 1.3.B
-            ### YOUR CODE HERE
             raise NotImplementedError
 
     def _value_function_loss_for(self, policy, q_function, q_function2, value_function):
-        ### Problem 1.2.A
-        ### YOUR CODE HERE
         raise NotImplementedError
 
     def _q_function_loss_for(self, q_function, target_value_function):
-        ### Problem 1.1.A
-        ### YOUR CODE HERE
         raise NotImplementedError
 
     def _create_target_update(self, source, target):

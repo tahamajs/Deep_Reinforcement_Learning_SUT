@@ -10,8 +10,6 @@ Student ID: 400206262
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-
-
 def build_mlp(
     input_placeholder,
     output_size,
@@ -43,13 +41,9 @@ def build_mlp(
             out, output_size, activation=output_activation, name="output"
         )
         return out
-
-
 def pathlength(path):
     """Get the length of a trajectory path."""
     return len(path["reward"])
-
-
 class ActorCriticAgent:
     """Actor-Critic agent with separate policy and value networks."""
 
@@ -192,8 +186,6 @@ class ActorCriticAgent:
             sy_mean, sy_logstd = policy_parameters
             sy_std = tf.exp(sy_logstd)
             sy_var = tf.square(sy_std)
-
-            # Multivariate Gaussian log probability
             sy_diff = sy_ac_na - sy_mean
             sy_quad_form = tf.reduce_sum(tf.square(sy_diff) / sy_var, axis=1)
             sy_log_det = tf.reduce_sum(sy_logstd, axis=1)
@@ -206,19 +198,13 @@ class ActorCriticAgent:
     def build_computation_graph(self):
         """Build the computation graph."""
         self.sy_ob_no, self.sy_ac_na, self.sy_adv_n = self.define_placeholders()
-
-        # Policy network
         self.policy_parameters = self.policy_forward_pass(self.sy_ob_no)
         self.sy_sampled_ac = self.sample_action(self.policy_parameters)
         self.sy_logprob_n = self.get_log_prob(self.policy_parameters, self.sy_ac_na)
-
-        # Actor loss and update
         actor_loss = tf.reduce_sum(-self.sy_logprob_n * self.sy_adv_n)
         self.actor_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(
             actor_loss
         )
-
-        # Critic network
         self.critic_prediction = tf.squeeze(
             build_mlp(self.sy_ob_no, 1, "critic", self.n_layers, self.size)
         )
@@ -259,8 +245,6 @@ class ActorCriticAgent:
                 time.sleep(0.1)
 
             obs.append(ob)
-
-            # Sample action
             ac = self.sess.run(self.sy_sampled_ac, feed_dict={self.sy_ob_no: [ob]})
             ac = ac[0] if not self.discrete else ac
             acs.append(ac)
@@ -287,18 +271,14 @@ class ActorCriticAgent:
 
     def estimate_advantage(self, ob_no, next_ob_no, re_n, terminal_n):
         """Estimate advantages using critic network."""
-        # Compute Q(s,a) = r(s,a) + gamma * V(s') * (1 - terminal)
+
         v_next = self.sess.run(
             self.critic_prediction, feed_dict={self.sy_ob_no: next_ob_no}
         )
         q_n = re_n + self.gamma * v_next * (1 - terminal_n)
-
-        # Compute V(s) for baseline
         v_current = self.sess.run(
             self.critic_prediction, feed_dict={self.sy_ob_no: ob_no}
         )
-
-        # Advantage = Q - V
         adv_n = q_n - v_current
 
         if self.normalize_advantages:
@@ -308,13 +288,11 @@ class ActorCriticAgent:
 
     def update_critic(self, ob_no, next_ob_no, re_n, terminal_n):
         """Update critic network."""
-        # Target values: r + gamma * V(s') * (1 - terminal)
+
         v_next = self.sess.run(
             self.critic_prediction, feed_dict={self.sy_ob_no: next_ob_no}
         )
         target_n = re_n + self.gamma * v_next * (1 - terminal_n)
-
-        # Update critic for multiple steps
         for _ in range(self.num_target_updates):
             for _ in range(self.num_grad_steps_per_target_update):
                 self.sess.run(

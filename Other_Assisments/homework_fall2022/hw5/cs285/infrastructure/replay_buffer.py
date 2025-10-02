@@ -1,7 +1,4 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from cs285.infrastructure.utils import *
-
-
 class ReplayBuffer(object):
 
     def __init__(self, max_size=1000000):
@@ -16,19 +13,15 @@ class ReplayBuffer(object):
         self.terminals = None
 
     def add_rollouts(self, paths, noised=False):
-
-        # add new rollouts into our list of rollouts
         for path in paths:
             tpath = dict()
-            # print (path.keys())
+
             tpath['observation'] = path['observations']
             tpath['next_observation'] = path['next_observations']
             tpath['reward'] = path['rewards']
             tpath['action'] = path['actions']
             tpath['terminal'] = path['terminals']
             self.paths.append(tpath)
-
-        # convert new rollouts into their component arrays, and append them onto our arrays
         observations, actions, next_observations, terminals, concatenated_rews, unconcatenated_rews = convert_listofrollouts(self.paths)
 
         if noised:
@@ -55,14 +48,11 @@ class ReplayBuffer(object):
                 [self.concatenated_rews, concatenated_rews]
             )[-self.max_size:]
             if isinstance(unconcatenated_rews, list):
-                self.unconcatenated_rews += unconcatenated_rews  # TODO keep only latest max_size around
+                self.unconcatenated_rews += unconcatenated_rews
             else:
-                self.unconcatenated_rews.append(unconcatenated_rews)  # TODO keep only latest max_size around
+                self.unconcatenated_rews.append(unconcatenated_rews)
 
         print (self.terminals.sum())
-    ########################################
-    ########################################
-
     def sample_random_rollouts(self, num_rollouts):
         rand_indices = np.random.permutation(len(self.paths))[:num_rollouts]
         return self.paths[rand_indices]
@@ -71,15 +61,11 @@ class ReplayBuffer(object):
         return self.paths[-num_rollouts:]
 
     def can_sample(self, batch_size):
-        # print (self.obs.shape[0])
+
         if self.obs.shape[0] > batch_size:
             return True
         else:
             return False
-
-    ########################################
-    ########################################
-
     def sample_random_data(self, batch_size):
 
         assert self.obs.shape[0] == self.acs.shape[0] == self.concatenated_rews.shape[0] == self.next_obs.shape[0] == self.terminals.shape[0]
@@ -88,7 +74,7 @@ class ReplayBuffer(object):
 
     def sample(self, batch_size):
         return self.sample_random_data(batch_size)
-    
+
     def sample_recent_data(self, batch_size=1, concat_rew=True):
 
         if concat_rew:

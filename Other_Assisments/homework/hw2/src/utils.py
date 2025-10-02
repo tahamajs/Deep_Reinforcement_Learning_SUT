@@ -8,8 +8,6 @@ Student ID: 400206262
 """
 
 import numpy as np
-
-
 def pathlength(path):
     """Get the length of a trajectory path.
 
@@ -20,8 +18,6 @@ def pathlength(path):
         int: length of the path
     """
     return len(path["reward"])
-
-
 def flatten_list_of_rollouts(paths):
     """Flatten a list of trajectory paths into arrays.
 
@@ -39,8 +35,6 @@ def flatten_list_of_rollouts(paths):
     rewards = np.concatenate([path["reward"] for path in paths])
 
     return observations, actions, rewards
-
-
 def add_baseline_to_path(path, baseline):
     """Add baseline predictions to a path.
 
@@ -54,8 +48,6 @@ def add_baseline_to_path(path, baseline):
     path_copy = path.copy()
     path_copy["baseline"] = baseline
     return path_copy
-
-
 def add_discounted_returns_to_path(path, gamma):
     """Add discounted returns to a path.
 
@@ -78,8 +70,6 @@ def add_discounted_returns_to_path(path, gamma):
 
     path_copy["returns"] = np.array(returns)
     return path_copy
-
-
 def add_value_predictions_to_path(path, values):
     """Add value predictions to a path.
 
@@ -93,8 +83,6 @@ def add_value_predictions_to_path(path, values):
     path_copy = path.copy()
     path_copy["values"] = values
     return path_copy
-
-
 def add_advantages_to_path(path, gamma, lam=1.0):
     """Add advantages to a path using GAE.
 
@@ -109,12 +97,8 @@ def add_advantages_to_path(path, gamma, lam=1.0):
     path_copy = path.copy()
     rewards = path["reward"]
     values = path["values"]
-
-    # Compute TD residuals
     deltas = rewards[:-1] + gamma * values[1:] - values[:-1]
-    deltas = np.append(deltas, rewards[-1] - values[-1])  # Last step
-
-    # Compute advantages using GAE
+    deltas = np.append(deltas, rewards[-1] - values[-1])
     advantages = []
     advantage = 0
     for delta in reversed(deltas):
@@ -124,8 +108,6 @@ def add_advantages_to_path(path, gamma, lam=1.0):
 
     path_copy["advantages"] = np.array(advantages)
     return path_copy
-
-
 def compute_advantages(re_n, gamma, reward_to_go=True, normalize_advantages=True):
     """Compute advantages for a batch of trajectories.
 
@@ -142,7 +124,7 @@ def compute_advantages(re_n, gamma, reward_to_go=True, normalize_advantages=True
 
     for re in re_n:
         if reward_to_go:
-            # Reward-to-go advantages
+
             adv_path = []
             for t in range(len(re)):
                 adv_t = 0
@@ -151,21 +133,17 @@ def compute_advantages(re_n, gamma, reward_to_go=True, normalize_advantages=True
                 adv_path.append(adv_t)
             adv_n.extend(adv_path)
         else:
-            # Trajectory-based advantages
+
             total_return = sum(
                 gamma**t_prime * re[t_prime] for t_prime in range(len(re))
             )
             adv_n.extend([total_return] * len(re))
 
     adv_n = np.array(adv_n)
-
-    # Normalize advantages
     if normalize_advantages:
         adv_n = (adv_n - np.mean(adv_n)) / (np.std(adv_n) + 1e-8)
 
     return adv_n
-
-
 def compute_qvals(re_n, gamma, reward_to_go=True):
     """Compute Q-values for a batch of trajectories.
 
@@ -181,7 +159,7 @@ def compute_qvals(re_n, gamma, reward_to_go=True):
 
     for re in re_n:
         if reward_to_go:
-            # Reward-to-go Q-values
+
             q_path = []
             for t in range(len(re)):
                 q_t = 0
@@ -190,7 +168,7 @@ def compute_qvals(re_n, gamma, reward_to_go=True):
                 q_path.append(q_t)
             q_n.extend(q_path)
         else:
-            # Trajectory-based Q-values
+
             total_return = sum(
                 gamma**t_prime * re[t_prime] for t_prime in range(len(re))
             )

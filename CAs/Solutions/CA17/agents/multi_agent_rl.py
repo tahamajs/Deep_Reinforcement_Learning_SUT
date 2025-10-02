@@ -9,8 +9,6 @@ import random
 from typing import List, Dict, Tuple, Optional
 import matplotlib.pyplot as plt
 import networkx as nx
-
-
 class MultiAgentReplayBuffer:
     """Replay buffer for multi-agent systems"""
 
@@ -61,8 +59,6 @@ class MultiAgentReplayBuffer:
 
     def __len__(self):
         return self.size
-
-
 class MADDPGActor(nn.Module):
     """Actor network for MADDPG - decentralized policy"""
 
@@ -75,13 +71,11 @@ class MADDPGActor(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, action_dim),
-            nn.Tanh(),  # Assume actions are bounded [-1, 1]
+            nn.Tanh(),
         )
 
     def forward(self, obs: torch.Tensor) -> torch.Tensor:
         return self.network(obs)
-
-
 class MADDPGCritic(nn.Module):
     """Critic network for MADDPG - centralized value function"""
 
@@ -116,8 +110,6 @@ class MADDPGCritic(nn.Module):
         inputs = torch.cat([obs_flat, actions_flat], dim=1)
 
         return self.network(inputs)
-
-
 class MADDPGAgent:
     """Multi-Agent Deep Deterministic Policy Gradient Agent - Multi-agent manager"""
 
@@ -136,8 +128,6 @@ class MADDPGAgent:
         self.n_agents = n_predators + n_prey
         self.obs_dim = obs_dim
         self.action_dim = action_dim
-
-        # Create individual agents
         self.agents = []
         for i in range(self.n_agents):
             agent = SingleMADDPGAgent(
@@ -149,8 +139,6 @@ class MADDPGAgent:
                 learning_rate=learning_rate,
             )
             self.agents.append(agent)
-
-        # Shared replay buffer
         self.replay_buffer = MultiAgentReplayBuffer(
             capacity=buffer_size,
             n_agents=self.n_agents,
@@ -185,21 +173,15 @@ class MADDPGAgent:
             return
 
         batch = self.replay_buffer.sample(64)
-
-        # Get target actions for all agents
         target_actions = []
         for i, agent in enumerate(self.agents):
             next_obs_i = batch["next_observations"][:, i]
             target_action = agent.target_actor(next_obs_i)
             target_actions.append(target_action)
-
-        # Update critics
         critic_losses = []
         for i, agent in enumerate(self.agents):
             loss = agent.update_critic(batch, torch.stack(target_actions, dim=1))
             critic_losses.append(loss)
-
-        # Update actors
         actor_losses = []
         agent_actions = []
         for i, agent in enumerate(self.agents):
@@ -210,8 +192,6 @@ class MADDPGAgent:
         for i, agent in enumerate(self.agents):
             loss = agent.update_actor(batch, agent_actions)
             actor_losses.append(loss)
-
-        # Soft updates
         for agent in self.agents:
             agent.soft_update()
 
@@ -219,8 +199,6 @@ class MADDPGAgent:
             "critic_loss": np.mean(critic_losses),
             "actor_loss": np.mean(actor_losses),
         }
-
-
 class SingleMADDPGAgent(nn.Module):
     """Single agent in MADDPG system"""
 
@@ -301,7 +279,7 @@ class SingleMADDPGAgent(nn.Module):
         """Update actor network"""
         obs = batch["observations"]
 
-        actions = torch.stack(agent_actions, dim=1)  # [batch, n_agents, action_dim]
+        actions = torch.stack(agent_actions, dim=1)
         actions[:, self.agent_id] = self.actor(obs[:, self.agent_id])
 
         actor_loss = -self.critic(obs, actions).mean()
@@ -328,8 +306,6 @@ class SingleMADDPGAgent(nn.Module):
             target_param.data.copy_(
                 self.tau * param.data + (1 - self.tau) * target_param.data
             )
-
-
 class CommunicationNetwork(nn.Module):
     """Neural communication network for multi-agent coordination"""
 
@@ -361,13 +337,11 @@ class CommunicationNetwork(nn.Module):
         self, obs: torch.Tensor, messages: torch.Tensor
     ) -> torch.Tensor:
         """Process received messages with observation"""
-        avg_message = messages.mean(dim=1)  # Average over senders
+        avg_message = messages.mean(dim=1)
 
         combined = torch.cat([obs, avg_message], dim=-1)
 
         return self.msg_processor(combined)
-
-
 class CommMADDPG(nn.Module):
     """MADDPG with learned communication"""
 
@@ -433,7 +407,7 @@ class CommMADDPG(nn.Module):
         for i in range(self.n_agents):
             msg = self.comm_nets[i].generate_message(observations[:, i])
             messages.append(msg)
-        messages = torch.stack(messages, dim=1)  # [batch, n_agents, comm_dim]
+        messages = torch.stack(messages, dim=1)
 
         processed_features = []
         actions = []
@@ -449,7 +423,7 @@ class CommMADDPG(nn.Module):
             action = self.actors[i](features)
             actions.append(action)
 
-        actions = torch.stack(actions, dim=1)  # [batch, n_agents, action_dim]
+        actions = torch.stack(actions, dim=1)
         processed_features = torch.stack(processed_features, dim=1)
 
         return {
@@ -457,8 +431,6 @@ class CommMADDPG(nn.Module):
             "messages": messages,
             "features": processed_features,
         }
-
-
 class PredatorPreyEnvironment:
     """Multi-agent predator-prey environment"""
 
@@ -482,16 +454,16 @@ class PredatorPreyEnvironment:
         self.done = False
 
         self.action_map = {
-            0: (-1, 0),  # up
-            1: (1, 0),  # down
-            2: (0, -1),  # left
-            3: (0, 1),  # right
-            4: (0, 0),  # stay
+            0: (-1, 0),
+            1: (1, 0),
+            2: (0, -1),
+            3: (0, 1),
+            4: (0, 0),
         }
 
         self.observation_dim = 4 + 2 * (
             n_predators + n_prey - 1
-        )  # position + relative positions
+        )
         self.action_dim = 5
 
     def reset(self) -> np.ndarray:
@@ -601,7 +573,7 @@ class PredatorPreyEnvironment:
                 )
                 min_distance = min(min_distance, distance)
 
-            rewards[i] = 1.0 / (min_distance + 1)  # Closer = higher reward
+            rewards[i] = 1.0 / (min_distance + 1)
 
             if self._check_capture():
                 rewards[i] += 10.0

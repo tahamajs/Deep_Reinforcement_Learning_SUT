@@ -9,15 +9,10 @@ Student ID: 400206262
 
 import numpy as np
 from collections import namedtuple
-
-
-# Named tuples for better code readability
 Transition = namedtuple(
     "Transition", ["state", "action", "reward", "next_state", "done"]
 )
 Trajectory = namedtuple("Trajectory", ["states", "actions", "rewards", "dones"])
-
-
 class Dataset:
     """Dataset for storing and sampling transitions."""
 
@@ -69,8 +64,6 @@ class Dataset:
             actions = trajectory["actions"]
             rewards = trajectory["rewards"]
             dones = trajectory["dones"]
-
-        # Convert to transitions
         for i in range(len(states)):
             next_state = states[i + 1] if i + 1 < len(states) else states[i]
             done = dones[i] if i < len(dones) else True
@@ -144,8 +137,6 @@ class Dataset:
             "reward_std": np.std(self.rewards),
             "episode_count": np.sum(self.dones),
         }
-
-
 class RollingDataset(Dataset):
     """Dataset with rolling window (fixed maximum size)."""
 
@@ -161,8 +152,6 @@ class RollingDataset(Dataset):
     def add(self, state, action, reward, next_state, done):
         """Add transition with size management."""
         super().add(state, action, reward, next_state, done)
-
-        # Remove oldest transitions if over limit
         while self.size() > self.max_size:
             self.states.pop(0)
             self.actions.pop(0)

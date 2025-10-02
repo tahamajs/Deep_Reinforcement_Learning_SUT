@@ -16,32 +16,19 @@ class MLPPolicy:
         nn_baseline=False,
         **kwargs):
         super().__init__()
-
-        # init vars
         self.device = device
         self.discrete = discrete
         self.training = training
         self.nn_baseline = nn_baseline
-
-        # network architecture
         self.policy_mlp = MLP(ac_dim, ob_dim, n_layers, size, device, discrete)
         params = list(self.policy_mlp.parameters())
         if self.nn_baseline:
             self.baseline_mlp = MLP(1, ob_dim, n_layers, size, device, True)
             params += list(self.baseline_mlp.parameters())
-
-        #optimizer
         if self.training:
             self.optimizer = torch.optim.Adam(params, lr = learning_rate)
-
-    ##################################
-
-    # update/train this policy
     def update(self, observations, actions):
         raise NotImplementedError
-
-    # query the neural net that's our 'policy' function, as defined by an mlp above
-    # query the policy with observation(s) to get selected action(s)
     def get_action(self, obs):
         output = self.policy_mlp(torch.Tensor(obs).to(self.device))
         if self.discrete:
@@ -57,10 +44,6 @@ class MLPPolicy:
             return torch.distributions.Categorical(network_outputs).log_prob(actions_taken)
         else:
             return torch.distributions.Normal(network_outputs[0], network_outputs[1]).log_prob(actions_taken).sum(-1)
-
-#####################################################
-#####################################################
-
 class MLPPolicyPG(MLPPolicy):
 
     def update(self, observations, acs_na, adv_n = None, acs_labels_na = None, qvals = None):
@@ -81,10 +64,6 @@ class MLPPolicyPG(MLPPolicy):
         self.optimizer.step()
 
         return loss
-
-#####################################################
-#####################################################
-
 class MLPPolicyAC(MLPPolicyPG):
     """ MLP policy required for actor-critic.
 

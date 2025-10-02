@@ -11,57 +11,18 @@ from gym.utils import seeding
 import pyglet
 
 from copy import copy
-
-# Rocket trajectory optimization is a classic topic in Optimal Control.
-#
-# According to Pontryagin's maximum principle it's optimal to fire engine full throttle or
-# turn it off. That's the reason this environment is OK to have discreet actions (engine on or off).
-#
-# Landing pad is always at coordinates (0,0). Coordinates are the first two numbers in state vector.
-# Reward for moving from the top of the screen to landing pad and zero speed is about 100..140 points.
-# If lander moves away from landing pad it loses reward back. Episode finishes if the lander crashes or
-# comes to rest, receiving additional -100 or +100 points. Each leg ground contact is +10. Firing main
-# engine is -0.3 points each frame. Solved is 200 points.
-#
-# Landing outside landing pad is possible. Fuel is infinite, so an agent can learn to fly and then land
-# on its first attempt. Please see source code for details.
-#
-# Too see heuristic landing, run:
-#
-# python gym/envs/box2d/lunar_lander.py
-#
-# To play yourself, run:
-#
-# python examples/agents/keyboard_agent.py LunarLander-v0
-#
-# Created by Oleg Klimov. Licensed on the same terms as the rest of OpenAI Gym.
-
-# Modified by Sid Reddy (sgr@berkeley.edu) on 8/14/18
-#
-# Changelog:
-# - different discretization scheme for actions
-# - different terminal rewards
-# - different observations
-# - randomized landing site
-#
-# You can create an env object using `gym.make('LunarLanderContinuous-v2')`,
-# and it will use the discrete action space specified in this file, even though
-# the env is called "Continuous".
-#
-# A good agent should be able to achieve >150 reward.
-
 MAX_NUM_STEPS = 1000
 
 N_OBS_DIM = 9
-N_ACT_DIM = 6 # num discrete actions
+N_ACT_DIM = 6
 
 FPS    = 50
-SCALE  = 30.0   # affects how fast-paced the game is, forces should be adjusted as well
+SCALE  = 30.0
 
 MAIN_ENGINE_POWER  = 13.0
 SIDE_ENGINE_POWER  =  0.6
 
-INITIAL_RANDOM = 1000.0   # Set 1500 to make game harder
+INITIAL_RANDOM = 1000.0
 
 LANDER_POLY =[
     (-14,+17), (-17,0), (-17,-10),
@@ -70,7 +31,7 @@ LANDER_POLY =[
 LEG_AWAY = 20
 LEG_DOWN = 18
 LEG_W, LEG_H = 2, 8
-LEG_SPRING_TORQUE = 40 # 40 is too difficult for human players, 400 a bit easier
+LEG_SPRING_TORQUE = 40
 
 SIDE_ENGINE_HEIGHT = 14.0
 SIDE_ENGINE_AWAY   = 12.0
@@ -78,19 +39,19 @@ SIDE_ENGINE_AWAY   = 12.0
 VIEWPORT_W = 600
 VIEWPORT_H = 400
 
-THROTTLE_MAG = 0.75 # discretized 'on' value for thrusters
-NOOP = 1 # don't fire main engine, don't steer
-def disc_to_cont(action): # discrete action -> continuous action
+THROTTLE_MAG = 0.75
+NOOP = 1
+def disc_to_cont(action):
   if type(action) == np.ndarray:
     return action
-  # main engine
+
   if action < 3:
     m = -THROTTLE_MAG
   elif action < 6:
     m = THROTTLE_MAG
   else:
     raise ValueError
-  # steering
+
   if action % 3 == 0:
     s = -THROTTLE_MAG
   elif action % 3 == 1:
@@ -133,7 +94,7 @@ class LunarLander(gym.Env):
 
         self.prev_reward = None
 
-        high = np.array([np.inf]*N_OBS_DIM)  # useful range is -1 .. +1, but spikes can be higher
+        high = np.array([np.inf]*N_OBS_DIM)
         self.observation_space = spaces.Box(-high, high)
 
         self.action_space = spaces.Discrete(N_ACT_DIM)
@@ -168,13 +129,9 @@ class LunarLander(gym.Env):
 
         W = VIEWPORT_W/SCALE
         H = VIEWPORT_H/SCALE
-
-        # terrain
         CHUNKS = 11
         height = self.np_random.uniform(0, H/2, size=(CHUNKS+1,) )
         chunk_x  = [W/(CHUNKS-1)*i for i in range(CHUNKS)]
-
-        # randomize helipad x-coord
         helipad_chunk = np.random.choice(range(1, CHUNKS-1))
 
         self.helipad_x1 = chunk_x[helipad_chunk-1]
@@ -201,7 +158,7 @@ class LunarLander(gym.Env):
         self.moon.color1 = (0.0,0.0,0.0)
         self.moon.color2 = (0.0,0.0,0.0)
 
-        initial_y = VIEWPORT_H/SCALE#*0.75
+        initial_y = VIEWPORT_H/SCALE
         self.lander = self.world.CreateDynamicBody(
             position = (VIEWPORT_W/SCALE/2, initial_y),
             angle=0.0,
@@ -210,8 +167,8 @@ class LunarLander(gym.Env):
                 density=5.0,
                 friction=0.1,
                 categoryBits=0x0010,
-                maskBits=0x001,  # collide only with ground
-                restitution=0.0) # 0.99 bouncy
+                maskBits=0x001,
+                restitution=0.0)
                 )
         self.lander.color1 = (0.5,0.4,0.9)
         self.lander.color2 = (0.3,0.3,0.5)
@@ -243,10 +200,10 @@ class LunarLander(gym.Env):
                 enableMotor=True,
                 enableLimit=True,
                 maxMotorTorque=LEG_SPRING_TORQUE,
-                motorSpeed=+0.3*i  # low enough not to jump back into the sky
+                motorSpeed=+0.3*i
                 )
             if i==-1:
-                rjd.lowerAngle = +0.9 - 0.5  # Yes, the most esoteric numbers here, angles legs have freedom to travel within
+                rjd.lowerAngle = +0.9 - 0.5
                 rjd.upperAngle = +0.9
             else:
                 rjd.lowerAngle = -0.9
@@ -267,7 +224,7 @@ class LunarLander(gym.Env):
                 density=mass,
                 friction=0.1,
                 categoryBits=0x0100,
-                maskBits=0x001,  # collide only with ground
+                maskBits=0x001,
                 restitution=0.3)
                 )
         p.ttl = ttl
@@ -280,33 +237,31 @@ class LunarLander(gym.Env):
             self.world.DestroyBody(self.particles.pop(0))
 
     def _step(self, action):
-        #assert self.action_space.contains(action), "%r (%s) invalid " % (action,type(action))
+
         if type(action) in [int, np.int64]:
           action = disc_to_cont(action)
-
-        # Engines
         tip  = (math.sin(self.lander.angle), math.cos(self.lander.angle))
         side = (-tip[1], tip[0]);
         dispersion = [self.np_random.uniform(-1.0, +1.0) / SCALE for _ in range(2)]
 
         m_power = 0.0
         if (self.continuous and action[0] > 0.0) or (not self.continuous and action==2):
-            # Main engine
+
             if self.continuous:
-                m_power = (np.clip(action[0], 0.0,1.0) + 1.0)*0.5   # 0.5..1.0
+                m_power = (np.clip(action[0], 0.0,1.0) + 1.0)*0.5
                 assert m_power>=0.5 and m_power <= 1.0
             else:
                 m_power = 1.0
-            ox =  tip[0]*(4/SCALE + 2*dispersion[0]) + side[0]*dispersion[1]   # 4 is move a bit downwards, +-2 for randomness
+            ox =  tip[0]*(4/SCALE + 2*dispersion[0]) + side[0]*dispersion[1]
             oy = -tip[1]*(4/SCALE + 2*dispersion[0]) - side[1]*dispersion[1]
             impulse_pos = (self.lander.position[0] + ox, self.lander.position[1] + oy)
-            p = self._create_particle(3.5, impulse_pos[0], impulse_pos[1], m_power)    # particles are just a decoration, 3.5 is here to make particle speed adequate
+            p = self._create_particle(3.5, impulse_pos[0], impulse_pos[1], m_power)
             p.ApplyLinearImpulse(           ( ox*MAIN_ENGINE_POWER*m_power,  oy*MAIN_ENGINE_POWER*m_power), impulse_pos, True)
             self.lander.ApplyLinearImpulse( (-ox*MAIN_ENGINE_POWER*m_power, -oy*MAIN_ENGINE_POWER*m_power), impulse_pos, True)
 
         s_power = 0.0
         if (self.continuous and np.abs(action[1]) > 0.5) or (not self.continuous and action in [1,3]):
-            # Orientation engines
+
             if self.continuous:
                 direction = np.sign(action[1])
                 s_power = np.clip(np.abs(action[1]), 0.5,1.0)
@@ -320,8 +275,6 @@ class LunarLander(gym.Env):
             p = self._create_particle(0.7, impulse_pos[0], impulse_pos[1], s_power)
             p.ApplyLinearImpulse(           ( ox*SIDE_ENGINE_POWER*s_power,  oy*SIDE_ENGINE_POWER*s_power), impulse_pos, True)
             self.lander.ApplyLinearImpulse( (-ox*SIDE_ENGINE_POWER*s_power, -oy*SIDE_ENGINE_POWER*s_power), impulse_pos, True)
-
-        # perform normal update
         self.world.Step(1.0/FPS, 6*30, 2*30)
 
         pos = self.lander.position
@@ -351,7 +304,7 @@ class LunarLander(gym.Env):
             reward = shaping - self.prev_shaping
         self.prev_shaping = shaping
 
-        reward -= m_power*0.30  # less fuel spent is better, about -30 for heurisic landing
+        reward -= m_power*0.30
         reward -= s_power*0.03
 
         oob = abs(state[0]) >= 1.0
@@ -426,25 +379,15 @@ class LunarLanderContinuous(LunarLander):
     continuous = True
 
 def heuristic(env, s):
-    # Heuristic for:
-    # 1. Testing.
-    # 2. Demonstration rollout.
-    angle_targ = s[0]*0.5 + s[2]*1.0         # angle should point towards center (s[0] is horizontal coordinate, s[2] hor speed)
-    if angle_targ >  0.4: angle_targ =  0.4  # more than 0.4 radians (22 degrees) is bad
+    angle_targ = s[0]*0.5 + s[2]*1.0
+    if angle_targ >  0.4: angle_targ =  0.4
     if angle_targ < -0.4: angle_targ = -0.4
-    hover_targ = 0.55*np.abs(s[0])           # target y should be proporional to horizontal offset
-
-    # PID controller: s[4] angle, s[5] angularSpeed
+    hover_targ = 0.55*np.abs(s[0])
     angle_todo = (angle_targ - s[4])*0.5 - (s[5])*1.0
-    #print("angle_targ=%0.2f, angle_todo=%0.2f" % (angle_targ, angle_todo))
-
-    # PID controller: s[1] vertical coordinate s[3] vertical speed
     hover_todo = (hover_targ - s[1])*0.5 - (s[3])*0.5
-    #print("hover_targ=%0.2f, hover_todo=%0.2f" % (hover_targ, hover_todo))
-
-    if s[6] or s[7]: # legs have contact
+    if s[6] or s[7]:
         angle_todo = 0
-        hover_todo = -(s[3])*0.5  # override to reduce fall speed, that's all we need after contact
+        hover_todo = -(s[3])*0.5
 
     if env.continuous:
         a = np.array( [hover_todo*20 - 1, -angle_todo*20] )
@@ -457,7 +400,7 @@ def heuristic(env, s):
     return a
 
 if __name__=="__main__":
-    #env = LunarLander()
+
     env = LunarLanderContinuous()
     s = env.reset()
     total_reward = 0

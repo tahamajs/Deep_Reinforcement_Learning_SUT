@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Modular Behavioral Cloning Implementation
 
@@ -25,8 +23,6 @@ import pickle
 import gym
 from src.expert_data_collector import ExpertDataCollector, load_expert_policy
 from src.behavioral_cloning import BehavioralCloning
-
-
 def collect_expert_data(args):
     """Collect expert demonstration data."""
     print("Loading expert policy...")
@@ -37,8 +33,6 @@ def collect_expert_data(args):
 
     print(f"Collecting {args.num_rollouts} expert rollouts...")
     data = collector.collect_rollouts(args.num_rollouts, args.render)
-
-    # Save data
     os.makedirs("expert_data", exist_ok=True)
     data_file = os.path.join("expert_data", f"{args.env}.pkl")
     collector.save_data(data, data_file)
@@ -46,11 +40,9 @@ def collect_expert_data(args):
     print(f"Expert data collection completed!")
     print(f'Mean return: {data["mean_return"]:.2f}')
     print(f'Std return: {data["std_return"]:.2f}')
-
-
 def train_bc_policy(args):
     """Train behavioral cloning policy."""
-    # Load expert data
+
     print(f"Loading expert data from {args.data_file}...")
     with open(args.data_file, "rb") as f:
         expert_data = pickle.load(f)
@@ -59,42 +51,26 @@ def train_bc_policy(args):
     actions = expert_data["actions"]
 
     print(f"Loaded {len(observations)} expert transitions")
-
-    # Create environment to get dimensions
     env = gym.make(args.env)
-
-    # Create and train BC agent
     print("Training behavioral cloning policy...")
     bc_agent = BehavioralCloning(env, args.learning_rate, args.hidden_sizes)
 
     history = bc_agent.train(observations, actions, args.epochs, args.batch_size)
-
-    # Save trained model
     os.makedirs("models", exist_ok=True)
     model_file = os.path.join("models", "bc_policy.pkl")
-
-    # Save model weights
     saver = tf.train.Saver()
     saver.save(bc_agent.sess, model_file)
     print(f"Model saved to {model_file}")
-
-    # Save training history
     history_file = os.path.join("models", "training_history.pkl")
     with open(history_file, "wb") as f:
         pickle.dump(history, f)
 
     print("Training completed!")
-
-
 def evaluate_bc_policy(args):
     """Evaluate trained behavioral cloning policy."""
-    # Create environment
+
     env = gym.make(args.env)
-
-    # Create BC agent
     bc_agent = BehavioralCloning(env)
-
-    # Load trained model
     print(f"Loading model from {args.model_file}...")
     saver = tf.train.Saver()
     saver.restore(bc_agent.sess, args.model_file)
@@ -105,19 +81,11 @@ def evaluate_bc_policy(args):
     print("Evaluation Results:")
     print(f'Mean Return: {results["mean_return"]:.2f}')
     print(f'Std Return: {results["std_return"]:.2f}')
-
-
 def main():
     parser = argparse.ArgumentParser(description="Behavioral Cloning")
-
-    # Common arguments
     parser.add_argument("--env", type=str, required=True, help="Gym environment name")
     parser.add_argument("--render", action="store_true", help="Render environment")
-
-    # Subcommands
     subparsers = parser.add_subparsers(dest="mode", help="Mode of operation")
-
-    # Collect mode
     collect_parser = subparsers.add_parser("collect", help="Collect expert data")
     collect_parser.add_argument(
         "--expert_policy", type=str, required=True, help="Path to expert policy file"
@@ -131,8 +99,6 @@ def main():
     collect_parser.add_argument(
         "--max_timesteps", type=int, help="Maximum timesteps per episode"
     )
-
-    # Train mode
     train_parser = subparsers.add_parser("train", help="Train BC policy")
     train_parser.add_argument(
         "--data_file", type=str, required=True, help="Path to expert data file"
@@ -153,8 +119,6 @@ def main():
         default=[100, 100],
         help="Hidden layer sizes",
     )
-
-    # Evaluate mode
     eval_parser = subparsers.add_parser("evaluate", help="Evaluate BC policy")
     eval_parser.add_argument(
         "--model_file", type=str, required=True, help="Path to trained model file"
@@ -173,8 +137,6 @@ def main():
         evaluate_bc_policy(args)
     else:
         parser.print_help()
-
-
 if __name__ == "__main__":
     import tensorflow as tf
 

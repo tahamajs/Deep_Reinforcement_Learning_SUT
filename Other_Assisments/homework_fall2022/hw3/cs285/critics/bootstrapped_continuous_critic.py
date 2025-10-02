@@ -1,11 +1,8 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from .base_critic import BaseCritic
 from torch import nn
 from torch import optim
 
 from cs285.infrastructure import pytorch_util as ptu
-
-
 class BootstrappedContinuousCritic(nn.Module, BaseCritic):
     """
         Notes on notation:
@@ -28,8 +25,6 @@ class BootstrappedContinuousCritic(nn.Module, BaseCritic):
         self.size = hparams['size']
         self.n_layers = hparams['n_layers']
         self.learning_rate = hparams['learning_rate']
-
-        # critic parameters
         self.num_target_updates = hparams['num_target_updates']
         self.num_grad_steps_per_target_update = hparams['num_grad_steps_per_target_update']
         self.gamma = hparams['gamma']
@@ -73,18 +68,4 @@ class BootstrappedContinuousCritic(nn.Module, BaseCritic):
             returns:
                 training loss
         """
-        # TODO: Implement the pseudocode below: do the following (
-        # self.num_grad_steps_per_target_update * self.num_target_updates)
-        # times:
-        # every self.num_grad_steps_per_target_update steps (which includes the
-        # first step), recompute the target values by
-        #     a) calculating V(s') by querying the critic with next_ob_no
-        #     b) and computing the target values as r(s, a) + gamma * V(s')
-        # every time, update this critic using the observations and targets
-        #
-        # HINT: don't forget to use terminal_n to cut off the V(s') (ie set it
-        #       to 0) when a terminal state is reached
-        # HINT: make sure to squeeze the output of the critic_network to ensure
-        #       that its dimensions match the reward
-
         return loss.item()

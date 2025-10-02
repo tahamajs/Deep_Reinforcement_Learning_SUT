@@ -1,9 +1,5 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import argparse
 from src.a3c_agent import A3C
-
-
 def parse_arguments():
     """Command-line flags are defined here."""
     parser = argparse.ArgumentParser()
@@ -98,17 +94,11 @@ def parse_arguments():
     parser.set_defaults(render=False)
 
     return parser.parse_args()
-
-
 def main():
     """Parse command-line arguments and run A3C."""
     args = parse_arguments()
-
-    # Create the environment.
     actor_critic = A3C(args, env="Breakout-v0")
     if not args.render:
         actor_critic.train()
-
-
 if __name__ == "__main__":
     main()

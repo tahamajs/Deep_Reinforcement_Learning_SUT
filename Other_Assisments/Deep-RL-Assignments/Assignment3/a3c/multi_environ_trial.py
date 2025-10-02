@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 '''
 Required packages
 1) pip3 install --upgrade stable-baselines --user
@@ -15,10 +14,8 @@ import numpy as np
 import os
 import argparse
 
-import torch 
-import torch.multiprocessing as mp 
-
-
+import torch
+import torch.multiprocessing as mp
 def make_env(env_id, rank, seed=0):
     """
     Utility function for multiprocessed env.
@@ -34,16 +31,12 @@ def make_env(env_id, rank, seed=0):
         return env
     set_global_seeds(seed)
     return _init
-
-
 def run():
     torch.multiprocessing.freeze_support()
     env_id = "CartPole-v1"
-    num_cpu = 4  # Number of processes to use
-    # Create the vectorized environment
+    num_cpu = 4
+
     env = SubprocVecEnv([make_env(env_id, i) for i in range(num_cpu)])
-
-
     model = ACKTR(MlpPolicy, env, verbose=1)
     model.learn(total_timesteps=25000)
 
@@ -51,8 +44,5 @@ def run():
     for _ in range(1000):
         action, _states = model.predict(obs)
         obs, rewards, dones, info = env.step(action)
-        #env.render()
-
 if __name__ == '__main__':
     run()
-

@@ -6,8 +6,6 @@ from torch.distributions import Normal, Independent
 import numpy as np
 from typing import Dict, Tuple, Optional, List
 import random
-
-
 class RSSMCore(nn.Module):
     """Core RSSM architecture for world modeling"""
 
@@ -30,13 +28,13 @@ class RSSMCore(nn.Module):
         self.prior_net = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 2 * state_dim),  # mean and std
+            nn.Linear(hidden_dim, 2 * state_dim),
         )
 
         self.posterior_net = nn.Sequential(
             nn.Linear(hidden_dim + obs_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 2 * state_dim),  # mean and std
+            nn.Linear(hidden_dim, 2 * state_dim),
         )
 
         self.rnn = nn.GRUCell(hidden_dim + state_dim + action_dim, hidden_dim)
@@ -76,12 +74,10 @@ class RSSMCore(nn.Module):
 
     def posterior(self, hidden: torch.Tensor, obs: torch.Tensor) -> Independent:
         """Compute posterior distribution q(z_t | h_t, o_t)"""
-        # hidden should be (batch_size, hidden_dim), obs should be (batch_size, obs_dim)
-        # Squeeze any extra sequence dimensions
         if hidden.dim() == 3:
-            hidden = hidden.squeeze(0)  # Remove sequence dimension if present
+            hidden = hidden.squeeze(0)
         if obs.dim() == 1:
-            obs = obs.unsqueeze(0)  # Add batch dimension if missing
+            obs = obs.unsqueeze(0)
 
         combined = torch.cat([hidden, obs], dim=-1)
         stats = self.posterior_net(combined)
@@ -95,21 +91,12 @@ class RSSMCore(nn.Module):
         """Compute deterministic transition h_t = f(h_{t-1}, z_{t-1}, a_{t-1})"""
         prev_hidden = prev_state["hidden"]
         prev_stoch = prev_state["stoch"]
-
-        # GRUCell expects 2D input: (batch_size, input_size)
-        # Squeeze the sequence dimension from prev_hidden for GRUCell
-        prev_hidden_2d = prev_hidden.squeeze(0)  # (batch_size, hidden_dim)
-
-        # Concatenate along feature dimension: hidden + stoch + action
+        prev_hidden_2d = prev_hidden.squeeze(0)
         rnn_input = torch.cat([prev_hidden_2d, prev_stoch, action], dim=-1)
-
-        # rnn_input should now be (batch_size, hidden_dim + state_dim + action_dim)
         hidden_new = self.rnn(rnn_input, prev_hidden_2d)
-
-        # Add back sequence dimension for consistency
         hidden_new = hidden_new.unsqueeze(0)
 
-        return {"hidden": hidden_new, "stoch": prev_stoch}  # Will be updated separately
+        return {"hidden": hidden_new, "stoch": prev_stoch}
 
     def observe(self, hidden: torch.Tensor, obs: torch.Tensor) -> torch.Tensor:
         """Update stochastic state using observation"""
@@ -135,8 +122,6 @@ class RSSMCore(nn.Module):
         """Decode continuation probability from state"""
         state_features = torch.cat([hidden.squeeze(0), stoch], dim=-1)
         return self.cont_decoder(state_features)
-
-
 class WorldModel(nn.Module):
     """Complete world model using RSSM"""
 
@@ -234,14 +219,12 @@ class WorldModel(nn.Module):
             state["stoch"] = stoch
 
         return {
-            "hidden": torch.stack(hidden_seq[1:], dim=1),  # Exclude initial
+            "hidden": torch.stack(hidden_seq[1:], dim=1),
             "stoch": torch.stack(stoch_seq[1:], dim=1),
             "pred_obs": torch.stack(pred_obs_seq, dim=1),
             "pred_reward": torch.stack(pred_reward_seq, dim=1),
             "pred_cont": torch.stack(pred_cont_seq, dim=1),
         }
-
-
 class MPCPlanner:
     """Model Predictive Control using learned world model"""
 
@@ -277,7 +260,7 @@ class MPCPlanner:
                 mean.unsqueeze(1).expand(-1, self.num_samples, -1, -1),
                 std.unsqueeze(1).expand(-1, self.num_samples, -1, -1),
             )
-            actions = torch.tanh(actions)  # Bound actions
+            actions = torch.tanh(actions)
 
             values = self._evaluate_sequences(state, actions)
 
@@ -301,7 +284,7 @@ class MPCPlanner:
             .expand(-1, 1, self.horizon, self.action_dim),
         )
 
-        return best_actions.squeeze(1)[:, 0]  # First action
+        return best_actions.squeeze(1)[:, 0]
 
     def _evaluate_sequences(
         self, state: Dict[str, torch.Tensor], actions: torch.Tensor
@@ -327,7 +310,7 @@ class MPCPlanner:
         with torch.no_grad():
             rollout = self.world_model.imagine_rollout(flat_state, flat_actions)
 
-            rewards = rollout["pred_reward"].squeeze(-1)  # [batch*samples, horizon]
+            rewards = rollout["pred_reward"].squeeze(-1)
             continues = rollout["pred_cont"].squeeze(-1)
 
             discount = torch.cumprod(continues, dim=-1)
@@ -338,8 +321,6 @@ class MPCPlanner:
         returns = returns.reshape(batch_size, num_samples)
 
         return returns
-
-
 class ImaginationAugmentedAgent(nn.Module):
     """I2A-style agent combining model-free and model-based paths"""
 
@@ -372,7 +353,7 @@ class ImaginationAugmentedAgent(nn.Module):
         )
 
         self.rollout_encoder = nn.Sequential(
-            nn.Linear(state_dim + 1 + 1, hidden_dim // 2),  # state + reward + continue
+            nn.Linear(state_dim + 1 + 1, hidden_dim // 2),
             nn.ReLU(),
             nn.LSTM(hidden_dim // 2, hidden_dim // 2, batch_first=True),
         )
@@ -402,8 +383,6 @@ class ImaginationAugmentedAgent(nn.Module):
     def select_action(self, state: np.ndarray) -> np.ndarray:
         """Select action using imagination-augmented policy"""
         state_tensor = torch.FloatTensor(state).unsqueeze(0)
-
-        # Get current world model state (simplified - in practice would track state)
         current_state = {"hidden": torch.zeros(1, 1, 256), "stoch": torch.zeros(1, 32)}
 
         with torch.no_grad():
@@ -422,15 +401,13 @@ class ImaginationAugmentedAgent(nn.Module):
     ):
         """Store transition in replay buffer"""
         self.replay_buffer.append((state, action, reward, next_state, done))
-        if len(self.replay_buffer) > 10000:  # Simple buffer limit
+        if len(self.replay_buffer) > 10000:
             self.replay_buffer.pop(0)
 
     def train_step(self) -> Dict[str, float]:
         """Train the agent for one step"""
         if len(self.replay_buffer) < 32:
             return {}
-
-        # Sample batch
         batch = random.sample(self.replay_buffer, 32)
         states, actions, rewards, next_states, dones = zip(*batch)
 
@@ -439,20 +416,12 @@ class ImaginationAugmentedAgent(nn.Module):
         rewards = torch.FloatTensor(rewards).unsqueeze(-1)
         next_states = torch.FloatTensor(np.array(next_states))
         dones = torch.FloatTensor(dones).unsqueeze(-1)
-
-        # Get current world model state (simplified)
         current_state = {
             "hidden": torch.zeros(1, 32, 256),
             "stoch": torch.zeros(32, 32),
         }
-
-        # Forward pass
         action_logits, values, _ = self.forward(states, current_state)
-
-        # Simple policy loss (placeholder - would need proper RL loss)
         policy_loss = F.mse_loss(torch.tanh(action_logits), actions)
-
-        # Simple value loss
         value_loss = F.mse_loss(values, rewards)
 
         total_loss = policy_loss + value_loss
@@ -498,7 +467,7 @@ class ImaginationAugmentedAgent(nn.Module):
 
         for _ in range(self.num_rollouts):
             actions = torch.randn(batch_size, self.rollout_length, self.action_dim)
-            actions = torch.tanh(actions)  # Bound actions
+            actions = torch.tanh(actions)
 
             with torch.no_grad():
                 rollout = self.world_model.imagine_rollout(state, actions)
@@ -512,7 +481,7 @@ class ImaginationAugmentedAgent(nn.Module):
                 encoded, (hidden, _) = self.rollout_encoder(rollout_seq)
                 rollout_feature = self.imagination_core(
                     hidden[-1]
-                )  # Use final hidden state
+                )
                 rollout_features.append(rollout_feature)
 
         return torch.cat(rollout_features, dim=-1)

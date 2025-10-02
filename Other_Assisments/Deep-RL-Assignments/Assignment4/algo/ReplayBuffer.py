@@ -1,26 +1,23 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import torch
 import numpy as np
 import random
-
-
 class ReplayBuffer(object):
     def __init__(self, memory_size, burn_in, state_dim, action_dim, device):
         self.memory_size = memory_size
         self.device = device
 
         self.burn_in = burn_in
-        self.states = torch.zeros((self.memory_size, state_dim)) 
+        self.states = torch.zeros((self.memory_size, state_dim))
         self.next_states = torch.zeros((self.memory_size, state_dim))
         self.actions = torch.zeros((self.memory_size, action_dim))
         self.rewards = torch.zeros((self.memory_size, 1))
         self.dones = torch.zeros((self.memory_size, 1))
         self.ptr = 0
         self.burned_in = False
-        self.not_full_yet = True  
+        self.not_full_yet = True
 
     def get_batch(self, batch_size):
-        # Randomly sample batch_size examples
+
         if self.not_full_yet:
             idxs = np.random.choice(self.ptr, batch_size, False)
         else:
@@ -53,10 +50,7 @@ class ReplayBuffer(object):
             self.not_full_yet = False
 
     def count(self):
-        # if buffer is full, return buffer size
-        # otherwise, return experience counter
         if self.not_full_yet:
             return self.ptr
         else:
             return self.memory_size
-

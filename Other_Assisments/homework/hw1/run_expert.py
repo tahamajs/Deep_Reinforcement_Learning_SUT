@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Code to load an expert policy and generate roll-out data for behavioral cloning.
 Example usage:

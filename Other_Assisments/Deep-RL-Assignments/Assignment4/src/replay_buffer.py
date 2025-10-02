@@ -7,8 +7,6 @@ Student ID: 400206262
 
 import numpy as np
 import torch
-
-
 class ReplayBuffer(object):
     """Experience replay buffer for storing and sampling transitions."""
 
@@ -27,8 +25,6 @@ class ReplayBuffer(object):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.device = device
-
-        # Initialize buffers
         self.states = torch.zeros((buffer_size, state_dim), device=device)
         self.actions = torch.zeros((buffer_size, action_dim), device=device)
         self.rewards = torch.zeros(buffer_size, device=device)

@@ -4,8 +4,6 @@ from tensorflow.keras import layers
 from tensorflow_probability import distributions
 from tensorflow.python import keras
 from tensorflow.python.keras.engine.network import Network
-
-
 class QFunction(Network):
     def __init__(self, hidden_layer_sizes, **kwargs):
         super(QFunction, self).__init__(**kwargs)
@@ -24,8 +22,6 @@ class QFunction(Network):
 
         self._init_graph_network(inputs, q_values)
         super(QFunction, self).build(input_shape)
-
-
 class ValueFunction(Network):
     def __init__(self, hidden_layer_sizes, **kwargs):
         super(ValueFunction, self).__init__(**kwargs)
@@ -41,8 +37,6 @@ class ValueFunction(Network):
 
         self._init_graph_network(inputs, values)
         super(ValueFunction, self).build(input_shape)
-
-
 class GaussianPolicy(Network):
     def __init__(self, action_dim, hidden_layer_sizes, reparameterize, **kwargs):
         super(GaussianPolicy, self).__init__(**kwargs)
@@ -72,15 +66,11 @@ class GaussianPolicy(Network):
 
             raw_actions = distribution.sample()
             if not self._reparameterize:
-                ### Problem 1.3.A
-                ### YOUR CODE HERE
                 raise NotImplementedError
             log_probs = distribution.log_prob(raw_actions)
             log_probs -= self._squash_correction(raw_actions)
 
             actions = None
-            ### Problem 2.A
-            ### YOUR CODE HERE
             raise NotImplementedError
 
             return actions, log_probs
@@ -92,8 +82,6 @@ class GaussianPolicy(Network):
         super(GaussianPolicy, self).build(input_shape)
 
     def _squash_correction(self, raw_actions):
-        ### Problem 2.B
-        ### YOUR CODE HERE
         raise NotImplementedError
 
     def eval(self, observation):

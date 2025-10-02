@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import abc
 import itertools
 from torch import nn
@@ -11,8 +10,6 @@ from torch import distributions
 
 from cs285.infrastructure import pytorch_util as ptu
 from cs285.policies.base_policy import BasePolicy
-
-
 class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
 
     def __init__(self,
@@ -27,8 +24,6 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
                  **kwargs
                  ):
         super().__init__(**kwargs)
-
-        # init vars
         self.ac_dim = ac_dim
         self.ob_dim = ob_dim
         self.n_layers = n_layers
@@ -77,28 +72,13 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             )
         else:
             self.baseline = None
-
-    ##################################
-
     def save(self, filepath):
         torch.save(self.state_dict(), filepath)
-
-    ##################################
-
-    # query the policy with observation(s) to get selected action(s)
     def get_action(self, obs: np.ndarray) -> np.ndarray:
-        # TODO: get this from hw1 or hw2
-        return action
 
-    # update/train this policy
+        return action
     def update(self, observations, actions, **kwargs):
         raise NotImplementedError
-
-    # This function defines the forward pass of the network.
-    # You can return anything you want, but you should be able to differentiate
-    # through it. For example, you can return a torch.FloatTensor. You can also
-    # return more flexible objects, such as a
-    # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor):
-        # TODO: get this from hw1 or hw2
+
         return action_distribution

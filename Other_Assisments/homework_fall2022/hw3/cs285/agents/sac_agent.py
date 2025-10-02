@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from collections import OrderedDict
 
 from cs285.critics.bootstrapped_continuous_critic import \
@@ -47,27 +46,9 @@ class SACAgent(BaseAgent):
         self.replay_buffer = ReplayBuffer(max_size=100000)
 
     def update_critic(self, ob_no, ac_na, next_ob_no, re_n, terminal_n):
-        # TODO: 
-        # 1. Compute the target Q value. 
-        # HINT: You need to use the entropy term (alpha)
-        # 2. Get current Q estimates and calculate critic loss
-        # 3. Optimize the critic  
         return critic_loss
 
     def train(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
-        # TODO 
-        # 1. Implement the following pseudocode:
-        # for agent_params['num_critic_updates_per_agent_update'] steps,
-        #     update the critic
-
-        # 2. Softly update the target every critic_target_update_frequency (HINT: look at sac_utils)
-
-        # 3. Implement following pseudocode:
-        # If you need to update actor
-        # for agent_params['num_actor_updates_per_agent_update'] steps,
-        #     update the actor
-
-        # 4. gather losses for logging
         loss = OrderedDict()
         loss['Critic_Loss'] = TODO
         loss['Actor_Loss'] = TODO

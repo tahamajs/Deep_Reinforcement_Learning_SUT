@@ -3,8 +3,6 @@
 import numpy as np
 import gymnasium as gym
 import gymnasium as gym.spaces
-
-
 class TwoLinkArmEnv(gym.core.Env):
     DOF = 2
     metadata = {
@@ -63,8 +61,6 @@ class TwoLinkArmEnv(gym.core.Env):
         self.K2 = self.m2 * self.l1 * self.l2
         self.K3 = 1 / 3. * self.m2 * self.l2**2.
         self.K4 = 1 / 2. * self.m2 * self.l1 * self.l2
-
-        # how much noise to add to input signal
         self.noise_free = noise_free
         self.noise_mu = np.zeros(
             (self.DOF, )) if noise_mu is None else noise_mu
@@ -140,13 +136,9 @@ class TwoLinkArmEnv(gym.core.Env):
         ddq1 = ((H2 * M11 - H1 * M21 - M11 * u[1] + M21 * u[0]) /
                 (M12**2. - M11 * M22))
         ddq0 = (-H2 + u[1] - M22 * ddq1) / M21
-
-        # pdb.set_trace()
         self.dq += np.array([ddq0, ddq1]) * dt
         self.q += self.dq * dt
         self.t += dt
-
-        # calculate the reward
         x_diff = np.hstack((self.q, self.dq)) - np.hstack(
             (self.goal_q, self.goal_dq))
 
@@ -176,8 +168,6 @@ class TwoLinkArmEnv(gym.core.Env):
             max_arm_length = 2 * self.l1 + self.l2
             bounds = 1.5 * max_arm_length
             self.viewer.set_bounds(-bounds, bounds, -bounds, bounds)
-
-        # add goal geoms
         link1_goal = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
         link1_goal_transform = rendering.Transform(rotation=self.goal_q[0])
         link1_goal.add_attr(link1_goal_transform)
@@ -198,8 +188,6 @@ class TwoLinkArmEnv(gym.core.Env):
         self.viewer.add_onetime(link2_goal)
 
         p1 = [2 * self.l1 * np.cos(self.q[0]), 2 * self.l1 * np.sin(self.q[0])]
-
-        # add the arm geoms
         link1 = self.viewer.draw_polygon([(l, b), (l, t), (r, t), (r, b)])
         link1_transform = rendering.Transform(rotation=self.q[0])
         link1.add_attr(link1_transform)
@@ -212,8 +200,6 @@ class TwoLinkArmEnv(gym.core.Env):
         link2.set_color(0., 0., 1.)
 
         return self.viewer.render(return_rgb_array=(mode == 'rgb_array'))
-
-
 class LimitedTorqueTwoLinkArmEnv(TwoLinkArmEnv):
     def __init__(self, max_torques=None, **kwargs):
         super(LimitedTorqueTwoLinkArmEnv, self).__init__(**kwargs)

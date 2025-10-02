@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from cs285.policies.MLP_policy import MLPPolicy
 import torch
 import numpy as np
@@ -36,22 +35,16 @@ class MLPPolicySAC(MLPPolicy):
 
     @property
     def alpha(self):
-        # TODO: get this from previous HW
+
         return entropy
 
     def get_action(self, obs: np.ndarray, sample=True) -> np.ndarray:
-        # TODO: get this from previous HW
-        return action
 
-    # This function defines the forward pass of the network.
-    # You can return anything you want, but you should be able to differentiate
-    # through it. For example, you can return a torch.FloatTensor. You can also
-    # return more flexible objects, such as a
-    # `torch.distributions.Distribution` object. It's up to you!
+        return action
     def forward(self, observation: torch.FloatTensor):
-        # TODO: get this from previous HW
+
         return action_distribution
 
     def update(self, obs, critic):
-        # TODO: get this from previous HW
+
         return actor_loss, alpha_loss, self.alpha

@@ -1,7 +1,3 @@
-#If not using anaconda use next two lines:
-#import sys
-#sys.path.append(r'<your path to hw3>')
-
 import os
 import gym
 import pdb
@@ -15,11 +11,6 @@ from cs285.agents.ac_agent import ACAgent
 class AC_Trainer(object):
 
     def __init__(self, params):
-
-        #####################
-        ## SET AGENT PARAMS
-        #####################
-
         computation_graph_args = {
             'n_layers': params['n_layers'],
             'size': params['size'],
@@ -46,11 +37,6 @@ class AC_Trainer(object):
         self.params['agent_class'] = ACAgent
         self.params['agent_params'] = agent_params
         self.params['batch_size_initial'] = self.params['batch_size']
-
-        ################
-        ## RL TRAINER
-        ################
-
         self.rl_trainer = RL_Trainer(self.params)
 
     def run_training_loop(self):
@@ -59,8 +45,6 @@ class AC_Trainer(object):
             collect_policy = self.rl_trainer.agent.actor,
             eval_policy = self.rl_trainer.agent.actor,
             )
-
-
 def main():
     import argparse
     parser = argparse.ArgumentParser()
@@ -73,9 +57,9 @@ def main():
     parser.add_argument('--num_critic_updates_per_agent_update', type=int, default=1)
     parser.add_argument('--num_actor_updates_per_agent_update', type=int, default=1)
 
-    parser.add_argument('--batch_size', '-b', type=int, default=1000) #steps collected per train iteration
-    parser.add_argument('--eval_batch_size', '-eb', type=int, default=400) #steps collected per eval iteration
-    parser.add_argument('--train_batch_size', '-tb', type=int, default=1000) ##steps used per gradient step
+    parser.add_argument('--batch_size', '-b', type=int, default=1000)
+    parser.add_argument('--eval_batch_size', '-eb', type=int, default=400)
+    parser.add_argument('--train_batch_size', '-tb', type=int, default=1000)
 
     parser.add_argument('--discount', type=float, default=1.0)
     parser.add_argument('--learning_rate', '-lr', type=float, default=5e-3)
@@ -94,8 +78,6 @@ def main():
     parser.add_argument('--save_params', action='store_true')
 
     args = parser.parse_args()
-
-    # convert to dictionary
     params = vars(args)
 
     if torch.cuda.is_available() and params["use_gpu"]:
@@ -105,16 +87,7 @@ def main():
     else:
         params["device"] = torch.device("cpu")
         print("Pytorch is running on the CPU")
-
-    # for policy gradient, we made a design decision
-    # to force batch_size = train_batch_size
-    # note that, to avoid confusion, you don't even have a train_batch_size argument anymore (above)
     params['train_batch_size'] = params['batch_size']
-
-    ##################################
-    ### CREATE DIRECTORY FOR LOGGING
-    ##################################
-
     logdir_prefix = 'ac_'
 
     data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data')
@@ -129,14 +102,7 @@ def main():
         os.makedirs(logdir)
 
     print("\n\n\nLOGGING TO: ", logdir, "\n\n\n")
-
-    ###################
-    ### RUN TRAINING
-    ###################
-
     trainer = AC_Trainer(params)
     trainer.run_training_loop()
-
-
 if __name__ == "__main__":
     main()

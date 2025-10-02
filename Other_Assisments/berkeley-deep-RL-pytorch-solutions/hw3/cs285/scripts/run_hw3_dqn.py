@@ -1,7 +1,3 @@
-# If not using anaconda use next two lines:
-# import sys
-# sys.path.append(r'<your path to hw3>')
-
 import os
 import time
 import torch
@@ -9,8 +5,6 @@ import torch
 from cs285.infrastructure.rl_trainer import RL_Trainer
 from cs285.agents.dqn_agent import DQNAgent
 from cs285.infrastructure.dqn_utils import get_env_kwargs
-
-
 class Q_Trainer:
     def __init__(self, params):
         self.params = params
@@ -42,8 +36,6 @@ class Q_Trainer:
             collect_policy=self.rl_trainer.agent.actor,
             eval_policy=self.rl_trainer.agent.actor,
         )
-
-
 def main():
 
     import argparse
@@ -73,10 +65,8 @@ def main():
     parser.add_argument("--save_params", action="store_true")
 
     args = parser.parse_args()
-
-    # convert to dictionary
     params = vars(args)
-    params["video_log_freq"] = -1  # This param is not used for DQN
+    params["video_log_freq"] = -1
 
     if torch.cuda.is_available() and params["use_gpu"]:
         which_gpu = "cuda:" + str(params["which_gpu"])
@@ -85,11 +75,6 @@ def main():
     else:
         params["device"] = torch.device("cpu")
         print("Pytorch is running on the CPU")
-
-    ##################################
-    ### CREATE DIRECTORY FOR LOGGING
-    ##################################
-
     logdir_prefix = "dqn_"
     if args.double_q:
         logdir_prefix += "double_q_"
@@ -116,7 +101,5 @@ def main():
 
     trainer = Q_Trainer(params)
     trainer.run_training_loop()
-
-
 if __name__ == "__main__":
     main()

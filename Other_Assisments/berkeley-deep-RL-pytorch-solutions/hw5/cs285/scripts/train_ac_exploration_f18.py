@@ -1,4 +1,3 @@
-# If not using anaconda use next two lines:
 import sys
 
 sys.path.append(r"C:\Users\Matt\OneDrive\RL\UCBerkeley-deep-RL\hw5")
@@ -11,8 +10,6 @@ import time
 from multiprocessing import Process
 from cs285.infrastructure.rl_trainer import RL_Trainer
 from cs285.agents.ac_agent import Exploratory_ACAgent
-
-
 def train_AC(params):
 
     computation_graph_args = {
@@ -57,8 +54,6 @@ def train_AC(params):
 
     rl_trainer = RL_Trainer(params)
     rl_trainer.run_training_loop(params["n_iter"], policy=rl_trainer.agent.actor)
-
-
 def main():
     import argparse
 
@@ -80,14 +75,14 @@ def main():
     parser.add_argument("--n_experiments", "-e", type=int, default=1)
     parser.add_argument("--n_layers", "-l", type=int, default=2)
     parser.add_argument("--size", "-s", type=int, default=32)
-    parser.add_argument("--scalar_log_freq", type=int, default=1)  # -1 to disable
-    parser.add_argument("--use_gpu", "-gpu", default=True)  # -1 to disable
-    parser.add_argument("--which_gpu", default=0)  # -1 to disable
-    ########################################################################
+    parser.add_argument("--scalar_log_freq", type=int, default=1)
+    parser.add_argument("--use_gpu", "-gpu", default=True)
+    parser.add_argument("--which_gpu", default=0)
+
     parser.add_argument("--num_agent_train_steps_per_iter", type=int, default=1)
     parser.add_argument("--num_critic_updates_per_agent_update", type=int, default=1)
     parser.add_argument("--num_actor_updates_per_agent_update", type=int, default=1)
-    ########################################################################
+
     parser.add_argument("--bonus_coeff", "-bc", type=float, default=1e-3)
     parser.add_argument("--density_model", type=str, default="hist | rbf | ex2 | none")
     parser.add_argument("--kl_weight", "-kl", type=float, default=1e-2)
@@ -97,11 +92,7 @@ def main():
     parser.add_argument("--density_hiddim", "-dh", type=int, default=32)
     parser.add_argument("--replay_size", "-rs", type=int, default=int(1e6))
     parser.add_argument("--sigma", "-sig", type=float, default=0.2)
-    ########################################################################
-
     args = parser.parse_args()
-
-    # convert to dictionary
     params = vars(args)
 
     if torch.cuda.is_available() and params["use_gpu"]:
@@ -147,13 +138,7 @@ def main():
         p = Process(target=train_AC(params), args=tuple())
         p.start()
         processes.append(p)
-        # if you comment in the line below, then the loop will block
-        # until this process finishes
-        # p.join()
-
     for p in processes:
         p.join()
-
-
 if __name__ == "__main__":
     main()

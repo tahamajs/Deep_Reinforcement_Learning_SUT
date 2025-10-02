@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from gymnasium.envs.registration import register
 
 register(

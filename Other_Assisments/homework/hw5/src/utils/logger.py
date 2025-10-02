@@ -12,8 +12,6 @@ import json
 import time
 from collections import defaultdict
 import numpy as np
-
-
 class Logger:
     """Simple logger for RL experiments."""
 
@@ -26,20 +24,12 @@ class Logger:
         """
         self.output_dir = output_dir or "logs"
         self.exp_name = exp_name or f"exp_{int(time.time())}"
-
-        # Create output directory
         self.log_dir = os.path.join(self.output_dir, self.exp_name)
         os.makedirs(self.log_dir, exist_ok=True)
-
-        # Initialize log files
         self.scalar_file = os.path.join(self.log_dir, "scalars.jsonl")
         self.config_file = os.path.join(self.log_dir, "config.json")
-
-        # In-memory storage
         self.scalars = defaultdict(list)
         self.config = {}
-
-        # Current step
         self.step = 0
 
     def log_config(self, config_dict):
@@ -63,11 +53,7 @@ class Logger:
         if step is None:
             step = self.step
             self.step += 1
-
-        # Store in memory
         self.scalars[key].append((step, value))
-
-        # Write to file
         log_entry = {"step": step, "key": key, "value": value, "timestamp": time.time()}
 
         with open(self.scalar_file, "a") as f:
@@ -152,8 +138,6 @@ class Logger:
                 stats = self.get_scalar_stats(key)
                 if stats:
                     print(f"  {key}: {stats['mean']:.3f} ± {stats['std']:.3f}")
-
-
 class WandBLogger(Logger):
     """Weights & Biases logger."""
 

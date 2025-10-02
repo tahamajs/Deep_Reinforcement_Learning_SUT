@@ -1,7 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-#!/usr/bin/env python
-# coding: utf-8
-
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from builtins import input
@@ -9,8 +5,6 @@ from builtins import input
 import gymnasium as gym
 import deeprl_hw2q2.lake_envs as lake_env
 import time
-
-
 def run_random_policy(env):
     """Run a random policy for the given environment.
 
@@ -31,7 +25,7 @@ def run_random_policy(env):
     """
     initial_state = env.reset()
     env.render()
-    time.sleep(1)  # just pauses so you can see the output
+    time.sleep(1)
 
     total_reward = 0
     num_steps = 0
@@ -49,12 +43,8 @@ def run_random_policy(env):
         time.sleep(1)
 
     return total_reward, num_steps
-
-
 def print_env_info(env):
     print('Environment has %d states and %d actions.' % (env.nS, env.nA))
-
-
 def print_model_info(env, state, action):
     transition_table_row = env.P[state][action]
     print(
@@ -67,10 +57,8 @@ def print_model_info(env, state, action):
         print(
             '\tTransitioning to %s state %d with probability %f and reward %f'
             % (state_type, nextstate, prob, reward))
-
-
 def main():
-    # create the environment
+
     env = gym.make('Deterministic-4x4-FrozenLake-v0')
 
     print_env_info(env)
@@ -83,7 +71,5 @@ def main():
     total_reward, num_steps = run_random_policy(env)
     print('Agent received total reward of: %f' % total_reward)
     print('Agent took %d steps' % num_steps)
-
-
 if __name__ == '__main__':
     main()

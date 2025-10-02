@@ -11,8 +11,6 @@ import matplotlib.pyplot as plt
 from typing import List, Dict, Tuple, Set, Optional
 from collections import defaultdict
 import random
-
-
 class CausalGraph:
     """Represents a causal graph structure"""
 
@@ -67,7 +65,7 @@ class CausalGraph:
             co_parents.update(self.get_parents(child))
 
         markov_blanket = parents | children | co_parents
-        markov_blanket.discard(var)  # Remove the variable itself
+        markov_blanket.discard(var)
 
         return markov_blanket
 
@@ -90,13 +88,11 @@ class CausalGraph:
         plt.axis("off")
         plt.tight_layout()
         plt.show()
-
-
 class PCCausalDiscovery:
     """PC algorithm for causal discovery"""
 
     def __init__(self, alpha: float = 0.05, max_cond_set_size: int = 3):
-        self.alpha = alpha  # Significance level for independence tests
+        self.alpha = alpha
         self.max_cond_set_size = max_cond_set_size
 
     def conditional_independence_test(
@@ -124,9 +120,9 @@ class PCCausalDiscovery:
                 corr, p_value = stats.pearsonr(residual_X, residual_Y)
                 return p_value > self.alpha, p_value
             else:
-                return True, 1.0  # Perfect dependence through Z
+                return True, 1.0
         except:
-            return True, 1.0  # Assume independence if test fails
+            return True, 1.0
 
     def discover_structure(self, data: np.ndarray, var_names: List[str]) -> CausalGraph:
         """Discover causal structure using PC algorithm"""
@@ -197,8 +193,6 @@ class PCCausalDiscovery:
                 graph.add_edge(var_names[j], var_names[i])
 
         return graph
-
-
 class CausalMechanism(nn.Module):
     """Learn individual causal mechanisms P(X_j | pa(X_j))"""
 
@@ -207,11 +201,11 @@ class CausalMechanism(nn.Module):
 
         if n_parents == 0:
             self.mechanism = nn.Sequential(
-                nn.Linear(1, hidden_dim),  # Input is just noise
+                nn.Linear(1, hidden_dim),
                 nn.ReLU(),
                 nn.Linear(hidden_dim, hidden_dim),
                 nn.ReLU(),
-                nn.Linear(hidden_dim, 2),  # Mean and log-std
+                nn.Linear(hidden_dim, 2),
             )
         else:
             self.mechanism = nn.Sequential(
@@ -219,7 +213,7 @@ class CausalMechanism(nn.Module):
                 nn.ReLU(),
                 nn.Linear(hidden_dim, hidden_dim),
                 nn.ReLU(),
-                nn.Linear(hidden_dim, 2),  # Mean and log-std
+                nn.Linear(hidden_dim, 2),
             )
 
         self.n_parents = n_parents
@@ -247,8 +241,6 @@ class CausalMechanism(nn.Module):
             noise = torch.randn_like(mean)
 
         return mean + std * noise
-
-
 class CausalWorldModel(nn.Module):
     """World model that respects causal structure"""
 
@@ -274,7 +266,7 @@ class CausalWorldModel(nn.Module):
             self.mechanisms[var] = CausalMechanism(n_parents, hidden_dim)
 
         self.encoder = nn.Sequential(
-            nn.Linear(state_dim * 2, hidden_dim),  # Current and next state
+            nn.Linear(state_dim * 2, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
@@ -379,8 +371,6 @@ class CausalWorldModel(nn.Module):
 
         next_state = torch.cat(next_state_components, dim=-1)
         return next_state
-
-
 class CounterfactualPolicyEvaluator:
     """Evaluate policies using counterfactual reasoning"""
 
@@ -433,10 +423,8 @@ class CounterfactualPolicyEvaluator:
         self, state: np.ndarray, cf_action: np.ndarray, observed_reward: float
     ) -> float:
         """Compute counterfactual reward (simplified heuristic)"""
-        action_quality = np.linalg.norm(cf_action)  # Simplified metric
+        action_quality = np.linalg.norm(cf_action)
         return observed_reward * (1 + 0.1 * action_quality)
-
-
 class CausalRLAgent:
     """RL Agent that uses causal reasoning for robust learning"""
 
@@ -450,19 +438,15 @@ class CausalRLAgent:
     ):
         self.n_arms = n_arms
         self.n_contexts = n_contexts
-        self.state_dim = n_contexts  # Context as state
+        self.state_dim = n_contexts
         self.action_dim = n_arms
-
-        # Create simple causal graph
         variables = [f"context_{i}" for i in range(n_contexts)] + [
             f"arm_{j}" for j in range(n_arms)
         ]
         self.causal_graph = CausalGraph(variables)
-
-        # Add some causal relationships
         for i in range(n_contexts):
             for j in range(n_arms):
-                if np.random.random() > 0.5:  # Random causal links
+                if np.random.random() > 0.5:
                     self.causal_graph.add_edge(f"context_{i}", f"arm_{j}")
 
         self.world_model = CausalWorldModel(
@@ -524,8 +508,6 @@ class CausalRLAgent:
         """Train the agent for one step"""
         if len(self.replay_buffer) < 32:
             return {}
-
-        # Sample batch
         batch = random.sample(self.replay_buffer, 32)
         states, actions, rewards, next_states, dones = zip(*batch)
 
@@ -534,20 +516,16 @@ class CausalRLAgent:
         rewards = torch.FloatTensor(rewards)
         next_states = torch.FloatTensor(np.array(next_states))
         dones = torch.FloatTensor(dones)
-
-        # Train world model
         transitions = [
             {"state": s, "action": a, "next_state": ns}
             for s, a, ns in zip(states, actions, next_states)
         ]
         model_loss = self.train_world_model(transitions)
-
-        # Policy and value update
         trajectories = [{"states": states, "actions": actions, "rewards": rewards}]
 
         policy_loss, value_loss = self.causal_policy_gradient(trajectories)
 
         return {
-            "causal_strength": 0.5,  # Placeholder
+            "causal_strength": 0.5,
             "counterfactual_regret": value_loss,
         }

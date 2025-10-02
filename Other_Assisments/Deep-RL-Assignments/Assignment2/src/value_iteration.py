@@ -1,10 +1,6 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import numpy as np
 from src.utils import value_function_to_policy
 from src.visualization import display_policy_letters, value_func_heatmap
-
-
 def value_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
     """Runs value iteration for a given gamma and environment.
 
@@ -25,7 +21,7 @@ def value_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
     np.ndarray, iteration
       The value function and the number of iterations it took to converge.
     """
-    value_func = np.zeros(env.nS)  # initialize value function
+    value_func = np.zeros(env.nS)
     next_value_func = np.zeros(env.nS)
     iters = 0
     delta = np.ones(env.nS)
@@ -34,7 +30,7 @@ def value_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
         for state in range(env.nS):
             max_value = -np.inf
             for action in range(env.nA):
-                # Iterate over all the future states
+
                 new_value = 0
                 for prob, nextstate, reward, is_terminal in env.P[state][action]:
                     prob = env.T[state, action, nextstate]
@@ -57,8 +53,6 @@ def value_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
     display_policy_letters(env, policy)
     value_func_heatmap(env, value_func)
     return value_func, iters
-
-
 def value_iteration_async_ordered(env, gamma, max_iterations=int(1e3), tol=1e-3):
     """Runs value iteration for a given gamma and environment.
     Updates states in their 1-N order.
@@ -80,7 +74,7 @@ def value_iteration_async_ordered(env, gamma, max_iterations=int(1e3), tol=1e-3)
     np.ndarray, iteration
       The value function and the number of iterations it took to converge.
     """
-    value_func = np.zeros(env.nS)  # initialize value function
+    value_func = np.zeros(env.nS)
     iters = 0
     delta = np.ones(env.nS)
     while iters < max_iterations and np.any((delta > tol)):
@@ -88,7 +82,7 @@ def value_iteration_async_ordered(env, gamma, max_iterations=int(1e3), tol=1e-3)
         for state in range(env.nS):
             max_value = -np.inf
             for action in range(env.nA):
-                # Iterate over all the future states
+
                 new_value = 0
                 for prob, nextstate, reward, is_terminal in env.P[state][action]:
                     prob = env.T[state, action, nextstate]
@@ -110,8 +104,6 @@ def value_iteration_async_ordered(env, gamma, max_iterations=int(1e3), tol=1e-3)
     display_policy_letters(env, policy)
     value_func_heatmap(env, value_func)
     return value_func, iters
-
-
 def value_iteration_async_randperm(env, gamma, max_iterations=int(1e3), tol=1e-3):
     """Runs value iteration for a given gamma and environment.
     Updates states by randomly sampling index order permutations.
@@ -133,7 +125,7 @@ def value_iteration_async_randperm(env, gamma, max_iterations=int(1e3), tol=1e-3
     np.ndarray, iteration
       The value function and the number of iterations it took to converge.
     """
-    value_func = np.zeros(env.nS)  # initialize value function
+    value_func = np.zeros(env.nS)
     iters = 0
     delta = np.ones(env.nS)
     while iters < max_iterations and np.any((delta > tol)):
@@ -143,7 +135,7 @@ def value_iteration_async_randperm(env, gamma, max_iterations=int(1e3), tol=1e-3
         for state in states:
             max_value = -np.inf
             for action in range(env.nA):
-                # Iterate over all the future states
+
                 new_value = 0
                 for prob, nextstate, reward, is_terminal in env.P[state][action]:
                     prob = env.T[state, action, nextstate]
@@ -165,8 +157,6 @@ def value_iteration_async_randperm(env, gamma, max_iterations=int(1e3), tol=1e-3
     display_policy_letters(env, policy)
     value_func_heatmap(env, value_func)
     return value_func, iters
-
-
 def value_iteration_async_custom(env, gamma, max_iterations=int(1e3), tol=1e-3):
     """Runs value iteration for a given gamma and environment.
     Updates states by student-defined heuristic.
@@ -188,5 +178,5 @@ def value_iteration_async_custom(env, gamma, max_iterations=int(1e3), tol=1e-3):
     np.ndarray, iteration
       The value function and the number of iterations it took to converge.
     """
-    value_func = np.zeros(env.nS)  # initialize value function
+    value_func = np.zeros(env.nS)
     return value_func, 0

@@ -1,14 +1,9 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-
-
 class ReturnWrapper(gym.Wrapper):
     def get_episode_rewards(self):
         return list(self.env.return_queue)
-
-
 class NoopResetEnv(gym.Wrapper):
     def __init__(self, env, noop_max=30):
         """Sample initial states by taking random number of no-ops on reset.
@@ -28,7 +23,7 @@ class NoopResetEnv(gym.Wrapper):
         else:
             noops = self.unwrapped.np_random.randint(
                 1, self.noop_max + 1
-            )  # pylint: disable=E1101
+            )
         assert noops > 0
         obs = None
         for _ in range(noops):
@@ -39,8 +34,6 @@ class NoopResetEnv(gym.Wrapper):
 
     def step(self, ac):
         return self.env.step(ac)
-
-
 class FireResetEnv(gym.Wrapper):
     def __init__(self, env):
         """Take action on reset for environments that are fixed until firing."""
@@ -60,8 +53,6 @@ class FireResetEnv(gym.Wrapper):
 
     def step(self, ac):
         return self.env.step(ac)
-
-
 class EpisodicLifeEnv(gym.Wrapper):
     def __init__(self, env):
         """Make end-of-life == end-of-episode, but only reset on true game over.
@@ -74,13 +65,8 @@ class EpisodicLifeEnv(gym.Wrapper):
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
         self.was_real_done = done
-        # check current lives, make loss of life terminal,
-        # then update lives to handle bonus lives
         lives = self.env.unwrapped.ale.lives()
         if lives < self.lives and lives > 0:
-            # for Qbert sometimes we stay in lives == 0 condition for a few frames
-            # so it's important to keep lives > 0, so that we only reset once
-            # the environment advertises done.
             done = True
         self.lives = lives
         return obs, reward, done, info
@@ -93,17 +79,15 @@ class EpisodicLifeEnv(gym.Wrapper):
         if self.was_real_done:
             obs = self.env.reset(**kwargs)
         else:
-            # no-op step to advance from terminal/lost life state
+
             obs, _, _, _ = self.env.step(0)
         self.lives = self.env.unwrapped.ale.lives()
         return obs
-
-
 class MaxAndSkipEnv(gym.Wrapper):
     def __init__(self, env, skip=4):
         """Return only every `skip`-th frame"""
         gym.Wrapper.__init__(self, env)
-        # most recent raw observations (for max pooling across time steps)
+
         self._obs_buffer = np.zeros((2,) + env.observation_space.shape, dtype=np.uint8)
         self._skip = skip
 
@@ -120,16 +104,12 @@ class MaxAndSkipEnv(gym.Wrapper):
             total_reward += reward
             if done:
                 break
-        # Note that the observation on the done=True frame
-        # doesn't matter
         max_frame = self._obs_buffer.max(axis=0)
 
         return max_frame, total_reward, done, info
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
-
-
 def _process_frame84(frame):
     import cv2
 
@@ -139,8 +119,6 @@ def _process_frame84(frame):
     x_t = resized_screen[18:102, :]
     x_t = np.reshape(x_t, [84, 84, 1])
     return x_t.astype(np.uint8)
-
-
 class ProcessFrame84(gym.Wrapper):
     def __init__(self, env=None):
         super(ProcessFrame84, self).__init__(env)
@@ -154,8 +132,6 @@ class ProcessFrame84(gym.Wrapper):
     def reset(self):
         obs, _ = self.env.reset()
         return _process_frame84(obs)
-
-
 class ClipRewardEnv(gym.RewardWrapper):
     def __init__(self, env):
         gym.RewardWrapper.__init__(self, env)
@@ -163,8 +139,6 @@ class ClipRewardEnv(gym.RewardWrapper):
     def reward(self, reward):
         """Bin reward to {+1, 0, -1} by its sign."""
         return np.sign(reward)
-
-
 def wrap_deepmind_ram(env):
     env = EpisodicLifeEnv(env)
     env = NoopResetEnv(env, noop_max=30)
@@ -173,8 +147,6 @@ def wrap_deepmind_ram(env):
         env = FireResetEnv(env)
     env = ClipRewardEnv(env)
     return env
-
-
 def wrap_deepmind(env):
     """Configure environment for DeepMind-style Atari."""
     env = EpisodicLifeEnv(env)

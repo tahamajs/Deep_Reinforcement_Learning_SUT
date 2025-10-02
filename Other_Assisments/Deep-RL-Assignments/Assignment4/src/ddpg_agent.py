@@ -16,8 +16,6 @@ from torch.utils.tensorboard import SummaryWriter
 from .actor import ActorNetwork
 from .critic import CriticNetwork, CriticNetworkTD3
 from .replay_buffer import ReplayBuffer
-
-
 class EpsilonNormalActionNoise:
     """Action noise for exploration in continuous action spaces."""
 
@@ -48,8 +46,6 @@ class EpsilonNormalActionNoise:
             )
         else:
             return np.random.uniform(-1.0, 1.0, size=action.shape)
-
-
 class DDPGAgent:
     """DDPG Agent with support for DDPG, TD3, and HER algorithms."""
 
@@ -72,12 +68,8 @@ class DDPGAgent:
 
         self.timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         self.weights_path = f"models/{self.timestamp}"
-
-        # Data for plotting
-        self.rewards_data = []  # n * [epoch, mean(returns), std(returns)]
+        self.rewards_data = []
         self.count = 0
-
-        # Initialize components
         self.action_selector = EpsilonNormalActionNoise(0, 0.05, self.args.epsilon)
         self.memory = ReplayBuffer(
             args.buffer_size, args.burn_in, self.state_dim, self.action_dim, self.device
@@ -115,19 +107,13 @@ class DDPGAgent:
                 self.device,
                 args.custom_init,
             )
-
-        # Load model if weights path is provided
         if args.weights_path:
             self.load_model()
-
-        # Initialize training components if training
         if args.train:
             self.logdir = f"logs/{self.timestamp}"
             self.imgdir = f"imgs/{self.timestamp}"
             os.makedirs(self.imgdir, exist_ok=True)
             self.summary_writer = SummaryWriter(self.logdir)
-
-            # Save hyperparameters
             with open(f"{self.logdir}/training_parameters.json", "w") as f:
                 json.dump(vars(self.args), f, indent=4)
 
@@ -213,8 +199,6 @@ class DDPGAgent:
 
             success_vec.append(success)
             test_rewards.append(total_reward)
-
-            # Plot trajectories for first 9 episodes if rendering is enabled
             if i < 9 and self.args.render:
                 plt.subplot(3, 3, i + 1)
                 s_vec = np.array(s_vec)
@@ -258,17 +242,13 @@ class DDPGAgent:
             state = torch.tensor(state, device=self.device).float()
 
             while not done:
-                # Select action with exploration noise
+
                 with torch.no_grad():
                     action = self.actor.policy(state)
                     env_action = self.action_selector(action.cpu().numpy())
                     action = torch.tensor(env_action, device=self.device).float()
-
-                # Take step in environment
                 next_state, reward, done, info = self.env.step(env_action)
                 next_state = torch.tensor(next_state, device=self.device).float()
-
-                # Store transition in replay buffer
                 self.memory.add(
                     state,
                     action,
@@ -276,8 +256,6 @@ class DDPGAgent:
                     next_state,
                     torch.tensor(done, device=self.device),
                 )
-
-                # Store trajectory data for HER
                 if self.args.algorithm == "her":
                     trajectory_data.append(
                         [
@@ -294,12 +272,8 @@ class DDPGAgent:
 
                 if not done:
                     state = next_state.clone().detach()
-
-            # Add HER experience if using HER
             if self.args.algorithm == "her":
                 self.add_hindsight_replay_experience(trajectory_data)
-
-            # Train networks if buffer is ready
             if self.memory.burned_in:
                 if self.args.algorithm in ["ddpg", "her"]:
                     critic_loss, policy_loss, new_metric = self.train_ddpg()
@@ -314,15 +288,11 @@ class DDPGAgent:
                         self.summary_writer.add_scalar(
                             "train/policy_loss", policy_loss, i
                         )
-
-            # Logging
             if self.memory.burned_in and i % self.args.log_interval == 0:
                 print(f"Episode {i}: Total reward = {total_reward}")
                 print(f"\tTD loss = {critic_loss / step:.2f}")
                 self.summary_writer.add_scalar("train/trajectory_length", step, i)
                 self.summary_writer.add_scalar("train/critic_loss", critic_loss, i)
-
-            # Evaluation
             if i % self.args.test_interval == 0:
                 successes, mean_rewards, std_rewards = self.evaluate(10)
                 self.rewards_data.append([i, mean_rewards, std_rewards])
@@ -336,8 +306,6 @@ class DDPGAgent:
                 )
                 with open(self.outfile, "a") as f:
                     f.write(f"{successes:.2f}, {mean_rewards:.2f},\n")
-
-            # Save model
             if i % self.args.save_interval == 0:
                 self.save_model(i)
 
@@ -350,10 +318,8 @@ class DDPGAgent:
         Args:
             trajectory: (list) list of [state, action, reward, next_state, done] tuples
         """
-        # Get new goal location (last location of box)
-        goal = trajectory[-1][3][2:4]
 
-        # Relabel trajectory with new goal
+        goal = trajectory[-1][3][2:4]
         for state, action, reward, next_state, done in trajectory:
             state[-2:] = goal.copy()
             next_state[-2:] = goal.copy()
@@ -452,8 +418,6 @@ class DDPGAgent:
             "plots", *self.args.weights_path.split("/")[-2:]
         ).replace(".h5", ".png")
         os.makedirs(os.path.dirname(filename), exist_ok=True)
-
-        # Plot error bars with mean and std of rewards
         data = np.asarray(self.rewards_data)
         plt.errorbar(
             data[:, 0],

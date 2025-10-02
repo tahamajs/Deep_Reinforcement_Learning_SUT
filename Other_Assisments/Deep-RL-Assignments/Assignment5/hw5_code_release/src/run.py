@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import matplotlib.pyplot as plt
 import numpy as np
 import gymnasium as gym
@@ -12,32 +11,22 @@ import torch
 from agent import Agent, RandomPolicy
 from mpc import MPC
 from model import PENN
-
-# Training params
 TASK_HORIZON = 40
 PLAN_HORIZON = 5
-
-# CEM params
 POPSIZE = 200
 NUM_ELITES = 20
 MAX_ITERS = 5
-
-# Model params
 LR = 1e-3
-
-# Dims
 STATE_DIM = 8
 
 LOG_DIR = './data'
-
-
 class ExperimentGTDynamics(object):
     def __init__(self, env_name='Pushing2D-v1', mpc_params=None):
         self.env = gym.make(env_name)
         self.task_horizon = TASK_HORIZON
 
         self.agent = Agent(self.env)
-        # Does not need model
+
         self.warmup = False
         mpc_params['use_gt_dynamics'] = True
         self.cem_policy = MPC(self.env, PLAN_HORIZON, None, POPSIZE, NUM_ELITES, MAX_ITERS, use_random_optimizer=False, **mpc_params)
@@ -55,18 +44,12 @@ class ExperimentGTDynamics(object):
         avg_return = np.mean([sample["reward_sum"] for sample in samples])
         avg_success = np.mean([sample["rewards"][-1] == 0 for sample in samples])
         return avg_return, avg_success
-
-
 class ExperimentModelDynamics:
     def __init__(self, env_name='Pushing2D-v1', num_nets=1, mpc_params=None):
         self.env = gym.make(env_name)
-        # self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
         self.device = torch.device('cpu')
-
-
         self.task_horizon = TASK_HORIZON
-
-        # Tensorboard logging.
         self.timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         self.environment_name = "pusher"
         self.logdir = 'logs/%s/%s' % (self.environment_name, self.timestamp)
@@ -114,8 +97,6 @@ class ExperimentModelDynamics:
         for i in range(num_train_epochs):
             print("####################################################################")
             print("Starting training epoch %d." % (i + 1))
-
-            
             for j in range(num_episodes_per_epoch):
                 new_sample = self.agent.sample(
                         self.task_horizon, self.cem_policy
@@ -142,51 +123,20 @@ class ExperimentModelDynamics:
                 self.summary_writer.add_scalar("test/Rand-AverageSuccess", rand_avg_success, i)
                 self.summary_writer.add_scalar("test/CEM-AverageReturn", cem_avg_return, i)
                 self.summary_writer.add_scalar("test/Rand-AverageReturn", rand_avg_return, i)
-
-
 def test_cem_gt_dynamics(num_episode=10):
-    # mpc_params = {'use_mpc': False, 'num_particles': 1}
-    # exp = ExperimentGTDynamics(env_name='Pushing2D-v1', mpc_params=mpc_params)
-    # avg_reward, avg_success = exp.test(num_episode)
-    # print('CEM PushingEnv: avg_reward: {}, avg_success: {}'.format(avg_reward, avg_success))
-
-    # mpc_params = {'use_mpc': True, 'num_particles': 1}
-    # exp = ExperimentGTDynamics(env_name='Pushing2D-v1', mpc_params=mpc_params)
-    # avg_reward, avg_success = exp.test(num_episode)
-    # print('MPC PushingEnv: avg_reward: {}, avg_success: {}'.format(avg_reward, avg_success))
-    
-    # mpc_params = {'use_mpc': False, 'num_particles': 1}
-    # exp = ExperimentGTDynamics(env_name='Pushing2DNoisyControl-v1', mpc_params=mpc_params)
-    # avg_reward, avg_success = exp.test(num_episode)
-    # print('CEM PushingEnv Noisy: avg_reward: {}, avg_success: {}'.format(avg_reward, avg_success))
-    #
     mpc_params = {'use_mpc': True, 'num_particles': 1}
     exp = ExperimentGTDynamics(env_name='Pushing2DNoisyControl-v1', mpc_params=mpc_params)
     avg_reward, avg_success = exp.test(num_episode)
     print('MPC PushingEnv Noisy: avg_reward: {}, avg_success: {}'.format(avg_reward, avg_success))
-
-    # mpc_params = {'use_mpc': False, 'num_particles': 1}
-    # exp = ExperimentGTDynamics(env_name='Pushing2D-v1', mpc_params=mpc_params)
-    # avg_reward, avg_success = exp.test(num_episode, optimizer='random')
-    # print('MPC PushingEnv: avg_reward: {}, avg_success: {}'.format(avg_reward, avg_success))
-
-    # mpc_params = {'use_mpc': True, 'num_particles': 1}
-    # exp = ExperimentGTDynamics(env_name='Pushing2D-v1', mpc_params=mpc_params)
-    # avg_reward, avg_success = exp.test(num_episode, optimizer='random')
-    # print('MPC PushingEnv: avg_reward: {}, avg_success: {}'.format(avg_reward, avg_success))
-
-
 def train_single_dynamics(num_test_episode=50):
     num_nets = 1
     num_episodes = 1000
     num_epochs = 100
-    mpc_params = {'use_mpc': True, 'num_particles': 6} #temp
+    mpc_params = {'use_mpc': True, 'num_particles': 6}
     exp = ExperimentModelDynamics(env_name='Pushing2D-v1', num_nets=num_nets, mpc_params=mpc_params)
     exp.model_warmup(num_episodes=num_episodes, num_epochs=num_epochs)
 
     avg_reward, avg_success = exp.test(num_test_episode, optimizer='cem')
-
-
 def train_pets():
     num_nets = 2
     num_epochs = 500
@@ -199,10 +149,8 @@ def train_pets():
     exp.train(num_train_epochs=num_epochs,
               num_episodes_per_epoch=num_episodes_per_epoch,
               evaluation_interval=evaluation_interval)
-
-
 if __name__ == "__main__":
-    # test_cem_gt_dynamics(50)
+
     if(len(sys.argv[1:])<1):
         print("Noob enter 0 or 1")
     elif(sys.argv[1] == '0'):

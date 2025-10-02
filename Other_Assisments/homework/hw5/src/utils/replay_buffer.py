@@ -10,8 +10,6 @@ Student ID: 400206262
 import numpy as np
 from collections import deque
 import random
-
-
 class ReplayBuffer:
     """Experience replay buffer."""
 
@@ -42,8 +40,6 @@ class ReplayBuffer:
             Dictionary of batched experiences
         """
         batch = random.sample(self.buffer, min(batch_size, len(self.buffer)))
-
-        # Unzip the batch
         batch_arrays = list(zip(*batch))
 
         return {
@@ -65,8 +61,6 @@ class ReplayBuffer:
     def clear(self):
         """Clear the buffer."""
         self.buffer.clear()
-
-
 class PrioritizedReplayBuffer(ReplayBuffer):
     """Prioritized experience replay buffer."""
 
@@ -102,21 +96,13 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         """
         if len(self.buffer) == 0:
             return None
-
-        # Compute sampling probabilities
         priorities = np.array(self.priorities)
         probs = priorities**self.alpha
         probs /= probs.sum()
-
-        # Sample indices
         indices = np.random.choice(len(self.buffer), batch_size, p=probs)
         batch = [self.buffer[i] for i in indices]
-
-        # Compute importance sampling weights
         weights = (len(self.buffer) * probs[indices]) ** (-self.beta)
         weights /= weights.max()
-
-        # Unzip the batch
         batch_arrays = list(zip(*batch))
 
         return {
@@ -139,8 +125,6 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         for idx, priority in zip(indices, priorities):
             self.priorities[idx] = priority + self.epsilon
             self.max_priority = max(self.max_priority, priority + self.epsilon)
-
-
 class TrajectoryBuffer:
     """Buffer for storing complete trajectories."""
 

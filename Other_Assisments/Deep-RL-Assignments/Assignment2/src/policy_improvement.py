@@ -1,8 +1,4 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import numpy as np
-
-
 def improve_policy(env, gamma, value_func, policy):
     """Performs policy improvement.
 

@@ -140,7 +140,7 @@ def run_quick_demo():
 
     print("\n📊 Running World Model Demo...")
     config = configs['world_model']
-    config.n_episodes = 10  # Reduced for demo
+    config.n_episodes = 10
 
     experiment = WorldModelExperiment(config, save_dir="demo_results")
     results = experiment.run_experiment()

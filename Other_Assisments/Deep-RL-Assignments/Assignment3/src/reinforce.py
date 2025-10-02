@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import os
 import pdb
 import sys
@@ -14,8 +13,6 @@ import torch.optim as optim
 import torch.nn.functional as F
 from tensorboardX import SummaryWriter
 import matplotlib.pyplot as plt
-
-
 class Model(torch.nn.Module):
     '''This class essentially defines the network architecture'''
     def __init__(self, input_dim, output_dim, hidden_size=64):
@@ -31,53 +28,33 @@ class Model(torch.nn.Module):
         x = F.relu(self.linear3(x))
         x = F.log_softmax(self.output(x), dim=1)
         return x
-
-
 class Reinforce():
     '''Implementation of the policy gradient method REINFORCE.'''
     def __init__(self, args, env, train=True):
         self.args = args
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-        # Create the environment.
         self.env = gym.make(env)
         self.environment_name = env
-
-        # Setup model.
         self.model = Model(input_dim=self.env.observation_space.shape[0],
             output_dim=self.env.action_space.n)
         self.model.apply(self.initialize_weights)
-
-        # Setup optimizer.
-        self.eps = 1e-10  # To avoid divide-by-zero error.
+        self.eps = 1e-10
         self.optimizer = optim.Adam(self.model.parameters(), lr=args.lr)
-
-        # Model weights path.
         self.timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         self.weights_path = 'models/%s/%s' % (self.environment_name, self.timestamp)
-
-        # Load pretrained weights.
         if args.weights_path: self.load_model()
         self.model.to(self.device)
-
-        # Video render mode.
         if args.render:
             self.model.eval()
             self.generate_episode(render=True)
             self.plot()
             return
-
-        # Data for plotting.
         self.utility_buffer = None
-        self.rewards_data = []  # n * [epoch, mean(returns), std(returns)]
-
-        # Network training mode.
+        self.rewards_data = []
         if train:
-            # Tensorboard logging.
+
             self.logdir = 'logs/%s/%s' % (self.environment_name, self.timestamp)
             self.summary_writer = SummaryWriter(self.logdir)
-
-            # Save hyper-parameters.
             with open(self.logdir + '/training_parameters.json', 'w') as f:
                 json.dump(vars(self.args), f, indent=4)
 
@@ -109,24 +86,16 @@ class Reinforce():
     def train(self):
         '''Trains the model on a single episode using REINFORCE.'''
         for epoch in range(self.args.num_episodes):
-            # Compute loss.
-            loss = self.generate_batch(epoch)
 
-            # Compute loss and policy gradient.
+            loss = self.generate_batch(epoch)
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
-
-            # Test the model.
             if epoch % self.args.test_interval == 0:
                 self.test(epoch)
-
-            # Logging.
             if epoch % self.args.log_interval == 0:
                 print('Epoch: {0:05d}/{1:05d} | Loss: {2:.3f}'.format(epoch, self.args.num_episodes, loss))
                 self.summary_writer.add_scalar('train/loss', loss, epoch)
-
-            # Save the model.
             if epoch % self.args.save_interval == 0:
                 self.save_model(epoch)
 
@@ -151,21 +120,15 @@ class Reinforce():
             return (returns * log_probs).mean().neg()
 
         while True:
-            # Generate episode data.
+
             returns, log_probs = self.generate_episode()
             self.summary_writer.add_scalar('train/trajectory_length', returns.size()[0], epoch)
 
             if self.utility_buffer is None: self.utility_buffer = returns * log_probs
             else: self.utility_buffer = torch.cat((self.utility_buffer, returns * log_probs))
-
-            # Keep generating data until size > batch_size.
             if self.utility_buffer.size()[0] > self.args.batch_size: break
-
-        # Sample sub-trajectory of given batch size and compute loss.
         batch = torch.narrow(self.utility_buffer, 0, 0, self.args.batch_size)
         loss = batch.mean().neg()
-
-        # Purge buffer.
         self.utility_buffer = torch.narrow(self.utility_buffer, 0,
             self.args.batch_size, self.utility_buffer.size()[0] - self.args.batch_size)
         return loss
@@ -181,8 +144,6 @@ class Reinforce():
         iters = 0
         done = False
         state = self.env.reset()
-
-        # Set video save path if render enabled.
         if render:
             save_path = 'videos/%s/epoch-%s' % (self.environment_name, self.checkpoint['epoch'])
             if not os.path.exists(save_path): os.makedirs(save_path)
@@ -193,45 +154,28 @@ class Reinforce():
         actions, log_probs = [], []
 
         while not done:
-            # Run policy on current state to log probabilities of actions.
+
             states.append(torch.tensor(state, device=self.device).float().unsqueeze(0))
             action_probs = self.model.forward(states[-1]).squeeze(0)
-
-            # Sample action from the log probabilities.
-            # Deterministic at test time, stochastic at train time.
             if test and self.args.det_eval: action = torch.argmax(action_probs)
             else: action = torch.argmax(torch.distributions.Multinomial(logits=action_probs).sample())
             actions.append(action)
             log_probs.append(action_probs[action])
-
-            # Run simulation with current action to get new state and reward.
             if render: monitor.render()
             state, reward, done, info = self.env.step(action.cpu().numpy())
             rewards.append(reward)
-
-            # Break if the episode takes too long.
             iters += 1
             if iters > self.args.max_iters: break
-
-        # Save video and close rendering.
         if render:
             monitor.close()
             print('\nCumulative Rewards:', np.sum(rewards))
             return
-
-        # Return cumulative rewards for test mode.
         if test: return np.sum(rewards)
-
-        # Flip rewards from T-1 to 0.
         rewards = torch.tensor(rewards[::-1], device=self.device)
-
-        # Compute the cumulative discounted returns.
         cumulative_return = 0
         for current_reward in rewards:
             cumulative_return = (cumulative_return * gamma) + current_reward
             returns.append(cumulative_return)
-
-        # Normalize returns.
         returns = torch.stack(returns)
         mean_return, std_return = returns.mean(), returns.std()
         returns = (returns - mean_return) / (std_return + self.eps)
@@ -239,11 +183,9 @@ class Reinforce():
         return returns, torch.stack(log_probs[::-1])
 
     def plot(self):
-        # Save the plot.
+
         filename = os.path.join('plots', *self.args.weights_path.split('/')[-2:]).replace('.h5', '.png')
         if not os.path.exists(os.path.dirname(filename)): os.makedirs(os.path.dirname(filename))
-
-        # Make error plot with mean, std of rewards.
         data = np.asarray(self.rewards_data)
         plt.errorbar(data[:, 0], data[:, 1], data[:, 2], lw=2.5, elinewidth=1.5,
             ecolor='grey', barsabove=True, capthick=2, capsize=3)
@@ -253,10 +195,8 @@ class Reinforce():
         plt.grid()
         plt.savefig(filename, dpi=300)
         plt.show()
-
-
 def parse_arguments():
-    # Command-line flags are defined here.
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--num_episodes', dest='num_episodes', type=int,
                         default=50000, help='Number of episodes to train on.')
@@ -286,16 +226,10 @@ def parse_arguments():
     parser.set_defaults(render=False)
 
     return parser.parse_args()
-
-
 def main():
-    # Parse command-line arguments.
-    args = parse_arguments()
 
-    # Train the model using REINFORCE.
+    args = parse_arguments()
     reinforce = Reinforce(args, env='LunarLander-v2')
     if not args.render: reinforce.train()
-
-
 if __name__ == '__main__':
     main()

@@ -22,10 +22,6 @@ from replay_buffer import ReplayBuffer, PPOReplayBuffer
 
 from point_mass import PointEnv
 from point_mass_observed import ObservedPointEnv
-
-#============================================================================================#
-# Utilities
-#============================================================================================#
 def minimize_and_clip(optimizer, objective, var_list, clip_val=10):
     """
     minimized `objective` using `optimizer` w.r.t. variables in
@@ -71,11 +67,6 @@ def build_rnn(x, h, output_size, scope, n_layers, size, activation=tf.tanh, outp
 
     hint: use `build_mlp()`
     """
-    #====================================================================================#
-    #                           ----------PROBLEM 2----------
-    #====================================================================================#
-    # YOUR CODE HERE
-
 def build_policy(x, h, output_size, scope, n_layers, size, gru_size, recurrent=True, activation=tf.tanh, output_activation=None):
     """
     build recurrent policy
@@ -137,14 +128,12 @@ def discount_cumsum(x, discount):
     return scipy.signal.lfilter([1], [1, float(-discount)], x[::-1], axis=0)[::-1]
 
 def setup_logger(logdir, locals_):
-    # Configure output directory for logging
+
     logz.configure_output_dir(logdir)
-    # Log experimental parameters
+
     args = inspect.getargspec(train_PG)[0]
     params = {k: locals_[k] if k in locals_ else None for k in args}
     logz.save_params(params)
-
-
 class Agent(object):
     def __init__(self, computation_graph_args, sample_trajectory_args, estimate_return_args):
         super(Agent, self).__init__()
@@ -178,10 +167,10 @@ class Agent(object):
 
     def init_tf_sess(self):
         tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)
-        tf_config.gpu_options.allow_growth = True # may need if using GPU
+        tf_config.gpu_options.allow_growth = True
         self.sess = tf.Session(config=tf_config)
-        self.sess.__enter__() # equivalent to `with self.sess:`
-        tf.global_variables_initializer().run() #pylint: disable=E1101
+        self.sess.__enter__()
+        tf.global_variables_initializer().run()
 
     def define_placeholders(self):
         """
@@ -227,7 +216,7 @@ class Agent(object):
                 sy_logstd: (batch_size, self.ac_dim)
 
         """
-        # ac_dim * 2 because we predict both mean and std
+
         sy_policy_params, sy_hidden = build_policy(sy_ob_no, sy_hidden, self.ac_dim*2, self.scope, n_layers=self.n_layers, size=self.size, gru_size=self.gru_size, recurrent=self.recurrent)
         return (sy_policy_params, sy_hidden)
 
@@ -294,31 +283,17 @@ class Agent(object):
             to get the policy gradient.
         """
         self.sy_ob_no, self.sy_ac_na, self.sy_adv_n, self.sy_hidden, self.sy_lp_n, self.sy_fixed_lp_n = self.define_placeholders()
-
-        # The policy takes in an observation and produces a distribution over the action space
         policy_outputs = self.policy_forward_pass(self.sy_ob_no, self.sy_hidden)
         self.policy_parameters = policy_outputs[:-1]
-
-        # unpack mean and variance
         self.policy_parameters = tf.split(self.policy_parameters[0], 2, axis=1)
-
-        # We can sample actions from this action distribution.
-        # This will be called in Agent.sample_trajectory() where we generate a rollout.
         self.sy_sampled_ac = self.sample_action(self.policy_parameters)
-
-        # We can also compute the logprob of the actions that were actually taken by the policy
-        # This is used in the loss function.
         self.sy_lp_n = self.get_log_prob(self.policy_parameters, self.sy_ac_na)
-
-        # PPO critic update
         critic_regularizer = tf.contrib.layers.l2_regularizer(1e-3) if self.l2reg else None
         self.critic_prediction = tf.squeeze(build_critic(self.sy_ob_no, self.sy_hidden, 1, 'critic_network', n_layers=self.n_layers, size=self.size, gru_size=self.gru_size, recurrent=self.recurrent, regularizer=critic_regularizer))
         self.sy_target_n = tf.placeholder(shape=[None], name="critic_target", dtype=tf.float32)
         self.critic_loss = tf.losses.mean_squared_error(self.sy_target_n, self.critic_prediction)
         self.critic_weights = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='critic_network')
         self.critic_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.critic_loss)
-
-        # PPO actor update
         self.sy_fixed_log_prob_n = tf.placeholder(shape=[None], name="fixed_log_prob", dtype=tf.float32)
         self.policy_surr_loss = self.ppo_loss(self.sy_lp_n, self.sy_fixed_lp_n, self.sy_adv_n)
         self.policy_weights = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope)
@@ -326,7 +301,7 @@ class Agent(object):
         self.policy_update_op = minimize_and_clip(optimizer, self.policy_surr_loss, var_list=self.policy_weights, clip_val=40)
 
     def sample_trajectories(self, itr, env, min_timesteps, is_evaluation=False):
-        # Collect paths until we have enough timesteps
+
         timesteps_this_batch = 0
         stats = []
         while True:
@@ -357,9 +332,6 @@ class Agent(object):
         """
         env.reset_task(is_evaluation=is_evaluation)
         stats = []
-        #====================================================================================#
-        #                           ----------PROBLEM 1----------
-        #====================================================================================#
         ep_steps = 0
         steps = 0
 
@@ -374,42 +346,19 @@ class Agent(object):
 
             if ep_steps == 0:
                 ob = env.reset()
-                # first meta ob has only the observation
-                # set a, r, d to zero, construct first meta observation in meta_obs
-                # YOUR CODE HERE
-
                 steps += 1
-
-            # index into the meta_obs array to get the window that ends with the current timestep
-            # please name the windowed observation `in_` for compatibilty with the code that adds to the replay buffer (lines 418, 420)
-            # YOUR CODE HERE
-
             hidden = np.zeros((1, self.gru_size), dtype=np.float32)
-
-            # get action from the policy
-            # YOUR CODE HERE
-
-            # step the environment
-            # YOUR CODE HERE
-
             ep_steps += 1
 
             done = bool(done) or ep_steps == self.max_path_length
-            # construct the meta-observation and add it to meta_obs
-            # YOUR CODE HERE
-
             rewards.append(rew)
             steps += 1
-
-            # add sample to replay buffer
             if is_evaluation:
                 self.val_replay_buffer.add_sample(in_, ac, rew, done, hidden, env._goal)
             else:
                 self.replay_buffer.add_sample(in_, ac, rew, done, hidden, env._goal)
-
-            # start new episode
             if done:
-                # compute stats over trajectory
+
                 s = dict()
                 s['rewards']= rewards[-ep_steps:]
                 s['ep_len'] = ep_steps
@@ -468,8 +417,6 @@ class Agent(object):
 
         advantages = (advantages - np.mean(advantages, axis=0)) / np.std(advantages, axis=0)
         return advantages, returns
-
-
     def estimate_return(self, ob_no, re_n, hidden, masks):
         """
         estimates the returns over a set of trajectories.
@@ -574,8 +521,6 @@ class Agent(object):
         entropy = tf.reduce_sum(-(log_probs * probs))
         policy_surr_loss -= entropy_coeff * entropy
         return policy_surr_loss
-
-
 def train_PG(
         exp_name,
         env_name,
@@ -602,39 +547,19 @@ def train_PG(
         ):
 
     start = time.time()
-
-    #========================================================================================#
-    # Set Up Logger
-    #========================================================================================#
     setup_logger(logdir, locals())
-
-    #========================================================================================#
-    # Set Up Env
-    #========================================================================================#
-
-    # Make the gym environment
     envs = {'pm': PointEnv,
             'pm-obs': ObservedPointEnv,
             }
     env = envs[env_name](num_tasks)
-
-    # Set random seeds
     tf.set_random_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
     env.seed(seed)
-
-    # Maximum length for episodes
     max_path_length = max_path_length
-
-    # Observation and action sizes
     ob_dim = env.observation_space.shape[0]
     ac_dim = env.action_space.shape[0]
-    task_dim = len(env._goal) # rude, sorry
-
-    #========================================================================================#
-    # Initialize Agent
-    #========================================================================================#
+    task_dim = len(env._goal)
     computation_graph_args = {
         'n_layers': n_layers,
         'ob_dim': ob_dim,
@@ -662,17 +587,8 @@ def train_PG(
     }
 
     agent = Agent(computation_graph_args, sample_trajectory_args, estimate_return_args)
-
-    # build computation graph
     agent.build_computation_graph()
-
-
-    # tensorflow: config, session, variable initialization
     agent.init_tf_sess()
-
-    #========================================================================================#
-    # Training Loop
-    #========================================================================================#
     def unpack_sample(data):
         '''
         unpack a sample from the replay buffer
@@ -683,26 +599,18 @@ def train_PG(
         hi = data["hiddens"]
         ma = 1 - data["terminals"]
         return ob, ac, re, hi, ma
-
-    # construct PPO replay buffer, perhaps rude to do outside the agent
     ppo_buffer = PPOReplayBuffer(agent.replay_buffer)
 
     total_timesteps = 0
     for itr in range(n_iter):
-        # for PPO: flush the replay buffer!
-        ppo_buffer.flush()
 
-        # sample trajectories to fill agent's replay buffer
+        ppo_buffer.flush()
         print("********** Iteration %i ************"%itr)
         stats = []
         for _ in range(num_tasks):
             s, timesteps_this_batch = agent.sample_trajectories(itr, env, min_timesteps_per_batch)
             total_timesteps += timesteps_this_batch
             stats += s
-
-        # compute the log probs, advantages, and returns for all data in agent's buffer
-        # store in ppo buffer for use in multiple ppo updates
-        # TODO: should move inside the agent probably
         data = agent.replay_buffer.all_batch()
         ob_no, ac_na, re_n, hidden, masks = unpack_sample(data)
         fixed_log_probs = agent.sess.run(agent.sy_lp_n,
@@ -710,8 +618,6 @@ def train_PG(
         q_n, adv_n = agent.estimate_return(ob_no, re_n, hidden, masks)
 
         ppo_buffer.add_samples(fixed_log_probs, adv_n, q_n)
-
-        # update with mini-batches sampled from ppo buffer
         for _ in range(num_ppo_updates):
 
             data = ppo_buffer.random_batch(mini_batch_size)
@@ -725,20 +631,14 @@ def train_PG(
                 feed_dict={agent.sy_ob_no: ob_no, agent.sy_hidden: hidden, agent.sy_ac_na: ac_na})
 
             agent.update_parameters(ob_no, hidden, ac_na, fixed_log_probs, q_n, adv_n)
-
-        # compute validation statistics
         print('Validating...')
         val_stats = []
         for _ in range(num_tasks):
             vs, timesteps_this_batch = agent.sample_trajectories(itr, env, min_timesteps_per_batch // 10, is_evaluation=True)
             val_stats += vs
-
-        # save trajectories for viz
         with open("output/{}-epoch{}.pkl".format(exp_name, itr), 'wb') as f:
             pickle.dump(agent.val_replay_buffer.all_batch(), f, pickle.HIGHEST_PROTOCOL)
         agent.val_replay_buffer.flush()
-
-        # Log TRAIN diagnostics
         returns = [sum(s["rewards"]) for s in stats]
         final_rewards = [s["rewards"][-1] for s in stats]
         ep_lengths = [s['ep_len'] for s in stats]
@@ -753,8 +653,6 @@ def train_PG(
         logz.log_tabular("EpLenStd", np.std(ep_lengths))
         logz.log_tabular("TimestepsThisBatch", timesteps_this_batch)
         logz.log_tabular("TimestepsSoFar", total_timesteps)
-
-        # Log VAL diagnostics
         val_returns = [sum(s["rewards"]) for s in val_stats]
         val_final_rewards = [s["rewards"][-1] for s in val_stats]
         logz.log_tabular("ValAverageReturn", np.mean(val_returns))
@@ -762,8 +660,6 @@ def train_PG(
 
         logz.dump_tabular()
         logz.pickle_tf_vars()
-
-
 def main():
     import argparse
     parser = argparse.ArgumentParser()
@@ -830,18 +726,10 @@ def main():
                 l2reg=args.l2reg,
                 recurrent=args.recurrent,
                 )
-        # # Awkward hacky process runs, because Tensorflow does not like
-        # # repeatedly calling train_PG in the same thread.
         p = Process(target=train_func, args=tuple())
         p.start()
         processes.append(p)
-        # if you comment in the line below, then the loop will block
-        # until this process finishes
-        # p.join()
-
     for p in processes:
         p.join()
-
-
 if __name__ == "__main__":
     main()

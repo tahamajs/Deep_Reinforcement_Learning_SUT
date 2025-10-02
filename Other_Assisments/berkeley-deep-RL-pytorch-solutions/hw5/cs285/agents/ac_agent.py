@@ -52,10 +52,10 @@ class ACAgent:
         for critic_update in range(self.num_critic_updates_per_agent_update):
             loss['Critic_Loss'] = self.critic.update(ob_no, next_ob_no, re_n, terminal_n)
 
-        adv_n = self.estimate_advantage(ob_no, next_ob_no, re_n, terminal_n) # put final critic loss here
+        adv_n = self.estimate_advantage(ob_no, next_ob_no, re_n, terminal_n)
 
         for actor_update in range(self.num_actor_updates_per_agent_update):
-            loss['Actor_Loss'] = self.actor.update(ob_no, ac_na, adv_n)  # put final actor loss here
+            loss['Actor_Loss'] = self.actor.update(ob_no, ac_na, adv_n)
 
         return loss
 
@@ -69,9 +69,6 @@ class Exploratory_ACAgent(ACAgent):
     def __init__(self, env, agent_params):
         super().__init__(env, agent_params)
         self.dm_type = agent_params['density_model']
-
-        ########################################################################
-        # Initalize exploration density model
         if self.dm_type != 'none':
             if agent_params['env_name'] == 'PointMass-v0' and self.dm_type == 'hist':
                 self.density_model = Histogram(
@@ -103,9 +100,6 @@ class Exploratory_ACAgent(ACAgent):
                 raise NotImplementedError
 
     def train(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
-
-        ########################################################################
-        # Modify the reward to include exploration bonus
         """
             1. Fit density model
                 if params["density_model"] == 'ex2':
@@ -119,21 +113,13 @@ class Exploratory_ACAgent(ACAgent):
         if self.dm_type == 'none':
             pass
         else:
-            # 1. Fit density model
+
             if self.dm_type == 'ex2':
-                ### PROBLEM 3
-                ### YOUR CODE HERE
                 ex2_vars = self.exploration.fit_density_model(ob_no)
             elif self.dm_type == 'hist' or self.dm_type == 'rbf':
-                ### PROBLEM 1
-                ### YOUR CODE HERE
                 self.exploration.fit_density_model(ob_no)
             else:
                 assert False
-
-            # 2. Modify the reward
-            ### PROBLEM 1
-            ### YOUR CODE HERE
             re_n = self.exploration.modify_reward(re_n, ob_no)
 
             print('average state', np.mean(ob_no, axis=0))
@@ -144,9 +130,9 @@ class Exploratory_ACAgent(ACAgent):
         for critic_update in range(self.num_critic_updates_per_agent_update):
             loss['Critic_Loss'] = self.critic.update(ob_no, next_ob_no, re_n, terminal_n)
 
-        adv_n = self.estimate_advantage(ob_no, next_ob_no, re_n, terminal_n) # put final critic loss here
+        adv_n = self.estimate_advantage(ob_no, next_ob_no, re_n, terminal_n)
 
         for actor_update in range(self.num_actor_updates_per_agent_update):
-            loss['Actor_Loss'] = self.actor.update(ob_no, ac_na, adv_n)  # put final actor loss here
+            loss['Actor_Loss'] = self.actor.update(ob_no, ac_na, adv_n)
 
         return loss, ex2_vars

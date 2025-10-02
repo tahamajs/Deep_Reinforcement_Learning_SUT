@@ -4,8 +4,6 @@ import argparse
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import pandas
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--exps',  nargs='+', type=str)
 parser.add_argument('--save', type=str, default=None)

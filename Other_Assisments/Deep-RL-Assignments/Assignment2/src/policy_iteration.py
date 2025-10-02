@@ -1,5 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import numpy as np
 from src.policy_evaluation import (
     evaluate_policy_sync,
@@ -9,8 +7,6 @@ from src.policy_evaluation import (
 from src.policy_improvement import improve_policy
 from src.utils import value_function_to_policy
 from src.visualization import display_policy_letters, value_func_heatmap
-
-
 def policy_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
     """Runs policy iteration.
 
@@ -58,8 +54,6 @@ def policy_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
     value_func_heatmap(env, value_func)
     print("Policy Evaluation Complete \n{}".format(value_func))
     return policy, value_func, policy_iters, value_iters
-
-
 def policy_iteration_async_ordered(env, gamma, max_iterations=int(1e3), tol=1e-3):
     """Runs policy iteration.
 
@@ -105,8 +99,6 @@ def policy_iteration_async_ordered(env, gamma, max_iterations=int(1e3), tol=1e-3
     value_func_heatmap(env, value_func)
     print("Policy Evaluation Complete \n{}".format(value_func))
     return policy, value_func, policy_iters, value_iters
-
-
 def policy_iteration_async_randperm(env, gamma, max_iterations=int(1e3), tol=1e-3):
     """Runs policy iteration.
 

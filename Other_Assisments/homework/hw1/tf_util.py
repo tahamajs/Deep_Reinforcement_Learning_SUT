@@ -1,20 +1,11 @@
 import numpy as np
-import tensorflow as tf # pylint: ignore-module
-#import builtins
+import tensorflow as tf
+
 import functools
 import copy
 import os
 import collections
-
-# ================================================================
-# Import all names into common namespace
-# ================================================================
-
 clip = tf.clip_by_value
-
-# Make consistent with numpy
-# ----------------------------------------
-
 def sum(x, axis=None, keepdims=False):
     return tf.reduce_sum(x, reduction_indices=None if axis is None else [axis], keep_dims = keepdims)
 def mean(x, axis=None, keepdims=False):
@@ -49,9 +40,6 @@ def switch(condition, then_expression, else_expression):
                 lambda: else_expression)
     x.set_shape(x_shape)
     return x
-
-# Extras
-# ----------------------------------------
 def l2loss(params):
     if len(params) == 0:
         return tf.constant(0.0)
@@ -62,14 +50,9 @@ def lrelu(x, leak=0.2):
     f2 = 0.5 * (1 - leak)
     return f1 * x + f2 * abs(x)
 def categorical_sample_logits(X):
-    # https://github.com/tensorflow/tensorflow/issues/456
+
     U = tf.random_uniform(tf.shape(X))
     return argmax(X - tf.log(-tf.log(U)), axis=1)
-
-# ================================================================
-# Global session
-# ================================================================
-
 def get_session():
     return tf.get_default_session()
 
@@ -84,15 +67,11 @@ def make_session(num_cpu):
         inter_op_parallelism_threads=num_cpu,
         intra_op_parallelism_threads=num_cpu)
     return tf.Session(config=tf_config)
-
-
 ALREADY_INITIALIZED = set()
 def initialize():
     new_variables = set(tf.all_variables()) - ALREADY_INITIALIZED
     get_session().run(tf.initialize_variables(new_variables))
     ALREADY_INITIALIZED.update(new_variables)
-
-
 def eval(expr, feed_dict=None):
     if feed_dict is None: feed_dict = {}
     return get_session().run(expr, feed_dict=feed_dict)
@@ -108,34 +87,20 @@ def save_state(fname):
     os.makedirs(os.path.dirname(fname), exist_ok=True)
     saver = tf.train.Saver()
     saver.save(get_session(), fname)
-
-# ================================================================
-# Model components
-# ================================================================
-
-
 def normc_initializer(std=1.0):
-    def _initializer(shape, dtype=None, partition_info=None): #pylint: disable=W0613
+    def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
         out *= std / np.sqrt(np.square(out).sum(axis=0, keepdims=True))
         return tf.constant(out)
     return _initializer
-
-
 def conv2d(x, num_filters, name, filter_size=(3, 3), stride=(1, 1), pad="SAME", dtype=tf.float32, collections=None,
            summary_tag=None):
     with tf.variable_scope(name):
         stride_shape = [1, stride[0], stride[1], 1]
         filter_shape = [filter_size[0], filter_size[1], int(x.get_shape()[3]), num_filters]
-
-        # there are "num input feature maps * filter height * filter width"
-        # inputs to each hidden unit
         fan_in = intprod(filter_shape[:3])
-        # each unit in the lower layer receives a gradient from:
-        # "num output feature maps * filter height * filter width" /
-        #   pooling size
         fan_out = intprod(filter_shape[:2]) * num_filters
-        # initialize weights with random weights
+
         w_bound = np.sqrt(6. / (fan_in + fan_out))
 
         w = tf.get_variable("W", filter_shape, dtype, tf.random_uniform_initializer(-w_bound, w_bound),
@@ -150,8 +115,6 @@ def conv2d(x, num_filters, name, filter_size=(3, 3), stride=(1, 1), pad="SAME", 
                              max_images=10)
 
         return tf.nn.conv2d(x, w, stride_shape, pad) + b
-
-
 def dense(x, size, name, weight_init=None, bias=True):
     w = tf.get_variable(name + "/w", [x.get_shape()[1], size], initializer=weight_init)
     ret = tf.matmul(x, w)
@@ -166,8 +129,6 @@ def wndense(x, size, name, init_scale=1.0):
                         initializer=tf.random_normal_initializer(0, 0.05))
     g = tf.get_variable(name + "/g", [size], initializer=tf.constant_initializer(init_scale))
     b = tf.get_variable(name + "/b", [size], initializer=tf.constant_initializer(0.0))
-
-    # use weight normalization (Salimans & Kingma, 2016)
     x = tf.matmul(x, v)
     scaler = g / tf.sqrt(sum(tf.square(v), axis=0, keepdims=True))
     return tf.reshape(scaler, [1, size]) * x + tf.reshape(b, [1, size])
@@ -203,13 +164,6 @@ def batchnorm(x, name, phase, updates, gamma=0.96):
     out = y * tf.get_variable(name+"/scaling", shape=[1, k], initializer=tf.constant_initializer(1.0), trainable=True)\
             + tf.get_variable(name+"/translation", shape=[1,k], initializer=tf.constant_initializer(0.0), trainable=True)
     return out
-
-
-
-# ================================================================
-# Basic Stuff
-# ================================================================
-
 def function(inputs, outputs, updates=None, givens=None):
     if isinstance(outputs, list):
         return _Function(inputs, outputs, updates, givens=givens)
@@ -273,11 +227,6 @@ class _MemFriendlyFunction(object):
         for i in range(len(results)):
             sum_results[i] = sum_results[i] / n
         return sum_results
-
-# ================================================================
-# Modules
-# ================================================================
-
 class Module(object):
     def __init__(self, name):
         self.name = name
@@ -312,8 +261,6 @@ class Module(object):
     def variables(self):
         assert self.scope is not None, "need to call module once before getting variables"
         return tf.get_collection(tf.GraphKeys.VARIABLES, self.scope)
-
-
 def module(name):
     @functools.wraps
     def wrapper(f):
@@ -322,14 +269,7 @@ def module(name):
                 return f(*args)
         return WrapperModule(name)
     return wrapper
-
-# ================================================================
-# Graph traversal
-# ================================================================
-
 VARIABLES = {}
-
-
 def get_parents(node):
     return node.op.inputs
 
@@ -340,13 +280,7 @@ def topsorted(outputs):
     assert isinstance(outputs, (list,tuple))
     marks = {}
     out = []
-    stack = [] #pylint: disable=W0621
-    # i: node
-    # jidx = number of children visited so far from that node
-    # marks: state of each node, which is one of
-    #   0: haven't visited
-    #   1: have visited, but not done visiting children
-    #   2: done visiting children
+    stack = []
     for x in outputs:
         stack.append((x,0))
         while stack:
@@ -368,12 +302,6 @@ def topsorted(outputs):
                 j = ps[jidx]
                 stack.append((j,0))
     return out
-
-
-# ================================================================
-# Flat vectors
-# ================================================================
-
 def var_shape(x):
     out = [k.value for k in x.get_shape()]
     assert all(isinstance(a, int) for a in out), \
@@ -413,12 +341,6 @@ class GetFlat(object):
         self.op = tf.concat(0, [tf.reshape(v, [numel(v)]) for v in var_list])
     def __call__(self):
         return get_session().run(self.op)
-
-# ================================================================
-# Misc
-# ================================================================
-
-
 def fancy_slice_2d(X, inds0, inds1):
     """
     like numpy X[inds0, inds1]
@@ -430,8 +352,6 @@ def fancy_slice_2d(X, inds0, inds1):
     ncols = shape[1]
     Xflat = tf.reshape(X, [-1])
     return tf.gather(Xflat, inds0 * ncols + inds1)
-
-
 def scope_vars(scope, trainable_only):
     """
     Get variables inside a scope
@@ -458,17 +378,13 @@ def lengths_to_mask(lengths_b, max_length):
     assert lengths_b.get_shape().ndims == 1
     mask_bt = tf.expand_dims(tf.range(max_length), 0) < tf.expand_dims(lengths_b, 1)
     return mask_bt
-
-
 def in_session(f):
     @functools.wraps(f)
     def newfunc(*args, **kwargs):
         with tf.Session():
             f(*args, **kwargs)
     return newfunc
-
-
-_PLACEHOLDER_CACHE = {} # name -> (placeholder, dtype, shape)
+_PLACEHOLDER_CACHE = {}
 def get_placeholder(name, dtype, shape):
     print("calling get_placeholder", name)
     if name in _PLACEHOLDER_CACHE:

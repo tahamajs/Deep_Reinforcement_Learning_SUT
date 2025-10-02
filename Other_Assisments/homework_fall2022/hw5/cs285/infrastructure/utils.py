@@ -1,20 +1,10 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import numpy as np
 import time
 import copy
-
-############################################
-############################################
-
-
 def calculate_mean_prediction_error(env, action_sequence, models, data_statistics):
 
     model = models[0]
-
-    # true
     true_states = perform_actions(env, action_sequence)["observation"]
-
-    # predicted
     ob = np.expand_dims(true_states[0], 0)
     pred_states = []
     for ac in action_sequence:
@@ -22,13 +12,9 @@ def calculate_mean_prediction_error(env, action_sequence, models, data_statistic
         action = np.expand_dims(ac, 0)
         ob = model.get_prediction(ob, action, data_statistics)
     pred_states = np.squeeze(pred_states)
-
-    # mpe
     mpe = mean_squared_error(pred_states, true_states)
 
     return mpe, true_states, pred_states
-
-
 def perform_actions(env, actions):
     ob, _ = env.reset()
     obs, acs, rewards, next_obs, terminals, image_obs = [], [], [], [], [], []
@@ -38,12 +24,10 @@ def perform_actions(env, actions):
         acs.append(ac)
         ob, rew, terminated, truncated, _ = env.step(ac)
         done = terminated or truncated
-        # add the observation after taking a step to next_obs
+
         next_obs.append(ob)
         rewards.append(rew)
         steps += 1
-        # If the episode ended, the corresponding terminal value is 1
-        # otherwise, it is 0
         if done:
             terminals.append(1)
             break
@@ -51,16 +35,8 @@ def perform_actions(env, actions):
             terminals.append(0)
 
     return Path(obs, image_obs, acs, rewards, next_obs, terminals)
-
-
 def mean_squared_error(a, b):
     return np.mean((a - b) ** 2)
-
-
-############################################
-############################################
-
-
 def sample_trajectory(
     env, policy, max_path_length, render=False, render_mode=("rgb_array")
 ):
@@ -68,7 +44,7 @@ def sample_trajectory(
     obs, acs, rewards, next_obs, terminals, image_obs = [], [], [], [], [], []
     steps = 0
     while True:
-        if render:  # feel free to ignore this for now
+        if render:
             if "rgb_array" in render_mode:
                 if hasattr(env.unwrapped, "sim"):
                     if "track" in env.unwrapped.model.camera_names:
@@ -88,24 +64,20 @@ def sample_trajectory(
                 time.sleep(env.model.opt.timestep)
         obs.append(ob)
         ac = policy.get_action(ob)
-        # ac = ac[0]
+
         acs.append(ac)
         ob, rew, terminated, truncated, _ = env.step(ac)
         done = terminated or truncated
-        # add the observation after taking a step to next_obs
+
         next_obs.append(ob)
         rewards.append(rew)
         steps += 1
-        # If the episode ended, the corresponding terminal value is 1
-        # otherwise, it is 0
         if done or steps > max_path_length:
             terminals.append(1)
             break
         else:
             terminals.append(0)
     return Path(obs, image_obs, acs, rewards, next_obs, terminals)
-
-
 def sample_trajectories(
     env,
     policy,
@@ -118,12 +90,8 @@ def sample_trajectories(
     timesteps_this_batch = 0
     paths = []
     while timesteps_this_batch < min_timesteps_per_batch:
-
-        # collect rollout
         path = sample_trajectory(env, policy, max_path_length, render, render_mode)
         paths.append(path)
-
-        # count steps
         timesteps_this_batch += get_pathlength(path)
         print(
             "At timestep:    ",
@@ -134,21 +102,17 @@ def sample_trajectories(
         )
 
     return paths, timesteps_this_batch
-
-
 def sample_n_trajectories(
     env, policy, ntraj, max_path_length, render=False, render_mode=("rgb_array")
 ):
 
     paths = []
     for i in range(ntraj):
-        # collect rollout
+
         path = sample_trajectory(env, policy, max_path_length, render, render_mode)
         paths.append(path)
 
     return paths
-
-
 def Path(obs, image_obs, acs, rewards, next_obs, terminals):
     """
     Take info (separate arrays) from a single rollout
@@ -164,8 +128,6 @@ def Path(obs, image_obs, acs, rewards, next_obs, terminals):
         "next_observation": np.array(next_obs, dtype=np.float32),
         "terminal": np.array(terminals, dtype=np.float32),
     }
-
-
 def convert_listofrollouts(paths):
     """
     Take a list of rollout dictionaries
@@ -186,37 +148,17 @@ def convert_listofrollouts(paths):
         concatenated_rewards,
         unconcatenated_rewards,
     )
-
-
-############################################
-############################################
-
-
 def get_pathlength(path):
     return len(path["reward"])
-
-
 def normalize(data, mean, std, eps=1e-8):
     return (data - mean) / (std + eps)
-
-
 def unnormalize(data, mean, std):
     return data * std + mean
-
-
 def add_noise(data_inp, noiseToSignal=0.01):
 
-    data = copy.deepcopy(data_inp)  # (num data points, dim)
-
-    # mean of data
+    data = copy.deepcopy(data_inp)
     mean_data = np.mean(data, axis=0)
-
-    # if mean is 0,
-    # make it 0.001 to avoid 0 issues later for dividing by std
     mean_data[mean_data == 0] = 0.000001
-
-    # width of normal distribution to sample noise from
-    # larger magnitude number = could have larger magnitude noise
     std_of_noise = mean_data * noiseToSignal
     for j in range(mean_data.shape[0]):
         data[:, j] = np.copy(

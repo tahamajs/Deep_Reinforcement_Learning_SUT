@@ -1,5 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import os
 import json
 import argparse
@@ -17,8 +15,6 @@ import matplotlib.pyplot as plt
 
 from src.preprocessing import preprocess
 from src.model import ActorCritic
-
-
 class A3C:
     """Implementation of N-step Asynchronous Advantage Actor Critic"""
 
@@ -26,51 +22,31 @@ class A3C:
         self.args = args
         self.set_random_seeds()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        # Create the environment.
         self.env = gym.make(env)
         self.environment_name = env
-
-        # Setup model.
         self.policy = ActorCritic(4, self.env.action_space.n)
         self.policy.apply(self.initialize_weights)
-
-        # Setup critic model.
         self.critic = ActorCritic(4, self.env.action_space.n)
         self.critic.apply(self.initialize_weights)
-
-        # Setup optimizer.
-        self.eps = 1e-10  # To avoid divide-by-zero error.
+        self.eps = 1e-10
         self.policy_optimizer = optim.Adam(self.policy.parameters(), lr=args.policy_lr)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=args.critic_lr)
-
-        # Model weights path.
         self.timestamp = datetime.now().strftime("a2c-breakout-%Y-%m-%d_%H-%M-%S")
         self.weights_path = "models/%s/%s" % (self.environment_name, self.timestamp)
-
-        # Load pretrained weights.
         if args.weights_path:
             self.load_model()
         self.policy.to(self.device)
         self.critic.to(self.device)
-
-        # Video render mode.
         if args.render:
             self.policy.eval()
             self.generate_episode(render=True)
             self.plot()
             return
-
-        # Data for plotting.
-        self.rewards_data = []  # n * [epoch, mean(returns), std(returns)]
-
-        # Network training mode.
+        self.rewards_data = []
         if train:
-            # Tensorboard logging.
+
             self.logdir = "logs/%s/%s" % (self.environment_name, self.timestamp)
             self.summary_writer = SummaryWriter(self.logdir)
-
-            # Save hyperparameters.
             with open(self.logdir + "/training_parameters.json", "w") as f:
                 json.dump(vars(self.args), f, indent=4)
 
@@ -116,7 +92,7 @@ class A3C:
     def train(self):
         """Trains the model on a single episode using REINFORCE."""
         for epoch in range(self.args.num_episodes):
-            # Generate episode data.
+
             returns, log_probs, value_function, train_rewards = self.generate_episode()
             self.summary_writer.add_scalar(
                 "train/cumulative_rewards", train_rewards, epoch
@@ -124,8 +100,6 @@ class A3C:
             self.summary_writer.add_scalar(
                 "train/trajectory_length", returns.size()[0], epoch
             )
-
-            # Compute loss and policy gradient.
             self.policy_optimizer.zero_grad()
             policy_loss = ((returns - value_function.detach()) * -log_probs).mean()
             policy_loss.backward()
@@ -135,8 +109,6 @@ class A3C:
             critic_loss = F.mse_loss(returns, value_function)
             critic_loss.backward()
             self.critic_optimizer.step()
-
-            # Test the model.
             if epoch % self.args.test_interval == 0:
                 self.policy.eval()
                 print("\nTesting")
@@ -153,8 +125,6 @@ class A3C:
                 self.summary_writer.add_scalar("test/rewards_mean", rewards_mean, epoch)
                 self.summary_writer.add_scalar("test/rewards_std", rewards_std, epoch)
                 self.policy.train()
-
-            # Logging.
             if epoch % self.args.log_interval == 0:
                 print(
                     "Epoch: {0:05d}/{1:05d} | Policy Loss: {2:.3f} | Value Loss: {3:.3f}".format(
@@ -163,8 +133,6 @@ class A3C:
                 )
                 self.summary_writer.add_scalar("train/policy_loss", policy_loss, epoch)
                 self.summary_writer.add_scalar("train/critic_loss", critic_loss, epoch)
-
-            # Save the model.
             if epoch % self.args.save_interval == 0:
                 self.save_model(epoch)
 
@@ -182,8 +150,6 @@ class A3C:
         iters = 0
         done = False
         state = self.env.reset()
-
-        # Set video save path if render enabled.
         if render:
             save_path = "videos/%s/epoch-%s" % (
                 self.environment_name,
@@ -199,14 +165,12 @@ class A3C:
         actions, log_probs = [], []
 
         while not done:
-            # Run policy on current state to log probabilities of actions.
+
             states.append(
                 torch.tensor(preprocess(state), device=self.device).float().squeeze(0)
             )
             batches.append(torch.stack(states[-4:]))
             action_probs = self.policy.forward(batches[-1].unsqueeze(0)).squeeze(0)
-
-            # Sample action from the log probabilities.
             if test and self.args.det_eval:
                 action = torch.argmax(action_probs)
             else:
@@ -215,41 +179,27 @@ class A3C:
                 )
             actions.append(action)
             log_probs.append(action_probs[action])
-
-            # Run simulation with current action to get new state and reward.
             if render:
                 monitor.render()
             state, reward, done, _ = self.env.step(action.cpu().numpy())
             rewards.append(reward)
-
-            # Break if the episode takes too long.
             iters += 1
             if iters > max_iters:
                 break
-
-        # Save video and close rendering.
         cum_rewards = np.sum(rewards)
         if render:
             monitor.close()
             print("\nCumulative Rewards:", cum_rewards)
             return
-
-        # Return cumulative rewards for test mode.
         if test:
             return cum_rewards
-
-        # Flip rewards from T-1 to 0.
         rewards = np.array(rewards) / self.args.reward_normalizer
-
-        # Compute value.
         values = []
         minibatches = torch.split(torch.stack(batches), 256)
         for minibatch in minibatches:
             values.append(self.critic.forward(minibatch, action=False).squeeze(1))
         values = torch.cat(values)
         discounted_values = values * gamma**self.args.n
-
-        # Compute the cumulative discounted returns.
         n_step_rewards = np.zeros((1, self.args.n))
         for i in reversed(range(rewards.shape[0])):
             if i + self.args.n >= rewards.shape[0]:
@@ -279,8 +229,6 @@ class A3C:
         ).replace(".h5", ".png")
         if not os.path.exists(os.path.dirname(filename)):
             os.makedirs(os.path.dirname(filename))
-
-        # Make error plot with mean, std of rewards.
         data = np.asarray(self.rewards_data)
         plt.errorbar(
             data[:, 0],

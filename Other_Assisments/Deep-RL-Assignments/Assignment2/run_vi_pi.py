@@ -1,5 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import gymnasium as gym
 from src.environment import env_wrapper
 from src.policy_iteration import (
@@ -12,10 +10,8 @@ from src.value_iteration import (
     value_iteration_async_ordered,
     value_iteration_async_randperm,
 )
-
-
 def main():
-    # Create environment
+
     env = env_wrapper("Deterministic-4x4-FrozenLake-v0")
     gamma = 0.9
 
@@ -62,7 +58,5 @@ def main():
         value_iteration_async_randperm(env, gamma)
     )
     print(f"Iters: {iters_vi_async_randperm}")
-
-
 if __name__ == "__main__":
     main()

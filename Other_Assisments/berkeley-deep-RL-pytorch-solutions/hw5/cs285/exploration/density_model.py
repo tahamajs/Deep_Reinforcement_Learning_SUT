@@ -122,26 +122,16 @@ class RBF:
         """
         b, ob_dim = states.shape
         if self.means is None:
-            # Return a uniform distribution if we don't have samples in the
-            # replay buffer yet.
             return (1.0/len(states))*np.ones(len(states))
         else:
             B, replay_dim = self.means.shape
             assert states.ndim == self.means.ndim and ob_dim == replay_dim
-
-            # 1. Compute deltas
             deltas = np.array([state - self.means for state in states])
             assert deltas.shape == (b, B, ob_dim)
-
-            # 2. Euclidean distance
             euc_dists = np.sum(np.square(deltas), axis = 2)
             assert euc_dists.shape == (b, B)
-
-            # Gaussian
             gaussians = np.exp(-euc_dists / (2 * self.sigma ** 2))
             assert gaussians.shape == (b, B)
-
-            # 4. Average
             densities = np.mean(gaussians, axis = 1)
             assert densities.shape == (b,)
 
@@ -189,8 +179,6 @@ class Exemplar(nn.Module):
 
         epsilon1 = self.prior.sample().to(self.device)
         epsilon2 = self.prior.sample().to(self.device)
-
-        #Reparameterization trick
         latent1 = encoded1_mean + (encoded1_std * epsilon1)
         latent2 = encoded2_mean + (encoded2_std * epsilon2)
 
@@ -273,10 +261,8 @@ class Exemplar(nn.Module):
                     compute the probability density of x from the discriminator
                     likelihood (see homework doc)
         """
-        #since liklihood of target 1 is just the value of the logit
-        likelihood = self(state, state).cpu().detach().numpy()
 
-        # avoid divide by 0 and log(0)
+        likelihood = self(state, state).cpu().detach().numpy()
         likelihood = np.clip(np.squeeze(likelihood), 1e-5, 1-1e-5)
         prob = (1 - likelihood) / likelihood
         return prob

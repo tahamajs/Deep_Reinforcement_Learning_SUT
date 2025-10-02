@@ -34,14 +34,6 @@ class ACAgent:
 
     def estimate_advantage(self, ob_no, next_ob_no, re_n, terminal_n):
         ob, next_ob, rew, done = map(lambda x: torch.from_numpy(x).to(self.device), [ob_no, next_ob_no, re_n, terminal_n])
-
-        # TODO Implement the following pseudocode:
-            # 1) query the critic with ob_no, to get V(s)
-            # 2) query the critic with next_ob_no, to get V(s')
-            # 3) estimate the Q value as Q(s, a) = r(s, a) + gamma*V(s')
-            # HINT: Remember to cut off the V(s') term (ie set it to 0) at terminal states (ie terminal_n=1)
-            # 4) calculate advantage (adv_n) as A(s, a) = Q(s, a) - V(s)
-
         value = self.critic.value_func(ob)
         next_value = self.critic.value_func(next_ob).squeeze() * (1 - done)
         adv_n = rew + (self.gamma * next_value) - value
@@ -52,25 +44,15 @@ class ACAgent:
         return adv_n
 
     def train(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
-
-        # TODO Implement the following pseudocode:
-            # for agent_params['num_critic_updates_per_agent_update'] steps,
-            #     update the critic
-
-            # advantage = estimate_advantage(...)
-
-            # for agent_params['num_actor_updates_per_agent_update'] steps,
-            #     update the actor
-
         loss = OrderedDict()
 
         for critic_update in range(self.num_critic_updates_per_agent_update):
             loss['Critic_Loss'] = self.critic.update(ob_no, next_ob_no, re_n, terminal_n)
 
-        adv_n = self.estimate_advantage(ob_no, next_ob_no, re_n, terminal_n) # put final critic loss here
+        adv_n = self.estimate_advantage(ob_no, next_ob_no, re_n, terminal_n)
 
         for actor_update in range(self.num_actor_updates_per_agent_update):
-            loss['Actor_Loss'] = self.actor.update(ob_no, ac_na, adv_n)  # put final actor loss here
+            loss['Actor_Loss'] = self.actor.update(ob_no, ac_na, adv_n)
 
         return loss
 

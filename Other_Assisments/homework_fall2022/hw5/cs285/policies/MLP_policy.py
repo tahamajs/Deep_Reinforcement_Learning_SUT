@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import abc
 import itertools
 from torch import nn
@@ -11,8 +10,6 @@ from torch import distributions
 
 from cs285.infrastructure import pytorch_util as ptu
 from cs285.policies.base_policy import BasePolicy
-
-
 class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
 
     def __init__(
@@ -28,8 +25,6 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         **kwargs,
     ):
         super().__init__(**kwargs)
-
-        # init vars
         self.ac_dim = ac_dim
         self.ob_dim = ob_dim
         self.n_layers = n_layers
@@ -82,15 +77,8 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             )
         else:
             self.baseline = None
-
-    ##################################
-
     def save(self, filepath):
         torch.save(self.state_dict(), filepath)
-
-    ##################################
-
-    # query the policy with observation(s) to get selected action(s)
     def get_action(self, obs: np.ndarray) -> np.ndarray:
         if len(obs.shape) > 1:
             observation = obs
@@ -98,21 +86,10 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             observation = obs[None]
         observation = ptu.from_numpy(observation)
         action_distribution = self(observation)
-        action = action_distribution.sample()  # don't bother with rsample
+        action = action_distribution.sample()
         return ptu.to_numpy(action)
-
-    ####################################
-    ####################################
-
-    # update/train this policy
     def update(self, observations, actions, **kwargs):
         raise NotImplementedError
-
-    # This function defines the forward pass of the network.
-    # You can return anything you want, but you should be able to differentiate
-    # through it. For example, you can return a torch.FloatTensor. You can also
-    # return more flexible objects, such as a
-    # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor):
         if self.discrete:
             logits = self.logits_na(observation)
@@ -128,25 +105,10 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
                 scale_tril=batch_scale_tril,
             )
             return action_distribution
-
-    ####################################
-    ####################################
-
-
-#####################################################
-#####################################################
-
-
 class MLPPolicyAC(MLPPolicy):
-    # MJ: cut acs_labels_na and qvals from the signature if they are not used
+
     def update(self, observations, actions, adv_n=None, acs_labels_na=None, qvals=None):
         raise NotImplementedError
-        # Not needed for this homework
-
-    ####################################
-    ####################################
-
-
 class MLPPolicyAWAC(MLPPolicy):
     def __init__(
         self,
@@ -183,9 +145,6 @@ class MLPPolicyAWAC(MLPPolicy):
             actions = ptu.from_numpy(actions)
         if isinstance(adv_n, np.ndarray):
             adv_n = ptu.from_numpy(adv_n)
-
-        # TODO update the policy network utilizing AWAC update
-
         action_distribution = self.forward(observations)
         log_probs = action_distribution.log_prob(actions)
         weighted_log_probs = torch.exp(adv_n / self.lambda_awac) * log_probs

@@ -9,8 +9,6 @@ Student ID: 400206262
 
 import tensorflow as tf
 import numpy as np
-
-
 def build_mlp(
     input_tensor,
     output_dim,
@@ -39,19 +37,13 @@ def build_mlp(
     """
     with tf.variable_scope(scope, reuse=reuse):
         x = input_tensor
-
-        # Hidden layers
         for i in range(n_layers):
             x = tf.layers.dense(
                 x, hidden_dim, activation=activation, name=f"hidden_{i}"
             )
-
-        # Output layer
         x = tf.layers.dense(x, output_dim, activation=output_activation, name="output")
 
         return x
-
-
 def build_policy_network(
     state_tensor,
     action_dim,
@@ -76,21 +68,13 @@ def build_policy_network(
     """
     with tf.variable_scope(scope, reuse=reuse):
         x = state_tensor
-
-        # Hidden layers
         for i, size in enumerate(hidden_sizes):
             x = tf.layers.dense(x, size, activation=activation, name=f"hidden_{i}")
-
-        # Output mean
         mean = tf.layers.dense(x, action_dim, name="mean")
-
-        # Output log standard deviation (clipped for numerical stability)
         log_std = tf.layers.dense(x, action_dim, name="log_std")
         log_std = tf.clip_by_value(log_std, -20, 2)
 
         return mean, log_std
-
-
 def build_value_network(
     state_tensor, scope, hidden_sizes=[256, 256], activation=tf.nn.relu, reuse=False
 ):
@@ -109,17 +93,11 @@ def build_value_network(
     """
     with tf.variable_scope(scope, reuse=reuse):
         x = state_tensor
-
-        # Hidden layers
         for i, size in enumerate(hidden_sizes):
             x = tf.layers.dense(x, size, activation=activation, name=f"hidden_{i}")
-
-        # Output value
         value = tf.layers.dense(x, 1, name="value")
 
         return tf.squeeze(value)
-
-
 def build_q_network(
     state_tensor,
     action_tensor,
@@ -143,19 +121,13 @@ def build_q_network(
         Q-value tensor
     """
     with tf.variable_scope(scope, reuse=reuse):
-        # Concatenate state and action
-        x = tf.concat([state_tensor, action_tensor], axis=-1)
 
-        # Hidden layers
+        x = tf.concat([state_tensor, action_tensor], axis=-1)
         for i, size in enumerate(hidden_sizes):
             x = tf.layers.dense(x, size, activation=activation, name=f"hidden_{i}")
-
-        # Output Q-value
         q_value = tf.layers.dense(x, 1, name="q_value")
 
         return tf.squeeze(q_value)
-
-
 def sample_action(mean, log_std, reparameterize=True):
     """
     Sample action from policy distribution.
@@ -172,22 +144,14 @@ def sample_action(mean, log_std, reparameterize=True):
     dist = tf.distributions.Normal(mean, std)
 
     if reparameterize:
-        # Reparameterization trick
+
         eps = tf.random.normal(tf.shape(mean))
         action = mean + std * eps
     else:
         action = dist.sample()
-
-    # Compute log probability
     log_prob = dist.log_prob(action)
     log_prob = tf.reduce_sum(log_prob, axis=-1, keepdims=True)
-
-    # Account for squashing (if using tanh)
-    # log_prob -= tf.reduce_sum(tf.log(1 - tf.tanh(action)**2 + 1e-6), axis=-1, keepdims=True)
-
     return action, log_prob
-
-
 def squash_action(action, log_prob):
     """
     Apply tanh squashing to action and adjust log probability.

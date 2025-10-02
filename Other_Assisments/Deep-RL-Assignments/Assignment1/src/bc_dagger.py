@@ -1,12 +1,8 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import numpy as np
 import tensorflow as tf
 from sklearn.utils import shuffle
 from src.models import make_model
 from src.utils import generate_episode, generate_dagger_episode, TV_distance
-
-
 class Imitation:
     def __init__(self, env, expert_policy, lr=1e-3):
         self.env = env
@@ -16,7 +12,7 @@ class Imitation:
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.lr)
 
     def train(self, num_rollouts, num_epochs=100, dagger=False):
-        # Collect initial expert data
+
         expert_states = []
         expert_actions = []
         for _ in range(num_rollouts):
@@ -25,8 +21,6 @@ class Imitation:
             expert_actions.extend(actions)
         expert_states = np.array(expert_states)
         expert_actions = np.array(expert_actions)
-
-        # Train policy
         for epoch in range(num_epochs):
             expert_states, expert_actions = shuffle(expert_states, expert_actions)
             with tf.GradientTape() as tape:
@@ -42,7 +36,7 @@ class Imitation:
             )
 
             if dagger:
-                # Collect more data with current policy
+
                 student_states = []
                 student_actions = []
                 for _ in range(num_rollouts):

@@ -1,12 +1,9 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from typing import Union
 
 import torch
 from torch import nn
 
 Activation = Union[str, nn.Module]
-
-
 _str_to_activation = {
     'relu': nn.ReLU(),
     'tanh': nn.Tanh(),
@@ -16,8 +13,6 @@ _str_to_activation = {
     'softplus': nn.Softplus(),
     'identity': nn.Identity(),
 }
-
-
 def build_mlp(
         input_size: int,
         output_size: int,
@@ -61,13 +56,9 @@ def build_mlp(
 
     layers.append(last_layer)
     layers.append(output_activation)
-        
+
     return nn.Sequential(*layers)
-
-
 device = None
-
-
 def init_gpu(use_gpu=True, gpu_id=0):
     global device
     if torch.cuda.is_available() and use_gpu:
@@ -76,18 +67,12 @@ def init_gpu(use_gpu=True, gpu_id=0):
     else:
         device = torch.device("cpu")
         print("GPU not detected. Defaulting to CPU.")
-
-
 def set_device(gpu_id):
     torch.cuda.set_device(gpu_id)
-
-
 def from_numpy(*args, **kwargs):
     return torch.from_numpy(*args, **kwargs).float().to(device)
 
 def ones(*args, **kwargs):
     return torch.ones(*args, **kwargs).to(device)
-
-
 def to_numpy(tensor):
     return tensor.to('cpu').detach().numpy()

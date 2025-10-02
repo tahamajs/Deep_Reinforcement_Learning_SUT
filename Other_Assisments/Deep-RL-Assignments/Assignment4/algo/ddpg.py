@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import os
 import copy
 import json
@@ -16,12 +15,10 @@ from .CriticNetwork import CriticNetwork, CriticNetworkTD3
 
 BUFFER_SIZE = 1000000
 BATCH_SIZE = 1024
-GAMMA = 0.98                    # Discount for rewards.
-TAU = 0.05                      # Target network update rate.
+GAMMA = 0.98
+TAU = 0.05
 LEARNING_RATE_ACTOR = 0.0001
 LEARNING_RATE_CRITIC = 0.001
-
-
 class EpsilonNormalActionNoise(object):
     """A class for adding noise to the actions for exploration."""
 
@@ -45,14 +42,12 @@ class EpsilonNormalActionNoise(object):
         Returns:
             noisy_action: a batched tensor storing the action.
         """
-        # self.epsilon = max((1-0.9 * self.call_count/100000),0.1)
+
         self.call_count += 1
         if np.random.uniform() > self.epsilon:
             return np.clip(action + np.random.normal(self.mu, self.sigma, 2), -1.0, 1.0)
         else:
             return np.random.uniform(-1.0, 1.0, size=action.shape)
-
-
 class DDPG(object):
     """A class for running the DDPG algorithm."""
 
@@ -74,9 +69,7 @@ class DDPG(object):
 
         self.timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         self.weights_path = 'models/%s' % (self.timestamp)
-
-        # Data for plotting.
-        self.rewards_data = []  # n * [epoch, mean(returns), std(returns)]
+        self.rewards_data = []
         self.count = 0
 
         self.action_selector = EpsilonNormalActionNoise(0, 0.05, self.args.epsilon)
@@ -92,13 +85,11 @@ class DDPG(object):
         if args.weights_path: self.load_model()
 
         if args.train:
-            # Tensorboard logging.
+
             self.logdir = 'logs/%s' % (self.timestamp)
             self.imgdir = 'imgs/%s' % (self.timestamp)
             os.makedirs(self.imgdir)
             self.summary_writer = SummaryWriter(self.logdir)
-
-            # Save hyperparameters.
             with open(self.logdir + '/training_parameters.json', 'w') as f:
                 json.dump(vars(self.args), f, indent=4)
 
@@ -180,10 +171,10 @@ class DDPG(object):
                 if i == 0:
                     plt.legend(loc='lower left', fontsize=28, ncol=3, bbox_to_anchor=(0.1, 1.0))
                 if i == 8:
-                    # Comment out the line below to disable plotting.
+
                     plt.savefig(os.path.join(self.imgdir,str(self.count)))
                     self.count += 1
-                    # plt.show()
+
         return np.mean(success_vec), np.mean(test_rewards), np.std(test_rewards)
 
     def train(self, num_episodes):
@@ -202,8 +193,6 @@ class DDPG(object):
             state = torch.tensor(state, device=self.device).float()
 
             while not done:
-                # Collect one episode of experience, saving the states and actions
-                # to store_states and store_actions, respectively.
                 with torch.no_grad():
                     action = self.actor.policy(state)
                     env_action = self.action_selector(action.cpu().numpy())
@@ -214,8 +203,6 @@ class DDPG(object):
 
                 self.memory.add(state, action, torch.tensor(reward, device=self.device),
                     next_state, torch.tensor(done, device=self.device))
-
-                # Save data for HER.
                 if self.args.algorithm == 'her':
                     trajectory_data.append([state.detach().cpu().numpy(), action.detach().cpu().numpy(),
                         reward, next_state.detach().cpu().numpy(), done])
@@ -227,7 +214,7 @@ class DDPG(object):
                     state = next_state.clone().detach()
 
             if self.args.algorithm == 'her':
-                # For HER, we also want to save the final next_state.
+
                 self.add_hindsight_replay_experience(trajectory_data)
 
             if self.memory.burned_in:
@@ -240,13 +227,9 @@ class DDPG(object):
                     critic_loss, policy_loss = self.train_TD3(i)
                     if i % self.args.policy_update_frequency == 0:
                         self.summary_writer.add_scalar('train/policy_loss', policy_loss, i)
-
-            # Logging
             if self.memory.burned_in and i % self.args.log_interval == 0:
                 print("Episode %d: Total reward = %d" % (i, total_reward))
-                print("\tTD loss = %.2f" % (critic_loss / step,)) 
-                # print("\tSteps = %d; Info = %s" % (step, info['done']))
-
+                print("\tTD loss = %.2f" % (critic_loss / step,))
                 self.summary_writer.add_scalar('train/trajectory_length', step, i)
                 self.summary_writer.add_scalar('train/critic_loss', critic_loss, i)
 
@@ -275,13 +258,11 @@ class DDPG(object):
             states: a list of states.
             actions: a list of states.
         """
-        # Get new goal location (last location of box).
-        goal = trajectory[-1][3][2:4]
 
-        # Relabels a trajectory using a new goal state.
+        goal = trajectory[-1][3][2:4]
         for state, action, reward, next_state, done in trajectory:
             state[-2:] = goal.copy()
-            next_state[-2:] = goal.copy()            
+            next_state[-2:] = goal.copy()
             reward = self.env._HER_calc_reward(state)
             if reward == 0: done = True
 
@@ -306,7 +287,7 @@ class DDPG(object):
             self.actor.update_target()
 
         return critic_loss, policy_loss, new_Q_value
-    
+
     def train_TD3(self, i):
         for j in range(self.args.num_update_iters):
             states, actions, rewards, next_states, dones = self.memory.get_batch(self.args.batch_size)
@@ -326,14 +307,10 @@ class DDPG(object):
 
     def noise_regularization(self, next_actions):
         return np.clip(next_actions + np.clip(np.random.normal(0, self.args.target_action_sigma, (self.args.batch_size, 2)), -self.args.clip, self.args.clip), -1.0, 1.0)
-        # return next_actions
-
     def plot(self):
-        # Save the plot.
+
         filename = os.path.join('plots', *self.args.weights_path.split('/')[-2:]).replace('.h5', '.png')
         if not os.path.exists(os.path.dirname(filename)): os.makedirs(os.path.dirname(filename))
-
-        # Make error plot with mean, std of rewards.
         data = np.asarray(self.rewards_data)
         plt.errorbar(data[:, 0], data[:, 1], data[:, 2], lw=2.5, elinewidth=1.5,
             ecolor='grey', barsabove=True, capthick=2, capsize=3)

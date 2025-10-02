@@ -1,11 +1,8 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from .base_agent import BaseAgent
 from cs285.models.ff_model import FFModel
 from cs285.policies.MPC_policy import MPCPolicy
 from cs285.infrastructure.replay_buffer import ReplayBuffer
 from cs285.infrastructure.utils import *
-
-
 class MBAgent(BaseAgent):
     def __init__(self, env, agent_params):
         super(MBAgent, self).__init__()
@@ -40,24 +37,15 @@ class MBAgent(BaseAgent):
         self.replay_buffer = ReplayBuffer()
 
     def train(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
-
-        # training a MB agent refers to updating the predictive model using observed state transitions
-        # NOTE: each model in the ensemble is trained on a different random batch of size batch_size
         losses = []
         num_data = ob_no.shape[0]
         num_data_per_ens = int(num_data / self.ensemble_size)
 
         for i in range(self.ensemble_size):
-
-            # select which datapoints to use for this model of the ensemble
-            # you might find the num_data_per_env variable defined above useful
-
-            observations = # TODO(Q1)
-            actions = # TODO(Q1)
-            next_observations = # TODO(Q1)
-
-            # use datapoints to update one of the dyn_models
-            model =  # TODO(Q1)
+            observations =
+            actions =
+            next_observations =
+            model =
             log = model.update(observations, actions, next_observations,
                                 self.data_statistics)
             loss = log['Training Loss']
@@ -69,11 +57,7 @@ class MBAgent(BaseAgent):
         }
 
     def add_to_replay_buffer(self, paths, add_sl_noise=False):
-
-        # add data to replay buffer
         self.replay_buffer.add_rollouts(paths, noised=add_sl_noise)
-
-        # get updated mean/std of the data in our replay buffer
         self.data_statistics = {
             'obs_mean': np.mean(self.replay_buffer.obs, axis=0),
             'obs_std': np.std(self.replay_buffer.obs, axis=0),
@@ -84,12 +68,8 @@ class MBAgent(BaseAgent):
             'delta_std': np.std(
                 self.replay_buffer.next_obs - self.replay_buffer.obs, axis=0),
         }
-
-        # update the actor's data_statistics too, so actor.get_action can be calculated correctly
         self.actor.data_statistics = self.data_statistics
 
     def sample(self, batch_size):
-        # NOTE: sampling batch_size * ensemble_size,
-        # so each model in our ensemble can get trained on batch_size data
         return self.replay_buffer.sample_random_data(
             batch_size * self.ensemble_size)

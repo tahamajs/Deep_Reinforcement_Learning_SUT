@@ -1,15 +1,9 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import numpy as np
 import gymnasium as gym
-
-
 def action_to_one_hot(env, action):
     action_vec = np.zeros(env.action_space.n)
     action_vec[action] = 1
     return action_vec
-
-
 def generate_episode(env, policy):
     """Collects one rollout from the policy in an environment."""
     done = False
@@ -27,8 +21,6 @@ def generate_episode(env, policy):
             states.append(next_state)
         state = next_state
     return np.array(states), np.array(actions), np.array(rewards)
-
-
 def generate_dagger_episode(env, policy, expert_policy):
     """Collects one rollout for DAgger."""
     done = False
@@ -47,8 +39,6 @@ def generate_dagger_episode(env, policy, expert_policy):
             states.append(next_state)
         state = next_state
     return np.array(states), np.array(actions), np.array(rewards)
-
-
 def generate_GAIL_episode(env, policy, discriminator=None):
     """Collects one rollout for GAIL."""
     done = False
@@ -70,15 +60,11 @@ def generate_GAIL_episode(env, policy, discriminator=None):
         state = next_state
     env.close()
     return np.array(states), np.array(actions), np.array(rewards)
-
-
 def get_x_position_histogram(states):
     x_vec = [s[0] for s in states]
     bins = np.linspace(-2.4, 2.4, 11)
     hist, _ = np.histogram(x_vec, bins=bins, density=True)
     return hist
-
-
 def TV_distance(expert_states, student_states):
     expert_hist = get_x_position_histogram(expert_states)
     student_hist = get_x_position_histogram(student_states)

@@ -44,6 +44,4 @@ class BootstrappedContinuousCritic:
             loss.backward()
             self.optimizer.step()
             target_value.detach_()
-        #'''
-
         return loss

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Actor-Critic Training Script
 
@@ -20,13 +19,9 @@ import numpy as np
 import tensorflow as tf
 import logz
 import multiprocessing as mp
-
-# Add src directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 from src.actor_critic import ActorCriticAgent
-
-
 def train_AC(
     exp_name,
     env_name,
@@ -46,8 +41,6 @@ def train_AC(
 ):
     """Train Actor-Critic agent."""
     start = time.time()
-
-    # Set up logger
     logz.configure_output_dir(logdir)
     args = {
         "exp_name": exp_name,
@@ -67,26 +60,14 @@ def train_AC(
         "size": size,
     }
     logz.save_params(args)
-
-    # Set random seeds
     tf.set_random_seed(seed)
     np.random.seed(seed)
-
-    # Create environment
     env = gym.make(env_name)
     env.seed(seed)
-
-    # Maximum length for episodes
     max_path_length = max_path_length or env.spec.max_episode_steps
-
-    # Is this env continuous, or discrete?
     discrete = isinstance(env.action_space, gym.spaces.Discrete)
-
-    # Observation and action sizes
     ob_dim = env.observation_space.shape[0]
     ac_dim = env.action_space.n if discrete else env.action_space.shape[0]
-
-    # Initialize agent
     computation_graph_args = {
         "n_layers": n_layers,
         "ob_dim": ob_dim,
@@ -112,35 +93,21 @@ def train_AC(
     agent = ActorCriticAgent(
         computation_graph_args, sample_trajectory_args, estimate_advantage_args
     )
-
-    # Build computation graph
     agent.build_computation_graph()
-
-    # TensorFlow: config, session, variable initialization
     agent.init_tf_sess()
-
-    # Training Loop
     total_timesteps = 0
     for itr in range(n_iter):
         print("********** Iteration %i ************" % itr)
         paths, timesteps_this_batch = agent.sample_trajectories(itr, env)
         total_timesteps += timesteps_this_batch
-
-        # Build arrays for observation, action for the policy gradient update
         ob_no = np.concatenate([path["observation"] for path in paths])
         ac_na = np.concatenate([path["action"] for path in paths])
         re_n = np.concatenate([path["reward"] for path in paths])
         next_ob_no = np.concatenate([path["next_observation"] for path in paths])
         terminal_n = np.concatenate([path["terminal"] for path in paths])
-
-        # Update critic and compute advantages
         agent.update_critic(ob_no, next_ob_no, re_n, terminal_n)
         adv_n = agent.estimate_advantage(ob_no, next_ob_no, re_n, terminal_n)
-
-        # Update actor
         agent.update_actor(ob_no, ac_na, adv_n)
-
-        # Log diagnostics
         returns = [path["reward"].sum() for path in paths]
         ep_lengths = [len(path["reward"]) for path in paths]
         logz.log_tabular("Time", time.time() - start)
@@ -155,8 +122,6 @@ def train_AC(
         logz.log_tabular("TimestepsSoFar", total_timesteps)
         logz.dump_tabular()
         logz.pickle_tf_vars()
-
-
 def main():
     """Main function."""
     parser = argparse.ArgumentParser()
@@ -213,18 +178,10 @@ def main():
                 n_layers=args.n_layers,
                 size=args.size,
             )
-
-        # Run training in separate process
         p = mp.Process(target=train_func, args=tuple())
         p.start()
         processes.append(p)
-
-        # For debugging, you can comment out the process code and run directly
-        # train_func()
-
     for p in processes:
         p.join()
-
-
 if __name__ == "__main__":
     main()

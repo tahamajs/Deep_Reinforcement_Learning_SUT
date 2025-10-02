@@ -1,12 +1,8 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import numpy as np
 import tensorflow as tf
 from sklearn.utils import shuffle
 from src.models import make_model
 from src.utils import generate_episode, generate_GAIL_episode
-
-
 class GAIL:
     def __init__(self, env, expert_policy, lr=1e-3):
         self.env = env
@@ -18,7 +14,7 @@ class GAIL:
         self.discriminator_optimizer = tf.keras.optimizers.Adam(learning_rate=self.lr)
 
     def train(self, num_rollouts, num_epochs=100):
-        # Collect expert data
+
         expert_states = []
         expert_actions = []
         for _ in range(num_rollouts):
@@ -29,7 +25,7 @@ class GAIL:
         expert_actions = np.array(expert_actions)
 
         for epoch in range(num_epochs):
-            # Train discriminator
+
             student_states = []
             student_actions = []
             for _ in range(num_rollouts):
@@ -61,8 +57,6 @@ class GAIL:
             self.discriminator_optimizer.apply_gradients(
                 zip(gradients, self.discriminator.trainable_variables)
             )
-
-            # Train policy
             policy_states = []
             policy_actions = []
             for _ in range(num_rollouts):

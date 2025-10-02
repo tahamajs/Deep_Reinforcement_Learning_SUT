@@ -2,12 +2,6 @@ import numpy as np
 import tensorflow as tf
 
 from logger import logger
-
-
-############
-### Data ###
-############
-
 class Dataset(object):
 
     def __init__(self):
@@ -23,11 +17,6 @@ class Dataset(object):
 
     def __len__(self):
         return len(self._states)
-
-    ##################
-    ### Statistics ###
-    ##################
-
     @property
     def state_mean(self):
         return np.mean(self._states, axis=0)
@@ -51,17 +40,12 @@ class Dataset(object):
     @property
     def delta_state_std(self):
         return np.std(np.array(self._next_states) - np.array(self._states), axis=0)
-
-    ###################
-    ### Adding data ###
-    ###################
-
     def add(self, state, action, next_state, reward, done):
         """
         Add (s, a, r, s') to this dataset
         """
         if not self.is_empty:
-            # ensure the state, action, next_state are of the same dimension
+
             assert len(self._states[-1]) == len(np.ravel(state))
             assert len(self._actions[-1]) == len(np.ravel(action))
             assert len(self._next_states[-1]) == len(np.ravel(next_state))
@@ -77,7 +61,7 @@ class Dataset(object):
         Append other_dataset to this dataset
         """
         if not self.is_empty and not other_dataset.is_empty:
-            # ensure the state, action, next_state are of the same dimension
+
             assert len(self._states[-1]) == len(other_dataset._states[-1])
             assert len(self._actions[-1]) == len(other_dataset._actions[-1])
             assert len(self._next_states[-1]) == len(other_dataset._next_states[-1])
@@ -87,11 +71,6 @@ class Dataset(object):
         self._next_states += other_dataset._next_states
         self._rewards += other_dataset._rewards
         self._dones += other_dataset._dones
-
-    ############################
-    ### Iterate through data ###
-    ############################
-
     def rollout_iterator(self):
         """
         Iterate through all the rollouts in the dataset sequentially
@@ -130,11 +109,6 @@ class Dataset(object):
             yield states[indices], actions[indices], next_states[indices], rewards[indices], dones[indices]
 
             i += batch_size
-
-    ###############
-    ### Logging ###
-    ###############
-
     def log(self):
         end_idxs = np.nonzero(self._dones)[0] + 1
 
@@ -151,11 +125,6 @@ class Dataset(object):
         logger.record_tabular('ReturnStd', np.std(returns))
         logger.record_tabular('ReturnMin', np.min(returns))
         logger.record_tabular('ReturnMax', np.max(returns))
-
-##################
-### Tensorflow ###
-##################
-
 def build_mlp(input_layer,
               output_dim,
               scope,
@@ -176,11 +145,6 @@ def normalize(x, mean, std, eps=1e-8):
 
 def unnormalize(x, mean, std):
     return x * std + mean
-
-################
-### Policies ###
-################
-
 class RandomPolicy(object):
 
     def __init__(self, env):
@@ -189,4 +153,3 @@ class RandomPolicy(object):
 
     def get_action(self, state):
         return np.random.uniform(self._action_space_low, self._action_space_high)
-

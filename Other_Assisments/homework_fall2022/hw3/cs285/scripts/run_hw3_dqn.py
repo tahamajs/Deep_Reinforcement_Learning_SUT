@@ -1,14 +1,9 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-# Homework 3: DQN Script
-
 import os
 import time
 
 from cs285.infrastructure.rl_trainer import RL_Trainer
 from cs285.agents.dqn_agent import DQNAgent
 from cs285.infrastructure.dqn_utils import get_env_kwargs
-
-
 class Q_Trainer(object):
 
     def __init__(self, params):
@@ -40,8 +35,6 @@ class Q_Trainer(object):
             collect_policy=self.rl_trainer.agent.actor,
             eval_policy=self.rl_trainer.agent.actor,
         )
-
-
 def main():
 
     import argparse
@@ -72,14 +65,8 @@ def main():
     parser.add_argument("--save_params", action="store_true")
 
     args = parser.parse_args()
-
-    # convert to dictionary
     params = vars(args)
-    params["video_log_freq"] = -1  # This param is not used for DQN
-    ##################################
-    ### CREATE DIRECTORY FOR LOGGING
-    ##################################
-
+    params["video_log_freq"] = -1
     data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../data")
 
     if not (os.path.exists(data_path)):
@@ -97,7 +84,5 @@ def main():
 
     trainer = Q_Trainer(params)
     trainer.run_training_loop()
-
-
 if __name__ == "__main__":
     main()

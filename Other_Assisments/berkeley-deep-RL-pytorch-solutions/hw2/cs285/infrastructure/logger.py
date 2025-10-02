@@ -2,8 +2,6 @@ import os
 import torch
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
-
-
 class Logger:
     def __init__(self, log_dir, n_logged_samples=10, summary_writer=None):
         self._log_dir = log_dir
@@ -23,7 +21,7 @@ class Logger:
         )
 
     def log_image(self, image, name, step):
-        assert len(image.shape) == 3  # [C, H, W]
+        assert len(image.shape) == 3
         self._summ_writer.add_image("{}".format(name), image, step)
 
     def log_video(self, video_frames, name, step, fps=10):
@@ -35,26 +33,18 @@ class Logger:
     def log_paths_as_videos(
         self, paths, step, max_videos_to_save=2, fps=10, video_title="video"
     ):
-
-        # reshape the rollouts
         videos = [np.transpose(p["image_obs"], [0, 3, 1, 2]) for p in paths]
-
-        # max rollout length
         max_videos_to_save = np.min([max_videos_to_save, len(videos)])
         max_length = videos[0].shape[0]
         for i in range(max_videos_to_save):
             if videos[i].shape[0] > max_length:
                 max_length = videos[i].shape[0]
-
-        # pad rollouts to all be same length
         for i in range(max_videos_to_save):
             if videos[i].shape[0] < max_length:
                 padding = np.tile(
                     [videos[i][-1]], (max_length - videos[i].shape[0], 1, 1, 1)
                 )
                 videos[i] = np.concatenate([videos[i], padding], 0)
-
-        # log videos to tensorboard event file
         videos = np.stack(videos[:max_videos_to_save], 0)
         self.log_video(videos, video_title, step, fps=fps)
 

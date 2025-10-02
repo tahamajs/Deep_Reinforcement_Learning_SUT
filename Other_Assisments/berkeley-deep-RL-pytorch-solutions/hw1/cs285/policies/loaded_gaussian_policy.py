@@ -38,8 +38,6 @@ class Loaded_Gaussian_Policy(nn.Module):
                 self.mlp.append(nn.Tanh())
             else:
                 raise NotImplementedError(self.nonlin_type)
-
-        #output layer
         W = self.policy_params['out']['AffineLayer']['W'].astype(np.float32)
         b = self.policy_params['out']['AffineLayer']['b'].astype(np.float32)
         r, h = W.shape
@@ -47,24 +45,15 @@ class Loaded_Gaussian_Policy(nn.Module):
         layer.weight.data.copy_(torch.from_numpy(W.transpose()))
         layer.bias.data.copy_(torch.from_numpy(b.squeeze(0)))
         self.mlp.append(layer)
-
-    ##################################
-
     def obs_norm(self, obs_bo, obsnorm_mean, obsnorm_meansq):
         obsnorm_stdev = np.sqrt(np.maximum(0, obsnorm_meansq - np.square(obsnorm_mean)))
         normedobs_bo = (obs_bo - obsnorm_mean) / (obsnorm_stdev + 1e-6)
         return torch.FloatTensor(normedobs_bo).squeeze(0)
-
-    ##################################
-
     def forward(self, obs):
         x = self.obs_norm(obs, self.obsnorm_mean, self.obsnorm_meansq)
         for layer in self.mlp:
             x = layer(x)
         return x
-
-    ##################################
-
     def update(self, obs_no, acs_na, adv_n=None, acs_labels_na=None):
         print("\n\nThis policy class simply loads in a particular type of policy and queries it.")
         print("Not training procedure has been written, so do not try to train it.\n\n")

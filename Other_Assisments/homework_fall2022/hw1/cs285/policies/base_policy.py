@@ -1,8 +1,5 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import abc
 import numpy as np
-
-
 class BasePolicy(object, metaclass=abc.ABCMeta):
     def get_action(self, obs: np.ndarray) -> np.ndarray:
         raise NotImplementedError

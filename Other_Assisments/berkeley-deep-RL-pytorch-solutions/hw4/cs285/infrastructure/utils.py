@@ -3,11 +3,6 @@ import time
 import copy
 import torch
 from torch import nn
-
-############################################
-############################################
-
-
 class MLP(nn.Module):
     def __init__(
         self,
@@ -22,21 +17,17 @@ class MLP(nn.Module):
         super().__init__()
 
         self.discrete = discrete
-
-        # network architecture
         self.mlp = nn.ModuleList()
-        self.mlp.append(nn.Linear(input_dim, size))  # first hidden layer
+        self.mlp.append(nn.Linear(input_dim, size))
         self.mlp.append(activation)
 
-        for h in range(n_layers - 1):  # additional hidden layers
+        for h in range(n_layers - 1):
             self.mlp.append(nn.Linear(size, size))
             self.mlp.append(activation)
 
         self.mlp.append(
             nn.Linear(size, output_dim)
-        )  # output layer, no activation function
-
-        # if continuous define logstd variable
+        )
         if not self.discrete:
             self.logstd = nn.Parameter(torch.zeros(output_dim))
 
@@ -55,17 +46,9 @@ class MLP(nn.Module):
 
     def restore(self, filepath):
         self.load_state_dict(torch.load(filepath))
-
-
 def calculate_mean_prediction_error(env, action_sequence, models, data_statistics):
-
-    # Use only one of the models in the ensemble for this calculation
     model = models[0]
-
-    # obtain ground truth states from the env
     true_states = perform_actions(env, action_sequence)["observation"]
-
-    # predict states using the model and given action sequence and initial state
     ob = np.expand_dims(true_states[0], 0)
     pred_states = []
     for ac in action_sequence:
@@ -73,13 +56,9 @@ def calculate_mean_prediction_error(env, action_sequence, models, data_statistic
         action = np.expand_dims(ac, 0)
         ob = model.get_prediction(ob, action, data_statistics)
     pred_states = np.squeeze(pred_states)
-
-    # Calculate the mean prediction error here
     mpe = mean_squared_error(pred_states, true_states)
 
     return mpe, true_states, pred_states
-
-
 def perform_actions(env, actions):
     ob = env.reset()
     obs, acs, rewards, next_obs, terminals, image_obs = [], [], [], [], [], []
@@ -88,12 +67,10 @@ def perform_actions(env, actions):
         obs.append(ob)
         acs.append(ac)
         ob, rew, done, _ = env.step(ac)
-        # add the observation after taking a step to next_obs
+
         next_obs.append(ob)
         rewards.append(rew)
         steps += 1
-        # If the episode ended, the corresponding terminal value is 1
-        # otherwise, it is 0
         if done:
             terminals.append(1)
             break
@@ -101,28 +78,16 @@ def perform_actions(env, actions):
             terminals.append(0)
 
     return Path(obs, image_obs, acs, rewards, next_obs, terminals)
-
-
 def mean_squared_error(a, b):
     return np.mean((a - b) ** 2)
-
-
-############################################
-############################################
-
-
 def sample_trajectory(
     env, policy, max_path_length, render=False, render_mode=("rgb_array")
 ):
-    # initialize env for the beginning of a new rollout
-    ob, _ = env.reset()
 
-    # init vars
+    ob, _ = env.reset()
     obs, acs, rewards, next_obs, terminals, image_obs = [], [], [], [], [], []
     steps = 0
     while True:
-
-        # render image of the simulated env
         if render:
             if "rgb_array" in render_mode:
                 if hasattr(env, "sim"):
@@ -139,23 +104,14 @@ def sample_trajectory(
             if "human" in render_mode:
                 env.render()
                 time.sleep(env.model.opt.timestep)
-
-        # use the most recent ob to decide what to do
         obs.append(ob)
         ac = policy.get_action(ob)
         acs.append(ac)
-
-        # take that action and record results
         ob, rew, terminated, truncated, _ = env.step(ac)
         done = terminated or truncated
-
-        # record result of taking that action
         steps += 1
         next_obs.append(ob)
         rewards.append(rew)
-
-        # End the rollout if the rollout ended
-        # Note that the rollout can end due to done, or due to max_path_length
         rollout_done = done or steps == max_path_length
         terminals.append(rollout_done)
 
@@ -163,8 +119,6 @@ def sample_trajectory(
             break
 
     return Path(obs, image_obs, acs, rewards, next_obs, terminals)
-
-
 def sample_trajectories(
     env,
     policy,
@@ -179,15 +133,13 @@ def sample_trajectories(
     paths = []
 
     while timesteps_this_batch < min_timesteps_per_batch:
-        # print("Sampling a trajectory -", timesteps_this_batch, "collected out of", min_timesteps_per_batch)
+
         paths.append(
             sample_trajectory(env, policy, max_path_length, render, render_mode)
         )
         timesteps_this_batch += get_pathlength(paths[-1])
 
     return paths, timesteps_this_batch
-
-
 def sample_n_trajectories(
     env, policy, ntraj, max_path_length, render=False, render_mode=("rgb_array")
 ):
@@ -198,12 +150,6 @@ def sample_n_trajectories(
         )
 
     return paths
-
-
-############################################
-############################################
-
-
 def Path(obs, image_obs, acs, rewards, next_obs, terminals):
     """
     Take info (separate arrays) from a single rollout
@@ -219,8 +165,6 @@ def Path(obs, image_obs, acs, rewards, next_obs, terminals):
         "next_observation": np.array(next_obs, dtype=np.float32),
         "terminal": np.array(terminals, dtype=np.float32),
     }
-
-
 def convert_listofrollouts(paths):
     """
     Take a list of rollout dictionaries
@@ -241,36 +185,16 @@ def convert_listofrollouts(paths):
         concatenated_rewards,
         unconcatenated_rewards,
     )
-
-
-############################################
-############################################
-
-
 def get_pathlength(path):
     return len(path["reward"])
-
-
 def normalize(data, mean, std, eps=1e-8):
     return (data - mean) / (std + eps)
-
-
 def unnormalize(data, mean, std):
     return data * std + mean
-
-
 def add_noise(data_inp, noiseToSignal=0.01):
-    data = copy.deepcopy(data_inp)  # (num data points, dim)
-
-    # mean of data
+    data = copy.deepcopy(data_inp)
     mean_data = np.mean(data, axis=0)
-
-    # if mean is 0,
-    # make it 0.001 to avoid 0 issues later for dividing by std
     mean_data[mean_data == 0] = 0.000001
-
-    # width of normal distribution to sample noise from
-    # larger magnitude number = could have larger magnitude noise
     std_of_noise = mean_data * noiseToSignal
     for j in range(mean_data.shape[0]):
         data[:, j] = np.copy(

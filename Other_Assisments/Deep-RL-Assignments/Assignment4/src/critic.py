@@ -9,8 +9,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
-
-
 class CriticNetwork(nn.Module):
     """Critic network for DDPG algorithm."""
 
@@ -36,8 +34,6 @@ class CriticNetwork(nn.Module):
         self.lr = lr
         self.gamma = gamma
         self.device = device
-
-        # Create the critic network
         self.critic = nn.Sequential(
             nn.Linear(state_dim + action_dim, 400),
             nn.ReLU(),
@@ -45,8 +41,6 @@ class CriticNetwork(nn.Module):
             nn.ReLU(),
             nn.Linear(300, 1)
         )
-
-        # Create the target critic network
         self.critic_target = nn.Sequential(
             nn.Linear(state_dim + action_dim, 400),
             nn.ReLU(),
@@ -54,20 +48,10 @@ class CriticNetwork(nn.Module):
             nn.ReLU(),
             nn.Linear(300, 1)
         )
-
-        # Copy weights to target network
         self.critic_target.load_state_dict(self.critic.state_dict())
-
-        # Set target network to evaluation mode
         self.critic_target.eval()
-
-        # Optimizer
         self.critic_optimizer = Adam(self.critic.parameters(), lr=lr)
-
-        # Loss function
         self.critic_loss = nn.MSELoss()
-
-        # Custom weight initialization
         if custom_init:
             for layer in self.critic:
                 if isinstance(layer, nn.Linear):
@@ -93,18 +77,12 @@ class CriticNetwork(nn.Module):
         Returns:
             critic_loss: (float) loss value
         """
-        # Compute target Q-values
+
         with torch.no_grad():
             next_Q = self.critic_target(next_states, next_actions)
             target_Q = rewards + (1 - dones) * self.gamma * next_Q
-
-        # Compute current Q-values
         current_Q = self.critic(states, actions)
-
-        # Compute loss
         critic_loss = self.critic_loss(current_Q, target_Q)
-
-        # Update critic
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
@@ -115,8 +93,6 @@ class CriticNetwork(nn.Module):
         """Soft update the target network."""
         for target_param, param in zip(self.critic_target.parameters(), self.critic.parameters()):
             target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
-
-
 class CriticNetworkTD3(nn.Module):
     """Twin Critic network for TD3 algorithm."""
 
@@ -142,8 +118,6 @@ class CriticNetworkTD3(nn.Module):
         self.lr = lr
         self.gamma = gamma
         self.device = device
-
-        # Create the first critic network
         self.critic1 = nn.Sequential(
             nn.Linear(state_dim + action_dim, 400),
             nn.ReLU(),
@@ -151,8 +125,6 @@ class CriticNetworkTD3(nn.Module):
             nn.ReLU(),
             nn.Linear(300, 1)
         )
-
-        # Create the second critic network
         self.critic2 = nn.Sequential(
             nn.Linear(state_dim + action_dim, 400),
             nn.ReLU(),
@@ -160,8 +132,6 @@ class CriticNetworkTD3(nn.Module):
             nn.ReLU(),
             nn.Linear(300, 1)
         )
-
-        # Create the target critic networks
         self.critic1_target = nn.Sequential(
             nn.Linear(state_dim + action_dim, 400),
             nn.ReLU(),
@@ -177,23 +147,13 @@ class CriticNetworkTD3(nn.Module):
             nn.ReLU(),
             nn.Linear(300, 1)
         )
-
-        # Copy weights to target networks
         self.critic1_target.load_state_dict(self.critic1.state_dict())
         self.critic2_target.load_state_dict(self.critic2.state_dict())
-
-        # Set target networks to evaluation mode
         self.critic1_target.eval()
         self.critic2_target.eval()
-
-        # Optimizers
         self.critic1_optimizer = Adam(self.critic1.parameters(), lr=lr)
         self.critic2_optimizer = Adam(self.critic2.parameters(), lr=lr)
-
-        # Loss function
         self.critic_loss = nn.MSELoss()
-
-        # Custom weight initialization
         if custom_init:
             for critic in [self.critic1, self.critic2]:
                 for layer in critic:
@@ -227,22 +187,16 @@ class CriticNetworkTD3(nn.Module):
         Returns:
             critic_loss: (float) average loss value
         """
-        # Compute target Q-values (take minimum of both critics)
+
         with torch.no_grad():
             next_q1, next_q2 = self.critic1_target(next_states, next_actions), self.critic2_target(next_states, next_actions)
             next_Q = torch.min(next_q1, next_q2)
             target_Q = rewards + (1 - dones) * self.gamma * next_Q
-
-        # Compute current Q-values
         current_q1 = self.critic1(torch.cat([states, actions], dim=1))
         current_q2 = self.critic2(torch.cat([states, actions], dim=1))
-
-        # Compute losses
         critic1_loss = self.critic_loss(current_q1, target_Q)
         critic2_loss = self.critic_loss(current_q2, target_Q)
         critic_loss = critic1_loss + critic2_loss
-
-        # Update critics
         self.critic1_optimizer.zero_grad()
         self.critic2_optimizer.zero_grad()
         critic_loss.backward()

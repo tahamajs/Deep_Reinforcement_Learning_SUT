@@ -9,8 +9,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
-
-
 class ActorNetwork(nn.Module):
     """Actor network for DDPG/TD3 algorithms."""
 
@@ -36,8 +34,6 @@ class ActorNetwork(nn.Module):
         self.tau = tau
         self.lr = lr
         self.device = device
-
-        # Create the policy network
         self.policy = nn.Sequential(
             nn.Linear(state_dim, 400),
             nn.ReLU(),
@@ -46,8 +42,6 @@ class ActorNetwork(nn.Module):
             nn.Linear(300, action_dim),
             nn.Tanh(),
         )
-
-        # Create the target policy network
         self.policy_target = nn.Sequential(
             nn.Linear(state_dim, 400),
             nn.ReLU(),
@@ -56,17 +50,9 @@ class ActorNetwork(nn.Module):
             nn.Linear(300, action_dim),
             nn.Tanh(),
         )
-
-        # Copy weights to target network
         self.policy_target.load_state_dict(self.policy.state_dict())
-
-        # Set target network to evaluation mode
         self.policy_target.eval()
-
-        # Optimizer
         self.policy_optimizer = Adam(self.policy.parameters(), lr=lr)
-
-        # Custom weight initialization
         if custom_init:
             for layer in self.policy:
                 if isinstance(layer, nn.Linear):

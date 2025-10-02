@@ -16,15 +16,15 @@ class Exploration(object):
         self.sess = sess
 
     def bonus_function(self, x):
-        # You do not need to do anything here
+
         raise NotImplementedError
 
     def fit_density_model(self, states):
-        # You do not need to do anything here
+
         raise NotImplementedError
 
     def compute_reward_bonus(self, states):
-        # You do not need to do anything here
+
         raise NotImplementedError
 
     def modify_reward(self, rewards, states):
@@ -80,15 +80,13 @@ class DiscreteExploration(Exploration):
         count = raise NotImplementedError
         bonus = raise NotImplementedError
         return bonus
-
-
 class ContinuousExploration(Exploration):
     def __init__(self, density_model, bonus_coeff, replay_size):
         super(ContinuousExploration, self).__init__(density_model, bonus_coeff)
         self.replay_buffer = Replay_Buffer(max_size=replay_size)
 
     def fit_density_model(self, states):
-        # You do not need to do anything here
+
         raise NotImplementedError
 
     def bonus_function(self, prob):
@@ -105,7 +103,7 @@ class ContinuousExploration(Exploration):
         """
             ### PROBLEM 2
             ### YOUR CODE HERE
-        
+
             args:
                 states: (bsize, ob_dim)
         """
@@ -113,8 +111,6 @@ class ContinuousExploration(Exploration):
         prob = None
         bonus = None
         return bonus
-
-
 class RBFExploration(ContinuousExploration):
     def __init__(self, density_model, bonus_coeff, replay_size):
         super(RBFExploration, self).__init__(density_model, bonus_coeff, replay_size)
@@ -126,13 +122,11 @@ class RBFExploration(ContinuousExploration):
         """
         self.replay_buffer.prepend(states)
         self.density_model.fit_data(self.replay_buffer.get_memory())
-
-
 class ExemplarExploration(ContinuousExploration):
     def __init__(self, density_model, bonus_coeff, train_iters, bsize, replay_size):
         super(ExemplarExploration, self).__init__(density_model, bonus_coeff, replay_size)
         self.train_iters = train_iters
-        self.bsize = bsize   
+        self.bsize = bsize
 
     def sample_idxs(self, states, batch_size):
         states = copy.deepcopy(states)

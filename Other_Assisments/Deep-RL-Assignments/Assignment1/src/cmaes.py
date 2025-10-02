@@ -1,10 +1,6 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import numpy as np
 import cma
 from src.utils import generate_episode
-
-
 class CMAES:
     def __init__(self, env, num_params, sigma=0.1):
         self.env = env
@@ -30,7 +26,7 @@ class CMAES:
             for _ in range(num_rollouts):
                 _, _, rewards = generate_episode(self.env, policy)
                 total_reward += np.sum(rewards)
-            return -total_reward / num_rollouts  # Minimize negative reward
+            return -total_reward / num_rollouts
 
         es = cma.CMAEvolutionStrategy(np.random.randn(self.num_params), self.sigma)
         es.optimize(evaluate_policy, iterations=num_epochs)

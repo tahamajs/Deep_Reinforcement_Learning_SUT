@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import tensorflow as tf
 from keras.layers import Dense, Flatten, Input, Concatenate, Lambda, Activation
 from keras.models import Model
@@ -10,8 +9,6 @@ from util import ZFilter
 HIDDEN1_UNITS = 400
 HIDDEN2_UNITS = 400
 HIDDEN3_UNITS = 400
-
-
 class PENN:
     """
     (P)robabilistic (E)nsemble of (N)eural (N)etworks
@@ -30,14 +27,8 @@ class PENN:
         self.state_dim = state_dim
         self.action_dim = action_dim
         K.set_session(self.sess)
-
-        # Log variance bounds
         self.max_logvar = tf.Variable(-3 * np.ones([1, self.state_dim]), dtype=tf.float32)
         self.min_logvar = tf.Variable(-7 * np.ones([1, self.state_dim]), dtype=tf.float32)
-
-        # TODO write your code here
-        # Create and initialize your model
-
     def get_output(self, output):
         """
         Argument:
@@ -68,7 +59,5 @@ class PENN:
           inputs: state and action inputs.  Assumes that inputs are standardized.
           targets: resulting states
         """
-        # TODO: write your code here
-        raise NotImplementedError
 
-    # TODO: Write any helper functions that you need
+        raise NotImplementedError

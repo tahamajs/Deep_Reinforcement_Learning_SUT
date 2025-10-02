@@ -1,10 +1,7 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-
 class ActorCritic(nn.Module):
     def __init__(self, input_channels, action_space):
         super(ActorCritic, self).__init__()
@@ -32,8 +29,6 @@ class ActorCritic(nn.Module):
             value = F.relu(self.critic_fc1(x))
             value = self.critic_fc2(value)
             return value
-
-
 if __name__ == "__main__":
     actor_critic = ActorCritic(4, 2)
     action, value = actor_critic(torch.zeros((1, 4, 84, 84)))

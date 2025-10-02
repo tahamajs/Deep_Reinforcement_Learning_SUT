@@ -1,11 +1,6 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import numpy as np
 from typing import Any
-
-
 Prediction = Any
-
-
 class BaseModel(object):
     def update(self, ob_no, next_ob_no, re_n, terminal_n) -> dict:
         raise NotImplementedError

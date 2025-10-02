@@ -1,6 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-# Homework 5: Exploration + Exploitation Script
-
 import os
 import time
 
@@ -11,8 +8,6 @@ from cs285.infrastructure.dqn_utils import (
     PiecewiseSchedule,
     ConstantSchedule,
 )
-
-
 class Q_Trainer(object):
 
     def __init__(self, params):
@@ -45,8 +40,6 @@ class Q_Trainer(object):
             collect_policy=self.rl_trainer.agent.actor,
             eval_policy=self.rl_trainer.agent.actor,
         )
-
-
 def main():
 
     import argparse
@@ -91,21 +84,15 @@ def main():
     parser.add_argument("--use_boltzmann", action="store_true")
 
     args = parser.parse_args()
-
-    # convert to dictionary
     params = vars(args)
     params["double_q"] = True
     params["num_agent_train_steps_per_iter"] = 1
     params["num_critic_updates_per_agent_update"] = 1
     params["exploit_weight_schedule"] = ConstantSchedule(1.0)
-    params["video_log_freq"] = -1  # This param is not used for DQN
+    params["video_log_freq"] = -1
     params["num_timesteps"] = 50000
     params["learning_starts"] = 2000
     params["eps"] = 0.2
-    ##################################
-    ### CREATE DIRECTORY FOR LOGGING
-    ##################################
-
     if params["env_name"] == "PointmassEasy-v0":
         params["ep_len"] = 50
     if params["env_name"] == "PointmassMedium-v0":
@@ -129,7 +116,7 @@ def main():
         if not params["use_rnd"]:
             params["learning_starts"] = params["num_exploration_steps"]
 
-    logdir_prefix = "hw5_expl_"  # keep for autograder
+    logdir_prefix = "hw5_expl_"
     data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../data")
 
     if not (os.path.exists(data_path)):
@@ -152,7 +139,5 @@ def main():
 
     trainer = Q_Trainer(params)
     trainer.run_training_loop()
-
-
 if __name__ == "__main__":
     main()

@@ -13,19 +13,15 @@ class MLP(nn.Module):
         super().__init__()
 
         self.discrete = discrete
-
-        # network architecture
         self.mlp = nn.ModuleList()
-        self.mlp.append(nn.Linear(ob_dim, size)) #first hidden layer
+        self.mlp.append(nn.Linear(ob_dim, size))
         self.mlp.append(activation)
 
-        for h in range(n_layers - 1): #additional hidden layers
+        for h in range(n_layers - 1):
             self.mlp.append(nn.Linear(size, size))
             self.mlp.append(activation)
 
-        self.mlp.append(nn.Linear(size, ac_dim)) #output layer, no activation function
-
-        #if continuous define logstd variable
+        self.mlp.append(nn.Linear(size, ac_dim))
         if not self.discrete:
             self.logstd = nn.Parameter(torch.zeros(ac_dim))
 
@@ -70,7 +66,7 @@ class atari_DQN(nn.Module):
 
     def forward(self, obs):
         out = obs.float() / 255
-        out = out.permute(0, 3, 1, 2) #reshape to [batch size, channels, height, width]
+        out = out.permute(0, 3, 1, 2)
         out = self.convnet(out)
         out = out.reshape(out.size(0), -1)
         out = self.action_value(out)

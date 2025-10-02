@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 class BaseAgent(object):
     def __init__(self, **kwargs):
         super(BaseAgent, self).__init__(**kwargs)

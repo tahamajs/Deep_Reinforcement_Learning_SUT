@@ -10,8 +10,6 @@ Student ID: 400206262
 import numpy as np
 import gym
 from collections import deque
-
-
 class TimeLimitWrapper(gym.Wrapper):
     """Wrapper that limits episode length."""
 
@@ -41,8 +39,6 @@ class TimeLimitWrapper(gym.Wrapper):
             info["TimeLimit.truncated"] = True
 
         return obs, reward, done, info
-
-
 class ActionRepeatWrapper(gym.Wrapper):
     """Wrapper that repeats actions for multiple steps."""
 
@@ -70,8 +66,6 @@ class ActionRepeatWrapper(gym.Wrapper):
                 break
 
         return obs, total_reward, done, info
-
-
 class FrameStackWrapper(gym.Wrapper):
     """Wrapper that stacks multiple frames."""
 
@@ -84,8 +78,6 @@ class FrameStackWrapper(gym.Wrapper):
         """
         super().__init__(env)
         self.num_stack = num_stack
-
-        # Update observation space
         obs_shape = env.observation_space.shape
         self.frames = deque(maxlen=num_stack)
 
@@ -111,8 +103,6 @@ class FrameStackWrapper(gym.Wrapper):
     def _get_obs(self):
         """Get stacked observation."""
         return np.concatenate(list(self.frames), axis=-1)
-
-
 class RewardScaleWrapper(gym.RewardWrapper):
     """Wrapper that scales rewards."""
 
@@ -129,8 +119,6 @@ class RewardScaleWrapper(gym.RewardWrapper):
     def reward(self, reward):
         """Scale reward."""
         return reward * self.scale
-
-
 class ObservationWrapper(gym.ObservationWrapper):
     """Base class for observation wrappers."""
 
@@ -145,15 +133,13 @@ class ObservationWrapper(gym.ObservationWrapper):
     def observation(self, obs):
         """Process observation."""
         return obs
-
-
 class GrayscaleWrapper(ObservationWrapper):
     """Convert RGB observations to grayscale."""
 
     def __init__(self, env):
         """Initialize grayscale wrapper."""
         super().__init__(env)
-        # Update observation space for grayscale
+
         old_shape = env.observation_space.shape
         self.observation_space = gym.spaces.Box(
             low=0, high=255, shape=(old_shape[0], old_shape[1], 1), dtype=np.uint8
@@ -161,10 +147,8 @@ class GrayscaleWrapper(ObservationWrapper):
 
     def observation(self, obs):
         """Convert to grayscale."""
-        # Simple grayscale conversion
+
         return np.mean(obs, axis=-1, keepdims=True).astype(np.uint8)
-
-
 class ResizeWrapper(ObservationWrapper):
     """Resize observations."""
 
@@ -177,8 +161,6 @@ class ResizeWrapper(ObservationWrapper):
         """
         super().__init__(env)
         self.size = size
-
-        # Update observation space
         old_shape = env.observation_space.shape
         self.observation_space = gym.spaces.Box(
             low=env.observation_space.low.min(),
@@ -196,6 +178,6 @@ class ResizeWrapper(ObservationWrapper):
             img = img.resize(self.size)
             return np.array(img)
         except ImportError:
-            # Fallback: simple nearest neighbor resize
+
             h, w = self.size
             return obs.reshape(h, w, -1)

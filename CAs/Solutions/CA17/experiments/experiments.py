@@ -42,8 +42,6 @@ from environments import (
     QuantumControlEnvironment,
     FederatedLearningEnvironment,
 )
-
-
 class ExperimentRunner:
     """Base class for running RL experiments"""
 
@@ -93,8 +91,6 @@ class ExperimentRunner:
     def plot_results(self):
         """Plot experiment results"""
         pass
-
-
 class WorldModelExperiment(ExperimentRunner):
     """Experiment for world models and imagination-augmented agents"""
 
@@ -199,8 +195,6 @@ class WorldModelExperiment(ExperimentRunner):
             bbox_inches="tight",
         )
         plt.show()
-
-
 class MultiAgentExperiment(ExperimentRunner):
     """Experiment for multi-agent reinforcement learning"""
 
@@ -219,7 +213,7 @@ class MultiAgentExperiment(ExperimentRunner):
             n_predators=config.n_predators,
             n_prey=config.n_prey,
             obs_dim=obs_dim,
-            action_dim=5,  # 5 actions per agent
+            action_dim=5,
             hidden_dim=config.hidden_dim,
             learning_rate=config.learning_rate,
         )
@@ -327,8 +321,6 @@ class MultiAgentExperiment(ExperimentRunner):
             bbox_inches="tight",
         )
         plt.show()
-
-
 class CausalRLExperiment(ExperimentRunner):
     """Experiment for causal reinforcement learning"""
 
@@ -436,8 +428,6 @@ class CausalRLExperiment(ExperimentRunner):
             bbox_inches="tight",
         )
         plt.show()
-
-
 class QuantumRLExperiment(ExperimentRunner):
     """Experiment for quantum-enhanced reinforcement learning"""
 
@@ -547,8 +537,6 @@ class QuantumRLExperiment(ExperimentRunner):
             bbox_inches="tight",
         )
         plt.show()
-
-
 class FederatedRLExperiment(ExperimentRunner):
     """Experiment for federated reinforcement learning"""
 
@@ -563,7 +551,7 @@ class FederatedRLExperiment(ExperimentRunner):
 
         self.server = FederatedRLServer(
             n_clients=config.n_clients,
-            model_dim=1,  # Simple linear model
+            model_dim=1,
             learning_rate=config.learning_rate,
         )
 
@@ -594,7 +582,7 @@ class FederatedRLExperiment(ExperimentRunner):
 
             global_losses.append(info["global_loss"])
             participation_rates.append(info["participation_rate"])
-            communication_costs.append(len(selected_clients))  # Simple cost metric
+            communication_costs.append(len(selected_clients))
 
             if (round_num + 1) % 10 == 0:
                 print(
@@ -652,8 +640,6 @@ class FederatedRLExperiment(ExperimentRunner):
             bbox_inches="tight",
         )
         plt.show()
-
-
 class SafetyExperiment(ExperimentRunner):
     """Experiment for advanced safety and robustness techniques"""
 
@@ -777,8 +763,6 @@ class SafetyExperiment(ExperimentRunner):
             bbox_inches="tight",
         )
         plt.show()
-
-
 class ComparativeExperiment(ExperimentRunner):
     """Comparative experiment across multiple RL paradigms"""
 
@@ -830,8 +814,6 @@ class ComparativeExperiment(ExperimentRunner):
                 bbox_inches="tight",
             )
             plt.show()
-
-
 def create_default_configs() -> Dict[str, Config]:
     """Create default configurations for all experiments"""
 
@@ -895,8 +877,6 @@ def create_default_configs() -> Dict[str, Config]:
     )
 
     return configs
-
-
 print("✅ Experiments module complete!")
 print("Components implemented:")
 print("- ExperimentRunner: Base class for experiments")
@@ -908,14 +888,10 @@ print("- FederatedRLExperiment: Federated RL evaluation")
 print("- SafetyExperiment: Safety and robustness evaluation")
 print("- ComparativeExperiment: Cross-paradigm comparison")
 print("- create_default_configs: Default experiment configurations")
-
-
 def demonstrate_world_models():
     """Demonstrate world models and imagination-augmented agents"""
     print("🚀 Demonstrating World Models and Imagination-Augmented Agents")
     print("=" * 60)
-
-    # Create configuration
     config = Config(
         n_episodes=50,
         batch_size=32,
@@ -924,8 +900,6 @@ def demonstrate_world_models():
         learning_rate=1e-3,
         goal_velocity=0.0,
     )
-
-    # Create and run experiment
     experiment = WorldModelExperiment(config, save_dir="experiments/world_models")
     results = experiment.run_experiment()
 
@@ -936,19 +910,15 @@ def demonstrate_world_models():
         f"  - Avg Imagination Error: {np.mean(results['imagination_errors']):.4f}"
         f"  - Avg Prediction Error: {np.mean(results['prediction_errors']):.4f}"
     )
-    # Plot results
+
     experiment.plot_results()
 
     print("✅ World Models demonstration complete!")
     return results
-
-
 def demonstrate_multi_agent_rl():
     """Demonstrate multi-agent reinforcement learning"""
     print("🚀 Demonstrating Multi-Agent Deep Reinforcement Learning")
     print("=" * 60)
-
-    # Create configuration
     config = Config(
         n_episodes=50,
         batch_size=32,
@@ -959,8 +929,6 @@ def demonstrate_multi_agent_rl():
         grid_size=8,
         max_steps=50,
     )
-
-    # Create and run experiment
     experiment = MultiAgentExperiment(config, save_dir="experiments/multi_agent")
     results = experiment.run_experiment()
 
@@ -971,19 +939,15 @@ def demonstrate_multi_agent_rl():
         f"  - Avg Prey Reward: {np.mean(results['prey_rewards']):.2f}"
         f"  - Avg Capture Rate: {np.mean(results['capture_rates']):.2f}"
     )
-    # Plot results
+
     experiment.plot_results()
 
     print("✅ Multi-Agent RL demonstration complete!")
     return results
-
-
 def demonstrate_causal_rl():
     """Demonstrate causal reinforcement learning"""
     print("🚀 Demonstrating Causal Reinforcement Learning")
     print("=" * 60)
-
-    # Create configuration
     config = Config(
         n_episodes=50,
         batch_size=32,
@@ -993,8 +957,6 @@ def demonstrate_causal_rl():
         n_contexts=2,
         max_steps=30,
     )
-
-    # Create and run experiment
     experiment = CausalRLExperiment(config, save_dir="experiments/causal_rl")
     results = experiment.run_experiment()
 
@@ -1005,19 +967,15 @@ def demonstrate_causal_rl():
         f"  - Avg Causal Discovery Strength: {np.mean(results['causal_discoveries']):.4f}"
         f"  - Avg Counterfactual Regret: {np.mean(results['counterfactual_regrets']):.4f}"
     )
-    # Plot results
+
     experiment.plot_results()
 
     print("✅ Causal RL demonstration complete!")
     return results
-
-
 def demonstrate_quantum_rl():
     """Demonstrate quantum-enhanced reinforcement learning"""
     print("🚀 Demonstrating Quantum-Enhanced Reinforcement Learning")
     print("=" * 60)
-
-    # Create configuration
     config = Config(
         n_episodes=30,
         batch_size=16,
@@ -1026,8 +984,6 @@ def demonstrate_quantum_rl():
         n_qubits=2,
         max_steps=15,
     )
-
-    # Create and run experiment
     experiment = QuantumRLExperiment(config, save_dir="experiments/quantum_rl")
     results = experiment.run_experiment()
 
@@ -1038,19 +994,15 @@ def demonstrate_quantum_rl():
         f"  - Avg Fidelity: {np.mean(results['fidelities']):.4f}"
         f"  - Avg Quantum Entropy: {np.mean(results['quantum_entropies']):.4f}"
     )
-    # Plot results
+
     experiment.plot_results()
 
     print("✅ Quantum RL demonstration complete!")
     return results
-
-
 def demonstrate_federated_rl():
     """Demonstrate federated reinforcement learning"""
     print("🚀 Demonstrating Federated Reinforcement Learning")
     print("=" * 60)
-
-    # Create configuration
     config = Config(
         n_rounds=50,
         n_clients=5,
@@ -1059,8 +1011,6 @@ def demonstrate_federated_rl():
         learning_rate=1e-3,
         participation_rate=0.6,
     )
-
-    # Create and run experiment
     experiment = FederatedRLExperiment(config, save_dir="experiments/federated_rl")
     results = experiment.run_experiment()
 
@@ -1071,29 +1021,19 @@ def demonstrate_federated_rl():
         f"  - Avg Participation Rate: {np.mean(results['participation_rates']):.2f}"
         f"  - Total Communication Cost: {sum(results['communication_costs'])}"
     )
-
-    # Plot results
     experiment.plot_results()
 
     print("✅ Federated RL demonstration complete!")
     return results
-
-
 def comprehensive_rl_showcase():
     """Comprehensive showcase of all RL paradigms"""
     print("🚀 Comprehensive RL Showcase: Next-Generation Paradigms")
     print("=" * 70)
-
-    # Create comparative experiment
     config = Config(n_episodes=30, batch_size=16, hidden_dim=32, learning_rate=1e-3)
     comparative_exp = ComparativeExperiment(
         config, save_dir="experiments/comprehensive"
     )
-
-    # Add individual experiments
     configs = create_default_configs()
-
-    # Scale down configurations for faster demonstration
     configs["world_model"].n_episodes = 20
     configs["multi_agent"].n_episodes = 20
     configs["causal_rl"].n_episodes = 20
@@ -1115,8 +1055,6 @@ def comprehensive_rl_showcase():
     comparative_exp.add_experiment(
         "Federated RL", FederatedRLExperiment(configs["federated_rl"])
     )
-
-    # Run comparative experiment
     results = comparative_exp.run_experiment()
 
     print("\n📊 Comprehensive Results Summary:")
@@ -1133,13 +1071,11 @@ def comprehensive_rl_showcase():
             print(f"  {paradigm}:")
             print(f"    - Final Loss: {losses[-1]:.4f}")
             print(f"    - Avg Loss: {np.mean(losses):.4f}")
-    # Plot comparative results
+
     comparative_exp.plot_results()
 
     print("✅ Comprehensive RL showcase complete!")
     return results
-
-
 print("✅ Demonstration functions added!")
 print("Available demonstrations:")
 print("- demonstrate_world_models()")

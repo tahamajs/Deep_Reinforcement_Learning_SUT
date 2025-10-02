@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 import numpy as np
 import pdb
 
@@ -8,15 +7,13 @@ from cs285.infrastructure.dqn_utils import (
 )
 from cs285.policies.argmax_policy import ArgMaxPolicy
 from cs285.critics.dqn_critic import DQNCritic
-
-
 class DQNAgent(object):
     def __init__(self, env, agent_params):
 
         self.env = env
         self.agent_params = agent_params
         self.batch_size = agent_params["batch_size"]
-        # import ipdb; ipdb.set_trace()
+
         self.last_obs, _ = self.env.reset()
 
         self.num_actions = agent_params["ac_dim"]
@@ -51,11 +48,6 @@ class DQNAgent(object):
         Note that self.last_obs must always point to the new latest observation.
         """
         raise NotImplementedError
-        # Not needed for this homework
-
-    ####################################
-    ####################################
-
     def sample(self, batch_size):
         if self.replay_buffer.can_sample(self.batch_size):
             return self.replay_buffer.sample(batch_size)
@@ -64,7 +56,3 @@ class DQNAgent(object):
 
     def train(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
         raise NotImplementedError
-        # Not needed for this homework
-
-    ####################################
-    ####################################

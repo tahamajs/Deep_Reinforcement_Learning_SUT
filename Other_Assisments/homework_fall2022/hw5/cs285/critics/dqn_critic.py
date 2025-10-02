@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from .base_critic import BaseCritic
 import torch
 import torch.optim as optim
@@ -7,8 +6,6 @@ from torch import nn
 import pdb
 
 from cs285.infrastructure import pytorch_util as ptu
-
-
 class DQNCritic(BaseCritic):
 
     def __init__(self, hparams, optimizer_spec, **kwargs):
@@ -38,7 +35,7 @@ class DQNCritic(BaseCritic):
             self.optimizer,
             self.optimizer_spec.learning_rate_schedule,
         )
-        self.loss = nn.SmoothL1Loss()  # AKA Huber loss
+        self.loss = nn.SmoothL1Loss()
         self.q_net.to(ptu.device)
         self.q_net_target.to(ptu.device)
 
@@ -77,19 +74,15 @@ class DQNCritic(BaseCritic):
         target = reward_n + self.gamma * q_tp1 * (1 - terminal_n)
         target = target.detach()
         loss = self.loss(q_t_values, target)
-    
+
         self.optimizer.zero_grad()
         loss.backward()
         utils.clip_grad_value_(self.q_net.parameters(), self.grad_norm_clipping)
         self.optimizer.step()
-        
+
         self.learning_rate_scheduler.step()
 
         return {'Training Loss': ptu.to_numpy(loss)}
-
-    ####################################
-    ####################################
-
     def update_target_network(self):
         for target_param, param in zip(
                 self.q_net_target.parameters(), self.q_net.parameters()

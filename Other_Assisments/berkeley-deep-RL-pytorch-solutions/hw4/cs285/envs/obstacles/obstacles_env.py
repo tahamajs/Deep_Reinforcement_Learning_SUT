@@ -1,12 +1,10 @@
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
-
-
 class Obstacles(gym.Env):
     def __init__(self, start=[-0.5, 0.75], end=[0.7, -0.8], random_starts=True):
 
-        import matplotlib.pyplot as plt  # inside, so doesnt get imported when not using this env
+        import matplotlib.pyplot as plt
 
         self.plt = plt
 
@@ -30,8 +28,6 @@ class Obstacles(gym.Env):
         self.end = np.array(end)
         self.current = np.array(start)
         self.random_starts = random_starts
-
-        # obstacles are rectangles, specified by [x of top left, y of topleft, width x, height y]
         self.obstacles = []
         self.obstacles.append([-0.4, 0.8, 0.4, 0.3])
         self.obstacles.append([-0.9, 0.3, 0.2, 0.6])
@@ -44,9 +40,6 @@ class Obstacles(gym.Env):
 
     def seed(self, seed):
         np.random.seed(seed)
-
-    #########################################
-
     def pick_start_pos(self):
         if self.random_starts:
             temp = np.random.uniform(
@@ -59,9 +52,6 @@ class Obstacles(gym.Env):
         else:
             temp = self.start
         return temp
-
-    #########################################
-
     def reset(self, seed=None, options=None):
         if seed:
             self.seed(seed)
@@ -76,16 +66,9 @@ class Obstacles(gym.Env):
 
         self.current = reset_pose.copy()
         self.end = reset_vel.copy()
-
-        # clear
         self.counter = 0
         self.plt.clf()
-
-        # return
         return self._get_obs()
-
-    #########################################
-
     def _get_obs(self):
         return np.concatenate([self.current, self.end])
 
@@ -106,8 +89,6 @@ class Obstacles(gym.Env):
             r_total: reward of this (o,a) pair, dimension is (batchsize,1) or (1,)
             done: True if env reaches terminal state, dimension is (batchsize,1) or (1,)
         """
-
-        # initialize and reshape as needed, for batch mode
         self.reward_dict = {}
         if len(observations.shape) == 1:
             observations = np.expand_dims(observations, axis=0)
@@ -115,39 +96,27 @@ class Obstacles(gym.Env):
             batch_mode = False
         else:
             batch_mode = True
-
-        # get vars
         curr_pos = observations[:, :2]
         end_pos = observations[:, -2:]
-
-        # calc rew
         dist = np.linalg.norm(curr_pos - end_pos, axis=1)
         self.reward_dict["dist"] = -dist
         self.reward_dict["r_total"] = self.reward_dict["dist"]
-
-        # done
         dones = np.zeros((observations.shape[0],))
         dones[dist < self.eps] = 1
-
-        # check oob
         oob = np.zeros((observations.shape[0],))
         oob[curr_pos[:, 0] < self.boundary_min] = 1
         oob[curr_pos[:, 1] < self.boundary_min] = 1
         oob[curr_pos[:, 0] > self.boundary_max] = 1
         oob[curr_pos[:, 1] > self.boundary_max] = 1
         dones[oob == 1] = 1
-
-        # return
         if not batch_mode:
             return self.reward_dict["r_total"][0], dones[0]
         return self.reward_dict["r_total"], dones
 
     def step(self, action):
         self.counter += 1
-        action = np.clip(action, -1, 1)  # clip (-1, 1)
-        action = action / 10.0  # scale (-1,1) to (-0.1, 0.1)
-
-        # move, only if its a valid move (else, keep it there because it cant move)
+        action = np.clip(action, -1, 1)
+        action = action / 10.0
         temp = self.current + action
         if self.is_valid(temp[None, :]):
             self.current = temp
@@ -158,14 +127,7 @@ class Obstacles(gym.Env):
         env_info = {"ob": ob, "rewards": self.reward_dict, "score": score}
 
         return ob, reward, done, False, env_info
-
-    ########################################
-    # utility functions
-    ########################################
-
     def render(self, mode=None):
-
-        # boundaries
         self.plt.plot(
             [self.boundary_min, self.boundary_min],
             [self.boundary_min, self.boundary_max],
@@ -186,8 +148,6 @@ class Obstacles(gym.Env):
             [self.boundary_max, self.boundary_max],
             "k",
         )
-
-        # obstacles
         for obstacle in self.obstacles:
             tl_x = obstacle[0]
             tl_y = obstacle[1]
@@ -201,8 +161,6 @@ class Obstacles(gym.Env):
             self.plt.plot([tl_x, tr_x], [tl_y, tr_y], "r")
             self.plt.plot([bl_x, bl_x], [bl_y, tl_y], "r")
             self.plt.plot([br_x, br_x], [br_y, tr_y], "r")
-
-        # current and end
         self.plt.plot(self.end[0], self.end[1], "go")
         self.plt.plot(self.current[0], self.current[1], "ko")
         self.plt.pause(0.1)
@@ -213,8 +171,6 @@ class Obstacles(gym.Env):
     def is_valid(self, dat):
 
         oob_mask = np.any(self.oob(dat), axis=1)
-
-        # old way
         self.a = self.boundary_min + (self.boundary_max - self.boundary_min) / 3.0
         self.b = self.boundary_min + 2 * (self.boundary_max - self.boundary_min) / 3.0
         data_mask = (
@@ -223,8 +179,6 @@ class Obstacles(gym.Env):
             | (dat[:, 1] < self.a)
             | (dat[:, 1] > self.b)
         )
-
-        #
         in_obstacle = False
         for obstacle in self.obstacles:
             tl_x = obstacle[0]
@@ -244,8 +198,6 @@ class Obstacles(gym.Env):
             ):
                 in_obstacle = True
                 return False
-
-        # not in obstacle, so return whether or not its in bounds
         return not oob_mask
 
     def oob(self, x):

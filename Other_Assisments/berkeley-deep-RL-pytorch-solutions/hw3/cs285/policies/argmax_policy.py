@@ -1,6 +1,4 @@
 import torch
-
-
 class ArgMaxPolicy:
 
     def __init__(self, critic, device):
@@ -12,5 +10,5 @@ class ArgMaxPolicy:
             observation = torch.tensor(obs, dtype=torch.float32).to(self.device)
         else:
             observation = torch.tensor(obs[None], dtype=torch.float32).to(self.device)
-        # TODO: pass observation to critic and use argmax of the resulting Q values as the action
+
         return self.critic.Q_func(observation).squeeze().argmax().item()

@@ -10,8 +10,6 @@ Student ID: 400206262
 import tensorflow as tf
 import numpy as np
 from tf_util import function, initialize
-
-
 class BehavioralCloning:
     """Behavioral Cloning agent."""
 
@@ -26,15 +24,9 @@ class BehavioralCloning:
         self.env = env
         self.learning_rate = learning_rate
         self.hidden_sizes = hidden_sizes
-
-        # Get dimensions
         self.obs_dim = env.observation_space.shape[0]
         self.act_dim = env.action_space.shape[0]
-
-        # Build network
         self._build_network()
-
-        # Initialize session
         self.sess = tf.Session()
         initialize()
 
@@ -42,15 +34,11 @@ class BehavioralCloning:
         """Build the neural network for policy."""
         self.obs_ph = tf.placeholder(tf.float32, [None, self.obs_dim])
         self.act_ph = tf.placeholder(tf.float32, [None, self.act_dim])
-
-        # Build MLP
         layer = self.obs_ph
         for size in self.hidden_sizes:
             layer = tf.layers.dense(layer, size, activation=tf.nn.relu)
 
         self.predicted_actions = tf.layers.dense(layer, self.act_dim, activation=None)
-
-        # Loss and optimizer
         self.loss = tf.reduce_mean(tf.square(self.predicted_actions - self.act_ph))
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
         self.train_op = self.optimizer.minimize(self.loss)
@@ -70,15 +58,13 @@ class BehavioralCloning:
         losses = []
 
         for epoch in range(epochs):
-            # Shuffle data
+
             indices = np.random.permutation(len(observations))
             obs_shuffled = observations[indices]
             act_shuffled = actions[indices]
 
             epoch_loss = 0
             num_batches = 0
-
-            # Mini-batch training
             for i in range(0, len(observations), batch_size):
                 obs_batch = obs_shuffled[i : i + batch_size]
                 act_batch = act_shuffled[i : i + batch_size]

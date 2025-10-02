@@ -73,7 +73,7 @@ class ContinuousMountainCar(BaseEnvironment):
             velocity = 0
 
         done = bool(position >= self.goal_position and velocity >= self.goal_velocity)
-        reward = -1.0  # Default reward
+        reward = -1.0
 
         if done:
             reward = 100.0
@@ -216,13 +216,13 @@ class PredatorPreyEnvironment(BaseEnvironment):
         """Move agent based on action"""
         x, y = position
 
-        if action == 0:  # up
+        if action == 0:
             y = min(y + 1, self.grid_size - 1)
-        elif action == 1:  # down
+        elif action == 1:
             y = max(y - 1, 0)
-        elif action == 2:  # left
+        elif action == 2:
             x = max(x - 1, 0)
-        elif action == 3:  # right
+        elif action == 3:
             x = min(x + 1, self.grid_size - 1)
 
         return (x, y)
@@ -300,11 +300,11 @@ class CausalBanditEnvironment(BaseEnvironment):
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict]:
         """Execute one time step"""
         reward = self.true_rewards[(self.context, action)]
-        reward += self.np_random.normal(0, 0.1)  # Add noise
+        reward += self.np_random.normal(0, 0.1)
 
         self.context = self.np_random.integers(0, self.n_contexts)
 
-        done = False  # Bandits are episodic
+        done = False
         return np.array([self.context]), reward, done, False, {
             'true_reward': self.true_rewards[(self.context, action)]
         }
@@ -340,7 +340,7 @@ class QuantumControlEnvironment(BaseEnvironment):
             self.target_state = target_state / np.linalg.norm(target_state)
 
         self.action_space = spaces.Box(low=-np.pi, high=np.pi,
-                                     shape=(n_qubits * 3,), dtype=np.float32)  # RX, RY, RZ
+                                     shape=(n_qubits * 3,), dtype=np.float32)
 
         self.observation_space = spaces.Box(low=-1, high=1,
                                           shape=(2 * self.state_dim,), dtype=np.float32)
@@ -460,7 +460,7 @@ class FederatedLearningEnvironment(BaseEnvironment):
 
         self.action_space = spaces.MultiBinary(n_clients)
 
-        obs_dim = n_clients * 3  # mean, std, size for each client
+        obs_dim = n_clients * 3
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf,
                                           shape=(obs_dim,), dtype=np.float32)
 
@@ -475,7 +475,7 @@ class FederatedLearningEnvironment(BaseEnvironment):
             std = 0.5 + self.np_random.random() * self.heterogeneity
 
             data = self.np_random.normal(mean, std, self.data_size)
-            labels = (data > 0).astype(int)  # Binary classification
+            labels = (data > 0).astype(int)
 
             clients_data.append({
                 'features': data.reshape(-1, 1),
@@ -490,7 +490,7 @@ class FederatedLearningEnvironment(BaseEnvironment):
     def reset(self, *, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict]:
         """Reset environment"""
         super().reset(seed=seed)
-        self.global_model = np.zeros(1)  # Simple linear model
+        self.global_model = np.zeros(1)
         self.round = 0
         return self._get_observation(), {}
 
@@ -539,10 +539,10 @@ class FederatedLearningEnvironment(BaseEnvironment):
 
         global_loss /= total_samples
 
-        reward = -global_loss - 0.1 * len(selected_clients)  # Encourage efficiency
+        reward = -global_loss - 0.1 * len(selected_clients)
 
         self.round += 1
-        done = self.round >= 100  # Max rounds
+        done = self.round >= 100
 
         return self._get_observation(), reward, done, False, {
             'global_loss': global_loss,

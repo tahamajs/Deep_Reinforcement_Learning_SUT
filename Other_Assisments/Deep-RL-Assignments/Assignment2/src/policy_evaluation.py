@@ -1,8 +1,4 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import numpy as np
-
-
 def evaluate_policy_sync(env, gamma, policy, max_iterations=int(1e3), tol=1e-3):
     """Performs policy evaluation.
 
@@ -28,16 +24,16 @@ def evaluate_policy_sync(env, gamma, policy, max_iterations=int(1e3), tol=1e-3):
       The value for the given policy and the number of iterations till
       the value function converged.
     """
-    value_func = np.zeros(env.nS)  # initialize value function
+    value_func = np.zeros(env.nS)
     next_value_func = np.zeros(env.nS)
     iters = 0
     delta = np.ones(env.nS)
     while iters < max_iterations and np.any((delta > tol)):
         delta = np.zeros(env.nS)
         for state in range(env.nS):
-            # Find out the current action encoded in the policy
+
             action = policy[state]
-            # Iterate over all the future states
+
             new_value = 0
             for prob, nextstate, reward, is_terminal in env.P[state][action]:
                 prob = env.T[state, action, nextstate]
@@ -51,8 +47,6 @@ def evaluate_policy_sync(env, gamma, policy, max_iterations=int(1e3), tol=1e-3):
         value_func = next_value_func.copy()
         iters += 1
     return value_func, iters
-
-
 def evaluate_policy_async_ordered(
     env, gamma, policy, max_iterations=int(1e3), tol=1e-3
 ):
@@ -81,15 +75,15 @@ def evaluate_policy_async_ordered(
       The value for the given policy and the number of iterations till
       the value function converged.
     """
-    value_func = np.zeros(env.nS)  # initialize value function
+    value_func = np.zeros(env.nS)
     iters = 0
     delta = np.ones(env.nS)
     while iters < max_iterations and np.any((delta > tol)):
         delta = np.zeros(env.nS)
         for state in range(env.nS):
-            # Find out the current action encoded in the policy
+
             action = policy[state]
-            # Iterate over all the future states
+
             new_value = 0
             for prob, nextstate, reward, is_terminal in env.P[state][action]:
                 prob = env.T[state, action, nextstate]
@@ -102,8 +96,6 @@ def evaluate_policy_async_ordered(
             value_func[state] = new_value
         iters += 1
     return value_func, iters
-
-
 def evaluate_policy_async_randperm(
     env, gamma, policy, max_iterations=int(1e3), tol=1e-3
 ):
@@ -132,7 +124,7 @@ def evaluate_policy_async_randperm(
       The value for the given policy and the number of iterations till
       the value function converged.
     """
-    value_func = np.zeros(env.nS)  # initialize value function
+    value_func = np.zeros(env.nS)
     iters = 0
     delta = np.ones(env.nS)
     while iters < max_iterations and np.any((delta > tol)):
@@ -140,9 +132,9 @@ def evaluate_policy_async_randperm(
         states = np.random.choice(env.nS, env.nS, replace=False)
 
         for state in states:
-            # Find out the current action encoded in the policy
+
             action = policy[state]
-            # Iterate over all the future states
+
             new_value = 0
             for prob, nextstate, reward, is_terminal in env.P[state][action]:
                 prob = env.T[state, action, nextstate]

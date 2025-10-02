@@ -1,4 +1,3 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
 from collections import OrderedDict
 
 from cs285.critics.bootstrapped_continuous_critic import \
@@ -7,8 +6,6 @@ from cs285.infrastructure.replay_buffer import ReplayBuffer
 from cs285.infrastructure.utils import *
 from cs285.policies.MLP_policy import MLPPolicyAC
 from .base_agent import BaseAgent
-
-
 class ACAgent(BaseAgent):
     def __init__(self, env, agent_params):
         super(ACAgent, self).__init__()
@@ -33,14 +30,5 @@ class ACAgent(BaseAgent):
 
     def train(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
         raise NotImplementedError
-        # Not needed for this homework
-
-    ####################################
-    ####################################
-
     def estimate_advantage(self, ob_no, next_ob_no, re_n, terminal_n):
         raise NotImplementedError
-        # Not needed for this homework
-
-    ####################################
-    ####################################

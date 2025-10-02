@@ -1,13 +1,8 @@
-#import sys
-#sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
-
 import cv2
 import numpy as np
 from collections import deque
 import gym
 from gym import spaces
-
-
 class NoopResetEnv(gym.Wrapper):
     def __init__(self, env=None, noop_max=30):
         """Sample initial states by taking random number of no-ops on reset.
@@ -51,13 +46,8 @@ class EpisodicLifeEnv(gym.Wrapper):
     def _step(self, action):
         obs, reward, done, info = self.env.step(action)
         self.was_real_done = done
-        # check current lives, make loss of life terminal,
-        # then update lives to handle bonus lives
         lives = self.env.unwrapped.ale.lives()
         if lives < self.lives and lives > 0:
-            # for Qbert somtimes we stay in lives == 0 condtion for a few frames
-            # so its important to keep lives > 0, so that we only reset once
-            # the environment advertises done.
             done = True
         self.lives = lives
         return obs, reward, done, info
@@ -71,7 +61,7 @@ class EpisodicLifeEnv(gym.Wrapper):
             obs = self.env.reset()
             self.was_real_reset = True
         else:
-            # no-op step to advance from terminal/lost life state
+
             obs, _, _, _ = self.env.step(0)
             self.was_real_reset = False
         self.lives = self.env.unwrapped.ale.lives()
@@ -81,7 +71,7 @@ class MaxAndSkipEnv(gym.Wrapper):
     def __init__(self, env=None, skip=4):
         """Return only every `skip`-th frame"""
         super(MaxAndSkipEnv, self).__init__(env)
-        # most recent raw observations (for max pooling across time steps)
+
         self._obs_buffer = deque(maxlen=2)
         self._skip       = skip
 

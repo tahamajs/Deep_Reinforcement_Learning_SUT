@@ -1,11 +1,7 @@
-# Author: Taha Majlesi - 810101504, University of Tehran
-
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import deeprl_hw2q2.lake_envs as lake_env
-
-
 def display_policy_letters(env, policy):
     """Displays a policy as letters, as required by problem 2.2 & 2.6
 
@@ -22,8 +18,6 @@ def display_policy_letters(env, policy):
 
     for row in range(env.nrow):
         print("".join(policy_letters[row, :]))
-
-
 def value_func_heatmap(env, value_func):
     """Visualize a policy as a heatmap, as required by problem 2.3 & 2.5
 
@@ -47,6 +41,4 @@ def value_func_heatmap(env, value_func):
         xticklabels=np.arange(1, env.nrow + 1),
     )
     plt.show()
-    # Other choices of cmap: YlGnBu
-    # More: https://matplotlib.org/3.1.1/gallery/color/colormap_reference.html
     return None

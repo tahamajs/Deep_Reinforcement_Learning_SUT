@@ -8,18 +8,15 @@ class HalfCheetahEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         utils.EzPickle.__init__(self)
 
     def step(self, action):
-        #################################################
+
         ctrl = False
         relu = False
         threshold = 10.0
-        #################################################
+
         xposbefore = self.sim.data.qpos[0]
         self.do_simulation(action, self.frame_skip)
         xposafter = self.sim.data.qpos[0]
         ob = self._get_obs()
-        # reward_ctrl = - 0.1 * np.square(action).sum()
-        # reward_run = (xposafter - xposbefore)/self.dt
-        #################################################
         if ctrl:
             reward_ctrl = - 0.1 * np.square(action).sum()
         else:
@@ -31,7 +28,7 @@ class HalfCheetahEnv(mujoco_env.MujocoEnv, utils.EzPickle):
                 reward_run = np.sign(xposafter)*(xposafter - xposbefore)/self.dt
             else:
                 reward_run = 1.0
-        #################################################
+
         reward = reward_ctrl + reward_run
         done = False
         return ob, reward, done, dict(reward_run=reward_run, reward_ctrl=reward_ctrl)
