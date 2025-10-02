@@ -18,6 +18,7 @@ import networkx as nx
 import random
 import math
 
+
 class BaseEnvironment(gym.Env):
     """Base class for custom RL environments"""
 
@@ -31,13 +32,14 @@ class BaseEnvironment(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def render(self, mode: str = 'human'):
+    def render(self, mode: str = "human"):
         """Render environment"""
         pass
 
     def close(self):
         """Clean up environment"""
         pass
+
 
 class ContinuousMountainCar(BaseEnvironment):
     """Continuous version of Mountain Car environment"""
@@ -83,7 +85,9 @@ class ContinuousMountainCar(BaseEnvironment):
         self.state = np.array([position, velocity])
         return self.state, reward, done, False, {}
 
-    def reset(self, *, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict]:
+    def reset(
+        self, *, seed: Optional[int] = None, options: Optional[Dict] = None
+    ) -> Tuple[np.ndarray, Dict]:
         """Reset environment"""
         super().reset(seed=seed)
         self.state = np.array([self.np_random.uniform(low=-0.6, high=-0.4), 0])
@@ -93,9 +97,9 @@ class ContinuousMountainCar(BaseEnvironment):
         """Height function for mountain car"""
         return np.sin(3 * xs) * 0.45 + 0.55
 
-    def render(self, mode: str = 'human'):
+    def render(self, mode: str = "human"):
         """Render environment"""
-        if not hasattr(self, 'fig'):
+        if not hasattr(self, "fig"):
             self.fig, self.ax = plt.subplots(figsize=(8, 4))
             self.ax.set_xlim(self.min_position - 0.1, self.max_position + 0.1)
             self.ax.set_ylim(0, 1.0)
@@ -106,24 +110,30 @@ class ContinuousMountainCar(BaseEnvironment):
 
         xs = np.linspace(self.min_position, self.max_position, 100)
         ys = self._height(xs)
-        self.ax.plot(xs, ys, 'b-', linewidth=2)
+        self.ax.plot(xs, ys, "b-", linewidth=2)
 
         position, velocity = self.state
         height = self._height(position)
-        self.ax.plot(position, height + 0.05, 'ro', markersize=10)
+        self.ax.plot(position, height + 0.05, "ro", markersize=10)
 
-        self.ax.axvline(x=self.goal_position, color='g', linestyle='--', alpha=0.7)
+        self.ax.axvline(x=self.goal_position, color="g", linestyle="--", alpha=0.7)
 
         plt.pause(0.01)
         return self.fig
 
+
 class PredatorPreyEnvironment(BaseEnvironment):
     """Multi-agent predator-prey environment"""
 
-    def __init__(self, n_predators: int = 2, n_prey: int = 1,
-                 grid_size: int = 10, max_steps: int = 100, seed: Optional[int] = None):
-        super().__init__(seed)
-
+    def __init__(
+        self,
+        n_predators: int = 2,
+        n_prey: int = 1,
+        grid_size: int = 10,
+        max_steps: int = 100,
+        seed: Optional[int] = None,
+    ):
+        # Set attributes before calling super().__init__ to avoid reset() being called prematurely
         self.n_predators = n_predators
         self.n_prey = n_prey
         self.grid_size = grid_size
@@ -133,12 +143,18 @@ class PredatorPreyEnvironment(BaseEnvironment):
         self.action_space = spaces.Discrete(5)
 
         obs_dim = 2 * (n_predators + n_prey)
-        self.observation_space = spaces.Box(low=0, high=grid_size-1,
-                                          shape=(obs_dim,), dtype=np.int32)
+        self.observation_space = spaces.Box(
+            low=0, high=grid_size - 1, shape=(obs_dim,), dtype=np.int32
+        )
 
+        # Initialize without calling reset() in super().__init__
+        self._seed = seed
+        self.seed(seed)
         self.reset()
 
-    def reset(self, *, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict]:
+    def reset(
+        self, *, seed: Optional[int] = None, options: Optional[Dict] = None
+    ) -> Tuple[np.ndarray, Dict]:
         """Reset environment"""
         super().reset(seed=seed)
         self.step_count = 0
@@ -160,8 +176,10 @@ class PredatorPreyEnvironment(BaseEnvironment):
 
     def _get_random_position(self) -> Tuple[int, int]:
         """Get random grid position"""
-        return (self.np_random.integers(0, self.grid_size),
-                self.np_random.integers(0, self.grid_size))
+        return (
+            self.np_random.integers(0, self.grid_size),
+            self.np_random.integers(0, self.grid_size),
+        )
 
     def _get_observation(self) -> np.ndarray:
         """Get current observation"""
@@ -170,18 +188,20 @@ class PredatorPreyEnvironment(BaseEnvironment):
             obs.extend(pos)
         return np.array(obs, dtype=np.int32)
 
-    def step(self, actions: Dict[int, int]) -> Tuple[np.ndarray, Dict[int, float], bool, bool, Dict]:
+    def step(
+        self, actions: Dict[int, int]
+    ) -> Tuple[np.ndarray, Dict[int, float], bool, bool, Dict]:
         """Execute one time step"""
         self.step_count += 1
 
         new_predator_positions = []
-        for i, action in enumerate(actions['predators']):
+        for i, action in enumerate(actions["predators"]):
             if i < len(self.predator_positions):
                 new_pos = self._move_agent(self.predator_positions[i], action)
                 new_predator_positions.append(new_pos)
 
         new_prey_positions = []
-        for i, action in enumerate(actions['prey']):
+        for i, action in enumerate(actions["prey"]):
             if i < len(self.prey_positions):
                 new_pos = self._move_agent(self.prey_positions[i], action)
                 new_prey_positions.append(new_pos)
@@ -189,26 +209,26 @@ class PredatorPreyEnvironment(BaseEnvironment):
         self.predator_positions = new_predator_positions
         self.prey_positions = new_prey_positions
 
-        rewards = {'predators': [0.0] * self.n_predators, 'prey': [0.0] * self.n_prey}
+        rewards = {"predators": [0.0] * self.n_predators, "prey": [0.0] * self.n_prey}
         captured_prey = []
 
         for i, predator_pos in enumerate(self.predator_positions):
             for j, prey_pos in enumerate(self.prey_positions):
                 if predator_pos == prey_pos and j not in captured_prey:
-                    rewards['predators'][i] += 10.0
-                    rewards['prey'][j] -= 10.0
+                    rewards["predators"][i] += 10.0
+                    rewards["prey"][j] -= 10.0
                     captured_prey.append(j)
 
-        self.prey_positions = [pos for i, pos in enumerate(self.prey_positions)
-                              if i not in captured_prey]
+        self.prey_positions = [
+            pos for i, pos in enumerate(self.prey_positions) if i not in captured_prey
+        ]
 
         for i in range(self.n_predators):
-            rewards['predators'][i] -= 0.1
+            rewards["predators"][i] -= 0.1
         for i in range(self.n_prey):
-            rewards['prey'][i] -= 0.1
+            rewards["prey"][i] -= 0.1
 
-        done = (self.step_count >= self.max_steps or
-                len(self.prey_positions) == 0)
+        done = self.step_count >= self.max_steps or len(self.prey_positions) == 0
 
         return self._get_observation(), rewards, done, False, {}
 
@@ -227,9 +247,9 @@ class PredatorPreyEnvironment(BaseEnvironment):
 
         return (x, y)
 
-    def render(self, mode: str = 'human'):
+    def render(self, mode: str = "human"):
         """Render environment"""
-        if not hasattr(self, 'fig'):
+        if not hasattr(self, "fig"):
             self.fig, self.ax = plt.subplots(figsize=(6, 6))
 
         self.ax.clear()
@@ -240,21 +260,22 @@ class PredatorPreyEnvironment(BaseEnvironment):
         self.ax.grid(True, alpha=0.3)
 
         for pos in self.predator_positions:
-            self.ax.scatter(pos[0], pos[1], c='red', marker='^', s=200, alpha=0.8)
+            self.ax.scatter(pos[0], pos[1], c="red", marker="^", s=200, alpha=0.8)
 
         for pos in self.prey_positions:
-            self.ax.scatter(pos[0], pos[1], c='blue', marker='o', s=200, alpha=0.8)
+            self.ax.scatter(pos[0], pos[1], c="blue", marker="o", s=200, alpha=0.8)
 
         plt.pause(0.1)
         return self.fig
 
+
 class CausalBanditEnvironment(BaseEnvironment):
     """Causal bandit environment for causal RL experiments"""
 
-    def __init__(self, n_arms: int = 3, n_contexts: int = 2,
-                 seed: Optional[int] = None):
-        super().__init__(seed)
-
+    def __init__(
+        self, n_arms: int = 3, n_contexts: int = 2, seed: Optional[int] = None
+    ):
+        # Set attributes before calling super().__init__ to avoid reset() being called prematurely
         self.n_arms = n_arms
         self.n_contexts = n_contexts
 
@@ -264,21 +285,24 @@ class CausalBanditEnvironment(BaseEnvironment):
         self.action_space = spaces.Discrete(n_arms)
         self.observation_space = spaces.MultiDiscrete([n_contexts])
 
+        # Initialize without calling reset() in super().__init__
+        self._seed = seed
+        self.seed(seed)
         self.reset()
 
     def _generate_causal_graph(self) -> nx.DiGraph:
         """Generate causal graph"""
         G = nx.DiGraph()
 
-        G.add_node('context')
+        G.add_node("context")
         for i in range(self.n_arms):
-            G.add_node(f'arm_{i}')
-        G.add_node('reward')
+            G.add_node(f"arm_{i}")
+        G.add_node("reward")
 
-        G.add_edge('context', 'reward')
+        G.add_edge("context", "reward")
         for i in range(self.n_arms):
-            G.add_edge('context', f'arm_{i}')
-            G.add_edge(f'arm_{i}', 'reward')
+            G.add_edge("context", f"arm_{i}")
+            G.add_edge(f"arm_{i}", "reward")
 
         return G
 
@@ -291,7 +315,9 @@ class CausalBanditEnvironment(BaseEnvironment):
                 rewards[(context, arm)] = base_reward
         return rewards
 
-    def reset(self, *, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict]:
+    def reset(
+        self, *, seed: Optional[int] = None, options: Optional[Dict] = None
+    ) -> Tuple[np.ndarray, Dict]:
         """Reset environment"""
         super().reset(seed=seed)
         self.context = self.np_random.integers(0, self.n_contexts)
@@ -305,32 +331,50 @@ class CausalBanditEnvironment(BaseEnvironment):
         self.context = self.np_random.integers(0, self.n_contexts)
 
         done = False
-        return np.array([self.context]), reward, done, False, {
-            'true_reward': self.true_rewards[(self.context, action)]
-        }
+        return (
+            np.array([self.context]),
+            reward,
+            done,
+            False,
+            {"true_reward": self.true_rewards[(self.context, action)]},
+        )
 
-    def render(self, mode: str = 'human'):
+    def render(self, mode: str = "human"):
         """Render causal graph"""
-        if not hasattr(self, 'fig'):
+        if not hasattr(self, "fig"):
             self.fig, self.ax = plt.subplots(figsize=(8, 6))
 
         self.ax.clear()
         pos = nx.spring_layout(self.causal_graph)
-        nx.draw(self.causal_graph, pos, with_labels=True, node_color='lightblue',
-                node_size=2000, font_size=16, font_weight='bold', ax=self.ax)
+        nx.draw(
+            self.causal_graph,
+            pos,
+            with_labels=True,
+            node_color="lightblue",
+            node_size=2000,
+            font_size=16,
+            font_weight="bold",
+            ax=self.ax,
+        )
         plt.title(f"Causal Bandit Environment (Context: {self.context})")
         plt.pause(0.01)
         return self.fig
 
+
 class QuantumControlEnvironment(BaseEnvironment):
     """Quantum control environment for quantum RL"""
 
-    def __init__(self, n_qubits: int = 2, target_state: Optional[np.ndarray] = None,
-                 max_steps: int = 100, seed: Optional[int] = None):
+    def __init__(
+        self,
+        n_qubits: int = 2,
+        target_state: Optional[np.ndarray] = None,
+        max_steps: int = 100,
+        seed: Optional[int] = None,
+    ):
         super().__init__(seed)
 
         self.n_qubits = n_qubits
-        self.state_dim = 2 ** n_qubits
+        self.state_dim = 2**n_qubits
         self.max_steps = max_steps
         self.step_count = 0
 
@@ -339,11 +383,13 @@ class QuantumControlEnvironment(BaseEnvironment):
         else:
             self.target_state = target_state / np.linalg.norm(target_state)
 
-        self.action_space = spaces.Box(low=-np.pi, high=np.pi,
-                                     shape=(n_qubits * 3,), dtype=np.float32)
+        self.action_space = spaces.Box(
+            low=-np.pi, high=np.pi, shape=(n_qubits * 3,), dtype=np.float32
+        )
 
-        self.observation_space = spaces.Box(low=-1, high=1,
-                                          shape=(2 * self.state_dim,), dtype=np.float32)
+        self.observation_space = spaces.Box(
+            low=-1, high=1, shape=(2 * self.state_dim,), dtype=np.float32
+        )
 
         self.reset()
 
@@ -354,7 +400,9 @@ class QuantumControlEnvironment(BaseEnvironment):
         state = real + 1j * imag
         return state / np.linalg.norm(state)
 
-    def _get_pauli_matrices(self, qubit: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _get_pauli_matrices(
+        self, qubit: int
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Get Pauli matrices for a qubit"""
         I = np.eye(2)
         X = np.array([[0, 1], [1, 0]])
@@ -381,7 +429,9 @@ class QuantumControlEnvironment(BaseEnvironment):
 
         return RX, RY, RZ
 
-    def reset(self, *, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict]:
+    def reset(
+        self, *, seed: Optional[int] = None, options: Optional[Dict] = None
+    ) -> Tuple[np.ndarray, Dict]:
         """Reset environment"""
         super().reset(seed=seed)
         self.step_count = 0
@@ -397,7 +447,7 @@ class QuantumControlEnvironment(BaseEnvironment):
         self.step_count += 1
 
         for qubit in range(self.n_qubits):
-            rx_angle, ry_angle, rz_angle = action[qubit*3:(qubit+1)*3]
+            rx_angle, ry_angle, rz_angle = action[qubit * 3 : (qubit + 1) * 3]
             RX, RY, RZ = self._get_pauli_matrices(qubit)
 
             rotation = self._rotation_matrix(rx_angle, ry_angle, rz_angle, RX, RY, RZ)
@@ -405,51 +455,73 @@ class QuantumControlEnvironment(BaseEnvironment):
 
         self.current_state = self.current_state / np.linalg.norm(self.current_state)
 
-        fidelity = abs(np.vdot(self.target_state, self.current_state))**2
+        fidelity = abs(np.vdot(self.target_state, self.current_state)) ** 2
         reward = fidelity
 
         done = self.step_count >= self.max_steps
 
-        return self._get_observation(), reward, done, False, {
-            'fidelity': fidelity,
-            'target_reached': fidelity > 0.99
-        }
+        return (
+            self._get_observation(),
+            reward,
+            done,
+            False,
+            {"fidelity": fidelity, "target_reached": fidelity > 0.99},
+        )
 
-    def _rotation_matrix(self, rx: float, ry: float, rz: float,
-                        RX: np.ndarray, RY: np.ndarray, RZ: np.ndarray) -> np.ndarray:
+    def _rotation_matrix(
+        self,
+        rx: float,
+        ry: float,
+        rz: float,
+        RX: np.ndarray,
+        RY: np.ndarray,
+        RZ: np.ndarray,
+    ) -> np.ndarray:
         """Compute rotation matrix"""
-        return np.cos(rx/2)*np.eye(self.state_dim) - 1j*np.sin(rx/2)*RX
+        return np.cos(rx / 2) * np.eye(self.state_dim) - 1j * np.sin(rx / 2) * RX
 
-    def render(self, mode: str = 'human'):
+    def render(self, mode: str = "human"):
         """Render quantum state"""
-        if not hasattr(self, 'fig'):
+        if not hasattr(self, "fig"):
             self.fig, (self.ax1, self.ax2) = plt.subplots(1, 2, figsize=(12, 4))
 
-        probs = np.abs(self.current_state)**2
+        probs = np.abs(self.current_state) ** 2
         self.ax1.clear()
-        self.ax1.bar(range(self.state_dim), probs, alpha=0.7, label='Current')
-        self.ax1.set_xlabel('Basis State')
-        self.ax1.set_ylabel('Probability')
-        self.ax1.set_title('Current State')
+        self.ax1.bar(range(self.state_dim), probs, alpha=0.7, label="Current")
+        self.ax1.set_xlabel("Basis State")
+        self.ax1.set_ylabel("Probability")
+        self.ax1.set_title("Current State")
         self.ax1.grid(True, alpha=0.3)
 
-        target_probs = np.abs(self.target_state)**2
+        target_probs = np.abs(self.target_state) ** 2
         self.ax2.clear()
-        self.ax2.bar(range(self.state_dim), target_probs, alpha=0.7, color='orange', label='Target')
-        self.ax2.set_xlabel('Basis State')
-        self.ax2.set_ylabel('Probability')
-        self.ax2.set_title('Target State')
+        self.ax2.bar(
+            range(self.state_dim),
+            target_probs,
+            alpha=0.7,
+            color="orange",
+            label="Target",
+        )
+        self.ax2.set_xlabel("Basis State")
+        self.ax2.set_ylabel("Probability")
+        self.ax2.set_title("Target State")
         self.ax2.grid(True, alpha=0.3)
 
         plt.tight_layout()
         plt.pause(0.01)
         return self.fig
 
+
 class FederatedLearningEnvironment(BaseEnvironment):
     """Federated learning environment"""
 
-    def __init__(self, n_clients: int = 10, data_size: int = 1000,
-                 heterogeneity: float = 0.5, seed: Optional[int] = None):
+    def __init__(
+        self,
+        n_clients: int = 10,
+        data_size: int = 1000,
+        heterogeneity: float = 0.5,
+        seed: Optional[int] = None,
+    ):
         super().__init__(seed)
 
         self.n_clients = n_clients
@@ -461,8 +533,9 @@ class FederatedLearningEnvironment(BaseEnvironment):
         self.action_space = spaces.MultiBinary(n_clients)
 
         obs_dim = n_clients * 3
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf,
-                                          shape=(obs_dim,), dtype=np.float32)
+        self.observation_space = spaces.Box(
+            low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
+        )
 
         self.reset()
 
@@ -477,17 +550,21 @@ class FederatedLearningEnvironment(BaseEnvironment):
             data = self.np_random.normal(mean, std, self.data_size)
             labels = (data > 0).astype(int)
 
-            clients_data.append({
-                'features': data.reshape(-1, 1),
-                'labels': labels,
-                'mean': mean,
-                'std': std,
-                'size': self.data_size
-            })
+            clients_data.append(
+                {
+                    "features": data.reshape(-1, 1),
+                    "labels": labels,
+                    "mean": mean,
+                    "std": std,
+                    "size": self.data_size,
+                }
+            )
 
         return clients_data
 
-    def reset(self, *, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict]:
+    def reset(
+        self, *, seed: Optional[int] = None, options: Optional[Dict] = None
+    ) -> Tuple[np.ndarray, Dict]:
         """Reset environment"""
         super().reset(seed=seed)
         self.global_model = np.zeros(1)
@@ -498,7 +575,7 @@ class FederatedLearningEnvironment(BaseEnvironment):
         """Get current observation"""
         obs = []
         for client in self.client_data:
-            obs.extend([client['mean'], client['std'], client['size']])
+            obs.extend([client["mean"], client["std"], client["size"]])
         return np.array(obs)
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, Dict]:
@@ -506,7 +583,13 @@ class FederatedLearningEnvironment(BaseEnvironment):
         selected_clients = np.where(action == 1)[0]
 
         if len(selected_clients) == 0:
-            return self._get_observation(), -1.0, False, False, {'error': 'No clients selected'}
+            return (
+                self._get_observation(),
+                -1.0,
+                False,
+                False,
+                {"error": "No clients selected"},
+            )
 
         client_updates = []
         client_losses = []
@@ -514,7 +597,7 @@ class FederatedLearningEnvironment(BaseEnvironment):
         for client_idx in selected_clients:
             client = self.client_data[client_idx]
 
-            features, labels = client['features'], client['labels']
+            features, labels = client["features"], client["labels"]
             predictions = features @ self.global_model
             errors = predictions.flatten() - labels
             gradient = np.mean(errors * features.flatten())
@@ -531,7 +614,7 @@ class FederatedLearningEnvironment(BaseEnvironment):
         total_samples = 0
 
         for client in self.client_data:
-            features, labels = client['features'], client['labels']
+            features, labels = client["features"], client["labels"]
             predictions = features @ self.global_model
             errors = predictions.flatten() - labels
             global_loss += np.sum(errors**2)
@@ -544,35 +627,44 @@ class FederatedLearningEnvironment(BaseEnvironment):
         self.round += 1
         done = self.round >= 100
 
-        return self._get_observation(), reward, done, False, {
-            'global_loss': global_loss,
-            'participation_rate': len(selected_clients) / self.n_clients,
-            'selected_clients': selected_clients.tolist()
-        }
+        return (
+            self._get_observation(),
+            reward,
+            done,
+            False,
+            {
+                "global_loss": global_loss,
+                "participation_rate": len(selected_clients) / self.n_clients,
+                "selected_clients": selected_clients.tolist(),
+            },
+        )
 
-    def render(self, mode: str = 'human'):
+    def render(self, mode: str = "human"):
         """Render federated learning state"""
-        if not hasattr(self, 'fig'):
+        if not hasattr(self, "fig"):
             self.fig, (self.ax1, self.ax2) = plt.subplots(1, 2, figsize=(12, 4))
 
         self.ax1.clear()
         for i, client in enumerate(self.client_data):
-            data = client['features'].flatten()
-            self.ax1.hist(data, alpha=0.3, bins=20, label=f'Client {i}')
-        self.ax1.set_xlabel('Feature Value')
-        self.ax1.set_ylabel('Frequency')
-        self.ax1.set_title('Client Data Distributions')
+            data = client["features"].flatten()
+            self.ax1.hist(data, alpha=0.3, bins=20, label=f"Client {i}")
+        self.ax1.set_xlabel("Feature Value")
+        self.ax1.set_ylabel("Frequency")
+        self.ax1.set_title("Client Data Distributions")
         self.ax1.legend()
 
         self.ax2.clear()
-        self.ax2.axvline(x=self.global_model[0], color='red', linewidth=3, label='Global Model')
-        self.ax2.set_xlabel('Model Parameter')
-        self.ax2.set_title(f'Global Model (Round {self.round})')
+        self.ax2.axvline(
+            x=self.global_model[0], color="red", linewidth=3, label="Global Model"
+        )
+        self.ax2.set_xlabel("Model Parameter")
+        self.ax2.set_title(f"Global Model (Round {self.round})")
         self.ax2.legend()
 
         plt.tight_layout()
         plt.pause(0.01)
         return self.fig
+
 
 print("✅ Environments module complete!")
 print("Components implemented:")

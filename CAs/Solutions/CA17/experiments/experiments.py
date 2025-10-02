@@ -42,6 +42,8 @@ from environments import (
     QuantumControlEnvironment,
     FederatedLearningEnvironment,
 )
+
+
 class ExperimentRunner:
     """Base class for running RL experiments"""
 
@@ -91,6 +93,8 @@ class ExperimentRunner:
     def plot_results(self):
         """Plot experiment results"""
         pass
+
+
 class WorldModelExperiment(ExperimentRunner):
     """Experiment for world models and imagination-augmented agents"""
 
@@ -195,6 +199,8 @@ class WorldModelExperiment(ExperimentRunner):
             bbox_inches="tight",
         )
         plt.show()
+
+
 class MultiAgentExperiment(ExperimentRunner):
     """Experiment for multi-agent reinforcement learning"""
 
@@ -209,13 +215,15 @@ class MultiAgentExperiment(ExperimentRunner):
         )
 
         obs_dim = self.env.observation_space.shape[0]
+        # Create action dimensions for each agent (all predators and prey use same action space)
+        action_dims = [5] * (config.n_predators + config.n_prey)
+
         self.agent = MADDPGAgent(
-            n_predators=config.n_predators,
-            n_prey=config.n_prey,
-            obs_dim=obs_dim,
-            action_dim=5,
+            state_dim=obs_dim,
+            action_dims=action_dims,
             hidden_dim=config.hidden_dim,
-            learning_rate=config.learning_rate,
+            actor_lr=config.learning_rate,
+            critic_lr=config.learning_rate,
         )
 
     def run_experiment(self) -> Dict[str, Any]:
@@ -234,18 +242,43 @@ class MultiAgentExperiment(ExperimentRunner):
             captures = 0
 
             for step in range(self.config.max_steps):
-                actions = self.agent.select_actions(obs)
+                # Convert observation to tensor for agent
+                obs_tensor = torch.FloatTensor(obs).unsqueeze(0)
+                actions = self.agent.select_actions(obs_tensor)
 
-                next_obs, rewards, done, _, _ = self.env.step(actions)
+                # Convert actions to numpy array for environment
+                actions_np = [action.squeeze(0).cpu().numpy() for action in actions]
 
-                self.agent.store_transition(obs, actions, rewards, next_obs, done)
+                # For discrete actions, we need to convert continuous actions to discrete
+                discrete_actions = []
+                for action in actions_np:
+                    # Convert continuous action to discrete (0-4)
+                    discrete_action = int(np.clip(action[0] * 2.5 + 2.5, 0, 4))
+                    discrete_actions.append(discrete_action)
+
+                next_obs, rewards, done, _, _ = self.env.step(discrete_actions)
+
+                # Convert rewards to tensor format
+                rewards_tensor = torch.FloatTensor(rewards)
+                next_obs_tensor = torch.FloatTensor(next_obs).unsqueeze(0)
+
+                self.agent.store_transition(
+                    obs_tensor.squeeze(0),
+                    actions,
+                    rewards_tensor,
+                    next_obs_tensor.squeeze(0),
+                    done,
+                )
 
                 if len(self.agent.replay_buffer) > self.config.batch_size:
                     self.agent.train_step()
 
                 obs = next_obs
-                episode_predator_rewards.append(np.mean(rewards["predators"]))
-                episode_prey_rewards.append(np.mean(rewards["prey"]))
+                # Split rewards for predators and prey
+                predator_rewards = rewards[: self.config.n_predators]
+                prey_rewards = rewards[self.config.n_predators :]
+                episode_predator_rewards.append(np.mean(predator_rewards))
+                episode_prey_rewards.append(np.mean(prey_rewards))
 
                 if done:
                     break
@@ -321,6 +354,8 @@ class MultiAgentExperiment(ExperimentRunner):
             bbox_inches="tight",
         )
         plt.show()
+
+
 class CausalRLExperiment(ExperimentRunner):
     """Experiment for causal reinforcement learning"""
 
@@ -428,6 +463,8 @@ class CausalRLExperiment(ExperimentRunner):
             bbox_inches="tight",
         )
         plt.show()
+
+
 class QuantumRLExperiment(ExperimentRunner):
     """Experiment for quantum-enhanced reinforcement learning"""
 
@@ -537,6 +574,8 @@ class QuantumRLExperiment(ExperimentRunner):
             bbox_inches="tight",
         )
         plt.show()
+
+
 class FederatedRLExperiment(ExperimentRunner):
     """Experiment for federated reinforcement learning"""
 
@@ -640,6 +679,8 @@ class FederatedRLExperiment(ExperimentRunner):
             bbox_inches="tight",
         )
         plt.show()
+
+
 class SafetyExperiment(ExperimentRunner):
     """Experiment for advanced safety and robustness techniques"""
 
@@ -763,6 +804,8 @@ class SafetyExperiment(ExperimentRunner):
             bbox_inches="tight",
         )
         plt.show()
+
+
 class ComparativeExperiment(ExperimentRunner):
     """Comparative experiment across multiple RL paradigms"""
 
@@ -814,6 +857,8 @@ class ComparativeExperiment(ExperimentRunner):
                 bbox_inches="tight",
             )
             plt.show()
+
+
 def create_default_configs() -> Dict[str, Config]:
     """Create default configurations for all experiments"""
 
@@ -877,6 +922,8 @@ def create_default_configs() -> Dict[str, Config]:
     )
 
     return configs
+
+
 print("✅ Experiments module complete!")
 print("Components implemented:")
 print("- ExperimentRunner: Base class for experiments")
@@ -888,6 +935,8 @@ print("- FederatedRLExperiment: Federated RL evaluation")
 print("- SafetyExperiment: Safety and robustness evaluation")
 print("- ComparativeExperiment: Cross-paradigm comparison")
 print("- create_default_configs: Default experiment configurations")
+
+
 def demonstrate_world_models():
     """Demonstrate world models and imagination-augmented agents"""
     print("🚀 Demonstrating World Models and Imagination-Augmented Agents")
@@ -915,6 +964,8 @@ def demonstrate_world_models():
 
     print("✅ World Models demonstration complete!")
     return results
+
+
 def demonstrate_multi_agent_rl():
     """Demonstrate multi-agent reinforcement learning"""
     print("🚀 Demonstrating Multi-Agent Deep Reinforcement Learning")
@@ -944,6 +995,8 @@ def demonstrate_multi_agent_rl():
 
     print("✅ Multi-Agent RL demonstration complete!")
     return results
+
+
 def demonstrate_causal_rl():
     """Demonstrate causal reinforcement learning"""
     print("🚀 Demonstrating Causal Reinforcement Learning")
@@ -972,6 +1025,8 @@ def demonstrate_causal_rl():
 
     print("✅ Causal RL demonstration complete!")
     return results
+
+
 def demonstrate_quantum_rl():
     """Demonstrate quantum-enhanced reinforcement learning"""
     print("🚀 Demonstrating Quantum-Enhanced Reinforcement Learning")
@@ -999,6 +1054,8 @@ def demonstrate_quantum_rl():
 
     print("✅ Quantum RL demonstration complete!")
     return results
+
+
 def demonstrate_federated_rl():
     """Demonstrate federated reinforcement learning"""
     print("🚀 Demonstrating Federated Reinforcement Learning")
@@ -1025,6 +1082,8 @@ def demonstrate_federated_rl():
 
     print("✅ Federated RL demonstration complete!")
     return results
+
+
 def comprehensive_rl_showcase():
     """Comprehensive showcase of all RL paradigms"""
     print("🚀 Comprehensive RL Showcase: Next-Generation Paradigms")
@@ -1076,6 +1135,8 @@ def comprehensive_rl_showcase():
 
     print("✅ Comprehensive RL showcase complete!")
     return results
+
+
 print("✅ Demonstration functions added!")
 print("Available demonstrations:")
 print("- demonstrate_world_models()")

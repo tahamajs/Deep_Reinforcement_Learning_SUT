@@ -9,6 +9,8 @@ import random
 from typing import List, Dict, Tuple, Optional
 import matplotlib.pyplot as plt
 import networkx as nx
+
+
 class MultiAgentReplayBuffer:
     """Replay buffer for multi-agent systems"""
 
@@ -59,6 +61,8 @@ class MultiAgentReplayBuffer:
 
     def __len__(self):
         return self.size
+
+
 class MADDPGActor(nn.Module):
     """Actor network for MADDPG - decentralized policy"""
 
@@ -76,6 +80,8 @@ class MADDPGActor(nn.Module):
 
     def forward(self, obs: torch.Tensor) -> torch.Tensor:
         return self.network(obs)
+
+
 class MADDPGCritic(nn.Module):
     """Critic network for MADDPG - centralized value function"""
 
@@ -110,6 +116,8 @@ class MADDPGCritic(nn.Module):
         inputs = torch.cat([obs_flat, actions_flat], dim=1)
 
         return self.network(inputs)
+
+
 class MADDPGAgent:
     """Multi-Agent Deep Deterministic Policy Gradient Agent - Multi-agent manager"""
 
@@ -199,6 +207,8 @@ class MADDPGAgent:
             "critic_loss": np.mean(critic_losses),
             "actor_loss": np.mean(actor_losses),
         }
+
+
 class SingleMADDPGAgent(nn.Module):
     """Single agent in MADDPG system"""
 
@@ -306,6 +316,181 @@ class SingleMADDPGAgent(nn.Module):
             target_param.data.copy_(
                 self.tau * param.data + (1 - self.tau) * target_param.data
             )
+
+
+class MADDPGAgent:
+    """Multi-Agent Deep Deterministic Policy Gradient Agent - Compatible version for notebook"""
+
+    def __init__(
+        self,
+        state_dim: int,
+        action_dims: List[int],
+        hidden_dim: int = 64,
+        actor_lr: float = 1e-3,
+        critic_lr: float = 1e-3,
+        buffer_size: int = 10000,
+    ):
+        self.state_dim = state_dim
+        self.action_dims = action_dims
+        self.n_agents = len(action_dims)
+        self.hidden_dim = hidden_dim
+
+        # Create actors and critics for each agent
+        self.actors = []
+        self.critics = []
+        self.actor_optimizers = []
+        self.critic_optimizers = []
+
+        for i in range(self.n_agents):
+            # Actor network for agent i
+            actor = MADDPGActor(state_dim, action_dims[i], hidden_dim)
+            self.actors.append(actor)
+
+            # Critic network for agent i (takes global state and all actions)
+            total_action_dim = sum(action_dims)
+            critic = MADDPGCritic(
+                state_dim, total_action_dim, self.n_agents, hidden_dim
+            )
+            self.critics.append(critic)
+
+            # Optimizers
+            self.actor_optimizers.append(optim.Adam(actor.parameters(), lr=actor_lr))
+            self.critic_optimizers.append(optim.Adam(critic.parameters(), lr=critic_lr))
+
+        # Replay buffer
+        self.replay_buffer = MultiAgentReplayBuffer(
+            capacity=buffer_size,
+            n_agents=self.n_agents,
+            obs_dim=state_dim,
+            action_dim=max(action_dims),
+        )
+
+        # Target networks (for stability)
+        self.target_actors = []
+        self.target_critics = []
+
+        for i in range(self.n_agents):
+            target_actor = MADDPGActor(state_dim, action_dims[i], hidden_dim)
+            target_actor.load_state_dict(self.actors[i].state_dict())
+            self.target_actors.append(target_actor)
+
+            target_critic = MADDPGCritic(
+                state_dim, sum(action_dims), self.n_agents, hidden_dim
+            )
+            target_critic.load_state_dict(self.critics[i].state_dict())
+            self.target_critics.append(target_critic)
+
+    def select_actions(self, state: torch.Tensor) -> List[torch.Tensor]:
+        """Select actions for all agents"""
+        actions = []
+        with torch.no_grad():
+            for i in range(self.n_agents):
+                action = self.actors[i](state)
+                actions.append(action)
+        return actions
+
+    def store_transition(self, state, actions, rewards, next_state, done):
+        """Store transition in replay buffer"""
+        # Convert to numpy if needed
+        if isinstance(state, torch.Tensor):
+            state = state.cpu().numpy()
+        if isinstance(actions, list):
+            actions = torch.stack(actions).cpu().numpy()
+        if isinstance(rewards, (list, tuple)):
+            rewards = np.array(rewards)
+        if isinstance(next_state, torch.Tensor):
+            next_state = next_state.cpu().numpy()
+
+        self.replay_buffer.add(
+            state, actions, rewards, next_state, np.array([done] * self.n_agents)
+        )
+
+    def train_step(self, batch_size: int = 64, gamma: float = 0.99, tau: float = 0.005):
+        """Train all agents for one step"""
+        if len(self.replay_buffer) < batch_size:
+            return
+
+        # Sample batch
+        batch = self.replay_buffer.sample(batch_size)
+        states = batch["observations"]
+        actions = batch["actions"]
+        rewards = batch["rewards"]
+        next_states = batch["next_observations"]
+        dones = batch["dones"]
+
+        # Train each agent
+        for i in range(self.n_agents):
+            self._train_agent(
+                i,
+                states,
+                actions,
+                rewards[:, i : i + 1],
+                next_states,
+                dones[:, i : i + 1],
+                gamma,
+                tau,
+            )
+
+    def _train_agent(
+        self, agent_idx: int, states, actions, rewards, next_states, dones, gamma, tau
+    ):
+        """Train individual agent"""
+        batch_size = states.size(0)
+
+        # Get current agent's action
+        current_actions = actions[:, agent_idx : agent_idx + 1]
+
+        # Critic loss
+        with torch.no_grad():
+            # Target actions from target actor
+            target_actions = self.target_actors[agent_idx](next_states)
+
+            # Replace current agent's action in target actions
+            target_all_actions = actions.clone()
+            target_all_actions[:, agent_idx : agent_idx + 1] = target_actions
+
+            target_q = self.target_critics[agent_idx](
+                next_states, target_all_actions.view(batch_size, -1)
+            )
+            target_q = rewards + gamma * target_q * (1 - dones.float())
+
+        current_q = self.critics[agent_idx](states, actions.view(batch_size, -1))
+        critic_loss = F.mse_loss(current_q, target_q)
+
+        # Update critic
+        self.critic_optimizers[agent_idx].zero_grad()
+        critic_loss.backward()
+        self.critic_optimizers[agent_idx].step()
+
+        # Actor loss
+        # Get all actions with current agent's action from current actor
+        current_actor_action = self.actors[agent_idx](states)
+        all_actions = actions.clone()
+        all_actions[:, agent_idx : agent_idx + 1] = current_actor_action
+
+        actor_loss = -self.critics[agent_idx](
+            states, all_actions.view(batch_size, -1)
+        ).mean()
+
+        # Update actor
+        self.actor_optimizers[agent_idx].zero_grad()
+        actor_loss.backward()
+        self.actor_optimizers[agent_idx].step()
+
+        # Soft update target networks
+        self._soft_update(self.actors[agent_idx], self.target_actors[agent_idx], tau)
+        self._soft_update(self.critics[agent_idx], self.target_critics[agent_idx], tau)
+
+    def _soft_update(self, local_model, target_model, tau):
+        """Soft update target network"""
+        for target_param, local_param in zip(
+            target_model.parameters(), local_model.parameters()
+        ):
+            target_param.data.copy_(
+                tau * local_param.data + (1.0 - tau) * target_param.data
+            )
+
+
 class CommunicationNetwork(nn.Module):
     """Neural communication network for multi-agent coordination"""
 
@@ -342,6 +527,8 @@ class CommunicationNetwork(nn.Module):
         combined = torch.cat([obs, avg_message], dim=-1)
 
         return self.msg_processor(combined)
+
+
 class CommMADDPG(nn.Module):
     """MADDPG with learned communication"""
 
@@ -431,6 +618,8 @@ class CommMADDPG(nn.Module):
             "messages": messages,
             "features": processed_features,
         }
+
+
 class PredatorPreyEnvironment:
     """Multi-agent predator-prey environment"""
 
@@ -461,9 +650,7 @@ class PredatorPreyEnvironment:
             4: (0, 0),
         }
 
-        self.observation_dim = 4 + 2 * (
-            n_predators + n_prey - 1
-        )
+        self.observation_dim = 4 + 2 * (n_predators + n_prey - 1)
         self.action_dim = 5
 
     def reset(self) -> np.ndarray:
