@@ -8,8 +8,8 @@ Student ID: 400206262
 """
 
 import numpy as np
-import tensorflow as tf
-import tensorflow_probability as tfp
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 def build_mlp(
     input_placeholder,
     output_size,
@@ -35,11 +35,22 @@ def build_mlp(
     """
     with tf.variable_scope(scope):
         out = input_placeholder
+        glorot = tf.keras.initializers.GlorotUniform()
         for i in range(n_layers):
-            out = tf.layers.dense(out, size, activation=activation, name=f"layer_{i}")
-        out = tf.layers.dense(
-            out, output_size, activation=output_activation, name="output"
+            dense_layer = tf.keras.layers.Dense(
+                units=size,
+                activation=activation,
+                kernel_initializer=glorot,
+                name=f"layer_{i}"
+            )
+            out = dense_layer(out)
+        output_layer = tf.keras.layers.Dense(
+            units=output_size,
+            activation=output_activation,
+            kernel_initializer=glorot,
+            name="output"
         )
+        out = output_layer(out)
         return out
 def pathlength(path):
     """Get the length of a trajectory path."""

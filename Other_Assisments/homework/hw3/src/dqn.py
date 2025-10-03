@@ -7,8 +7,9 @@ Author: Saeed Reza Zouashkiani
 Student ID: 400206262
 """
 
-import tensorflow as tf
-import tensorflow.contrib.layers as layers
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+import tensorflow.compat.v1.layers as layers
 from dqn_utils import huber_loss
 def build_q_network(input_shape, num_actions, scope, reuse=False):
     """Build a Q-network for DQN.

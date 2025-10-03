@@ -17,7 +17,8 @@ A['EpRewMean']
 
 import os.path as osp, shutil, time, atexit, os, subprocess
 import pickle
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 color2num = dict(
     gray=30,

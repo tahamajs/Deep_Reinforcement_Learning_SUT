@@ -16,7 +16,8 @@ import sys
 import time
 import gym
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import logz
 import multiprocessing as mp
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
