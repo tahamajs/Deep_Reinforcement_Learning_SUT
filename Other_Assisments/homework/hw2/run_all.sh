@@ -36,12 +36,8 @@ python -c "import mujoco_py" 2>/dev/null && MUJOCO_AVAILABLE=true
 if [ "$MUJOCO_AVAILABLE" = true ]; then
     echo "✅ MuJoCo is available - all environments will be tested"
 else
-    echo "⚠️  MuJoCo not detected - will skip HalfCheetah-v2 experiments"
-    echo "   To enable MuJoCo environments:"
-    echo "   1. Download MuJoCo 2.1.0 from: https://github.com/deepmind/mujoco/releases"
-    echo "   2. Extract to ~/.mujoco/mujoco210"
-    echo "   3. Install mujoco-py: pip install mujoco-py"
-    echo "   4. On macOS: brew install gcc"
+    echo "⚠️  MuJoCo not available — running with Pendulum-v0 instead."
+    echo "   (Results may differ from HalfCheetah. Install MuJoCo for full experiments.)"
 fi
 echo ""
 

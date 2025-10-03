@@ -1,5 +1,7 @@
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+
+tf.disable_v2_behavior()
 from gym import utils
 from gym.envs.mujoco import mujoco_env
 
@@ -38,15 +40,15 @@ class HalfCheetahEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     @staticmethod
     def cost_fn(states, actions, next_states):
-        is_tf = tf.contrib.framework.is_tensor(states)
-        is_single_state = (len(states.get_shape()) == 1) if is_tf else (len(states.shape) == 1)
+        is_tf = tf.is_tensor(states)
+        is_single_state = (len(states.get_shape()) == 1) if is_tf else (len(np.shape(states)) == 1)
 
         if is_single_state:
             states = states[None, ...]
             actions = actions[None, ...]
             next_states = next_states[None, ...]
 
-        scores = tf.zeros(actions.get_shape()[0].value) if is_tf else np.zeros(actions.shape[0])
+        scores = tf.zeros(tf.shape(actions)[0], dtype=tf.float32) if is_tf else np.zeros(actions.shape[0])
 
         heading_penalty_factor = 10
         front_leg = states[:, 5]
@@ -70,7 +72,10 @@ class HalfCheetahEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         else:
             scores += (front_foot >= my_range) * heading_penalty_factor
 
-        scores -= (next_states[:, 17] - states[:, 17]) / 0.01
+        if is_tf:
+            scores -= (next_states[:, 17] - states[:, 17]) / 0.01
+        else:
+            scores -= (next_states[:, 17] - states[:, 17]) / 0.01
 
         if is_single_state:
             scores = scores[0]

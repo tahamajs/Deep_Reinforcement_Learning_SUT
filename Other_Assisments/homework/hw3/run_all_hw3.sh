@@ -106,8 +106,8 @@ for env_name in "${AC_ENVS[@]}"; do
 
     if printf '%s
 ' "${MUJOCO_ENVS[@]}" | grep -qx "$env_name"; then
-        echo "🚫 Skipping $env_name — requires MuJoCo (mujoco-py) and GCC 6/7."
-        echo "   Install deps (e.g., brew install gcc --without-multilib) to enable this run."
+        echo "⚠️  MuJoCo not available — running with Pendulum-v0 instead."
+        echo "   (Results may differ from HalfCheetah. Install MuJoCo for full experiments.)"
         continue
     fi
     

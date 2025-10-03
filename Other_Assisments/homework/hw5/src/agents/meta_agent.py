@@ -19,7 +19,7 @@ from collections import deque
 def v1_dense(x, units, activation=None, name="dense"):
     """Lightweight Dense layer compatible with TF v1 graph mode and Keras 3."""
     input_dim = x.get_shape().as_list()[-1]
-    with tf.variable_scope(name):
+    with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         w = tf.get_variable(
             "kernel",
             shape=[input_dim, units],
@@ -114,6 +114,9 @@ class MetaLearningAgent:
             self.action_dist = tf.distributions.Categorical(logits=self.action_logits)
             self.sampled_action = self.action_dist.sample()
             self.log_prob = self.action_dist.log_prob(self.sampled_action)
+            # For computing log prob of given actions
+            self.given_action_ph = tf.placeholder(tf.int32, [None])
+            self.log_prob_given = self.action_dist.log_prob(self.given_action_ph)
         else:
             # For continuous actions, model Gaussian policy (simple baseline)
             self.action_mean = self.action_logits
@@ -123,6 +126,9 @@ class MetaLearningAgent:
             dist = tf.distributions.Normal(self.action_mean, tf.exp(self.action_log_std))
             self.sampled_action = dist.sample()
             self.log_prob = tf.reduce_sum(dist.log_prob(self.sampled_action), axis=1)
+            # For computing log prob of given actions
+            self.given_action_ph = tf.placeholder(tf.float32, [None, self.action_dim])
+            self.log_prob_given = tf.reduce_sum(dist.log_prob(self.given_action_ph), axis=1)
         ratio = tf.exp(self.log_prob - self.old_log_prob_ph)
         clipped_ratio = tf.clip_by_value(ratio, 0.8, 1.2)
         self.policy_loss = -tf.reduce_mean(
@@ -217,11 +223,15 @@ class MetaLearningAgent:
             values = self.sess.run(self.value, feed_dict=feed_dict)
 
             advantages = self.compute_advantages(rewards, values, dones, self.discount)
-            feed_dict = {self.state_ph: states, self.action_ph: actions}
-            old_log_probs = self.sess.run(self.log_prob, feed_dict=feed_dict)
+            if self.discrete:
+                # Convert actions to integers for discrete case
+                feed_dict = {self.state_ph: states, self.given_action_ph: actions.astype(np.int32)}
+                old_log_probs = self.sess.run(self.log_prob_given, feed_dict=feed_dict)
+            else:
+                feed_dict = {self.state_ph: states, self.given_action_ph: actions}
+                old_log_probs = self.sess.run(self.log_prob_given, feed_dict=feed_dict)
             feed_dict = {
                 self.state_ph: states,
-                self.action_ph: actions,
                 self.advantage_ph: advantages,
                 self.old_log_prob_ph: old_log_probs,
             }
@@ -304,11 +314,15 @@ class MAMLAgent(MetaLearningAgent):
             values = self.sess.run(self.value, feed_dict=feed_dict)
 
             advantages = self.compute_advantages(rewards, values, dones, self.discount)
-            feed_dict = {self.state_ph: states, self.action_ph: actions}
-            old_log_probs = self.sess.run(self.log_prob, feed_dict=feed_dict)
+            if self.discrete:
+                # Convert actions to integers for discrete case
+                feed_dict = {self.state_ph: states, self.given_action_ph: actions.astype(np.int32)}
+                old_log_probs = self.sess.run(self.log_prob_given, feed_dict=feed_dict)
+            else:
+                feed_dict = {self.state_ph: states, self.given_action_ph: actions}
+                old_log_probs = self.sess.run(self.log_prob_given, feed_dict=feed_dict)
             feed_dict = {
                 self.state_ph: states,
-                self.action_ph: actions,
                 self.advantage_ph: advantages,
                 self.old_log_prob_ph: old_log_probs,
             }

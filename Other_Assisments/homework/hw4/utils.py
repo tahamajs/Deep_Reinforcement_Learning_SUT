@@ -1,5 +1,7 @@
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+
+tf.disable_v2_behavior()
 
 from logger import logger
 class Dataset(object):
@@ -125,6 +127,27 @@ class Dataset(object):
         logger.record_tabular('ReturnStd', np.std(returns))
         logger.record_tabular('ReturnMin', np.min(returns))
         logger.record_tabular('ReturnMax', np.max(returns))
+def _dense(layer, units, activation, scope, reuse):
+    input_dim = layer.get_shape().as_list()[-1]
+    if input_dim is None:
+        raise ValueError("Input dimension must be known for dense layer")
+    with tf.variable_scope(scope, reuse=reuse):
+        kernel = tf.get_variable(
+            "kernel",
+            shape=[input_dim, units],
+            initializer=tf.glorot_uniform_initializer(),
+        )
+        bias = tf.get_variable(
+            "bias",
+            shape=[units],
+            initializer=tf.zeros_initializer(),
+        )
+        output = tf.matmul(layer, kernel) + bias
+        if activation is not None:
+            output = activation(output)
+        return output
+
+
 def build_mlp(input_layer,
               output_dim,
               scope,
@@ -133,11 +156,11 @@ def build_mlp(input_layer,
               activation=tf.nn.relu,
               output_activation=None,
               reuse=False):
-    layer = input_layer
     with tf.variable_scope(scope, reuse=reuse):
-        for _ in range(n_layers):
-            layer = tf.layers.dense(layer, hidden_dim, activation=activation)
-        layer = tf.layers.dense(layer, output_dim, activation=output_activation)
+        layer = input_layer
+        for i in range(n_layers):
+            layer = _dense(layer, hidden_dim, activation, scope=f"hidden_{i}", reuse=reuse)
+        layer = _dense(layer, output_dim, output_activation, scope="output", reuse=reuse)
     return layer
 
 def normalize(x, mean, std, eps=1e-8):

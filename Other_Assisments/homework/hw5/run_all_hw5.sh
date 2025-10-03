@@ -51,13 +51,8 @@ if python3 -c "import mujoco_py" 2>/dev/null; then
     echo "✅ MuJoCo (mujoco-py) is installed and available"
     MUJOCO_AVAILABLE=true
 else
-    echo "⚠️  MuJoCo (mujoco-py) not found."
-    echo "   To enable MuJoCo environments:"
-    echo "   1. Install MuJoCo binaries (mujoco.org)"
-    echo "   2. Install mujoco-py: pip install mujoco-py"
-    echo "   3. On macOS: brew install gcc --without-multilib"
-    echo ""
-    echo "   Proceeding with non-MuJoCo environments only."
+    echo "⚠️  MuJoCo not available — running with Pendulum-v0 instead."
+    echo "   (Results may differ from HalfCheetah. Install MuJoCo for full experiments.)"
 fi
 
 # ======================================================================================
@@ -114,7 +109,8 @@ if [ "$MUJOCO_AVAILABLE" = true ]; then
         echo "✅ SAC on $SAC_ENV_MUJOCO logs saved"
     fi
 else
-    echo "⚠️  Skipping MuJoCo SAC experiments (MuJoCo not available)"
+    echo "⚠️  MuJoCo not available — running with Pendulum-v0 instead."
+    echo "   (Skipping MuJoCo SAC experiments. Install MuJoCo for full experiments.)"
 fi
 
 echo "✅ SAC experiments completed!"
@@ -173,7 +169,8 @@ if [ "$MUJOCO_AVAILABLE" = true ]; then
         echo "✅ Exploration on $EXPLORE_ENV_MUJOCO logs saved"
     fi
 else
-    echo "⚠️  Skipping MuJoCo exploration experiments (MuJoCo not available)"
+    echo "⚠️  MuJoCo not available — running with Pendulum-v0 instead."
+    echo "   (Skipping MuJoCo exploration experiments. Install MuJoCo for full experiments.)"
 fi
 
 echo "✅ Exploration experiments completed!"

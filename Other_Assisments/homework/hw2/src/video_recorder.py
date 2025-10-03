@@ -34,13 +34,11 @@ def record_episode_video(env, agent, video_path, num_episodes=3, max_steps=None)
     os.makedirs(video_dir, exist_ok=True)
     
     # Wrap environment with Monitor to record video
-    video_name = os.path.basename(video_path)
     env_monitored = Monitor(
-        env, 
+        env,
         video_dir,
         video_callable=lambda episode_id: True,
         force=True,
-        name_prefix=video_name
     )
     
     returns = []

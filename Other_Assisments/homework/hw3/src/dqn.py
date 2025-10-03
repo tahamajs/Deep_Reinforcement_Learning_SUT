@@ -9,8 +9,78 @@ Student ID: 400206262
 
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
-import tensorflow.compat.v1.layers as layers
+import numpy as np
+import random
+
 from dqn_utils import huber_loss
+
+
+def _ensure_tuple(value):
+    if isinstance(value, tuple):
+        return value
+    return (value, value)
+
+
+def _variance_scaling_initializer():
+    return tf.variance_scaling_initializer(
+        scale=2.0, mode="fan_in", distribution="truncated_normal"
+    )
+
+
+def _dense_layer(inputs, units, activation, name):
+    with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
+        input_dim = inputs.get_shape().as_list()[-1]
+        if input_dim is None:
+            raise ValueError("Input dimension must be known for dense layer")
+        kernel = tf.get_variable(
+            "kernel",
+            shape=[input_dim, units],
+            initializer=_variance_scaling_initializer(),
+        )
+        bias = tf.get_variable(
+            "bias", shape=[units], initializer=tf.zeros_initializer()
+        )
+        output = tf.matmul(inputs, kernel) + bias
+        if activation is not None:
+            output = activation(output)
+        return output
+
+
+def _conv2d_layer(inputs, filters, kernel_size, strides, activation, name):
+    kernel_h, kernel_w = _ensure_tuple(kernel_size)
+    stride_h, stride_w = _ensure_tuple(strides)
+    in_channels = inputs.get_shape().as_list()[-1]
+    if in_channels is None:
+        raise ValueError("Input channels must be known for conv layer")
+    with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
+        kernel = tf.get_variable(
+            "kernel",
+            shape=[kernel_h, kernel_w, in_channels, filters],
+            initializer=_variance_scaling_initializer(),
+        )
+        bias = tf.get_variable(
+            "bias", shape=[filters], initializer=tf.zeros_initializer()
+        )
+        conv = tf.nn.conv2d(
+            inputs,
+            kernel,
+            strides=[1, stride_h, stride_w, 1],
+            padding="VALID",
+        )
+        conv = tf.nn.bias_add(conv, bias)
+        if activation is not None:
+            conv = activation(conv)
+        return conv
+
+
+def _flatten(inputs):
+    shape = inputs.get_shape().as_list()
+    if None in shape[1:]:
+        raise ValueError("All but batch dimensions must be known to flatten tensor")
+    flat_dim = int(np.prod(shape[1:]))
+    output = tf.reshape(inputs, [-1, flat_dim])
+    output.set_shape([None, flat_dim])
+    return output
 def build_q_network(input_shape, num_actions, scope, reuse=False):
     """Build a Q-network for DQN.
 
@@ -30,31 +100,25 @@ def build_q_network(input_shape, num_actions, scope, reuse=False):
 
             obs_t_ph = tf.placeholder(tf.uint8, [None] + list(input_shape))
             obs_t_float = tf.cast(obs_t_ph, tf.float32) / 255.0
-            conv1 = layers.conv2d(
-                obs_t_float, 32, 8, 4, activation_fn=tf.nn.relu, scope="conv1"
+            conv1 = _conv2d_layer(
+                obs_t_float, 32, 8, 4, activation=tf.nn.relu, name="conv1"
             )
-            conv2 = layers.conv2d(
-                conv1, 64, 4, 2, activation_fn=tf.nn.relu, scope="conv2"
+            conv2 = _conv2d_layer(
+                conv1, 64, 4, 2, activation=tf.nn.relu, name="conv2"
             )
-            conv3 = layers.conv2d(
-                conv2, 64, 3, 1, activation_fn=tf.nn.relu, scope="conv3"
+            conv3 = _conv2d_layer(
+                conv2, 64, 3, 1, activation=tf.nn.relu, name="conv3"
             )
-            flattened = layers.flatten(conv3)
-            fc1 = layers.fully_connected(
-                flattened, 512, activation_fn=tf.nn.relu, scope="fc1"
-            )
-            q_values = layers.fully_connected(
-                fc1, num_actions, activation_fn=None, scope="q_values"
+            flattened = _flatten(conv3)
+            fc1 = _dense_layer(flattened, 512, activation=tf.nn.relu, name="fc1")
+            q_values = _dense_layer(
+                fc1, num_actions, activation=None, name="q_values"
             )
         else:
             obs_t_ph = tf.placeholder(tf.float32, [None] + list(input_shape))
-            fc1 = layers.fully_connected(
-                obs_t_ph, 64, activation_fn=tf.nn.relu, scope="fc1"
-            )
-            fc2 = layers.fully_connected(fc1, 64, activation_fn=tf.nn.relu, scope="fc2")
-            q_values = layers.fully_connected(
-                fc2, num_actions, activation_fn=None, scope="q_values"
-            )
+            fc1 = _dense_layer(obs_t_ph, 64, activation=tf.nn.relu, name="fc1")
+            fc2 = _dense_layer(fc1, 64, activation=tf.nn.relu, name="fc2")
+            q_values = _dense_layer(fc2, num_actions, activation=None, name="q_values")
 
         network_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)
 

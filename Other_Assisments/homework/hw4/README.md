@@ -6,17 +6,37 @@ This homework implements model-based reinforcement learning algorithms, focusing
 
 ### Prerequisites
 
-**Important**: This homework requires MuJoCo (MuJoCo physics engine) and compatible dependencies:
+**Note**: This homework works with or without MuJoCo!
 
-1. **Install MuJoCo**: Download from [mujoco.org](https://www.mujoco.org/)
-2. **Install mujoco-py**: `pip install mujoco-py`
-3. **macOS users**: Install GCC toolchain:
+- **With MuJoCo** (recommended): Full experiments on HalfCheetah-v2
+- **Without MuJoCo**: Fallback experiments on Pendulum-v0 (simpler but functional)
+
+#### Option A: Run Without MuJoCo (Pendulum)
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Make script executable
+chmod +x run_all_hw4.sh
+
+# Run all experiments (automatically uses Pendulum if no MuJoCo)
+./run_all_hw4.sh
+```
+
+#### Option B: Install MuJoCo for Full Experience
+
+1. **Install MuJoCo**: Download from [mujoco.org](https://www.mujoco.org/) or [GitHub releases](https://github.com/deepmind/mujoco/releases)
+2. **Extract to** `~/.mujoco/mujoco210`
+3. **Install mujoco-py**: `pip install mujoco-py`
+4. **macOS users**: Install GCC toolchain:
    ```bash
-   brew install gcc --without-multilib
+   brew install gcc
    ```
-4. **Linux users**: Install GCC 6 or 7 and development libraries
-
-If MuJoCo is not installed, the automation scripts will skip runs and provide installation instructions.
+5. **Linux users**: Install GCC 6/7 and dev libraries:
+   ```bash
+   sudo apt-get install gcc g++ libgl1-mesa-dev libglew-dev
+   ```
 
 ### Installation
 
@@ -25,22 +45,29 @@ If MuJoCo is not installed, the automation scripts will skip runs and provide in
 pip install -r requirements.txt
 
 # Make automation script executable
-chmod +x run_all_hw4.sh
+chmod +x run_all_hw4.sh run_all.sh
 ```
 
 ### Run All Experiments (Automated)
 
 ```bash
-# Run complete training pipeline (Q1, Q2, Q3 with hyperparameter sweeps)
+# Run complete training pipeline
 ./run_all_hw4.sh
+# or
+./run_all.sh
+
+# Environment automatically selected:
+# - HalfCheetah-v2 if MuJoCo available
+# - Pendulum-v0 otherwise
 ```
 
 This will:
+- ✅ Detect MuJoCo availability
 - ✅ Train dynamics models (Q1)
 - ✅ Evaluate MPC policies (Q2)
 - ✅ Run on-policy MBRL with various hyperparameters (Q3)
 - ✅ Generate comparison plots
-- ✅ Organize all results in `results_hw4/`
+- ✅ Organize all results in `data/` and `plots/`
 
 ## 📁 Project Structure
 

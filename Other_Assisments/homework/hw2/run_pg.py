@@ -82,14 +82,11 @@ def main():
     ac_dim = env.action_space.n if discrete else env.action_space.shape[0]
     for e in range(args.n_experiments):
 
-        logdir = (
-            args.exp_name
-            + "_"
-            + args.env_name
-            + "_"
-            + time.strftime("%d-%m-%Y_%H-%M-%S")
-        )
-        logz.configure_output_dir(logdir)
+        timestamp = time.strftime("%d-%m-%Y_%H-%M-%S")
+        logdir_name = f"{args.exp_name}_{timestamp}"
+        base_log_dir = os.path.join("data_hw2", logdir_name)
+        os.makedirs(os.path.dirname(base_log_dir), exist_ok=True)
+        logz.configure_output_dir(base_log_dir)
         logz.save_params(vars(args))
         agent = PolicyGradientAgent(
             ob_dim=ob_dim,

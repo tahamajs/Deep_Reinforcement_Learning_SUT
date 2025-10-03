@@ -18,7 +18,7 @@ except ImportError:
 def v1_dense(x, units, activation=None, name="dense"):
     """Lightweight Dense layer compatible with TF v1 graph mode and Keras 3."""
     input_dim = x.get_shape().as_list()[-1]
-    with tf.variable_scope(name):
+    with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         w = tf.get_variable(
             "kernel",
             shape=[input_dim, units],
@@ -34,35 +34,38 @@ def v1_dense(x, units, activation=None, name="dense"):
 class DensityModel:
     """Density model for exploration."""
 
-    def __init__(self, state_dim, hidden_dims=[64, 64], learning_rate=1e-3):
+    def __init__(self, state_dim, hidden_dims=[64, 64], learning_rate=1e-3, scope_name="density_model"):
         """Initialize density model.
 
         Args:
             state_dim: State dimension
             hidden_dims: Hidden layer dimensions
             learning_rate: Learning rate
+            scope_name: Unique scope name for this model
         """
         self.state_dim = state_dim
         self.hidden_dims = hidden_dims
         self.learning_rate = learning_rate
+        self.scope_name = scope_name
 
         self._build_model()
 
     def _build_model(self):
         """Build the density model network."""
-        self.state_ph = tf.placeholder(tf.float32, [None, self.state_dim])
-        x = self.state_ph
-        for i, dim in enumerate(self.hidden_dims):
-            x = v1_dense(x, dim, activation=tf.nn.relu, name=f"h{i}")
-        self.log_density = v1_dense(x, 1, name="out")
-        self.target_ph = tf.placeholder(tf.float32, [None, 1])
-        self.loss = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(
-                logits=self.log_density, labels=self.target_ph
+        with tf.variable_scope(self.scope_name):
+            self.state_ph = tf.placeholder(tf.float32, [None, self.state_dim])
+            x = self.state_ph
+            for i, dim in enumerate(self.hidden_dims):
+                x = v1_dense(x, dim, activation=tf.nn.relu, name=f"h{i}")
+            self.log_density = v1_dense(x, 1, name="out")
+            self.target_ph = tf.placeholder(tf.float32, [None, 1])
+            self.loss = tf.reduce_mean(
+                tf.nn.sigmoid_cross_entropy_with_logits(
+                    logits=self.log_density, labels=self.target_ph
+                )
             )
-        )
-        self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
-        self.train_op = self.optimizer.minimize(self.loss)
+            self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
+            self.train_op = self.optimizer.minimize(self.loss)
 
     def fit(self, states, sess, epochs=100, batch_size=512):
         """Fit density model to data.
@@ -121,7 +124,7 @@ class ExplorationAgent:
         self.state_dim = state_dim
         self.bonus_coeff = bonus_coeff
         self.density_model = DensityModel(
-            state_dim, density_hidden_dims, density_learning_rate
+            state_dim, density_hidden_dims, density_learning_rate, scope_name="state_density"
         )
         self.sess = None
 
@@ -193,7 +196,7 @@ class DiscreteExplorationAgent(ExplorationAgent):
         self.num_actions = num_actions
         self.state_action_dim = state_dim + num_actions
         self.state_action_density = DensityModel(
-            self.state_action_dim, density_hidden_dims, density_learning_rate
+            self.state_action_dim, density_hidden_dims, density_learning_rate, scope_name="state_action_density"
         )
 
     def fit_density_model(self, states, actions, epochs=100, batch_size=512):
