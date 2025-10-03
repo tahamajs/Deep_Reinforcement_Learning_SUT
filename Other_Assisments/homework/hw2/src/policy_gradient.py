@@ -8,7 +8,8 @@ Student ID: 400206262
 """
 
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 from .networks import PolicyNetwork, ValueNetwork
 def pathlength(path):
     """Get the length of a trajectory path."""
@@ -122,7 +123,9 @@ class PolicyGradientAgent:
                 self.policy_net.sy_sampled_ac,
                 feed_dict={self.policy_net.sy_ob_no: [ob]},
             )
-            ac = ac[0] if not self.discrete else ac
+            ac = ac[0]
+            if self.discrete:
+                ac = int(ac)
             acs.append(ac)
 
             ob, rew, done, _ = env.step(ac)

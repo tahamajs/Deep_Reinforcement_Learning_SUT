@@ -16,11 +16,13 @@ import sys
 import time
 import gym
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
-from src.policy_gradient import PolicyGradientAgent
+from src.policy_gradient import PolicyGradientAgent, pathlength
 from src.utils import flatten_list_of_rollouts
+from src.video_recorder import record_before_after_videos
 import logz
 def main():
     """Main training function."""
@@ -40,6 +42,8 @@ def main():
     parser.add_argument("--n_experiments", "-e", type=int, default=1)
     parser.add_argument("--n_layers", "-l", type=int, default=2)
     parser.add_argument("--size", "-s", type=int, default=64)
+    parser.add_argument("--record_video", action="store_true",
+                       help="Record before/after training videos")
 
     args = parser.parse_args()
     tf.set_random_seed(args.seed)
@@ -59,6 +63,7 @@ def main():
             + time.strftime("%d-%m-%Y_%H-%M-%S")
         )
         logz.configure_output_dir(logdir)
+        logz.save_params(vars(args))
         agent = PolicyGradientAgent(
             ob_dim=ob_dim,
             ac_dim=ac_dim,
@@ -75,6 +80,25 @@ def main():
             animate=args.render,
         )
         agent.init_tf_sess()
+        
+        # Record "before" video (iteration 0, untrained)
+        if args.record_video:
+            print("📹 Recording BEFORE training video...")
+            try:
+                env_temp = gym.make(args.env_name)
+                before_results = record_before_after_videos(
+                    env_temp,
+                    agent,  # Untrained agent
+                    "results_hw2/videos",
+                    args.env_name,
+                    args.exp_name,
+                    num_episodes=1
+                )
+                env_temp.close()
+                print("✓ BEFORE video recorded")
+            except Exception as e:
+                print(f"⚠ Could not record BEFORE video: {e}")
+        
         total_timesteps = 0
         for itr in range(args.n_iter):
             print("********** Iteration %i ************" % itr)
@@ -99,7 +123,28 @@ def main():
             logz.log_tabular("TimestepsThisBatch", timesteps_this_batch)
             logz.log_tabular("TimestepsSoFar", total_timesteps)
             logz.dump_tabular()
-            logz.save_params()
+        
+        # Save trained model variables
+        logz.pickle_tf_vars()
+        
+        # Record "after" video (trained policy)
+        if args.record_video:
+            print("\n📹 Recording AFTER training video...")
+            try:
+                env_temp = gym.make(args.env_name)
+                after_results = record_before_after_videos(
+                    env_temp,
+                    agent,  # Trained agent
+                    "results_hw2/videos",
+                    args.env_name,
+                    args.exp_name,
+                    num_episodes=3
+                )
+                env_temp.close()
+                print("✓ AFTER video recorded")
+                print(f"   Improvement: {after_results['after']['avg_return'] - after_results['before']['avg_return']:.2f}")
+            except Exception as e:
+                print(f"⚠ Could not record AFTER video: {e}")
 
         print("Training completed!")
 if __name__ == "__main__":

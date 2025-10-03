@@ -46,8 +46,15 @@ The script is INTERACTIVE and will:
      → Evaluate trained policy
      → Compare results
   
+  ✅ Generate comprehensive visualizations:
+     → Training loss curves
+     → Performance comparison charts
+     → Complete summary dashboard
+     → Detailed analysis plots
+  
   ✅ Generate comprehensive summary report
   ✅ Save all logs and results
+  ✅ Organize everything in folders
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -76,6 +83,16 @@ After running, you'll have:
     ├── bc_policy_Hopper-v2.*
     ├── training_history_Hopper-v2.pkl
     └── ...
+  
+  visualizations/        → All charts and plots
+    ├── training_curves/         → Loss curves for each env
+    │   ├── Hopper-v2_training_loss.png
+    │   └── ...
+    ├── comparisons/             → Performance comparisons
+    │   ├── Hopper-v2_comparison.png
+    │   └── ...
+    ├── complete_summary.png     → Full dashboard
+    └── detailed_analysis.png    → Statistical analysis
   
   logs/                  → Detailed logs for each run
     ├── Hopper-v2_20251003_143052.log

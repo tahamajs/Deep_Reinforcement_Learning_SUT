@@ -7,7 +7,8 @@ Author: Saeed Reza Zouashkiani
 Student ID: 400206262
 """
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import numpy as np
 def build_mlp(
     input_placeholder,
@@ -35,20 +36,23 @@ def build_mlp(
     """
     with tf.variable_scope(scope):
         layer = input_placeholder
+        glorot = tf.compat.v1.keras.initializers.GlorotUniform()
         for i in range(n_layers):
-            layer = tf.layers.dense(
-                layer,
-                size,
+            dense_layer = tf.compat.v1.keras.layers.Dense(
+                units=size,
                 activation=activation,
-                kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                kernel_initializer=glorot,
+                name=f"{scope}_dense_{i}"
             )
+            layer = dense_layer(layer)
 
-        output = tf.layers.dense(
-            layer,
-            output_size,
+        output_layer = tf.compat.v1.keras.layers.Dense(
+            units=output_size,
             activation=output_activation,
-            kernel_initializer=tf.contrib.layers.xavier_initializer(),
+            kernel_initializer=glorot,
+            name=f"{scope}_output"
         )
+        output = output_layer(layer)
         return output
 class PolicyNetwork:
     """Policy network for policy gradient methods."""
