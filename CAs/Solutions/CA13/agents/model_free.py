@@ -137,7 +137,7 @@ class DQNAgent(ModelFreeAgent):
         self.training_step += 1
 
         return loss.item()
-    
+
 
 class ReplayBuffer:
     """Experience replay buffer for DQN"""
@@ -174,21 +174,28 @@ class ReplayBuffer:
 
 class MultiAgentDQN:
     """Independent DQN agents with optional communication"""
-    
-    def __init__(self, n_agents, state_dim, action_dim, hidden_dim=64, 
-                 lr=1e-3, enable_communication=False):
+
+    def __init__(
+        self,
+        n_agents,
+        state_dim,
+        action_dim,
+        hidden_dim=64,
+        lr=1e-3,
+        enable_communication=False,
+    ):
         self.n_agents = n_agents
         self.agents = []
-        
+
         for i in range(n_agents):
             agent = DQNAgent(
                 state_dim=state_dim,
                 action_dim=action_dim,
                 hidden_dim=hidden_dim,
-                learning_rate=lr
+                learning_rate=lr,
             )
             self.agents.append(agent)
-            
+
         self.enable_communication = enable_communication
         if enable_communication:
             # Communication network
@@ -196,20 +203,20 @@ class MultiAgentDQN:
                 nn.Linear(state_dim * n_agents, hidden_dim),
                 nn.ReLU(),
                 nn.Linear(hidden_dim, n_agents * 8),  # 8-dim message per agent
-                nn.Tanh()
+                nn.Tanh(),
             )
             self.comm_optimizer = optim.Adam(self.comm_net.parameters(), lr=lr)
-    
+
     def act(self, observations, epsilon=0.1):
         """Select actions for all agents"""
         actions = []
-        
+
         if self.enable_communication:
             # Generate communication messages
             all_obs = torch.cat([torch.FloatTensor(obs) for obs in observations])
             with torch.no_grad():  # No gradients needed for inference
                 messages = self.comm_net(all_obs).reshape(self.n_agents, -1)
-        
+
         for i, obs in enumerate(observations):
             if self.enable_communication:
                 # Concatenate observation with message (detach to avoid gradient issues)
@@ -218,9 +225,9 @@ class MultiAgentDQN:
             else:
                 action = self.agents[i].act(obs, epsilon)
             actions.append(action)
-            
+
         return actions
-    
+
     def update(self, experiences):
         """Update all agents"""
         for i, exp in enumerate(experiences):

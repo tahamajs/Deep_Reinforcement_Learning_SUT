@@ -17,7 +17,7 @@ class AdvancedRLEvaluator:
 
     def evaluate_agent(self, agent, environment, n_episodes=10, max_steps=100):
         """Evaluate single agent on single environment"""
-            episode_rewards = []
+        episode_rewards = []
         episode_lengths = []
         episode_times = []
         
@@ -30,15 +30,15 @@ class AdvancedRLEvaluator:
             for step in range(max_steps):
                 if hasattr(agent, 'act'):
                     action = agent.act(obs, epsilon=0.0)  # No exploration
-                        else:
+                else:
                     action = environment.action_space.sample()
                 
                 obs, reward, done, _ = environment.step(action)
                 total_reward += reward
                 steps += 1
 
-                    if done:
-                        break
+                if done:
+                    break
 
             episode_rewards.append(total_reward)
             episode_lengths.append(steps)

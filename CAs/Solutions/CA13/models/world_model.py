@@ -70,9 +70,9 @@ class VariationalWorldModel(nn.Module):
 
     def reparameterize(self, mu, logvar):
         """Reparameterization trick for VAE"""
-            std = torch.exp(0.5 * logvar)
-            eps = torch.randn_like(std)
-            return mu + eps * std
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return mu + eps * std
     
     def decode(self, z):
         """Decode latent representation to observation"""
@@ -177,7 +177,7 @@ class VariationalWorldModel(nn.Module):
         z_current = z_start
         for t in range(horizon):
             if t < len(actions):
-            action = actions[t]
+                action = actions[t]
             else:
                 # Random action if not provided
                 action = torch.randint(0, self.action_dim, (z_current.size(0),))
