@@ -46,7 +46,42 @@ This assignment covers value-based and actor-critic reinforcement learning algor
   ```bash
   python cs285/scripts/run_hw3.py --env_name LunarLander-v2 --exp_name ac_test
   ```
-- Results are saved in `results/`.
+- Logs produced by the helper scripts land in `cs285/data/` by default.
+
+## Automated runner script
+
+To set up the environment and execute the DQN, actor-critic, and SAC experiments in one pass, use the included helper script:
+
+```bash
+chmod +x run_hw3.sh
+./run_hw3.sh
+```
+
+The script will create (or reuse) a virtual environment at `.venv/`, install dependencies from `requirements.txt`, install `cs285` in editable mode, and then sequentially launch the three training pipelines with sensible default hyperparameters (`LunarLander-v3` for DQN, `CartPole-v0` for actor-critic and SAC).
+
+Customize the workflow by overriding environment variables when invoking the script:
+
+- `RUN_DQN`, `RUN_ACTOR_CRITIC`, `RUN_SAC` – set to `0` to skip a section.
+- `DQN_ENV_NAME`, `AC_ENV_NAME`, `SAC_ENV_NAME` – target environments supported by the respective scripts.
+- `DQN_DOUBLE_Q=1` – enable Double DQN.
+- `AC_STANDARDIZE_ADV=0` – disable advantage standardization.
+- `SAC_INIT_TEMPERATURE`, `SAC_ACTOR_UPDATE_FREQ`, etc. – fine-tune SAC hyperparameters.
+- `SKIP_INSTALL=1` – reuse an existing virtualenv without reinstalling packages.
+- `*_EXTRA_FLAGS` (e.g. `DQN_EXTRA_FLAGS="--save_params"`) – append additional CLI options to a stage.
+
+Examples:
+
+Run only Double DQN on Pong with a cold start:
+
+```bash
+RUN_ACTOR_CRITIC=0 RUN_SAC=0 DQN_ENV_NAME=PongNoFrameskip-v4 DQN_DOUBLE_Q=1 ./run_hw3.sh
+```
+
+Reuse the environment to launch SAC on HalfCheetah with a custom temperature:
+
+```bash
+SKIP_INSTALL=1 RUN_DQN=0 RUN_ACTOR_CRITIC=0 SAC_ENV_NAME=HalfCheetah-v4 SAC_INIT_TEMPERATURE=0.5 ./run_hw3.sh
+```
 
 ## Key Files
 

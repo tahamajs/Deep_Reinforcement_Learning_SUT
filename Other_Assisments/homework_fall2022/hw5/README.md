@@ -74,11 +74,53 @@ For this particular assignment, you will need to install networkx==2.5
 
 ## Running Experiments
 
-- Example command:
+- Exploration + CQL (Question 1):
   ```bash
-  python cs285/scripts/run_hw5.py --env_name PointmassMedium-v0 --exp_name awac_test
+  python cs285/scripts/run_hw5_expl.py --env_name PointmassHard-v0 --exp_name expl_test
   ```
-- Results are saved in `results/`.
+- AWAC (Question 2):
+  ```bash
+  python cs285/scripts/run_hw5_awac.py --env_name PointmassMedium-v0 --exp_name awac_test
+  ```
+- IQL (Question 3):
+  ```bash
+  python cs285/scripts/run_hw5_iql.py --env_name PointmassHard-v0 --exp_name iql_test
+  ```
+- Each script writes logs to `cs285/data/`.
+
+## Automated runner script
+
+To provision a virtual environment, install dependencies (including `networkx==2.5`), and execute the three homework pipelines with one command, use the helper script:
+
+```bash
+chmod +x run_hw5.sh
+./run_hw5.sh
+```
+
+By default it runs the exploration/CQL, AWAC, and IQL experiments sequentially on the pointmass benchmarks with RND enabled for intrinsic rewards. The script creates (or reuses) `.venv/`, installs packages from `requirements.txt`, registers `cs285` in editable mode, and sets `MUJOCO_GL=egl` for headless rendering.
+
+Tweak behavior by setting environment variables when launching the script:
+
+- `RUN_EXPLORATION`, `RUN_AWAC`, `RUN_IQL` – set to `0` to skip a stage.
+- `EXPL_ENV_NAME`, `AWAC_ENV_NAME`, `IQL_ENV_NAME` – choose among `PointmassEasy/Medium/Hard/VeryHard-v0`.
+- `EXPL_USE_RND`, `AWAC_USE_RND`, `IQL_USE_RND` – toggle Random Network Distillation bonuses.
+- `AWAC_LAMBDA`, `IQL_EXPECTILE` – adjust algorithm-specific hyperparameters.
+- `EXPL_EXTRA_FLAGS`, `AWAC_EXTRA_FLAGS`, `IQL_EXTRA_FLAGS` – append custom CLI arguments.
+- `SKIP_INSTALL=1` – reuse the existing environment without reinstalling packages.
+
+Examples:
+
+Run only AWAC with supervised data and no intrinsic rewards:
+
+```bash
+RUN_EXPLORATION=0 RUN_IQL=0 AWAC_USE_RND=0 AWAC_ENV_NAME=PointmassMedium-v0 ./run_hw5.sh
+```
+
+Reuse the environment and sweep IQL expectile on the hard task:
+
+```bash
+SKIP_INSTALL=1 RUN_EXPLORATION=0 RUN_AWAC=0 IQL_ENV_NAME=PointmassHard-v0 IQL_EXPECTILE=0.9 ./run_hw5.sh
+```
 
 ## Key Files
 
