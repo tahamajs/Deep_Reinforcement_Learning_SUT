@@ -28,9 +28,30 @@
 set -e
 echo "🚀 Starting Comprehensive Training for HW2: Policy Gradients 🚀"
 
+# --- MuJoCo Detection ---
+echo "🔍 Checking MuJoCo availability..."
+MUJOCO_AVAILABLE=false
+python -c "import mujoco_py" 2>/dev/null && MUJOCO_AVAILABLE=true
+
+if [ "$MUJOCO_AVAILABLE" = true ]; then
+    echo "✅ MuJoCo is available - all environments will be tested"
+else
+    echo "⚠️  MuJoCo not detected - will skip HalfCheetah-v2 experiments"
+    echo "   To enable MuJoCo environments:"
+    echo "   1. Download MuJoCo 2.1.0 from: https://github.com/deepmind/mujoco/releases"
+    echo "   2. Extract to ~/.mujoco/mujoco210"
+    echo "   3. Install mujoco-py: pip install mujoco-py"
+    echo "   4. On macOS: brew install gcc"
+fi
+echo ""
+
 # --- Configuration ---
 # Using standard indexed arrays for macOS bash compatibility
-ENVS=("CartPole-v0" "LunarLander-v2" "HalfCheetah-v2")
+if [ "$MUJOCO_AVAILABLE" = true ]; then
+    ENVS=("CartPole-v0" "LunarLander-v2" "HalfCheetah-v2")
+else
+    ENVS=("CartPole-v0" "LunarLander-v2")
+fi
 declare -a CONFIG_NAMES
 declare -a CONFIG_FLAGS
 CONFIG_NAMES[0]="Vanilla"
@@ -226,5 +247,9 @@ echo "  📊 Training logs:  $LOGS_DIR"
 echo "  📈 Plots:          $PLOTS_DIR"
 echo "  🎬 Videos:         results_hw2/videos/"
 echo "=================================================="
+if [ "$MUJOCO_AVAILABLE" = false ]; then
+    echo ""
+    echo "⚠️  Note: HalfCheetah-v2 experiments were skipped (MuJoCo not installed)"
+fi
 echo ""
 echo "To view videos, navigate to results_hw2/videos/<env>/<config>/before|after/"

@@ -13,6 +13,24 @@ try:
     tf.disable_v2_behavior()
 except ImportError:
     import tensorflow as tf  # type: ignore
+
+
+def v1_dense(x, units, activation=None, name="dense"):
+    """Lightweight Dense layer compatible with TF v1 graph mode and Keras 3."""
+    input_dim = x.get_shape().as_list()[-1]
+    with tf.variable_scope(name):
+        w = tf.get_variable(
+            "kernel",
+            shape=[input_dim, units],
+            initializer=tf.glorot_uniform_initializer(),
+        )
+        b = tf.get_variable(
+            "bias",
+            shape=[units],
+            initializer=tf.zeros_initializer(),
+        )
+        z = tf.matmul(x, w) + b
+        return activation(z) if activation is not None else z
 class DensityModel:
     """Density model for exploration."""
 
@@ -34,9 +52,9 @@ class DensityModel:
         """Build the density model network."""
         self.state_ph = tf.placeholder(tf.float32, [None, self.state_dim])
         x = self.state_ph
-        for dim in self.hidden_dims:
-            x = tf.layers.dense(x, dim, activation=tf.nn.relu)
-        self.log_density = tf.layers.dense(x, 1)
+        for i, dim in enumerate(self.hidden_dims):
+            x = v1_dense(x, dim, activation=tf.nn.relu, name=f"h{i}")
+        self.log_density = v1_dense(x, 1, name="out")
         self.target_ph = tf.placeholder(tf.float32, [None, 1])
         self.loss = tf.reduce_mean(
             tf.nn.sigmoid_cross_entropy_with_logits(

@@ -24,6 +24,21 @@ from src.policy_gradient import PolicyGradientAgent, pathlength
 from src.utils import flatten_list_of_rollouts
 from src.video_recorder import record_before_after_videos
 import logz
+
+# MuJoCo environments that require mujoco-py
+MUJOCO_ENVS = {
+    'HalfCheetah-v2', 'Hopper-v2', 'Walker2d-v2', 'Ant-v2',
+    'Humanoid-v2', 'Reacher-v2', 'Swimmer-v2', 'InvertedPendulum-v2',
+    'InvertedDoublePendulum-v2', 'Pusher-v2', 'Thrower-v2', 'Striker-v2'
+}
+
+def check_mujoco_available():
+    """Check if MuJoCo is available."""
+    try:
+        import mujoco_py
+        return True
+    except (ImportError, Exception):
+        return False
 def main():
     """Main training function."""
     parser = argparse.ArgumentParser()
@@ -46,6 +61,18 @@ def main():
                        help="Record before/after training videos")
 
     args = parser.parse_args()
+    
+    # Check if environment requires MuJoCo
+    if args.env_name in MUJOCO_ENVS and not check_mujoco_available():
+        print(f"\n❌ ERROR: Environment '{args.env_name}' requires MuJoCo, but it's not installed.")
+        print("\n📦 To install MuJoCo:")
+        print("   1. Download MuJoCo 2.1.0 from: https://github.com/deepmind/mujoco/releases")
+        print("   2. Extract to ~/.mujoco/mujoco210")
+        print("   3. Install mujoco-py: pip install mujoco-py")
+        print("   4. On macOS, you may need: brew install gcc")
+        print("\nSkipping this experiment.\n")
+        sys.exit(1)
+    
     tf.set_random_seed(args.seed)
     np.random.seed(args.seed)
     env = gym.make(args.env_name)

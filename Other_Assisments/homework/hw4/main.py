@@ -1,17 +1,24 @@
 import os
 import argparse
 import time
+import sys
+
 try:
     import tensorflow.compat.v1 as tf  # type: ignore
     tf.disable_v2_behavior()
 except ImportError:
     import tensorflow as tf  # type: ignore
 
-from half_cheetah_env import HalfCheetahEnv
-from logger import logger
-from model_based_rl import ModelBasedRL
-
+# MuJoCo environments that require mujoco-py
 MUJOCO_ENVS = {'HalfCheetah', 'InvertedPendulum', 'Hopper', 'Walker2d', 'Ant', 'Humanoid'}
+
+def check_mujoco_available():
+    """Check if MuJoCo is available."""
+    try:
+        import mujoco_py
+        return True
+    except (ImportError, Exception):
+        return False
 
 parser = argparse.ArgumentParser()
 parser.add_argument('question', type=str, choices=('q1', 'q2', 'q3'))
@@ -23,15 +30,21 @@ parser.add_argument('--num_random_action_selection', type=int, default=4096)
 parser.add_argument('--nn_layers', type=int, default=1)
 args = parser.parse_args()
 
-# Check for MuJoCo dependency
-if args.env in MUJOCO_ENVS:
-    try:
-        import mujoco_py
-    except ImportError:
-        print("🚫 MuJoCo environment requested but mujoco-py is not installed.")
-        print("   Install mujoco-py and GCC 6/7 (brew install gcc --without-multilib) to enable.")
-        print("   Exiting.")
-        exit(1)
+# Check for MuJoCo dependency BEFORE importing environment
+if args.env in MUJOCO_ENVS and not check_mujoco_available():
+    print(f"\n❌ ERROR: Environment '{args.env}' requires MuJoCo, but it's not installed.")
+    print("\n📦 To install MuJoCo:")
+    print("   1. Download MuJoCo 2.1.0 from: https://github.com/deepmind/mujoco/releases")
+    print("   2. Extract to ~/.mujoco/mujoco210")
+    print("   3. Install mujoco-py: pip install mujoco-py")
+    print("   4. On macOS: brew install gcc")
+    print("\nExiting HW4 (all experiments require MuJoCo).\n")
+    sys.exit(1)
+
+# Import MuJoCo-dependent modules AFTER the check
+from half_cheetah_env import HalfCheetahEnv
+from logger import logger
+from model_based_rl import ModelBasedRL
 
 data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
 exp_name = '{0}_{1}_{2}'.format(args.env,

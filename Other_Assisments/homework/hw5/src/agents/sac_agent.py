@@ -15,6 +15,27 @@ except ImportError:
     import tensorflow as tf  # type: ignore
 from collections import deque
 import random
+
+
+def v1_dense(x, units, activation=None, name="dense"):
+    """Lightweight Dense layer compatible with TF v1 graph mode and Keras 3.
+
+    Avoids tf.layers/keras dependencies which are removed in Keras 3.
+    """
+    input_dim = x.get_shape().as_list()[-1]
+    with tf.variable_scope(name):
+        w = tf.get_variable(
+            "kernel",
+            shape=[input_dim, units],
+            initializer=tf.glorot_uniform_initializer(),
+        )
+        b = tf.get_variable(
+            "bias",
+            shape=[units],
+            initializer=tf.zeros_initializer(),
+        )
+        z = tf.matmul(x, w) + b
+        return activation(z) if activation is not None else z
 class ReplayBuffer:
     """Experience replay buffer for SAC."""
 
@@ -120,13 +141,15 @@ class SACAgent:
         """Build actor network (policy)."""
         with tf.variable_scope("actor"):
             x = state
-            for size in self.hidden_sizes:
-                x = tf.layers.dense(x, size, activation=tf.nn.relu)
+            for i, size in enumerate(self.hidden_sizes):
+                x = v1_dense(x, size, activation=tf.nn.relu, name=f"h{i}")
 
-            mean = tf.layers.dense(x, self.action_dim, activation=tf.nn.tanh)
+            mean = v1_dense(x, self.action_dim, activation=tf.nn.tanh, name="mean")
             mean = mean * self.action_high
 
-            log_std = tf.layers.dense(x, self.action_dim, activation=tf.nn.tanh)
+            log_std = v1_dense(
+                x, self.action_dim, activation=tf.nn.tanh, name="log_std"
+            )
             log_std = tf.clip_by_value(log_std, -20, 2)
 
             return mean, log_std
@@ -135,17 +158,17 @@ class SACAgent:
         """Build critic network (Q-function)."""
         with tf.variable_scope(scope, reuse=reuse):
             x = tf.concat([state, action], axis=1)
-            for size in self.hidden_sizes:
-                x = tf.layers.dense(x, size, activation=tf.nn.relu)
-            return tf.layers.dense(x, 1)
+            for i, size in enumerate(self.hidden_sizes):
+                x = v1_dense(x, size, activation=tf.nn.relu, name=f"h{i}")
+            return v1_dense(x, 1, name="out")
 
     def _build_value(self, state, scope, reuse=False):
         """Build value network."""
         with tf.variable_scope(scope, reuse=reuse):
             x = state
-            for size in self.hidden_sizes:
-                x = tf.layers.dense(x, size, activation=tf.nn.relu)
-            return tf.layers.dense(x, 1)
+            for i, size in enumerate(self.hidden_sizes):
+                x = v1_dense(x, size, activation=tf.nn.relu, name=f"h{i}")
+            return v1_dense(x, 1, name="out")
 
     def _sample_action(self, mean, log_std):
         """Sample action from policy distribution."""

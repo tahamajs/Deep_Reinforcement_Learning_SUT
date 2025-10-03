@@ -14,6 +14,24 @@ try:
 except ImportError:
     import tensorflow as tf  # type: ignore
 from collections import deque
+
+
+def v1_dense(x, units, activation=None, name="dense"):
+    """Lightweight Dense layer compatible with TF v1 graph mode and Keras 3."""
+    input_dim = x.get_shape().as_list()[-1]
+    with tf.variable_scope(name):
+        w = tf.get_variable(
+            "kernel",
+            shape=[input_dim, units],
+            initializer=tf.glorot_uniform_initializer(),
+        )
+        b = tf.get_variable(
+            "bias",
+            shape=[units],
+            initializer=tf.zeros_initializer(),
+        )
+        z = tf.matmul(x, w) + b
+        return activation(z) if activation is not None else z
 class ReplayBuffer:
     """Replay buffer for meta-learning."""
 
@@ -67,7 +85,13 @@ class MetaLearningAgent:
         """
         self.env = env
         self.state_dim = env.observation_space.shape[0]
-        self.action_dim = env.action_space.shape[0]
+        # Support both continuous and discrete action spaces
+        if hasattr(env.action_space, "shape") and env.action_space.shape is not None and len(env.action_space.shape) > 0:
+            self.action_dim = env.action_space.shape[0]
+            self.discrete = False
+        else:
+            self.action_dim = env.action_space.n
+            self.discrete = True
         self.hidden_sizes = hidden_sizes
         self.learning_rate = learning_rate
         self.meta_learning_rate = meta_learning_rate
@@ -86,9 +110,19 @@ class MetaLearningAgent:
         self.advantage_ph = tf.placeholder(tf.float32, [None])
         self.old_log_prob_ph = tf.placeholder(tf.float32, [None])
         self.action_logits, self.value = self._build_policy(self.state_ph)
-        self.action_dist = tf.distributions.Categorical(logits=self.action_logits)
-        self.sampled_action = self.action_dist.sample()
-        self.log_prob = self.action_dist.log_prob(self.sampled_action)
+        if self.discrete:
+            self.action_dist = tf.distributions.Categorical(logits=self.action_logits)
+            self.sampled_action = self.action_dist.sample()
+            self.log_prob = self.action_dist.log_prob(self.sampled_action)
+        else:
+            # For continuous actions, model Gaussian policy (simple baseline)
+            self.action_mean = self.action_logits
+            self.action_log_std = tf.get_variable(
+                "action_log_std", shape=[self.action_dim], initializer=tf.zeros_initializer()
+            )
+            dist = tf.distributions.Normal(self.action_mean, tf.exp(self.action_log_std))
+            self.sampled_action = dist.sample()
+            self.log_prob = tf.reduce_sum(dist.log_prob(self.sampled_action), axis=1)
         ratio = tf.exp(self.log_prob - self.old_log_prob_ph)
         clipped_ratio = tf.clip_by_value(ratio, 0.8, 1.2)
         self.policy_loss = -tf.reduce_mean(
@@ -103,10 +137,10 @@ class MetaLearningAgent:
         """Build policy network."""
         with tf.variable_scope("policy"):
             x = state
-            for size in self.hidden_sizes:
-                x = tf.layers.dense(x, size, activation=tf.nn.tanh)
-            action_logits = tf.layers.dense(x, self.action_dim)
-            value = tf.layers.dense(x, 1)
+            for i, size in enumerate(self.hidden_sizes):
+                x = v1_dense(x, size, activation=tf.nn.tanh, name=f"h{i}")
+            action_logits = v1_dense(x, self.action_dim, name="act")
+            value = v1_dense(x, 1, name="val")
 
             return action_logits, tf.squeeze(value)
 

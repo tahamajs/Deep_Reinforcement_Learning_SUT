@@ -24,12 +24,30 @@ hw2/
 ## Dependencies
 
 - Python **3.7+**
-- NumPy **1.21.0+**
-- TensorFlow **2.8.0+**
-- MuJoCo **2.1.0+** and mujoco-py **2.1.0+**
-- OpenAI Gym **0.21.0+**
+- NumPy **< 2.0.0**
+- TensorFlow **2.8.0 - 2.15.x** (v1 compatibility mode)
+- OpenAI Gym **0.21.0 - 0.25.x**
 - seaborn
 - Box2D **2.3.10+**
+- **MuJoCo 2.1.0+ (Optional)**: Required for HalfCheetah, Hopper, Walker, etc.
+  - If not installed, the script will gracefully skip MuJoCo environments
+
+## Quick Start
+
+Run all experiments automatically:
+
+```bash
+chmod +x run_all.sh
+./run_all.sh
+```
+
+This will:
+- ✅ Detect MuJoCo availability
+- 🏋️ Train agents on CartPole-v0, LunarLander-v2, and HalfCheetah-v2 (if MuJoCo available)
+- 📊 Generate comparison plots
+- 🎬 Record before/after training videos
+
+Results will be saved to `results_hw2/`.
 
 ## Setup
 
@@ -39,7 +57,26 @@ hw2/
    pip install -r requirements.txt
    ```
 
-2. Replace the default lunar lander environment:
+2. **(Optional) Install MuJoCo** for advanced robotics environments:
+
+   ```bash
+   # Download MuJoCo 2.1.0
+   wget https://github.com/deepmind/mujoco/releases/download/2.1.0/mujoco210-macos-x86_64.tar.gz
+   
+   # Extract to ~/.mujoco
+   mkdir -p ~/.mujoco
+   tar -xzf mujoco210-macos-x86_64.tar.gz -C ~/.mujoco
+   
+   # Install mujoco-py
+   pip install mujoco-py
+   
+   # On macOS, install GCC
+   brew install gcc
+   ```
+
+   **Note**: Without MuJoCo, you can still run CartPole and LunarLander experiments. The script will automatically skip HalfCheetah-v2.
+
+3. Replace the default lunar lander environment:
    ```bash
    cp lunar_lander.py /path/to/gym/envs/box2d/lunar_lander.py
    ```
@@ -119,6 +156,55 @@ Training results and logs are saved in the `results/` directory. Use `plot.py` t
 
 ```bash
 python plot.py results/experiment_name/
+```
+
+## Troubleshooting
+
+### MuJoCo Errors
+
+**Error: "Could not find GCC 6 or GCC 7 executable"**
+```bash
+# On macOS
+brew install gcc
+
+# On Ubuntu
+sudo apt-get install gcc g++
+```
+
+**Error: "Monitor object has no attribute 'enabled'"**
+- This is a Gym version compatibility issue. The script now uses matplotlib Agg backend to avoid GUI issues.
+
+**Error: "AttributeError: module 'numpy' has no attribute 'int'"**
+- You have NumPy 2.x installed. Downgrade:
+  ```bash
+  pip install "numpy<2.0.0"
+  ```
+
+### Video Recording Issues
+
+If video recording fails:
+1. Make sure `ffmpeg` is installed: `brew install ffmpeg` (macOS) or `sudo apt-get install ffmpeg` (Ubuntu)
+2. The script automatically uses non-interactive matplotlib backend
+3. Check the `results_hw2/videos/` directory for recorded videos
+
+### Training Too Slow
+
+If training is slow:
+- Reduce `--n_iter` (fewer iterations)
+- Reduce `--batch_size` (less data per iteration)
+- Skip video recording (remove `--record_video` flag)
+
+## TensorFlow 2.x Compatibility
+
+This code uses TensorFlow 2.x with v1 compatibility mode:
+```python
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+```
+
+If you encounter TensorFlow errors, ensure you have a compatible version:
+```bash
+pip install "tensorflow>=2.8.0,<2.16.0"
 ```
 
 ## References
