@@ -4,6 +4,8 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 
 import utils
+
+
 class ModelBasedPolicy(object):
 
     def __init__(self,
@@ -17,21 +19,23 @@ class ModelBasedPolicy(object):
         self._action_dim = env.action_space.shape[0]
         self._action_space_low = env.action_space.low
         self._action_space_high = env.action_space.high
-    self._dataset = init_dataset
+        self._dataset = init_dataset
         self._horizon = horizon
         self._num_random_action_selection = num_random_action_selection
         self._nn_layers = nn_layers
         self._learning_rate = 1e-3
 
-    (self._sess,
-     self._state_ph,
-     self._action_ph,
-     self._next_state_ph,
-     self._next_state_pred,
-     self._loss,
-     self._optimizer,
-     self._action_state_ph,
-     self._best_action) = self._setup_graph()
+        (
+            self._sess,
+            self._state_ph,
+            self._action_ph,
+            self._next_state_ph,
+            self._next_state_pred,
+            self._loss,
+            self._optimizer,
+            self._action_state_ph,
+            self._best_action,
+        ) = self._setup_graph()
 
     def _setup_placeholders(self):
         """
@@ -46,11 +50,11 @@ class ModelBasedPolicy(object):
                 (a) the placeholders should have 2 dimensions,
                     in which the 1st dimension is variable length (i.e., None)
         """
-    state_ph = tf.placeholder(tf.float32, shape=[None, self._state_dim], name='state')
-    action_ph = tf.placeholder(tf.float32, shape=[None, self._action_dim], name='action')
-    next_state_ph = tf.placeholder(tf.float32, shape=[None, self._state_dim], name='next_state')
+        state_ph = tf.placeholder(tf.float32, shape=[None, self._state_dim], name='state')
+        action_ph = tf.placeholder(tf.float32, shape=[None, self._action_dim], name='action')
+        next_state_ph = tf.placeholder(tf.float32, shape=[None, self._state_dim], name='next_state')
 
-    return state_ph, action_ph, next_state_ph
+        return state_ph, action_ph, next_state_ph
 
     def _dynamics_func(self, state, action, reuse):
         """
@@ -116,17 +120,17 @@ class ModelBasedPolicy(object):
                 (d) Create the optimizer by minimizing the loss using the Adam optimizer with self._learning_rate
 
         """
-    dataset = self._dataset
-    delta_true = next_state_ph - state_ph
-    delta_pred = next_state_pred - state_ph
+        dataset = self._dataset
+        delta_true = next_state_ph - state_ph
+        delta_pred = next_state_pred - state_ph
 
-    delta_true_norm = utils.normalize(delta_true, dataset.delta_state_mean, dataset.delta_state_std)
-    delta_pred_norm = utils.normalize(delta_pred, dataset.delta_state_mean, dataset.delta_state_std)
+        delta_true_norm = utils.normalize(delta_true, dataset.delta_state_mean, dataset.delta_state_std)
+        delta_pred_norm = utils.normalize(delta_pred, dataset.delta_state_mean, dataset.delta_state_std)
 
-    loss = tf.reduce_mean(tf.square(delta_true_norm - delta_pred_norm))
-    optimizer = tf.train.AdamOptimizer(self._learning_rate).minimize(loss)
+        loss = tf.reduce_mean(tf.square(delta_true_norm - delta_pred_norm))
+        optimizer = tf.train.AdamOptimizer(self._learning_rate).minimize(loss)
 
-    return loss, optimizer
+        return loss, optimizer
 
     def _setup_action_selection(self, state_ph):
         """

@@ -19,9 +19,21 @@ import numpy as np
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 import logz
+import logging
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 from src.actor_critic import ActorCriticAgent
+
+# تنظیم logging برای debugging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('run_ac_debug.log')
+    ]
+)
+logger = logging.getLogger(__name__)
 
 MUJOCO_ENVS = {
     "InvertedPendulum-v1",
@@ -55,6 +67,14 @@ def train_AC(
     size,
 ):
     """Train Actor-Critic agent."""
+    logger.info(f"🚀 Starting Actor-Critic training:")
+    logger.info(f"  📋 Experiment: {exp_name}")
+    logger.info(f"  🎮 Environment: {env_name}")
+    logger.info(f"  🔄 Iterations: {n_iter}")
+    logger.info(f"  ⚙️  Learning rate: {learning_rate}")
+    logger.info(f"  📊 Batch size: {min_timesteps_per_batch}")
+    logger.info(f"  🌱 Seed: {seed}")
+    
     start = time.time()
     logz.configure_output_dir(logdir)
     args = {
@@ -77,14 +97,20 @@ def train_AC(
     logz.save_params(args)
     tf.set_random_seed(seed)
     np.random.seed(seed)
+    
     if env_name in MUJOCO_ENVS:
+        logger.error(f"❌ MuJoCo environment detected: {env_name}")
         raise RuntimeError(
             f"Environment '{env_name}' requires MuJoCo (mujoco-py) and a GCC 6/7 toolchain. "
             "Install dependencies (e.g., brew install gcc --without-multilib) before running."
         )
 
+    logger.info(f"🎮 Creating environment: {env_name}")
     env = gym.make(env_name)
     env.seed(seed)
+    
+    logger.info(f"  📊 Observation space: {env.observation_space}")
+    logger.info(f"  🎯 Action space: {env.action_space}")
     max_path_length = max_path_length or env.spec.max_episode_steps
     discrete = isinstance(env.action_space, gym.spaces.Discrete)
     ob_dim = env.observation_space.shape[0]
@@ -130,12 +156,28 @@ def train_AC(
     agent.init_tf_sess()
     total_timesteps = 0
     for itr in range(n_iter):
+        logger.info(f"🔄 ========== Iteration {itr}/{n_iter-1} ==========")
         print("********** Iteration %i ************" % itr)
+        
+        logger.info(f"  📊 Sampling trajectories...")
         paths, timesteps_this_batch = agent.sample_trajectories(itr, env)
         total_timesteps += timesteps_this_batch
+        
+        logger.info(f"  ✅ Sampled {len(paths)} paths, {timesteps_this_batch} timesteps")
+        logger.info(f"  📈 Total timesteps so far: {total_timesteps}")
+        
+        # محاسبه آمار مسیرها
+        returns = [sum(path["reward"]) for path in paths]
+        path_lengths = [len(path["reward"]) for path in paths]
+        
+        logger.info(f"  📊 Path stats: returns_mean={np.mean(returns):.3f}, "
+                   f"returns_std={np.std(returns):.3f}, lengths_mean={np.mean(path_lengths):.1f}")
+        
         ob_no = np.concatenate([path["observation"] for path in paths])
         ac_na = np.concatenate([path["action"] for path in paths])
         re_n = np.concatenate([path["reward"] for path in paths])
+        
+        logger.debug(f"  📐 Data shapes: obs={ob_no.shape}, actions={ac_na.shape}, rewards={re_n.shape}")
         next_ob_no = np.concatenate([path["next_observation"] for path in paths])
         terminal_n = np.concatenate([path["terminal"] for path in paths])
         agent.update_critic(ob_no, next_ob_no, re_n, terminal_n)

@@ -48,8 +48,8 @@ class PendulumEnvWrapper:
         Returns:
             costs: shape [batch_size] or scalar
         """
-    is_tf = tf.is_tensor(states)
-    is_single_state = (len(states.get_shape()) == 1) if is_tf else (len(np.shape(states)) == 1)
+        is_tf = tf.is_tensor(states)
+        is_single_state = (len(states.get_shape()) == 1) if is_tf else (len(np.shape(states)) == 1)
         
         if is_single_state:
             states = states[None, ...]

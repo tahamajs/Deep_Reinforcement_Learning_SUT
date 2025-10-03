@@ -158,10 +158,10 @@ class ModelBasedRL(object):
         self._log(self._random_dataset)
 
         logger.info('Training policy....')
-    self._train_policy(self._random_dataset)
+        self._train_policy(self._random_dataset)
 
         logger.info('Evaluating policy...')
-    eval_dataset = self._gather_rollouts(self._policy, self._num_onpolicy_rollouts)
+        eval_dataset = self._gather_rollouts(self._policy, self._num_onpolicy_rollouts)
 
         logger.info('Trained policy')
         self._log(eval_dataset)
