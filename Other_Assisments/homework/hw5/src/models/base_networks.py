@@ -7,7 +7,11 @@ Author: Saeed Reza Zouashkiani
 Student ID: 400206262
 """
 
-import tensorflow as tf
+try:
+    import tensorflow.compat.v1 as tf  # type: ignore
+    tf.disable_v2_behavior()
+except ImportError:
+    import tensorflow as tf  # type: ignore
 import numpy as np
 def build_mlp(
     input_tensor,

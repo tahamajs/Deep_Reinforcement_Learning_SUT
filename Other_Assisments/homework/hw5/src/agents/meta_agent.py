@@ -8,7 +8,11 @@ Student ID: 400206262
 """
 
 import numpy as np
-import tensorflow as tf
+try:
+    import tensorflow.compat.v1 as tf  # type: ignore
+    tf.disable_v2_behavior()
+except ImportError:
+    import tensorflow as tf  # type: ignore
 from collections import deque
 class ReplayBuffer:
     """Replay buffer for meta-learning."""

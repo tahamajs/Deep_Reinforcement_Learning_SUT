@@ -15,12 +15,36 @@ import os
 import sys
 import time
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend
 import matplotlib.pyplot as plt
+try:
+    import tensorflow.compat.v1 as tf  # type: ignore
+    tf.disable_v2_behavior()
+except ImportError:
+    import tensorflow as tf  # type: ignore
+
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 from agents.sac_agent import SACAgent
 from agents.exploration_agent import ExplorationAgent, DiscreteExplorationAgent
 from agents.meta_agent import MetaLearningAgent, MAMLAgent
+
+MUJOCO_ENVS = {
+    "InvertedPendulum-v1",
+    "InvertedPendulum-v2",
+    "HalfCheetah-v1",
+    "HalfCheetah-v2",
+    "Hopper-v1",
+    "Hopper-v2",
+    "Walker2d-v1",
+    "Walker2d-v2",
+    "Ant-v1",
+    "Ant-v2",
+    "Humanoid-v1",
+    "Humanoid-v2",
+    "SparseHalfCheetah-v0",
+}
 def create_experiment_dir(exp_name):
     """Create experiment directory."""
     data_dir = os.path.join(os.path.dirname(__file__), "data")
@@ -290,9 +314,21 @@ def main():
     parser.add_argument("--log_interval", type=int, default=10, help="Logging interval")
 
     args = parser.parse_args()
+    
+    # Check for MuJoCo dependency
+    if args.env_name in MUJOCO_ENVS:
+        try:
+            import mujoco_py
+        except ImportError:
+            print("🚫 MuJoCo environment requested but mujoco-py is not installed.")
+            print("   Install mujoco-py and GCC 6/7 (brew install gcc --without-multilib) to enable.")
+            print("   Skipping run.")
+            return
+    
     if args.exp_name is None:
         timestamp = time.strftime("%d-%m-%Y_%H-%M-%S")
         args.exp_name = f"{args.algorithm}_{args.env_name}_{timestamp}"
+    
     args.exp_dir = create_experiment_dir(args.exp_name)
     try:
         import gym
