@@ -32,7 +32,7 @@ import math
 from tqdm import tqdm
 from abc import ABC, abstractmethod
 import itertools
-from advanced_policy import PPONetwork, PPOAgent
+from agents.advanced_policy import PPONetwork, PPOAgent
 
 warnings.filterwarnings("ignore")
 

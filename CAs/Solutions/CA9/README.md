@@ -235,6 +235,17 @@ results = benchmark.run_benchmark(num_episodes=200, num_seeds=3)
 
 ```python
 from utils.policy_gradient_visualizer import PolicyGradientVisualizer
+from training_examples import (
+    plot_policy_gradient_convergence_analysis,
+    plot_advantage_function_analysis,
+    plot_continuous_control_policy_landscapes,
+    plot_hyperparameter_sensitivity_analysis,
+    comprehensive_policy_gradient_comparison,
+    policy_gradient_curriculum_learning,
+    entropy_regularization_study,
+    trust_region_policy_optimization_comparison,
+    create_comprehensive_visualization_suite
+)
 
 visualizer = PolicyGradientVisualizer()
 
@@ -246,6 +257,19 @@ visualizer.compare_value_vs_policy_methods()
 
 # Advanced visualizations
 visualizer.create_advanced_visualizations()
+
+# New comprehensive visualizations
+plot_policy_gradient_convergence_analysis()
+plot_advantage_function_analysis()
+plot_continuous_control_policy_landscapes()
+plot_hyperparameter_sensitivity_analysis()
+comprehensive_policy_gradient_comparison()
+policy_gradient_curriculum_learning()
+entropy_regularization_study()
+trust_region_policy_optimization_comparison()
+
+# Generate all visualizations at once
+create_comprehensive_visualization_suite(save_dir='visualizations/')
 ```
 
 ## 📊 Key Features

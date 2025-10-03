@@ -154,9 +154,10 @@ class DreamerAgent:
 
     def compute_returns_and_advantages(self, trajectory):
         """Compute returns and advantages using GAE"""
-        rewards = trajectory["rewards"]
-        values = trajectory["values"]
-        final_value = trajectory["final_value"]
+        # Detach to avoid backpropagating through imagination/critic graphs
+        rewards = trajectory["rewards"].detach()
+        values = trajectory["values"].detach()
+        final_value = trajectory["final_value"].detach()
 
         returns = torch.zeros_like(rewards)
         advantages = torch.zeros_like(rewards)
@@ -190,25 +191,30 @@ class DreamerAgent:
         log_probs = log_probs.view(-1)
 
         returns, advantages = self.compute_returns_and_advantages(trajectory)
-        returns = returns.view(-1)
-        advantages = advantages.view(-1)
+        # Detach targets for stable updates
+        returns = returns.view(-1).detach()
+        advantages = advantages.view(-1).detach()
 
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         self.critic_optimizer.zero_grad()
-        values_pred = self.critic(states)
+        # Detach states to avoid gradients flowing into the world model/actor graph
+        values_pred = self.critic(states.detach())
         critic_loss = F.mse_loss(values_pred, returns)
-        critic_loss.backward()
+    critic_loss.backward(retain_graph=False)
         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 10.0)
         self.critic_optimizer.step()
 
         self.actor_optimizer.zero_grad()
 
-        action_mean, action_std = self.actor(states)
+        # Detach states to avoid backpropagating through the critic's graph
+        action_mean, action_std = self.actor(states.detach())
         dist = Normal(action_mean, action_std)
 
+        # Use detached actions from the imagination to avoid linking to old actor graph
+        actions_detached = actions.detach()
         raw_actions = torch.atanh(
-            torch.clamp(actions / self.actor.action_range, -0.999, 0.999)
+            torch.clamp(actions_detached / self.actor.action_range, -0.999, 0.999)
         )
         new_log_probs = dist.log_prob(raw_actions).sum(dim=-1)
         new_log_probs -= (

@@ -43,8 +43,11 @@ class ModelBasedComparisonFramework:
 
             if hasattr(env, "num_states"):
                 tabular_model = TabularModel(env.num_states, env.num_actions)
+                neural_model = NeuralModel(
+                    env.num_states, env.num_actions, hidden_dim=64, ensemble_size=3
+                )
 
-                self._train_models(env, tabular_model)  # , neural_model)
+                self._train_models(env, tabular_model, neural_model)
 
             for method_name, method_info in self.methods.items():
                 print(f"  📊 Testing {method_name}...")

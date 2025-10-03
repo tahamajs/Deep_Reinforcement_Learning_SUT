@@ -101,12 +101,25 @@ class MCTSNode:
 class MonteCarloTreeSearch:
     """Monte Carlo Tree Search for planning."""
 
-    def __init__(self, model, value_network=None, policy_network=None):
+    def __init__(self, action_dim, num_simulations=100, exploration_constant=1.4, discount_factor=0.99, model=None, value_network=None, policy_network=None):
+        """
+        Monte Carlo Tree Search initializer.
+        Args:
+            action_dim (int): number of possible actions.
+            num_simulations (int): number of MCTS simulations.
+            exploration_constant (float): exploration constant (c_puct).
+            discount_factor (float): discount factor for rollouts.
+            model: environment dynamics model.
+            value_network: network for evaluating leaf values.
+            policy_network: network for guiding expansion.
+        """
+        self.action_dim = action_dim
+        self.num_simulations = num_simulations
+        self.c_puct = exploration_constant
+        self.discount_factor = discount_factor
         self.model = model
         self.value_network = value_network
         self.policy_network = policy_network
-        self.c_puct = 1.4
-        self.num_simulations = 100
 
     def search(self, root_state, num_simulations=None):
         """Perform MCTS search from root state."""
@@ -122,8 +135,7 @@ class MonteCarloTreeSearch:
                 priors = F.softmax(policy_logits, dim=-1).squeeze().cpu().numpy()
                 root.expand(list(range(len(priors))), priors)
         else:
-            num_actions = 4  # Assume 4 actions for simplicity
-            root.expand(list(range(num_actions)))
+            root.expand(list(range(self.action_dim)))
 
         for _ in range(num_simulations):
             self._simulate(root)
@@ -145,7 +157,7 @@ class MonteCarloTreeSearch:
             if hasattr(self.model, "get_possible_actions"):
                 actions = self.model.get_possible_actions(current.state)
             else:
-                actions = list(range(4))  # Default actions
+                actions = list(range(self.action_dim))
 
             current.expand(actions)
 
@@ -188,25 +200,25 @@ class MonteCarloTreeSearch:
         current_state = state
 
         for i in range(depth):
-            action = np.random.randint(4)
+            action = np.random.randint(self.action_dim)
 
             if hasattr(self.model, "predict_mean"):
                 next_state, reward = self.model.predict_mean(
                     torch.FloatTensor(current_state).to(device),
                     torch.LongTensor([action]).to(device),
                 )
-                total_reward += reward.item() * (0.99**i)
+                total_reward += reward.item() * (self.discount_factor**i)
                 current_state = next_state.cpu().numpy()
             else:
                 reward = np.random.randn()
-                total_reward += reward * (0.99**i)
+                total_reward += reward * (self.discount_factor**i)
 
         return total_reward
 
     def get_action_probabilities(self, root):
         """Get action probabilities from MCTS results."""
         if root.is_leaf():
-            return np.ones(4) / 4  # Uniform if no children
+            return np.ones(self.action_dim) / self.action_dim
 
         visits = []
         actions = []
@@ -221,12 +233,24 @@ class MonteCarloTreeSearch:
         visits = np.array(visits)
         probabilities = visits / visits.sum()
 
-        full_probs = np.zeros(4)  # Assume 4 actions
+        full_probs = np.zeros(self.action_dim)
         for action, prob in zip(actions, probabilities):
             if action < len(full_probs):
                 full_probs[action] = prob
 
         return full_probs
+
+    def get_best_action(self, state):
+        """Get best action from MCTS search."""
+        root = self.search(state)
+
+        if root.is_leaf() or len(root.children) == 0:
+            # No children, return random action
+            return np.random.randint(self.action_dim)
+
+        # Return action with most visits
+        best_action = max(root.children.items(), key=lambda x: x[1].visit_count)[0]
+        return best_action
 
 
 class ModelBasedValueExpansion:

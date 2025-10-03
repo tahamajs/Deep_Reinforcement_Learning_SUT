@@ -212,6 +212,7 @@ class DQNAgent:
         self.epsilon_decay = epsilon_decay
         self.batch_size = batch_size
         self.target_update_freq = target_update_freq
+        self.device = device
 
         self.q_network = DQN(state_dim, action_dim).to(device)
         self.target_network = DQN(state_dim, action_dim).to(device)

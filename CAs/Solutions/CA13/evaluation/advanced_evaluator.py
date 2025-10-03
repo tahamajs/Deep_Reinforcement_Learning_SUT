@@ -6,12 +6,12 @@ import torch.nn.functional as F
 import torch.optim as optim
 import copy
 
-from ..environments.grid_world import SimpleGridWorld
-from ..agents.model_free import DQNAgent
-from ..agents.sample_efficient import SampleEfficientAgent, DataAugmentationDQN
-from ..agents.hierarchical import OptionsCriticAgent
-from ..buffers.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
-from ..models.world_model import VariationalWorldModel
+from environments.grid_world import SimpleGridWorld
+from agents.model_free import DQNAgent
+from agents.sample_efficient import SampleEfficientAgent, DataAugmentationDQN
+from agents.hierarchical import OptionsCriticAgent
+from buffers.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
+from models.world_model import VariationalWorldModel
 
 
 class AdvancedRLEvaluator:

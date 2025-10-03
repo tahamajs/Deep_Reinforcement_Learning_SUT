@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from torch.distributions import Categorical
-from ..utils.utils import device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class ValueNetwork(nn.Module):
@@ -324,9 +324,9 @@ class VarianceAnalyzer:
             rewards = agent.episode_rewards_history
             
             if len(rewards) > 10:
-            smoothed = pd.Series(rewards).rolling(window=20).mean()
+                smoothed = pd.Series(rewards).rolling(window=20).mean()
                 ax.plot(smoothed, label=baseline_type.replace('_', ' ').title(), 
-                       color=colors[i], linewidth=2)
+                    color=colors[i], linewidth=2)
         
         ax.set_title('Learning Curves Comparison')
         ax.set_xlabel('Episode')

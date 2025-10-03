@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical
 import numpy as np
-from ..experiments.game_theory import MultiAgentEnvironment
+from experiments.game_theory import MultiAgentEnvironment
 
 
 class MAMLAgent(nn.Module):

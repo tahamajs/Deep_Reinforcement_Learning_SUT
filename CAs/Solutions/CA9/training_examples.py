@@ -30,6 +30,7 @@ import random
 import pandas as pd
 from tqdm import tqdm
 import warnings
+import os
 
 warnings.filterwarnings("ignore")
 
@@ -1446,16 +1447,677 @@ def comprehensive_policy_gradient_comparison(
 # MAIN TRAINING EXAMPLES
 # =============================================================================
 
+
+def policy_gradient_curriculum_learning(
+    save_path: Optional[str] = None,
+) -> Dict[str, Any]:
+    """تحلیل curriculum learning برای روش‌های policy gradient"""
+    print("\nتحلیل Curriculum Learning برای Policy Gradient...")
+    print("=" * 50)
+
+    curriculum_stages = [
+        {
+            "name": "مراحل ساده",
+            "complexity": "low",
+            "variance": "high",
+            "horizon": "short",
+        },
+        {
+            "name": "مراحل متوسط",
+            "complexity": "medium",
+            "variance": "medium",
+            "horizon": "medium",
+        },
+        {
+            "name": "مراحل پیچیده",
+            "complexity": "high",
+            "variance": "low",
+            "horizon": "long",
+        },
+        {
+            "name": "مراحل خبره",
+            "complexity": "expert",
+            "variance": "minimal",
+            "horizon": "very_long",
+        },
+    ]
+
+    algorithms = ["REINFORCE", "Actor-Critic", "PPO"]
+    curriculum_results = {alg: [] for alg in algorithms}
+
+    # شبیه‌سازی نتایج curriculum learning
+    for stage_idx, stage in enumerate(curriculum_stages):
+        print(f"\nمرحله Curriculum {stage_idx + 1}: {stage['name']}")
+        for alg in algorithms:
+            base_performance = 100
+            if stage["complexity"] == "low":
+                alg_multipliers = {"REINFORCE": 1.0, "Actor-Critic": 1.1, "PPO": 1.05}
+            elif stage["complexity"] == "medium":
+                alg_multipliers = {"REINFORCE": 0.9, "Actor-Critic": 1.2, "PPO": 1.3}
+            elif stage["complexity"] == "high":
+                alg_multipliers = {"REINFORCE": 0.7, "Actor-Critic": 1.1, "PPO": 1.4}
+            else:
+                alg_multipliers = {"REINFORCE": 0.5, "Actor-Critic": 0.9, "PPO": 1.5}
+
+            performance = base_performance * alg_multipliers[alg]
+            performance += np.random.normal(0, 10)
+            curriculum_results[alg].append(performance)
+
+    # رسم نمودار
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+    # نمودار پیشرفت curriculum
+    ax = axes[0]
+    stage_names = [stage["name"] for stage in curriculum_stages]
+    colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
+
+    for i, (alg, performances) in enumerate(curriculum_results.items()):
+        ax.plot(
+            stage_names,
+            performances,
+            "o-",
+            linewidth=3,
+            markersize=8,
+            label=alg,
+            color=colors[i],
+        )
+
+    ax.set_xlabel("مرحله Curriculum", fontsize=12)
+    ax.set_ylabel("امتیاز عملکرد", fontsize=12)
+    ax.set_title("پیشرفت یادگیری با Curriculum", fontsize=14, fontweight="bold")
+    ax.legend(fontsize=11)
+    ax.grid(True, alpha=0.3)
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=15, ha="right")
+
+    # نمودار مقایسه بهبود
+    ax = axes[1]
+    improvements = {}
+    for alg in algorithms:
+        total_improvement = curriculum_results[alg][-1] - curriculum_results[alg][0]
+        improvements[alg] = total_improvement
+
+    bars = ax.bar(
+        improvements.keys(),
+        improvements.values(),
+        color=colors,
+        alpha=0.7,
+        edgecolor="black",
+    )
+    ax.set_xlabel("الگوریتم", fontsize=12)
+    ax.set_ylabel("بهبود کلی", fontsize=12)
+    ax.set_title("بهبود کلی با Curriculum Learning", fontsize=14, fontweight="bold")
+    ax.grid(True, alpha=0.3, axis="y")
+
+    # اضافه کردن مقادیر روی میله‌ها
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height,
+            f"{height:.1f}",
+            ha="center",
+            va="bottom",
+            fontweight="bold",
+        )
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.show()
+
+    print("\n💡 بینش‌های Curriculum Learning:")
+    print("• PPO بیشترین بهره را از curriculum learning می‌برد")
+    print("• Actor-Critic سازگاری خوبی در مراحل مختلف نشان می‌دهد")
+    print("• REINFORCE با وظایف پیچیده حتی با curriculum مشکل دارد")
+    print("• پیچیدگی تدریجی به همه روش‌ها کمک می‌کند اما به روش‌های پیشرفته بیشتر")
+
+    return curriculum_results
+
+
+def entropy_regularization_study(save_path: Optional[str] = None) -> Dict[str, Any]:
+    """مطالعه regularization آنتروپی"""
+    print("\nمطالعه Entropy Regularization...")
+    print("=" * 30)
+
+    entropy_coeffs = [0.0, 0.001, 0.01, 0.1, 1.0]
+    algorithms = ["REINFORCE", "PPO"]
+    entropy_results = {}
+
+    for alg in algorithms:
+        entropy_results[alg] = {}
+        for entropy_coeff in entropy_coeffs:
+            base_performance = 150 if alg == "PPO" else 120
+            if entropy_coeff == 0.0:
+                performance = base_performance
+                exploration = 0.3
+            elif entropy_coeff == 0.001:
+                performance = base_performance * 1.05
+                exploration = 0.5
+            elif entropy_coeff == 0.01:
+                performance = base_performance * 1.1
+                exploration = 0.7
+            elif entropy_coeff == 0.1:
+                performance = base_performance * 1.05
+                exploration = 0.8
+            else:
+                performance = base_performance * 0.9
+                exploration = 0.9
+
+            performance += np.random.normal(0, 5)
+            entropy_results[alg][entropy_coeff] = {
+                "performance": performance,
+                "exploration": exploration,
+            }
+
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    colors = ["#1f77b4", "#ff7f0e"]
+
+    # نمودار عملکرد vs ضریب آنتروپی
+    ax = axes[0, 0]
+    for i, alg in enumerate(algorithms):
+        coeffs = list(entropy_results[alg].keys())
+        performances = [entropy_results[alg][c]["performance"] for c in coeffs]
+        ax.plot(
+            coeffs,
+            performances,
+            "o-",
+            linewidth=2,
+            label=alg,
+            markersize=8,
+            color=colors[i],
+        )
+
+    ax.set_xlabel("ضریب آنتروپی", fontsize=12)
+    ax.set_ylabel("عملکرد نهایی", fontsize=12)
+    ax.set_title("عملکرد vs Entropy Regularization", fontsize=14, fontweight="bold")
+    ax.set_xscale("log")
+    ax.legend(fontsize=11)
+    ax.grid(True, alpha=0.3)
+
+    # نمودار exploration vs exploitation
+    ax = axes[0, 1]
+    for i, alg in enumerate(algorithms):
+        performances = [entropy_results[alg][c]["performance"] for c in entropy_coeffs]
+        explorations = [entropy_results[alg][c]["exploration"] for c in entropy_coeffs]
+        ax.scatter(
+            explorations, performances, s=150, alpha=0.6, label=alg, color=colors[i]
+        )
+        ax.plot(
+            explorations, performances, "o-", linewidth=2, markersize=6, color=colors[i]
+        )
+
+    ax.set_xlabel("سطح اکتشاف", fontsize=12)
+    ax.set_ylabel("عملکرد نهایی", fontsize=12)
+    ax.set_title("تعادل Exploration vs Exploitation", fontsize=14, fontweight="bold")
+    ax.legend(fontsize=11)
+    ax.grid(True, alpha=0.3)
+
+    # هیت‌مپ تأثیر آنتروپی
+    ax = axes[1, 0]
+    heatmap_data = np.array(
+        [
+            [entropy_results[alg][coeff]["performance"] for coeff in entropy_coeffs]
+            for alg in algorithms
+        ]
+    )
+    im = ax.imshow(heatmap_data, cmap="RdYlGn", aspect="auto")
+
+    ax.set_xticks(np.arange(len(entropy_coeffs)))
+    ax.set_xticklabels([f"{c}" for c in entropy_coeffs])
+    ax.set_yticks(np.arange(len(algorithms)))
+    ax.set_yticklabels(algorithms)
+    ax.set_xlabel("ضریب آنتروپی", fontsize=12)
+    ax.set_title("هیت‌مپ عملکرد", fontsize=14, fontweight="bold")
+
+    # اضافه کردن مقادیر به هیت‌مپ
+    for i in range(len(algorithms)):
+        for j in range(len(entropy_coeffs)):
+            text = ax.text(
+                j,
+                i,
+                f"{heatmap_data[i, j]:.0f}",
+                ha="center",
+                va="center",
+                color="black",
+                fontweight="bold",
+            )
+
+    plt.colorbar(im, ax=ax, label="عملکرد")
+
+    # خلاصه توصیه‌ها
+    ax = axes[1, 1]
+    ax.axis("off")
+
+    summary_text = """
+    📊 خلاصه Entropy Regularization:
+    
+    ✓ آنتروپی بهینه (0.01) معمولاً
+      بهترین عملکرد را ارائه می‌دهد
+      
+    ✗ آنتروپی بیش از حد (> 0.1)
+      به exploitation آسیب می‌زند
+      
+    ⚖️ PPO بیشتر از REINFORCE از
+      آنتروپی بهره می‌برد
+      
+    🎯 تعادل exploration و
+      exploitation را بر اساس
+      نیازهای task تنظیم کنید
+      
+    📈 آنتروپی متوسط (0.001-0.01)
+      برای اکثر کاربردها مناسب است
+    """
+
+    ax.text(
+        0.05,
+        0.95,
+        summary_text,
+        transform=ax.transAxes,
+        fontsize=11,
+        verticalalignment="top",
+        fontfamily="monospace",
+        bbox=dict(boxstyle="round,pad=0.8", facecolor="lightblue", alpha=0.7),
+    )
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.show()
+
+    print("\n💡 بینش‌های Entropy Regularization:")
+    print("• آنتروپی متوسط (0.01) معمولاً بهترین عملکرد را دارد")
+    print("• آنتروپی بیش از حد به exploitation آسیب می‌زند")
+    print("• PPO بیشتر از REINFORCE از آنتروپی بهره می‌برد")
+    print("• تعادل exploration و exploitation را بر اساس نیازهای task تنظیم کنید")
+
+    return entropy_results
+
+
+def trust_region_policy_optimization_comparison(
+    save_path: Optional[str] = None,
+) -> Dict[str, Any]:
+    """مقایسه روش‌های Trust Region Policy Optimization"""
+    print("\nمقایسه Trust Region Policy Optimization...")
+    print("=" * 45)
+
+    methods = ["Vanilla PG", "TRPO", "PPO (Clip)", "PPO (Adaptive)", "CPO"]
+    environments = ["ساده", "پیچیده", "پیوسته"]
+
+    # داده‌های عملکرد
+    performance_data = {}
+    for env in environments:
+        performance_data[env] = {}
+        for method in methods:
+            if env == "ساده":
+                base_perf = {
+                    "Vanilla PG": 80,
+                    "TRPO": 85,
+                    "PPO (Clip)": 88,
+                    "PPO (Adaptive)": 86,
+                    "CPO": 87,
+                }
+            elif env == "پیچیده":
+                base_perf = {
+                    "Vanilla PG": 60,
+                    "TRPO": 75,
+                    "PPO (Clip)": 82,
+                    "PPO (Adaptive)": 85,
+                    "CPO": 83,
+                }
+            else:
+                base_perf = {
+                    "Vanilla PG": 50,
+                    "TRPO": 70,
+                    "PPO (Clip)": 78,
+                    "PPO (Adaptive)": 82,
+                    "CPO": 80,
+                }
+
+            performance = base_perf[method] + np.random.normal(0, 3)
+            performance_data[env][method] = performance
+
+    # داده‌های پیچیدگی و ثبات
+    complexity_data = {
+        "Vanilla PG": {"complexity": 2, "stability": 3},
+        "TRPO": {"complexity": 8, "stability": 9},
+        "PPO (Clip)": {"complexity": 5, "stability": 8},
+        "PPO (Adaptive)": {"complexity": 6, "stability": 8},
+        "CPO": {"complexity": 7, "stability": 9},
+    }
+
+    # کارایی نمونه
+    sample_efficiency = {
+        "Vanilla PG": 1.0,
+        "TRPO": 2.5,
+        "PPO (Clip)": 3.0,
+        "PPO (Adaptive)": 3.2,
+        "CPO": 2.8,
+    }
+
+    fig, axes = plt.subplots(2, 3, figsize=(20, 12))
+    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
+
+    # نمودار عملکرد به تفکیک محیط
+    ax = axes[0, 0]
+    env_names = environments
+    x = np.arange(len(env_names))
+    width = 0.15
+
+    for i, (method, color) in enumerate(zip(methods, colors)):
+        scores = [performance_data[env][method] for env in env_names]
+        offset = width * (i - len(methods) / 2)
+        bars = ax.bar(x + offset, scores, width, label=method, color=color, alpha=0.8)
+
+    ax.set_xlabel("نوع محیط", fontsize=12)
+    ax.set_ylabel("امتیاز عملکرد", fontsize=12)
+    ax.set_title(
+        "عملکرد روش Trust Region به تفکیک محیط", fontsize=14, fontweight="bold"
+    )
+    ax.set_xticks(x)
+    ax.set_xticklabels(env_names)
+    ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=9)
+    ax.grid(True, alpha=0.3, axis="y")
+
+    # نمودار پیچیدگی vs ثبات
+    ax = axes[0, 1]
+    complexities = [complexity_data[method]["complexity"] for method in methods]
+    stabilities = [complexity_data[method]["stability"] for method in methods]
+
+    scatter = ax.scatter(complexities, stabilities, s=200, alpha=0.6, c=colors)
+
+    for i, method in enumerate(methods):
+        ax.annotate(
+            method,
+            (complexities[i], stabilities[i]),
+            xytext=(5, 5),
+            textcoords="offset points",
+            fontsize=9,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="yellow", alpha=0.6),
+        )
+
+    ax.set_xlabel("پیچیدگی پیاده‌سازی", fontsize=12)
+    ax.set_ylabel("ثبات آموزش", fontsize=12)
+    ax.set_title("تعادل پیچیدگی vs ثبات", fontsize=14, fontweight="bold")
+    ax.grid(True, alpha=0.3)
+
+    # رتبه‌بندی کلی
+    ax = axes[0, 2]
+    avg_performance = {}
+    for method in methods:
+        avg_performance[method] = np.mean(
+            [performance_data[env][method] for env in env_names]
+        )
+
+    sorted_methods = sorted(
+        avg_performance.keys(), key=lambda x: avg_performance[x], reverse=True
+    )
+    sorted_scores = [avg_performance[method] for method in sorted_methods]
+    sorted_colors = [colors[methods.index(method)] for method in sorted_methods]
+
+    bars = ax.barh(
+        range(len(sorted_methods)), sorted_scores, color=sorted_colors, alpha=0.7
+    )
+    ax.set_yticks(range(len(sorted_methods)))
+    ax.set_yticklabels(sorted_methods)
+    ax.set_xlabel("عملکرد میانگین", fontsize=12)
+    ax.set_title("رتبه‌بندی کلی روش‌ها", fontsize=14, fontweight="bold")
+    ax.grid(True, alpha=0.3, axis="x")
+
+    # اضافه کردن مقادیر به میله‌ها
+    for i, bar in enumerate(bars):
+        width = bar.get_width()
+        ax.text(
+            width,
+            bar.get_y() + bar.get_height() / 2.0,
+            f"{width:.1f}",
+            ha="left",
+            va="center",
+            fontweight="bold",
+            fontsize=10,
+        )
+
+    # کارایی نمونه
+    ax = axes[1, 0]
+    bars = ax.bar(
+        range(len(sample_efficiency)),
+        list(sample_efficiency.values()),
+        color=colors,
+        alpha=0.7,
+        edgecolor="black",
+        linewidth=1.5,
+    )
+    ax.set_xticks(range(len(sample_efficiency)))
+    ax.set_xticklabels(list(sample_efficiency.keys()), rotation=15, ha="right")
+    ax.set_ylabel("کارایی نمونه نسبی", fontsize=12)
+    ax.set_title("مقایسه کارایی نمونه", fontsize=14, fontweight="bold")
+    ax.grid(True, alpha=0.3, axis="y")
+
+    # اضافه کردن مقادیر روی میله‌ها
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height,
+            f"{height:.1f}",
+            ha="center",
+            va="bottom",
+            fontweight="bold",
+        )
+
+    # هیت‌مپ ویژگی‌ها
+    ax = axes[1, 1]
+    characteristics = ["عملکرد", "ثبات", "کارایی", "سادگی"]
+
+    # امتیازات ویژگی‌ها (1-10)
+    char_scores = {
+        "Vanilla PG": [6, 3, 2, 10],
+        "TRPO": [7, 9, 5, 2],
+        "PPO (Clip)": [8, 8, 7, 5],
+        "PPO (Adaptive)": [9, 8, 8, 4],
+        "CPO": [8, 9, 6, 3],
+    }
+
+    heatmap_data = np.array([char_scores[method] for method in methods])
+    im = ax.imshow(heatmap_data, cmap="RdYlGn", aspect="auto", vmin=0, vmax=10)
+
+    ax.set_xticks(np.arange(len(characteristics)))
+    ax.set_xticklabels(characteristics)
+    ax.set_yticks(np.arange(len(methods)))
+    ax.set_yticklabels(methods)
+    ax.set_title("هیت‌مپ ویژگی‌های روش‌ها", fontsize=14, fontweight="bold")
+
+    # اضافه کردن مقادیر
+    for i in range(len(methods)):
+        for j in range(len(characteristics)):
+            text = ax.text(
+                j,
+                i,
+                heatmap_data[i, j],
+                ha="center",
+                va="center",
+                color="black",
+                fontweight="bold",
+            )
+
+    plt.colorbar(im, ax=ax, label="امتیاز (0-10)")
+
+    # خلاصه و توصیه‌ها
+    ax = axes[1, 2]
+    ax.axis("off")
+
+    best_overall = sorted_methods[0]
+    best_stability = max(complexity_data.items(), key=lambda x: x[1]["stability"])[0]
+    best_efficiency = max(sample_efficiency.items(), key=lambda x: x[1])[0]
+
+    summary_text = f"""
+    📊 خلاصه Trust Region Methods:
+    
+    🏆 بهترین عملکرد کلی:
+       {best_overall}
+       
+    ⚡ بالاترین کارایی نمونه:
+       {best_efficiency}
+       
+    🛡️ باثبات‌ترین:
+       {best_stability}
+       
+    💡 توصیه‌ها:
+    
+    • PPO variants بهترین تعادل
+      عملکرد-پیچیدگی را ارائه می‌دهند
+      
+    • TRPO حداکثر ثبات را فراهم
+      می‌کند اما پیچیده‌تر است
+      
+    • PPO (Adaptive) معمولاً در
+      عمل بهترین عمل می‌کند
+      
+    • روش را بر اساس محاسبات
+      موجود و نیازهای ثبات انتخاب کنید
+    """
+
+    ax.text(
+        0.05,
+        0.95,
+        summary_text,
+        transform=ax.transAxes,
+        fontsize=10,
+        verticalalignment="top",
+        fontfamily="monospace",
+        bbox=dict(boxstyle="round,pad=0.6", facecolor="lightgreen", alpha=0.7),
+    )
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.show()
+
+    # چاپ تحلیل جزئی
+    print("\n" + "=" * 45)
+    print("تحلیل Trust Region Policy Optimization")
+    print("=" * 45)
+
+    for method in methods:
+        avg_score = avg_performance[method]
+        complexity = complexity_data[method]["complexity"]
+        stability = complexity_data[method]["stability"]
+        efficiency = sample_efficiency[method]
+
+        print(
+            f"\n{method:18} | عملکرد: {avg_score:5.1f} | پیچیدگی: {complexity} | "
+            f"ثبات: {stability} | کارایی: {efficiency:.1f}"
+        )
+
+    print("\n💡 بینش‌های کلیدی Trust Region:")
+    print("• PPO variants بهترین تعادل عملکرد-پیچیدگی را ارائه می‌دهند")
+    print("• TRPO حداکثر ثبات را فراهم می‌کند اما هزینه پیاده‌سازی بالایی دارد")
+    print("• PPO (Adaptive) معمولاً در عمل بهترین عمل می‌کند")
+    print("• روش را بر اساس محاسبات موجود و نیازهای ثبات انتخاب کنید")
+
+    return {
+        "performance_data": performance_data,
+        "complexity_data": complexity_data,
+        "sample_efficiency": sample_efficiency,
+    }
+
+
+def create_comprehensive_visualization_suite(save_dir: Optional[str] = None):
+    """ایجاد مجموعه کامل visualization برای policy gradient methods"""
+    print("\n" + "=" * 60)
+    print("ایجاد مجموعه کامل Visualization برای Policy Gradient Methods")
+    print("=" * 60)
+
+    if save_dir and not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    # 1. تحلیل همگرایی
+    print("\n1. تولید تحلیل همگرایی...")
+    plot_policy_gradient_convergence_analysis(
+        save_path=(
+            os.path.join(save_dir, "convergence_analysis.png") if save_dir else None
+        )
+    )
+
+    # 2. تحلیل تابع advantage
+    print("\n2. تولید تحلیل تابع Advantage...")
+    plot_advantage_function_analysis(
+        save_path=os.path.join(save_dir, "advantage_analysis.png") if save_dir else None
+    )
+
+    # 3. چشم‌اندازهای policy کنترل پیوسته
+    print("\n3. تولید چشم‌اندازهای Policy کنترل پیوسته...")
+    plot_continuous_control_policy_landscapes(
+        save_path=(
+            os.path.join(save_dir, "continuous_policy_landscapes.png")
+            if save_dir
+            else None
+        )
+    )
+
+    # 4. تحلیل حساسیت hyperparameter
+    print("\n4. تولید تحلیل حساسیت Hyperparameter...")
+    plot_hyperparameter_sensitivity_analysis(
+        save_path=(
+            os.path.join(save_dir, "hyperparameter_sensitivity.png")
+            if save_dir
+            else None
+        )
+    )
+
+    # 5. مقایسه جامع
+    print("\n5. تولید مقایسه جامع...")
+    comprehensive_policy_gradient_comparison(
+        save_path=(
+            os.path.join(save_dir, "comprehensive_comparison.png") if save_dir else None
+        )
+    )
+
+    # 6. یادگیری curriculum
+    print("\n6. تولید تحلیل Curriculum Learning...")
+    policy_gradient_curriculum_learning(
+        save_path=(
+            os.path.join(save_dir, "curriculum_learning.png") if save_dir else None
+        )
+    )
+
+    # 7. مطالعه regularization آنتروپی
+    print("\n7. تولید مطالعه Entropy Regularization...")
+    entropy_regularization_study(
+        save_path=(
+            os.path.join(save_dir, "entropy_regularization.png") if save_dir else None
+        )
+    )
+
+    # 8. مقایسه trust region
+    print("\n8. تولید مقایسه Trust Region...")
+    trust_region_policy_optimization_comparison(
+        save_path=(
+            os.path.join(save_dir, "trust_region_comparison.png") if save_dir else None
+        )
+    )
+
+    print("\n" + "=" * 60)
+    print("✅ مجموعه کامل Visualization با موفقیت ایجاد شد!")
+    if save_dir:
+        print(f"📁 تمام نمودارها در ذخیره شدند: {save_dir}")
+    print("=" * 60)
+
+
 if __name__ == "__main__":
-    print("Advanced Policy Gradient Methods")
+    print("روش‌های پیشرفته Policy Gradient")
     print("=" * 40)
-    print("Available training examples:")
-    print("1. train_reinforce_agent() - Train REINFORCE with/without baseline")
-    print("2. train_ppo_agent() - Train PPO agent")
-    print("3. train_continuous_ppo_agent() - Train continuous PPO")
-    print("4. compare_policy_gradient_methods() - Compare all methods")
-    print("5. plot_policy_gradient_convergence_analysis() - Convergence analysis")
-    print("6. comprehensive_policy_gradient_comparison() - Full comparison")
-    print("\nExample usage:")
+    print("نمونه‌های آموزشی موجود:")
+    print("1. train_reinforce_agent() - آموزش REINFORCE با/بدون baseline")
+    print("2. train_ppo_agent() - آموزش agent PPO")
+    print("3. train_continuous_ppo_agent() - آموزش PPO پیوسته")
+    print("4. compare_policy_gradient_methods() - مقایسه تمام روش‌ها")
+    print("5. plot_policy_gradient_convergence_analysis() - تحلیل همگرایی")
+    print("6. comprehensive_policy_gradient_comparison() - مقایسه کامل")
+    print("7. policy_gradient_curriculum_learning() - یادگیری Curriculum")
+    print("8. entropy_regularization_study() - مطالعه Regularization آنتروپی")
+    print("9. trust_region_policy_optimization_comparison() - مقایسه Trust Region")
+    print("10. create_comprehensive_visualization_suite() - مجموعه کامل Visualization")
+    print("\nنمونه استفاده:")
     print("results = train_ppo_agent(num_episodes=100)")
     print("comparison = compare_policy_gradient_methods()")
+    print("create_comprehensive_visualization_suite(save_dir='visualizations/')")

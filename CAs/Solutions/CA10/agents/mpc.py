@@ -400,6 +400,9 @@ def demonstrate_mpc():
     plt.grid(True, alpha=0.3)
 
     plt.tight_layout()
+
+    # Create visualizations directory if it doesn't exist
+    os.makedirs("visualizations", exist_ok=True)
     plt.savefig("visualizations/mpc_analysis.png", dpi=300, bbox_inches="tight")
     plt.show()
 

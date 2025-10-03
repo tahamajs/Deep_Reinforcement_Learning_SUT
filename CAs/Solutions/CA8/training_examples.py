@@ -28,6 +28,7 @@ import random
 import pandas as pd
 from tqdm import tqdm
 import warnings
+import os
 
 warnings.filterwarnings("ignore")
 
@@ -1202,6 +1203,739 @@ def comprehensive_causal_multi_modal_comparison(
 # MAIN TRAINING EXAMPLES
 # =============================================================================
 
+
+def plot_causal_discovery_comparison(save_path: Optional[str] = None) -> Dict[str, Any]:
+    """مقایسه جامع الگوریتم‌های کشف علّی"""
+    print("\nمقایسه الگوریتم‌های کشف علّی...")
+    print("=" * 50)
+
+    algorithms = ["PC", "GES", "LiNGAM", "NOTEARS", "CAM"]
+    metrics = ["دقت", "یادآوری", "F1-Score", "زمان اجرا", "مقیاس‌پذیری"]
+
+    # داده‌های شبیه‌سازی شده
+    performance_data = {
+        "PC": {
+            "دقت": 0.75,
+            "یادآوری": 0.70,
+            "F1-Score": 0.72,
+            "زمان اجرا": 5.2,
+            "مقیاس‌پذیری": 6,
+        },
+        "GES": {
+            "دقت": 0.80,
+            "یادآوری": 0.75,
+            "F1-Score": 0.77,
+            "زمان اجرا": 8.5,
+            "مقیاس‌پذیری": 7,
+        },
+        "LiNGAM": {
+            "دقت": 0.85,
+            "یادآوری": 0.80,
+            "F1-Score": 0.82,
+            "زمان اجرا": 3.8,
+            "مقیاس‌پذیری": 8,
+        },
+        "NOTEARS": {
+            "دقت": 0.88,
+            "یادآوری": 0.85,
+            "F1-Score": 0.86,
+            "زمان اجرا": 12.3,
+            "مقیاس‌پذیری": 5,
+        },
+        "CAM": {
+            "دقت": 0.82,
+            "یادآوری": 0.78,
+            "F1-Score": 0.80,
+            "زمان اجرا": 6.7,
+            "مقیاس‌پذیری": 7,
+        },
+    }
+
+    fig, axes = plt.subplots(2, 3, figsize=(20, 12))
+    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
+
+    # نمودار 1: مقایسه دقت
+    ax = axes[0, 0]
+    accuracies = [performance_data[alg]["دقت"] for alg in algorithms]
+    bars = ax.bar(algorithms, accuracies, color=colors, alpha=0.7, edgecolor="black")
+    ax.set_ylabel("دقت", fontsize=12)
+    ax.set_title("مقایسه دقت الگوریتم‌ها", fontsize=14, fontweight="bold")
+    ax.set_ylim([0, 1])
+    ax.grid(True, alpha=0.3, axis="y")
+
+    for i, bar in enumerate(bars):
+        height = bar.get_height()
+        ax.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height,
+            f"{height:.2f}",
+            ha="center",
+            va="bottom",
+            fontweight="bold",
+        )
+
+    # نمودار 2: F1-Score vs زمان اجرا
+    ax = axes[0, 1]
+    f1_scores = [performance_data[alg]["F1-Score"] for alg in algorithms]
+    runtimes = [performance_data[alg]["زمان اجرا"] for alg in algorithms]
+
+    scatter = ax.scatter(
+        runtimes, f1_scores, c=colors, s=200, alpha=0.6, edgecolors="black"
+    )
+
+    for i, alg in enumerate(algorithms):
+        ax.annotate(
+            alg,
+            (runtimes[i], f1_scores[i]),
+            xytext=(5, 5),
+            textcoords="offset points",
+            fontsize=10,
+            fontweight="bold",
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="yellow", alpha=0.6),
+        )
+
+    ax.set_xlabel("زمان اجرا (ثانیه)", fontsize=12)
+    ax.set_ylabel("F1-Score", fontsize=12)
+    ax.set_title("کارایی vs سرعت", fontsize=14, fontweight="bold")
+    ax.grid(True, alpha=0.3)
+
+    # نمودار 3: Radar chart ویژگی‌ها
+    ax = axes[0, 2]
+    ax.axis("off")
+
+    # ایجاد subplot جدید برای radar
+    ax_radar = plt.subplot(2, 3, 3, projection="polar")
+
+    categories = ["دقت", "یادآوری", "F1", "سرعت", "مقیاس"]
+    N = len(categories)
+    angles = [n / float(N) * 2 * np.pi for n in range(N)]
+    angles += angles[:1]
+
+    for i, alg in enumerate(algorithms[:3]):  # فقط 3 الگوریتم اول
+        values = [
+            performance_data[alg]["دقت"],
+            performance_data[alg]["یادآوری"],
+            performance_data[alg]["F1-Score"],
+            1 - (performance_data[alg]["زمان اجرا"] / 15),  # نرمالیزه
+            performance_data[alg]["مقیاس‌پذیری"] / 10,
+        ]
+        values += values[:1]
+
+        ax_radar.plot(angles, values, "o-", linewidth=2, label=alg, color=colors[i])
+        ax_radar.fill(angles, values, alpha=0.15, color=colors[i])
+
+    ax_radar.set_xticks(angles[:-1])
+    ax_radar.set_xticklabels(categories)
+    ax_radar.set_ylim(0, 1)
+    ax_radar.set_title(
+        "مقایسه ویژگی‌های الگوریتم‌ها", fontsize=12, fontweight="bold", pad=20
+    )
+    ax_radar.legend(loc="upper right", bbox_to_anchor=(1.3, 1.1))
+    ax_radar.grid(True)
+
+    # نمودار 4: هیت‌مپ عملکرد
+    ax = axes[1, 0]
+
+    metric_names = ["دقت", "یادآوری", "F1-Score"]
+    heatmap_data = np.array(
+        [
+            [performance_data[alg][metric] for metric in metric_names]
+            for alg in algorithms
+        ]
+    )
+
+    im = ax.imshow(heatmap_data, cmap="RdYlGn", aspect="auto", vmin=0, vmax=1)
+
+    ax.set_xticks(np.arange(len(metric_names)))
+    ax.set_xticklabels(metric_names)
+    ax.set_yticks(np.arange(len(algorithms)))
+    ax.set_yticklabels(algorithms)
+    ax.set_title("هیت‌مپ عملکرد الگوریتم‌ها", fontsize=14, fontweight="bold")
+
+    for i in range(len(algorithms)):
+        for j in range(len(metric_names)):
+            text = ax.text(
+                j,
+                i,
+                f"{heatmap_data[i, j]:.2f}",
+                ha="center",
+                va="center",
+                color="black",
+                fontweight="bold",
+            )
+
+    plt.colorbar(im, ax=ax, label="امتیاز")
+
+    # نمودار 5: مقایسه مقیاس‌پذیری
+    ax = axes[1, 1]
+
+    node_counts = [5, 10, 20, 50, 100]
+
+    for i, alg in enumerate(algorithms):
+        base_time = performance_data[alg]["زمان اجرا"]
+        scale = performance_data[alg]["مقیاس‌پذیری"]
+
+        times = [base_time * (n / 10) ** (2 - scale / 5) for n in node_counts]
+        ax.plot(
+            node_counts,
+            times,
+            "o-",
+            linewidth=2,
+            label=alg,
+            color=colors[i],
+            markersize=6,
+        )
+
+    ax.set_xlabel("تعداد نودها در گراف", fontsize=12)
+    ax.set_ylabel("زمان اجرا (ثانیه)", fontsize=12)
+    ax.set_title("تحلیل مقیاس‌پذیری", fontsize=14, fontweight="bold")
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    # نمودار 6: توصیه‌ها
+    ax = axes[1, 2]
+    ax.axis("off")
+
+    summary_text = """
+    📊 خلاصه الگوریتم‌های کشف علّی:
+    
+    🏆 بهترین دقت:
+       NOTEARS (0.88)
+       
+    ⚡ سریع‌ترین:
+       LiNGAM (3.8s)
+       
+    🎯 بهترین F1-Score:
+       NOTEARS (0.86)
+       
+    📈 مقیاس‌پذیرترین:
+       LiNGAM (8/10)
+       
+    💡 توصیه‌ها:
+    
+    • NOTEARS برای دقت بالا
+    • LiNGAM برای سرعت
+    • GES برای تعادل خوب
+    • PC برای گراف‌های کوچک
+    • CAM برای داده‌های غیرخطی
+    """
+
+    ax.text(
+        0.05,
+        0.95,
+        summary_text,
+        transform=ax.transAxes,
+        fontsize=10,
+        verticalalignment="top",
+        fontfamily="monospace",
+        bbox=dict(boxstyle="round,pad=0.8", facecolor="lightblue", alpha=0.7),
+    )
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.show()
+
+    print("\n💡 بینش‌های کلیدی:")
+    print("• NOTEARS دقت بالایی دارد اما کند است")
+    print("• LiNGAM سریع است و برای روابط خطی مناسب است")
+    print("• GES تعادل خوبی بین دقت و سرعت دارد")
+    print("• انتخاب الگوریتم بستگی به نیازهای خاص دارد")
+
+    return performance_data
+
+
+def plot_multimodal_fusion_analysis(save_path: Optional[str] = None) -> Dict[str, Any]:
+    """تحلیل روش‌های Multi-Modal Fusion"""
+    print("\nتحلیل روش‌های Multi-Modal Fusion...")
+    print("=" * 50)
+
+    fusion_methods = [
+        "Early Fusion",
+        "Late Fusion",
+        "Cross-Modal Attention",
+        "Hierarchical",
+        "Dynamic",
+    ]
+    modalities = ["Visual", "Text", "State", "Audio"]
+
+    # داده‌های عملکرد
+    performance_data = {
+        "Early Fusion": {
+            "accuracy": 0.72,
+            "speed": 9,
+            "complexity": 3,
+            "robustness": 6,
+        },
+        "Late Fusion": {"accuracy": 0.75, "speed": 7, "complexity": 5, "robustness": 7},
+        "Cross-Modal Attention": {
+            "accuracy": 0.85,
+            "speed": 5,
+            "complexity": 7,
+            "robustness": 8,
+        },
+        "Hierarchical": {
+            "accuracy": 0.82,
+            "speed": 6,
+            "complexity": 8,
+            "robustness": 7,
+        },
+        "Dynamic": {"accuracy": 0.88, "speed": 4, "complexity": 9, "robustness": 9},
+    }
+
+    # مشارکت مدالیته‌ها
+    modality_contributions = {
+        "Early Fusion": [0.25, 0.25, 0.25, 0.25],
+        "Late Fusion": [0.30, 0.25, 0.25, 0.20],
+        "Cross-Modal Attention": [0.35, 0.30, 0.20, 0.15],
+        "Hierarchical": [0.40, 0.30, 0.20, 0.10],
+        "Dynamic": [0.30, 0.35, 0.20, 0.15],
+    }
+
+    fig, axes = plt.subplots(2, 3, figsize=(20, 12))
+    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
+
+    # نمودار 1: دقت vs پیچیدگی
+    ax = axes[0, 0]
+
+    accuracies = [performance_data[method]["accuracy"] for method in fusion_methods]
+    complexities = [performance_data[method]["complexity"] for method in fusion_methods]
+
+    scatter = ax.scatter(
+        complexities, accuracies, c=colors, s=200, alpha=0.6, edgecolors="black"
+    )
+
+    for i, method in enumerate(fusion_methods):
+        ax.annotate(
+            method,
+            (complexities[i], accuracies[i]),
+            xytext=(5, 5),
+            textcoords="offset points",
+            fontsize=9,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="yellow", alpha=0.6),
+        )
+
+    ax.set_xlabel("پیچیدگی پیاده‌سازی", fontsize=12)
+    ax.set_ylabel("دقت", fontsize=12)
+    ax.set_title("دقت vs پیچیدگی", fontsize=14, fontweight="bold")
+    ax.grid(True, alpha=0.3)
+
+    # نمودار 2: مشارکت مدالیته‌ها (Stacked Bar)
+    ax = axes[0, 1]
+
+    x = np.arange(len(fusion_methods))
+    width = 0.6
+
+    bottom = np.zeros(len(fusion_methods))
+    modality_colors = ["#e74c3c", "#3498db", "#2ecc71", "#f39c12"]
+
+    for i, modality in enumerate(modalities):
+        values = [modality_contributions[method][i] for method in fusion_methods]
+        ax.bar(
+            x,
+            values,
+            width,
+            label=modality,
+            bottom=bottom,
+            color=modality_colors[i],
+            alpha=0.8,
+        )
+        bottom += values
+
+    ax.set_ylabel("مشارکت نسبی", fontsize=12)
+    ax.set_title("مشارکت مدالیته‌ها در هر روش", fontsize=14, fontweight="bold")
+    ax.set_xticks(x)
+    ax.set_xticklabels(fusion_methods, rotation=15, ha="right")
+    ax.legend(title="Modality")
+    ax.grid(True, alpha=0.3, axis="y")
+
+    # نمودار 3: Radar Chart
+    ax = axes[0, 2]
+    ax.axis("off")
+
+    ax_radar = plt.subplot(2, 3, 3, projection="polar")
+
+    categories = ["دقت", "سرعت", "استحکام", "سادگی"]
+    N = len(categories)
+    angles = [n / float(N) * 2 * np.pi for n in range(N)]
+    angles += angles[:1]
+
+    for i, method in enumerate(fusion_methods):
+        values = [
+            performance_data[method]["accuracy"],
+            performance_data[method]["speed"] / 10,
+            performance_data[method]["robustness"] / 10,
+            1 - (performance_data[method]["complexity"] / 10),
+        ]
+        values += values[:1]
+
+        ax_radar.plot(angles, values, "o-", linewidth=2, label=method, color=colors[i])
+        ax_radar.fill(angles, values, alpha=0.15, color=colors[i])
+
+    ax_radar.set_xticks(angles[:-1])
+    ax_radar.set_xticklabels(categories)
+    ax_radar.set_ylim(0, 1)
+    ax_radar.set_title("مقایسه جامع روش‌ها", fontsize=12, fontweight="bold", pad=20)
+    ax_radar.legend(loc="upper right", bbox_to_anchor=(1.3, 1.1), fontsize=8)
+    ax_radar.grid(True)
+
+    # نمودار 4: عملکرد با missing modalities
+    ax = axes[1, 0]
+
+    missing_percentages = [0, 25, 50, 75]
+
+    for i, method in enumerate(fusion_methods):
+        base_acc = performance_data[method]["accuracy"]
+        robustness = performance_data[method]["robustness"] / 10
+
+        accuracies = [
+            base_acc * (1 - p / 100 * (1 - robustness)) for p in missing_percentages
+        ]
+        ax.plot(
+            missing_percentages,
+            accuracies,
+            "o-",
+            linewidth=2,
+            label=method,
+            color=colors[i],
+            markersize=6,
+        )
+
+    ax.set_xlabel("درصد مدالیته‌های گمشده", fontsize=12)
+    ax.set_ylabel("دقت", fontsize=12)
+    ax.set_title("استحکام در برابر missing modalities", fontsize=14, fontweight="bold")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    # نمودار 5: زمان پردازش
+    ax = axes[1, 1]
+
+    batch_sizes = [1, 4, 16, 64, 256]
+
+    for i, method in enumerate(fusion_methods):
+        base_speed = 10 - performance_data[method]["speed"]
+        complexity = performance_data[method]["complexity"]
+
+        times = [base_speed * (1 + np.log(b) * complexity / 10) for b in batch_sizes]
+        ax.plot(
+            batch_sizes,
+            times,
+            "o-",
+            linewidth=2,
+            label=method,
+            color=colors[i],
+            markersize=6,
+        )
+
+    ax.set_xlabel("اندازه Batch", fontsize=12)
+    ax.set_ylabel("زمان پردازش (ms)", fontsize=12)
+    ax.set_title("تحلیل سرعت پردازش", fontsize=14, fontweight="bold")
+    ax.set_xscale("log")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    # نمودار 6: توصیه‌ها
+    ax = axes[1, 2]
+    ax.axis("off")
+
+    best_accuracy = max(fusion_methods, key=lambda x: performance_data[x]["accuracy"])
+    best_speed = max(fusion_methods, key=lambda x: performance_data[x]["speed"])
+    best_robustness = max(
+        fusion_methods, key=lambda x: performance_data[x]["robustness"]
+    )
+
+    summary_text = f"""
+    📊 خلاصه Multi-Modal Fusion:
+    
+    🏆 بهترین دقت:
+       {best_accuracy}
+       ({performance_data[best_accuracy]['accuracy']:.2f})
+       
+    ⚡ سریع‌ترین:
+       {best_speed}
+       
+    🛡️ مستحکم‌ترین:
+       {best_robustness}
+       
+    💡 توصیه‌ها:
+    
+    • Dynamic Fusion برای بهترین عملکرد
+    • Early Fusion برای سادگی
+    • Cross-Modal Attention برای
+      تعادل خوب
+    • Late Fusion برای استقلال
+      مدالیته‌ها
+    • Hierarchical برای ساختار
+      سلسله‌مراتبی
+    """
+
+    ax.text(
+        0.05,
+        0.95,
+        summary_text,
+        transform=ax.transAxes,
+        fontsize=10,
+        verticalalignment="top",
+        fontfamily="monospace",
+        bbox=dict(boxstyle="round,pad=0.8", facecolor="lightgreen", alpha=0.7),
+    )
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.show()
+
+    print("\n💡 بینش‌های Multi-Modal Fusion:")
+    print("• Dynamic Fusion بهترین عملکرد را دارد اما پیچیده است")
+    print("• Cross-Modal Attention تعادل خوبی ارائه می‌دهد")
+    print("• Early Fusion ساده اما کمتر انعطاف‌پذیر است")
+    print("• استحکام در برابر missing modalities مهم است")
+
+    return performance_data
+
+
+def plot_intervention_effects_analysis(
+    save_path: Optional[str] = None,
+) -> Dict[str, Any]:
+    """تحلیل تأثیرات Causal Interventions"""
+    print("\nتحلیل تأثیرات Causal Interventions...")
+    print("=" * 50)
+
+    variables = ["State", "Action", "Reward", "Next_State"]
+    interventions = ["do(Action=↑)", "do(Action=↓)", "do(Action=←)", "do(Action=→)"]
+
+    # تأثیرات شبیه‌سازی شده
+    intervention_effects = {
+        "do(Action=↑)": [0.1, 1.0, 0.3, 0.8],
+        "do(Action=↓)": [0.1, 1.0, -0.2, 0.6],
+        "do(Action=←)": [0.1, 1.0, 0.1, 0.7],
+        "do(Action=→)": [0.1, 1.0, 0.2, 0.75],
+    }
+
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    colors = ["#e74c3c", "#3498db", "#2ecc71", "#f39c12"]
+
+    # نمودار 1: هیت‌مپ تأثیرات
+    ax = axes[0, 0]
+
+    effect_matrix = np.array([intervention_effects[interv] for interv in interventions])
+
+    im = ax.imshow(effect_matrix, cmap="RdYlGn", aspect="auto", vmin=-0.5, vmax=1)
+
+    ax.set_xticks(np.arange(len(variables)))
+    ax.set_xticklabels(variables)
+    ax.set_yticks(np.arange(len(interventions)))
+    ax.set_yticklabels(interventions)
+    ax.set_title("هیت‌مپ تأثیرات Interventions", fontsize=14, fontweight="bold")
+
+    for i in range(len(interventions)):
+        for j in range(len(variables)):
+            text = ax.text(
+                j,
+                i,
+                f"{effect_matrix[i, j]:.2f}",
+                ha="center",
+                va="center",
+                color="black",
+                fontweight="bold",
+            )
+
+    plt.colorbar(im, ax=ax, label="شدت تأثیر")
+
+    # نمودار 2: مقایسه تأثیرات بر reward
+    ax = axes[0, 1]
+
+    reward_effects = [intervention_effects[interv][2] for interv in interventions]
+    bars = ax.bar(
+        range(len(interventions)),
+        reward_effects,
+        color=colors,
+        alpha=0.7,
+        edgecolor="black",
+    )
+
+    ax.set_xticks(range(len(interventions)))
+    ax.set_xticklabels(interventions, rotation=15, ha="right")
+    ax.set_ylabel("تأثیر بر Reward", fontsize=12)
+    ax.set_title("مقایسه تأثیر Interventions بر Reward", fontsize=14, fontweight="bold")
+    ax.axhline(y=0, color="black", linestyle="--", linewidth=1)
+    ax.grid(True, alpha=0.3, axis="y")
+
+    for i, bar in enumerate(bars):
+        height = bar.get_height()
+        ax.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height,
+            f"{height:.2f}",
+            ha="center",
+            va="bottom" if height > 0 else "top",
+            fontweight="bold",
+        )
+
+    # نمودار 3: تحلیل Causal Chain
+    ax = axes[1, 0]
+
+    # شبیه‌سازی تأثیر زنجیره‌ای
+    timesteps = np.arange(0, 10, 1)
+
+    for i, interv in enumerate(interventions):
+        initial_effect = intervention_effects[interv][2]
+        # تأثیر کاهش می‌یابد با زمان
+        effects = [initial_effect * np.exp(-t / 5) for t in timesteps]
+        ax.plot(
+            timesteps,
+            effects,
+            "o-",
+            linewidth=2,
+            label=interv,
+            color=colors[i],
+            markersize=6,
+        )
+
+    ax.set_xlabel("Time Steps", fontsize=12)
+    ax.set_ylabel("تأثیر باقیمانده", fontsize=12)
+    ax.set_title("تحلیل تأثیر زنجیره‌ای", fontsize=14, fontweight="bold")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    ax.axhline(y=0, color="black", linestyle="--", linewidth=1)
+
+    # نمودار 4: خلاصه و توصیه‌ها
+    ax = axes[1, 1]
+    ax.axis("off")
+
+    best_intervention = max(interventions, key=lambda x: intervention_effects[x][2])
+    worst_intervention = min(interventions, key=lambda x: intervention_effects[x][2])
+
+    summary_text = f"""
+    📊 خلاصه تحلیل Interventions:
+    
+    ✅ بهترین Intervention:
+       {best_intervention}
+       تأثیر: {intervention_effects[best_intervention][2]:.2f}
+       
+    ❌ بدترین Intervention:
+       {worst_intervention}
+       تأثیر: {intervention_effects[worst_intervention][2]:.2f}
+       
+    💡 بینش‌های کلیدی:
+    
+    • Interventions تأثیر مستقیم بر
+      reward دارند
+      
+    • تأثیرات به صورت زنجیره‌ای
+      منتشر می‌شوند
+      
+    • تأثیرات با زمان کاهش می‌یابند
+      
+    • انتخاب action مناسب بر اساس
+      causal effects بهتر از
+      روش‌های کور است
+      
+    🎯 کاربردها:
+    
+    • برنامه‌ریزی بلندمدت
+    • تحلیل What-If
+    • Counterfactual Reasoning
+    • Policy Optimization
+    """
+
+    ax.text(
+        0.05,
+        0.95,
+        summary_text,
+        transform=ax.transAxes,
+        fontsize=10,
+        verticalalignment="top",
+        fontfamily="monospace",
+        bbox=dict(boxstyle="round,pad=0.8", facecolor="lightyellow", alpha=0.7),
+    )
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.show()
+
+    print("\n💡 بینش‌های Intervention Analysis:")
+    print(f"• بهترین intervention: {best_intervention}")
+    print("• تأثیرات به صورت زنجیره‌ای منتشر می‌شوند")
+    print("• Causal reasoning به تصمیم‌گیری بهتر کمک می‌کند")
+
+    return intervention_effects
+
+
+def create_comprehensive_causal_multimodal_visualization_suite(
+    save_dir: Optional[str] = None,
+):
+    """ایجاد مجموعه کامل visualization برای Causal & Multi-Modal RL"""
+    print("\n" + "=" * 70)
+    print("ایجاد مجموعه کامل Visualization برای Causal & Multi-Modal RL")
+    print("=" * 70)
+
+    if save_dir and not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    # 1. مقایسه الگوریتم‌های کشف علّی
+    print("\n1. تولید مقایسه الگوریتم‌های کشف علّی...")
+    plot_causal_discovery_comparison(
+        save_path=(
+            os.path.join(save_dir, "causal_discovery_comparison.png")
+            if save_dir
+            else None
+        )
+    )
+
+    # 2. تحلیل Multi-Modal Fusion
+    print("\n2. تولید تحلیل Multi-Modal Fusion...")
+    plot_multimodal_fusion_analysis(
+        save_path=(
+            os.path.join(save_dir, "multimodal_fusion_analysis.png")
+            if save_dir
+            else None
+        )
+    )
+
+    # 3. تحلیل تأثیرات Intervention
+    print("\n3. تولید تحلیل Intervention Effects...")
+    plot_intervention_effects_analysis(
+        save_path=(
+            os.path.join(save_dir, "intervention_effects_analysis.png")
+            if save_dir
+            else None
+        )
+    )
+
+    # 4. تکامل گراف علّی
+    print("\n4. تولید Causal Graph Evolution...")
+    # این نمودار از agent واقعی استفاده می‌کند
+    # plot_causal_graph_evolution(...)
+
+    # 5. الگوهای Cross-Modal Attention
+    print("\n5. تولید Multi-Modal Attention Patterns...")
+    # plot_multi_modal_attention_patterns(...)
+
+    # 6. مقایسه جامع
+    print("\n6. تولید مقایسه جامع...")
+    comprehensive_causal_multi_modal_comparison(
+        save_path=(
+            os.path.join(save_dir, "comprehensive_comparison.png") if save_dir else None
+        )
+    )
+
+    print("\n" + "=" * 70)
+    print("✅ مجموعه کامل Visualization با موفقیت ایجاد شد!")
+    if save_dir:
+        print(f"📁 تمام نمودارها در ذخیره شدند: {save_dir}")
+    print("=" * 70)
+
+    print("\n📊 نمودارهای تولید شده:")
+    print("   1. causal_discovery_comparison.png - مقایسه الگوریتم‌های کشف علّی")
+    print("   2. multimodal_fusion_analysis.png - تحلیل روش‌های Fusion")
+    print("   3. intervention_effects_analysis.png - تحلیل تأثیرات Intervention")
+    print("   4. comprehensive_comparison.png - مقایسه جامع روش‌ها")
+
+
 if __name__ == "__main__":
     print("Causal Reasoning and Multi-Modal Reinforcement Learning")
     print("=" * 60)
@@ -1210,7 +1944,16 @@ if __name__ == "__main__":
     print("2. compare_causal_algorithms() - Compare different approaches")
     print("3. curriculum_learning_causal_multi_modal() - Curriculum learning")
     print("4. plot_causal_graph_evolution() - Visualize causal learning")
-    print("5. comprehensive_causal_multi_modal_comparison() - Full analysis")
+    print("5. plot_causal_discovery_comparison() - Compare discovery algorithms")
+    print("6. plot_multimodal_fusion_analysis() - Analyze fusion methods")
+    print("7. plot_intervention_effects_analysis() - Analyze interventions")
+    print("8. comprehensive_causal_multi_modal_comparison() - Full analysis")
+    print(
+        "9. create_comprehensive_causal_multimodal_visualization_suite() - Generate all"
+    )
     print("\nExample usage:")
     print("results = train_causal_multi_modal_agent(num_episodes=100)")
     print("plot_causal_graph_evolution(results['agent'])")
+    print(
+        "create_comprehensive_causal_multimodal_visualization_suite(save_dir='visualizations/')"
+    )

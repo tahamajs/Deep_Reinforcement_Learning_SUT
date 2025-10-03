@@ -20,14 +20,11 @@ from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Optional, Any
 import time
 
-# Import from CA13 package
-from CA13 import (
-    ModelFreeAgent,
-    DQNAgent,
-    ModelBasedAgent,
-    ReplayBuffer,
-    get_device,
-)
+# Import from local modules
+from agents.model_free import ModelFreeAgent, DQNAgent
+from agents.model_based import ModelBasedAgent
+from buffers.replay_buffer import ReplayBuffer
+from utils import get_device
 
 
 @dataclass

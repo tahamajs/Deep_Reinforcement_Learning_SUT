@@ -7,7 +7,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 import copy
 
-from ..buffers.replay_buffer import PrioritizedReplayBuffer
+try:
+    from ..buffers.replay_buffer import PrioritizedReplayBuffer
+except ImportError:
+    from buffers.replay_buffer import PrioritizedReplayBuffer
 
 
 class DataAugmentationDQN(nn.Module):

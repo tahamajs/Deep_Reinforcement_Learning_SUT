@@ -10,7 +10,8 @@ from torch.distributions import Categorical
 from .actor_critic import ActorNetwork, CriticNetwork, ActorCriticAgent, A2CAgent
 from .reinforce import REINFORCEAgent
 from .baseline_reinforce import BaselineREINFORCEAgent
-from ..utils.utils import device
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class PPOBuffer:

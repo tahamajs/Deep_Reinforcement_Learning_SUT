@@ -16,6 +16,7 @@ import torch.optim as optim
 from torch.distributions import Categorical, Normal
 import random
 import copy
+from collections import deque
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

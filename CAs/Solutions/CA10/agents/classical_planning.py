@@ -521,6 +521,9 @@ def demonstrate_classical_planning():
     plot_policy(axes[1, 2], pessimistic_policy, "Pessimistic Planning - Policy")
 
     plt.tight_layout()
+
+    # Create visualizations directory if it doesn't exist
+    os.makedirs("visualizations", exist_ok=True)
     plt.savefig("visualizations/classical_planning.png", dpi=300, bbox_inches="tight")
     plt.show()
 

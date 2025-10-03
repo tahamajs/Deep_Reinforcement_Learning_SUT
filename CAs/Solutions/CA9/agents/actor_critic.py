@@ -7,7 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from torch.distributions import Categorical
-from ..utils.utils import device
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class ActorNetwork(nn.Module):
@@ -100,23 +101,27 @@ class ActorCriticAgent:
             state = torch.FloatTensor(state).unsqueeze(0).to(device)
         if not isinstance(next_state, torch.Tensor):
             next_state = torch.FloatTensor(next_state).unsqueeze(0).to(device)
-        if not isinstance(value, torch.Tensor):
-            value = torch.FloatTensor([value]).to(device)
+
+        # Recalculate value to ensure gradient flow
+        current_value = self.critic(state)
 
         with torch.no_grad():
             next_value = self.critic(next_state) if not done else 0
             td_target = reward + self.gamma * next_value
-            td_error = td_target - value
 
-        value_tensor = torch.tensor(value, device=device, dtype=torch.float32)
-        critic_loss = F.mse_loss(value_tensor, td_target)
+        # Calculate td_error outside of no_grad for tracking
+        td_error = td_target - current_value.item()
+        
+        # Critic loss: detach td_target since it shouldn't propagate gradients
+        td_target_tensor = torch.tensor(td_target, device=device, dtype=torch.float32)
+        critic_loss = F.mse_loss(current_value, td_target_tensor)
 
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=1.0)
         self.critic_optimizer.step()
 
-        actor_loss = -log_prob * td_error.detach() - self.entropy_coeff * entropy
+        actor_loss = -log_prob * td_error - self.entropy_coeff * entropy
 
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
@@ -125,11 +130,11 @@ class ActorCriticAgent:
 
         self.actor_losses.append(actor_loss.item())
         self.critic_losses.append(critic_loss.item())
-        self.td_errors.append(td_error.item())
+        self.td_errors.append(td_error)
         self.entropies.append(entropy.item())
-        self.value_estimates.append(value.item())
+        self.value_estimates.append(current_value.item())
 
-        return td_error.item()
+        return td_error
 
     def train_episode(self, env, max_steps=1000):
         """Train for one episode"""

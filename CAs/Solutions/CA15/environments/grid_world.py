@@ -6,6 +6,7 @@ including grid worlds and other control tasks.
 """
 
 import numpy as np
+from gymnasium import spaces
 
 
 class SimpleGridWorld:
@@ -16,6 +17,13 @@ class SimpleGridWorld:
         self.num_goals = num_goals
         self.action_space_size = 4  # up, down, left, right
         self.state_dim = size * size
+        
+        # Add gymnasium-compatible spaces
+        self.observation_space = spaces.Box(
+            low=0, high=1, shape=(self.state_dim,), dtype=np.float32
+        )
+        self.action_space = spaces.Discrete(self.action_space_size)
+        
         self.reset()
 
     def reset(self):
@@ -36,7 +44,7 @@ class SimpleGridWorld:
         self.steps = 0
         self.max_steps = self.size * 4
 
-        return self._get_state()
+        return self._get_state(), {}
 
     def _get_state(self):
         """Convert position to state representation."""
@@ -72,16 +80,22 @@ class SimpleGridWorld:
 
         if distance == 0:
             reward = 100.0  # Goal reached
-            done = True
+            terminated = True
+            truncated = False
         else:
             reward = -1.0 - 0.1 * distance  # Step penalty + distance penalty
-            done = False
+            terminated = False
+            truncated = False
 
         if self.steps >= self.max_steps:
-            done = True
+            truncated = True
             if distance > 0:
                 reward -= 50.0  # Timeout penalty
 
         info = {"distance": distance, "steps": self.steps}
 
-        return self._get_state(), reward, done, info
+        return self._get_state(), reward, terminated, truncated, info
+
+    def close(self):
+        """Close the environment (cleanup if needed)."""
+        pass

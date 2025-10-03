@@ -342,6 +342,9 @@ def demonstrate_dyna_q():
     plt.grid(True, alpha=0.3)
 
     plt.tight_layout()
+
+    # Create visualizations directory if it doesn't exist
+    os.makedirs("visualizations", exist_ok=True)
     plt.savefig("visualizations/dyna_q_comparison.png", dpi=300, bbox_inches="tight")
     plt.show()
 

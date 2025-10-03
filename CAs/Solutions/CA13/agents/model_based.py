@@ -63,7 +63,10 @@ class ModelBasedAgent:
         )
 
         # Initialize replay buffer
-        from ..buffers.replay_buffer import ReplayBuffer
+        try:
+            from ..buffers.replay_buffer import ReplayBuffer
+        except ImportError:
+            from buffers.replay_buffer import ReplayBuffer
         self.replay_buffer = ReplayBuffer(capacity=10000)
 
         self.model_losses = []
@@ -261,3 +264,18 @@ class HybridDynaAgent:
                 self.q_table[state_key][action] += self.lr * (
                     target - self.q_table[state_key][action]
                 )
+    
+    # Alias methods for compatibility with training functions
+    def select_action(self, state, training=True):
+        """Alias for act() method."""
+        return self.act(state)
+    
+    def store_transition(self, state, action, reward, next_state, done):
+        """Store transition in replay buffer."""
+        self.replay_buffer.push(state, action, reward, next_state, done)
+    
+    def train_step(self):
+        """Train model and value function."""
+        if len(self.replay_buffer) < 32:
+            return None
+        return self.update(batch_size=32)

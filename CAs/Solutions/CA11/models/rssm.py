@@ -76,6 +76,30 @@ class RSSM(nn.Module):
             nn.Sigmoid()
         )
 
+    def _normalize_action(self, action: torch.Tensor) -> torch.Tensor:
+        """Ensure action tensor matches expected action_dim.
+
+        Supports two cases:
+        - Already proper shape [..., action_dim]
+        - Discrete index encoded as [..., 1] when action_dim > 1 -> convert to one-hot
+        """
+        # If there's an extra seq dim of length 1, squeeze it (handled by caller usually)
+        if action.dim() == 3 and action.size(1) == 1:
+            action = action.squeeze(1)
+
+        if action.size(-1) == self.action_dim:
+            return action
+        # Discrete index -> one-hot (common when collecting data from Discrete action spaces)
+        if action.size(-1) == 1 and self.action_dim > 1:
+            idx = action.squeeze(-1)
+            # Safely convert to integer indices
+            idx_long = idx.round().clamp(min=0, max=self.action_dim - 1).long()
+            one_hot = F.one_hot(idx_long, num_classes=self.action_dim).to(action.dtype)
+            return one_hot
+        raise RuntimeError(
+            f"Expected action last dim to be {self.action_dim} or 1 (discrete index), got {action.size(-1)}."
+        )
+
     def _sample_stochastic(self, mean: torch.Tensor, std: torch.Tensor) -> torch.Tensor:
         """Sample from stochastic state distribution"""
         eps = torch.randn_like(mean)
@@ -96,8 +120,42 @@ class RSSM(nn.Module):
         prev_action: torch.Tensor,
         prev_latent: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Single imagination step"""
-        # Combine previous latent and action
+        """
+        Single imagination step in latent space.
+        
+        Args:
+            prev_state: Previous hidden state (batch, hidden_dim)
+            prev_action: Previous action (batch, action_dim) or (batch, 1, action_dim)
+            prev_latent: Previous latent representation (batch, latent_dim) or (batch, 1, latent_dim)
+                        This should be the encoded observation, not raw observation!
+        
+        Returns:
+            next_obs: Predicted next observation (batch, obs_dim)
+            reward: Predicted reward (batch,)
+            new_hidden: New hidden state (batch, hidden_dim)
+        """
+        # Ensure inputs have correct dimensions
+        # Accept either latent (latent_dim) or raw observation (obs_dim) and encode if needed.
+        # Remove optional sequence dimension if present and add it back consistently for RNN.
+        if prev_latent.dim() == 3 and prev_latent.size(1) == 1:
+            prev_latent = prev_latent.squeeze(1)
+        if prev_action.dim() == 3 and prev_action.size(1) == 1:
+            prev_action = prev_action.squeeze(1)
+
+        # If a raw observation was provided instead of a latent, encode it
+        if prev_latent.size(-1) == self.obs_dim and self.obs_dim != self.latent_dim:
+            prev_latent = self._encode_observation(prev_latent)
+
+        # Validate shapes
+        if prev_latent.size(-1) != self.latent_dim:
+            raise RuntimeError(
+                f"Expected prev_latent last dim = latent_dim ({self.latent_dim}), got {prev_latent.size(-1)}. "
+                f"Provide a latent of size {self.latent_dim} or an observation of size {self.obs_dim}."
+            )
+        # Normalize/validate action shape
+        prev_action = self._normalize_action(prev_action)
+
+        # Combine previous latent and action for a single-step RNN update (seq_len=1)
         rnn_input = torch.cat([prev_latent, prev_action], dim=-1).unsqueeze(1)
         
         # Update hidden state
@@ -126,6 +184,7 @@ class RSSM(nn.Module):
         encoded_obs = self._encode_observation(obs)
         
         # Combine with previous action
+        prev_action = self._normalize_action(prev_action)
         rnn_input = torch.cat([encoded_obs, prev_action], dim=-1).unsqueeze(1)
         
         # Update hidden state
@@ -194,12 +253,27 @@ class RSSM(nn.Module):
 
     def forward(
         self,
-        obs: torch.Tensor,
+        obs_or_latent: torch.Tensor,
         actions: torch.Tensor,
         hidden: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Forward pass for single step"""
-        return self.imagine_step(obs, actions, hidden)
+        """Forward pass for a single step.
+
+        If the first argument has last dimension == obs_dim, it's treated as an observation and
+        observe_step is used. If it matches latent_dim, it's treated as a latent and imagine_step is used.
+        """
+        x_last = obs_or_latent.size(-1)
+        if x_last == self.obs_dim:
+            # Treat as observation
+            _, new_hidden, recon_obs, reward, _ = self.observe_step(obs_or_latent, hidden, actions)
+            return recon_obs, reward, new_hidden
+        elif x_last == self.latent_dim:
+            # Treat as latent
+            return self.imagine_step(hidden, actions, obs_or_latent)
+        else:
+            raise RuntimeError(
+                f"forward expected input last dim to be either obs_dim ({self.obs_dim}) or latent_dim ({self.latent_dim}), got {x_last}."
+            )
 
     def compute_loss(
         self,
@@ -232,8 +306,13 @@ class RSSM(nn.Module):
             recon_loss = F.mse_loss(recon_obs_t, obs_t)
             reward_loss = F.mse_loss(pred_reward_t, reward_t)
             
-            # KL divergence loss (if using stochastic states)
-            kl_loss = -0.5 * torch.sum(1 + torch.log(stoch_mean.pow(2) + 1e-8) - stoch_mean.pow(2))
+            # KL divergence loss between N(mu, sigma^2) and N(0, 1):
+            # 0.5 * sum(mu^2 + sigma^2 - log(sigma^2) - 1)
+            # We recompute stoch_std from the hidden state to avoid changing observe_step's API.
+            stoch_std_t = F.softplus(self.stoch_std(hidden_t)) + 0.1
+            var_t = stoch_std_t.pow(2)
+            logvar_t = torch.log(var_t + 1e-8)
+            kl_loss = 0.5 * torch.sum(stoch_mean.pow(2) + var_t - logvar_t - 1.0)
             
             total_recon_loss += recon_loss
             total_reward_loss += reward_loss

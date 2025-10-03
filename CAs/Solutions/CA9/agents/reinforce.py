@@ -7,7 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from torch.distributions import Categorical
-from ..utils.utils import device
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class PolicyNetwork(nn.Module):
