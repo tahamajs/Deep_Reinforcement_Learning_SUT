@@ -1,7 +1,7 @@
 """Utilities module for CA14 advanced RL implementations."""
 
 import numpy as np
-from robust_rl.environment import RobustEnvironment
+from ..robust_rl.environment import RobustEnvironment
 
 
 def create_evaluation_environments():
@@ -22,7 +22,7 @@ def run_comprehensive_evaluation():
     print("🔍 Starting Comprehensive Evaluation of Advanced Deep RL Methods")
     print("=" * 70)
 
-    from evaluation.advanced_evaluator import ComprehensiveEvaluator
+    from ..evaluation.advanced_evaluator import ComprehensiveEvaluator
 
     evaluator = ComprehensiveEvaluator()
 

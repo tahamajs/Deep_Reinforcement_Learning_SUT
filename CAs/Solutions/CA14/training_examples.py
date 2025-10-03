@@ -28,6 +28,15 @@ import gym
 from typing import List, Dict, Tuple, Optional, Union
 import warnings
 
+# Local environments (robust import for both package and script execution)
+try:
+    from .environments.grid_world import SimpleGridWorld  # type: ignore
+except Exception:  # pragma: no cover
+    try:
+        from environments.grid_world import SimpleGridWorld  # type: ignore
+    except Exception:
+        from CA14.environments.grid_world import SimpleGridWorld  # type: ignore
+
 warnings.filterwarnings("ignore")
 
 torch.manual_seed(42)
@@ -1953,15 +1962,47 @@ class RobustRLAgent:
 
             return ucb_values.argmax().item()
 
-    def update(self, batch):
-        """Update robust RL agent."""
-        states, actions, rewards, next_states, dones = batch
+    def update(self, data):
+        """Update robust RL agent.
 
-        states = torch.FloatTensor(states).to(device)
-        actions = torch.LongTensor(actions).to(device)
-        rewards = torch.FloatTensor(rewards).to(device)
-        next_states = torch.FloatTensor(next_states).to(device)
-        dones = torch.BoolTensor(dones).to(device)
+        Accepts either a batch tuple (states, actions, rewards, next_states, dones)
+        or a list of trajectories where each trajectory is a list of tuples
+        (state, action, reward, _, done, _).
+        """
+        # Flatten trajectories to a batch if needed
+        if isinstance(data, list):
+            flat_states: List[np.ndarray] = []
+            flat_actions: List[int] = []
+            flat_rewards: List[float] = []
+            flat_next_states: List[np.ndarray] = []
+            flat_dones: List[bool] = []
+
+            for traj in data:
+                for t_idx, step in enumerate(traj):
+                    state_t, action_t, reward_t, _cost_t, done_t, _logp = step
+                    flat_states.append(np.asarray(state_t, dtype=np.float32))
+                    flat_actions.append(int(action_t))
+                    flat_rewards.append(float(reward_t))
+
+                    if t_idx + 1 < len(traj):
+                        next_state_t = traj[t_idx + 1][0]
+                    else:
+                        next_state_t = state_t
+                    flat_next_states.append(np.asarray(next_state_t, dtype=np.float32))
+                    flat_dones.append(bool(done_t))
+
+            states = torch.FloatTensor(np.stack(flat_states)).to(device)
+            actions = torch.LongTensor(np.array(flat_actions)).to(device)
+            rewards = torch.FloatTensor(np.array(flat_rewards)).to(device)
+            next_states = torch.FloatTensor(np.stack(flat_next_states)).to(device)
+            dones = torch.BoolTensor(np.array(flat_dones)).to(device)
+        else:
+            states, actions, rewards, next_states, dones = data
+            states = torch.FloatTensor(states).to(device)
+            actions = torch.LongTensor(actions).to(device)
+            rewards = torch.FloatTensor(rewards).to(device)
+            next_states = torch.FloatTensor(next_states).to(device)
+            dones = torch.BoolTensor(dones).to(device)
 
         # Update Q-network
         q_values = self.q_network(states)
@@ -1981,8 +2022,8 @@ class RobustRLAgent:
 
         # Update uncertainty estimator
         uncertainty_loss = self.uncertainty_estimator.update_ensemble(
-            states.cpu().numpy(),
-            actions.cpu().numpy(),
+            states.detach().cpu().numpy(),
+            actions.detach().cpu().numpy(),
             target_q_values.detach().cpu().numpy(),
         )
 
@@ -1995,18 +2036,18 @@ class RobustRLAgent:
         # Track uncertainty
         with torch.no_grad():
             _, uncertainties = self.uncertainty_estimator.get_uncertainty(
-                states[0].cpu().numpy()
+                states[0].detach().cpu().numpy()
             )
-            avg_uncertainty = uncertainties.mean().item()
+            avg_uncertainty = float(uncertainties.mean().item())
             self.uncertainties.append(avg_uncertainty)
 
-        self.losses.append(q_loss.item())
+        self.losses.append(float(q_loss.item()))
 
         return {
-            "q_loss": q_loss.item(),
-            "uncertainty_loss": uncertainty_loss,
-            "avg_uncertainty": avg_uncertainty,
-            "epsilon": self.epsilon,
+            "q_loss": float(q_loss.item()),
+            "uncertainty_loss": float(uncertainty_loss),
+            "avg_uncertainty": float(avg_uncertainty),
+            "epsilon": float(self.epsilon),
         }
 
     def soft_update_target(self):
@@ -2243,7 +2284,7 @@ def train_all_advanced_rl_algorithms():
 
     # Train Offline RL
     print("\n1️⃣ Training Offline RL Algorithms...")
-    offline_results, offline_eval, offline_datasets = train_offline_rl()
+    offline_results, offline_eval, offline_datasets = train_offline_rl_algorithms()
 
     # Train Safe RL
     print("\n2️⃣ Training Safe RL Algorithms...")

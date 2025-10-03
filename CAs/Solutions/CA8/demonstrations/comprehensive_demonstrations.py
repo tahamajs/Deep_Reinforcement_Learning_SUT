@@ -7,9 +7,15 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from typing import Dict, Any, List
 
-from ..agents.causal_discovery import CausalGraph
-from ..agents.causal_rl_agent import CausalRLAgent
-from ..environments.multi_modal_env import MultiModalGridWorld, MultiModalWrapper
+# Handle both relative and absolute imports
+try:
+    from ..agents.causal_discovery import CausalGraph
+    from ..agents.causal_rl_agent import CausalRLAgent
+    from ..environments.multi_modal_env import MultiModalGridWorld, MultiModalWrapper
+except ImportError:
+    from agents.causal_discovery import CausalGraph
+    from agents.causal_rl_agent import CausalRLAgent
+    from environments.multi_modal_env import MultiModalGridWorld, MultiModalWrapper
 
 
 def run_comprehensive_experiments():

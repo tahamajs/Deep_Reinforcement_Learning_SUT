@@ -6,22 +6,41 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import Dict, Any
 
-from ..experiments.causal_experiments import CausalDiscoveryExperiments
-from ..experiments.multimodal_experiments import MultiModalExperiments
-from ..experiments.integrated_experiments import IntegratedExperiments
-from ..visualization.causal_visualizations import (
-    plot_causal_graph_evolution,
-    plot_causal_intervention_analysis,
-    causal_discovery_algorithm_comparison,
-)
-from ..visualization.multimodal_visualizations import (
-    plot_multi_modal_attention_patterns,
-    multi_modal_fusion_strategy_comparison,
-)
-from ..visualization.comprehensive_visualizations import (
-    comprehensive_causal_multi_modal_comparison,
-    causal_multi_modal_curriculum_learning,
-)
+# Handle both relative and absolute imports
+try:
+    from ..experiments.causal_experiments import CausalDiscoveryExperiments
+    from ..experiments.multimodal_experiments import MultiModalExperiments
+    from ..experiments.integrated_experiments import IntegratedExperiments
+    from ..visualization.causal_visualizations import (
+        plot_causal_graph_evolution,
+        plot_causal_intervention_analysis,
+        causal_discovery_algorithm_comparison,
+    )
+    from ..visualization.multimodal_visualizations import (
+        plot_multi_modal_attention_patterns,
+        multi_modal_fusion_strategy_comparison,
+    )
+    from ..visualization.comprehensive_visualizations import (
+        comprehensive_causal_multi_modal_comparison,
+        causal_multi_modal_curriculum_learning,
+    )
+except ImportError:
+    from experiments.causal_experiments import CausalDiscoveryExperiments
+    from experiments.multimodal_experiments import MultiModalExperiments
+    from experiments.integrated_experiments import IntegratedExperiments
+    from visualization.causal_visualizations import (
+        plot_causal_graph_evolution,
+        plot_causal_intervention_analysis,
+        causal_discovery_algorithm_comparison,
+    )
+    from visualization.multimodal_visualizations import (
+        plot_multi_modal_attention_patterns,
+        multi_modal_fusion_strategy_comparison,
+    )
+    from visualization.comprehensive_visualizations import (
+        comprehensive_causal_multi_modal_comparison,
+        causal_multi_modal_curriculum_learning,
+    )
 
 
 def run_comprehensive_analysis():

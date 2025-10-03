@@ -47,6 +47,9 @@ def env_reset(env):
         observation, info = result
     else:
         observation, info = result, {}
+    # Ensure observation is a regular numpy array without deprecated types
+    if hasattr(observation, 'dtype'):
+        observation = np.asarray(observation, dtype=np.float32)
     return observation, info
 
 
@@ -55,9 +58,18 @@ def env_step(env, action):
     result = env.step(action)
     if isinstance(result, tuple) and len(result) == 5:
         observation, reward, terminated, truncated, info = result
-        done = terminated or truncated
+        done = bool(terminated or truncated)
+        reward = float(reward)
+        # Ensure observation is a regular numpy array without deprecated types
+        if hasattr(observation, 'dtype'):
+            observation = np.asarray(observation, dtype=np.float32)
     elif isinstance(result, tuple) and len(result) == 4:
         observation, reward, done, info = result
+        done = bool(done)
+        reward = float(reward)
+        # Ensure observation is a regular numpy array without deprecated types
+        if hasattr(observation, 'dtype'):
+            observation = np.asarray(observation, dtype=np.float32)
     else:
         raise ValueError("Unexpected env.step return format")
     return observation, reward, done, info
@@ -156,25 +168,28 @@ def train_model_based_agent(
         start_time = time.time()
 
         while not done and ep_length < max_steps:
-            action = agent.select_action(state, training=True)
+            # Use act() method for ModelBasedAgent
+            action = agent.act(state, epsilon=agent.epsilon)
             next_state, reward, done, info = env_step(env, action)
 
-            agent.store_transition(state, action, reward, next_state, done)
+            # Store transition in replay buffer
+            agent.replay_buffer.push(state, action, reward, next_state, done)
             
-            # Update model and Q-function
-            model_loss = agent.train_model()
-            q_loss = agent.train_q_function()
-            
-            if model_loss is not None:
-                ep_model_losses.append(model_loss)
-                model_losses.append(model_loss)
-            if q_loss is not None:
-                ep_q_losses.append(q_loss)
-                q_losses.append(q_loss)
-            
-            # Planning step
-            if hasattr(agent, 'planning_step'):
-                agent.planning_step(num_steps=planning_steps)
+            # Update model and value function if enough data
+            model_loss = None
+            q_loss = None
+            if len(agent.replay_buffer) >= 32:
+                # Sample batch and update
+                batch = agent.replay_buffer.sample(32)
+                model_loss = agent.update_model(batch)
+                q_loss = agent.update_value_function(batch)
+                
+                if model_loss is not None:
+                    ep_model_losses.append(model_loss)
+                    model_losses.append(model_loss)
+                if q_loss is not None:
+                    ep_q_losses.append(q_loss)
+                    q_losses.append(q_loss)
 
             state = next_state
             ep_reward += reward

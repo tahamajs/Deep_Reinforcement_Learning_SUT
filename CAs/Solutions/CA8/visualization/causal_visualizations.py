@@ -7,7 +7,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Optional, Dict, Any
 
-from ..agents.causal_discovery import CausalDiscovery, CausalGraph
+# Handle both relative and absolute imports
+try:
+    from ..agents.causal_discovery import CausalDiscovery, CausalGraph
+except ImportError:
+    from agents.causal_discovery import CausalDiscovery, CausalGraph
 
 
 def plot_causal_graph_evolution(

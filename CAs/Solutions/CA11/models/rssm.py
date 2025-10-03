@@ -21,7 +21,7 @@ class RSSM(nn.Module):
         latent_dim: int = 32,
         hidden_dim: int = 256,
         stochastic_size: int = 32,
-        rnn_type: str = 'gru'
+        rnn_type: str = "gru",
     ):
         super().__init__()
         self.obs_dim = obs_dim
@@ -30,50 +30,48 @@ class RSSM(nn.Module):
         self.hidden_dim = hidden_dim
         self.stochastic_size = stochastic_size
         self.deter_dim = hidden_dim
-        
+
         # Encoder for observations
         self.encoder = nn.Sequential(
             nn.Linear(obs_dim, 256),
             nn.ReLU(),
             nn.Linear(256, 128),
             nn.ReLU(),
-            nn.Linear(128, latent_dim)
+            nn.Linear(128, latent_dim),
         )
-        
+
         # Decoder for observations
         self.decoder = nn.Sequential(
             nn.Linear(latent_dim + hidden_dim, 128),
             nn.ReLU(),
             nn.Linear(128, 256),
             nn.ReLU(),
-            nn.Linear(256, obs_dim)
+            nn.Linear(256, obs_dim),
         )
-        
+
         # Recurrent network
-        if rnn_type == 'gru':
+        if rnn_type == "gru":
             self.rnn = nn.GRU(latent_dim + action_dim, hidden_dim, batch_first=True)
-        elif rnn_type == 'lstm':
+        elif rnn_type == "lstm":
             self.rnn = nn.LSTM(latent_dim + action_dim, hidden_dim, batch_first=True)
         else:
             raise ValueError(f"Unsupported RNN type: {rnn_type}")
-        
+
         # Stochastic state components
         self.stoch_mean = nn.Linear(hidden_dim, stochastic_size)
         self.stoch_std = nn.Linear(hidden_dim, stochastic_size)
-        
+
         # Reward predictor
         self.reward_predictor = nn.Sequential(
-            nn.Linear(latent_dim + hidden_dim, 128),
-            nn.ReLU(),
-            nn.Linear(128, 1)
+            nn.Linear(latent_dim + hidden_dim, 128), nn.ReLU(), nn.Linear(128, 1)
         )
-        
+
         # Done predictor (optional)
         self.done_predictor = nn.Sequential(
             nn.Linear(latent_dim + hidden_dim, 128),
             nn.ReLU(),
             nn.Linear(128, 1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def _normalize_action(self, action: torch.Tensor) -> torch.Tensor:
@@ -109,7 +107,9 @@ class RSSM(nn.Module):
         """Encode observation to latent representation"""
         return self.encoder(obs)
 
-    def _decode_observation(self, latent: torch.Tensor, hidden: torch.Tensor) -> torch.Tensor:
+    def _decode_observation(
+        self, latent: torch.Tensor, hidden: torch.Tensor
+    ) -> torch.Tensor:
         """Decode latent and hidden state to observation"""
         combined = torch.cat([latent, hidden], dim=-1)
         return self.decoder(combined)
@@ -122,13 +122,13 @@ class RSSM(nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Single imagination step in latent space.
-        
+
         Args:
             prev_state: Previous hidden state (batch, hidden_dim)
             prev_action: Previous action (batch, action_dim) or (batch, 1, action_dim)
             prev_latent: Previous latent representation (batch, latent_dim) or (batch, 1, latent_dim)
                         This should be the encoded observation, not raw observation!
-        
+
         Returns:
             next_obs: Predicted next observation (batch, obs_dim)
             reward: Predicted reward (batch,)
@@ -157,23 +157,23 @@ class RSSM(nn.Module):
 
         # Combine previous latent and action for a single-step RNN update (seq_len=1)
         rnn_input = torch.cat([prev_latent, prev_action], dim=-1).unsqueeze(1)
-        
+
         # Update hidden state
         _, new_hidden = self.rnn(rnn_input, prev_state.unsqueeze(0))
         new_hidden = new_hidden.squeeze(0)
-        
+
         # Sample new stochastic state
         stoch_mean = self.stoch_mean(new_hidden)
         stoch_std = F.softplus(self.stoch_std(new_hidden)) + 0.1
         new_latent = self._sample_stochastic(stoch_mean, stoch_std)
-        
+
         # Predict next observation
         next_obs = self._decode_observation(new_latent, new_hidden)
-        
+
         # Predict reward
         combined = torch.cat([new_latent, new_hidden], dim=-1)
         reward = self.reward_predictor(combined).squeeze(-1)
-        
+
         return next_obs, reward, new_hidden
 
     def observe_step(
@@ -182,27 +182,27 @@ class RSSM(nn.Module):
         """Single observation step"""
         # Encode observation
         encoded_obs = self._encode_observation(obs)
-        
+
         # Combine with previous action
         prev_action = self._normalize_action(prev_action)
         rnn_input = torch.cat([encoded_obs, prev_action], dim=-1).unsqueeze(1)
-        
+
         # Update hidden state
         _, new_hidden = self.rnn(rnn_input, prev_state.unsqueeze(0))
         new_hidden = new_hidden.squeeze(0)
-        
+
         # Sample stochastic state
         stoch_mean = self.stoch_mean(new_hidden)
         stoch_std = F.softplus(self.stoch_std(new_hidden)) + 0.1
         new_latent = self._sample_stochastic(stoch_mean, stoch_std)
-        
+
         # Reconstruct observation
         recon_obs = self._decode_observation(new_latent, new_hidden)
-        
+
         # Predict reward
         combined = torch.cat([new_latent, new_hidden], dim=-1)
         reward = self.reward_predictor(combined).squeeze(-1)
-        
+
         return new_latent, new_hidden, recon_obs, reward, stoch_mean
 
     def imagine_trajectory(
@@ -214,48 +214,45 @@ class RSSM(nn.Module):
         """Imagine a complete trajectory"""
         batch_size, horizon = actions.shape[:2]
         device = actions.device
-        
+
         # Initialize trajectory
         observations = []
         rewards = []
         hidden_states = [initial_state]
         latents = [initial_latent]
-        
+
         current_state = initial_state
         current_latent = initial_latent
-        
+
         for t in range(horizon):
             action = actions[:, t]
-            
+
             # Imagination step
             next_obs, reward, next_state = self.imagine_step(
                 current_state, action, current_latent
             )
-            
+
             # Store results
             observations.append(next_obs)
             rewards.append(reward)
             hidden_states.append(next_state)
-            
+
             # Update for next step
             current_state = next_state
             current_latent = self._sample_stochastic(
                 self.stoch_mean(next_state),
-                F.softplus(self.stoch_std(next_state)) + 0.1
+                F.softplus(self.stoch_std(next_state)) + 0.1,
             )
             latents.append(current_latent)
-        
+
         return (
             torch.stack(observations, dim=1),  # [batch, horizon, obs_dim]
-            torch.stack(rewards, dim=1),       # [batch, horizon]
-            torch.stack(hidden_states[1:], dim=1)  # [batch, horizon, hidden_dim]
+            torch.stack(rewards, dim=1),  # [batch, horizon]
+            torch.stack(hidden_states[1:], dim=1),  # [batch, horizon, hidden_dim]
         )
 
     def forward(
-        self,
-        obs_or_latent: torch.Tensor,
-        actions: torch.Tensor,
-        hidden: torch.Tensor
+        self, obs_or_latent: torch.Tensor, actions: torch.Tensor, hidden: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Forward pass for a single step.
 
@@ -265,7 +262,9 @@ class RSSM(nn.Module):
         x_last = obs_or_latent.size(-1)
         if x_last == self.obs_dim:
             # Treat as observation
-            _, new_hidden, recon_obs, reward, _ = self.observe_step(obs_or_latent, hidden, actions)
+            _, new_hidden, recon_obs, reward, _ = self.observe_step(
+                obs_or_latent, hidden, actions
+            )
             return recon_obs, reward, new_hidden
         elif x_last == self.latent_dim:
             # Treat as latent
@@ -280,32 +279,32 @@ class RSSM(nn.Module):
         obs_seq: torch.Tensor,
         action_seq: torch.Tensor,
         reward_seq: torch.Tensor,
-        initial_hidden: torch.Tensor
+        initial_hidden: torch.Tensor,
     ) -> Dict[str, torch.Tensor]:
         """Compute RSSM loss"""
         batch_size, seq_len = obs_seq.shape[:2]
         device = obs_seq.device
-        
+
         # Initialize
         current_hidden = initial_hidden
         total_recon_loss = 0
         total_reward_loss = 0
         total_kl_loss = 0
-        
+
         for t in range(seq_len):
             obs_t = obs_seq[:, t]
             action_t = action_seq[:, t]
             reward_t = reward_seq[:, t]
-            
+
             # Observation step
-            latent_t, hidden_t, recon_obs_t, pred_reward_t, stoch_mean = self.observe_step(
-                obs_t, current_hidden, action_t
+            latent_t, hidden_t, recon_obs_t, pred_reward_t, stoch_mean = (
+                self.observe_step(obs_t, current_hidden, action_t)
             )
-            
+
             # Compute losses
             recon_loss = F.mse_loss(recon_obs_t, obs_t)
             reward_loss = F.mse_loss(pred_reward_t, reward_t)
-            
+
             # KL divergence loss between N(mu, sigma^2) and N(0, 1):
             # 0.5 * sum(mu^2 + sigma^2 - log(sigma^2) - 1)
             # We recompute stoch_std from the hidden state to avoid changing observe_step's API.
@@ -313,23 +312,49 @@ class RSSM(nn.Module):
             var_t = stoch_std_t.pow(2)
             logvar_t = torch.log(var_t + 1e-8)
             kl_loss = 0.5 * torch.sum(stoch_mean.pow(2) + var_t - logvar_t - 1.0)
-            
+
             total_recon_loss += recon_loss
             total_reward_loss += reward_loss
             total_kl_loss += kl_loss
-            
+
             current_hidden = hidden_t
-        
+
         # Average losses
         avg_recon_loss = total_recon_loss / seq_len
         avg_reward_loss = total_reward_loss / seq_len
         avg_kl_loss = total_kl_loss / seq_len
-        
+
         total_loss = avg_recon_loss + avg_reward_loss + 0.1 * avg_kl_loss
-        
+
         return {
-            'total_loss': total_loss,
-            'reconstruction_loss': avg_recon_loss,
-            'reward_loss': avg_reward_loss,
-            'kl_loss': avg_kl_loss
+            "total_loss": total_loss,
+            "reconstruction_loss": avg_recon_loss,
+            "reward_loss": avg_reward_loss,
+            "kl_loss": avg_kl_loss,
         }
+
+    def imagine(
+        self, hidden: torch.Tensor, latent: torch.Tensor, action: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Imagination method for planning.
+
+        Args:
+            hidden: Current hidden state (batch, hidden_dim)
+            latent: Current latent state (batch, latent_dim)
+            action: Action to take (batch, action_dim)
+
+        Returns:
+            next_hidden: Next hidden state (batch, hidden_dim)
+            next_latent: Next latent state (batch, latent_dim)
+            reward: Predicted reward (batch,)
+        """
+        # Use imagine_step for single step imagination
+        next_obs, reward, next_hidden = self.imagine_step(hidden, action, latent)
+
+        # Sample next latent state from the new hidden state
+        stoch_mean = self.stoch_mean(next_hidden)
+        stoch_std = F.softplus(self.stoch_std(next_hidden)) + 0.1
+        next_latent = self._sample_stochastic(stoch_mean, stoch_std)
+
+        return next_hidden, next_latent, reward

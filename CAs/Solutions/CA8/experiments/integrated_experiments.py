@@ -11,10 +11,17 @@ from typing import Dict, List, Tuple, Any, Optional
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from ..agents.causal_discovery import CausalGraph, CausalDiscovery
-from ..agents.causal_rl_agent import CausalRLAgent, CounterfactualRLAgent
-from ..environments.multi_modal_env import MultiModalGridWorld, MultiModalWrapper
-from ..evaluation.metrics import IntegratedMetrics
+# Handle both relative and absolute imports
+try:
+    from ..agents.causal_discovery import CausalGraph, CausalDiscovery
+    from ..agents.causal_rl_agent import CausalRLAgent, CounterfactualRLAgent
+    from ..environments.multi_modal_env import MultiModalGridWorld, MultiModalWrapper
+    from ..evaluation.metrics import IntegratedMetrics
+except ImportError:
+    from agents.causal_discovery import CausalGraph, CausalDiscovery
+    from agents.causal_rl_agent import CausalRLAgent, CounterfactualRLAgent
+    from environments.multi_modal_env import MultiModalGridWorld, MultiModalWrapper
+    from evaluation.metrics import IntegratedMetrics
 
 
 class IntegratedExperiments:

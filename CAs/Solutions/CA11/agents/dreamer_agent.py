@@ -69,6 +69,14 @@ class DreamerAgent:
         self.lambda_ = lambda_
         self.imagination_horizon = imagination_horizon
 
+        # Align dims with world_model if available
+        wm_state_dim = getattr(world_model, "latent_dim", state_dim)
+        wm_action_dim = getattr(world_model, "action_dim", action_dim)
+        if wm_state_dim != state_dim or wm_action_dim != action_dim:
+            # Non-fatal: prefer world model dims to avoid shape mismatches
+            state_dim = wm_state_dim
+            action_dim = wm_action_dim
+
         self.actor = LatentActor(state_dim, action_dim).to(device)
         self.critic = LatentCritic(state_dim).to(device)
 
@@ -122,7 +130,7 @@ class DreamerAgent:
             else:
                 batch_size = current_state.shape[0]
                 h_dim = self.world_model.deter_dim
-                z_dim = self.world_model.stoch_dim
+                z_dim = self.world_model.stochastic_size
 
                 h = current_state[:, :h_dim]
                 z = current_state[:, h_dim : h_dim + z_dim]

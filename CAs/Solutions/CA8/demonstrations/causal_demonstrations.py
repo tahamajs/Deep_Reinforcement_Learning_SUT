@@ -6,8 +6,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import Dict, Any
 
-from ..agents.causal_discovery import CausalGraph, CausalDiscovery
-from ..agents.causal_rl_agent import CausalRLAgent
+# Handle both relative and absolute imports
+try:
+    from ..agents.causal_discovery import CausalGraph, CausalDiscovery
+    from ..agents.causal_rl_agent import CausalRLAgent
+except ImportError:
+    from agents.causal_discovery import CausalGraph, CausalDiscovery
+    from agents.causal_rl_agent import CausalRLAgent
 
 
 def demonstrate_causal_graph():

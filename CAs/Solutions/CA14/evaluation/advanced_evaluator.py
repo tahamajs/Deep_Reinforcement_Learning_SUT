@@ -69,12 +69,13 @@ class ComprehensiveEvaluator:
 
                     while not done:
                         if hasattr(agent, "get_action"):
-                            if len(inspect.signature(agent.get_action).parameters) > 1:
-                                action, _, _ = agent.get_action(obs)
+                            act_out = agent.get_action(obs)
+                            if isinstance(act_out, (list, tuple)):
+                                action = act_out[0]
                             else:
-                                action = agent.get_action(obs)
+                                action = act_out
                         else:
-                            action = np.random.randint(env.action_space)
+                            action = np.random.randint(getattr(env, "action_space", 4))
 
                         obs, reward, done, _ = env.step(action)
                         total_reward += reward
@@ -108,12 +109,13 @@ class ComprehensiveEvaluator:
 
                 while not done:
                     if hasattr(agent, "get_action"):
-                        if len(inspect.signature(agent.get_action).parameters) > 1:
-                            action, _, _ = agent.get_action(obs)
+                        act_out = agent.get_action(obs)
+                        if isinstance(act_out, (list, tuple)):
+                            action = act_out[0]
                         else:
-                            action = agent.get_action(obs)
+                            action = act_out
                     else:
-                        action = np.random.randint(safe_environment.action_space)
+                        action = np.random.randint(getattr(safe_environment, "action_space", 4))
 
                     obs, reward, done, info = safe_environment.step(action)
                     total_steps += 1
@@ -136,17 +138,28 @@ class ComprehensiveEvaluator:
         return safety_scores
 
     def evaluate_coordination(self, multi_agent_results):
-        """Evaluate multi-agent coordination effectiveness."""
+        """Evaluate multi-agent coordination effectiveness.
+
+        Accepts different result shapes. If `cooperation_rate` exists, uses its
+        final-episodes mean. Otherwise, falls back to coordination rewards if present.
+        """
         coordination_scores = {}
 
         for method_name, results in multi_agent_results.items():
-            if "coordination_rewards" in results:
-                individual_perf = results.get("individual_performance", 0)
-                coordinated_perf = np.mean(results["coordination_rewards"][-50:])
+            score = 0.0
+            if "cooperation_rate" in results and len(results["cooperation_rate"]) > 0:
+                vals = results["cooperation_rate"]
+                score = float(np.mean(vals[-50:])) if len(vals) >= 50 else float(np.mean(vals))
+            elif "coordination_rewards" in results and len(results["coordination_rewards"]) > 0:
+                individual_perf = results.get("individual_performance", 0.0)
+                coordinated_perf = (
+                    float(np.mean(results["coordination_rewards"][-50:]))
+                    if len(results["coordination_rewards"]) >= 50
+                    else float(np.mean(results["coordination_rewards"]))
+                )
+                score = coordinated_perf - float(individual_perf)
 
-                coordination_scores[method_name] = coordinated_perf - individual_perf
-            else:
-                coordination_scores[method_name] = 0.0
+            coordination_scores[method_name] = score
 
         return coordination_scores
 

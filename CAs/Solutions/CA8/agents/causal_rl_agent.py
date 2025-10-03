@@ -11,7 +11,12 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 from typing import Dict, List, Tuple, Optional, Any
 from .causal_discovery import CausalGraph
-from ..utils.causal_rl_utils import device
+
+# Import device - handle both relative and absolute imports
+try:
+    from ..utils.causal_rl_utils import device
+except ImportError:
+    from utils.causal_rl_utils import device
 
 
 class CausalReasoningNetwork(nn.Module):
@@ -281,13 +286,20 @@ class CausalRLAgent:
         counterfactual_rewards = []
 
         for state, action, reward, next_state, done in trajectory:
-            intervened_state = self.perform_intervention(state, intervention)
+            # Check if state is a dictionary (multi-modal observation)
+            if isinstance(state, dict):
+                # Skip counterfactual reasoning for dict observations
+                # In a real implementation, you would extract and process the state
+                counterfactual_reward = reward * 0.9  # Placeholder
+            else:
+                intervened_state = self.perform_intervention(state, intervention)
 
-            intervened_action, _ = self.select_action(
-                intervened_state, deterministic=True
-            )
+                intervened_action, _ = self.select_action(
+                    intervened_state, deterministic=True
+                )
 
-            counterfactual_reward = reward * 0.8  # Placeholder
+                counterfactual_reward = reward * 0.8  # Placeholder
+            
             counterfactual_rewards.append(counterfactual_reward)
 
         return counterfactual_rewards

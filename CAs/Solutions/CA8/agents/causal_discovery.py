@@ -113,6 +113,20 @@ class CausalGraph:
 
         return G
 
+    def get_edges(self) -> List[Tuple[str, str]]:
+        """Get all edges in the graph as list of tuples"""
+        edges = []
+        for i in range(len(self.variables)):
+            for j in range(len(self.variables)):
+                if self.adj_matrix[i, j]:
+                    edges.append((self.variables[i], self.variables[j]))
+        return edges
+
+    @property
+    def edges(self) -> List[Tuple[str, str]]:
+        """Property to access edges"""
+        return self.get_edges()
+
     def __str__(self):
         """String representation of the graph"""
         edges = []
@@ -200,28 +214,35 @@ class CausalDiscovery:
         n_vars = len(variable_names)
         graph = CausalGraph(variable_names)
 
+        # Keep track of original variable names
+        original_var_names = variable_names.copy()
+        remaining_vars = variable_names.copy()
         residuals = np.copy(data)
+        working_data = np.copy(data)
 
         for i in range(n_vars):
             residual_vars = np.var(residuals, axis=0)
             target_idx = np.argmin(residual_vars)
+            
+            # Get the actual variable name
+            target_var = remaining_vars[target_idx]
 
-            remaining_indices = [j for j in range(n_vars) if j != target_idx]
+            remaining_indices = [j for j in range(len(remaining_vars)) if j != target_idx]
             if remaining_indices:
-                X = data[:, remaining_indices]
-                y = data[:, target_idx]
+                X = working_data[:, remaining_indices]
+                y = working_data[:, target_idx]
 
                 reg = LinearRegression()
                 reg.fit(X, y)
 
                 for j, coef in zip(remaining_indices, reg.coef_):
                     if abs(coef) > 0.1:  # Threshold
-                        graph.add_edge(variable_names[j], variable_names[target_idx])
+                        source_var = remaining_vars[j]
+                        graph.add_edge(source_var, target_var)
 
+            # Remove processed variable
             residuals = np.delete(residuals, target_idx, axis=1)
-            data = np.delete(data, target_idx, axis=1)
-            variable_names = [
-                v for k, v in enumerate(variable_names) if k != target_idx
-            ]
+            working_data = np.delete(working_data, target_idx, axis=1)
+            remaining_vars = [v for k, v in enumerate(remaining_vars) if k != target_idx]
 
         return graph

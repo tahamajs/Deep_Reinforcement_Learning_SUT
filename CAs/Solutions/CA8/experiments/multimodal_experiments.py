@@ -11,8 +11,13 @@ from typing import Dict, List, Tuple, Any, Optional
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from ..environments.multi_modal_env import MultiModalGridWorld, MultiModalWrapper
-from ..evaluation.metrics import MultiModalMetrics
+# Handle both relative and absolute imports
+try:
+    from ..environments.multi_modal_env import MultiModalGridWorld, MultiModalWrapper
+    from ..evaluation.metrics import MultiModalMetrics
+except ImportError:
+    from environments.multi_modal_env import MultiModalGridWorld, MultiModalWrapper
+    from evaluation.metrics import MultiModalMetrics
 
 
 class MultiModalExperiments:
@@ -80,13 +85,12 @@ class MultiModalExperiments:
                         state_feat = processed_obs[
                             wrapper.visual_dim + wrapper.text_dim :
                         ]
-                        # Simple attention weights
+                        # Apply attention weights to each modality separately, then concatenate
                         attention_weights = np.array([0.4, 0.3, 0.3])
-                        fused_features = (
-                            attention_weights[0] * visual_feat
-                            + attention_weights[1] * text_feat
-                            + attention_weights[2] * state_feat
-                        )
+                        weighted_visual = attention_weights[0] * visual_feat
+                        weighted_text = attention_weights[1] * text_feat
+                        weighted_state = attention_weights[2] * state_feat
+                        fused_features = np.concatenate([weighted_visual, weighted_text, weighted_state])
                     else:  # hierarchical
                         # Hierarchical fusion
                         fused_features = processed_obs * 1.1  # Boost all features

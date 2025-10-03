@@ -229,7 +229,8 @@ class MultiModalWrapper:
     def __init__(self, env: MultiModalGridWorld):
         self.env = env
 
-        self.visual_dim = 64  # After CNN processing
+        # Set dimensions based on actual processing
+        self.visual_dim = 3  # RGB channels after processing
         self.text_dim = 32  # After transformer processing
         self.state_dim = 2  # Raw state
 

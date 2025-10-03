@@ -97,21 +97,21 @@ pip install scikit-learn jupyter
 ### Quick Start
 
 ```python
-# Import key components
-from offline_rl.cql import ConservativeQLearning
-from safe_rl.cpo import ConstrainedPolicyOptimization
-from multi_agent.maddpg import MADDPGAgent
-from robust_rl.domain_randomization import DomainRandomizationAgent
+# Import key components (package-relative modules)
+from CA14.offline_rl import ConservativeQLearning, ImplicitQLearning, generate_offline_dataset
+from CA14.safe_rl.agents import ConstrainedPolicyOptimization
+from CA14.multi_agent.agents import MADDPGAgent, QMIXAgent
+from CA14.robust_rl import RobustEnvironment
+from CA14.robust_rl.agents import DomainRandomizationAgent, AdversarialRobustAgent
 
 # Create offline dataset
-dataset = generate_offline_dataset(dataset_type='mixed', size=50000)
+dataset = generate_offline_dataset(dataset_type='mixed', size=10000)
 
-# Train CQL agent
-cql_agent = ConservativeQLearning(state_dim=4, action_dim=2)
-cql_agent.train_on_dataset(dataset)
-
-# Evaluate performance
-results = evaluate_offline_performance(cql_agent, test_env)
+# Train CQL agent (toy example)
+cql_agent = ConservativeQLearning(state_dim=2, action_dim=4)
+for _ in range(100):
+    batch = dataset.sample(256)
+    cql_agent.update(batch)
 ```
 
 ## Key Implementations
@@ -277,21 +277,26 @@ for episode in range(500):
 ```python
 # Create robust environments
 environments = {
-    'low_uncertainty': RobustEnvironment(base_size=6, uncertainty_level=0.1),
-    'high_uncertainty': RobustEnvironment(base_size=6, uncertainty_level=0.5)
+    'standard': RobustEnvironment(base_size=6, uncertainty_level=0.0),
+    'noisy': RobustEnvironment(base_size=6, uncertainty_level=0.2)
 }
 
-# Train with domain randomization
+# Train with domain randomization (toy rollout loop)
 robust_agent = DomainRandomizationAgent(obs_dim=6, action_dim=4)
-for episode in range(400):
+for _ in range(40):
     trajectories = []
     for env in environments.values():
-        traj = collect_robust_trajectory(env, robust_agent)
-        trajectories.extend(traj)
+        obs = env.reset()
+        traj = []
+        for _ in range(50):
+            action, logp, value = robust_agent.get_action(obs)
+            next_obs, reward, done, info = env.step(action)
+            traj.append((obs, action, reward, logp, value, info))
+            obs = next_obs
+            if done:
+                break
+        trajectories.append(traj)
     robust_agent.update(trajectories)
-
-# Evaluate robustness
-robustness_score = evaluate_robustness(robust_agent, test_environments)
 ```
 
 ## Results and Analysis

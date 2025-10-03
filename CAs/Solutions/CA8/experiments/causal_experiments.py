@@ -11,8 +11,13 @@ from typing import Dict, List, Tuple, Any, Optional
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from ..agents.causal_discovery import CausalGraph, CausalDiscovery
-from ..evaluation.metrics import CausalDiscoveryMetrics
+# Handle both relative and absolute imports
+try:
+    from ..agents.causal_discovery import CausalGraph, CausalDiscovery
+    from ..evaluation.metrics import CausalDiscoveryMetrics
+except ImportError:
+    from agents.causal_discovery import CausalGraph, CausalDiscovery
+    from evaluation.metrics import CausalDiscoveryMetrics
 
 
 class CausalDiscoveryExperiments:
