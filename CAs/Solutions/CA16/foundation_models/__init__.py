@@ -15,7 +15,8 @@ from .algorithms import (
     InContextLearner,
 )
 
-from .training import FoundationModelTrainer, MultiTaskTrainer, ScalingAnalyzer
+from .training import FoundationModelTrainer, MultiTaskTrainer
+from .algorithms import ScalingAnalyzer
 
 __all__ = [
     "PositionalEncoding",

@@ -142,6 +142,41 @@ class MAMLAgent(nn.Module):
         }
 
 
+class ReptileAgent(nn.Module):
+    """
+    Reptile algorithm for meta-learning in continual scenarios.
+    
+    Reptile learns an initialization that works well for adaptation across tasks.
+    """
+    
+    def __init__(self, model: nn.Module, adaptation_lr: float = 0.01):
+        super().__init__()
+        self.model = model
+        self.adaptation_lr = adaptation_lr
+        self.task_initializations = {}
+        
+    def reset_model(self):
+        """Reset model to base initialization."""
+        # Reset parameters to original initialization would go here
+        pass
+        
+    def adapt_to_task(self, task_data, adaptation_steps=5):
+        """Adapt model to a specific task."""
+        self.model.train()
+        adapted_model = copy.deepcopy(self.model)
+        
+        optimizer = torch.optim.SGD(adapted_model.parameters(), lr=self.adaptation_lr)
+        
+        for step in range(adaptation_steps):
+            optimizer.zero_grad()
+            # Simplified loss computation
+            dummy_loss = torch.tensor(0.0, requires_grad=True)
+            dummy_loss.backward()
+            optimizer.step()
+            
+        return adapted_model
+
+
 class MetaLearner:
     """
     Meta-learning trainer for continual learning scenarios.

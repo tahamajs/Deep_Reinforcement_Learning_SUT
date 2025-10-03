@@ -110,3 +110,46 @@ class HumanFeedbackCollector:
         current_avg = self.feedback_statistics["avg_confidence"]
         new_avg = (current_avg * (total - 1) + feedback.feedback_value) / total
         self.feedback_statistics["avg_confidence"] = new_avg
+
+
+class InteractiveLearner:
+    """Learner that interactively collects feedback and updates policies."""
+
+    def __init__(self, state_dim: int, action_dim: int):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.feedback_collector = HumanFeedbackCollector()
+        self.learning_history = []
+
+    def learn_from_feedback(self, feedback: HumanFeedback) -> Dict[str, float]:
+        """Learn from a single piece of feedback."""
+        self.feedback_collector.add_feedback("default", feedback)
+        # Simple learning update
+        self.learning_history.append(feedback.feedback_value)
+        return {"feedback_value": feedback.feedback_value}
+
+
+class TrustModel(nn.Module):
+    """Model for tracking trust in AI agent."""
+
+    def __init__(self, state_dim: int, action_dim: int, hidden_dim: int = 64):
+        super().__init__()
+        self.trust_net = nn.Sequential(
+            nn.Linear(state_dim + action_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1),
+            nn.Sigmoid(),
+        )
+
+    def forward(self, state: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
+        """Compute trust score for state-action pair."""
+        combined = torch.cat([state, action], dim=-1)
+        return self.trust_net(combined)
+
+    def compute_trust_metrics(self) -> Dict[str, float]:
+        """Compute overall trust metrics."""
+        return {
+            "avg_trust": 0.8,  # Placeholder
+            "trust_variance": 0.1,
+            "interaction_count": 100,
+        }

@@ -48,39 +48,35 @@ This assignment explores the most advanced paradigms in deep reinforcement learn
 ```
 CA14/
 ├── CA14.ipynb                 # Main notebook with implementations
+├── CA14.md                    # Markdown export of the notebook
 ├── README.md                  # This documentation
-├── offline_rl/               # Offline RL implementations
+├── training_examples.py       # End-to-end training and visualization script
+├── environments/              # Simple grid-world envs
 │   ├── __init__.py
-│   ├── cql.py               # Conservative Q-Learning
-│   ├── iql.py               # Implicit Q-Learning
-│   ├── datasets.py          # Offline dataset handling
-│   └── evaluation.py        # Offline RL evaluation
-├── safe_rl/                  # Safe RL implementations
+│   └── grid_world.py
+├── offline_rl/                # Offline RL implementations
 │   ├── __init__.py
-│   ├── cpo.py               # Constrained Policy Optimization
-│   ├── lagrangian.py        # Lagrangian safe RL
-│   ├── environments.py      # Safe environments
-│   └── constraints.py       # Constraint definitions
-├── multi_agent/              # Multi-agent RL implementations
+│   ├── algorithms.py          # CQL, IQL
+│   ├── dataset.py             # Offline dataset handling
+│   └── utils.py               # Dataset generation utilities
+├── safe_rl/                   # Safe RL implementations
 │   ├── __init__.py
-│   ├── maddpg.py            # MADDPG implementation
-│   ├── qmix.py              # QMIX implementation
-│   ├── environments.py      # Multi-agent environments
-│   └── communication.py     # Communication protocols
-├── robust_rl/                # Robust RL implementations
+│   ├── agents.py              # CPO, Lagrangian methods
+│   └── environment.py         # Safe grid-world env
+├── multi_agent/               # Multi-agent RL implementations
 │   ├── __init__.py
-│   ├── domain_randomization.py
-│   ├── adversarial_training.py
-│   ├── uncertainty.py       # Uncertainty quantification
-│   └── environments.py      # Robust environments
-├── evaluation/               # Comprehensive evaluation
+│   ├── agents.py              # MADDPG, QMIX
+│   └── environment.py         # Multi-agent grid env
+├── robust_rl/                 # Robust RL implementations
 │   ├── __init__.py
-│   ├── metrics.py           # Evaluation metrics
-│   ├── framework.py         # Evaluation framework
-│   └── visualization.py     # Result visualization
-└── results/                  # Experiment results
-    ├── experiments/          # Saved experiment data
-    └── plots/               # Generated visualizations
+│   ├── agents.py              # Domain randomization, adversarial agents
+│   └── environment.py         # Robust env with uncertainty
+├── evaluation/                # Comprehensive evaluation
+│   ├── __init__.py
+│   └── advanced_evaluator.py  # Evaluation and scoring
+└── utils/
+    ├── __init__.py
+    └── evaluation_utils.py    # Evaluation helpers and environment factory
 ```
 
 ## Installation and Setup

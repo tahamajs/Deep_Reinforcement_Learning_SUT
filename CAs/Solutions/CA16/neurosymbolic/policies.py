@@ -181,12 +181,8 @@ class NeurosymbolicPolicy(nn.Module):
         # Symbolic reasoning
         symbolic_features = self.symbolic_reasoning(neural_features)
 
-        # Combine neural and symbolic features
-        attention_probs = F.softmax(self.attention_weights, dim=0)
-        combined_features = (
-            attention_probs[0] * neural_features
-            + attention_probs[1] * symbolic_features
-        )
+        # Concatenate features for combination
+        combined_features = torch.cat([neural_features, symbolic_features], dim=-1)
 
         # Policy and value outputs
         action_logits = self.policy_head(combined_features)
@@ -197,7 +193,6 @@ class NeurosymbolicPolicy(nn.Module):
             "neural_features": neural_features,
             "symbolic_features": symbolic_features,
             "attention_weights": attention_weights,
-            "attention_probs": attention_probs,
             "rule_weights": self.symbolic_reasoning.rule_weights,
         }
 

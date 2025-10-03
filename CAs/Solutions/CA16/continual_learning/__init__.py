@@ -23,7 +23,7 @@ from .experience_replay import (
     ContinualExperienceReplay,
 )
 
-from .meta_learning import MAML, Reptile, MetaLearner
+from .meta_learning import MAMLAgent as MAML, ReptileAgent as Reptile, MetaLearner
 
 from .dynamic_architectures import (
     DynamicNetwork,

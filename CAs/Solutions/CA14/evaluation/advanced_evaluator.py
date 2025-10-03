@@ -115,7 +115,9 @@ class ComprehensiveEvaluator:
                         else:
                             action = act_out
                     else:
-                        action = np.random.randint(getattr(safe_environment, "action_space", 4))
+                        action = np.random.randint(
+                            getattr(safe_environment, "action_space", 4)
+                        )
 
                     obs, reward, done, info = safe_environment.step(action)
                     total_steps += 1
@@ -149,8 +151,15 @@ class ComprehensiveEvaluator:
             score = 0.0
             if "cooperation_rate" in results and len(results["cooperation_rate"]) > 0:
                 vals = results["cooperation_rate"]
-                score = float(np.mean(vals[-50:])) if len(vals) >= 50 else float(np.mean(vals))
-            elif "coordination_rewards" in results and len(results["coordination_rewards"]) > 0:
+                score = (
+                    float(np.mean(vals[-50:]))
+                    if len(vals) >= 50
+                    else float(np.mean(vals))
+                )
+            elif (
+                "coordination_rewards" in results
+                and len(results["coordination_rewards"]) > 0
+            ):
                 individual_perf = results.get("individual_performance", 0.0)
                 coordinated_perf = (
                     float(np.mean(results["coordination_rewards"][-50:]))

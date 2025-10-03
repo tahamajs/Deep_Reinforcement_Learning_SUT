@@ -177,8 +177,7 @@ class ProgressiveNetwork(nn.Module):
             if current_column_idx > 0 and current_column_idx - 1 < len(self.lateral_connections):
                 trainable_params.extend(list(self.lateral_connections[current_column_idx - 1].parameters()))
             else:
-            # Train all parameters
-            trainable_params = list(self.parameters())
+                trainable_params = list(self.parameters())
         
         optimizer = optim.Adam(trainable_params, lr=lr)
         losses = []
