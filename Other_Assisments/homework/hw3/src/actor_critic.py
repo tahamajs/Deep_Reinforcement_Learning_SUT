@@ -9,6 +9,7 @@ Student ID: 400206262
 
 import numpy as np
 import tensorflow.compat.v1 as tf
+
 tf.disable_v2_behavior()
 import logging
 import sys
@@ -16,13 +17,15 @@ import sys
 # تنظیم logging برای debugging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('actor_critic_debug.log')
-    ]
+        logging.FileHandler("actor_critic_debug.log"),
+    ],
 )
 logger = logging.getLogger(__name__)
+
+
 def build_mlp(
     input_placeholder,
     output_size,
@@ -47,36 +50,42 @@ def build_mlp(
         Output tensor
     """
     with tf.variable_scope(scope):
-        logger.info(f"🔧 Building MLP: scope={scope}, input_shape={input_placeholder.shape}, "
-                   f"output_size={output_size}, n_layers={n_layers}, size={size}")
-        
+        logger.info(
+            f"🔧 Building MLP: scope={scope}, input_shape={input_placeholder.shape}, "
+            f"output_size={output_size}, n_layers={n_layers}, size={size}"
+        )
+
         out = input_placeholder
         glorot = tf.keras.initializers.GlorotUniform()
-        
+
         for i in range(n_layers):
             logger.debug(f"  📐 Layer {i}: input_shape={out.shape}, units={size}")
             dense_layer = tf.keras.layers.Dense(
                 units=size,
                 activation=activation,
                 kernel_initializer=glorot,
-                name=f"layer_{i}"
+                name=f"layer_{i}",
             )
             out = dense_layer(out)
             logger.debug(f"  ✅ Layer {i} output shape: {out.shape}")
-        
+
         logger.debug(f"  📐 Output layer: input_shape={out.shape}, units={output_size}")
         output_layer = tf.keras.layers.Dense(
             units=output_size,
             activation=output_activation,
             kernel_initializer=glorot,
-            name="output"
+            name="output",
         )
         out = output_layer(out)
         logger.info(f"✅ MLP built successfully: final_output_shape={out.shape}")
         return out
+
+
 def pathlength(path):
     """Get the length of a trajectory path."""
     return len(path["reward"])
+
+
 class ActorCriticAgent:
     """Actor-Critic agent with separate policy and value networks."""
 
@@ -126,13 +135,17 @@ class ActorCriticAgent:
         self.max_path_length = max_path_length
         self.min_timesteps_per_batch = min_timesteps_per_batch
         self.animate = animate
-        
+
         logger.info(f"🎯 ActorCriticAgent initialized:")
         logger.info(f"  📊 ob_dim={ob_dim}, ac_dim={ac_dim}, discrete={discrete}")
         logger.info(f"  🏗️  n_layers={n_layers}, size={size}")
         logger.info(f"  ⚙️  learning_rate={learning_rate}, gamma={gamma}")
-        logger.info(f"  🔄 target_updates={num_target_updates}, grad_steps={num_grad_steps_per_target_update}")
-        logger.info(f"  📏 max_path_length={max_path_length}, min_timesteps_per_batch={min_timesteps_per_batch}")
+        logger.info(
+            f"  🔄 target_updates={num_target_updates}, grad_steps={num_grad_steps_per_target_update}"
+        )
+        logger.info(
+            f"  📏 max_path_length={max_path_length}, min_timesteps_per_batch={min_timesteps_per_batch}"
+        )
 
     def init_tf_sess(self):
         """Initialize TensorFlow session."""
@@ -276,13 +289,14 @@ class ActorCriticAgent:
         ob = env.reset()
         obs, acs, rewards, next_obs, terminals = [], [], [], [], []
         steps = 0
-        
+
         logger.debug(f"🚀 Starting new trajectory (animate={animate_this_episode})")
 
         while True:
             if animate_this_episode:
                 env.render()
                 import time
+
                 time.sleep(0.1)
 
             obs.append(ob)
@@ -292,22 +306,24 @@ class ActorCriticAgent:
             else:
                 ac = ac[0]
             acs.append(ac)
-            
+
             logger.debug(f"  Step {steps}: obs_shape={np.array(ob).shape}, action={ac}")
 
             ob, rew, done, _ = env.step(ac)
             next_obs.append(ob)
             rewards.append(rew)
             terminals.append(1.0 if done else 0.0)
-            
+
             logger.debug(f"  Step {steps}: reward={rew:.3f}, done={done}")
 
             steps += 1
 
             if done or steps > self.max_path_length:
                 total_reward = sum(rewards)
-                logger.info(f"🏁 Trajectory completed: steps={steps}, total_reward={total_reward:.3f}, "
-                           f"avg_reward={total_reward/steps:.3f}")
+                logger.info(
+                    f"🏁 Trajectory completed: steps={steps}, total_reward={total_reward:.3f}, "
+                    f"avg_reward={total_reward/steps:.3f}"
+                )
                 break
 
         action_dtype = np.int32 if self.discrete else np.float32
@@ -340,17 +356,21 @@ class ActorCriticAgent:
 
     def update_critic(self, ob_no, next_ob_no, re_n, terminal_n):
         """Update critic network."""
-        logger.debug(f"🔄 Updating critic: {self.num_target_updates} target updates, "
-                    f"{self.num_grad_steps_per_target_update} grad steps each")
+        logger.debug(
+            f"🔄 Updating critic: {self.num_target_updates} target updates, "
+            f"{self.num_grad_steps_per_target_update} grad steps each"
+        )
 
         v_next = self.sess.run(
             self.critic_prediction, feed_dict={self.sy_ob_no: next_ob_no}
         )
         target_n = re_n + self.gamma * v_next * (1 - terminal_n)
-        
-        logger.debug(f"  📊 Critic stats: v_next_mean={np.mean(v_next):.3f}, "
-                    f"target_mean={np.mean(target_n):.3f}, rewards_mean={np.mean(re_n):.3f}")
-        
+
+        logger.debug(
+            f"  📊 Critic stats: v_next_mean={np.mean(v_next):.3f}, "
+            f"target_mean={np.mean(target_n):.3f}, rewards_mean={np.mean(re_n):.3f}"
+        )
+
         for update_idx in range(self.num_target_updates):
             for grad_idx in range(self.num_grad_steps_per_target_update):
                 loss_before = self.sess.run(
@@ -365,15 +385,19 @@ class ActorCriticAgent:
                     self.critic_loss,
                     feed_dict={self.sy_ob_no: ob_no, self.sy_target_n: target_n},
                 )
-                logger.debug(f"    Update {update_idx}-{grad_idx}: loss {loss_before:.6f} -> {loss_after:.6f}")
-        
+                logger.debug(
+                    f"    Update {update_idx}-{grad_idx}: loss {loss_before:.6f} -> {loss_after:.6f}"
+                )
+
         logger.info(f"✅ Critic update completed: final_loss={loss_after:.6f}")
 
     def update_actor(self, ob_no, ac_na, adv_n):
         """Update actor network."""
-        logger.debug(f"🎭 Updating actor: obs_shape={np.array(ob_no).shape}, "
-                    f"actions_shape={np.array(ac_na).shape}, adv_mean={np.mean(adv_n):.3f}")
-        
+        logger.debug(
+            f"🎭 Updating actor: obs_shape={np.array(ob_no).shape}, "
+            f"actions_shape={np.array(ac_na).shape}, adv_mean={np.mean(adv_n):.3f}"
+        )
+
         self.sess.run(
             self.actor_update_op,
             feed_dict={
@@ -382,6 +406,8 @@ class ActorCriticAgent:
                 self.sy_adv_n: adv_n,
             },
         )
-        
-        logger.info(f"✅ Actor update completed: adv_mean={np.mean(adv_n):.3f}, "
-                   f"adv_std={np.std(adv_n):.3f}")
+
+        logger.info(
+            f"✅ Actor update completed: adv_mean={np.mean(adv_n):.3f}, "
+            f"adv_std={np.std(adv_n):.3f}"
+        )

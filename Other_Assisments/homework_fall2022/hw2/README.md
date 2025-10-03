@@ -63,7 +63,41 @@ You will be running your policy gradients implementation in five experiments tot
   ```bash
   python cs285/scripts/run_hw2.py --env_name LunarLander-v2 --exp_name pg_test
   ```
-- Results are saved in `results/`.
+- Logs are stored inside `cs285/data/` by default.
+
+## One-click runner script
+
+You can automate setup and launch a sequence of policy-gradient experiments using the helper script:
+
+```bash
+chmod +x run_hw2.sh
+./run_hw2.sh
+```
+
+The script will create (or reuse) a virtual environment in `.venv/`, install dependencies from `requirements.txt`, register the package in editable mode, and then execute a suite of presets (vanilla PG, reward-to-go, baseline, and reward-to-go with baseline) on `LunarLander-v2`.
+
+Customize runs by overriding environment variables when invoking the script:
+
+- `ENV_NAME` – target Gym environment (e.g. `CartPole-v1`, `LunarLander-v2`, `Ant-v4`).
+- `PRESETS` – comma-separated list choosing among `vanilla`, `rtg`, `baseline`, `rtg_baseline`, `gae`, `no_std_adv`, or `custom`.
+- `GAE_LAMBDA` – lambda for the `gae` preset (defaults to `0.95`).
+- `N_ITER`, `BATCH_SIZE`, `LEARNING_RATE`, `NUM_AGENT_TRAIN_STEPS`, etc. – tune training hyperparameters.
+- `SKIP_INSTALL=1` – reuse an existing environment without reinstalling requirements.
+- `CUSTOM_FLAGS` – extra CLI flags appended to every run; required when using the `custom` preset.
+
+Examples:
+
+Run only reward-to-go with baseline for Hopper:
+
+```bash
+PRESETS=rtg_baseline ENV_NAME=Hopper-v4 ./run_hw2.sh
+```
+
+Evaluate a GAE sweep without reinstalling dependencies:
+
+```bash
+SKIP_INSTALL=1 PRESETS=gae ENV_NAME=HalfCheetah-v4 GAE_LAMBDA=0.97 ./run_hw2.sh
+```
 
 ## Key Files
 
