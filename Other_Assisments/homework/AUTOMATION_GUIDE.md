@@ -63,6 +63,24 @@ chmod +x run_all_hw4.sh
 
 **Note**: Requires MuJoCo installation (see [MuJoCo Setup](#mujoco-setup))
 
+### HW5: Exploration, SAC, and Meta-Learning
+
+```bash
+cd homework/hw5
+chmod +x run_all_hw5.sh
+./run_all_hw5.sh
+```
+
+**What it does**:
+- Trains Soft Actor-Critic on continuous control
+- Tests exploration methods with density models
+- Trains meta-learning agents for few-shot adaptation
+- Generates performance plots
+
+**Results**: `results_hw5/`
+
+**Note**: Some experiments benefit from MuJoCo but will run basic environments without it
+
 ## 🔧 Environment Setup
 
 ### Standard Dependencies
@@ -113,7 +131,7 @@ If MuJoCo is not installed, automation scripts will skip MuJoCo-dependent enviro
 Each homework creates an organized results directory:
 
 ```
-results_hw{2,3,4}/
+results_hw{2,3,4,5}/
 ├── logs/                    # Training logs and raw data
 │   ├── {experiment_name}/
 │   │   ├── log.txt         # Training metrics
@@ -227,6 +245,24 @@ python main.py q3 --exp_name custom \
     --num_random_action_selection 4096 \
     --mpc_horizon 20 \
     --nn_layers 2
+```
+
+### HW5: Exploration, SAC, and Meta-Learning
+
+```bash
+cd homework/hw5
+
+# SAC on Pendulum
+python run_hw5.py sac --env_name Pendulum-v0 --total_steps 50000
+
+# SAC on HalfCheetah (requires MuJoCo)
+python run_hw5.py sac --env_name HalfCheetah-v2 --total_steps 100000
+
+# Exploration on MountainCar
+python run_hw5.py exploration --env_name MountainCar-v0 --bonus_coeff 0.1
+
+# Meta-learning on CartPole
+python run_hw5.py meta --env_name CartPole-v0 --num_tasks 20 --meta_steps 100
 ```
 
 ## 📈 Plotting Results

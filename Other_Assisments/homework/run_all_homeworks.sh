@@ -1,7 +1,36 @@
 #!/bin/bash
 
 # ======================================================================================
-# Master Automation Script for Deep RL Homework Assignments
+# Master Automatio    cd "$SCRIPT_DIR"
+    echo ""
+    echo "✅ HW4 Phase Complete"
+    echo ""
+fi
+
+# ======================================================================================
+# HW5: Exploration, SAC, and Meta-Learning
+# ======================================================================================
+if [ "$RUN_HW5" = true ]; then
+    echo ""
+    echo "╔════════════════════════════════════════════════════════════════════════════╗"
+    echo "║  HW5: Exploration, SAC, and Meta-Learning                                  ║"
+    echo "╚════════════════════════════════════════════════════════════════════════════╝"
+    echo ""
+    
+    cd "$SCRIPT_DIR/hw5"
+    
+    if [ -f "run_all_hw5.sh" ]; then
+        chmod +x run_all_hw5.sh
+        ./run_all_hw5.sh || echo "⚠️  HW5 completed with warnings"
+    else
+        echo "❌ run_all_hw5.sh not found in hw5/"
+    fi
+    
+    cd "$SCRIPT_DIR"
+    echo ""
+    echo "✅ HW5 Phase Complete"
+    echo ""
+fiipt for Deep RL Homework Assignments
 #
 # Author: GitHub Copilot
 # Date: October 3, 2025
@@ -26,6 +55,7 @@ SKIP_MUJOCO=false
 RUN_HW2=true
 RUN_HW3=true
 RUN_HW4=true
+RUN_HW5=true
 
 # Parse arguments
 for arg in "$@"; do
@@ -47,10 +77,17 @@ for arg in "$@"; do
             RUN_HW2=false
             RUN_HW3=false
             RUN_HW4=true
+            RUN_HW5=false
+            ;;
+        --hw5-only)
+            RUN_HW2=false
+            RUN_HW3=false
+            RUN_HW4=false
+            RUN_HW5=true
             ;;
         *)
             echo "Unknown option: $arg"
-            echo "Usage: $0 [--skip-mujoco] [--hw2-only] [--hw3-only] [--hw4-only]"
+            echo "Usage: $0 [--skip-mujoco] [--hw2-only] [--hw3-only] [--hw4-only] [--hw5-only]"
             exit 1
             ;;
     esac
@@ -66,6 +103,7 @@ echo "Configuration:"
 echo "  Run HW2: $RUN_HW2"
 echo "  Run HW3: $RUN_HW3"
 echo "  Run HW4: $RUN_HW4"
+echo "  Run HW5: $RUN_HW5"
 echo "  Skip MuJoCo: $SKIP_MUJOCO"
 echo ""
 
@@ -227,6 +265,17 @@ if [ "$RUN_HW4" = true ] && [ "$MUJOCO_AVAILABLE" = true ]; then
     echo ""
 fi
 
+if [ "$RUN_HW5" = true ]; then
+    echo "📂 HW5: Exploration, SAC, Meta-Learning"
+    if [ -d "$SCRIPT_DIR/hw5/results_hw5" ]; then
+        echo "   ├─ Logs:   hw5/results_hw5/logs/"
+        echo "   └─ Plots:  hw5/results_hw5/plots/"
+    else
+        echo "   └─ No results directory found"
+    fi
+    echo ""
+fi
+
 echo "═══════════════════════════════════════════════════════════════════════════════"
 echo "Quick View Commands"
 echo "═══════════════════════════════════════════════════════════════════════════════"
@@ -248,6 +297,11 @@ if [ "$RUN_HW4" = true ] && [ "$MUJOCO_AVAILABLE" = true ]; then
     echo "  open hw4/results_hw4/plots/*.jpg"
     echo ""
 fi
+if [ "$RUN_HW5" = true ]; then
+    echo "View HW5 plots:"
+    echo "  open hw5/results_hw5/plots/*.png"
+    echo ""
+fi
 
 echo "═══════════════════════════════════════════════════════════════════════════════"
 echo "Documentation"
@@ -260,5 +314,6 @@ echo "To re-run individual homeworks:"
 echo "  cd hw2 && ./run_all_hw2.sh"
 echo "  cd hw3 && ./run_all_hw3.sh"
 echo "  cd hw4 && ./run_all_hw4.sh"
+echo "  cd hw5 && ./run_all_hw5.sh"
 echo ""
 echo "═══════════════════════════════════════════════════════════════════════════════"
