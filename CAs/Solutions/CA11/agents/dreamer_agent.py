@@ -201,7 +201,7 @@ class DreamerAgent:
         # Detach states to avoid gradients flowing into the world model/actor graph
         values_pred = self.critic(states.detach())
         critic_loss = F.mse_loss(values_pred, returns)
-    critic_loss.backward(retain_graph=False)
+        critic_loss.backward(retain_graph=False)
         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 10.0)
         self.critic_optimizer.step()
 

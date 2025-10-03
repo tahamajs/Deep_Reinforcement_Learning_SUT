@@ -22,19 +22,19 @@ class PolicyNetwork(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, action_dim),
-            nn.Softmax(dim=-1),
         )
 
     def forward(self, state):
-        return self.network(state)
+        logits = self.network(state)
+        return logits
 
     def get_action_and_log_prob(self, state):
         """Get action and its log probability"""
         if not isinstance(state, torch.Tensor):
             state = torch.FloatTensor(state).unsqueeze(0).to(device)
 
-        action_probs = self.forward(state)
-        action_dist = Categorical(action_probs)
+        logits = self.forward(state)
+        action_dist = Categorical(logits=logits)
         action = action_dist.sample()
         log_prob = action_dist.log_prob(action)
 
@@ -157,8 +157,8 @@ class REINFORCEAgent:
             for _ in range(1000):
                 with torch.no_grad():
                     state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
-                    action_probs = self.policy_network(state_tensor)
-                    action = torch.argmax(action_probs, dim=1).item()
+                    logits = self.policy_network(state_tensor)
+                    action = torch.argmax(logits, dim=1).item()
 
                 next_state, reward, terminated, truncated, _ = env.step(action)
                 done = terminated or truncated

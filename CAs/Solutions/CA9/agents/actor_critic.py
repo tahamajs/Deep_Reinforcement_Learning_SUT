@@ -22,15 +22,15 @@ class ActorNetwork(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, action_dim),
-            nn.Softmax(dim=-1),
         )
 
     def forward(self, state):
-        return self.network(state)
+        logits = self.network(state)
+        return logits
 
     def get_action_and_log_prob(self, state):
-        action_probs = self.forward(state)
-        action_dist = Categorical(action_probs)
+        logits = self.forward(state)
+        action_dist = Categorical(logits=logits)
         action = action_dist.sample()
         log_prob = action_dist.log_prob(action)
         entropy = action_dist.entropy()
@@ -111,7 +111,7 @@ class ActorCriticAgent:
 
         # Calculate td_error outside of no_grad for tracking
         td_error = td_target - current_value.item()
-        
+
         # Critic loss: detach td_target since it shouldn't propagate gradients
         td_target_tensor = torch.tensor(td_target, device=device, dtype=torch.float32)
         critic_loss = F.mse_loss(current_value, td_target_tensor)
@@ -289,7 +289,7 @@ class A2CAgent(ActorCriticAgent):
                 advantages_tensor.std() + 1e-8
             )
 
-        values_pred = self.critic(states_tensor)
+        values_pred = self.critic(states_tensor).squeeze()
         critic_loss = F.mse_loss(values_pred, returns_tensor)
 
         self.critic_optimizer.zero_grad()
@@ -311,7 +311,11 @@ class A2CAgent(ActorCriticAgent):
         self.critic_losses.append(critic_loss.item())
         self.td_errors.extend(advantages)
         self.entropies.extend([e.item() for e in entropies_tensor])
-        self.value_estimates.extend([v.item() for v in values_pred])
+        # Handle both scalar and tensor cases
+        if values_pred.dim() == 0:
+            self.value_estimates.append(values_pred.item())
+        else:
+            self.value_estimates.extend(values_pred.tolist())
 
         self.clear_storage()
 

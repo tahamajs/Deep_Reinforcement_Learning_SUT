@@ -168,8 +168,8 @@ class PPOAgent:
                 batch_returns = returns[batch_idx]
                 batch_old_log_probs = old_log_probs[batch_idx]
 
-                action_probs = self.actor(batch_states)
-                dist = Categorical(action_probs)
+                logits = self.actor(batch_states)
+                dist = Categorical(logits=logits)
                 new_log_probs = dist.log_prob(batch_actions)
                 entropy = dist.entropy().mean()
 
