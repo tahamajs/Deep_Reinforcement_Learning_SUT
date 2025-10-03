@@ -17,7 +17,11 @@ A['EpRewMean']
 
 import os.path as osp, shutil, time, atexit, os, subprocess
 import pickle
-import tensorflow as tf
+try:  # Prefer TF v1 compatibility when available
+    import tensorflow.compat.v1 as tf  # type: ignore
+    tf.disable_v2_behavior()
+except ImportError:  # pragma: no cover - fallback for legacy TF1 installs
+    import tensorflow as tf  # type: ignore
 
 color2num = dict(
     gray=30,
@@ -73,14 +77,28 @@ def save_params(params):
     with open(osp.join(G.output_dir, "params.json"), 'w') as out:
         out.write(json.dumps(params, separators=(',\n','\t:\t'), sort_keys=True))
 
-def pickle_tf_vars():
+def pickle_tf_vars(sess=None):
+    """Persist TensorFlow variables to disk.
+
+    Args:
+        sess: Optional TensorFlow session. If omitted, the current default
+              session will be used.
     """
-    Saves tensorflow variables
-    Requires them to be initialized first, also a default session must exist
-    """
-    _dict = {v.name : v.eval() for v in tf.global_variables()}
+    active_sess = sess or tf.get_default_session()
+    if active_sess is None:
+        raise RuntimeError(
+            "No active TensorFlow session available for pickle_tf_vars. "
+            "Pass the agent's session explicitly."
+        )
+
+    variables = tf.global_variables()
+    if not variables:
+        return
+
+    values = active_sess.run(variables)
+    var_dict = {var.name: value for var, value in zip(variables, values)}
     with open(osp.join(G.output_dir, "vars.pkl"), 'wb') as f:
-        pickle.dump(_dict, f)
+        pickle.dump(var_dict, f)
 def dump_tabular():
     """
     Write all of the diagnostics from the current iteration

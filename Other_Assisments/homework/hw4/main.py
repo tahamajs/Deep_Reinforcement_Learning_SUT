@@ -1,13 +1,20 @@
 import os
 import argparse
 import time
+try:
+    import tensorflow.compat.v1 as tf  # type: ignore
+    tf.disable_v2_behavior()
+except ImportError:
+    import tensorflow as tf  # type: ignore
 
 from half_cheetah_env import HalfCheetahEnv
 from logger import logger
 from model_based_rl import ModelBasedRL
 
+MUJOCO_ENVS = {'HalfCheetah', 'InvertedPendulum', 'Hopper', 'Walker2d', 'Ant', 'Humanoid'}
+
 parser = argparse.ArgumentParser()
-parser.add_argument('question', type=str, choices=('q1, q2, q3'))
+parser.add_argument('question', type=str, choices=('q1', 'q2', 'q3'))
 parser.add_argument('--exp_name', type=str, default=None)
 parser.add_argument('--env', type=str, default='HalfCheetah', choices=('HalfCheetah',))
 parser.add_argument('--render', action='store_true')
@@ -15,6 +22,16 @@ parser.add_argument('--mpc_horizon', type=int, default=15)
 parser.add_argument('--num_random_action_selection', type=int, default=4096)
 parser.add_argument('--nn_layers', type=int, default=1)
 args = parser.parse_args()
+
+# Check for MuJoCo dependency
+if args.env in MUJOCO_ENVS:
+    try:
+        import mujoco_py
+    except ImportError:
+        print("🚫 MuJoCo environment requested but mujoco-py is not installed.")
+        print("   Install mujoco-py and GCC 6/7 (brew install gcc --without-multilib) to enable.")
+        print("   Exiting.")
+        exit(1)
 
 data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
 exp_name = '{0}_{1}_{2}'.format(args.env,

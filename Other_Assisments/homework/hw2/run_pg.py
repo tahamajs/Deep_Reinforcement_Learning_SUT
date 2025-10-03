@@ -123,10 +123,10 @@ def main():
             logz.log_tabular("TimestepsThisBatch", timesteps_this_batch)
             logz.log_tabular("TimestepsSoFar", total_timesteps)
             logz.dump_tabular()
-        
+
         # Save trained model variables
-        logz.pickle_tf_vars()
-        
+        logz.pickle_tf_vars(agent.sess)
+
         # Record "after" video (trained policy)
         if args.record_video:
             print("\n📹 Recording AFTER training video...")

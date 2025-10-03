@@ -8,7 +8,11 @@ Student ID: 400206262
 """
 
 import numpy as np
-import tensorflow as tf
+try:
+    import tensorflow.compat.v1 as tf  # type: ignore
+    tf.disable_v2_behavior()
+except ImportError:
+    import tensorflow as tf  # type: ignore
 from collections import namedtuple
 class Dataset:
     """Dataset for storing transition tuples."""
@@ -238,8 +242,13 @@ class ModelBasedRLAgent:
 
     def init_tf_sess(self):
         """Initialize TensorFlow session."""
-        self.sess = tf.Session()
-        self.sess.run(tf.global_variables_initializer())
+        tf_config = tf.ConfigProto(
+            inter_op_parallelism_threads=1, intra_op_parallelism_threads=1
+        )
+        tf_config.gpu_options.allow_growth = True
+        self.sess = tf.Session(config=tf_config)
+        self.sess.__enter__()
+        tf.global_variables_initializer().run()
 
     def gather_rollouts(self, policy, num_rollouts, render=False):
         """Gather rollouts using a policy.

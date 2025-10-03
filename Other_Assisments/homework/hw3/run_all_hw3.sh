@@ -22,6 +22,7 @@
 # ======================================================================================
 
 set -e
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "🚀 Starting Comprehensive Training for HW3: DQN & Actor-Critic 🚀"
 
 # --- Configuration ---
@@ -70,6 +71,22 @@ AC_ENVS=("CartPole-v0" "InvertedPendulum-v2")
 AC_N_ITER=100
 AC_BATCH_SIZE=1000
 AC_LR=0.005
+MUJOCO_ENVS=(
+    "InvertedPendulum-v1"
+    "InvertedPendulum-v2"
+    "HalfCheetah-v1"
+    "HalfCheetah-v2"
+    "Hopper-v1"
+    "Hopper-v2"
+    "Walker2d-v1"
+    "Walker2d-v2"
+    "Ant-v1"
+    "Ant-v2"
+    "Humanoid-v1"
+    "Humanoid-v2"
+)
+
+log_dir_base="$SCRIPT_DIR/data"
 
 for env_name in "${AC_ENVS[@]}"; do
     echo "--------------------------------------------------"
@@ -86,7 +103,13 @@ for env_name in "${AC_ENVS[@]}"; do
     fi
     
     exp_name="ac_${env_name}"
-    log_dir_base="data_hw3"
+
+    if printf '%s
+' "${MUJOCO_ENVS[@]}" | grep -qx "$env_name"; then
+        echo "🚫 Skipping $env_name — requires MuJoCo (mujoco-py) and GCC 6/7."
+        echo "   Install deps (e.g., brew install gcc --without-multilib) to enable this run."
+        continue
+    fi
     
     echo "▶️  Running Actor-Critic..."
     echo "   Command: python run_ac.py $env_name --exp_name $exp_name -n $AC_N_ITER -b $AC_BATCH_SIZE -lr $AC_LR"
@@ -107,8 +130,8 @@ for env_name in "${AC_ENVS[@]}"; do
 done
 
 # Clean up base log directory
-if [ -d "data_hw3" ] && [ -z "$(ls -A data_hw3 2>/dev/null)" ]; then
-    rmdir "data_hw3" 2>/dev/null || true
+if [ -d "$log_dir_base" ] && [ -z "$(ls -A "$log_dir_base" 2>/dev/null)" ]; then
+    rmdir "$log_dir_base" 2>/dev/null || true
 fi
 
 echo "✅ Actor-Critic training completed!"

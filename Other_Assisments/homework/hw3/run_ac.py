@@ -19,10 +19,24 @@ import numpy as np
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 import logz
-import multiprocessing as mp
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 from src.actor_critic import ActorCriticAgent
+
+MUJOCO_ENVS = {
+    "InvertedPendulum-v1",
+    "InvertedPendulum-v2",
+    "HalfCheetah-v1",
+    "HalfCheetah-v2",
+    "Hopper-v1",
+    "Hopper-v2",
+    "Walker2d-v1",
+    "Walker2d-v2",
+    "Ant-v1",
+    "Ant-v2",
+    "Humanoid-v1",
+    "Humanoid-v2",
+}
 def train_AC(
     exp_name,
     env_name,
@@ -63,6 +77,12 @@ def train_AC(
     logz.save_params(args)
     tf.set_random_seed(seed)
     np.random.seed(seed)
+    if env_name in MUJOCO_ENVS:
+        raise RuntimeError(
+            f"Environment '{env_name}' requires MuJoCo (mujoco-py) and a GCC 6/7 toolchain. "
+            "Install dependencies (e.g., brew install gcc --without-multilib) before running."
+        )
+
     env = gym.make(env_name)
     env.seed(seed)
     max_path_length = max_path_length or env.spec.max_episode_steps
@@ -92,7 +112,19 @@ def train_AC(
     }
 
     agent = ActorCriticAgent(
-        computation_graph_args, sample_trajectory_args, estimate_advantage_args
+        ob_dim=ob_dim,
+        ac_dim=ac_dim,
+        discrete=discrete,
+        n_layers=n_layers,
+        size=size,
+        learning_rate=learning_rate,
+        num_target_updates=num_target_updates,
+        num_grad_steps_per_target_update=num_grad_steps_per_target_update,
+        gamma=gamma,
+        normalize_advantages=normalize_advantages,
+        max_path_length=max_path_length,
+        min_timesteps_per_batch=min_timesteps_per_batch,
+        animate=animate,
     )
     agent.build_computation_graph()
     agent.init_tf_sess()
@@ -122,7 +154,7 @@ def train_AC(
         logz.log_tabular("TimestepsThisBatch", timesteps_this_batch)
         logz.log_tabular("TimestepsSoFar", total_timesteps)
         logz.dump_tabular()
-        logz.pickle_tf_vars()
+        logz.pickle_tf_vars(agent.sess)
 def main():
     """Main function."""
     parser = argparse.ArgumentParser()
@@ -152,37 +184,44 @@ def main():
 
     max_path_length = args.ep_len if args.ep_len > 0 else None
 
-    processes = []
-
     for e in range(args.n_experiments):
         seed = args.seed + 10 * e
+
+        if args.env_name in MUJOCO_ENVS:
+            print(
+                "🚫 MuJoCo environment requested. Install mujoco-py and GCC 6/7 (brew install gcc --without-multilib) to enable. Skipping run."
+            )
+            continue
+
         print("Running experiment with seed %d" % seed)
 
-        def train_func():
-            train_AC(
-                exp_name=args.exp_name,
-                env_name=args.env_name,
-                n_iter=args.n_iter,
-                gamma=args.discount,
-                min_timesteps_per_batch=args.batch_size,
-                max_path_length=max_path_length,
-                learning_rate=args.learning_rate,
-                num_target_updates=args.num_target_updates,
-                num_grad_steps_per_target_update=args.num_grad_steps_per_target_update,
-                animate=args.render,
-                logdir=os.path.join(
-                    data_path,
-                    f'ac_{args.exp_name}_{args.env_name}_{time.strftime("%d-%m-%Y_%H-%M-%S")}_{seed}',
-                ),
-                normalize_advantages=not (args.dont_normalize_advantages),
-                seed=seed,
-                n_layers=args.n_layers,
-                size=args.size,
-            )
-        p = mp.Process(target=train_func, args=tuple())
-        p.start()
-        processes.append(p)
-    for p in processes:
-        p.join()
+        logdir = (
+            args.exp_name
+            + "_"
+            + args.env_name
+            + "_"
+            + time.strftime("%d-%m-%Y_%H-%M-%S")
+        )
+        logdir = os.path.join(data_path, logdir)
+
+        # Call train_AC directly instead of using multiprocessing
+        train_AC(
+            exp_name=args.exp_name,
+            env_name=args.env_name,
+            n_iter=args.n_iter,
+            gamma=args.discount,
+            min_timesteps_per_batch=args.batch_size,
+            max_path_length=max_path_length,
+            learning_rate=args.learning_rate,
+            num_target_updates=args.num_target_updates,
+            num_grad_steps_per_target_update=args.num_grad_steps_per_target_update,
+            animate=args.render,
+            logdir=logdir,
+            normalize_advantages=not (args.dont_normalize_advantages),
+            seed=seed,
+            n_layers=args.n_layers,
+            size=args.size,
+        )
+
 if __name__ == "__main__":
     main()

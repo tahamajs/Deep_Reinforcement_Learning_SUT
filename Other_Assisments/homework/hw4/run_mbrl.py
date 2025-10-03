@@ -15,12 +15,29 @@ import os
 import sys
 import time
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
+try:
+    import tensorflow.compat.v1 as tf  # type: ignore
+    tf.disable_v2_behavior()
+except ImportError:
+    import tensorflow as tf  # type: ignore
+
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 from model_based_rl import ModelBasedRLAgent, RandomPolicy
 from half_cheetah_env import HalfCheetahEnv
 from logger import logger
+
+MUJOCO_ENVS = {
+    "HalfCheetah",
+    "InvertedPendulum",
+    "Hopper",
+    "Walker2d",
+    "Ant",
+    "Humanoid",
+}
 def create_experiment_dir(exp_name):
     """Create experiment directory and setup logging."""
     data_dir = os.path.join(os.path.dirname(__file__), "data")
@@ -243,6 +260,17 @@ def main():
     )
 
     args = parser.parse_args()
+    
+    # Check for MuJoCo dependency
+    if args.env in MUJOCO_ENVS:
+        try:
+            import mujoco_py
+        except ImportError:
+            print("🚫 MuJoCo environment requested but mujoco-py is not installed.")
+            print("   Install mujoco-py and GCC 6/7 (brew install gcc --without-multilib) to enable.")
+            print("   Skipping run.")
+            return
+    
     if args.exp_name is None:
         timestamp = time.strftime("%d-%m-%Y_%H-%M-%S")
         args.exp_name = f"{args.env}_{args.question}_{timestamp}"

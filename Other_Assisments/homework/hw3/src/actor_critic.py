@@ -257,7 +257,10 @@ class ActorCriticAgent:
 
             obs.append(ob)
             ac = self.sess.run(self.sy_sampled_ac, feed_dict={self.sy_ob_no: [ob]})
-            ac = ac[0] if not self.discrete else ac
+            if self.discrete:
+                ac = int(np.asarray(ac).reshape(-1)[0])
+            else:
+                ac = ac[0]
             acs.append(ac)
 
             ob, rew, done, _ = env.step(ac)
@@ -270,10 +273,11 @@ class ActorCriticAgent:
             if done or steps > self.max_path_length:
                 break
 
+        action_dtype = np.int32 if self.discrete else np.float32
         path = {
             "observation": np.array(obs, dtype=np.float32),
             "reward": np.array(rewards, dtype=np.float32),
-            "action": np.array(acs, dtype=np.float32),
+            "action": np.array(acs, dtype=action_dtype),
             "next_observation": np.array(next_obs, dtype=np.float32),
             "terminal": np.array(terminals, dtype=np.float32),
         }

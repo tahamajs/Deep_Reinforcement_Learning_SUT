@@ -74,14 +74,23 @@ def save_params(params):
     with open(osp.join(G.output_dir, "params.json"), 'w') as out:
         out.write(json.dumps(params, separators=(',\n','\t:\t'), sort_keys=True))
 
-def pickle_tf_vars():
-    """
-    Saves tensorflow variables
-    Requires them to be initialized first, also a default session must exist
-    """
-    _dict = {v.name : v.eval() for v in tf.global_variables()}
+def pickle_tf_vars(sess=None):
+    """Persist TensorFlow variables to disk."""
+    active_sess = sess or tf.get_default_session()
+    if active_sess is None:
+        raise RuntimeError(
+            "No active TensorFlow session available for pickle_tf_vars. "
+            "Pass the agent's session explicitly."
+        )
+
+    variables = tf.global_variables()
+    if not variables:
+        return
+
+    values = active_sess.run(variables)
+    var_dict = {var.name: value for var, value in zip(variables, values)}
     with open(osp.join(G.output_dir, "vars.pkl"), 'wb') as f:
-        pickle.dump(_dict, f)
+        pickle.dump(var_dict, f)
 def dump_tabular():
     """
     Write all of the diagnostics from the current iteration
