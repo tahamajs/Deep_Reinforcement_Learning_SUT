@@ -1,34 +1,50 @@
-"""Model-Free Reinforcement Learning Agents."""
-
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
+import torch.nn.functional as F
 import numpy as np
-from abc import ABC, abstractmethod
+import random
+from collections import deque
 
 
-class ModelFreeAgent(ABC):
-    """Base class for model-free RL agents."""
+class ModelFreeAgent:
+    """Base class for model-free RL agents"""
 
-    def __init__(self, state_dim, action_dim, lr=1e-3):
+    def __init__(self, state_dim, action_dim, learning_rate=1e-3, gamma=0.99):
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.lr = lr
+        self.learning_rate = learning_rate
+        self.gamma = gamma
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    @abstractmethod
-    def get_best_action(self, state):
-        """Get best action according to current policy."""
-        pass
+    def act(self, state, epsilon=0.1):
+        """Select action using epsilon-greedy policy"""
+        raise NotImplementedError
 
-    @abstractmethod
-    def update(self, batch):
-        """Update agent from batch of experiences."""
-        pass
+    def update(self, batch_size=32):
+        """Update agent parameters"""
+        raise NotImplementedError
+
+
+class DQNNetwork(nn.Module):
+    """Deep Q-Network architecture"""
+
+    def __init__(self, state_dim, action_dim, hidden_dim=128):
+        super(DQNNetwork, self).__init__()
+        self.network = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, action_dim),
+        )
+
+    def forward(self, state):
+        return self.network(state)
 
 
 class DQNAgent(ModelFreeAgent):
-    """Deep Q-Network agent (model-free)."""
+    """Deep Q-Network agent with experience replay and target network"""
 
     def __init__(
         self,
@@ -40,120 +56,173 @@ class DQNAgent(ModelFreeAgent):
         epsilon_start=1.0,
         epsilon_end=0.01,
         epsilon_decay=500,
+        buffer_size=10000,
+        target_update_freq=100,
     ):
-        super().__init__(state_dim, action_dim, learning_rate)
-        self.gamma = gamma
-        self.hidden_dim = hidden_dim
+        super().__init__(state_dim, action_dim, learning_rate, gamma)
 
-        # Epsilon-greedy parameters
         self.epsilon_start = epsilon_start
         self.epsilon_end = epsilon_end
         self.epsilon_decay = epsilon_decay
+        self.target_update_freq = target_update_freq
+
+        # Networks
+        self.q_network = DQNNetwork(state_dim, action_dim, hidden_dim).to(self.device)
+        self.target_network = DQNNetwork(state_dim, action_dim, hidden_dim).to(
+            self.device
+        )
+        self.optimizer = optim.Adam(self.q_network.parameters(), lr=learning_rate)
+
+        # Experience replay buffer
+        self.replay_buffer = ReplayBuffer(buffer_size)
+
+        # Training statistics
+        self.training_step = 0
         self.epsilon = epsilon_start
-        self.steps_done = 0
-
-        # Q-Network
-        self.network = nn.Sequential(
-            nn.Linear(state_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, action_dim),
-        )
-        self.q_network = self.network  # Alias for compatibility
-
-        # Target Network
-        self.target_network = nn.Sequential(
-            nn.Linear(state_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, action_dim),
-        )
-        self.target_network.load_state_dict(self.network.state_dict())
-
-        self.optimizer = optim.Adam(self.network.parameters(), lr=learning_rate)
-
-        self.update_count = 0
-        self.losses = []
-
-        # Initialize replay buffer (will be set externally if needed)
-        try:
-            from ..buffers.replay_buffer import ReplayBuffer
-        except ImportError:
-            from buffers.replay_buffer import ReplayBuffer
-        self.replay_buffer = ReplayBuffer(capacity=10000)
 
     def act(self, state, epsilon=None):
-        """Select action using epsilon-greedy policy."""
+        """Select action using epsilon-greedy policy"""
         if epsilon is None:
-            # Use decaying epsilon
-            self.epsilon = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * \
-                          np.exp(-1.0 * self.steps_done / self.epsilon_decay)
-            self.steps_done += 1
             epsilon = self.epsilon
 
-        if np.random.random() < epsilon:
-            return np.random.randint(self.action_dim)
+        if random.random() < epsilon:
+            return random.randint(0, self.action_dim - 1)
 
-        return self.get_best_action(state)
-
-    def get_best_action(self, state):
-        """Get action with highest Q-value."""
         with torch.no_grad():
-            state_tensor = torch.FloatTensor(state).unsqueeze(0)
-            q_values = self.network(state_tensor)
+            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+            q_values = self.q_network(state_tensor)
             return q_values.argmax().item()
 
     def update(self, batch_size=32):
-        """Update Q-network using DQN loss."""
+        """Update Q-network using experience replay"""
         if len(self.replay_buffer) < batch_size:
-            return None
+            return
 
         batch = self.replay_buffer.sample(batch_size)
-        if batch is None:
-            return None
+        states = torch.FloatTensor(batch["states"]).to(self.device)
+        actions = torch.LongTensor(batch["actions"]).to(self.device)
+        rewards = torch.FloatTensor(batch["rewards"]).to(self.device)
+        next_states = torch.FloatTensor(batch["next_states"]).to(self.device)
+        dones = torch.BoolTensor(batch["dones"]).to(self.device)
 
-        states, actions, rewards, next_states, dones = batch
+        # Current Q values
+        current_q_values = self.q_network(states).gather(1, actions.unsqueeze(1))
 
-        states = torch.FloatTensor(states)
-        actions = torch.LongTensor(actions)
-        rewards = torch.FloatTensor(rewards)
-        next_states = torch.FloatTensor(next_states)
-        dones = torch.BoolTensor(dones)
-
-        current_q = self.network(states).gather(1, actions.unsqueeze(1))
-
+        # Target Q values
         with torch.no_grad():
-            next_q = self.target_network(next_states).max(1)[0]
-            target_q = rewards + (self.gamma * next_q * (~dones))
+            next_q_values = self.target_network(next_states).max(1)[0]
+            target_q_values = rewards + (self.gamma * next_q_values * ~dones)
 
-        loss = F.mse_loss(current_q.squeeze(), target_q)
+        # Compute loss
+        loss = F.mse_loss(current_q_values.squeeze(), target_q_values)
 
+        # Optimize
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=1.0)
         self.optimizer.step()
 
-        self.losses.append(loss.item())
-        self.update_count += 1
+        # Update epsilon
+        self.epsilon = max(
+            self.epsilon_end,
+            self.epsilon_start
+            - (self.epsilon_start - self.epsilon_end)
+            * self.training_step
+            / self.epsilon_decay,
+        )
 
-        if self.update_count % 100 == 0:
-            self.target_network.load_state_dict(self.network.state_dict())
+        # Update target network
+        if self.training_step % self.target_update_freq == 0:
+            self.target_network.load_state_dict(self.q_network.state_dict())
+
+        self.training_step += 1
 
         return loss.item()
     
-    # Alias methods for compatibility with training functions
-    def select_action(self, state, training=True):
-        """Alias for act() method."""
-        return self.act(state)
+
+class ReplayBuffer:
+    """Experience replay buffer for DQN"""
+
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.buffer = deque(maxlen=capacity)
+
+    def push(self, state, action, reward, next_state, done):
+        """Add experience to buffer"""
+        self.buffer.append((state, action, reward, next_state, done))
+
+    def sample(self, batch_size):
+        """Sample batch of experiences"""
+        batch = random.sample(self.buffer, batch_size)
+
+        states = np.array([e[0] for e in batch])
+        actions = np.array([e[1] for e in batch])
+        rewards = np.array([e[2] for e in batch])
+        next_states = np.array([e[3] for e in batch])
+        dones = np.array([e[4] for e in batch])
+
+        return {
+            "states": states,
+            "actions": actions,
+            "rewards": rewards,
+            "next_states": next_states,
+            "dones": dones,
+        }
+
+    def __len__(self):
+        return len(self.buffer)
+
+
+class MultiAgentDQN:
+    """Independent DQN agents with optional communication"""
     
-    def store_transition(self, state, action, reward, next_state, done):
-        """Store transition in replay buffer."""
-        self.replay_buffer.push(state, action, reward, next_state, done)
+    def __init__(self, n_agents, state_dim, action_dim, hidden_dim=64, 
+                 lr=1e-3, enable_communication=False):
+        self.n_agents = n_agents
+        self.agents = []
+        
+        for i in range(n_agents):
+            agent = DQNAgent(
+                state_dim=state_dim,
+                action_dim=action_dim,
+                hidden_dim=hidden_dim,
+                learning_rate=lr
+            )
+            self.agents.append(agent)
+            
+        self.enable_communication = enable_communication
+        if enable_communication:
+            # Communication network
+            self.comm_net = nn.Sequential(
+                nn.Linear(state_dim * n_agents, hidden_dim),
+                nn.ReLU(),
+                nn.Linear(hidden_dim, n_agents * 8),  # 8-dim message per agent
+                nn.Tanh()
+            )
+            self.comm_optimizer = optim.Adam(self.comm_net.parameters(), lr=lr)
     
-    def train_step(self):
-        """Alias for update() method - train on a batch."""
-        if len(self.replay_buffer) < 32:
-            return None
-        return self.update(batch_size=32)
+    def act(self, observations, epsilon=0.1):
+        """Select actions for all agents"""
+        actions = []
+        
+        if self.enable_communication:
+            # Generate communication messages
+            all_obs = torch.cat([torch.FloatTensor(obs) for obs in observations])
+            with torch.no_grad():  # No gradients needed for inference
+                messages = self.comm_net(all_obs).reshape(self.n_agents, -1)
+        
+        for i, obs in enumerate(observations):
+            if self.enable_communication:
+                # Concatenate observation with message (detach to avoid gradient issues)
+                obs_with_msg = torch.cat([torch.FloatTensor(obs), messages[i].detach()])
+                action = self.agents[i].act(obs_with_msg.numpy(), epsilon)
+            else:
+                action = self.agents[i].act(obs, epsilon)
+            actions.append(action)
+            
+        return actions
+    
+    def update(self, experiences):
+        """Update all agents"""
+        for i, exp in enumerate(experiences):
+            if len(self.agents[i].replay_buffer) > 32:
+                self.agents[i].update(batch_size=32)

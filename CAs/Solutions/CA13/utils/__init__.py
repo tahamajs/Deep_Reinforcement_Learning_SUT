@@ -1,32 +1,13 @@
-"""
-Utility functions for CA13: Sample-Efficient Deep RL
-"""
+# CA13 Utils Module
+from .visualization import plot_training_curves, compare_bars, plot_latent_trajectories, plot_augmentation_examples
+from .helpers import set_seed, get_device, create_directory_structure
 
-import torch
-import numpy as np
-import random
-
-
-def set_seed(seed=42):
-    """Set random seeds for reproducibility."""
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-
-
-def get_device():
-    """Get the best available device (CUDA if available, otherwise CPU)."""
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    elif torch.backends.mps.is_available():
-        return torch.device("mps")
-    else:
-        return torch.device("cpu")
-
-
-__all__ = ["set_seed", "get_device"]
+__all__ = [
+    'plot_training_curves',
+    'compare_bars', 
+    'plot_latent_trajectories',
+    'plot_augmentation_examples',
+    'set_seed',
+    'get_device',
+    'create_directory_structure'
+]

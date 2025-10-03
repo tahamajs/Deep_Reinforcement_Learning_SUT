@@ -15,7 +15,7 @@ from .algorithms import (
     InContextLearner,
 )
 
-from .training import FoundationModelTrainer, MultiTaskTrainer
+from .training import FoundationModelTrainer, MultiTaskTrainer, InContextTrainer
 from .algorithms import ScalingAnalyzer
 
 __all__ = [
@@ -25,5 +25,6 @@ __all__ = [
     "InContextLearner",
     "FoundationModelTrainer",
     "MultiTaskTrainer",
+    "InContextTrainer",
     "ScalingAnalyzer",
 ]

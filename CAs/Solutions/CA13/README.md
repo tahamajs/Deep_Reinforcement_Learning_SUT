@@ -1,284 +1,341 @@
-# CA13: Advanced Deep Reinforcement Learning - Model-Free vs Model-Based Methods and Real-World Applications
+# CA13: Advanced Model-Based RL and World Models
 
-## Overview
+This repository contains implementations for Computer Assignment 13 of the Deep Reinforcement Learning course, focusing on advanced model-based reinforcement learning techniques including world models, sample efficiency methods, and hierarchical RL.
 
-This assignment explores advanced deep reinforcement learning concepts, focusing on the fundamental differences between model-free and model-based approaches, world models, sample efficiency techniques, and practical considerations for real-world deployment. The notebook provides comprehensive implementations and comparisons of cutting-edge RL methods.
+## 📚 Overview
 
-**Status**: ✅ Complete and ready to run
+This assignment explores cutting-edge techniques in deep reinforcement learning:
 
-## Learning Objectives
+- **Model-Based vs Model-Free RL**: Comparative analysis of approaches
+- **World Models**: Variational Autoencoder-based environment modeling
+- **Imagination-Based Learning**: Planning in latent space
+- **Sample Efficiency**: Prioritized replay, data augmentation, auxiliary tasks
+- **Transfer Learning**: Multi-task and meta-learning approaches
+- **Hierarchical RL**: Options framework and feudal networks
+- **Multi-Agent RL**: Coordination and communication protocols
 
-1. **Model-Free vs Model-Based RL**: Understand theoretical foundations, trade-offs, and practical implementations
-2. **World Models**: Learn environment dynamics using VAE-based architectures for imagination-based planning
-3. **Sample Efficiency**: Master techniques like prioritized replay, data augmentation, and auxiliary tasks
-4. **Transfer Learning**: Implement knowledge reuse and adaptation across related tasks
-5. **Hierarchical RL**: Explore temporal abstraction using Options-Critic and Feudal Networks
-6. **Comprehensive Evaluation**: Compare methods across multiple dimensions and provide practical guidelines
-
-## Key Concepts Covered
-
-### 1. Model-Free vs Model-Based RL
-
-- **Model-Free Methods**: DQN, policy gradients - learn directly from experience
-- **Model-Based Methods**: Learn environment dynamics for planning and imagination
-- **Hybrid Approaches**: Dyna-Q style learning combining both paradigms
-- **Trade-off Analysis**: Sample efficiency vs computational complexity
-
-### 2. World Models and Imagination
-
-- **Variational Autoencoders (VAE)**: Stochastic latent representations
-- **Dynamics Modeling**: Predicting next states and rewards
-- **Imagination-Based Planning**: Planning in learned latent space
-- **Dreamer Algorithm**: Combining world models with policy learning
-
-### 3. Sample Efficiency Techniques
-
-- **Prioritized Experience Replay**: Focus on important transitions
-- **Data Augmentation**: Robustness through input transformations
-- **Auxiliary Tasks**: Multi-task learning for better representations
-- **Curriculum Learning**: Progressive difficulty for stable learning
-
-### 4. Transfer Learning and Meta-Learning
-
-- **Transfer Learning**: Leveraging knowledge from source to target tasks
-- **Fine-tuning**: Adapting pre-trained models to new domains
-- **Meta-Learning**: Learning to learn across multiple tasks
-
-### 5. Hierarchical Reinforcement Learning
-
-- **Options Framework**: Temporal abstractions as skills
-- **Options-Critic**: Joint learning of options and policies
-- **Feudal Networks**: Manager-worker hierarchies with intrinsic motivation
-- **Hindsight Experience Replay**: Goal-conditioned learning
-
-## Project Structure
+## 🏗️ Project Structure
 
 ```
 CA13/
-├── CA13.ipynb                 # Main notebook with implementations
-├── README.md                  # This documentation
-├── agents/                    # Modular agent implementations
+├── CA13.ipynb              # Main assignment notebook
+├── agents/                 # RL agent implementations
 │   ├── __init__.py
-│   ├── model_free.py         # DQN, Policy Gradient agents
-│   ├── model_based.py        # Dynamics model, MPC agents
-│   ├── hybrid.py             # Dyna-Q, hybrid approaches
-│   ├── world_model.py        # VAE-based world models
-│   ├── imagination.py        # Imagination-based planning
-│   ├── hierarchical.py       # Options-Critic, Feudal networks
-│   └── transfer.py           # Transfer learning agents
-├── environments/              # Custom environments
+│   ├── model_free.py      # DQN and other model-free agents
+│   ├── model_based.py     # Model-based RL agents
+│   ├── sample_efficient.py # Sample efficiency techniques
+│   └── hierarchical.py    # Hierarchical RL agents
+├── models/                 # Neural network architectures
 │   ├── __init__.py
-│   ├── gridworld.py          # Simple grid navigation
-│   └── utils.py              # Environment utilities
-├── utils/                     # Utility functions
+│   └── world_model.py     # VAE-based world models
+├── environments/           # Custom environments
 │   ├── __init__.py
-│   ├── buffers.py            # Experience replay buffers
-│   ├── evaluation.py         # Evaluation frameworks
-│   └── visualization.py      # Plotting and analysis
-└── results/                   # Experiment results and logs
-    ├── experiments/          # Saved experiment data
-    └── plots/               # Generated visualizations
+│   └── grid_world.py      # Grid world environments
+├── buffers/                # Experience replay buffers
+│   ├── __init__.py
+│   └── replay_buffer.py   # Standard and prioritized replay
+├── evaluation/             # Evaluation framework
+│   ├── __init__.py
+│   └── advanced_evaluator.py # Comprehensive evaluation tools
+├── utils/                  # Utility functions
+│   ├── __init__.py
+│   ├── visualization.py   # Plotting and analysis tools
+│   └── helpers.py         # Helper functions
+├── training_examples.py    # Training scripts and examples
+├── requirements.txt        # Dependencies
+└── README.md              # This file
 ```
 
-## Installation and Setup
+## 🚀 Quick Start
 
-### Requirements
+### Installation
+
+1. Clone the repository:
 
 ```bash
-pip install torch torchvision torchaudio
-pip install numpy matplotlib seaborn pandas
-pip install plotly gym gymnasium
-pip install scikit-learn jupyter
+git clone <repository-url>
+cd CA13
 ```
 
-### Quick Start
+2. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+3. Run the main notebook:
+
+```bash
+jupyter notebook CA13.ipynb
+```
+
+### Basic Usage
 
 ```python
-# Import key components
 from agents.model_free import DQNAgent
 from agents.model_based import ModelBasedAgent
-from agents.world_model import VariationalWorldModel
-from environments.gridworld import SimpleGridWorld
+from models.world_model import VariationalWorldModel
+from environments.grid_world import SimpleGridWorld
+from training_examples import train_dqn_agent, evaluate_agent
 
-# Create environment and agents
+# Create environment
 env = SimpleGridWorld(size=5)
-model_free_agent = DQNAgent(state_dim=2, action_dim=4)
-model_based_agent = ModelBasedAgent(state_dim=2, action_dim=4)
 
-# Compare performance
-results = compare_agents_performance(env, [model_free_agent, model_based_agent])
+# Create agent
+agent = DQNAgent(
+    state_dim=2,
+    action_dim=4,
+    learning_rate=1e-3
+)
+
+# Train agent
+results = train_dqn_agent(env, agent, num_episodes=200)
+
+# Evaluate agent
+eval_results = evaluate_agent(env, agent, num_episodes=10)
 ```
 
-## Key Implementations
+## 🔬 Key Components
 
-### Core Agent Classes
-
-#### Model-Free Agents
+### World Models
 
 ```python
-class DQNAgent:
-    """Deep Q-Network with experience replay"""
-    def __init__(self, state_dim, action_dim, lr=1e-3)
-    def act(self, state, epsilon=0.1)  # Epsilon-greedy action selection
-    def update(self, batch)            # DQN learning update
+from models.world_model import VariationalWorldModel
+
+# Create VAE-based world model
+world_model = VariationalWorldModel(
+    obs_dim=4,
+    action_dim=2,
+    latent_dim=32
+)
+
+# Train on environment data
+losses = world_model.compute_loss(obs, actions, rewards, next_obs, dones)
+
+# Generate imagined trajectories
+imagined_trajectory = world_model.imagine_trajectory(z_start, actions, horizon=10)
 ```
 
-#### Model-Based Agents
+### Sample Efficient Agents
 
 ```python
-class ModelBasedAgent:
-    """Learns dynamics model for planning"""
-    def __init__(self, state_dim, action_dim, planning_horizon=5)
-    def update_model(self, batch)      # Update dynamics/reward models
-    def plan_action(self, state)       # MPC-style planning
+from agents.sample_efficient import SampleEfficientAgent
+
+# Create sample-efficient agent with prioritized replay and auxiliary tasks
+agent = SampleEfficientAgent(
+    state_dim=4,
+    action_dim=2,
+    hidden_dim=128
+)
+
+# Training includes data augmentation and auxiliary learning
+losses = agent.update(batch_size=32)
 ```
 
-#### World Model Agents
+### Hierarchical RL
 
 ```python
-class VariationalWorldModel:
-    """VAE-based world model"""
-    def encode(self, obs)              # Observation to latent
-    def dynamics_forward(self, z, a)   # Predict next latent
-    def imagine_trajectory(self, obs, actions)  # Rollout in imagination
+from agents.hierarchical import OptionsCriticAgent, FeudalAgent
+
+# Options-Critic agent
+oc_agent = OptionsCriticAgent(
+    state_dim=4,
+    action_dim=2,
+    num_options=4
+)
+
+# Feudal Networks agent
+feudal_agent = FeudalAgent(
+    state_dim=4,
+    action_dim=2,
+    goal_dim=16,
+    temporal_horizon=10
+)
 ```
 
-#### Hierarchical Agents
+### Multi-Agent RL
 
 ```python
-class OptionsCriticAgent:
-    """Options-Critic architecture"""
-    def select_option(self, state)     # Choose high-level option
-    def select_action(self, state, option)  # Execute within option
-    def update(self, trajectory)       # Joint option-policy learning
+from environments.grid_world import MultiAgentGridWorld
+from agents.model_free import MultiAgentDQN
+
+# Create multi-agent environment
+ma_env = MultiAgentGridWorld(size=7, n_agents=3)
+
+# Create multi-agent system with communication
+ma_system = MultiAgentDQN(
+    n_agents=3,
+    state_dim=obs_dim,
+    action_dim=4,
+    enable_communication=True
+)
 ```
 
-### Advanced Techniques
+## 📊 Evaluation Framework
 
-#### Sample Efficiency
-
-- **PrioritizedReplayBuffer**: TD-error based prioritization
-- **DataAugmentationDQN**: Input transformations for robustness
-- **Auxiliary Tasks**: Reward and dynamics prediction
-
-#### Transfer Learning
-
-- **TransferLearningAgent**: Multi-task policy heads
-- **CurriculumLearningFramework**: Progressive difficulty
-- **Fine-tuning**: Knowledge transfer between tasks
-
-## Usage Examples
-
-### Basic Comparison
+The evaluation framework provides comprehensive analysis tools:
 
 ```python
-# Compare model-free vs model-based
-env = SimpleGridWorld(size=5)
-agents = {
-    'DQN': DQNAgent(2, 4),
-    'Model-Based': ModelBasedAgent(2, 4),
-    'Hybrid': HybridDynaAgent(2, 4)
+from evaluation.advanced_evaluator import AdvancedRLEvaluator
+
+# Create evaluator
+evaluator = AdvancedRLEvaluator(
+    environments=[env1, env2, env3],
+    agents={'DQN': dqn_agent, 'MB': mb_agent},
+    metrics=['sample_efficiency', 'reward', 'transfer']
+)
+
+# Run comprehensive evaluation
+results = evaluator.comprehensive_evaluation()
+evaluator.generate_report()
+evaluator.plot_results()
+```
+
+## 🎯 Experiments
+
+### Model-Free vs Model-Based Comparison
+
+Compare different RL approaches on the same environment:
+
+```python
+from training_examples import compare_agents
+
+results = compare_agents(
+    env=env,
+    agents={
+        'DQN': dqn_agent,
+        'Model-Based': mb_agent,
+        'Sample-Efficient': se_agent
+    },
+    num_episodes=200
+)
+
+# Plot comparison
+plot_training_curves(results, save_path='comparison.png')
+```
+
+### Hyperparameter Sweep
+
+```python
+from training_examples import hyperparameter_sweep
+
+param_grid = {
+    'learning_rate': [1e-4, 1e-3, 1e-2],
+    'hidden_dim': [64, 128, 256],
+    'gamma': [0.95, 0.99, 0.995]
 }
 
-results = compare_agents_performance(env, agents)
-visualize_comparison(results)
+results_df = hyperparameter_sweep(
+    env=env,
+    agent_class=DQNAgent,
+    param_grid=param_grid,
+    num_episodes=100
+)
 ```
 
-### World Model Learning
+## 📈 Visualization Tools
+
+The utils module provides extensive visualization capabilities:
 
 ```python
-# Train world model for imagination
-world_model = VariationalWorldModel(obs_dim=2, action_dim=4)
-agent = ImaginationBasedAgent(obs_dim=2, action_dim=4)
+from utils.visualization import (
+    plot_training_curves,
+    plot_world_model_analysis,
+    plot_multi_agent_analysis,
+    create_summary_table
+)
 
-# Train and evaluate
-trained_agent, rewards, losses = demonstrate_world_model_learning()
-visualize_world_model_performance(trained_agent, rewards, losses)
+# Plot training progress
+plot_training_curves({
+    'DQN': dqn_rewards,
+    'Model-Based': mb_rewards
+}, title='Learning Curves Comparison')
+
+# Analyze world model
+plot_world_model_analysis(world_model_results)
+
+# Multi-agent coordination analysis
+plot_multi_agent_analysis(ma_results)
+
+# Create summary table
+summary_df = create_summary_table(results)
+print(summary_df)
 ```
 
-### Hierarchical Learning
+## 🔧 Configuration
+
+Use the configuration system for reproducible experiments:
 
 ```python
-# Options-Critic for temporal abstraction
-agent = OptionsCriticAgent(state_dim=2, action_dim=4, num_options=4)
+from utils.helpers import create_config_template, save_config, load_config
 
-# Train with hierarchical learning
-results, agents = demonstrate_hierarchical_rl()
+# Create configuration
+config = create_config_template()
+
+# Modify configuration
+config['agent']['learning_rate'] = 5e-4
+config['training']['num_episodes'] = 500
+
+# Save configuration
+save_config(config, 'experiment_config.json')
+
+# Load configuration
+config = load_config('experiment_config.json')
 ```
 
-### Transfer Learning
+## 📚 Theoretical Background
 
-```python
-# Transfer between related tasks
-agent = TransferLearningAgent(state_dim=2, action_dim=4)
-agent.add_task('task1')
-agent.add_task('task2')
+This implementation is based on several key papers:
 
-# Fine-tune from task1 to task2
-agent.fine_tune_for_task('task1', 'task2')
-```
+- **World Models** (Ha & Schmidhuber, 2018): VAE-based world modeling
+- **Dreamer** (Hafner et al., 2020): Imagination-based learning
+- **Options-Critic** (Bacon et al., 2017): Hierarchical RL
+- **Feudal Networks** (Vezhnevets et al., 2017): Manager-worker hierarchies
+- **Prioritized Experience Replay** (Schaul et al., 2016): Sample efficiency
 
-## Results and Analysis
+## 🎓 Learning Objectives
 
-### Performance Comparison
+By completing this assignment, students will:
 
-The notebook provides comprehensive evaluation across:
+1. **Understand** the trade-offs between model-free and model-based RL
+2. **Implement** world models using variational autoencoders
+3. **Apply** imagination-based planning in latent space
+4. **Design** sample-efficient learning algorithms
+5. **Build** hierarchical decision-making systems
+6. **Develop** multi-agent coordination protocols
+7. **Evaluate** advanced RL methods comprehensively
 
-- **Sample Efficiency**: Episodes to convergence
-- **Final Performance**: Asymptotic reward levels
-- **Robustness**: Performance variance across runs
-- **Transfer Capability**: Adaptation to new tasks
+## 🚀 Advanced Features
 
-### Key Findings
+- **Modular Architecture**: Easy to extend and modify
+- **Comprehensive Evaluation**: Multiple metrics and visualizations
+- **Multi-Agent Support**: Communication and coordination protocols
+- **World Model Integration**: VAE-based environment modeling
+- **Hierarchical Learning**: Options and feudal networks
+- **Sample Efficiency**: Prioritized replay and auxiliary tasks
+- **Transfer Learning**: Multi-task and meta-learning frameworks
 
-1. **Model-Based methods** excel in sample efficiency but struggle with high-dimensional observations
-2. **World models** enable imagination-based planning and improve exploration
-3. **Hierarchical methods** provide temporal abstractions for long-horizon tasks
-4. **Sample efficiency techniques** (prioritized replay, augmentation) significantly improve learning
-5. **Transfer learning** enables rapid adaptation to related domains
+## 🤝 Contributing
 
-## Applications and Extensions
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-### Real-World Applications
+## 📄 License
 
-- **Robotics**: Model-based control for manipulation and navigation
-- **Game AI**: World models for strategic planning in complex games
-- **Autonomous Systems**: Safe exploration with imagination-based methods
-- **Healthcare**: Sample-efficient learning from limited patient data
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-### Extensions
+## 🙏 Acknowledgments
 
-- **Multi-Agent RL**: Coordination with hierarchical policies
-- **Meta-RL**: Learning across distributions of tasks
-- **Offline RL**: Learning from fixed datasets
-- **Safe RL**: Constrained optimization for safety-critical domains
+- Course instructors for guidance and feedback
+- OpenAI Gym/Gymnasium for environment frameworks
+- PyTorch team for deep learning framework
+- Research community for foundational papers
 
-## Educational Value
+---
 
-This assignment provides:
+**Happy Learning!** 🎉
 
-- **Theoretical Understanding**: Deep dive into advanced RL concepts
-- **Practical Implementation**: Working code for all major techniques
-- **Comparative Analysis**: Empirical evaluation of different approaches
-- **Research Insights**: Understanding of current RL research directions
-
-## References
-
-1. **World Models**: Ha & Schmidhuber (2018) - Recurrent World Models Facilitate Policy Evolution
-2. **Options Framework**: Sutton et al. (1999) - Between MDPs and Semi-MDPs
-3. **Dreamer**: Hafner et al. (2019) - Learning to Simulate and Dream
-4. **Options-Critic**: Bacon et al. (2017) - The Option-Critic Architecture
-5. **Feudal Networks**: Vezhnevets et al. (2017) - Feudal Networks for Hierarchical Reinforcement Learning
-
-## Next Steps
-
-After completing CA13, you should be able to:
-
-- Choose appropriate RL methods for different problem domains
-- Implement advanced techniques for sample-efficient learning
-- Design hierarchical policies for complex tasks
-- Apply transfer learning for knowledge reuse
-- Deploy RL systems with practical considerations
-
-This comprehensive assignment bridges the gap between theoretical RL concepts and real-world applications, preparing you for advanced research and industry applications in deep reinforcement learning.</content>
-<parameter name="filePath">/Users/tahamajs/Documents/uni/DRL/CAs/Solutions/CA13/README.md
+For questions or issues, please open an issue in the repository.

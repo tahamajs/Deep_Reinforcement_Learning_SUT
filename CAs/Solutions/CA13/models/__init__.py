@@ -1,5 +1,4 @@
-"""Models module for world models and dynamics learning."""
+# CA13 Models Module
+from .world_model import VariationalWorldModel
 
-from .world_model import VariationalWorldModel, WorldModelLoss
-
-__all__ = ["VariationalWorldModel", "WorldModelLoss"]
+__all__ = ['VariationalWorldModel']

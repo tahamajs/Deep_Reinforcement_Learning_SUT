@@ -1,222 +1,273 @@
-"""World Model implementations for model-based reinforcement learning."""
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.distributions import Normal
+import numpy as np
 
 
 class VariationalWorldModel(nn.Module):
-    """Variational Autoencoder-based world model for learning environment dynamics."""
+    """Variational Autoencoder-based World Model for Model-Based RL"""
 
-    def __init__(self, obs_dim, action_dim, latent_dim=64, hidden_dim=128):
-        super().__init__()
+    def __init__(self, obs_dim, action_dim, latent_dim=32, hidden_dim=128):
+        super(VariationalWorldModel, self).__init__()
         self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.latent_dim = latent_dim
 
+        # Encoder: obs -> latent mean and log variance
         self.encoder = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
+            nn.ReLU()
         )
-        self.encoder_mu = nn.Linear(hidden_dim, latent_dim)
-        self.encoder_logvar = nn.Linear(hidden_dim, latent_dim)
-
-        self.dynamics = nn.Sequential(
-            nn.Linear(latent_dim + action_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-        )
-
-        self.dynamics_mu = nn.Linear(hidden_dim, latent_dim)
-        self.dynamics_logvar = nn.Linear(hidden_dim, latent_dim)
-
-        self.reward_model = nn.Sequential(
-            nn.Linear(latent_dim + action_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Linear(hidden_dim // 2, 1),
-        )
-
+        
+        self.mu_head = nn.Linear(hidden_dim, latent_dim)
+        self.logvar_head = nn.Linear(hidden_dim, latent_dim)
+        
+        # Decoder: latent -> observation reconstruction
         self.decoder = nn.Sequential(
             nn.Linear(latent_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, obs_dim),
+            nn.Linear(hidden_dim, obs_dim)
+        )
+
+        # Dynamics model: (latent, action) -> next latent
+        self.dynamics_model = nn.Sequential(
+            nn.Linear(latent_dim + action_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, latent_dim * 2)  # mean and logvar
+        )
+
+        # Reward model: (latent, action) -> reward
+        self.reward_model = nn.Sequential(
+            nn.Linear(latent_dim + action_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1)
+        )
+
+        # Done model: (latent, action) -> done probability
+        self.done_model = nn.Sequential(
+            nn.Linear(latent_dim + action_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1),
+            nn.Sigmoid()
         )
 
     def encode(self, obs):
-        """Encode observation to latent distribution parameters."""
+        """Encode observation to latent space"""
         h = self.encoder(obs)
-        mu = self.encoder_mu(h)
-        logvar = self.encoder_logvar(h)
+        mu = self.mu_head(h)
+        logvar = self.logvar_head(h)
         return mu, logvar
 
     def reparameterize(self, mu, logvar):
-        """Reparameterization trick for VAE."""
-        if self.training:
+        """Reparameterization trick for VAE"""
             std = torch.exp(0.5 * logvar)
             eps = torch.randn_like(std)
             return mu + eps * std
+    
+    def decode(self, z):
+        """Decode latent representation to observation"""
+        return self.decoder(z)
+    
+    def forward(self, obs):
+        """Forward pass: encode -> decode"""
+        mu, logvar = self.encode(obs)
+        z = self.reparameterize(mu, logvar)
+        recon_obs = self.decode(z)
+        return recon_obs, mu, logvar
+    
+    def dynamics_forward(self, z, action):
+        """Predict next latent state given current latent and action"""
+        # Convert action to one-hot if needed
+        if action.dim() == 1:
+            action_onehot = F.one_hot(action, self.action_dim).float()
         else:
-            return mu
-
-    def dynamics_forward(self, latent_state, action):
-        """Predict next latent state given current state and action."""
-        if len(action.shape) == 1:
-            action_one_hot = F.one_hot(action.long(), self.action_dim).float()
+            action_onehot = action.float()
+        
+        # Concatenate latent and action
+        input_vec = torch.cat([z, action_onehot], dim=-1)
+        
+        # Predict next latent (mean and log variance)
+        output = self.dynamics_model(input_vec)
+        next_mu = output[:, :self.latent_dim]
+        next_logvar = output[:, self.latent_dim:]
+        
+        return next_mu, next_logvar
+    
+    def predict_next_latent(self, z, action):
+        """Predict next latent state (returns sampled latent)"""
+        next_mu, next_logvar = self.dynamics_forward(z, action)
+        return self.reparameterize(next_mu, next_logvar)
+    
+    def predict_reward(self, z, action):
+        """Predict reward given latent state and action"""
+        # Convert action to one-hot if needed
+        if action.dim() == 1:
+            action_onehot = F.one_hot(action, self.action_dim).float()
         else:
-            action_one_hot = action
-
-        dynamics_input = torch.cat([latent_state, action_one_hot], dim=-1)
-        h = self.dynamics(dynamics_input)
-
-        mu = self.dynamics_mu(h)
-        logvar = self.dynamics_logvar(h)
-
-        return mu, logvar
-
-    def predict_reward(self, latent_state, action):
-        """Predict reward given latent state and action."""
-        if len(action.shape) == 1:
-            action_one_hot = F.one_hot(action.long(), self.action_dim).float()
+            action_onehot = action.float()
+        
+        input_vec = torch.cat([z, action_onehot], dim=-1)
+        return self.reward_model(input_vec)
+    
+    def predict_done(self, z, action):
+        """Predict done probability given latent state and action"""
+        # Convert action to one-hot if needed
+        if action.dim() == 1:
+            action_onehot = F.one_hot(action, self.action_dim).float()
         else:
-            action_one_hot = action
-
-        reward_input = torch.cat([latent_state, action_one_hot], dim=-1)
-        return self.reward_model(reward_input)
-
-    def decode(self, latent_state):
-        """Decode latent state to observation."""
-        return self.decoder(latent_state)
-
-    def forward(self, obs, action=None):
-        """Full forward pass through world model."""
-        mu_enc, logvar_enc = self.encode(obs)
-        latent_state = self.reparameterize(mu_enc, logvar_enc)
-
-        recon_obs = self.decode(latent_state)
-
-        results = {
-            "latent_state": latent_state,
-            "mu_enc": mu_enc,
-            "logvar_enc": logvar_enc,
-            "recon_obs": recon_obs,
+            action_onehot = action.float()
+        
+        input_vec = torch.cat([z, action_onehot], dim=-1)
+        return self.done_model(input_vec)
+    
+    def compute_loss(self, obs, actions, rewards, next_obs, dones):
+        """Compute total world model loss"""
+        batch_size = obs.size(0)
+        
+        # VAE loss (reconstruction + KL divergence)
+        recon_obs, mu, logvar = self.forward(obs)
+        recon_loss = F.mse_loss(recon_obs, obs, reduction='sum')
+        kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        vae_loss = recon_loss + kl_loss
+        
+        # Encode observations to latent
+        z = self.reparameterize(mu, logvar)
+        next_mu, next_logvar = self.encode(next_obs)
+        next_z = self.reparameterize(next_mu, next_logvar)
+        
+        # Dynamics loss
+        pred_next_mu, pred_next_logvar = self.dynamics_forward(z, actions)
+        dynamics_loss = F.mse_loss(pred_next_mu, next_z, reduction='sum')
+        
+        # Reward loss
+        pred_rewards = self.predict_reward(z, actions)
+        reward_loss = F.mse_loss(pred_rewards.squeeze(), rewards, reduction='sum')
+        
+        # Done loss
+        pred_dones = self.predict_done(z, actions)
+        done_loss = F.binary_cross_entropy(pred_dones.squeeze(), dones.float(), reduction='sum')
+        
+        # Total loss
+        total_loss = vae_loss + dynamics_loss + reward_loss + done_loss
+        
+        return {
+            'total': total_loss,
+            'vae': vae_loss,
+            'dynamics': dynamics_loss,
+            'reward': reward_loss,
+            'done': done_loss
         }
-
-        if action is not None:
-            mu_dyn, logvar_dyn = self.dynamics_forward(latent_state, action)
-            next_latent = self.reparameterize(mu_dyn, logvar_dyn)
-            pred_reward = self.predict_reward(latent_state, action)
-
-            results.update(
-                {
-                    "mu_dyn": mu_dyn,
-                    "logvar_dyn": logvar_dyn,
-                    "next_latent": next_latent,
-                    "pred_reward": pred_reward,
-                }
-            )
-
-        return results
-
-    def imagine_trajectory(self, initial_obs, actions):
-        """Imagine trajectory given initial observation and action sequence."""
-        batch_size = initial_obs.shape[0]
-        sequence_length = len(actions)
-
-        mu_enc, logvar_enc = self.encode(initial_obs)
-        current_latent = self.reparameterize(mu_enc, logvar_enc)
-
-        trajectory = {
-            "latent_states": [current_latent],
-            "observations": [self.decode(current_latent)],
-            "rewards": [],
-            "actions": [],
-        }
-
-        for t in range(sequence_length):
+    
+    def imagine_trajectory(self, z_start, actions, horizon=10):
+        """Generate imagined trajectory in latent space"""
+        z_trajectory = [z_start]
+        rewards = []
+        dones = []
+        
+        z_current = z_start
+        for t in range(horizon):
+            if t < len(actions):
             action = actions[t]
-            trajectory["actions"].append(action)
+            else:
+                # Random action if not provided
+                action = torch.randint(0, self.action_dim, (z_current.size(0),))
+            
+            # Predict next state
+            z_next = self.predict_next_latent(z_current, action)
+            reward = self.predict_reward(z_current, action)
+            done = self.predict_done(z_current, action)
+            
+            z_trajectory.append(z_next)
+            rewards.append(reward)
+            dones.append(done)
+            
+            z_current = z_next
+            
+            # Stop if done
+            if done.mean() > 0.5:  # If more than half of batch is done
+                break
+        
+        return z_trajectory, rewards, dones
+    
+    def decode_trajectory(self, z_trajectory):
+        """Decode latent trajectory to observations"""
+        obs_trajectory = []
+        for z in z_trajectory:
+            obs = self.decode(z)
+            obs_trajectory.append(obs)
+        return obs_trajectory
 
-            pred_reward = self.predict_reward(current_latent, action)
-            trajectory["rewards"].append(pred_reward)
 
-            mu_dyn, logvar_dyn = self.dynamics_forward(current_latent, action)
-            next_latent = self.reparameterize(mu_dyn, logvar_dyn)
-
-            current_latent = next_latent
-            trajectory["latent_states"].append(current_latent)
-            trajectory["observations"].append(self.decode(current_latent))
-
-        return trajectory
-
-
-class WorldModelLoss:
-    """Loss functions for training world models."""
-
-    def __init__(
-        self, recon_weight=1.0, kl_weight=1.0, reward_weight=1.0, dynamics_weight=1.0
-    ):
-        self.recon_weight = recon_weight
-        self.kl_weight = kl_weight
-        self.reward_weight = reward_weight
-        self.dynamics_weight = dynamics_weight
-
-    def reconstruction_loss(self, recon_obs, target_obs):
-        """Reconstruction loss between predicted and actual observations."""
-        return F.mse_loss(recon_obs, target_obs)
-
-    def kl_divergence_loss(self, mu, logvar):
-        """KL divergence loss for VAE regularization."""
-        return -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()) / mu.shape[0]
-
-    def reward_loss(self, pred_reward, target_reward):
-        """Reward prediction loss."""
-        return F.mse_loss(pred_reward.squeeze(), target_reward)
-
-    def dynamics_loss(self, pred_next_latent, target_next_latent):
-        """Dynamics prediction loss in latent space."""
-        return F.mse_loss(pred_next_latent, target_next_latent)
-
-    def compute_total_loss(
-        self, model_output, target_obs, target_reward=None, target_next_obs=None
-    ):
-        """Compute total loss for world model training."""
-        losses = {}
-
-        recon_loss = self.reconstruction_loss(model_output["recon_obs"], target_obs)
-        losses["reconstruction"] = recon_loss
-
-        kl_loss = self.kl_divergence_loss(
-            model_output["mu_enc"], model_output["logvar_enc"]
+class RecurrentWorldModel(nn.Module):
+    """Recurrent version of world model for temporal dependencies"""
+    
+    def __init__(self, obs_dim, action_dim, latent_dim=32, hidden_dim=128, rnn_hidden=64):
+        super(RecurrentWorldModel, self).__init__()
+        self.obs_dim = obs_dim
+        self.action_dim = action_dim
+        self.latent_dim = latent_dim
+        self.rnn_hidden = rnn_hidden
+        
+        # Encoder
+        self.encoder = nn.Sequential(
+            nn.Linear(obs_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, latent_dim)
         )
-        losses["kl_divergence"] = kl_loss
-
-        total_loss = self.recon_weight * recon_loss + self.kl_weight * kl_loss
-
-        if target_reward is not None and "pred_reward" in model_output:
-            reward_loss = self.reward_loss(model_output["pred_reward"], target_reward)
-            losses["reward"] = reward_loss
-            total_loss += self.reward_weight * reward_loss
-
-        if target_next_obs is not None and "mu_dyn" in model_output:
-            with torch.no_grad():
-                target_mu, _ = (
-                    model_output["mu_enc"],
-                    model_output["logvar_enc"],
-                )  # Placeholder - need next obs encoding
-
-            dynamics_loss = F.mse_loss(
-                model_output["mu_dyn"], model_output["next_latent"]
-            )
-            losses["dynamics"] = dynamics_loss
-            total_loss += self.dynamics_weight * dynamics_loss
-
-        losses["total"] = total_loss
-        return losses
+        
+        # RNN for temporal dynamics
+        self.rnn = nn.GRU(latent_dim + action_dim, rnn_hidden, batch_first=True)
+        
+        # Output heads
+        self.latent_head = nn.Linear(rnn_hidden, latent_dim * 2)  # mean and logvar
+        self.reward_head = nn.Linear(rnn_hidden, 1)
+        self.done_head = nn.Linear(rnn_hidden, 1)
+        
+        # Decoder
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, obs_dim)
+        )
+        
+    def forward(self, obs_sequence, action_sequence, hidden=None):
+        """Process sequence of observations and actions"""
+        batch_size, seq_len, _ = obs_sequence.shape
+        
+        # Encode observations
+        obs_flat = obs_sequence.view(-1, self.obs_dim)
+        latent_flat = self.encoder(obs_flat)
+        latent = latent_flat.view(batch_size, seq_len, self.latent_dim)
+        
+        # Prepare RNN input
+        action_onehot = F.one_hot(action_sequence, self.action_dim).float()
+        rnn_input = torch.cat([latent, action_onehot], dim=-1)
+        
+        # RNN forward
+        rnn_output, hidden = self.rnn(rnn_input, hidden)
+        
+        # Predictions
+        latent_output = self.latent_head(rnn_output)
+        next_mu = latent_output[:, :, :self.latent_dim]
+        next_logvar = latent_output[:, :, self.latent_dim:]
+        
+        rewards = self.reward_head(rnn_output)
+        dones = torch.sigmoid(self.done_head(rnn_output))
+        
+        return {
+            'next_mu': next_mu,
+            'next_logvar': next_logvar,
+            'rewards': rewards,
+            'dones': dones,
+            'hidden': hidden
+        }

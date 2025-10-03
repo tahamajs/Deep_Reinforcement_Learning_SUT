@@ -1,258 +1,476 @@
-"""
-Computer Assignment 13: Sample-Efficient Deep RL
-Training Examples and Utilities
-
-This file contains training loops and utility functions for:
-- Model-free agents (DQN, PPO)
-- Model-based agents with learned dynamics
-- Sample-efficient methods (Rainbow, SAC)
-- Hierarchical RL approaches
-
-Author: DRL Course Team
-Institution: Sharif University of Technology
-"""
-
 import numpy as np
-import torch
-import torch.nn as nn
+import matplotlib.pyplot as plt
 import pandas as pd
-from dataclasses import dataclass, field, asdict
-from typing import List, Dict, Optional, Any
+import torch
 import time
-
-# Import from local modules
-from agents.model_free import ModelFreeAgent, DQNAgent
-from agents.model_based import ModelBasedAgent
-from buffers.replay_buffer import ReplayBuffer
-from utils import get_device
+from typing import Dict, List, Any, Optional
 
 
-@dataclass
-class EpisodeMetrics:
-    """Container for per-episode statistics."""
-    episode: int
-    return_: float
-    length: int
-    elapsed_sec: float
-    mean_loss: Optional[float] = None
-    success: Optional[bool] = None
-    exploration_rate: Optional[float] = None
-    notes: Dict[str, Any] = field(default_factory=dict)
-
-
-def env_reset(env):
-    """Wrapper for gym/gymnasium reset API."""
-    result = env.reset()
-    if isinstance(result, tuple) and len(result) == 2:
-        observation, info = result
-    else:
-        observation, info = result, {}
-    # Ensure observation is a regular numpy array without deprecated types
-    if hasattr(observation, 'dtype'):
-        observation = np.asarray(observation, dtype=np.float32)
-    return observation, info
-
-
-def env_step(env, action):
-    """Wrapper around env.step supporting both Gym and Gymnasium."""
-    result = env.step(action)
-    if isinstance(result, tuple) and len(result) == 5:
-        observation, reward, terminated, truncated, info = result
-        done = bool(terminated or truncated)
-        reward = float(reward)
-        # Ensure observation is a regular numpy array without deprecated types
-        if hasattr(observation, 'dtype'):
-            observation = np.asarray(observation, dtype=np.float32)
-    elif isinstance(result, tuple) and len(result) == 4:
-        observation, reward, done, info = result
-        done = bool(done)
-        reward = float(reward)
-        # Ensure observation is a regular numpy array without deprecated types
-        if hasattr(observation, 'dtype'):
-            observation = np.asarray(observation, dtype=np.float32)
-    else:
-        raise ValueError("Unexpected env.step return format")
-    return observation, reward, done, info
-
-
-def train_dqn_agent(
-    env,
-    agent: DQNAgent,
-    num_episodes: int = 500,
-    max_steps: int = 1000,
-    eval_interval: int = 50,
-):
-    """Train DQN agent with detailed logging."""
-    episode_rewards = []
-    episode_lengths = []
-    episode_logs = []
-    losses = []
-
-    for episode in range(1, num_episodes + 1):
-        state, reset_info = env_reset(env)
-        done = False
-        ep_reward = 0.0
-        ep_length = 0
-        ep_losses = []
-        start_time = time.time()
-
-        while not done and ep_length < max_steps:
-            action = agent.select_action(state, training=True)
-            next_state, reward, done, info = env_step(env, action)
-
-            agent.store_transition(state, action, reward, next_state, done)
-            loss = agent.train_step()
-            
-            if loss is not None:
-                ep_losses.append(loss)
-                losses.append(loss)
-
-            state = next_state
-            ep_reward += reward
-            ep_length += 1
-
-        elapsed = time.time() - start_time
-        
-        metrics = EpisodeMetrics(
-            episode=episode,
-            return_=ep_reward,
-            length=ep_length,
-            elapsed_sec=elapsed,
-            mean_loss=float(np.mean(ep_losses)) if ep_losses else None,
-            exploration_rate=agent.epsilon if hasattr(agent, 'epsilon') else None,
-            notes={"reset_info": reset_info},
-        )
-        episode_logs.append(asdict(metrics))
-        episode_rewards.append(ep_reward)
-        episode_lengths.append(ep_length)
-
-        if episode % eval_interval == 0:
-            mean_return = np.mean(episode_rewards[-eval_interval:])
-            print(f"Episode {episode:04d} | Avg Return = {mean_return:.2f} | Length = {ep_length}")
-
-    results = {
-        "rewards": episode_rewards,
-        "lengths": episode_lengths,
-        "losses": losses,
-        "episode_logs": episode_logs,
-    }
-
-    if episode_logs:
-        results["episode_dataframe"] = pd.DataFrame(episode_logs)
-
-    return results
-
-
-def train_model_based_agent(
-    env,
-    agent: ModelBasedAgent,
-    num_episodes: int = 500,
-    max_steps: int = 1000,
-    eval_interval: int = 50,
-    planning_steps: int = 10,
-):
-    """Train model-based agent with planning."""
-    episode_rewards = []
-    episode_lengths = []
-    episode_logs = []
-    model_losses = []
-    q_losses = []
-
-    for episode in range(1, num_episodes + 1):
-        state, reset_info = env_reset(env)
-        done = False
-        ep_reward = 0.0
-        ep_length = 0
-        ep_model_losses = []
-        ep_q_losses = []
-        start_time = time.time()
-
-        while not done and ep_length < max_steps:
-            # Use act() method for ModelBasedAgent
-            action = agent.act(state, epsilon=agent.epsilon)
-            next_state, reward, done, info = env_step(env, action)
-
-            # Store transition in replay buffer
-            agent.replay_buffer.push(state, action, reward, next_state, done)
-            
-            # Update model and value function if enough data
-            model_loss = None
-            q_loss = None
-            if len(agent.replay_buffer) >= 32:
-                # Sample batch and update
-                batch = agent.replay_buffer.sample(32)
-                model_loss = agent.update_model(batch)
-                q_loss = agent.update_value_function(batch)
-                
-                if model_loss is not None:
-                    ep_model_losses.append(model_loss)
-                    model_losses.append(model_loss)
-                if q_loss is not None:
-                    ep_q_losses.append(q_loss)
-                    q_losses.append(q_loss)
-
-            state = next_state
-            ep_reward += reward
-            ep_length += 1
-
-        elapsed = time.time() - start_time
-        
-        metrics = EpisodeMetrics(
-            episode=episode,
-            return_=ep_reward,
-            length=ep_length,
-            elapsed_sec=elapsed,
-            mean_loss=float(np.mean(ep_q_losses)) if ep_q_losses else None,
-            notes={
-                "reset_info": reset_info,
-                "model_loss": float(np.mean(ep_model_losses)) if ep_model_losses else None,
-            },
-        )
-        episode_logs.append(asdict(metrics))
-        episode_rewards.append(ep_reward)
-        episode_lengths.append(ep_length)
-
-        if episode % eval_interval == 0:
-            mean_return = np.mean(episode_rewards[-eval_interval:])
-            print(f"Episode {episode:04d} | Avg Return = {mean_return:.2f} | Model Loss = {metrics.notes.get('model_loss', 0):.4f}")
-
-    results = {
-        "rewards": episode_rewards,
-        "lengths": episode_lengths,
-        "q_losses": q_losses,
-        "model_losses": model_losses,
-        "episode_logs": episode_logs,
-    }
-
-    if episode_logs:
-        results["episode_dataframe"] = pd.DataFrame(episode_logs)
-
-    return results
-
-
-def evaluate_agent(env, agent, num_episodes: int = 10, max_steps: int = 1000):
-    """Evaluate agent performance."""
-    returns = []
-    lengths = []
+def train_dqn_agent(env, agent, num_episodes=200, max_steps=500, eval_interval=20, 
+                   target_reward=195, verbose=True):
+    """
+    Train a DQN agent and return training statistics
     
-    for _ in range(num_episodes):
-        state, _ = env_reset(env)
-        done = False
-        ep_return = 0.0
-        ep_length = 0
+    Args:
+        env: Environment
+        agent: DQN agent
+        num_episodes: Number of training episodes
+        max_steps: Maximum steps per episode
+        eval_interval: Episodes between evaluations
+        target_reward: Target reward for success
+        verbose: Print progress
+    
+    Returns:
+        Dictionary with training results
+    """
+    episode_rewards = []
+    episode_lengths = []
+    losses = []
+    eval_rewards = []
+    eval_lengths = []
+    
+    best_reward = float('-inf')
+    
+    for episode in range(num_episodes):
+        obs = env.reset()
+        episode_reward = 0
+        episode_losses = []
         
-        while not done and ep_length < max_steps:
-            action = agent.select_action(state, training=False)
-            state, reward, done, _ = env_step(env, action)
-            ep_return += reward
-            ep_length += 1
+        for step in range(max_steps):
+            # Select action
+            action = agent.act(obs)
+            
+            # Take step
+            next_obs, reward, done, _ = env.step(action)
+            
+            # Store experience
+            agent.replay_buffer.push(obs, action, reward, next_obs, done)
+            
+            # Update agent
+            if len(agent.replay_buffer) > 32:
+                loss = agent.update(batch_size=32)
+            if loss is not None:
+                    episode_losses.append(loss)
+            
+            episode_reward += reward
+            obs = next_obs
+            
+            if done:
+                break
         
-        returns.append(ep_return)
-        lengths.append(ep_length)
+        episode_rewards.append(episode_reward)
+        episode_lengths.append(step + 1)
+        
+        if episode_losses:
+            losses.extend(episode_losses)
+        
+        # Evaluation
+        if episode % eval_interval == 0:
+            eval_reward, eval_length = evaluate_agent_episode(env, agent, n_episodes=5)
+            eval_rewards.append(eval_reward)
+            eval_lengths.append(eval_length)
+            
+            if eval_reward > best_reward:
+                best_reward = eval_reward
+            
+            if verbose:
+                avg_reward = np.mean(episode_rewards[-20:]) if len(episode_rewards) >= 20 else np.mean(episode_rewards)
+                print(f"Episode {episode:4d} | Avg Reward: {avg_reward:6.2f} | "
+                      f"Eval Reward: {eval_reward:6.2f} | Epsilon: {agent.epsilon:.3f}")
+        
+        # Early stopping if target reached
+        if len(eval_rewards) > 0 and eval_rewards[-1] >= target_reward:
+            if verbose:
+                print(f"Target reward {target_reward} reached at episode {episode}")
+            break
+    
+    # Create results dataframe
+    results_df = pd.DataFrame({
+        'episode': range(len(episode_rewards)),
+        'reward': episode_rewards,
+        'length': episode_lengths
+    })
     
     return {
-        "mean_return": float(np.mean(returns)),
-        "std_return": float(np.std(returns)),
-        "mean_length": float(np.mean(lengths)),
-        "std_length": float(np.std(lengths)),
+        'rewards': episode_rewards,
+        'lengths': episode_lengths,
+        'losses': losses,
+        'eval_rewards': eval_rewards,
+        'eval_lengths': eval_lengths,
+        'best_reward': best_reward,
+        'episode_dataframe': results_df,
+        'training_steps': len(losses)
     }
+
+
+def train_model_based_agent(env, agent, num_episodes=200, max_steps=500, eval_interval=20,
+                           planning_steps=10, target_reward=195, verbose=True):
+    """
+    Train a model-based agent with planning
+    
+    Args:
+        env: Environment
+        agent: Model-based agent
+        num_episodes: Number of training episodes
+        max_steps: Maximum steps per episode
+        eval_interval: Episodes between evaluations
+        planning_steps: Number of planning steps per real step
+        target_reward: Target reward for success
+        verbose: Print progress
+    
+    Returns:
+        Dictionary with training results
+    """
+    episode_rewards = []
+    episode_lengths = []
+    model_losses = []
+    q_losses = []
+    eval_rewards = []
+    eval_lengths = []
+    
+    best_reward = float('-inf')
+    
+    for episode in range(num_episodes):
+        obs = env.reset()
+        episode_reward = 0
+        episode_model_losses = []
+        episode_q_losses = []
+        
+        for step in range(max_steps):
+            # Select action (with planning)
+            if episode > 10:  # Start planning after some exploration
+                action = agent.plan(obs)
+            else:
+                action = agent.act(obs, epsilon=0.5)
+            
+            # Take step
+            next_obs, reward, done, _ = env.step(action)
+            
+            # Store experience
+            agent.store_experience(obs, action, reward, next_obs, done)
+            
+            # Update agent
+            if len(agent.replay_buffer) > 32:
+                losses = agent.update(batch_size=32)
+                if losses:
+                    episode_model_losses.append(losses.get('dynamics_loss', 0) + losses.get('reward_loss', 0))
+                    episode_q_losses.append(losses.get('q_loss', 0))
+            
+            # Planning steps
+            for _ in range(planning_steps):
+                if len(agent.replay_buffer) > 32:
+                    agent.update(batch_size=32)
+            
+            episode_reward += reward
+            obs = next_obs
+            
+            if done:
+                break
+        
+        episode_rewards.append(episode_reward)
+        episode_lengths.append(step + 1)
+        
+        if episode_model_losses:
+            model_losses.extend(episode_model_losses)
+        if episode_q_losses:
+            q_losses.extend(episode_q_losses)
+        
+        # Evaluation
+        if episode % eval_interval == 0:
+            eval_reward, eval_length = evaluate_agent_episode(env, agent, n_episodes=5)
+            eval_rewards.append(eval_reward)
+            eval_lengths.append(eval_length)
+            
+            if eval_reward > best_reward:
+                best_reward = eval_reward
+            
+            if verbose:
+                avg_reward = np.mean(episode_rewards[-20:]) if len(episode_rewards) >= 20 else np.mean(episode_rewards)
+                avg_model_loss = np.mean(episode_model_losses) if episode_model_losses else 0
+                avg_q_loss = np.mean(episode_q_losses) if episode_q_losses else 0
+                print(f"Episode {episode:4d} | Avg Reward: {avg_reward:6.2f} | "
+                      f"Eval Reward: {eval_reward:6.2f} | Model Loss: {avg_model_loss:.4f} | Q Loss: {avg_q_loss:.4f}")
+        
+        # Early stopping if target reached
+        if len(eval_rewards) > 0 and eval_rewards[-1] >= target_reward:
+            if verbose:
+                print(f"Target reward {target_reward} reached at episode {episode}")
+            break
+    
+    # Create results dataframe
+    results_df = pd.DataFrame({
+        'episode': range(len(episode_rewards)),
+        'reward': episode_rewards,
+        'length': episode_lengths
+    })
+    
+    return {
+        'rewards': episode_rewards,
+        'lengths': episode_lengths,
+        'model_losses': model_losses,
+        'q_losses': q_losses,
+        'eval_rewards': eval_rewards,
+        'eval_lengths': eval_lengths,
+        'best_reward': best_reward,
+        'episode_dataframe': results_df,
+        'training_steps': len(model_losses)
+    }
+
+
+def evaluate_agent(env, agent, num_episodes=10, max_steps=500, render=False):
+    """
+    Evaluate an agent for multiple episodes
+    
+    Args:
+        env: Environment
+        agent: Agent to evaluate
+        num_episodes: Number of evaluation episodes
+        max_steps: Maximum steps per episode
+        render: Whether to render episodes
+    
+    Returns:
+        Dictionary with evaluation metrics
+    """
+    episode_rewards = []
+    episode_lengths = []
+    
+    for episode in range(num_episodes):
+        obs = env.reset()
+        episode_reward = 0
+        
+        for step in range(max_steps):
+            if render:
+                env.render()
+            
+            # Select action (no exploration)
+            if hasattr(agent, 'act'):
+                action = agent.act(obs, epsilon=0.0)
+            else:
+                action = env.action_space.sample()
+            
+            obs, reward, done, _ = env.step(action)
+            episode_reward += reward
+            
+            if done:
+                break
+        
+        episode_rewards.append(episode_reward)
+        episode_lengths.append(step + 1)
+        
+        if render:
+            print(f"Episode {episode + 1}: Reward = {episode_reward:.2f}, Length = {step + 1}")
+    
+    return {
+        'mean_return': np.mean(episode_rewards),
+        'std_return': np.std(episode_rewards),
+        'mean_length': np.mean(episode_lengths),
+        'std_length': np.std(episode_lengths),
+        'episode_rewards': episode_rewards,
+        'episode_lengths': episode_lengths
+    }
+
+
+def evaluate_agent_episode(env, agent, n_episodes=5, max_steps=500):
+    """
+    Quick evaluation for a single agent
+    
+    Returns:
+        (mean_reward, mean_length)
+    """
+    rewards = []
+    lengths = []
+    
+    for _ in range(n_episodes):
+        obs = env.reset()
+        episode_reward = 0
+        
+        for step in range(max_steps):
+            action = agent.act(obs, epsilon=0.0)
+            obs, reward, done, _ = env.step(action)
+            episode_reward += reward
+            
+            if done:
+                break
+        
+        rewards.append(episode_reward)
+        lengths.append(step + 1)
+    
+    return np.mean(rewards), np.mean(lengths)
+
+
+def compare_agents(env, agents, num_episodes=100, eval_episodes=10):
+    """
+    Compare multiple agents on the same environment
+    
+    Args:
+        env: Environment
+        agents: Dictionary of agent_name -> agent
+        num_episodes: Training episodes
+        eval_episodes: Evaluation episodes
+    
+    Returns:
+        Dictionary with comparison results
+    """
+    results = {}
+    
+    for agent_name, agent in agents.items():
+        print(f"\nTraining {agent_name}...")
+        
+        # Train agent
+        if hasattr(agent, 'replay_buffer'):  # DQN-style agent
+            train_results = train_dqn_agent(env, agent, num_episodes, verbose=False)
+        elif hasattr(agent, 'store_experience'):  # Model-based agent
+            train_results = train_model_based_agent(env, agent, num_episodes, verbose=False)
+        else:
+            print(f"Unknown agent type for {agent_name}, skipping...")
+            continue
+        
+        # Evaluate agent
+        eval_results = evaluate_agent(env, agent, eval_episodes)
+        
+        results[agent_name] = {
+            'training': train_results,
+            'evaluation': eval_results
+        }
+        
+        print(f"{agent_name}: Final reward = {eval_results['mean_return']:.2f} ± {eval_results['std_return']:.2f}")
+
+    return results
+
+
+def plot_training_curves(results, save_path=None):
+    """
+    Plot training curves for multiple agents
+    
+    Args:
+        results: Dictionary from compare_agents
+        save_path: Optional path to save plot
+    """
+    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    
+    # Plot 1: Training rewards
+    ax = axes[0, 0]
+    for agent_name, result in results.items():
+        rewards = result['training']['rewards']
+        window = max(1, len(rewards) // 50)
+        smoothed = pd.Series(rewards).rolling(window=window, min_periods=1).mean()
+        ax.plot(smoothed, label=agent_name, linewidth=2)
+    
+    ax.set_title('Training Rewards', fontsize=14, fontweight='bold')
+    ax.set_xlabel('Episode')
+    ax.set_ylabel('Average Reward')
+    ax.legend()
+    ax.grid(alpha=0.3)
+    
+    # Plot 2: Evaluation rewards
+    ax = axes[0, 1]
+    for agent_name, result in results.items():
+        eval_rewards = result['training'].get('eval_rewards', [])
+        if eval_rewards:
+            ax.plot(eval_rewards, label=agent_name, marker='o', linewidth=2)
+    
+    ax.set_title('Evaluation Rewards', fontsize=14, fontweight='bold')
+    ax.set_xlabel('Evaluation Epoch')
+    ax.set_ylabel('Average Reward')
+    ax.legend()
+    ax.grid(alpha=0.3)
+    
+    # Plot 3: Episode lengths
+    ax = axes[1, 0]
+    for agent_name, result in results.items():
+        lengths = result['training']['lengths']
+        window = max(1, len(lengths) // 50)
+        smoothed = pd.Series(lengths).rolling(window=window, min_periods=1).mean()
+        ax.plot(smoothed, label=agent_name, linewidth=2)
+    
+    ax.set_title('Episode Lengths', fontsize=14, fontweight='bold')
+    ax.set_xlabel('Episode')
+    ax.set_ylabel('Average Length')
+    ax.legend()
+    ax.grid(alpha=0.3)
+    
+    # Plot 4: Final performance comparison
+    ax = axes[1, 1]
+    agent_names = list(results.keys())
+    final_rewards = [results[name]['evaluation']['mean_return'] for name in agent_names]
+    final_stds = [results[name]['evaluation']['std_return'] for name in agent_names]
+    
+    bars = ax.bar(agent_names, final_rewards, yerr=final_stds, capsize=5, alpha=0.7)
+    ax.set_title('Final Performance Comparison', fontsize=14, fontweight='bold')
+    ax.set_ylabel('Average Reward')
+    ax.tick_params(axis='x', rotation=45)
+    ax.grid(alpha=0.3, axis='y')
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    
+    plt.show()
+
+
+def hyperparameter_sweep(env, agent_class, param_grid, num_episodes=50, eval_episodes=5):
+    """
+    Perform hyperparameter sweep for an agent
+    
+    Args:
+        env: Environment
+        agent_class: Agent class to instantiate
+        param_grid: Dictionary of parameter_name -> list of values
+        num_episodes: Training episodes per configuration
+        eval_episodes: Evaluation episodes per configuration
+    
+    Returns:
+        DataFrame with results for all parameter combinations
+    """
+    import itertools
+    
+    # Generate all parameter combinations
+    param_names = list(param_grid.keys())
+    param_values = list(param_grid.values())
+    combinations = list(itertools.product(*param_values))
+    
+    results = []
+    
+    for i, combination in enumerate(combinations):
+        params = dict(zip(param_names, combination))
+        
+        print(f"\nConfiguration {i+1}/{len(combinations)}: {params}")
+        
+        # Create agent with these parameters
+        agent = agent_class(**params)
+        
+        # Train agent
+        train_results = train_dqn_agent(env, agent, num_episodes, verbose=False)
+        
+        # Evaluate agent
+        eval_results = evaluate_agent(env, agent, eval_episodes)
+        
+        # Store results
+        result = params.copy()
+        result.update({
+            'final_reward': eval_results['mean_return'],
+            'final_std': eval_results['std_return'],
+            'training_reward': np.mean(train_results['rewards'][-10:]) if len(train_results['rewards']) >= 10 else np.mean(train_results['rewards']),
+            'training_steps': train_results['training_steps']
+        })
+        
+        results.append(result)
+        
+        print(f"Final reward: {eval_results['mean_return']:.2f} ± {eval_results['std_return']:.2f}")
+    
+    return pd.DataFrame(results)
+
+
+def set_seed(seed):
+    """Set random seed for reproducibility"""
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+
+def get_device():
+    """Get appropriate device (CUDA if available)"""
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
