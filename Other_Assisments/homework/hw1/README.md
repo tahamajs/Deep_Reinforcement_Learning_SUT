@@ -4,6 +4,48 @@
 
 This homework implements behavioral cloning for imitation learning with a modular, well-structured codebase.
 
+## 🚀 **QUICK START** - Ready to Run!
+
+**All compatibility issues fixed! Just run ONE command:**
+
+```bash
+cd /Users/tahamajs/Documents/uni/DRL/Other_Assisments/homework/hw1
+
+# Make script executable and run
+chmod +x run_all.sh && ./run_all.sh
+```
+
+**This interactive script will:**
+- ✅ Check your environment
+- ✅ Let you choose which environments to run (or all)
+- ✅ Collect expert data
+- ✅ Train BC policies
+- ✅ Evaluate results
+- ✅ Generate summary report
+
+**For quick test without MuJoCo:**
+```bash
+python test_without_mujoco.py
+```
+
+**📚 Documentation:**
+- **[QUICK_REFERENCE.txt](QUICK_REFERENCE.txt)** - ⭐ Quick commands
+- **[READY_TO_RUN.md](READY_TO_RUN.md)** - Latest status & commands
+- **[FINAL_GUIDE.md](FINAL_GUIDE.md)** - Complete guide with all options
+- **[MUJOCO_SETUP.md](MUJOCO_SETUP.md)** - MuJoCo installation guide
+
+---
+
+## ✅ What's Fixed
+
+- ✅ TensorFlow 2.x compatibility (works with TF 2.20)
+- ✅ Keras 3 compatibility
+- ✅ Action dimension handling
+- ✅ Modern Python 3.13 support
+- ✅ Test script without MuJoCo requirement
+
+---
+
 ## Project Structure
 
 ```

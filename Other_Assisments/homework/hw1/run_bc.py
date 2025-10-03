@@ -21,6 +21,13 @@ import os
 import argparse
 import pickle
 import gym
+import tensorflow as tf
+
+# TensorFlow 2.x compatibility
+if hasattr(tf, '__version__') and int(tf.__version__.split('.')[0]) >= 2:
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
+
 from src.expert_data_collector import ExpertDataCollector, load_expert_policy
 from src.behavioral_cloning import BehavioralCloning
 def collect_expert_data(args):
@@ -137,7 +144,6 @@ def main():
         evaluate_bc_policy(args)
     else:
         parser.print_help()
-if __name__ == "__main__":
-    import tensorflow as tf
 
+if __name__ == "__main__":
     main()

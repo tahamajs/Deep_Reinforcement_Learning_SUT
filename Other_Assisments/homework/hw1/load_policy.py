@@ -1,4 +1,13 @@
-import pickle, tensorflow as tf, tf_util, numpy as np
+import pickle
+import tensorflow as tf
+
+# TensorFlow 2.x compatibility
+if hasattr(tf, '__version__') and int(tf.__version__.split('.')[0]) >= 2:
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
+
+import tf_util
+import numpy as np
 
 def load_policy(filename):
     with open(filename, 'rb') as f:

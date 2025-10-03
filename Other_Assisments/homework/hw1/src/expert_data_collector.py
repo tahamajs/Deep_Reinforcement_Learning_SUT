@@ -12,6 +12,12 @@ import pickle
 import numpy as np
 import gym
 import tensorflow as tf
+
+# TensorFlow 2.x compatibility
+if hasattr(tf, '__version__') and int(tf.__version__.split('.')[0]) >= 2:
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
+
 from tf_util import initialize
 class ExpertDataCollector:
     """Class for collecting expert demonstration data."""
@@ -53,9 +59,9 @@ class ExpertDataCollector:
             while not done:
                 action = self.policy_fn(obs[None, :])
                 observations.append(obs)
-                actions.append(action)
+                actions.append(action[0])  # Squeeze the action
 
-                obs, reward, done, _ = self.env.step(action)
+                obs, reward, done, _ = self.env.step(action[0])
                 total_reward += reward
                 steps += 1
 

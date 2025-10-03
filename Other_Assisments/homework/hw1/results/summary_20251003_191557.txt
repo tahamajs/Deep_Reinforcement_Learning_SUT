@@ -1,0 +1,17 @@
+BEHAVIORAL CLONING RESULTS SUMMARY
+Generated: Fri Oct  3 19:15:57 +0330 2025
+========================================
+
+Configuration:
+  - Rollouts: 20
+  - Epochs: 100
+  - Batch Size: 64
+
+Results:
+----------------------------------------
+Environment          Expert          BC Policy       Ratio     
+----------------------------------------
+Hopper-v2            N/A             N/A             N/A%      
+----------------------------------------
+
+Total Duration: 0h 0m 7s

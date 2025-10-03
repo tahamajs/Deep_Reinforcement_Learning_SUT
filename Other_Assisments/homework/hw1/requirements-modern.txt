@@ -1,0 +1,20 @@
+# Modern Requirements (Works on M1/M2 Mac and Python 3.13)
+
+# Core RL libraries (modern versions)
+gymnasium>=0.29.0
+gymnasium[mujoco]>=0.29.0
+
+# Deep Learning
+tensorflow>=2.10.0
+
+# Data science
+numpy>=1.21.0
+matplotlib>=3.5.0
+seaborn>=0.12.0
+
+# Additional environments (optional)
+# box2d-py  # For LunarLander
+# pygame    # For rendering
+
+# Note: This uses the modern 'gymnasium' instead of old 'gym'
+# and includes built-in MuJoCo support that works on M1/M2 Macs

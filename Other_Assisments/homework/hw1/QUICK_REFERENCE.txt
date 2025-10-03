@@ -1,0 +1,135 @@
+╔════════════════════════════════════════════════════════════════╗
+║                 BEHAVIORAL CLONING - QUICK REFERENCE            ║
+║                    All Issues Fixed & Ready!                    ║
+╚════════════════════════════════════════════════════════════════╝
+
+📍 CURRENT LOCATION:
+   /Users/tahamajs/Documents/uni/DRL/Other_Assisments/homework/hw1
+
+✅ STATUS: All compatibility issues resolved!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 RUN THIS NOW (One command for everything!):
+
+   chmod +x run_all.sh && ./run_all.sh
+
+   This interactive script will guide you through everything!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎮 OR TEST WITHOUT MUJOCO (Works immediately):
+
+   python test_without_mujoco.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📚 DOCUMENTATION:
+
+   📄 READY_TO_RUN.md          ⭐ Latest status & quick commands
+   📄 FINAL_GUIDE.md            Complete guide with all options  
+   📄 MUJOCO_SETUP.md           MuJoCo installation help
+   📄 RUNNING_INSTRUCTIONS.md   Detailed step-by-step guide
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💻 COMMANDS CHEAT SHEET:
+
+   # Test BC implementation (no MuJoCo)
+   python test_without_mujoco.py
+
+   # Check environment setup
+   python check_setup.py
+
+   # For MuJoCo environments (if setup)
+   python run_full_pipeline.py --env Hopper-v2
+
+   # Modular approach
+   python run_bc.py collect --env Hopper-v2 --expert_policy experts/Hopper-v2.pkl
+   python run_bc.py train --env Hopper-v2 --data_file expert_data/Hopper-v2.pkl
+   python run_bc.py evaluate --env Hopper-v2 --model_file models/bc_policy
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔧 WHAT WAS FIXED:
+
+   ✅ TensorFlow 2.x compatibility (works with TF 2.20)
+   ✅ Keras 3 compatibility (latest version)
+   ✅ tf.Session, tf.placeholder support via compat.v1
+   ✅ tf.layers.dense → tf.compat.v1.layers.dense
+   ✅ Action dimension handling
+   ✅ Python 3.13 support
+   ✅ Modern gym/gymnasium support
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎮 FOR MUJOCO ENVIRONMENTS:
+
+   Option A: Google Colab (Recommended)
+   └─ Upload folder → Install MuJoCo → Run pipeline
+
+   Option B: Test without MuJoCo
+   └─ python test_without_mujoco.py (works now!)
+
+   Option C: Fix local MuJoCo
+   └─ See MUJOCO_SETUP.md for detailed guide
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 DEPENDENCIES:
+
+   Required:
+   - tensorflow>=2.0
+   - gymnasium (or gym)
+   - numpy
+
+   Optional:
+   - box2d-py (for LunarLander)
+   - mujoco-py (for MuJoCo environments)
+
+   Install: pip install gymnasium tensorflow numpy
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 PROJECT STRUCTURE:
+
+   hw1/
+   ├── src/
+   │   ├── behavioral_cloning.py     [Core BC implementation]
+   │   └── expert_data_collector.py  [Data collection]
+   ├── run_full_pipeline.py          [Automated pipeline]
+   ├── run_bc.py                     [Modular interface]
+   ├── test_without_mujoco.py        [Quick test script]
+   ├── check_setup.py                [Environment checker]
+   └── experts/                      [Expert policies]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 RECOMMENDED WORKFLOW:
+
+   1. Test BC works:
+      python test_without_mujoco.py
+
+   2. For MuJoCo, use Google Colab:
+      - Upload hw1 folder
+      - Install MuJoCo in Colab
+      - Run: python run_full_pipeline.py --env Hopper-v2
+
+   3. View results and compare with expert
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+👤 AUTHOR:
+   Saeed Reza Zouashkiani
+   Student ID: 400206262
+   Course: CS294-112 Deep Reinforcement Learning
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 QUICK START:
+
+   python test_without_mujoco.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Good luck! 🎉

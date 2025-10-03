@@ -1,6 +1,9 @@
 gym==0.10.5
 mujoco-py==1.50.1.56
-tensorflow>=1.10.0
+tensorflow>=1.10.0,<3.0.0
 numpy>=1.14.5
 seaborn>=0.9.0
 matplotlib>=3.0.0
+
+# Note: This code is compatible with both TensorFlow 1.x and 2.x
+# For TensorFlow 2.x, it will automatically use compatibility mode

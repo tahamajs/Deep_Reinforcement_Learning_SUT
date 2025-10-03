@@ -8,6 +8,12 @@ Student ID: 400206262
 """
 
 import tensorflow as tf
+
+# TensorFlow 2.x compatibility
+if hasattr(tf, '__version__') and int(tf.__version__.split('.')[0]) >= 2:
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
+
 import numpy as np
 from tf_util import function, initialize
 class BehavioralCloning:
@@ -36,9 +42,9 @@ class BehavioralCloning:
         self.act_ph = tf.placeholder(tf.float32, [None, self.act_dim])
         layer = self.obs_ph
         for size in self.hidden_sizes:
-            layer = tf.layers.dense(layer, size, activation=tf.nn.relu)
+            layer = tf.compat.v1.layers.dense(layer, size, activation=tf.nn.relu)
 
-        self.predicted_actions = tf.layers.dense(layer, self.act_dim, activation=None)
+        self.predicted_actions = tf.compat.v1.layers.dense(layer, self.act_dim, activation=None)
         self.loss = tf.reduce_mean(tf.square(self.predicted_actions - self.act_ph))
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
         self.train_op = self.optimizer.minimize(self.loss)
@@ -55,6 +61,10 @@ class BehavioralCloning:
         Returns:
             dict: Training history
         """
+        # Ensure actions are 2D
+        if len(actions.shape) == 1:
+            actions = actions.reshape(-1, 1)
+        
         losses = []
 
         for epoch in range(epochs):

@@ -1,0 +1,145 @@
+╔═══════════════════════════════════════════════════════════════════════╗
+║                                                                       ║
+║              🎯 BEHAVIORAL CLONING - ONE COMMAND TO RUN ALL          ║
+║                                                                       ║
+╚═══════════════════════════════════════════════════════════════════════╝
+
+Author: Saeed Reza Zouashkiani
+Student ID: 400206262
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 JUST RUN THIS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    cd /Users/tahamajs/Documents/uni/DRL/Other_Assisments/homework/hw1
+    
+    chmod +x run_all.sh && ./run_all.sh
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ WHAT IT DOES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The script is INTERACTIVE and will:
+
+  ✅ Check your environment setup
+  ✅ Let you choose environments:
+     1. Hopper-v2 (fastest - 5-10 min)
+     2. Reacher-v2 (fast - 5-10 min)
+     3. HalfCheetah-v2 (medium - 10-15 min)
+     4. Walker2d-v2 (medium - 10-15 min)
+     5. Ant-v2 (slow - 15-20 min)
+     6. Humanoid-v2 (very slow - 30+ min)
+     7. ALL environments (sequential)
+     8. Quick test without MuJoCo
+  
+  ✅ Ask for parameters (or use defaults):
+     - Number of rollouts (default: 20)
+     - Training epochs (default: 100)
+     - Batch size (default: 64)
+  
+  ✅ Run complete pipeline for each environment:
+     → Load expert policy
+     → Collect expert demonstrations
+     → Train BC policy
+     → Evaluate trained policy
+     → Compare results
+  
+  ✅ Generate comprehensive summary report
+  ✅ Save all logs and results
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 EXAMPLE OUTPUT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Environment          Expert Return   BC Return       Ratio      Status
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Hopper-v2           3672.43         3045.67         82.9%      SUCCESS
+Reacher-v2          -4.23           -5.12           82.5%      SUCCESS
+HalfCheetah-v2      4132.45         3201.32         77.5%      SUCCESS
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 OUTPUT FILES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After running, you'll have:
+
+  expert_data/           → Collected expert demonstrations
+    ├── Hopper-v2.pkl
+    ├── Ant-v2.pkl
+    └── ...
+  
+  models/                → Trained BC policies
+    ├── bc_policy_Hopper-v2.*
+    ├── training_history_Hopper-v2.pkl
+    └── ...
+  
+  logs/                  → Detailed logs for each run
+    ├── Hopper-v2_20251003_143052.log
+    └── ...
+  
+  results/               → Summary reports
+    └── summary_20251003_143052.txt
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎮 ALTERNATIVE - TEST WITHOUT MUJOCO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+If MuJoCo isn't working, test with simple environments:
+
+    python test_without_mujoco.py
+
+This works on ANY system without MuJoCo!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 TIPS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  • Start with Hopper-v2 (fastest) to test
+  • Use default parameters first time
+  • The script creates all directories automatically
+  • All progress is shown with colored output
+  • Press Ctrl+C to cancel at any time
+  • Logs are saved even if something fails
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❓ TROUBLESHOOTING:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Issue: MuJoCo not working
+  → Run: python test_without_mujoco.py
+  → Or see: MUJOCO_SETUP.md
+
+  Issue: Permission denied
+  → Run: chmod +x run_all.sh
+
+  Issue: Script not found
+  → Make sure you're in the hw1 directory
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📚 MORE INFO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  README.md              → Main documentation
+  READY_TO_RUN.md        → Complete status and commands
+  FINAL_GUIDE.md         → Full guide with all options
+  MUJOCO_SETUP.md        → MuJoCo installation help
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ READY TO GO!
+
+Just copy and paste this command:
+
+    chmod +x run_all.sh && ./run_all.sh
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Good luck! 🚀
