@@ -19,7 +19,11 @@ from models.trainers import RSSMTrainer
 from environments.continuous_cartpole import ContinuousCartPole
 from environments.continuous_pendulum import ContinuousPendulum
 
-from utils.data_collection import collect_world_model_data, create_sequence_dataset, create_sequence_dataloader
+from utils.data_collection import (
+    collect_world_model_data,
+    create_sequence_dataset,
+    create_sequence_dataloader,
+)
 from utils.visualization import plot_rssm_training, plot_imagination_trajectory
 
 
@@ -126,23 +130,25 @@ def run_rssm_experiment(
     # Evaluate RSSM
     print("Evaluating RSSM...")
     rssm.eval()
-    
+
     eval_losses = []
     reconstruction_errors = []
-    
+
     with torch.no_grad():
         for batch in dataloader:
             obs_seq = batch["observations"]
             action_seq = batch["actions"]
             reward_seq = batch["rewards"]
-            
+
             batch_size = obs_seq.shape[0]
             initial_hidden = torch.zeros(batch_size, rssm.deter_dim).to(device)
-            
+
             # Compute loss
-            loss_dict = rssm.compute_loss(obs_seq, action_seq, reward_seq, initial_hidden)
+            loss_dict = rssm.compute_loss(
+                obs_seq, action_seq, reward_seq, initial_hidden
+            )
             eval_losses.append(loss_dict["total_loss"].item())
-            
+
             # Compute reconstruction error for first observation
             first_obs = obs_seq[:, 0]  # First observation in sequence
             encoded_obs = rssm._encode_observation(first_obs)
@@ -152,7 +158,7 @@ def run_rssm_experiment(
 
     avg_eval_loss = np.mean(eval_losses)
     avg_recon_error = np.mean(reconstruction_errors)
-    
+
     print(f"Average evaluation loss: {avg_eval_loss:.4f}")
     print(f"Average reconstruction error: {avg_recon_error:.4f}")
 
@@ -161,16 +167,16 @@ def run_rssm_experiment(
     test_batch = next(iter(dataloader))
     test_obs = test_batch["observations"][0:1]  # Test on 1 sample
     test_actions = test_batch["actions"][0:1]
-    
+
     # Get initial state
     initial_hidden = torch.zeros(1, rssm.deter_dim).to(device)
     initial_latent = rssm._encode_observation(test_obs[:, 0])
-    
+
     # Imagine trajectory
     imagined_obs, imagined_rewards, imagined_hidden = rssm.imagine_trajectory(
         initial_hidden, initial_latent, test_actions
     )
-    
+
     print(f"Imagined trajectory shapes:")
     print(f"- Observations: {imagined_obs.shape}")
     print(f"- Rewards: {imagined_rewards.shape}")
@@ -244,7 +250,9 @@ def main():
     )
     parser.add_argument("--latent_dim", type=int, default=32, help="Latent dimension")
     parser.add_argument("--hidden_dim", type=int, default=256, help="Hidden dimension")
-    parser.add_argument("--stochastic_size", type=int, default=16, help="Stochastic state size")
+    parser.add_argument(
+        "--stochastic_size", type=int, default=16, help="Stochastic state size"
+    )
     parser.add_argument(
         "--epochs",
         type=int,
@@ -264,7 +272,10 @@ def main():
         help="Number of data collection steps",
     )
     parser.add_argument(
-        "--save_dir", type=str, default="visualizations", help="Directory to save results"
+        "--save_dir",
+        type=str,
+        default="visualizations",
+        help="Directory to save results",
     )
 
     args = parser.parse_args()

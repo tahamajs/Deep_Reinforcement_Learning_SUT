@@ -23,7 +23,10 @@ from environments.continuous_cartpole import ContinuousCartPole
 from environments.continuous_pendulum import ContinuousPendulum
 
 from utils.data_collection import collect_world_model_data, create_dataloader
-from utils.visualization import plot_world_model_training, plot_reconstruction_comparison
+from utils.visualization import (
+    plot_world_model_training,
+    plot_reconstruction_comparison,
+)
 
 
 def run_world_model_experiment(
@@ -125,21 +128,21 @@ def run_world_model_experiment(
     # Evaluate world model
     print("Evaluating world model...")
     world_model.eval()
-    
+
     eval_losses = []
     reconstruction_errors = []
-    
+
     with torch.no_grad():
         for batch in dataloader:
             obs = batch["observations"]
             actions = batch["actions"]
             next_obs = batch["next_observations"]
             rewards = batch["rewards"]
-            
+
             # Compute loss
             loss_dict = world_model.compute_loss(obs, actions, next_obs, rewards)
             eval_losses.append(loss_dict["total_loss"].item())
-            
+
             # Compute reconstruction error
             _, _, _, z = world_model.vae.encode(obs)
             recon_obs = world_model.vae.decode(z)
@@ -148,7 +151,7 @@ def run_world_model_experiment(
 
     avg_eval_loss = np.mean(eval_losses)
     avg_recon_error = np.mean(reconstruction_errors)
-    
+
     print(f"Average evaluation loss: {avg_eval_loss:.4f}")
     print(f"Average reconstruction error: {avg_recon_error:.4f}")
 
@@ -157,11 +160,11 @@ def run_world_model_experiment(
     test_batch = next(iter(dataloader))
     test_obs = test_batch["observations"][:5]  # Test on 5 samples
     test_actions = test_batch["actions"][:5]
-    
+
     imagined_trajectory = world_model.imagine_trajectory(
         test_obs, test_actions, horizon=10
     )
-    
+
     print(f"Imagined trajectory shape: {imagined_trajectory['observations'].shape}")
 
     # Prepare results
@@ -244,7 +247,10 @@ def main():
         help="Number of data collection steps",
     )
     parser.add_argument(
-        "--save_dir", type=str, default="visualizations", help="Directory to save results"
+        "--save_dir",
+        type=str,
+        default="visualizations",
+        help="Directory to save results",
     )
 
     args = parser.parse_args()
