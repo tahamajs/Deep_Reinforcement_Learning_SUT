@@ -335,7 +335,7 @@ class VarianceAnalyzer:
             rewards = agent.episode_rewards_history
             
             if len(rewards) > 10:
-            smoothed = pd.Series(rewards).rolling(window=20).mean()
+                smoothed = pd.Series(rewards).rolling(window=20).mean()
                 ax.plot(
                     smoothed,
                     label=baseline_type.replace("_", " ").title(),
