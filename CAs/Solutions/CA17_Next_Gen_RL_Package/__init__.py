@@ -145,7 +145,7 @@ def run_quick_demo():
     experiment = WorldModelExperiment(config, save_dir="demo_results")
     results = experiment.run_experiment()
 
-    print(".2f"    print(".2f"
+    print(f"✅ World Model Demo Results: {results['final_reward']:.2f}")
     experiment.plot_results()
 
     print("\n✅ Demo completed! Check 'demo_results' directory for outputs.")

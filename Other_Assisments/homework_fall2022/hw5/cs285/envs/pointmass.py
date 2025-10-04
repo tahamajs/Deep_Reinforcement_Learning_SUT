@@ -14,7 +14,9 @@ class PointMass(gym.Env):
         self.scale = int(scale)
         self.grid_size = self.scale * self.scale
         self.observation_space = gym.spaces.Box(
-            low=np.array([0.0, 0.0]), high=np.array([1.0, 1.0])
+            low=np.array([0.0, 0.0], dtype=np.float32), 
+            high=np.array([1.0, 1.0], dtype=np.float32),
+            dtype=np.float32
         )
         self.action_space = gym.spaces.Box(
             low=np.array([-np.inf, -np.inf]), high=np.array([np.inf, np.inf])
@@ -25,10 +27,12 @@ class PointMass(gym.Env):
             max_episode_steps=int(max_episode_steps_coeff * self.scale),
         )
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
+        if seed is not None:
+            np.random.seed(seed)
         plt.close()
         self.state = np.array([self.goal_padding, self.goal_padding])
-        state = self.state / self.scale
+        state = (self.state / self.scale).astype(np.float32)
         return state, {}
 
     def step(self, action):
@@ -44,17 +48,17 @@ class PointMass(gym.Env):
         if new_y > self.scale:
             new_y = self.scale
         self.state = np.array([new_x, new_y])
-        state = self.state / self.scale
+        state = (self.state / self.scale).astype(np.float32)
         reg_term = -0.01 * np.sum(action**2)
 
         threshold = self.scale - self.goal_padding
         if new_x > threshold and new_y > threshold:
-            reward = 10 + reg_term
+            reward = float(10 + reg_term)
         else:
-            reward = 0 + reg_term
+            reward = float(0 + reg_term)
         done = False
 
-        return state, reward, False, False, {}
+        return state, reward, done, False, {}
 
     def preprocess(self, state):
         scaled_state = self.scale * state

@@ -34,8 +34,8 @@ class RL_Trainer(object):
         torch.manual_seed(seed)
         ptu.init_gpu(use_gpu=not self.params["no_gpu"], gpu_id=self.params["which_gpu"])
         register_custom_envs()
-        self.env = gym.make(self.params["env_name"], render_mode='rgb_array')
-        self.eval_env = gym.make(self.params["env_name"], render_mode='rgb_array')
+        self.env = gym.make(self.params["env_name"])
+        self.eval_env = gym.make(self.params["env_name"])
         if not ("pointmass" in self.params["env_name"]):
             import matplotlib
 
@@ -54,41 +54,45 @@ class RL_Trainer(object):
 
             self.env = wrappers.RecordEpisodeStatistics(self.env)
             self.env = ReturnWrapper(self.env)
-            self.env = wrappers.RecordVideo(
-                self.env,
-                os.path.join(self.params["logdir"], "gym"),
-                episode_trigger=self.episode_trigger,
-            )
+            if "pointmass" not in self.params["env_name"].lower():
+                self.env = wrappers.RecordVideo(
+                    self.env,
+                    os.path.join(self.params["logdir"], "gym"),
+                    episode_trigger=self.episode_trigger,
+                )
             self.env = params["env_wrappers"](self.env)
 
             self.eval_env = wrappers.RecordEpisodeStatistics(
                 self.eval_env
             )
             self.eval_env = ReturnWrapper(self.eval_env)
-            self.eval_env = wrappers.RecordVideo(
-                self.eval_env,
-                os.path.join(self.params["logdir"], "gym"),
-                episode_trigger=self.episode_trigger,
-            )
+            if "pointmass" not in self.params["env_name"].lower():
+                self.eval_env = wrappers.RecordVideo(
+                    self.eval_env,
+                    os.path.join(self.params["logdir"], "gym"),
+                    episode_trigger=self.episode_trigger,
+                )
             self.eval_env = params["env_wrappers"](self.eval_env)
 
             self.mean_episode_reward = -float("nan")
             self.best_mean_episode_reward = -float("inf")
         if "non_atari_colab_env" in self.params and self.params["video_log_freq"] > 0:
-            self.env = wrappers.RecordVideo(
-                self.env,
-                os.path.join(self.params["logdir"], "gym"),
-                episode_trigger=self.episode_trigger,
-            )
-            self.eval_env = wrappers.RecordVideo(
-                self.eval_env,
-                os.path.join(self.params["logdir"], "gym"),
-                episode_trigger=self.episode_trigger,
-            )
+            if "pointmass" not in self.params["env_name"].lower():
+                self.env = wrappers.RecordVideo(
+                    self.env,
+                    os.path.join(self.params["logdir"], "gym"),
+                    episode_trigger=self.episode_trigger,
+                )
+                self.eval_env = wrappers.RecordVideo(
+                    self.eval_env,
+                    os.path.join(self.params["logdir"], "gym"),
+                    episode_trigger=self.episode_trigger,
+                )
             self.mean_episode_reward = -float("nan")
             self.best_mean_episode_reward = -float("inf")
-        self.env.seed(seed)
-        self.eval_env.seed(seed)
+        # Set seed using Gymnasium API
+        self.env.reset(seed=seed)
+        self.eval_env.reset(seed=seed)
         self.params["ep_len"] = self.params["ep_len"] or self.env.spec.max_episode_steps
         global MAX_VIDEO_LEN
         MAX_VIDEO_LEN = self.params["ep_len"]

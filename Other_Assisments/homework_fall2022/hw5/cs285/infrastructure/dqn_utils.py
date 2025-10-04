@@ -363,7 +363,7 @@ def get_wrapper_by_name(env, classname):
         else:
             raise ValueError("Couldn't find wrapper named %s" % classname)
 class MemoryOptimizedReplayBuffer(object):
-    def __init__(self, size, frame_history_len, lander=False, float_obs=False):
+    def __init__(self, size, frame_history_len, lander=False, float_obs=False, continuous_actions=False, action_shape=None):
         """This is a memory efficient implementation of the replay buffer.
 
         The sepecific memory optimizations use here are:
@@ -388,8 +388,14 @@ class MemoryOptimizedReplayBuffer(object):
             overflows the old memories are dropped.
         frame_history_len: int
             Number of memories to be retried for each observation.
+        continuous_actions: bool
+            Whether the action space is continuous (for PointMass envs)
+        action_shape: tuple
+            Shape of continuous actions if applicable
         """
         self.float_obs = lander or float_obs
+        self.continuous_actions = continuous_actions
+        self.action_shape = action_shape
 
         self.size = size
         self.frame_history_len = frame_history_len
@@ -519,7 +525,10 @@ class MemoryOptimizedReplayBuffer(object):
                 [self.size] + list(frame.shape),
                 dtype=np.float32 if self.float_obs else np.uint8,
             )
-            self.action = np.empty([self.size], dtype=np.int32)
+            if self.continuous_actions and self.action_shape is not None:
+                self.action = np.empty([self.size] + list(self.action_shape), dtype=np.float32)
+            else:
+                self.action = np.empty([self.size], dtype=np.int32)
             self.reward = np.empty([self.size], dtype=np.float32)
             self.done = np.empty([self.size], dtype=np.bool)
         self.obs[self.next_idx] = frame

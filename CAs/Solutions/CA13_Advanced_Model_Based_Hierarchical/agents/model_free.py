@@ -74,6 +74,7 @@ class DQNAgent(ModelFreeAgent):
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=learning_rate)
 
         # Experience replay buffer
+        from ..buffers.replay_buffer import ReplayBuffer
         self.replay_buffer = ReplayBuffer(buffer_size)
 
         # Training statistics

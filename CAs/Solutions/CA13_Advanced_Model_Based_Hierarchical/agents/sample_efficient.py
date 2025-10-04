@@ -146,6 +146,7 @@ class SampleEfficientAgent:
         self.optimizer = optim.Adam(self.network.parameters(), lr=lr)
         
         # Prioritized replay buffer
+        from ..buffers.replay_buffer import PrioritizedReplayBuffer
         self.replay_buffer = PrioritizedReplayBuffer(buffer_size)
         
         # Training parameters
