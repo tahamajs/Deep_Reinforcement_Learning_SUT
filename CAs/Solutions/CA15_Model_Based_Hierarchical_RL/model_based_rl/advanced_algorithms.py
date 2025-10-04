@@ -500,3 +500,4 @@ class SafeModelBasedRL(nn.Module):
         pred_constraints = self.predict_constraints(states, actions)
         safety_loss = F.mse_loss(pred_constraints, constraints)
         return safety_loss
+

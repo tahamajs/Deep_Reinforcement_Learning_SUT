@@ -429,3 +429,4 @@ def get_memory_usage() -> Dict[str, float]:
     memory_info["cpu_memory"] = process.memory_info().rss / (1024**3)  # GB
 
     return memory_info
+

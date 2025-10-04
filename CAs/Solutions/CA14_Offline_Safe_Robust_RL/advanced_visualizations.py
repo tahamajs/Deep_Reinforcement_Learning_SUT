@@ -1055,3 +1055,4 @@ class AdvancedMetricsAnalyzer:
 
         # Invert y-axis to show best method at top
         ax.invert_yaxis()
+

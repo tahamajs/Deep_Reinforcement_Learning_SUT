@@ -163,3 +163,4 @@ def create_simple_grid_world(grid_size: int = 5) -> SimpleGridWorld:
 def create_multi_armed_bandit(n_arms: int = 10) -> MultiArmedBandit:
     """Create and return a multi-armed bandit environment."""
     return MultiArmedBandit(n_arms=n_arms)
+

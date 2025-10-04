@@ -635,3 +635,4 @@ if __name__ == "__main__":
     print("- DynamicEnvironment: Changing obstacles and goals")
     print("- HierarchicalEnvironment: Sub-goals and meta-goals")
     print("- StochasticEnvironment: Probabilistic transitions")
+

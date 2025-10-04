@@ -35,6 +35,7 @@ print_status "Creating necessary directories..."
 mkdir -p visualizations
 mkdir -p results
 mkdir -p logs
+mkdir -p logs/experiments
 
 # Check if Python is available
 if ! command -v python3 &> /dev/null; then
@@ -268,3 +269,4 @@ echo ""
 echo "========================================"
 print_success "CA07 DQN Project Execution Complete!"
 echo "========================================"
+

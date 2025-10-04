@@ -576,3 +576,4 @@ class ContinuousOptionCritic(nn.Module):
         log_probs = dist.log_prob(actions).sum(dim=-1)
 
         return log_probs
+

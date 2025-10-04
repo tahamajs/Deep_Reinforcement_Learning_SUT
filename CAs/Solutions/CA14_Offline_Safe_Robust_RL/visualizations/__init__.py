@@ -8,3 +8,4 @@ if not os.path.exists(VIS_DIR):
     os.makedirs(VIS_DIR)
 
 __all__ = []
+

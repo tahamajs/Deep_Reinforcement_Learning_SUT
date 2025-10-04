@@ -821,3 +821,4 @@ class InteractiveVisualizer:
                 else:
                     value_map[i, j] = 0
         return value_map
+

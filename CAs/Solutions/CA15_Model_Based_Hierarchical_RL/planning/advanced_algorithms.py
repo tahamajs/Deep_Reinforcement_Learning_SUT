@@ -615,3 +615,4 @@ class VariationalLatentPlanner(nn.Module):
         self.optimizer.step()
 
         return total_loss.item()
+

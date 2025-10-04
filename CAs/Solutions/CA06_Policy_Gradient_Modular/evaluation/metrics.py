@@ -256,3 +256,4 @@ def calculate_final_performance(
         "min_final_performance": np.min(final_rewards),
         "max_final_performance": np.max(final_rewards),
     }
+

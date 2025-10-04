@@ -1,87 +1,89 @@
 """
-Continual Learning Environments
+Continual Learning Environment
 
-This module contains environments designed for continual learning scenarios,
-including task switching and domain adaptation.
+This module implements environments that support continual learning across multiple tasks.
 """
 
 import numpy as np
-import gymnasium as gym
-from gymnasium import Env, spaces
-from typing import Dict, List, Any, Optional, Tuple
-import random
-import time
-from dataclasses import dataclass
-
-
-@dataclass
-class TaskConfig:
-    """Configuration for a learning task."""
-
-    task_id: int
-    task_name: str
-    difficulty: float
-    reward_structure: Dict[str, float]
-    state_distribution: str
-    action_requirements: List[int]
-    success_criteria: Dict[str, Any]
+import torch
+from typing import Dict, List, Tuple, Optional, Any, Union
+from gymnasium import Env
+from gymnasium.spaces import Discrete, Box
 
 
 class ContinualLearningEnvironment(Env):
-    """Environment for continual learning scenarios."""
+    """Environment that supports continual learning across multiple tasks."""
 
-    def __init__(self, num_tasks: int = 5, task_switch_frequency: int = 1000):
+    def __init__(
+        self,
+        num_tasks: int = 5,
+        state_dim: int = 4,
+        action_dim: int = 2,
+        task_switch_prob: float = 0.1,
+        task_complexity_range: Tuple[float, float] = (0.1, 1.0),
+    ):
         super().__init__()
-
         self.num_tasks = num_tasks
-        self.task_switch_frequency = task_switch_frequency
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.task_switch_prob = task_switch_prob
+        self.task_complexity_range = task_complexity_range
 
-        # Action space: 0=up, 1=down, 2=left, 3=right, 4=special_action
-        self.action_space = spaces.Discrete(5)
+        # Action space
+        self.action_space = Discrete(action_dim)
 
-        # Observation space: position + task_id + task_features
-        self.observation_space = spaces.Box(
-            low=-1, high=1, shape=(8,), dtype=np.float32
-        )
+        # Observation space
+        self.observation_space = Box(
+            low=-1, high=1, shape=(state_dim + 1,), dtype=np.float32
+        )  # +1 for task indicator
+
+        # Task definitions
+        self.tasks = self._generate_tasks()
+        self.current_task = 0
+        self.task_history = []
 
         # Environment state
-        self.current_task = 0
-        self.task_step_count = 0
-        self.agent_pos = np.array([0.0, 0.0])
-        self.task_features = np.zeros(4)
-
-        # Task configurations
-        self.task_configs = self._create_task_configs()
-
-        # Performance tracking
-        self.task_performances = {}
-        self.forgetting_measures = {}
-
-        # Episode tracking
+        self.state = None
         self.episode_length = 0
-        self.max_episode_length = 200
+        self.max_episode_length = 100
 
-    def _create_task_configs(self) -> List[TaskConfig]:
-        """Create task configurations."""
-        configs = []
+        # Continual learning metrics
+        self.task_performances = {}
+        self.forgetting_metrics = {}
+        self.transfer_metrics = {}
 
-        for i in range(self.num_tasks):
-            config = TaskConfig(
-                task_id=i,
-                task_name=f"task_{i}",
-                difficulty=0.2 + i * 0.1,
-                reward_structure={
-                    "goal_reward": 10.0,
-                    "step_penalty": -0.1,
-                    "collision_penalty": -1.0,
-                },
-                state_distribution="uniform",
-                action_requirements=[0, 1, 2, 3],  # Basic movement
-                success_criteria={"max_steps": 50, "success_rate": 0.8},
-            )
-            configs.append(config)
-
-        return configs
+    def _generate_tasks(self) -> List[Dict[str, Any]]:
+        """Generate different tasks for continual learning."""
+        tasks = []
+        
+        for task_id in range(self.num_tasks):
+            # Generate task-specific parameters
+            complexity = np.random.uniform(*self.task_complexity_range)
+            
+            # Task-specific reward function parameters
+            reward_params = {
+                "center": np.random.uniform(-1, 1, self.state_dim),
+                "scale": np.random.uniform(0.1, 1.0),
+                "complexity": complexity,
+            }
+            
+            # Task-specific dynamics
+            dynamics_params = {
+                "drift": np.random.uniform(-0.1, 0.1, self.state_dim),
+                "noise_scale": np.random.uniform(0.01, 0.1),
+            }
+            
+            task = {
+                "task_id": task_id,
+                "reward_params": reward_params,
+                "dynamics_params": dynamics_params,
+                "complexity": complexity,
+                "description": f"Task {task_id} (complexity: {complexity:.2f})",
+            }
+            
+            tasks.append(task)
+        
+        return tasks
 
     def reset(
         self, seed: Optional[int] = None, options: Optional[Dict] = None
@@ -89,188 +91,287 @@ class ContinualLearningEnvironment(Env):
         """Reset the environment."""
         super().reset(seed=seed)
 
-        # Reset agent position
-        self.agent_pos = np.array([0.0, 0.0])
-
-        # Reset task features
-        self.task_features = np.random.uniform(-1, 1, 4)
+        # Initialize state
+        self.state = np.random.uniform(-1, 1, self.state_dim)
 
         # Reset episode tracking
         self.episode_length = 0
 
-        return self.get_observation(), {}
+        # Record task start
+        self.task_history.append({
+            "task_id": self.current_task,
+            "episode_start": True,
+            "timestamp": len(self.task_history),
+        })
+
+        return self.get_observation(), {"task_id": self.current_task}
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict]:
         """Execute one step in the environment."""
-        # Check for task switch
-        if (
-            self.task_step_count > 0
-            and self.task_step_count % self.task_switch_frequency == 0
-        ):
-            self._switch_task()
+        if self.state is None:
+            raise ValueError("Environment not reset")
 
+        # Get current task
+        task = self.tasks[self.current_task]
+        
         # Execute action
-        reward = self._execute_action(action)
+        next_state = self._apply_action(action, task)
+        
+        # Compute reward
+        reward = self._compute_reward(next_state, task)
+        
+        # Check for task switch
+        task_switched = False
+        if np.random.random() < self.task_switch_prob:
+            self._switch_task()
+            task_switched = True
 
         # Update state
-        self.task_step_count += 1
+        self.state = next_state
         self.episode_length += 1
 
-        # Check termination
+        # Check for episode termination
         done = self.episode_length >= self.max_episode_length
 
-        # Create info
+        # Create info dictionary
         info = {
-            "current_task": self.current_task,
-            "task_step_count": self.task_step_count,
-            "task_performance": self._get_task_performance(),
+            "task_id": self.current_task,
+            "task_switched": task_switched,
+            "episode_length": self.episode_length,
+            "task_complexity": task["complexity"],
         }
+        
+        # Record step
+        self.task_history.append({
+            "task_id": self.current_task,
+            "action": action,
+            "reward": reward,
+            "episode_length": self.episode_length,
+            "timestamp": len(self.task_history),
+        })
 
         return self.get_observation(), reward, done, False, info
 
-    def _execute_action(self, action: int) -> float:
-        """Execute the given action."""
-        config = self.task_configs[self.current_task]
+    def _apply_action(self, action: int, task: Dict[str, Any]) -> np.ndarray:
+        """Apply action to current state."""
+        # Convert action to continuous action
+        action_vector = np.zeros(self.state_dim)
+        action_vector[action] = 1.0
+        
+        # Apply task-specific dynamics
+        dynamics = task["dynamics_params"]
+        next_state = self.state + action_vector * 0.1 + dynamics["drift"]
+        
+        # Add noise
+        noise = np.random.normal(0, dynamics["noise_scale"], self.state_dim)
+        next_state += noise
+        
+        # Clip to valid range
+        next_state = np.clip(next_state, -1, 1)
+        
+        return next_state
 
-        # Basic movement actions
-        if action == 0:  # up
-            self.agent_pos[1] += 0.1
-        elif action == 1:  # down
-            self.agent_pos[1] -= 0.1
-        elif action == 2:  # left
-            self.agent_pos[0] -= 0.1
-        elif action == 3:  # right
-            self.agent_pos[0] += 0.1
-        elif action == 4:  # special action
-            return self._execute_special_action()
-
-        # Keep agent in bounds
-        self.agent_pos = np.clip(self.agent_pos, -1, 1)
-
-        # Calculate reward
-        reward = config.reward_structure["step_penalty"]
-
-        # Check for goal (simplified)
-        if np.linalg.norm(self.agent_pos) < 0.1:
-            reward += config.reward_structure["goal_reward"]
-
-        return reward
-
-    def _execute_special_action(self) -> float:
-        """Execute special action for current task."""
-        config = self.task_configs[self.current_task]
-
-        # Task-specific special actions
-        if self.current_task == 0:
-            # Task 0: Move towards center
-            direction = -self.agent_pos
-            self.agent_pos += 0.2 * direction / (np.linalg.norm(direction) + 1e-8)
-            return 1.0
-        elif self.current_task == 1:
-            # Task 1: Move in circle
-            angle = np.arctan2(self.agent_pos[1], self.agent_pos[0])
-            new_angle = angle + 0.1
-            radius = 0.5
-            self.agent_pos = radius * np.array([np.cos(new_angle), np.sin(new_angle)])
-            return 0.5
-        else:
-            # Default: random movement
-            self.agent_pos += 0.1 * np.random.uniform(-1, 1, 2)
-            return 0.0
+    def _compute_reward(self, state: np.ndarray, task: Dict[str, Any]) -> float:
+        """Compute reward for given state and task."""
+        reward_params = task["reward_params"]
+        
+        # Distance-based reward
+        distance = np.linalg.norm(state - reward_params["center"])
+        reward = np.exp(-distance / reward_params["scale"])
+        
+        # Scale by task complexity
+        reward *= reward_params["complexity"]
+        
+        return float(reward)
 
     def _switch_task(self):
-        """Switch to the next task."""
+        """Switch to a different task."""
         old_task = self.current_task
         self.current_task = (self.current_task + 1) % self.num_tasks
 
         # Record task switch
-        if old_task not in self.task_performances:
-            self.task_performances[old_task] = []
-
-        # Update task features
-        self.task_features = np.random.uniform(-1, 1, 4)
-
-    def _get_task_performance(self) -> float:
-        """Get performance for current task."""
-        if self.current_task not in self.task_performances:
-            return 0.0
-
-        performances = self.task_performances[self.current_task]
-        return np.mean(performances) if performances else 0.0
+        self.task_history.append({
+            "task_id": self.current_task,
+            "task_switch": True,
+            "from_task": old_task,
+            "timestamp": len(self.task_history),
+        })
 
     def get_observation(self) -> np.ndarray:
-        """Get current observation."""
-        obs = np.concatenate(
-            [
-                self.agent_pos,
-                [self.current_task / self.num_tasks],
-                self.task_features,
-            ]
-        )
-        return obs.astype(np.float32)
+        """Get current observation including task indicator."""
+        if self.state is None:
+            return np.zeros(self.state_dim + 1)
+        
+        # Combine state and task indicator
+        task_indicator = np.array([self.current_task / self.num_tasks])
+        observation = np.concatenate([self.state, task_indicator])
+        
+        return observation.astype(np.float32)
 
-    def get_task_info(self) -> Dict[str, Any]:
-        """Get information about current task."""
-        config = self.task_configs[self.current_task]
+    def set_task(self, task_id: int):
+        """Set the current task."""
+        if 0 <= task_id < self.num_tasks:
+            self.current_task = task_id
+
+    def get_task_info(self, task_id: int) -> Dict[str, Any]:
+        """Get information about a specific task."""
+        if 0 <= task_id < self.num_tasks:
+            return self.tasks[task_id]
+        return {}
+
+    def get_task_performance(self, task_id: int) -> Dict[str, Any]:
+        """Get performance metrics for a specific task."""
+        if task_id not in self.task_performances:
+            return {"avg_reward": 0.0, "episodes": 0}
+        
+        return self.task_performances[task_id]
+
+    def update_task_performance(self, task_id: int, reward: float):
+        """Update performance metrics for a task."""
+        if task_id not in self.task_performances:
+            self.task_performances[task_id] = {
+                "rewards": [],
+                "avg_reward": 0.0,
+                "episodes": 0,
+            }
+        
+        self.task_performances[task_id]["rewards"].append(reward)
+        self.task_performances[task_id]["episodes"] += 1
+        self.task_performances[task_id]["avg_reward"] = np.mean(
+            self.task_performances[task_id]["rewards"]
+        )
+
+    def compute_forgetting_metrics(self) -> Dict[str, Any]:
+        """Compute forgetting metrics across tasks."""
+        if len(self.task_performances) < 2:
+            return {"forgetting": 0.0, "retention": 1.0}
+        
+        forgetting_scores = []
+        retention_scores = []
+        
+        for task_id in range(self.num_tasks):
+            if task_id in self.task_performances:
+                task_perf = self.task_performances[task_id]
+                if len(task_perf["rewards"]) > 10:
+                    # Use first 10 episodes as baseline
+                    baseline_perf = np.mean(task_perf["rewards"][:10])
+                    # Use last 10 episodes as current performance
+                    current_perf = np.mean(task_perf["rewards"][-10:])
+                    
+                    forgetting = max(0, baseline_perf - current_perf)
+                    retention = current_perf / baseline_perf if baseline_perf > 0 else 0
+                    
+                    forgetting_scores.append(forgetting)
+                    retention_scores.append(retention)
+        
         return {
-            "task_id": config.task_id,
-            "task_name": config.task_name,
-            "difficulty": config.difficulty,
-            "step_count": self.task_step_count,
+            "forgetting": np.mean(forgetting_scores) if forgetting_scores else 0.0,
+            "retention": np.mean(retention_scores) if retention_scores else 1.0,
+            "task_forgetting": {
+                task_id: forgetting_scores[i] if i < len(forgetting_scores) else 0.0
+                for i, task_id in enumerate(self.task_performances.keys())
+            },
         }
+
+    def get_continual_learning_statistics(self) -> Dict[str, Any]:
+        """Get continual learning statistics."""
+        stats = {
+            "num_tasks": self.num_tasks,
+            "current_task": self.current_task,
+            "task_performances": self.task_performances,
+            "total_episodes": sum(
+                perf["episodes"] for perf in self.task_performances.values()
+            ),
+        }
+        
+        # Add forgetting metrics
+        forgetting_metrics = self.compute_forgetting_metrics()
+        stats.update(forgetting_metrics)
+        
+        # Add task complexity analysis
+        task_complexities = [task["complexity"] for task in self.tasks]
+        stats["task_complexities"] = task_complexities
+        stats["avg_complexity"] = np.mean(task_complexities)
+        
+        return stats
+
+    def render(self, mode: str = "human") -> Optional[np.ndarray]:
+        """Render the environment."""
+        if mode == "human":
+            print(f"\nContinual Learning Environment")
+            print(f"Current Task: {self.current_task}")
+            print(f"Task Description: {self.tasks[self.current_task]['description']}")
+            print(f"State: {self.state}")
+            print(f"Episode Length: {self.episode_length}")
+            print(f"Task Performances: {self.task_performances}")
+        
+        return None
 
 
 class TaskSwitchingEnvironment(Env):
-    """Environment with explicit task switching."""
+    """Environment that switches between different tasks during episodes."""
 
-    def __init__(self, num_tasks: int = 3, switch_probability: float = 0.1):
+    def __init__(
+        self,
+        num_tasks: int = 3,
+        state_dim: int = 4,
+        action_dim: int = 2,
+        switch_frequency: int = 20,
+        task_overlap: float = 0.5,
+    ):
         super().__init__()
-
         self.num_tasks = num_tasks
-        self.switch_probability = switch_probability
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.switch_frequency = switch_frequency
+        self.task_overlap = task_overlap
 
-        # Action space: 0=up, 1=down, 2=left, 3=right, 4=switch_task
-        self.action_space = spaces.Discrete(5)
+        # Action space
+        self.action_space = Discrete(action_dim)
 
-        # Observation space: position + task_id + task_specific_features
-        self.observation_space = spaces.Box(
-            low=-1, high=1, shape=(10,), dtype=np.float32
+        # Observation space
+        self.observation_space = Box(
+            low=-1, high=1, shape=(state_dim + 1,), dtype=np.float32
         )
 
-        # Environment state
+        # Task definitions
+        self.tasks = self._generate_overlapping_tasks()
         self.current_task = 0
-        self.agent_pos = np.array([0.0, 0.0])
-        self.task_goals = {}
-        self.task_obstacles = {}
+        self.task_switch_count = 0
 
-        # Initialize tasks
-        self._initialize_tasks()
-
-        # Performance tracking
-        self.task_switches = 0
-        self.task_successes = {}
-        self.task_attempts = {}
-
-        # Episode tracking
+        # Environment state
+        self.state = None
         self.episode_length = 0
-        self.max_episode_length = 300
+        self.max_episode_length = 100
 
-    def _initialize_tasks(self):
-        """Initialize task-specific elements."""
-        for i in range(self.num_tasks):
-            # Random goal for each task
-            self.task_goals[i] = np.random.uniform(-0.8, 0.8, 2)
-
-            # Random obstacles for each task
-            num_obstacles = random.randint(2, 5)
-            self.task_obstacles[i] = []
-            for _ in range(num_obstacles):
-                obstacle = np.random.uniform(-0.9, 0.9, 2)
-                self.task_obstacles[i].append(obstacle)
-
-            # Initialize performance tracking
-            self.task_successes[i] = 0
-            self.task_attempts[i] = 0
+    def _generate_overlapping_tasks(self) -> List[Dict[str, Any]]:
+        """Generate tasks with overlapping features."""
+        tasks = []
+        
+        for task_id in range(self.num_tasks):
+            # Create overlapping reward centers
+            center = np.random.uniform(-1, 1, self.state_dim)
+            
+            # Add overlap with previous tasks
+            if task_id > 0:
+                overlap = self.tasks[task_id - 1]["reward_params"]["center"]
+                center = (1 - self.task_overlap) * center + self.task_overlap * overlap
+            
+            task = {
+                "task_id": task_id,
+                "reward_params": {
+                    "center": center,
+                    "scale": np.random.uniform(0.1, 1.0),
+                },
+                "dynamics_params": {
+                    "drift": np.random.uniform(-0.1, 0.1, self.state_dim),
+                    "noise_scale": np.random.uniform(0.01, 0.1),
+                },
+            }
+            
+            tasks.append(task)
+        
+        return tasks
 
     def reset(
         self, seed: Optional[int] = None, options: Optional[Dict] = None
@@ -278,123 +379,104 @@ class TaskSwitchingEnvironment(Env):
         """Reset the environment."""
         super().reset(seed=seed)
 
-        # Reset agent position
-        self.agent_pos = np.array([0.0, 0.0])
-
-        # Reset current task
-        self.current_task = 0
+        # Initialize state
+        self.state = np.random.uniform(-1, 1, self.state_dim)
 
         # Reset episode tracking
         self.episode_length = 0
+        self.task_switch_count = 0
+        self.current_task = 0
 
-        return self.get_observation(), {}
+        return self.get_observation(), {"task_id": self.current_task}
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict]:
         """Execute one step in the environment."""
-        reward = 0.0
+        if self.state is None:
+            raise ValueError("Environment not reset")
 
-        # Handle task switching
-        if action == 4:  # switch task
+        # Check for task switch
+        task_switched = False
+        if self.episode_length > 0 and self.episode_length % self.switch_frequency == 0:
             self._switch_task()
-            reward += 0.1  # Small reward for task switching
-        else:
-            # Execute movement action
-            reward += self._execute_movement(action)
+            task_switched = True
+            self.task_switch_count += 1
 
-        # Random task switching
-        if random.random() < self.switch_probability:
-            self._switch_task()
+        # Get current task
+        task = self.tasks[self.current_task]
+        
+        # Execute action
+        next_state = self._apply_action(action, task)
+        
+        # Compute reward
+        reward = self._compute_reward(next_state, task)
 
         # Update state
+        self.state = next_state
         self.episode_length += 1
 
-        # Check termination
+        # Check for episode termination
         done = self.episode_length >= self.max_episode_length
 
-        # Create info
+        # Create info dictionary
         info = {
-            "current_task": self.current_task,
-            "task_switches": self.task_switches,
-            "task_success_rate": self._get_task_success_rate(),
+            "task_id": self.current_task,
+            "task_switched": task_switched,
+            "episode_length": self.episode_length,
+            "task_switch_count": self.task_switch_count,
         }
 
         return self.get_observation(), reward, done, False, info
 
-    def _execute_movement(self, action: int) -> float:
-        """Execute movement action."""
-        old_pos = self.agent_pos.copy()
+    def _apply_action(self, action: int, task: Dict[str, Any]) -> np.ndarray:
+        """Apply action to current state."""
+        # Convert action to continuous action
+        action_vector = np.zeros(self.state_dim)
+        action_vector[action] = 1.0
+        
+        # Apply task-specific dynamics
+        dynamics = task["dynamics_params"]
+        next_state = self.state + action_vector * 0.1 + dynamics["drift"]
+        
+        # Add noise
+        noise = np.random.normal(0, dynamics["noise_scale"], self.state_dim)
+        next_state += noise
+        
+        # Clip to valid range
+        next_state = np.clip(next_state, -1, 1)
+        
+        return next_state
 
-        # Movement
-        if action == 0:  # up
-            self.agent_pos[1] += 0.1
-        elif action == 1:  # down
-            self.agent_pos[1] -= 0.1
-        elif action == 2:  # left
-            self.agent_pos[0] -= 0.1
-        elif action == 3:  # right
-            self.agent_pos[0] += 0.1
-
-        # Keep agent in bounds
-        self.agent_pos = np.clip(self.agent_pos, -1, 1)
-
-        # Check for collisions with obstacles
-        for obstacle in self.task_obstacles[self.current_task]:
-            if np.linalg.norm(self.agent_pos - obstacle) < 0.1:
-                self.agent_pos = old_pos  # Revert movement
-                return -1.0  # Collision penalty
-
-        # Check for goal
-        goal = self.task_goals[self.current_task]
-        if np.linalg.norm(self.agent_pos - goal) < 0.1:
-            self.task_successes[self.current_task] += 1
-            return 10.0  # Goal reward
-
-        # Step penalty
-        return -0.01
+    def _compute_reward(self, state: np.ndarray, task: Dict[str, Any]) -> float:
+        """Compute reward for given state and task."""
+        reward_params = task["reward_params"]
+        
+        # Distance-based reward
+        distance = np.linalg.norm(state - reward_params["center"])
+        reward = np.exp(-distance / reward_params["scale"])
+        
+        return float(reward)
 
     def _switch_task(self):
-        """Switch to a random task."""
-        old_task = self.current_task
-        self.current_task = random.randint(0, self.num_tasks - 1)
-
-        if self.current_task != old_task:
-            self.task_switches += 1
-            self.task_attempts[self.current_task] += 1
-
-    def _get_task_success_rate(self) -> float:
-        """Get overall task success rate."""
-        total_successes = sum(self.task_successes.values())
-        total_attempts = sum(self.task_attempts.values())
-
-        return total_successes / max(1, total_attempts)
+        """Switch to the next task."""
+        self.current_task = (self.current_task + 1) % self.num_tasks
 
     def get_observation(self) -> np.ndarray:
-        """Get current observation."""
-        # Agent position
-        agent_obs = self.agent_pos
+        """Get current observation including task indicator."""
+        if self.state is None:
+            return np.zeros(self.state_dim + 1)
+        
+        # Combine state and task indicator
+        task_indicator = np.array([self.current_task / self.num_tasks])
+        observation = np.concatenate([self.state, task_indicator])
+        
+        return observation.astype(np.float32)
 
-        # Task ID (one-hot encoded)
-        task_obs = np.zeros(self.num_tasks)
-        task_obs[self.current_task] = 1.0
-
-        # Goal position
-        goal_obs = self.task_goals[self.current_task]
-
-        # Obstacle positions (flattened)
-        obstacle_obs = np.zeros(6)  # Max 3 obstacles * 2 coordinates
-        obstacles = self.task_obstacles[self.current_task]
-        for i, obstacle in enumerate(obstacles[:3]):  # Limit to 3 obstacles
-            obstacle_obs[i * 2 : (i + 1) * 2] = obstacle
-
-        obs = np.concatenate([agent_obs, task_obs, goal_obs, obstacle_obs])
-        return obs.astype(np.float32)
-
-    def get_task_info(self) -> Dict[str, Any]:
-        """Get information about current task."""
+    def get_task_switch_statistics(self) -> Dict[str, Any]:
+        """Get task switching statistics."""
         return {
-            "task_id": self.current_task,
-            "goal_position": self.task_goals[self.current_task],
-            "num_obstacles": len(self.task_obstacles[self.current_task]),
-            "success_rate": self.task_successes[self.current_task]
-            / max(1, self.task_attempts[self.current_task]),
+            "num_tasks": self.num_tasks,
+            "current_task": self.current_task,
+            "task_switch_count": self.task_switch_count,
+            "switch_frequency": self.switch_frequency,
+            "task_overlap": self.task_overlap,
         }

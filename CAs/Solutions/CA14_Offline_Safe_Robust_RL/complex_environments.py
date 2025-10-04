@@ -144,6 +144,7 @@ class DynamicMultiObjectiveEnvironment:
 
         # Boundary constraints
         self.agent_pos = np.clip(self.agent_pos, 0.0, float(self.size - 1))
+        self.agent_pos = self.agent_pos.astype(np.float32)
 
     def _check_collisions(self):
         """Check for collisions with obstacles."""
@@ -409,12 +410,12 @@ class PartiallyObservableEnvironment:
         for enemy in self.enemies:
             # Simple random movement
             enemy["direction"] += np.random.uniform(-0.5, 0.5)
-            enemy["pos"] += enemy["speed"] * np.array(
+            enemy["pos"] = enemy["pos"].astype(np.float32) + (enemy["speed"] * np.array(
                 [np.cos(enemy["direction"]), np.sin(enemy["direction"])]
-            )
+            )).astype(np.float32)
 
             # Keep enemies within bounds
-            enemy["pos"] = np.clip(enemy["pos"], 0, self.size - 1)
+            enemy["pos"] = np.clip(enemy["pos"], 0.0, float(self.size - 1))
 
     def reset(self):
         """Reset environment."""
@@ -662,7 +663,9 @@ class ContinuousControlEnvironment:
         self.agent_angular_velocity *= 1 - self.drag_coefficient
 
         # Update position
-        self.agent_pos += self.agent_velocity * 0.1
+        self.agent_pos = self.agent_pos.astype(np.float32) + (
+            self.agent_velocity * 0.1
+        ).astype(np.float32)
         self.agent_angle += self.agent_angular_velocity * 0.1
 
         # Keep angle in [0, 2π]

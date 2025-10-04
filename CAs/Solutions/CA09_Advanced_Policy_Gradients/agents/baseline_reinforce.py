@@ -13,7 +13,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ValueNetwork(nn.Module):
     """Value network for baseline estimation"""
-    
+
     def __init__(self, state_dim, hidden_dim=128):
         super(ValueNetwork, self).__init__()
         self.network = nn.Sequential(
@@ -23,14 +23,14 @@ class ValueNetwork(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, 1),
         )
-    
+
     def forward(self, state):
         return self.network(state).squeeze()
 
 
 class PolicyNetwork(nn.Module):
     """Policy network for discrete action spaces"""
-    
+
     def __init__(self, state_dim, action_dim, hidden_dim=128):
         super(PolicyNetwork, self).__init__()
         self.network = nn.Sequential(
@@ -40,21 +40,21 @@ class PolicyNetwork(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, action_dim),
         )
-    
+
     def forward(self, state):
         logits = self.network(state)
         return logits
-    
+
     def get_action_and_log_prob(self, state):
         """Get action and its log probability"""
         if not isinstance(state, torch.Tensor):
             state = torch.FloatTensor(state).unsqueeze(0).to(device)
-        
+
         logits = self.forward(state)
         action_dist = Categorical(logits=logits)
         action = action_dist.sample()
         log_prob = action_dist.log_prob(action)
-        
+
         return action.item(), log_prob
 
 
@@ -81,7 +81,7 @@ class BaselineREINFORCEAgent:
             device
         )
         self.policy_optimizer = optim.Adam(self.policy_network.parameters(), lr=lr)
-        
+
         # Value network for baseline
         if baseline_type == "value_function":
             self.value_network = ValueNetwork(state_dim, hidden_dim).to(device)
@@ -93,13 +93,13 @@ class BaselineREINFORCEAgent:
         self.episode_rewards = []
         self.episode_log_probs = []
         self.episode_values = []
-        
+
         # Training history
         self.episode_rewards_history = []
         self.policy_losses = []
         self.value_losses = []
         self.advantage_variances = []
-        
+
         # Moving average baseline
         if baseline_type == "moving_average":
             self.moving_avg_baseline = 0.0
@@ -108,7 +108,7 @@ class BaselineREINFORCEAgent:
     def select_action(self, state):
         """Select action based on current policy"""
         action, log_prob = self.policy_network.get_action_and_log_prob(state)
-        
+
         # Get value estimate if using value function baseline
         if self.baseline_type == "value_function":
             if not isinstance(state, torch.Tensor):
@@ -119,31 +119,31 @@ class BaselineREINFORCEAgent:
                 value = self.value_network(state_tensor).item()
         else:
             value = 0.0
-        
+
         self.episode_states.append(state)
         self.episode_actions.append(action)
         self.episode_log_probs.append(log_prob)
         self.episode_values.append(value)
-        
+
         return action
 
     def store_reward(self, reward):
         """Store reward for current episode"""
         self.episode_rewards.append(reward)
-    
+
     def calculate_returns_and_advantages(self):
         """Calculate returns and advantages with baseline"""
         returns = []
         advantages = []
-        
+
         # Calculate discounted returns
         discounted_sum = 0
         for reward in reversed(self.episode_rewards):
             discounted_sum = reward + self.gamma * discounted_sum
             returns.insert(0, discounted_sum)
-        
+
         returns = torch.FloatTensor(returns).to(device)
-        
+
         if self.baseline_type == "value_function":
             # Use value function as baseline
             values = torch.FloatTensor(self.episode_values).to(device)
@@ -157,11 +157,11 @@ class BaselineREINFORCEAgent:
         else:
             # No baseline
             advantages = returns
-        
+
         # Normalize advantages
         if len(advantages) > 1:
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-        
+
         return returns, advantages
 
     def update_policy(self):
@@ -170,7 +170,7 @@ class BaselineREINFORCEAgent:
             return
 
         returns, advantages = self.calculate_returns_and_advantages()
-        
+
         # Calculate policy loss
         policy_loss = []
         for log_prob, advantage in zip(self.episode_log_probs, advantages):
@@ -183,91 +183,91 @@ class BaselineREINFORCEAgent:
         policy_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.policy_network.parameters(), max_norm=1.0)
         self.policy_optimizer.step()
-        
+
         # Update value function if using value function baseline
         if self.baseline_type == "value_function":
             states_tensor = torch.FloatTensor(self.episode_states).to(device)
             values_pred = self.value_network(states_tensor)
             value_loss = F.mse_loss(values_pred, returns)
-            
+
             self.value_optimizer.zero_grad()
             value_loss.backward()
             torch.nn.utils.clip_grad_norm_(
                 self.value_network.parameters(), max_norm=1.0
             )
             self.value_optimizer.step()
-            
+
             self.value_losses.append(value_loss.item())
-        
+
         # Store metrics
         self.policy_losses.append(policy_loss.item())
         self.advantage_variances.append(advantages.var().item())
-        
+
         # Clear episode data
         self.episode_states.clear()
         self.episode_actions.clear()
         self.episode_rewards.clear()
         self.episode_log_probs.clear()
         self.episode_values.clear()
-    
+
     def train_episode(self, env, max_steps=1000):
         """Train for one episode"""
         state, _ = env.reset()
         total_reward = 0
         steps = 0
-        
+
         for step in range(max_steps):
             action = self.select_action(state)
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
-            
+
             self.store_reward(reward)
             total_reward += reward
             steps += 1
-            
+
             if done:
                 break
-            
+
             state = next_state
-        
+
         self.update_policy()
         self.episode_rewards_history.append(total_reward)
-        
+
         return total_reward, steps
-    
+
     def evaluate(self, env, num_episodes=10):
         """Evaluate current policy"""
         self.policy_network.eval()
         if self.baseline_type == "value_function":
             self.value_network.eval()
-        
+
         rewards = []
-        
+
         for _ in range(num_episodes):
             state, _ = env.reset()
             total_reward = 0
-            
+
             for _ in range(1000):
                 with torch.no_grad():
                     state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
                     logits = self.policy_network(state_tensor)
                     action = torch.argmax(logits, dim=1).item()
-                
+
                 next_state, reward, terminated, truncated, _ = env.step(action)
                 done = terminated or truncated
                 total_reward += reward
-                
+
                 if done:
                     break
-                
+
                 state = next_state
-            
+
             rewards.append(total_reward)
-        
+
         self.policy_network.train()
         if self.baseline_type == "value_function":
             self.value_network.train()
-        
+
         return {
             "mean_reward": np.mean(rewards),
             "std_reward": np.std(rewards),
@@ -295,7 +295,7 @@ class VarianceAnalyzer:
 
         for baseline_type in baseline_types:
             print(f"\nTraining {baseline_type.replace('_', ' ').title()}...")
-            
+
             agent = BaselineREINFORCEAgent(
                 state_dim, action_dim, baseline_type=baseline_type, lr=1e-3
             )
@@ -329,11 +329,11 @@ class VarianceAnalyzer:
         # Learning curves
         ax = axes[0, 0]
         colors = ["red", "orange", "green"]
-        
+
         for i, (baseline_type, data) in enumerate(results.items()):
             agent = data["agent"]
             rewards = agent.episode_rewards_history
-            
+
             if len(rewards) > 10:
                 smoothed = pd.Series(rewards).rolling(window=20).mean()
                 ax.plot(
@@ -355,7 +355,7 @@ class VarianceAnalyzer:
         final_performances = [data["final_performance"] for data in results.values()]
         eval_means = [data["eval_results"]["mean_reward"] for data in results.values()]
         eval_stds = [data["eval_results"]["std_reward"] for data in results.values()]
-        
+
         x = np.arange(len(baseline_names))
         width = 0.35
 
@@ -439,7 +439,7 @@ class VarianceAnalyzer:
             final_perf = data["final_performance"]
             eval_perf = data["eval_results"]["mean_reward"]
             eval_std = data["eval_results"]["std_reward"]
-            
+
             print(f"\n{baseline_type.replace('_', ' ').title()}:")
             print(f"  Final Training Performance: {final_perf:.2f}")
             print(f"  Evaluation Performance: {eval_perf:.2f} ± {eval_std:.2f}")

@@ -1,334 +1,387 @@
 """
-Multi-Modal Grid World Environment
+Multi-Modal Environment for Advanced RL
 
-This module provides a multi-modal grid world environment for testing advanced RL algorithms.
+This module implements multi-modal environments that combine different types of observations.
 """
 
 import numpy as np
-import gymnasium as gym
-from gymnasium import spaces
-from typing import Dict, List, Tuple, Optional, Any
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+import torch
+from typing import Dict, List, Tuple, Optional, Any, Union
+from gymnasium import Env
+from gymnasium.spaces import Discrete, Box, Dict as DictSpace
 
 
-class MultiModalGridWorld(gym.Env):
-    """Multi-modal grid world with visual, symbolic, and language modalities."""
+class MultiModalEnvironment(Env):
+    """Environment that provides multi-modal observations."""
 
-    def __init__(self, size: int = 10, num_objects: int = 5, max_steps: int = 100):
+    def __init__(
+        self,
+        size: int = 8,
+        num_goals: int = 3,
+        num_obstacles: int = 5,
+        include_visual: bool = True,
+        include_audio: bool = True,
+        include_text: bool = True,
+    ):
         super().__init__()
-
         self.size = size
-        self.num_objects = num_objects
-        self.max_steps = max_steps
+        self.num_goals = num_goals
+        self.num_obstacles = num_obstacles
+        self.include_visual = include_visual
+        self.include_audio = include_audio
+        self.include_text = include_text
 
-        self.action_space = spaces.Discrete(7)
+        # Action space: 0=up, 1=down, 2=left, 3=right
+        self.action_space = Discrete(4)
 
-        self.observation_space = spaces.Dict(
-            {
-                "visual": spaces.Box(
-                    low=0, high=255, shape=(size, size, 3), dtype=np.uint8
-                ),
-                "symbolic": spaces.MultiDiscrete(
-                    [size, size, num_objects + 1]
-                ),  # position + object types
-                "language": spaces.Text(max_length=100),  # natural language description
-            }
-        )
+        # Multi-modal observation space
+        self.observation_space = self._create_observation_space()
 
+        # Environment state
         self.agent_pos = None
-        self.objects = {}  # position -> object_type
-        self.inventory = []  # held objects
-        self.step_count = 0
+        self.goals = None
+        self.obstacles = None
+        self.grid = None
 
-        self.object_types = ["key", "door", "treasure", "obstacle", "powerup"]
-        self.object_colors = {
-            "key": [255, 215, 0],  # gold
-            "door": [139, 69, 19],  # brown
-            "treasure": [255, 0, 255],  # magenta
-            "obstacle": [128, 128, 128],  # gray
-            "powerup": [0, 255, 255],  # cyan
-        }
+        # Multi-modal data
+        self.visual_data = None
+        self.audio_data = None
+        self.text_data = None
 
-        self.rewards = {
-            "move": -0.01,
-            "pickup_key": 1.0,
-            "pickup_treasure": 5.0,
-            "pickup_powerup": 2.0,
-            "use_key": 10.0,
-            "hit_obstacle": -1.0,
-            "timeout": -2.0,
-        }
+        # Episode tracking
+        self.episode_length = 0
+        self.max_episode_length = 200
 
-    def reset(self, seed=None, options=None):
+    def _create_observation_space(self) -> DictSpace:
+        """Create multi-modal observation space."""
+        spaces = {}
+        
+        # Basic state information
+        spaces["state"] = Box(
+            low=0, high=1, shape=(self.size * self.size + 2 + self.num_goals * 2,), dtype=np.float32
+        )
+        
+        # Visual information
+        if self.include_visual:
+            spaces["visual"] = Box(
+                low=0, high=255, shape=(self.size, self.size, 3), dtype=np.uint8
+            )
+        
+        # Audio information
+        if self.include_audio:
+            spaces["audio"] = Box(
+                low=0, high=1, shape=(64,), dtype=np.float32
+            )
+        
+        # Text information
+        if self.include_text:
+            spaces["text"] = Box(
+                low=0, high=1, shape=(32,), dtype=np.float32
+            )
+        
+        return DictSpace(spaces)
+
+    def reset(
+        self, seed: Optional[int] = None, options: Optional[Dict] = None
+    ) -> Tuple[Dict[str, np.ndarray], Dict]:
         """Reset the environment."""
         super().reset(seed=seed)
 
-        self.agent_pos = (np.random.randint(self.size), np.random.randint(self.size))
+        # Initialize agent position
+        self.agent_pos = [0, 0]
 
-        self.objects = {}
-        positions = [(i, j) for i in range(self.size) for j in range(self.size)]
-        np.random.shuffle(positions)
+        # Initialize goals
+        self.goals = []
+        while len(self.goals) < self.num_goals:
+            goal = [np.random.randint(0, self.size), np.random.randint(0, self.size)]
+            if goal != self.agent_pos and goal not in self.goals:
+                self.goals.append(goal)
 
-        for i, obj_type in enumerate(
-            np.random.choice(self.object_types, self.num_objects)
-        ):
-            self.objects[positions[i]] = obj_type
+        # Initialize obstacles
+        self.obstacles = []
+        while len(self.obstacles) < self.num_obstacles:
+            obstacle = [
+                np.random.randint(0, self.size),
+                np.random.randint(0, self.size),
+            ]
+            if (
+                obstacle != self.agent_pos
+                and obstacle not in self.goals
+                and obstacle not in self.obstacles
+            ):
+                self.obstacles.append(obstacle)
 
-        self.inventory = []
-        self.step_count = 0
+        # Initialize grid
+        self.grid = np.zeros((self.size, self.size))
+        for goal in self.goals:
+            self.grid[goal[0], goal[1]] = 2  # Goal
+        for obstacle in self.obstacles:
+            self.grid[obstacle[0], obstacle[1]] = 1  # Obstacle
 
-        return self._get_observation(), {}
+        # Generate multi-modal data
+        self._generate_multimodal_data()
 
-    def step(self, action: int) -> Tuple[Dict, float, bool, bool, Dict]:
-        """Execute action in the environment."""
-        self.step_count += 1
+        # Reset episode tracking
+        self.episode_length = 0
 
-        reward = 0
-        terminated = False
-        truncated = self.step_count >= self.max_steps
+        return self.get_observation(), {}
 
-        if action < 4:  # Movement actions
-            reward += self._move_agent(action)
-        elif action == 4:  # Pickup
-            reward += self._pickup_object()
-        elif action == 5:  # Drop
-            reward += self._drop_object()
-        elif action == 6:  # Use
-            reward += self._use_object()
+    def step(self, action: int) -> Tuple[Dict[str, np.ndarray], float, bool, bool, Dict]:
+        """Execute one step in the environment."""
+        # Actions: 0=up, 1=down, 2=left, 3=right
+        new_pos = self.agent_pos.copy()
 
-        if self._check_win_condition():
-            reward += 20.0
-            terminated = True
-        elif self._check_lose_condition():
-            reward += self.rewards["timeout"]
-            terminated = True
+        if action == 0:  # up
+            new_pos[0] = max(0, new_pos[0] - 1)
+        elif action == 1:  # down
+            new_pos[0] = min(self.size - 1, new_pos[0] + 1)
+        elif action == 2:  # left
+            new_pos[1] = max(0, new_pos[1] - 1)
+        elif action == 3:  # right
+            new_pos[1] = min(self.size - 1, new_pos[1] + 1)
 
-        reward += self.rewards["move"]
-
-        observation = self._get_observation()
-        info = {
-            "inventory": self.inventory.copy(),
-            "objects_remaining": len(self.objects),
-            "step_count": self.step_count,
-        }
-
-        return observation, reward, terminated, truncated, info
-
-    def _move_agent(self, direction: int) -> float:
-        """Move agent in specified direction."""
-        dx, dy = [(0, -1), (0, 1), (-1, 0), (1, 0)][direction]  # up, down, left, right
-        new_pos = (self.agent_pos[0] + dx, self.agent_pos[1] + dy)
-
-        if not (0 <= new_pos[0] < self.size and 0 <= new_pos[1] < self.size):
-            return self.rewards["hit_obstacle"]  # Hit wall
-
-        if new_pos in self.objects and self.objects[new_pos] == "obstacle":
-            return self.rewards["hit_obstacle"]
-
+        # Check for obstacles
+        if new_pos in self.obstacles:
+            reward = -1
+            done = False
+        else:
         self.agent_pos = new_pos
-        return 0.0
 
-    def _pickup_object(self) -> float:
-        """Pickup object at current position."""
-        if self.agent_pos in self.objects:
-            obj_type = self.objects[self.agent_pos]
+            # Check for goals
+            if new_pos in self.goals:
+                self.goals.remove(new_pos)
+                reward = 10
+            else:
+                reward = -0.1
 
-            if obj_type != "door":  # Can't pickup doors
-                self.inventory.append(obj_type)
-                del self.objects[self.agent_pos]
+            done = len(self.goals) == 0
 
-                if obj_type == "key":
-                    return self.rewards["pickup_key"]
-                elif obj_type == "treasure":
-                    return self.rewards["pickup_treasure"]
-                elif obj_type == "powerup":
-                    return self.rewards["pickup_powerup"]
+        # Update episode length
+        self.episode_length += 1
 
-        return 0.0
+        # Check for episode termination
+        if self.episode_length >= self.max_episode_length:
+            done = True
 
-    def _drop_object(self) -> float:
-        """Drop held object."""
-        if self.inventory:
-            obj_type = self.inventory.pop()
-            self.objects[self.agent_pos] = obj_type
-        return 0.0
+        # Update multi-modal data
+        self._update_multimodal_data()
 
-    def _use_object(self) -> float:
-        """Use held object."""
-        if "key" in self.inventory and self.agent_pos in self.objects:
-            if self.objects[self.agent_pos] == "door":
-                self.inventory.remove("key")
-                del self.objects[self.agent_pos]
-                return self.rewards["use_key"]
+        return self.get_observation(), reward, done, False, {}
 
-        if "powerup" in self.inventory:
-            self.inventory.remove("powerup")
-            return 1.0
+    def _generate_multimodal_data(self):
+        """Generate multi-modal data for current state."""
+        # Visual data (RGB image)
+        if self.include_visual:
+            self.visual_data = self._generate_visual_data()
+        
+        # Audio data (spectrogram-like)
+        if self.include_audio:
+            self.audio_data = self._generate_audio_data()
+        
+        # Text data (embedding-like)
+        if self.include_text:
+            self.text_data = self._generate_text_data()
 
-        return 0.0
+    def _generate_visual_data(self) -> np.ndarray:
+        """Generate visual data (RGB image)."""
+        # Create RGB array
+        rgb_array = np.zeros((self.size, self.size, 3), dtype=np.uint8)
+        
+        # Set background color
+        rgb_array[:, :] = [255, 255, 255]  # White background
+        
+        # Obstacles (black)
+        for obstacle in self.obstacles:
+            rgb_array[obstacle[0], obstacle[1]] = [0, 0, 0]
+        
+        # Goals (green)
+        for goal in self.goals:
+            rgb_array[goal[0], goal[1]] = [0, 255, 0]
+        
+        # Agent (red)
+        rgb_array[self.agent_pos[0], self.agent_pos[1]] = [255, 0, 0]
+        
+        return rgb_array
 
-    def _check_win_condition(self) -> bool:
-        """Check if agent has won."""
-        return len([obj for obj in self.objects.values() if obj == "treasure"]) == 0
+    def _generate_audio_data(self) -> np.ndarray:
+        """Generate audio data (spectrogram-like)."""
+        # Simulate audio features based on environment state
+        audio_features = np.zeros(64)
+        
+        # Distance to nearest goal
+        if self.goals:
+            distances = [
+                abs(self.agent_pos[0] - goal[0]) + abs(self.agent_pos[1] - goal[1])
+                for goal in self.goals
+            ]
+            min_distance = min(distances)
+            audio_features[:16] = np.exp(-min_distance / 5.0)  # Closer = louder
+        
+        # Distance to nearest obstacle
+        if self.obstacles:
+            distances = [
+                abs(self.agent_pos[0] - obs[0]) + abs(self.agent_pos[1] - obs[1])
+                for obs in self.obstacles
+            ]
+            min_distance = min(distances)
+            audio_features[16:32] = np.exp(-min_distance / 3.0)  # Closer = louder
+        
+        # Episode progress
+        progress = self.episode_length / self.max_episode_length
+        audio_features[32:48] = progress
+        
+        # Random noise
+        audio_features[48:64] = np.random.normal(0, 0.1, 16)
+        
+        return audio_features.astype(np.float32)
 
-    def _check_lose_condition(self) -> bool:
-        """Check if agent has lost."""
-        return self.step_count >= self.max_steps
+    def _generate_text_data(self) -> np.ndarray:
+        """Generate text data (embedding-like)."""
+        # Simulate text embeddings based on environment state
+        text_features = np.zeros(32)
+        
+        # Goal-related features
+        if self.goals:
+            text_features[:8] = 1.0  # Goals present
+            text_features[8:16] = len(self.goals) / self.num_goals  # Goal count
+        else:
+            text_features[:8] = 0.0  # No goals
+        
+        # Obstacle-related features
+        if self.obstacles:
+            text_features[16:24] = 1.0  # Obstacles present
+            text_features[24:32] = len(self.obstacles) / self.num_obstacles  # Obstacle count
+        else:
+            text_features[16:24] = 0.0  # No obstacles
+        
+        return text_features.astype(np.float32)
 
-    def _get_observation(self) -> Dict:
+    def _update_multimodal_data(self):
+        """Update multi-modal data after state change."""
+        if self.include_visual:
+            self.visual_data = self._generate_visual_data()
+        if self.include_audio:
+            self.audio_data = self._generate_audio_data()
+        if self.include_text:
+            self.text_data = self._generate_text_data()
+
+    def get_observation(self) -> Dict[str, np.ndarray]:
         """Get multi-modal observation."""
-        return {
-            "visual": self._get_visual_observation(),
-            "symbolic": self._get_symbolic_observation(),
-            "language": self._get_language_description(),
+        observation = {}
+        
+        # Basic state information
+        observation["state"] = self._get_state_observation()
+        
+        # Multi-modal information
+        if self.include_visual:
+            observation["visual"] = self.visual_data
+        if self.include_audio:
+            observation["audio"] = self.audio_data
+        if self.include_text:
+            observation["text"] = self.text_data
+        
+        return observation
+
+    def _get_state_observation(self) -> np.ndarray:
+        """Get basic state observation."""
+        # Flatten grid
+        grid_flat = self.grid.flatten()
+        
+        # Agent position
+        agent_pos = np.array(self.agent_pos, dtype=np.float32) / self.size
+        
+        # Goal positions
+        goal_positions = np.zeros(self.num_goals * 2, dtype=np.float32)
+        for i, goal in enumerate(self.goals):
+            if i < self.num_goals:
+                goal_positions[i * 2] = goal[0] / self.size
+                goal_positions[i * 2 + 1] = goal[1] / self.size
+        
+        # Combine all observations
+        observation = np.concatenate([grid_flat, agent_pos, goal_positions])
+        
+        return observation.astype(np.float32)
+
+    def get_multimodal_statistics(self) -> Dict[str, Any]:
+        """Get multi-modal environment statistics."""
+        stats = {
+            "size": self.size,
+            "num_goals": self.num_goals,
+            "num_obstacles": self.num_obstacles,
+            "include_visual": self.include_visual,
+            "include_audio": self.include_audio,
+            "include_text": self.include_text,
+            "observation_space_size": len(self.observation_space.spaces),
         }
+        
+        # Add data statistics
+        if self.include_visual and self.visual_data is not None:
+            stats["visual_data_shape"] = self.visual_data.shape
+            stats["visual_data_range"] = [self.visual_data.min(), self.visual_data.max()]
+        
+        if self.include_audio and self.audio_data is not None:
+            stats["audio_data_shape"] = self.audio_data.shape
+            stats["audio_data_range"] = [self.audio_data.min(), self.audio_data.max()]
+        
+        if self.include_text and self.text_data is not None:
+            stats["text_data_shape"] = self.text_data.shape
+            stats["text_data_range"] = [self.text_data.min(), self.text_data.max()]
+        
+        return stats
 
-    def _get_visual_observation(self) -> np.ndarray:
-        """Get visual observation as RGB image."""
-        image = np.zeros((self.size, self.size, 3), dtype=np.uint8)
-
-        for pos, obj_type in self.objects.items():
-            color = self.object_colors[obj_type]
-            image[pos[0], pos[1]] = color
-
-        image[self.agent_pos[0], self.agent_pos[1]] = [255, 255, 255]
-
-        return image
-
-    def _get_symbolic_observation(self) -> np.ndarray:
-        """Get symbolic observation as discrete values."""
-        agent_x, agent_y = self.agent_pos
-
-        current_obj = 0  # 0 = empty
-        if self.agent_pos in self.objects:
-            obj_type = self.objects[self.agent_pos]
-            current_obj = self.object_types.index(obj_type) + 1
-
-        return np.array([agent_x, agent_y, current_obj])
-
-    def _get_language_description(self) -> str:
-        """Get natural language description of the state."""
-        descriptions = []
-
-        descriptions.append(
-            f"You are at position ({self.agent_pos[0]}, {self.agent_pos[1]})."
-        )
-
-        nearby_objects = []
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
-                    continue
-                pos = (self.agent_pos[0] + dx, self.agent_pos[1] + dy)
-                if (
-                    0 <= pos[0] < self.size
-                    and 0 <= pos[1] < self.size
-                    and pos in self.objects
-                ):
-                    obj_type = self.objects[pos]
-                    nearby_objects.append(
-                        f"{obj_type} to the {self._get_direction_name(dx, dy)}"
-                    )
-
-        if nearby_objects:
-            descriptions.append(f"You see: {', '.join(nearby_objects)}.")
-        else:
-            descriptions.append("You see no objects nearby.")
-
-        if self.inventory:
-            descriptions.append(f"You are carrying: {', '.join(self.inventory)}.")
-        else:
-            descriptions.append("You are not carrying anything.")
-
-        return " ".join(descriptions)
-
-    def _get_direction_name(self, dx: int, dy: int) -> str:
-        """Get direction name from offset."""
-        if dx == -1 and dy == 0:
-            return "west"
-        elif dx == 1 and dy == 0:
-            return "east"
-        elif dx == 0 and dy == -1:
-            return "north"
-        elif dx == 0 and dy == 1:
-            return "south"
-        elif dx == -1 and dy == -1:
-            return "northwest"
-        elif dx == -1 and dy == 1:
-            return "southwest"
-        elif dx == 1 and dy == -1:
-            return "northeast"
-        elif dx == 1 and dy == 1:
-            return "southeast"
-        else:
-            return "unknown"
-
-    def render(self, mode="human"):
+    def render(self, mode: str = "human") -> Optional[np.ndarray]:
         """Render the environment."""
-        if mode == "rgb_array":
-            return self._get_visual_observation()
+        if mode == "human":
+            # Create display grid
+            display_grid = np.zeros((self.size, self.size), dtype=str)
+            display_grid.fill(".")
 
-        grid = [["." for _ in range(self.size)] for _ in range(self.size)]
+            # Place obstacles
+            for obstacle in self.obstacles:
+                display_grid[obstacle[0], obstacle[1]] = "X"
 
-        for pos, obj_type in self.objects.items():
-            symbol = obj_type[0].upper()  # First letter
-            grid[pos[0]][pos[1]] = symbol
+            # Place goals
+            for goal in self.goals:
+                display_grid[goal[0], goal[1]] = "G"
 
-        grid[self.agent_pos[0]][self.agent_pos[1]] = "A"
+            # Place agent
+            display_grid[self.agent_pos[0], self.agent_pos[1]] = "A"
 
-        print("\n".join(" ".join(row) for row in grid))
-        print(f"Inventory: {self.inventory}")
-        print(f"Step: {self.step_count}")
+            # Print grid
+            print("\n" + "=" * (self.size * 2 + 1))
+            for row in display_grid:
+                print("|" + " ".join(row) + "|")
+            print("=" * (self.size * 2 + 1))
+            print(f"Agent: {self.agent_pos}, Goals: {self.goals}, Episode: {self.episode_length}")
+            
+            # Print multi-modal info
+            if self.include_visual:
+                print(f"Visual data shape: {self.visual_data.shape}")
+            if self.include_audio:
+                print(f"Audio data shape: {self.audio_data.shape}")
+            if self.include_text:
+                print(f"Text data shape: {self.text_data.shape}")
 
-    def close(self):
-        """Close the environment."""
-        pass
+        elif mode == "rgb_array":
+            # Return visual data if available
+            if self.include_visual:
+                return self.visual_data
+            else:
+                # Create simple RGB array
+                rgb_array = np.zeros((self.size, self.size, 3), dtype=np.uint8)
+                rgb_array[:, :] = [255, 255, 255]  # White background
+                
+                # Obstacles (black)
+                for obstacle in self.obstacles:
+                    rgb_array[obstacle[0], obstacle[1]] = [0, 0, 0]
+                
+                # Goals (green)
+                for goal in self.goals:
+                    rgb_array[goal[0], goal[1]] = [0, 255, 0]
+                
+                # Agent (red)
+                rgb_array[self.agent_pos[0], self.agent_pos[1]] = [255, 0, 0]
+                
+                return rgb_array
 
-
-class MultiModalGridWorldWithMemory(MultiModalGridWorld):
-    """Multi-modal grid world with memory capabilities."""
-
-    def __init__(self, *args, memory_size: int = 10, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.memory_size = memory_size
-        self.state_memory = []  # List of (state, action, reward) tuples
-        self.episode_memory = []  # Current episode memory
-
-    def step(self, action: int) -> Tuple[Dict, float, bool, bool, Dict]:
-        """Step with memory tracking."""
-        current_state = self._get_observation()
-
-        observation, reward, terminated, truncated, info = super().step(action)
-
-        self.episode_memory.append(
-            {
-                "state": current_state,
-                "action": action,
-                "reward": reward,
-                "next_state": observation,
-            }
-        )
-
-        if len(self.episode_memory) > self.memory_size:
-            self.episode_memory.pop(0)
-
-        info["memory"] = self.episode_memory.copy()
-        info["memory_size"] = len(self.episode_memory)
-
-        return observation, reward, terminated, truncated, info
-
-    def reset(self, seed=None, options=None):
-        """Reset with memory clearing."""
-        observation, info = super().reset(seed, options)
-
-        if self.episode_memory:
-            self.state_memory.append(self.episode_memory.copy())
-
-        self.episode_memory = []
-
-        if len(self.state_memory) > 100:  # Keep last 100 episodes
-            self.state_memory.pop(0)
-
-        info["long_term_memory"] = len(self.state_memory)
-        return observation, info
+        return None

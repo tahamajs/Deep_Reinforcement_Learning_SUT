@@ -668,3 +668,4 @@ class DynamicObstacleEnv:
         ax.set_title("Dynamic Obstacle Environment")
 
         plt.show()
+

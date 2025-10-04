@@ -221,3 +221,4 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     echo "Opening results folder..."
     open visualizations/
 fi
+

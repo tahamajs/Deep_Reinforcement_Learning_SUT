@@ -1,609 +1,513 @@
 """
 Experiments Module
 
-This module contains experiment runners and evaluation frameworks
-for all CA16 paradigms:
-- Foundation model experiments
-- Neurosymbolic RL experiments
-- Human-AI collaboration experiments
-- Continual learning experiments
-- Advanced computation experiments
-- Real-world deployment experiments
+This module contains experiment scripts and utilities for testing CA16 components.
 """
 
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 import matplotlib.pyplot as plt
-from typing import Dict, List, Tuple, Optional, Any, Union, Callable
-from collections import defaultdict
+import seaborn as sns
+from typing import Dict, List, Tuple, Optional, Any, Union
 import time
-import os
 import json
-from datetime import datetime
-import logging
-
-from ..utils import (
-    MetricsTracker,
-    ExperimentConfig,
-    evaluate_policy,
-    plot_training_progress,
-    TrajectoryBuffer,
-    set_seed,
-)
-
-from ..foundation_models import DecisionTransformer, MultiTaskRLFoundationModel
-from ..neurosymbolic import NeurosymbolicAgent
-from ..human_ai_collaboration import CollaborativeAgent
-from ..continual_learning import (
-    ElasticWeightConsolidation,
-    ProgressiveNetwork,
-    MAMLAgent,
-)
-from ..advanced_computation import QuantumRLAgent, NeuromorphicNetwork
-from ..real_world_deployment import ProductionRLAgent
-from ..environments import (
-    MultiModalGridWorld,
-    SymbolicGridWorld,
-    CollaborativeGridWorld,
-)
-
-logger = logging.getLogger(__name__)
-
-
-class BaseExperimentRunner:
-    """
-    Base class for running RL experiments.
-
-    Provides common functionality for experiment execution, logging, and evaluation.
-    """
-
-    def __init__(self, config: ExperimentConfig):
-        self.config = config
-        self.metrics = MetricsTracker(config["log_dir"])
-        self.start_time = time.time()
-
-        set_seed(42)
-
-        logger.info(f"Initialized experiment: {config['experiment_name']}")
-
-    def run_experiment(self) -> Dict[str, Any]:
-        """Run the complete experiment. To be implemented by subclasses."""
-        raise NotImplementedError
-
-    def evaluate_agent(
-        self, agent: Any, env_fn: Callable, num_episodes: int = 10
-    ) -> Dict[str, Any]:
-        """Evaluate an agent on an environment."""
-
-        def policy(state):
-            return agent.get_action(state)
-
-        return evaluate_policy(env_fn, policy, num_episodes)
-
-    def save_results(self, results: Dict[str, Any]):
-        """Save experiment results."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"results_{timestamp}.json"
-        filepath = os.path.join(self.config["save_dir"], filename)
-
-        results["config"] = self.config.config
-        results["timestamp"] = timestamp
-        results["duration"] = time.time() - self.start_time
-
-        with open(filepath, "w") as f:
-            json.dump(results, f, indent=2, default=str)
-
-        logger.info(f"Results saved to {filepath}")
-        return filepath
-
-    def plot_results(self, results: Dict[str, Any]):
-        """Plot experiment results."""
-        if hasattr(self.metrics, "metrics"):
-            training_metrics = {}
-            for name, history in self.metrics.metrics.items():
-                if history and isinstance(history[0]["value"], (int, float)):
-                    training_metrics[name] = [entry["value"] for entry in history]
-
-            if training_metrics:
-                plot_path = os.path.join(self.config["log_dir"], "training_curves.png")
-                plot_training_progress(training_metrics, plot_path)
-
-
-class FoundationModelExperiment(BaseExperimentRunner):
-    """
-    Experiment runner for foundation model experiments.
-
-    Tests Decision Transformers and Multi-Task RL Foundation Models.
-    """
-
-    def run_experiment(self) -> Dict[str, Any]:
-        """Run foundation model experiments."""
-        logger.info("Running foundation model experiments")
-
-        results = {
-            "decision_transformer": self._run_decision_transformer_experiment(),
-            "multi_task_foundation": self._run_multi_task_foundation_experiment(),
-            "in_context_learning": self._run_in_context_learning_experiment(),
-        }
-
-        self.save_results(results)
-        self.plot_results(results)
-
-        return results
-
-    def _run_decision_transformer_experiment(self) -> Dict[str, Any]:
-        """Run Decision Transformer experiment."""
-        from ..foundation_models.training import create_trajectory_dataset_from_env
-        from ..environments import MultiModalGridWorld
-
-        def env_fn():
-            return MultiModalGridWorld()
-
-        logger.info("Collecting trajectories for Decision Transformer")
-        dataset = create_trajectory_dataset_from_env(env_fn, num_trajectories=100)
-
-        state_dim = 10  # MultiModalGridWorld state dimension
-        action_dim = 4  # Number of actions
-
-        model = DecisionTransformer(
-            state_dim=state_dim,
-            action_dim=action_dim,
-            model_dim=128,
-            num_heads=4,
-            num_layers=4,
-        )
-
-        from ..foundation_models.training import FoundationModelTrainer
-
-        trainer = FoundationModelTrainer(model)
-
-        train_loader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=True)
-
-        trainer.train(train_loader, num_epochs=10)
-
-        eval_results = self.evaluate_agent(model, env_fn, num_episodes=5)
-
-        return {
-            "trajectories_collected": len(dataset.trajectories),
-            "training_stats": trainer.training_stats,
-            "evaluation_results": eval_results,
-        }
-
-    def _run_multi_task_foundation_experiment(self) -> Dict[str, Any]:
-        """Run Multi-Task RL Foundation Model experiment."""
-        return {"status": "not_implemented_yet"}
-
-    def _run_in_context_learning_experiment(self) -> Dict[str, Any]:
-        """Run In-Context Learning experiment."""
-        return {"status": "not_implemented_yet"}
-
-
-class NeurosymbolicExperiment(BaseExperimentRunner):
-    """
-    Experiment runner for neurosymbolic RL experiments.
-
-    Tests symbolic reasoning combined with neural networks.
-    """
-
-    def run_experiment(self) -> Dict[str, Any]:
-        """Run neurosymbolic experiments."""
-        logger.info("Running neurosymbolic experiments")
-
-        results = {
-            "symbolic_reasoning": self._run_symbolic_reasoning_experiment(),
-            "neural_symbolic_integration": self._run_neural_symbolic_integration_experiment(),
-            "knowledge_base_evaluation": self._run_knowledge_base_evaluation_experiment(),
-        }
-
-        self.save_results(results)
-        return results
-
-    def _run_symbolic_reasoning_experiment(self) -> Dict[str, Any]:
-        """Run symbolic reasoning experiment."""
-        from ..environments import SymbolicGridWorld
-
-        def env_fn():
-            return SymbolicGridWorld()
-
-        agent = NeurosymbolicAgent(
-            state_dim=10,
-            action_dim=4,
-            symbolic_rules=[],  # Would be populated with domain knowledge
-        )
-
-        num_episodes = 50
-        for episode in range(num_episodes):
-            env = env_fn()
-            state, _ = env.reset()
-            done = False
-            episode_reward = 0
-
-            while not done:
-                action = agent.get_action(state)
-                next_state, reward, terminated, truncated, _ = env.step(action)
-                done = terminated or truncated
-
-                agent.update(state, action, reward, next_state, done)
-
-                state = next_state
-                episode_reward += reward
-
-            self.metrics.log_metric("episode_reward", episode_reward, episode)
-
-        eval_results = self.evaluate_agent(agent, env_fn, num_episodes=10)
-
-        return {"episodes_trained": num_episodes, "evaluation_results": eval_results}
-
-    def _run_neural_symbolic_integration_experiment(self) -> Dict[str, Any]:
-        """Run neural-symbolic integration experiment."""
-        return {"status": "not_implemented_yet"}
-
-    def _run_knowledge_base_evaluation_experiment(self) -> Dict[str, Any]:
-        """Run knowledge base evaluation experiment."""
-        return {"status": "not_implemented_yet"}
-
-
-class ContinualLearningExperiment(BaseExperimentRunner):
-    """
-    Experiment runner for continual learning experiments.
-
-    Tests elastic weight consolidation, progressive networks, and meta-learning.
-    """
-
-    def run_experiment(self) -> Dict[str, Any]:
-        """Run continual learning experiments."""
-        logger.info("Running continual learning experiments")
-
-        results = {
-            "elastic_weight_consolidation": self._run_ewc_experiment(),
-            "progressive_networks": self._run_progressive_networks_experiment(),
-            "meta_learning": self._run_meta_learning_experiment(),
-        }
-
-        self.save_results(results)
-        return results
-
-    def _run_ewc_experiment(self) -> Dict[str, Any]:
-        """Run Elastic Weight Consolidation experiment."""
-        tasks = [
-            ("task1", lambda: MultiModalGridWorld()),
-            ("task2", lambda: SymbolicGridWorld()),
-            ("task3", lambda: CollaborativeGridWorld()),
-        ]
-
-        base_model = nn.Sequential(
-            nn.Linear(10, 64), nn.ReLU(), nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, 4)
-        )
-
-        ewc_agent = ElasticWeightConsolidation(base_model, lambda_=0.1)
-
-        task_performance = {}
-
-        for task_name, env_fn in tasks:
-            logger.info(f"Training on {task_name}")
-
-            for episode in range(20):
-                env = env_fn()
-                state, _ = env.reset()
-                done = False
-
-                while not done:
-                    action = ewc_agent.get_action(state)
-                    next_state, reward, terminated, truncated, _ = env.step(action)
-                    done = terminated or truncated
-
-                    ewc_agent.update(state, action, reward, next_state, done)
-                    state = next_state
-
-            ewc_agent.consolidate()
-
-            all_task_performance = {}
-            for prev_task_name, prev_env_fn in tasks[
-                : tasks.index((task_name, env_fn)) + 1
-            ]:
-                eval_results = self.evaluate_agent(
-                    ewc_agent, prev_env_fn, num_episodes=5
-                )
-                all_task_performance[prev_task_name] = eval_results["mean_return"]
-
-            task_performance[task_name] = all_task_performance
-
-        return {
-            "tasks": [t[0] for t in tasks],
-            "task_performance": task_performance,
-            "final_performance": task_performance[list(task_performance.keys())[-1]],
-        }
-
-    def _run_progressive_networks_experiment(self) -> Dict[str, Any]:
-        """Run Progressive Networks experiment."""
-        return {"status": "not_implemented_yet"}
-
-    def _run_meta_learning_experiment(self) -> Dict[str, Any]:
-        """Run Meta-Learning experiment."""
-        return {"status": "not_implemented_yet"}
-
-
-class AdvancedComputationExperiment(BaseExperimentRunner):
-    """
-    Experiment runner for advanced computation experiments.
-
-    Tests quantum RL, neuromorphic networks, and distributed RL.
-    """
-
-    def run_experiment(self) -> Dict[str, Any]:
-        """Run advanced computation experiments."""
-        logger.info("Running advanced computation experiments")
-
-        results = {
-            "quantum_rl": self._run_quantum_rl_experiment(),
-            "neuromorphic_networks": self._run_neuromorphic_experiment(),
-            "distributed_rl": self._run_distributed_rl_experiment(),
-        }
-
-        self.save_results(results)
-        return results
-
-    def _run_quantum_rl_experiment(self) -> Dict[str, Any]:
-        """Run Quantum RL experiment."""
-        try:
-            agent = QuantumRLAgent(state_dim=4, action_dim=2, num_qubits=2)
-
-            env = MultiModalGridWorld()
-            num_episodes = 10
-
-            for episode in range(num_episodes):
-                state, _ = env.reset()
-                done = False
-                episode_reward = 0
-
-                while not done:
-                    action = agent.get_action(state)
-                    next_state, reward, terminated, truncated, _ = env.step(action)
-                    done = terminated or truncated
-
-                    agent.update(state, action, reward, next_state, done)
-
-                    state = next_state
-                    episode_reward += reward
-
-                self.metrics.log_metric(
-                    "quantum_episode_reward", episode_reward, episode
-                )
-
-            eval_results = self.evaluate_agent(
-                agent, lambda: MultiModalGridWorld(), num_episodes=5
-            )
-
-            return {
-                "episodes_trained": num_episodes,
-                "evaluation_results": eval_results,
-            }
-
-        except Exception as e:
-            logger.error(f"Quantum RL experiment failed: {e}")
-            return {"error": str(e)}
-
-    def _run_neuromorphic_experiment(self) -> Dict[str, Any]:
-        """Run Neuromorphic Networks experiment."""
-        return {"status": "not_implemented_yet"}
-
-    def _run_distributed_rl_experiment(self) -> Dict[str, Any]:
-        """Run Distributed RL experiment."""
-        return {"status": "not_implemented_yet"}
-
-
-class HumanAICollaborationExperiment(BaseExperimentRunner):
-    """
-    Experiment runner for human-AI collaboration experiments.
-
-    Tests preference learning and collaborative decision making.
-    """
-
-    def run_experiment(self) -> Dict[str, Any]:
-        """Run human-AI collaboration experiments."""
-        logger.info("Running human-AI collaboration experiments")
-
-        results = {
-            "preference_learning": self._run_preference_learning_experiment(),
-            "collaborative_decision_making": self._run_collaborative_decision_experiment(),
-            "feedback_collection": self._run_feedback_collection_experiment(),
-        }
-
-        self.save_results(results)
-        return results
-
-    def _run_preference_learning_experiment(self) -> Dict[str, Any]:
-        """Run preference learning experiment."""
-        return {"status": "not_implemented_yet"}
-
-    def _run_collaborative_decision_experiment(self) -> Dict[str, Any]:
-        """Run collaborative decision making experiment."""
-        return {"status": "not_implemented_yet"}
-
-    def _run_feedback_collection_experiment(self) -> Dict[str, Any]:
-        """Run feedback collection experiment."""
-        return {"status": "not_implemented_yet"}
-
-
-class RealWorldDeploymentExperiment(BaseExperimentRunner):
-    """
-    Experiment runner for real-world deployment experiments.
-
-    Tests production agents, safety monitoring, and deployment frameworks.
-    """
-
-    def run_experiment(self) -> Dict[str, Any]:
-        """Run real-world deployment experiments."""
-        logger.info("Running real-world deployment experiments")
-
-        results = {
-            "production_agent": self._run_production_agent_experiment(),
-            "safety_monitoring": self._run_safety_monitoring_experiment(),
-            "deployment_framework": self._run_deployment_framework_experiment(),
-        }
-
-        self.save_results(results)
-        return results
-
-    def _run_production_agent_experiment(self) -> Dict[str, Any]:
-        """Run production agent experiment."""
-        return {"status": "not_implemented_yet"}
-
-    def _run_safety_monitoring_experiment(self) -> Dict[str, Any]:
-        """Run safety monitoring experiment."""
-        return {"status": "not_implemented_yet"}
-
-    def _run_deployment_framework_experiment(self) -> Dict[str, Any]:
-        """Run deployment framework experiment."""
-        return {"status": "not_implemented_yet"}
-
-
-class ComprehensiveEvaluationSuite:
-    """
-    Comprehensive evaluation suite for all CA16 paradigms.
-
-    Runs standardized evaluations across all implemented approaches.
-    """
-
-    def __init__(self, paradigms: List[str] = None):
-        if paradigms is None:
-            paradigms = [
-                "foundation_models",
-                "neurosymbolic",
-                "continual_learning",
-                "human_ai_collaboration",
-                "advanced_computation",
-                "real_world_deployment",
-            ]
-
-        self.paradigms = paradigms
+import os
+
+# Import CA16 modules
+from foundation_models import DecisionTransformer, MultiTaskDecisionTransformer
+from neurosymbolic import SymbolicKnowledgeBase, NeurosymbolicPolicy
+from continual_learning import ContinualLearningAgent, MAML
+from human_ai_collaboration import CollaborativeAgent, PreferenceRewardModel
+from environments import SymbolicGridWorld, CollaborativeGridWorld, ContinualLearningEnvironment
+from advanced_computing import QuantumInspiredRL, NeuromorphicNetwork
+from deployment_ethics import ProductionRLSystem, SafetyMonitor, EthicsChecker
+
+
+class ExperimentRunner:
+    """Base class for running experiments."""
+
+    def __init__(self, output_dir: str = "results"):
+        self.output_dir = output_dir
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Experiment tracking
+        self.experiments = []
         self.results = {}
+        
+        # Set up plotting
+        plt.style.use('seaborn-v0_8')
+        sns.set_palette("husl")
 
-    def run_full_evaluation(self) -> Dict[str, Any]:
-        """Run full evaluation suite."""
-        logger.info("Running comprehensive CA16 evaluation suite")
+    def run_experiment(self, experiment_name: str, experiment_func, *args, **kwargs):
+        """Run an experiment and save results."""
+        print(f"Running experiment: {experiment_name}")
+        start_time = time.time()
+        
+        try:
+            result = experiment_func(*args, **kwargs)
+            end_time = time.time()
+            
+            # Save results
+            self.results[experiment_name] = {
+                "result": result,
+                "duration": end_time - start_time,
+                "timestamp": time.time(),
+            }
+            
+            # Save to file
+            self._save_experiment_result(experiment_name, result)
+            
+            print(f"Experiment {experiment_name} completed in {end_time - start_time:.2f}s")
+            return result
+            
+        except Exception as e:
+            print(f"Experiment {experiment_name} failed: {str(e)}")
+            self.results[experiment_name] = {
+                "error": str(e),
+                "duration": time.time() - start_time,
+                "timestamp": time.time(),
+            }
+            return None
 
-        for paradigm in self.paradigms:
-            logger.info(f"Evaluating {paradigm}")
+    def _save_experiment_result(self, experiment_name: str, result: Any):
+        """Save experiment result to file."""
+        filename = os.path.join(self.output_dir, f"{experiment_name}_result.json")
+        
+        # Convert result to serializable format
+        if isinstance(result, dict):
+            serializable_result = self._make_serializable(result)
+        else:
+            serializable_result = str(result)
+        
+        with open(filename, 'w') as f:
+            json.dump(serializable_result, f, indent=2)
 
-            try:
-                if paradigm == "foundation_models":
-                    experiment = FoundationModelExperiment(
-                        ExperimentConfig(experiment_name=f"{paradigm}_eval")
-                    )
-                elif paradigm == "neurosymbolic":
-                    experiment = NeurosymbolicExperiment(
-                        ExperimentConfig(experiment_name=f"{paradigm}_eval")
-                    )
-                elif paradigm == "continual_learning":
-                    experiment = ContinualLearningExperiment(
-                        ExperimentConfig(experiment_name=f"{paradigm}_eval")
-                    )
-                elif paradigm == "human_ai_collaboration":
-                    experiment = HumanAICollaborationExperiment(
-                        ExperimentConfig(experiment_name=f"{paradigm}_eval")
-                    )
-                elif paradigm == "advanced_computation":
-                    experiment = AdvancedComputationExperiment(
-                        ExperimentConfig(experiment_name=f"{paradigm}_eval")
-                    )
-                elif paradigm == "real_world_deployment":
-                    experiment = RealWorldDeploymentExperiment(
-                        ExperimentConfig(experiment_name=f"{paradigm}_eval")
-                    )
-                else:
-                    logger.warning(f"Unknown paradigm: {paradigm}")
-                    continue
+    def _make_serializable(self, obj: Any) -> Any:
+        """Convert object to JSON serializable format."""
+        if isinstance(obj, dict):
+            return {k: self._make_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._make_serializable(item) for item in obj]
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, torch.Tensor):
+            return obj.detach().cpu().numpy().tolist()
+        elif isinstance(obj, (int, float, str, bool)):
+            return obj
+        else:
+            return str(obj)
 
-                results = experiment.run_experiment()
-                self.results[paradigm] = results
+    def plot_results(self, experiment_name: str, data: Dict[str, Any], save: bool = True):
+        """Plot experiment results."""
+        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+        fig.suptitle(f"Experiment Results: {experiment_name}")
+        
+        # Plot 1: Training curves
+        if "training_losses" in data:
+            axes[0, 0].plot(data["training_losses"])
+            axes[0, 0].set_title("Training Loss")
+            axes[0, 0].set_xlabel("Epoch")
+            axes[0, 0].set_ylabel("Loss")
+        
+        # Plot 2: Performance metrics
+        if "performance_metrics" in data:
+            metrics = data["performance_metrics"]
+            if isinstance(metrics, dict):
+                metric_names = list(metrics.keys())
+                metric_values = list(metrics.values())
+                axes[0, 1].bar(metric_names, metric_values)
+                axes[0, 1].set_title("Performance Metrics")
+                axes[0, 1].set_ylabel("Value")
+        
+        # Plot 3: Comparison plot
+        if "comparison_data" in data:
+            comparison = data["comparison_data"]
+            if isinstance(comparison, dict):
+                methods = list(comparison.keys())
+                scores = list(comparison.values())
+                axes[1, 0].bar(methods, scores)
+                axes[1, 0].set_title("Method Comparison")
+                axes[1, 0].set_ylabel("Score")
+        
+        # Plot 4: Statistics
+        if "statistics" in data:
+            stats = data["statistics"]
+            if isinstance(stats, dict):
+                stat_names = list(stats.keys())
+                stat_values = list(stats.values())
+                axes[1, 1].bar(stat_names, stat_values)
+                axes[1, 1].set_title("Statistics")
+                axes[1, 1].set_ylabel("Value")
+        
+        plt.tight_layout()
+        
+        if save:
+            filename = os.path.join(self.output_dir, f"{experiment_name}_plot.png")
+            plt.savefig(filename, dpi=300, bbox_inches='tight')
+            print(f"Plot saved to {filename}")
+        
+        plt.show()
 
-            except Exception as e:
-                logger.error(f"Evaluation failed for {paradigm}: {e}")
-                self.results[paradigm] = {"error": str(e)}
 
-        self.results["comparative_analysis"] = self._generate_comparative_analysis()
+def foundation_model_experiment():
+    """Test foundation models."""
+    print("Testing Foundation Models...")
+    
+    # Create Decision Transformer
+    dt = DecisionTransformer(
+        state_dim=4,
+        action_dim=2,
+        hidden_dim=64,
+        num_layers=3,
+            num_heads=4,
+        max_length=100,
+        )
 
-        return self.results
+    # Test forward pass
+    batch_size = 8
+    seq_length = 10
 
-    def _generate_comparative_analysis(self) -> Dict[str, Any]:
-        """Generate comparative analysis across paradigms."""
-        analysis = {
-            "paradigms_evaluated": list(self.results.keys()),
-            "performance_comparison": {},
-            "implementation_status": {},
+    states = torch.randn(batch_size, seq_length, 4)
+    actions = torch.randint(0, 2, (batch_size, seq_length))
+    returns_to_go = torch.randn(batch_size, seq_length, 1)
+    timesteps = torch.arange(seq_length).unsqueeze(0).repeat(batch_size, 1)
+
+    # Forward pass
+    action_logits, values = dt(states, actions, returns_to_go, timesteps)
+
+    print(f"Decision Transformer output shapes: {action_logits.shape}, {values.shape}")
+
+    # Test action prediction
+    action = dt.get_action(states[0], actions[0], returns_to_go[0], timesteps[0])
+    print(f"Predicted action: {action}")
+
+        return {
+        "model_parameters": sum(p.numel() for p in dt.parameters()),
+        "output_shapes": {"action_logits": list(action_logits.shape), "values": list(values.shape)},
+        "predicted_action": action.item() if isinstance(action, torch.Tensor) else action,
+    }
+
+
+def neurosymbolic_experiment():
+    """Test neurosymbolic RL."""
+    print("Testing Neurosymbolic RL...")
+    
+    # Create symbolic knowledge base
+    kb = SymbolicKnowledgeBase()
+    
+    # Add some predicates
+    kb.add_predicate("at", 2)  # at(agent, location)
+    kb.add_predicate("goal", 1)  # goal(location)
+    kb.add_predicate("obstacle", 1)  # obstacle(location)
+    
+    # Add some rules
+    kb.add_rule("reachable(X, Y)", ["at(agent, X)", "not obstacle(Y)"], 0.8)
+    kb.add_rule("safe_move(X, Y)", ["at(agent, X)", "not obstacle(Y)", "reachable(X, Y)"], 0.9)
+    
+    # Test inference
+    facts = ["at(agent, (0,0))", "goal((5,5))", "obstacle((2,2))"]
+    kb.add_facts(facts)
+    
+    # Forward chaining
+    inferred = kb.forward_chaining()
+    print(f"Inferred facts: {inferred}")
+    
+    # Create neurosymbolic policy
+    policy = NeurosymbolicPolicy(
+        state_dim=4,
+            action_dim=4,
+        hidden_dim=32,
+        symbolic_dim=8,
+    )
+    
+    # Test policy
+    state = torch.randn(1, 4)
+    action_logits, value = policy(state)
+    
+    print(f"Neurosymbolic policy output shapes: {action_logits.shape}, {value.shape}")
+    
+    return {
+        "knowledge_base_size": len(kb.predicates),
+        "rules_count": len(kb.rules),
+        "inferred_facts": len(inferred),
+        "policy_parameters": sum(p.numel() for p in policy.parameters()),
+    }
+
+
+def continual_learning_experiment():
+    """Test continual learning."""
+    print("Testing Continual Learning...")
+    
+    # Create continual learning agent
+    agent = ContinualLearningAgent(
+        state_dim=4,
+        action_dim=2,
+        hidden_dim=64,
+        num_tasks=3,
+    )
+    
+    # Test on multiple tasks
+    task_performances = {}
+    
+    for task_id in range(3):
+        # Generate mock data for task
+        states = torch.randn(100, 4)
+        actions = torch.randint(0, 2, (100,))
+        rewards = torch.randn(100)
+        
+        # Train agent on task
+        loss = agent.train_step(states, actions, rewards, task_id)
+        
+        # Evaluate performance
+        with torch.no_grad():
+            action_probs = agent.get_action_probs(states[:10], task_id)
+            value = agent.get_value(states[:10], task_id)
+        
+        task_performances[task_id] = {
+            "loss": loss,
+            "action_probs_mean": action_probs.mean().item(),
+            "value_mean": value.mean().item(),
         }
-
-        for paradigm, results in self.results.items():
-            if paradigm == "comparative_analysis":
-                continue
-
-            if "error" not in results:
-                analysis["implementation_status"][paradigm] = "successful"
-
-                performance_metrics = {}
-                for key, value in results.items():
-                    if isinstance(value, dict) and "evaluation_results" in value:
-                        eval_results = value["evaluation_results"]
-                        if "mean_return" in eval_results:
-                            performance_metrics[key] = eval_results["mean_return"]
-
-                if performance_metrics:
-                    analysis["performance_comparison"][paradigm] = performance_metrics
-            else:
-                analysis["implementation_status"][paradigm] = "failed"
-
-        return analysis
-
-    def save_evaluation_report(self, filepath: str):
-        """Save comprehensive evaluation report."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-        report = {
-            "evaluation_timestamp": timestamp,
-            "paradigms_evaluated": self.paradigms,
-            "results": self.results,
-            "summary": {
-                "total_paradigms": len(self.paradigms),
-                "successful_evaluations": len(
-                    [
-                        p
-                        for p in self.paradigms
-                        if "error" not in self.results.get(p, {})
-                    ]
-                ),
-                "failed_evaluations": len(
-                    [p for p in self.paradigms if "error" in self.results.get(p, {})]
-                ),
-            },
-        }
-
-        with open(filepath, "w") as f:
-            json.dump(report, f, indent=2, default=str)
-
-        logger.info(f"Evaluation report saved to {filepath}")
+    
+    # Compute forgetting metrics
+    forgetting_metrics = agent.compute_forgetting_metrics()
+    
+    print(f"Task performances: {task_performances}")
+    print(f"Forgetting metrics: {forgetting_metrics}")
+    
+    return {
+        "task_performances": task_performances,
+        "forgetting_metrics": forgetting_metrics,
+        "agent_parameters": sum(p.numel() for p in agent.parameters()),
+    }
 
 
-def run_experiment_suite(
-    paradigms: List[str] = None, save_dir: str = "./experiment_results"
-) -> Dict[str, Any]:
-    """
-    Run a complete experiment suite for specified paradigms.
+def human_ai_collaboration_experiment():
+    """Test human-AI collaboration."""
+    print("Testing Human-AI Collaboration...")
+    
+    # Create collaborative agent
+    agent = CollaborativeAgent(
+        state_dim=4,
+        action_dim=2,
+        hidden_dim=32,
+        confidence_threshold=0.7,
+    )
+    
+    # Create preference model
+    preference_model = PreferenceRewardModel(
+        state_dim=4,
+        action_dim=2,
+        hidden_dim=32,
+    )
+    
+    # Test collaboration
+    state = torch.randn(1, 4)
+    action, confidence = agent.get_action(state)
+    
+    print(f"Agent action: {action}, confidence: {confidence}")
+    
+    # Test preference learning
+    state1 = torch.randn(1, 4)
+    state2 = torch.randn(1, 4)
+    action1 = torch.tensor([0])
+    action2 = torch.tensor([1])
+    preference = torch.tensor([1.0])  # Prefer action1
+    
+    preference_loss = preference_model.compute_loss(state1, action1, state2, action2, preference)
+    
+    print(f"Preference loss: {preference_loss.item()}")
+    
+    return {
+        "agent_confidence": confidence,
+        "preference_loss": preference_loss.item(),
+        "agent_parameters": sum(p.numel() for p in agent.parameters()),
+        "preference_model_parameters": sum(p.numel() for p in preference_model.parameters()),
+    }
 
-    Args:
-        paradigms: List of paradigms to evaluate
-        save_dir: Directory to save results
 
-    Returns:
-        Experiment results
-    """
-    os.makedirs(save_dir, exist_ok=True)
+def advanced_computing_experiment():
+    """Test advanced computing paradigms."""
+    print("Testing Advanced Computing Paradigms...")
+    
+    # Test quantum-inspired RL
+    quantum_rl = QuantumInspiredRL(
+        state_dim=4,
+        action_dim=2,
+        num_qubits=4,
+        num_layers=2,
+    )
+    
+    state = torch.randn(1, 4)
+    action_logits = quantum_rl(state)
+    
+    print(f"Quantum RL output shape: {action_logits.shape}")
+    
+    # Test neuromorphic network
+    neuromorphic_net = NeuromorphicNetwork(
+        input_dim=4,
+        hidden_dim=16,
+        output_dim=2,
+        num_layers=2,
+        time_steps=5,
+    )
+    
+    input_spikes = torch.randn(1, 4)
+    output_rates = neuromorphic_net(input_spikes)
+    
+    print(f"Neuromorphic network output shape: {output_rates.shape}")
+    
+    return {
+        "quantum_rl_parameters": sum(p.numel() for p in quantum_rl.parameters()),
+        "neuromorphic_parameters": sum(p.numel() for p in neuromorphic_net.parameters()),
+        "quantum_output_shape": list(action_logits.shape),
+        "neuromorphic_output_shape": list(output_rates.shape),
+    }
 
-    suite = ComprehensiveEvaluationSuite(paradigms)
-    results = suite.run_full_evaluation()
 
-    report_path = os.path.join(save_dir, "comprehensive_evaluation_report.json")
-    suite.save_evaluation_report(report_path)
+def deployment_ethics_experiment():
+    """Test deployment and ethics components."""
+    print("Testing Deployment and Ethics...")
+    
+    # Create a simple model for testing
+    model = nn.Sequential(
+        nn.Linear(4, 32),
+        nn.ReLU(),
+        nn.Linear(32, 2),
+    )
+    
+    # Test production system
+    production_system = ProductionRLSystem(model)
+    
+    # Deploy system
+    config = {
+        "model_path": "test_model.pth",
+        "environment_config": {"state_dim": 4, "action_dim": 2},
+        "safety_config": {"threshold": 0.8},
+    }
+    
+    deployed = production_system.deploy(config)
+    print(f"System deployed: {deployed}")
+    
+    # Test inference
+    if deployed:
+        state = torch.randn(1, 4)
+        action, info = production_system.inference(state)
+        print(f"Inference result: {action.shape}, info: {info}")
+    
+    # Test safety monitor
+    safety_monitor = SafetyMonitor(
+        safety_thresholds={"inference_time": 0.1, "memory_usage": 0.8},
+    )
+    
+    safety_monitor.start_monitoring()
+    safety_monitor.update_metrics({"inference_time": 0.05, "memory_usage": 0.6})
+    
+    safety_report = safety_monitor.get_safety_report()
+    print(f"Safety report: {safety_report}")
+    
+    # Test ethics checker
+    ethics_checker = EthicsChecker(
+        ethical_guidelines={"bias_threshold": 0.1, "fairness_threshold": 0.8},
+    )
+    
+    predictions = torch.randn(100, 2)
+    protected_attributes = torch.randint(0, 2, (100,))
+    
+    bias_result = ethics_checker.check_bias(predictions, protected_attributes)
+    print(f"Bias check result: {bias_result}")
+    
+    return {
+        "system_deployed": deployed,
+        "safety_violations": safety_report["total_violations"],
+        "bias_score": bias_result["bias_score"],
+        "system_status": production_system.get_system_status(),
+    }
 
-    return results
+
+def environment_experiment():
+    """Test custom environments."""
+    print("Testing Custom Environments...")
+    
+    # Test symbolic grid world
+    symbolic_env = SymbolicGridWorld(size=5, num_goals=2, num_obstacles=3)
+    
+    obs, info = symbolic_env.reset()
+    print(f"Symbolic environment observation shape: {obs.shape}")
+    
+    # Test collaborative grid world
+    collaborative_env = CollaborativeGridWorld(size=5, num_goals=2, num_obstacles=3)
+    
+    obs, info = collaborative_env.reset()
+    print(f"Collaborative environment observation shape: {obs.shape}")
+    
+    # Test continual learning environment
+    continual_env = ContinualLearningEnvironment(num_tasks=3, state_dim=4, action_dim=2)
+    
+    obs, info = continual_env.reset()
+    print(f"Continual environment observation shape: {obs.shape}")
+    
+    return {
+        "symbolic_env_size": symbolic_env.size,
+        "collaborative_env_size": collaborative_env.size,
+        "continual_env_tasks": continual_env.num_tasks,
+        "observation_shapes": {
+            "symbolic": list(obs.shape),
+            "collaborative": list(obs.shape),
+            "continual": list(obs.shape),
+        },
+    }
+
+
+def run_all_experiments():
+    """Run all experiments."""
+    print("Starting CA16 Comprehensive Experiments...")
+    
+    runner = ExperimentRunner("experiment_results")
+    
+    # Run experiments
+    experiments = [
+        ("foundation_models", foundation_model_experiment),
+        ("neurosymbolic", neurosymbolic_experiment),
+        ("continual_learning", continual_learning_experiment),
+        ("human_ai_collaboration", human_ai_collaboration_experiment),
+        ("advanced_computing", advanced_computing_experiment),
+        ("deployment_ethics", deployment_ethics_experiment),
+        ("environments", environment_experiment),
+    ]
+    
+    all_results = {}
+    
+    for exp_name, exp_func in experiments:
+        result = runner.run_experiment(exp_name, exp_func)
+        if result:
+            all_results[exp_name] = result
+    
+    # Generate summary report
+    summary = {
+        "total_experiments": len(experiments),
+        "successful_experiments": len(all_results),
+        "failed_experiments": len(experiments) - len(all_results),
+        "experiment_results": all_results,
+    }
+    
+    # Save summary
+    with open(os.path.join(runner.output_dir, "experiment_summary.json"), 'w') as f:
+        json.dump(runner._make_serializable(summary), f, indent=2)
+    
+    print(f"\nExperiment Summary:")
+    print(f"Total experiments: {summary['total_experiments']}")
+    print(f"Successful: {summary['successful_experiments']}")
+    print(f"Failed: {summary['failed_experiments']}")
+    print(f"Results saved to: {runner.output_dir}")
+    
+    return summary
+
+
+if __name__ == "__main__":
+    # Run all experiments
+    results = run_all_experiments()
+    
+    print("\nAll experiments completed!")
+    print("Check the 'experiment_results' directory for detailed results.")
