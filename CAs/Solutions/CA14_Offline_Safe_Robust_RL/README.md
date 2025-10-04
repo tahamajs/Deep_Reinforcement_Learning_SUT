@@ -1,4 +1,5 @@
 # CA14 Advanced Deep Reinforcement Learning Project
+
 ## پروژه پیشرفته یادگیری تقویتی عمیق CA14
 
 A comprehensive implementation of cutting-edge reinforcement learning algorithms and concepts, featuring advanced techniques from multiple domains of AI research.
@@ -6,12 +7,14 @@ A comprehensive implementation of cutting-edge reinforcement learning algorithms
 ## 🚀 Key Features
 
 ### Core RL Methods
+
 - **Offline Reinforcement Learning**: Conservative Q-Learning (CQL), Implicit Q-Learning (IQL)
 - **Safe Reinforcement Learning**: Constrained Policy Optimization (CPO), Lagrangian methods
 - **Multi-Agent Reinforcement Learning**: MADDPG, QMIX with coordination mechanisms
 - **Robust Reinforcement Learning**: Domain Randomization, Adversarial Training
 
 ### Advanced Algorithms
+
 - **Hierarchical RL**: Options framework with meta-policies and termination functions
 - **Meta-Learning**: Model-Agnostic Meta-Learning (MAML) for rapid adaptation
 - **Causal RL**: Causal inference with intervention and counterfactual reasoning
@@ -20,12 +23,14 @@ A comprehensive implementation of cutting-edge reinforcement learning algorithms
 - **Federated RL**: Distributed learning with privacy-preserving techniques
 
 ### Complex Environments
+
 - **Dynamic Multi-Objective**: Changing goals with physics-based dynamics
 - **Partially Observable**: Limited visibility with field-of-view constraints
 - **Continuous Control**: Realistic physics with force and torque control
 - **Adversarial**: Adaptive opponents with strategy learning
 
 ### Advanced Visualizations
+
 - **3D Interactive**: Real-time 3D environment visualization
 - **Real-time Monitoring**: Live performance dashboards
 - **Multi-dimensional Analysis**: Parallel coordinates and radar charts
@@ -34,6 +39,7 @@ A comprehensive implementation of cutting-edge reinforcement learning algorithms
 - **Federated Learning**: Privacy analysis and communication patterns
 
 ### Advanced Concepts
+
 - **Transfer Learning**: Domain adaptation with knowledge distillation
 - **Curriculum Learning**: Progressive difficulty with performance-based advancement
 - **Multi-Task Learning**: Shared representations with task-specific heads
@@ -111,24 +117,29 @@ CA14_Offline_Safe_Robust_RL/
 ## 🛠️ Installation
 
 ### Prerequisites
+
 - Python 3.8+
 - PyTorch 1.9+
 - CUDA (optional, for GPU acceleration)
 
 ### Setup
+
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd CA14_Offline_Safe_Robust_RL
 ```
 
 2. Create virtual environment:
+
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 3. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -136,20 +147,26 @@ pip install -r requirements.txt
 ## 🚀 Quick Start
 
 ### Option 1: Complete Execution
+
 Run the complete project with all advanced features:
+
 ```bash
 chmod +x run.sh
 ./run.sh
 ```
 
 ### Option 2: Quick Start Utility
+
 Use the interactive quick start:
+
 ```bash
 python quick_start.py
 ```
 
 ### Option 3: Individual Components
+
 Run specific components:
+
 ```bash
 # Basic training
 python training_examples.py
@@ -164,6 +181,7 @@ jupyter notebook CA14.ipynb
 ## 📊 Usage Examples
 
 ### Advanced Algorithm Training
+
 ```python
 from advanced_algorithms import HierarchicalRLAgent, MetaLearningAgent
 from complex_environments import DynamicMultiObjectiveEnvironment, EnvironmentConfig
@@ -180,20 +198,21 @@ for episode in range(1000):
     state = env.reset()
     done = False
     trajectory = []
-    
+
     while not done:
         option = agent.select_option(state)
         action = agent.get_action(state, option)
         next_state, reward, done, info = env.step(action)
-        
+
         trajectory.append((state, action, reward, option, done))
         state = next_state
-    
+
     # Update agent
     agent.update([trajectory])
 ```
 
 ### Advanced Visualization
+
 ```python
 from advanced_visualizations import Interactive3DVisualizer, VisualizationConfig
 
@@ -215,6 +234,7 @@ fig.savefig('3d_environment.png', dpi=300, bbox_inches='tight')
 ```
 
 ### Federated Learning
+
 ```python
 from advanced_algorithms import FederatedRLAgent
 
@@ -238,6 +258,7 @@ print(f"Federation round: {results['federation_round']}")
 The project generates comprehensive results including:
 
 ### Performance Metrics
+
 - **Sample Efficiency**: Episodes to convergence
 - **Asymptotic Performance**: Final reward levels
 - **Robustness**: Performance under perturbations
@@ -245,6 +266,7 @@ The project generates comprehensive results including:
 - **Coordination**: Multi-agent cooperation scores
 
 ### Visualizations
+
 - **3D Environment Plots**: Interactive trajectory visualization
 - **Performance Dashboards**: Real-time monitoring
 - **Multi-dimensional Analysis**: Parallel coordinates and radar charts
@@ -253,6 +275,7 @@ The project generates comprehensive results including:
 - **Federated Learning**: Privacy-utility trade-offs
 
 ### Reports
+
 - **Comprehensive Analysis**: Multi-method comparison
 - **Performance Rankings**: Overall method evaluation
 - **Computational Costs**: Training time and memory usage
@@ -263,18 +286,21 @@ The project generates comprehensive results including:
 This project implements state-of-the-art techniques suitable for:
 
 ### Academic Research
+
 - **Algorithm Development**: Novel RL method prototyping
 - **Benchmarking**: Comprehensive method comparison
 - **Theoretical Analysis**: Causal inference and interpretability
 - **Multi-domain Learning**: Transfer and continual learning
 
 ### Industry Applications
+
 - **Autonomous Systems**: Safe and robust decision-making
 - **Multi-agent Systems**: Coordinated team behaviors
 - **Privacy-Preserving Learning**: Federated RL applications
 - **Explainable AI**: Interpretable decision processes
 
 ### Advanced Topics
+
 - **Quantum Machine Learning**: Quantum-inspired algorithms
 - **Neuro-Symbolic AI**: Neural-symbolic integration
 - **Causal AI**: Causal reasoning in RL
@@ -283,17 +309,21 @@ This project implements state-of-the-art techniques suitable for:
 ## 🧪 Testing
 
 ### Basic Tests
+
 ```bash
 python test_modules.py
 ```
 
 ### Advanced Tests
+
 ```bash
 python test_advanced_modules.py
 ```
 
 ### Comprehensive Testing
+
 The test suite includes:
+
 - **Algorithm Tests**: All advanced algorithms
 - **Environment Tests**: Complex environment interactions
 - **Visualization Tests**: Advanced plotting capabilities
@@ -304,26 +334,31 @@ The test suite includes:
 ## 📚 Key Concepts Covered
 
 ### Offline Reinforcement Learning
+
 - **Conservative Q-Learning**: Preventing overestimation in offline settings
 - **Implicit Q-Learning**: Value function learning without explicit policy
 - **Dataset Quality**: Expert, mixed, and random data handling
 
 ### Safe Reinforcement Learning
+
 - **Constrained Policy Optimization**: Direct constraint satisfaction
 - **Lagrangian Methods**: Dual optimization for safety
 - **Risk Assessment**: Hazard detection and avoidance
 
 ### Multi-Agent Reinforcement Learning
+
 - **MADDPG**: Multi-agent actor-critic with centralized training
 - **QMIX**: Value-based multi-agent learning with monotonic mixing
 - **Coordination**: Emergent cooperation behaviors
 
 ### Robust Reinforcement Learning
+
 - **Domain Randomization**: Training with environmental variations
 - **Adversarial Training**: Robustness against perturbations
 - **Uncertainty Handling**: Dealing with model uncertainty
 
 ### Advanced Algorithms
+
 - **Hierarchical RL**: Multi-level decision making
 - **Meta-Learning**: Learning to learn quickly
 - **Causal RL**: Understanding cause-effect relationships
@@ -334,6 +369,7 @@ The test suite includes:
 ## 🤝 Contributing
 
 Contributions are welcome! Please see the contributing guidelines for:
+
 - Code style and standards
 - Testing requirements
 - Documentation standards

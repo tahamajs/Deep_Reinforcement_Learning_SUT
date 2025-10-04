@@ -43,10 +43,12 @@ class MAML:
     ) -> Dict[str, float]:
         """Perform meta-update using support and query sets."""
         self.model.train()
-        
+
         # Store original parameters
-        original_params = {name: param.clone() for name, param in self.model.named_parameters()}
-        
+        original_params = {
+            name: param.clone() for name, param in self.model.named_parameters()
+        }
+
         meta_losses = []
         adaptation_losses = []
 
@@ -54,7 +56,7 @@ class MAML:
         for support_set, query_set in zip(support_sets, query_sets):
             # Inner loop: adapt to support set
             adapted_params = self._adapt_to_task(support_set)
-            
+
             # Compute adaptation loss
             adaptation_loss = self._compute_loss(support_set, adapted_params)
             adaptation_losses.append(adaptation_loss.item())
@@ -80,38 +82,48 @@ class MAML:
             "avg_adaptation_loss": np.mean(adaptation_losses),
         }
 
-    def _adapt_to_task(self, support_set: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def _adapt_to_task(
+        self, support_set: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """Adapt model to a specific task using support set."""
         # Create temporary optimizer for inner loop
         temp_optimizer = torch.optim.SGD(self.model.parameters(), lr=self.inner_lr)
-        
+
         # Store original parameters
-        original_params = {name: param.clone() for name, param in self.model.named_parameters()}
-        
+        original_params = {
+            name: param.clone() for name, param in self.model.named_parameters()
+        }
+
         # Adaptation steps
         for _ in range(self.adaptation_steps):
             # Forward pass
             loss = self._compute_loss(support_set, original_params)
-            
+
             # Compute gradients
             temp_optimizer.zero_grad()
             loss.backward()
             temp_optimizer.step()
 
         # Return adapted parameters
-        adapted_params = {name: param.clone() for name, param in self.model.named_parameters()}
-        
+        adapted_params = {
+            name: param.clone() for name, param in self.model.named_parameters()
+        }
+
         # Restore original parameters
         for name, param in self.model.named_parameters():
             param.data.copy_(original_params[name])
-        
+
         return adapted_params
 
-    def _compute_loss(self, data: Dict[str, torch.Tensor], params: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def _compute_loss(
+        self, data: Dict[str, torch.Tensor], params: Dict[str, torch.Tensor]
+    ) -> torch.Tensor:
         """Compute loss for given data and parameters."""
         # Temporarily set parameters
-        original_params = {name: param.clone() for name, param in self.model.named_parameters()}
-        
+        original_params = {
+            name: param.clone() for name, param in self.model.named_parameters()
+        }
+
         for name, param in self.model.named_parameters():
             param.data.copy_(params[name])
 
@@ -139,7 +151,7 @@ class MAML:
     ) -> Dict[str, float]:
         """Evaluate MAML on test tasks."""
         self.model.eval()
-        
+
         if adaptation_steps is None:
             adaptation_steps = self.adaptation_steps
 
@@ -150,11 +162,11 @@ class MAML:
             for task in test_tasks:
                 # Adapt to task
                 adapted_params = self._adapt_to_task(task)
-                
+
                 # Evaluate on adapted model
                 loss = self._compute_loss(task, adapted_params)
                 test_losses.append(loss.item())
-                
+
                 # Compute reward (simplified)
                 reward = -loss.item()
                 test_rewards.append(reward)
@@ -197,10 +209,12 @@ class Reptile:
     ) -> Dict[str, float]:
         """Perform meta-update using Reptile algorithm."""
         self.model.train()
-        
+
         # Store original parameters
-        original_params = {name: param.clone() for name, param in self.model.named_parameters()}
-        
+        original_params = {
+            name: param.clone() for name, param in self.model.named_parameters()
+        }
+
         meta_losses = []
         adaptation_losses = []
         parameter_updates = []
@@ -241,40 +255,50 @@ class Reptile:
             "avg_adaptation_loss": np.mean(adaptation_losses),
         }
 
-    def _adapt_to_task(self, support_set: Dict[str, torch.Tensor]) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
+    def _adapt_to_task(
+        self, support_set: Dict[str, torch.Tensor]
+    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
         """Adapt model to a specific task using support set."""
         # Create temporary optimizer for inner loop
         temp_optimizer = torch.optim.SGD(self.model.parameters(), lr=self.inner_lr)
-        
+
         # Store original parameters
-        original_params = {name: param.clone() for name, param in self.model.named_parameters()}
-        
+        original_params = {
+            name: param.clone() for name, param in self.model.named_parameters()
+        }
+
         # Adaptation steps
         total_loss = 0.0
         for _ in range(self.adaptation_steps):
             # Forward pass
             loss = self._compute_loss(support_set, original_params)
             total_loss += loss.item()
-            
+
             # Compute gradients
             temp_optimizer.zero_grad()
             loss.backward()
             temp_optimizer.step()
 
         # Return adapted parameters
-        adapted_params = {name: param.clone() for name, param in self.model.named_parameters()}
-        
+        adapted_params = {
+            name: param.clone() for name, param in self.model.named_parameters()
+        }
+
         # Restore original parameters
         for name, param in self.model.named_parameters():
             param.data.copy_(original_params[name])
-        
+
         return adapted_params, torch.tensor(total_loss / self.adaptation_steps)
 
-    def _compute_loss(self, data: Dict[str, torch.Tensor], params: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def _compute_loss(
+        self, data: Dict[str, torch.Tensor], params: Dict[str, torch.Tensor]
+    ) -> torch.Tensor:
         """Compute loss for given data and parameters."""
         # Temporarily set parameters
-        original_params = {name: param.clone() for name, param in self.model.named_parameters()}
-        
+        original_params = {
+            name: param.clone() for name, param in self.model.named_parameters()
+        }
+
         for name, param in self.model.named_parameters():
             param.data.copy_(params[name])
 
@@ -302,7 +326,7 @@ class Reptile:
     ) -> Dict[str, float]:
         """Evaluate Reptile on test tasks."""
         self.model.eval()
-        
+
         if adaptation_steps is None:
             adaptation_steps = self.adaptation_steps
 
@@ -313,11 +337,11 @@ class Reptile:
             for task in test_tasks:
                 # Adapt to task
                 adapted_params, _ = self._adapt_to_task(task)
-                
+
                 # Evaluate on adapted model
                 loss = self._compute_loss(task, adapted_params)
                 test_losses.append(loss.item())
-                
+
                 # Compute reward (simplified)
                 reward = -loss.item()
                 test_rewards.append(reward)
@@ -370,7 +394,7 @@ class MetaLearningTrainer:
             # Split into support and query sets
             support_sets = []
             query_sets = []
-            
+
             for task in meta_tasks:
                 # Split task data
                 split_idx = len(task["states"]) // 2
@@ -384,20 +408,20 @@ class MetaLearningTrainer:
                     "actions": task["actions"][split_idx:],
                     "rewards": task["rewards"][split_idx:],
                 }
-                
+
                 support_sets.append(support_set)
                 query_sets.append(query_set)
 
             # Meta-update
             meta_loss_info = self.meta_algorithm.meta_update(support_sets, query_sets)
-            
+
             epoch_meta_losses.append(meta_loss_info["meta_loss"])
             epoch_adaptation_losses.append(meta_loss_info["avg_adaptation_loss"])
 
         # Record training history
         avg_meta_loss = np.mean(epoch_meta_losses)
         avg_adaptation_loss = np.mean(epoch_adaptation_losses)
-        
+
         self.training_history["meta_losses"].append(avg_meta_loss)
         self.training_history["adaptation_losses"].append(avg_adaptation_loss)
 
@@ -420,9 +444,11 @@ class MetaLearningTrainer:
 
         # Evaluate
         eval_results = self.meta_algorithm.evaluate(test_tasks)
-        
+
         # Record test performance
-        self.training_history["test_performances"].append(eval_results["avg_test_reward"])
+        self.training_history["test_performances"].append(
+            eval_results["avg_test_reward"]
+        )
 
         return eval_results
 
@@ -430,9 +456,29 @@ class MetaLearningTrainer:
         """Get training statistics."""
         return {
             "total_epochs": len(self.training_history["meta_losses"]),
-            "avg_meta_loss": np.mean(self.training_history["meta_losses"]) if self.training_history["meta_losses"] else 0.0,
-            "avg_adaptation_loss": np.mean(self.training_history["adaptation_losses"]) if self.training_history["adaptation_losses"] else 0.0,
-            "avg_test_performance": np.mean(self.training_history["test_performances"]) if self.training_history["test_performances"] else 0.0,
-            "latest_meta_loss": self.training_history["meta_losses"][-1] if self.training_history["meta_losses"] else 0.0,
-            "latest_test_performance": self.training_history["test_performances"][-1] if self.training_history["test_performances"] else 0.0,
+            "avg_meta_loss": (
+                np.mean(self.training_history["meta_losses"])
+                if self.training_history["meta_losses"]
+                else 0.0
+            ),
+            "avg_adaptation_loss": (
+                np.mean(self.training_history["adaptation_losses"])
+                if self.training_history["adaptation_losses"]
+                else 0.0
+            ),
+            "avg_test_performance": (
+                np.mean(self.training_history["test_performances"])
+                if self.training_history["test_performances"]
+                else 0.0
+            ),
+            "latest_meta_loss": (
+                self.training_history["meta_losses"][-1]
+                if self.training_history["meta_losses"]
+                else 0.0
+            ),
+            "latest_test_performance": (
+                self.training_history["test_performances"][-1]
+                if self.training_history["test_performances"]
+                else 0.0
+            ),
         }

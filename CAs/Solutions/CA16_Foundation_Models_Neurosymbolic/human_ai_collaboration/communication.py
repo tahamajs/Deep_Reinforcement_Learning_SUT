@@ -15,6 +15,7 @@ from dataclasses import dataclass
 @dataclass
 class CommunicationMessage:
     """Represents a communication message between human and AI."""
+
     sender: str  # "human" or "ai"
     message_type: str
     content: Any
@@ -26,6 +27,7 @@ class CommunicationMessage:
 @dataclass
 class Advice:
     """Represents advice from human to AI or vice versa."""
+
     advisor: str  # "human" or "ai"
     advice_type: str
     content: str
@@ -62,30 +64,37 @@ class CommunicationProtocol:
     def receive_message(self, sender: str) -> Optional[CommunicationMessage]:
         """Receive a message from a specific sender."""
         # Find highest priority message from sender
-        for message in sorted(self.message_queue, key=lambda m: m.priority, reverse=True):
+        for message in sorted(
+            self.message_queue, key=lambda m: m.priority, reverse=True
+        ):
             if message.sender == sender:
                 self.message_queue.remove(message)
                 return message
 
         return None
 
-    def get_all_messages(self, message_type: Optional[str] = None) -> List[CommunicationMessage]:
+    def get_all_messages(
+        self, message_type: Optional[str] = None
+    ) -> List[CommunicationMessage]:
         """Get all messages, optionally filtered by type."""
         if message_type is None:
             return self.message_queue.copy()
         else:
-            return [msg for msg in self.message_queue if msg.message_type == message_type]
+            return [
+                msg for msg in self.message_queue if msg.message_type == message_type
+            ]
 
     def _cleanup_queue(self):
         """Clean up old and low-priority messages."""
         current_time = time.time()
-        
+
         # Remove timed out messages
         self.message_queue = [
-            msg for msg in self.message_queue
+            msg
+            for msg in self.message_queue
             if current_time - msg.timestamp < self.protocol_rules["message_timeout"]
         ]
-        
+
         # Remove lowest priority messages if still over limit
         if len(self.message_queue) >= self.protocol_rules["max_queue_size"]:
             self.message_queue.sort(key=lambda m: m.priority)
@@ -103,7 +112,9 @@ class CommunicationProtocol:
 
         for message in self.communication_history:
             sender_counts[message.sender] = sender_counts.get(message.sender, 0) + 1
-            type_counts[message.message_type] = type_counts.get(message.message_type, 0) + 1
+            type_counts[message.message_type] = (
+                type_counts.get(message.message_type, 0) + 1
+            )
             priority_counts[message.priority] += 1
 
         return {
@@ -176,8 +187,7 @@ class AdviceSystem:
 
         # Sort by confidence and recency
         relevant_advice.sort(
-            key=lambda a: (a.confidence, current_time - a.timestamp),
-            reverse=True
+            key=lambda a: (a.confidence, current_time - a.timestamp), reverse=True
         )
 
         return relevant_advice
@@ -291,7 +301,9 @@ class DemonstrationCollector:
                 return demo
         return None
 
-    def get_demonstration_trajectory(self, demo_id: str) -> Optional[List[Dict[str, Any]]]:
+    def get_demonstration_trajectory(
+        self, demo_id: str
+    ) -> Optional[List[Dict[str, Any]]]:
         """Get the trajectory of a specific demonstration."""
         demo = self._find_demonstration(demo_id)
         if demo is None:
@@ -313,15 +325,15 @@ class DemonstrationCollector:
 
         completed_demos = self.get_completed_demonstrations()
         total_steps = sum(len(demo["trajectory"]) for demo in completed_demos)
-        total_rewards = [
-            demo["statistics"]["total_reward"] for demo in completed_demos
-        ]
+        total_rewards = [demo["statistics"]["total_reward"] for demo in completed_demos]
 
         return {
             "total_demonstrations": len(self.demonstrations),
             "completed_demonstrations": len(completed_demos),
             "total_steps": total_steps,
-            "avg_steps_per_demo": total_steps / len(completed_demos) if completed_demos else 0,
+            "avg_steps_per_demo": (
+                total_steps / len(completed_demos) if completed_demos else 0
+            ),
             "avg_total_reward": np.mean(total_rewards) if total_rewards else 0,
             "reward_std": np.std(total_rewards) if total_rewards else 0,
         }
@@ -333,7 +345,7 @@ class DemonstrationCollector:
     def export_demonstrations(self) -> Dict[str, Any]:
         """Export demonstrations in a format suitable for training."""
         completed_demos = self.get_completed_demonstrations()
-        
+
         if not completed_demos:
             return {"states": [], "actions": [], "rewards": []}
 

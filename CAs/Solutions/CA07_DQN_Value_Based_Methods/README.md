@@ -91,6 +91,7 @@ chmod +x run.sh
 ```
 
 This will:
+
 - Install dependencies
 - Run all experiments
 - Generate comprehensive visualizations
@@ -189,17 +190,20 @@ The main `CA7.ipynb` notebook provides:
 ### Implemented Algorithms
 
 1. **Basic DQN**
+
    - Experience replay buffer
    - Target networks for stability
    - ε-greedy exploration
    - Gradient clipping
 
 2. **Double DQN**
+
    - Addresses overestimation bias
    - Decouples action selection from evaluation
    - Bias analysis tools
 
 3. **Dueling DQN**
+
    - Value-advantage decomposition
    - Separate streams for value and advantage functions
    - Advanced architecture analysis
@@ -229,7 +233,7 @@ The main `CA7.ipynb` notebook provides:
 ### CartPole-v1 Environment
 
 - **Basic DQN**: Typically achieves ~150-200 average reward
-- **Double DQN**: Improved stability, ~180-220 average reward  
+- **Double DQN**: Improved stability, ~180-220 average reward
 - **Dueling DQN**: Better sample efficiency, ~200-250 average reward
 - **Dueling Double DQN**: Best performance, ~220-280 average reward
 
@@ -275,6 +279,7 @@ The code is designed to work with Gymnasium environments:
 After running the experiments, you'll find:
 
 ### Visualizations (`visualizations/`)
+
 - `basic_dqn_experiment.png` - Basic DQN training results
 - `dqn_variants_comparison.png` - Comparison of all variants
 - `dqn_hyperparameter_optimization.png` - Hyperparameter sensitivity
@@ -283,11 +288,13 @@ After running the experiments, you'll find:
 - `q_value_analysis.png` - Q-value distribution analysis
 
 ### Results (`results/`)
+
 - `comprehensive_analysis_results.json` - Detailed numerical results
 - `summary.txt` - Text summary of experiments
 - `evaluation_results.json` - Agent evaluation data
 
 ### Logs (`logs/`)
+
 - `basic_dqn_experiment.log` - Basic experiment logs
 - `comprehensive_dqn_analysis.log` - Analysis logs
 - `training_examples.log` - Training example logs

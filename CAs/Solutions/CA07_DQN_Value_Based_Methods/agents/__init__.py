@@ -9,7 +9,13 @@ from .dueling_dqn import DuelingDQNAgent, DuelingQNetwork, DuelingDoubleDQNAgent
 from .utils import DQNVisualizer, DQNAnalyzer
 
 __all__ = [
-    'DQNAgent', 'DoubleDQNAgent', 'DuelingDQNAgent', 'DuelingDoubleDQNAgent',
-    'QNetwork', 'DuelingQNetwork', 'ReplayBuffer',
-    'DQNVisualizer', 'DQNAnalyzer'
+    "DQNAgent",
+    "DoubleDQNAgent",
+    "DuelingDQNAgent",
+    "DuelingDoubleDQNAgent",
+    "QNetwork",
+    "DuelingQNetwork",
+    "ReplayBuffer",
+    "DQNVisualizer",
+    "DQNAnalyzer",
 ]

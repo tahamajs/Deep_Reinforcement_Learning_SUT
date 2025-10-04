@@ -2,7 +2,7 @@
 World Model Experiment Script
 
 This module provides a complete experiment script for training and evaluating
-world models on various environments.
+world models with VAE, dynamics, and reward models.
 """
 
 import numpy as np
@@ -22,17 +22,13 @@ from models.trainers import WorldModelTrainer
 from environments.continuous_cartpole import ContinuousCartPole
 from environments.continuous_pendulum import ContinuousPendulum
 
-from utils.data_collection import (
-    collect_world_model_data,
-    split_data,
-    create_data_loader,
-)
-from utils.visualization import plot_world_model_training, plot_world_model_predictions
+from utils.data_collection import collect_world_model_data, create_dataloader
+from utils.visualization import plot_world_model_training, plot_reconstruction_comparison
 
 
 def run_world_model_experiment(
     config: Dict[str, Any],
-) -> tuple[WorldModel, WorldModelTrainer]:
+) -> tuple[WorldModel, Dict[str, Any]]:
     """
     Run a complete world model experiment.
 
@@ -40,7 +36,7 @@ def run_world_model_experiment(
         config: Experiment configuration dictionary
 
     Returns:
-        Tuple of (trained_world_model, trainer)
+        Tuple of (trained_world_model, results)
     """
     # Set random seeds
     np.random.seed(config.get("seed", 42))
@@ -62,39 +58,22 @@ def run_world_model_experiment(
     print(f"Observation space: {env.observation_space.shape}")
     print(f"Action space: {env.action_space.shape}")
 
-    # Collect data
-    print("Collecting training data...")
-    data = collect_world_model_data(
+    # Collect data for world model training
+    print("Collecting data for world model training...")
+    world_model_data = collect_world_model_data(
         env=env,
-        steps=config["data_collection_steps"],
-        episodes=config.get("data_collection_episodes"),
+        steps=config["data_steps"],
+        episodes=config.get("data_episodes"),
         seed=config.get("seed", 42),
     )
 
-    print(f"Collected {len(data['observations'])} transitions")
+    print(f"Collected {len(world_model_data['observations'])} transitions")
 
-    # Split data
-    train_data, val_data, test_data = split_data(
-        data,
-        train_ratio=0.7,
-        val_ratio=0.15,
-        test_ratio=0.15,
-        seed=config.get("seed", 42),
-    )
-
-    print(
-        f"Train: {len(train_data['observations'])}, "
-        f"Val: {len(val_data['observations'])}, "
-        f"Test: {len(test_data['observations'])}"
-    )
-
-    # Create data loaders
-    train_loader = create_data_loader(
-        train_data, batch_size=config["batch_size"], shuffle=True, device=device
-    )
-
-    val_loader = create_data_loader(
-        val_data, batch_size=config["batch_size"], shuffle=False, device=device
+    # Create data loader
+    dataloader = create_dataloader(
+        world_model_data,
+        batch_size=config["batch_size"],
+        device=device,
     )
 
     # Create world model components
@@ -126,91 +105,113 @@ def run_world_model_experiment(
     print(f"- Dynamics: {latent_dim} + {action_dim} -> {latent_dim}")
     print(f"- Reward: {latent_dim} + {action_dim} -> 1")
 
-    # Create trainer
+    # Train world model
+    print("Training world model...")
     trainer = WorldModelTrainer(
         world_model=world_model,
         learning_rate=config["learning_rate"],
         device=device,
-        beta_schedule=config.get("beta_schedule", "constant"),
-        beta_value=config.get("beta_value", 1.0),
     )
 
-    # Training loop
-    print("Starting training...")
-    best_val_loss = float("inf")
-    patience = config.get("patience", 50)
-    patience_counter = 0
-
-    for epoch in range(config["train_epochs"]):
-        # Train epoch
-        train_losses = trainer.train_epoch(train_loader)
-
-        # Validate
-        val_losses = trainer.evaluate(val_loader)
-
-        # Print progress
-        if (epoch + 1) % config.get("print_interval", 10) == 0:
-            print(f"Epoch {epoch+1}/{config['train_epochs']}:")
-            print(f"  Train Loss: {train_losses['total_loss']:.4f}")
-            print(f"  Val Loss: {val_losses['total_loss']:.4f}")
-
-        # Early stopping
-        if val_losses["total_loss"] < best_val_loss:
-            best_val_loss = val_losses["total_loss"]
-            patience_counter = 0
-        else:
-            patience_counter += 1
-
-        if patience_counter >= patience:
-            print(f"Early stopping at epoch {epoch+1}")
-            break
-
-    print("Training completed!")
-
-    # Final evaluation
-    test_loader = create_data_loader(
-        test_data, batch_size=config["batch_size"], shuffle=False, device=device
+    losses = trainer.train(
+        dataloader=dataloader,
+        epochs=config["epochs"],
+        beta=config.get("beta_value", 1.0),
+        print_interval=config.get("print_interval", 10),
     )
 
-    test_losses = trainer.evaluate(test_loader)
-    print(f"Final test loss: {test_losses['total_loss']:.4f}")
+    print("World model training completed!")
+
+    # Evaluate world model
+    print("Evaluating world model...")
+    world_model.eval()
+    
+    eval_losses = []
+    reconstruction_errors = []
+    
+    with torch.no_grad():
+        for batch in dataloader:
+            obs = batch["observations"]
+            actions = batch["actions"]
+            next_obs = batch["next_observations"]
+            rewards = batch["rewards"]
+            
+            # Compute loss
+            loss_dict = world_model.compute_loss(obs, actions, next_obs, rewards)
+            eval_losses.append(loss_dict["total_loss"].item())
+            
+            # Compute reconstruction error
+            _, _, _, z = world_model.vae.encode(obs)
+            recon_obs = world_model.vae.decode(z)
+            recon_error = torch.mean((obs - recon_obs) ** 2, dim=1)
+            reconstruction_errors.extend(recon_error.cpu().numpy())
+
+    avg_eval_loss = np.mean(eval_losses)
+    avg_recon_error = np.mean(reconstruction_errors)
+    
+    print(f"Average evaluation loss: {avg_eval_loss:.4f}")
+    print(f"Average reconstruction error: {avg_recon_error:.4f}")
+
+    # Test imagination
+    print("Testing imagination...")
+    test_batch = next(iter(dataloader))
+    test_obs = test_batch["observations"][:5]  # Test on 5 samples
+    test_actions = test_batch["actions"][:5]
+    
+    imagined_trajectory = world_model.imagine_trajectory(
+        test_obs, test_actions, horizon=10
+    )
+    
+    print(f"Imagined trajectory shape: {imagined_trajectory['observations'].shape}")
+
+    # Prepare results
+    results = {
+        "training_losses": losses,
+        "eval_loss": avg_eval_loss,
+        "reconstruction_error": avg_recon_error,
+        "imagined_trajectory": {
+            "observations": imagined_trajectory["observations"].cpu().numpy(),
+            "rewards": imagined_trajectory["rewards"].cpu().numpy(),
+        },
+        "config": config,
+    }
 
     # Generate plots
     if config.get("save_plots", True):
-        save_dir = Path(config.get("save_dir", "results"))
+        save_dir = Path(config.get("save_dir", "visualizations"))
         save_dir.mkdir(exist_ok=True)
 
         # Training progress
         plot_world_model_training(
-            trainer,
+            losses,
             title=f"World Model Training - {env.name}",
-            save_path=save_dir / "training_progress.png",
+            save_path=save_dir / "world_model_training.png",
         )
 
-        # Predictions
-        plot_world_model_predictions(
-            world_model,
-            test_data,
-            num_samples=5,
-            title=f"World Model Predictions - {env.name}",
-            save_path=save_dir / "predictions.png",
+        # Reconstruction comparison
+        test_recon = world_model.vae.decode(world_model.vae.encode(test_obs)[2])
+        plot_reconstruction_comparison(
+            test_obs.cpu().numpy(),
+            test_recon.cpu().numpy(),
+            title="Reconstruction Quality",
+            save_path=save_dir / "reconstruction_comparison.png",
         )
 
     # Save model
     if config.get("save_model", True):
-        save_dir = Path(config.get("save_dir", "results"))
+        save_dir = Path(config.get("save_dir", "visualizations"))
         save_dir.mkdir(exist_ok=True)
 
         torch.save(
             {
                 "world_model_state_dict": world_model.state_dict(),
                 "config": config,
-                "test_losses": test_losses,
+                "results": results,
             },
             save_dir / "world_model.pth",
         )
 
-    return world_model, trainer
+    return world_model, results
 
 
 def main():
@@ -219,7 +220,7 @@ def main():
     parser.add_argument(
         "--config",
         type=str,
-        default="configs/world_model_config.json",
+        default=None,
         help="Path to configuration file",
     )
     parser.add_argument(
@@ -231,14 +232,19 @@ def main():
     )
     parser.add_argument("--latent_dim", type=int, default=32, help="Latent dimension")
     parser.add_argument(
-        "--train_epochs", type=int, default=100, help="Number of training epochs"
+        "--epochs",
+        type=int,
+        default=100,
+        help="Number of training epochs",
     )
-    parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
     parser.add_argument(
-        "--learning_rate", type=float, default=1e-3, help="Learning rate"
+        "--data_steps",
+        type=int,
+        default=5000,
+        help="Number of data collection steps",
     )
     parser.add_argument(
-        "--save_dir", type=str, default="results", help="Directory to save results"
+        "--save_dir", type=str, default="visualizations", help="Directory to save results"
     )
 
     args = parser.parse_args()
@@ -251,18 +257,15 @@ def main():
         "dynamics_hidden_dims": [256, 128],
         "reward_hidden_dims": [128, 64],
         "stochastic_dynamics": True,
-        "learning_rate": args.learning_rate,
-        "batch_size": args.batch_size,
-        "train_epochs": args.train_epochs,
-        "data_collection_steps": 5000,
-        "data_collection_episodes": 20,
-        "patience": 50,
+        "learning_rate": 1e-3,
+        "epochs": args.epochs,
+        "batch_size": 64,
+        "data_steps": args.data_steps,
         "print_interval": 10,
         "save_plots": True,
         "save_model": True,
         "save_dir": args.save_dir,
         "seed": 42,
-        "beta_schedule": "constant",
         "beta_value": 1.0,
     }
 
@@ -273,9 +276,11 @@ def main():
             config.update(file_config)
 
     # Run experiment
-    world_model, trainer = run_world_model_experiment(config)
+    world_model, results = run_world_model_experiment(config)
 
     print("Experiment completed successfully!")
+    print(f"Final evaluation loss: {results['eval_loss']:.4f}")
+    print(f"Reconstruction error: {results['reconstruction_error']:.4f}")
 
 
 if __name__ == "__main__":

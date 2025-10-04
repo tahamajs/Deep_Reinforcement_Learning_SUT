@@ -96,7 +96,10 @@ class DuelingDQNAgent(DQNAgent):
         with torch.no_grad():
             state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
             value, advantage = self.q_network.get_value_and_advantage(state_tensor)
-            return float(value.cpu().numpy().flatten()[0]), advantage.cpu().numpy().flatten()
+            return (
+                float(value.cpu().numpy().flatten()[0]),
+                advantage.cpu().numpy().flatten(),
+            )
 
     def analyze_value_advantage_decomposition(
         self, env, num_samples: int = 1000

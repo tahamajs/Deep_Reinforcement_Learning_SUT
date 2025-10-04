@@ -1,0 +1,76 @@
+{
+  "test_summary": {
+    "total_tests": 52,
+    "passed_tests": 29,
+    "failed_tests": 23,
+    "success_rate": 55.769230769230774
+  },
+  "detailed_results": {
+    "structure": {
+      "__init__.py": false,
+      "README.md": true,
+      "requirements.txt": false,
+      "training_examples.py": true,
+      "run.sh": true,
+      "CA10.ipynb": true,
+      "agents/__init__.py": true,
+      "agents/classical_planning.py": true,
+      "agents/dyna_q.py": true,
+      "agents/mcts.py": true,
+      "agents/mpc.py": true,
+      "environments/__init__.py": true,
+      "environments/environments.py": true,
+      "models/__init__.py": true,
+      "models/models.py": true,
+      "experiments/__init__.py": true,
+      "experiments/comparison.py": true,
+      "evaluation/__init__.py": true,
+      "evaluation/evaluator.py": true,
+      "evaluation/metrics.py": true,
+      "utils/__init__.py": true,
+      "utils/helpers.py": true,
+      "utils/visualization.py": true,
+      "agents/": true,
+      "environments/": true,
+      "models/": true,
+      "experiments/": true,
+      "evaluation/": true,
+      "utils/": true,
+      "visualizations/": true,
+      "CA10_files/": true
+    },
+    "imports": {
+      "basic_deps": false,
+      "models.models": false,
+      "environments.environments": false,
+      "agents.classical_planning": false,
+      "agents.dyna_q": false,
+      "agents.mcts": false,
+      "agents.mpc": false,
+      "experiments.comparison": false,
+      "evaluation.evaluator": false,
+      "evaluation.metrics": false,
+      "utils.helpers": false,
+      "utils.visualization": false
+    },
+    "functionality": {
+      "environment": false,
+      "tabular_model": false,
+      "neural_model": false,
+      "dyna_q": false,
+      "mcts": false,
+      "mpc": false
+    },
+    "visualization": {
+      "basic_plotting": false,
+      "learning_curves": false
+    },
+    "experiment": {
+      "mini_experiment": false
+    }
+  },
+  "recommendations": [
+    "Install missing dependencies: pip install -r requirements.txt",
+    "Fix import issues in: basic_deps, models.models, environments.environments, agents.classical_planning, agents.dyna_q, agents.mcts, agents.mpc, experiments.comparison, evaluation.evaluator, evaluation.metrics, utils.helpers, utils.visualization"
+  ]
+}

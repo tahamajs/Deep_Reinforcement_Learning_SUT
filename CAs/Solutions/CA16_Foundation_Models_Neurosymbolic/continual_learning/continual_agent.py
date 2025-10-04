@@ -38,14 +38,14 @@ class ContinualLearningAgent:
         )
 
         # Task-specific heads
-        self.task_heads = nn.ModuleList([
-            nn.Linear(hidden_dim, action_dim) for _ in range(num_tasks)
-        ])
+        self.task_heads = nn.ModuleList(
+            [nn.Linear(hidden_dim, action_dim) for _ in range(num_tasks)]
+        )
 
         # Task-specific value heads
-        self.value_heads = nn.ModuleList([
-            nn.Linear(hidden_dim, 1) for _ in range(num_tasks)
-        ])
+        self.value_heads = nn.ModuleList(
+            [nn.Linear(hidden_dim, 1) for _ in range(num_tasks)]
+        )
 
         # Optimizer
         self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
@@ -72,7 +72,9 @@ class ContinualLearningAgent:
 
             return action.item()
 
-    def get_action_probs(self, state: torch.Tensor, task_id: Optional[int] = None) -> torch.Tensor:
+    def get_action_probs(
+        self, state: torch.Tensor, task_id: Optional[int] = None
+    ) -> torch.Tensor:
         """Get action probabilities for given task."""
         if task_id is None:
             task_id = self.current_task
@@ -81,7 +83,9 @@ class ContinualLearningAgent:
         action_logits = self.task_heads[task_id](features)
         return F.softmax(action_logits, dim=-1)
 
-    def get_value(self, state: torch.Tensor, task_id: Optional[int] = None) -> torch.Tensor:
+    def get_value(
+        self, state: torch.Tensor, task_id: Optional[int] = None
+    ) -> torch.Tensor:
         """Get state value for given task."""
         if task_id is None:
             task_id = self.current_task
@@ -109,10 +113,10 @@ class ContinualLearningAgent:
         # Compute losses
         action_probs = F.softmax(action_logits, dim=-1)
         log_probs = torch.log(action_probs.gather(1, actions.unsqueeze(1)))
-        
+
         # Policy loss (simplified REINFORCE)
         policy_loss = -(log_probs.squeeze() * rewards).mean()
-        
+
         # Value loss
         value_loss = F.mse_loss(values, rewards)
 
@@ -145,7 +149,7 @@ class ContinualLearningAgent:
     def _compute_ewc_penalty(self) -> torch.Tensor:
         """Compute EWC penalty for previous tasks."""
         penalty = torch.tensor(0.0)
-        
+
         for task_id in range(self.current_task):
             if task_id in self.fisher_information:
                 for name, param in self.named_parameters():
@@ -153,13 +157,15 @@ class ContinualLearningAgent:
                         fisher = self.fisher_information[task_id][name]
                         optimal = self.optimal_params[task_id][name]
                         penalty += (fisher * (param - optimal) ** 2).sum()
-        
+
         return penalty
 
-    def compute_fisher_information(self, states: torch.Tensor, actions: torch.Tensor, task_id: int):
+    def compute_fisher_information(
+        self, states: torch.Tensor, actions: torch.Tensor, task_id: int
+    ):
         """Compute Fisher information matrix for current task."""
         self.eval()
-        
+
         # Forward pass
         features = self.backbone(states)
         action_logits = self.task_heads[task_id](features)
@@ -173,7 +179,7 @@ class ContinualLearningAgent:
         # Store Fisher information
         fisher_info = {}
         optimal_params = {}
-        
+
         for name, param in self.named_parameters():
             if param.grad is not None:
                 fisher_info[name] = param.grad.data.clone() ** 2
@@ -245,10 +251,10 @@ class ContinualLearningAgent:
                     baseline_perf = np.mean(task_perf["rewards"][:10])
                     # Use last 10 episodes as current performance
                     current_perf = np.mean(task_perf["rewards"][-10:])
-                    
+
                     forgetting = max(0, baseline_perf - current_perf)
                     retention = current_perf / baseline_perf if baseline_perf > 0 else 0
-                    
+
                     forgetting_scores.append(forgetting)
                     retention_scores.append(retention)
 
@@ -272,7 +278,7 @@ class ContinualLearningAgent:
         """Load checkpoint for a specific task."""
         checkpoint = torch.load(path)
         self.load_state_dict(checkpoint["model_state_dict"])
-        
+
         task_id = checkpoint["task_id"]
         if "fisher_information" in checkpoint:
             self.fisher_information[task_id] = checkpoint["fisher_information"]
@@ -283,7 +289,11 @@ class ContinualLearningAgent:
 
     def parameters(self):
         """Get all model parameters."""
-        return list(self.backbone.parameters()) + list(self.task_heads.parameters()) + list(self.value_heads.parameters())
+        return (
+            list(self.backbone.parameters())
+            + list(self.task_heads.parameters())
+            + list(self.value_heads.parameters())
+        )
 
     def named_parameters(self):
         """Get named parameters."""

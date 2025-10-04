@@ -1,7 +1,7 @@
 """
-Collaborative Environment for Human-AI Collaboration
+Collaborative Environment for Human-AI Interaction
 
-This module implements a collaborative grid world environment for testing human-AI collaboration.
+This module implements environments that support human-AI collaboration.
 """
 
 import numpy as np
@@ -12,22 +12,31 @@ from gymnasium.spaces import Discrete, Box
 
 
 class CollaborativeGridWorld(Env):
-    """Collaborative grid world environment for human-AI collaboration."""
+    """Grid world environment that supports human-AI collaboration."""
 
-    def __init__(self, size: int = 8, num_goals: int = 3, num_obstacles: int = 5):
+    def __init__(
+        self,
+        size: int = 8,
+        num_goals: int = 3,
+        num_obstacles: int = 5,
+        collaboration_mode: bool = True,
+        human_assistance_prob: float = 0.3,
+    ):
         super().__init__()
         self.size = size
         self.num_goals = num_goals
         self.num_obstacles = num_obstacles
+        self.collaboration_mode = collaboration_mode
+        self.human_assistance_prob = human_assistance_prob
 
-        # Action space: 0=up, 1=down, 2=left, 3=right
-        self.action_space = Discrete(4)
+        # Action space: 0=up, 1=down, 2=left, 3=right, 4=human_help
+        self.action_space = Discrete(5)
 
         # Observation space: flattened grid + agent position + goal positions + collaboration info
         self.observation_space = Box(
             low=0,
             high=1,
-            shape=(size * size + 2 + num_goals * 2 + 3,),
+            shape=(size * size + 2 + num_goals * 2 + 2,),
             dtype=np.float32,
         )
 
@@ -39,21 +48,13 @@ class CollaborativeGridWorld(Env):
 
         # Collaboration state
         self.human_available = True
+        self.human_assistance_count = 0
+        self.ai_confidence = 0.5
         self.collaboration_history = []
-        self.human_confidence = 0.8
-        self.ai_confidence = 0.7
 
         # Episode tracking
         self.episode_length = 0
         self.max_episode_length = 200
-
-        # Collaboration metrics
-        self.collaboration_metrics = {
-            "human_interventions": 0,
-            "ai_decisions": 0,
-            "collaborative_decisions": 0,
-            "successful_collaborations": 0,
-        }
 
     def reset(
         self, seed: Optional[int] = None, options: Optional[Dict] = None
@@ -93,81 +94,74 @@ class CollaborativeGridWorld(Env):
             self.grid[obstacle[0], obstacle[1]] = 1  # Obstacle
 
         # Reset collaboration state
-        self.collaboration_history = []
-        self.collaboration_metrics = {
-            "human_interventions": 0,
-            "ai_decisions": 0,
-            "collaborative_decisions": 0,
-            "successful_collaborations": 0,
-        }
+        self.human_assistance_count = 0
+        self.ai_confidence = 0.5
+        self.collaboration_history.clear()
 
         # Reset episode tracking
         self.episode_length = 0
 
         return self.get_observation(), {}
 
-    def step(
-        self,
-        action: int,
-        human_action: Optional[int] = None,
-        human_confidence: float = 0.5,
-    ) -> Tuple[np.ndarray, float, bool, bool, Dict]:
+    def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict]:
         """Execute one step in the environment."""
-        # Record collaboration
-        if human_action is not None:
-            self.collaboration_history.append(
-                {
-                    "ai_action": action,
-                    "human_action": human_action,
-                    "human_confidence": human_confidence,
-                    "used_human": np.random.random() < human_confidence,
-                }
-            )
+        info = {"human_assistance": False, "ai_confidence": self.ai_confidence}
 
-            # Use human action if confident enough
-            if self.collaboration_history[-1]["used_human"]:
-                action = human_action
-                self.collaboration_metrics["human_interventions"] += 1
+        # Check if human assistance is requested
+        if action == 4:  # Human help action
+            if self.human_available and np.random.random() < self.human_assistance_prob:
+                # Human provides assistance
+                self.human_assistance_count += 1
+                info["human_assistance"] = True
+                info["human_guidance"] = self._get_human_guidance()
+
+                # Update AI confidence based on human assistance
+                self.ai_confidence = min(1.0, self.ai_confidence + 0.1)
+
+                # Human suggests a better action
+                suggested_action = self._get_human_suggested_action()
+                action = suggested_action
             else:
-                self.collaboration_metrics["ai_decisions"] += 1
+                # Human not available, use AI action
+                action = self._get_ai_action()
+                self.ai_confidence = max(0.0, self.ai_confidence - 0.05)
+
+        # Execute the action
+        if action < 4:  # Valid movement action
+            new_pos = self.agent_pos.copy()
+
+            if action == 0:  # up
+                new_pos[0] = max(0, new_pos[0] - 1)
+            elif action == 1:  # down
+                new_pos[0] = min(self.size - 1, new_pos[0] + 1)
+            elif action == 2:  # left
+                new_pos[1] = max(0, new_pos[1] - 1)
+            elif action == 3:  # right
+                new_pos[1] = min(self.size - 1, new_pos[1] + 1)
+
+            # Check for obstacles
+            if new_pos in self.obstacles:
+                reward = -1
+                done = False
+                info["collision"] = True
+            else:
+                self.agent_pos = new_pos
+
+                # Check for goals
+                if new_pos in self.goals:
+                    self.goals.remove(new_pos)
+                    reward = 10
+                    info["goal_reached"] = True
+                else:
+                    reward = -0.1
+
+                done = len(self.goals) == 0
+
         else:
-            self.collaboration_metrics["ai_decisions"] += 1
-
-        # Execute action
-        new_pos = self.agent_pos.copy()
-
-        if action == 0:  # up
-            new_pos[0] = max(0, new_pos[0] - 1)
-        elif action == 1:  # down
-            new_pos[0] = min(self.size - 1, new_pos[0] + 1)
-        elif action == 2:  # left
-            new_pos[1] = max(0, new_pos[1] - 1)
-        elif action == 3:  # right
-            new_pos[1] = min(self.size - 1, new_pos[1] + 1)
-
-        # Check for obstacles
-        if new_pos in self.obstacles:
+            # Invalid action
             reward = -1
             done = False
-        else:
-            self.agent_pos = new_pos
-
-            # Check for goals
-            if new_pos in self.goals:
-                self.goals.remove(new_pos)
-                reward = 10
-
-                # Bonus for successful collaboration
-                if (
-                    human_action is not None
-                    and self.collaboration_history[-1]["used_human"]
-                ):
-                    reward += 1.0
-                    self.collaboration_metrics["successful_collaborations"] += 1
-            else:
-                reward = -0.1
-
-            done = len(self.goals) == 0
+            info["invalid_action"] = True
 
         # Update episode length
         self.episode_length += 1
@@ -176,17 +170,20 @@ class CollaborativeGridWorld(Env):
         if self.episode_length >= self.max_episode_length:
             done = True
 
-        # Create info dictionary
-        info = {
-            "collaboration_used": human_action is not None,
-            "collaboration_history": self.collaboration_history.copy(),
-            "collaboration_metrics": self.collaboration_metrics.copy(),
-        }
+        # Record collaboration history
+        self.collaboration_history.append(
+            {
+                "action": action,
+                "human_assistance": info["human_assistance"],
+                "ai_confidence": self.ai_confidence,
+                "reward": reward,
+            }
+        )
 
         return self.get_observation(), reward, done, False, info
 
     def get_observation(self) -> np.ndarray:
-        """Get current observation."""
+        """Get current observation including collaboration info."""
         # Flatten grid
         grid_flat = self.grid.flatten()
 
@@ -200,9 +197,12 @@ class CollaborativeGridWorld(Env):
                 goal_positions[i * 2] = goal[0] / self.size
                 goal_positions[i * 2 + 1] = goal[1] / self.size
 
-        # Collaboration information
+        # Collaboration info
         collaboration_info = np.array(
-            [float(self.human_available), self.human_confidence, self.ai_confidence],
+            [
+                self.ai_confidence,
+                1.0 if self.human_available else 0.0,
+            ],
             dtype=np.float32,
         )
 
@@ -213,40 +213,74 @@ class CollaborativeGridWorld(Env):
 
         return observation.astype(np.float32)
 
+    def _get_human_guidance(self) -> str:
+        """Get human guidance for current situation."""
+        # Simple heuristic for human guidance
+        if self.agent_pos in self.goals:
+            return "You're at a goal! Good job!"
+        elif any(
+            abs(self.agent_pos[0] - goal[0]) + abs(self.agent_pos[1] - goal[1]) <= 1
+            for goal in self.goals
+        ):
+            return "You're close to a goal, keep going!"
+        elif any(
+            abs(self.agent_pos[0] - obs[0]) + abs(self.agent_pos[1] - obs[1]) <= 1
+            for obs in self.obstacles
+        ):
+            return "Watch out for obstacles nearby!"
+        else:
+            return "Explore the environment to find goals!"
+
+    def _get_human_suggested_action(self) -> int:
+        """Get human-suggested action based on current state."""
+        # Simple heuristic for human suggestions
+        if not self.goals:
+            return np.random.randint(0, 4)  # Random if no goals
+
+        # Find closest goal
+        closest_goal = min(
+            self.goals,
+            key=lambda g: abs(self.agent_pos[0] - g[0]) + abs(self.agent_pos[1] - g[1]),
+        )
+
+        # Suggest action towards closest goal
+        if closest_goal[0] > self.agent_pos[0]:  # Goal is below
+            return 1  # down
+        elif closest_goal[0] < self.agent_pos[0]:  # Goal is above
+            return 0  # up
+        elif closest_goal[1] > self.agent_pos[1]:  # Goal is to the right
+            return 3  # right
+        else:  # Goal is to the left
+            return 2  # left
+
+    def _get_ai_action(self) -> int:
+        """Get AI action when human is not available."""
+        # Simple AI behavior
+        return np.random.randint(0, 4)
+
     def set_human_availability(self, available: bool):
         """Set human availability."""
         self.human_available = available
 
-    def set_human_confidence(self, confidence: float):
-        """Set human confidence level."""
-        self.human_confidence = max(0.0, min(1.0, confidence))
-
-    def set_ai_confidence(self, confidence: float):
-        """Set AI confidence level."""
-        self.ai_confidence = max(0.0, min(1.0, confidence))
-
     def get_collaboration_statistics(self) -> Dict[str, Any]:
         """Get collaboration statistics."""
-        total_decisions = (
-            self.collaboration_metrics["human_interventions"]
-            + self.collaboration_metrics["ai_decisions"]
+        if not self.collaboration_history:
+            return {"total_interactions": 0}
+
+        total_interactions = len(self.collaboration_history)
+        human_assistances = sum(
+            1 for h in self.collaboration_history if h["human_assistance"]
         )
 
-        if total_decisions == 0:
-            return self.collaboration_metrics.copy()
-
-        stats = self.collaboration_metrics.copy()
-        stats["human_intervention_rate"] = (
-            self.collaboration_metrics["human_interventions"] / total_decisions
-        )
-        stats["ai_decision_rate"] = (
-            self.collaboration_metrics["ai_decisions"] / total_decisions
-        )
-        stats["collaboration_success_rate"] = self.collaboration_metrics[
-            "successful_collaborations"
-        ] / max(1, self.collaboration_metrics["human_interventions"])
-
-        return stats
+        return {
+            "total_interactions": total_interactions,
+            "human_assistances": human_assistances,
+            "human_assistance_rate": (
+                human_assistances / total_interactions if total_interactions > 0 else 0
+            ),
+            "ai_confidence": self.ai_confidence,
+            "human_assistance_count": self.human_assistance_count,
+        }
 
     def render(self, mode: str = "human") -> Optional[np.ndarray]:
         """Render the environment."""
@@ -271,17 +305,13 @@ class CollaborativeGridWorld(Env):
             for row in display_grid:
                 print("|" + " ".join(row) + "|")
             print("=" * (self.size * 2 + 1))
+            print(f"Agent: {self.agent_pos}, Goals: {self.goals}")
             print(
-                f"Agent: {self.agent_pos}, Goals: {self.goals}, Episode: {self.episode_length}"
+                f"AI Confidence: {self.ai_confidence:.2f}, Human Available: {self.human_available}"
             )
             print(
-                f"Human Available: {self.human_available}, Human Confidence: {self.human_confidence:.2f}"
+                f"Human Assists: {self.human_assistance_count}, Episode: {self.episode_length}"
             )
-            print(f"AI Confidence: {self.ai_confidence:.2f}")
-
-            # Print collaboration statistics
-            stats = self.get_collaboration_statistics()
-            print(f"Collaboration Stats: {stats}")
 
         elif mode == "rgb_array":
             # Create RGB array
@@ -304,73 +334,3 @@ class CollaborativeGridWorld(Env):
             return rgb_array
 
         return None
-
-    def get_environment_info(self) -> Dict[str, Any]:
-        """Get environment information."""
-        return {
-            "size": self.size,
-            "num_goals": self.num_goals,
-            "num_obstacles": self.num_obstacles,
-            "agent_pos": self.agent_pos,
-            "goals": self.goals,
-            "obstacles": self.obstacles,
-            "episode_length": self.episode_length,
-            "human_available": self.human_available,
-            "human_confidence": self.human_confidence,
-            "ai_confidence": self.ai_confidence,
-            "collaboration_history": self.collaboration_history.copy(),
-            "collaboration_metrics": self.collaboration_metrics.copy(),
-        }
-
-    def simulate_human_action(self, state: np.ndarray) -> Tuple[int, float]:
-        """Simulate human action selection."""
-        # Simple heuristic: move towards nearest goal
-        if not self.goals:
-            return np.random.randint(0, 4), 0.5
-
-        # Find nearest goal
-        nearest_goal = min(
-            self.goals,
-            key=lambda g: abs(g[0] - self.agent_pos[0]) + abs(g[1] - self.agent_pos[1]),
-        )
-
-        # Determine best action
-        if nearest_goal[0] > self.agent_pos[0]:  # Goal is below
-            action = 1  # down
-        elif nearest_goal[0] < self.agent_pos[0]:  # Goal is above
-            action = 0  # up
-        elif nearest_goal[1] > self.agent_pos[1]:  # Goal is to the right
-            action = 3  # right
-        elif nearest_goal[1] < self.agent_pos[1]:  # Goal is to the left
-            action = 2  # left
-        else:
-            action = np.random.randint(0, 4)
-
-        # Simulate confidence (higher for closer goals)
-        distance = abs(nearest_goal[0] - self.agent_pos[0]) + abs(
-            nearest_goal[1] - self.agent_pos[1]
-        )
-        confidence = max(0.3, 1.0 - distance / (self.size * 2))
-
-        return action, confidence
-
-    def get_collaboration_reward(
-        self, ai_action: int, human_action: int, human_confidence: float
-    ) -> float:
-        """Get reward for collaboration."""
-        # Base reward
-        reward = 0.0
-
-        # Reward for human intervention
-        if human_confidence > 0.7:
-            reward += 0.1
-
-        # Reward for agreement
-        if ai_action == human_action:
-            reward += 0.2
-
-        # Penalty for disagreement
-        if ai_action != human_action:
-            reward -= 0.1
-
-        return reward

@@ -466,21 +466,22 @@ def demonstrate_performance_analysis():
 def generate_comprehensive_report():
     """Generate comprehensive report for CA06"""
     print("Generating comprehensive report...")
-    
+
     # Create results directory if it doesn't exist
     import os
+
     os.makedirs("results", exist_ok=True)
-    
+
     # Run the demonstration
     report = demonstrate_performance_analysis()
-    
+
     # Save report to file
     with open("results/comprehensive_report.txt", "w") as f:
         f.write("CA06 Policy Gradient Methods - Comprehensive Report\n")
         f.write("=" * 60 + "\n\n")
         f.write(f"Generated on: {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
         f.write(str(report))
-    
+
     print("✅ Comprehensive report saved to results/comprehensive_report.txt")
     return report
 

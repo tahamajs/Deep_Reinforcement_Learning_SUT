@@ -177,41 +177,56 @@ def run_module(module_name: str, description: str):
             return True
 
         elif module_name == "algorithms.advanced_causal_discovery":
-            from algorithms.advanced_causal_discovery import run_advanced_causal_discovery_comparison
+            from algorithms.advanced_causal_discovery import (
+                run_advanced_causal_discovery_comparison,
+            )
             import numpy as np
-            
+
             # Generate synthetic data
             np.random.seed(42)
             n_samples = 1000
             n_vars = 4
             X = np.random.randn(n_samples, n_vars)
-            true_graph = np.array([[0, 1, 1, 0], [0, 0, 1, 1], [0, 0, 0, 1], [0, 0, 0, 0]])
-            
-            result = run_advanced_causal_discovery_comparison(X, true_graph, save_path="visualizations/advanced_causal_discovery_comparison.png")
+            true_graph = np.array(
+                [[0, 1, 1, 0], [0, 0, 1, 1], [0, 0, 0, 1], [0, 0, 0, 0]]
+            )
+
+            result = run_advanced_causal_discovery_comparison(
+                X,
+                true_graph,
+                save_path="visualizations/advanced_causal_discovery_comparison.png",
+            )
             print("✅ Advanced causal discovery algorithms completed successfully")
             return result
-            
+
         elif module_name == "algorithms.advanced_multimodal_fusion":
-            from algorithms.advanced_multimodal_fusion import run_advanced_multimodal_fusion_comparison
+            from algorithms.advanced_multimodal_fusion import (
+                run_advanced_multimodal_fusion_comparison,
+            )
             import torch
-            
+
             # Generate synthetic multi-modal data
             torch.manual_seed(42)
             modal_data = {
-                'visual': torch.randn(32, 64),
-                'textual': torch.randn(32, 32),
-                'audio': torch.randn(32, 48),
-                'state': torch.randn(32, 16)
+                "visual": torch.randn(32, 64),
+                "textual": torch.randn(32, 32),
+                "audio": torch.randn(32, 48),
+                "state": torch.randn(32, 16),
             }
-            
-            result = run_advanced_multimodal_fusion_comparison(modal_data, save_path="visualizations/advanced_multimodal_fusion_comparison.png")
+
+            result = run_advanced_multimodal_fusion_comparison(
+                modal_data,
+                save_path="visualizations/advanced_multimodal_fusion_comparison.png",
+            )
             print("✅ Advanced multi-modal fusion methods completed successfully")
             return result
-            
+
         elif module_name == "algorithms.advanced_counterfactual_reasoning":
-            from algorithms.advanced_counterfactual_reasoning import run_advanced_counterfactual_analysis
+            from algorithms.advanced_counterfactual_reasoning import (
+                run_advanced_counterfactual_analysis,
+            )
             import numpy as np
-            
+
             # Generate synthetic data
             np.random.seed(42)
             n_samples = 1000
@@ -219,27 +234,45 @@ def run_module(module_name: str, description: str):
             X = np.random.randn(n_samples, n_vars)
             treatment_prob = 1 / (1 + np.exp(-0.5 * X[:, 0] + 0.3 * X[:, 1]))
             treatment = np.random.binomial(1, treatment_prob)
-            outcome = (0.5 * X[:, 0] + 0.3 * X[:, 1] + 0.2 * X[:, 2] + 0.8 * treatment + 0.1 * np.random.randn(n_samples))
-            
-            result = run_advanced_counterfactual_analysis(X, treatment, outcome, save_path="visualizations/advanced_counterfactual_analysis.png")
+            outcome = (
+                0.5 * X[:, 0]
+                + 0.3 * X[:, 1]
+                + 0.2 * X[:, 2]
+                + 0.8 * treatment
+                + 0.1 * np.random.randn(n_samples)
+            )
+
+            result = run_advanced_counterfactual_analysis(
+                X,
+                treatment,
+                outcome,
+                save_path="visualizations/advanced_counterfactual_analysis.png",
+            )
             print("✅ Advanced counterfactual reasoning completed successfully")
             return result
-            
+
         elif module_name == "algorithms.advanced_meta_transfer_learning":
-            from algorithms.advanced_meta_transfer_learning import run_advanced_meta_transfer_learning_comparison
+            from algorithms.advanced_meta_transfer_learning import (
+                run_advanced_meta_transfer_learning_comparison,
+            )
             import numpy as np
-            
+
             # Generate synthetic data
             np.random.seed(42)
             n_samples = 1000
             n_vars = 4
             source_data = np.random.randn(n_samples, n_vars)
             target_data = source_data + np.random.randn(n_samples, n_vars) * 0.5
-            
-            data = {'train': source_data, 'test': target_data}
-            
-            result = run_advanced_meta_transfer_learning_comparison(data, save_path="visualizations/advanced_meta_transfer_learning_comparison.png")
-            print("✅ Advanced meta-learning and transfer learning completed successfully")
+
+            data = {"train": source_data, "test": target_data}
+
+            result = run_advanced_meta_transfer_learning_comparison(
+                data,
+                save_path="visualizations/advanced_meta_transfer_learning_comparison.png",
+            )
+            print(
+                "✅ Advanced meta-learning and transfer learning completed successfully"
+            )
             return result
 
     except Exception as e:
@@ -287,8 +320,16 @@ def main():
         (11, "Training Examples", "training_examples"),
         (12, "Advanced Causal Discovery", "algorithms.advanced_causal_discovery"),
         (13, "Advanced Multi-Modal Fusion", "algorithms.advanced_multimodal_fusion"),
-        (14, "Advanced Counterfactual Reasoning", "algorithms.advanced_counterfactual_reasoning"),
-        (15, "Advanced Meta-Learning & Transfer", "algorithms.advanced_meta_transfer_learning"),
+        (
+            14,
+            "Advanced Counterfactual Reasoning",
+            "algorithms.advanced_counterfactual_reasoning",
+        ),
+        (
+            15,
+            "Advanced Meta-Learning & Transfer",
+            "algorithms.advanced_meta_transfer_learning",
+        ),
     ]
 
     # Execute all steps

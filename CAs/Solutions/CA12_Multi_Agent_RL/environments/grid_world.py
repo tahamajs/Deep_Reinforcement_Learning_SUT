@@ -50,7 +50,10 @@ class GridWorldEnvironment:
         self.agent_positions = []
         for i in range(self.n_agents):
             while True:
-                pos = (np.random.randint(0, self.height), np.random.randint(0, self.width))
+                pos = (
+                    np.random.randint(0, self.height),
+                    np.random.randint(0, self.width),
+                )
                 if pos not in self.agent_positions:
                     self.agent_positions.append(pos)
                     break
@@ -59,7 +62,10 @@ class GridWorldEnvironment:
         self.target_positions = []
         for i in range(self.n_targets):
             while True:
-                pos = (np.random.randint(0, self.height), np.random.randint(0, self.width))
+                pos = (
+                    np.random.randint(0, self.height),
+                    np.random.randint(0, self.width),
+                )
                 if pos not in self.agent_positions and pos not in self.target_positions:
                     self.target_positions.append(pos)
                     break

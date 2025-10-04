@@ -220,33 +220,33 @@ CA06_Policy_Gradient_Modular/
 ├── README.md                   # This file
 ├── CA6.ipynb                  # Original Jupyter notebook
 ├── training_examples.py        # Complete training examples
-├── 
+├──
 ├── agents/                     # Policy gradient agents
 │   ├── reinforce.py           # REINFORCE algorithm
 │   ├── actor_critic.py        # Actor-Critic methods
 │   ├── advanced_pg.py         # A2C, PPO, A3C algorithms
 │   └── variance_reduction.py  # Variance reduction techniques
-├── 
+├──
 ├── models/                     # Neural network models
 │   ├── __init__.py
 │   └── networks.py            # Policy and value networks
-├── 
+├──
 ├── environments/               # Custom environments
 │   └── continuous_control.py  # Continuous control environments
-├── 
+├──
 ├── experiments/                # Advanced experiments
 │   └── applications.py        # Real-world applications
-├── 
+├──
 ├── evaluation/                 # Evaluation and metrics
 │   ├── __init__.py
 │   ├── metrics.py             # Evaluation metrics
 │   └── visualization.py       # Visualization utilities
-├── 
+├──
 ├── utils/                      # Utility functions
 │   ├── setup.py               # Environment setup
 │   ├── performance_analysis.py # Performance analysis
 │   └── run_ca6_smoke.py       # Smoke tests
-├── 
+├──
 ├── visualizations/             # Generated plots and results
 ├── results/                    # Training results and logs
 ├── logs/                       # Execution logs
@@ -256,6 +256,7 @@ CA06_Policy_Gradient_Modular/
 ## Features
 
 ### Implemented Algorithms
+
 - **REINFORCE**: Monte Carlo Policy Gradient
 - **REINFORCE with Baseline**: Variance reduction using value function
 - **Actor-Critic**: Temporal difference learning
@@ -265,6 +266,7 @@ CA06_Policy_Gradient_Modular/
 - **Continuous Control**: Gaussian policy for continuous actions
 
 ### Advanced Features
+
 - **Variance Reduction**: Control variates, baseline methods
 - **Curriculum Learning**: Progressive difficulty training
 - **Hyperparameter Analysis**: Sensitivity analysis and tuning
@@ -272,6 +274,7 @@ CA06_Policy_Gradient_Modular/
 - **Real-world Applications**: Robotics, finance, gaming examples
 
 ### Environments Supported
+
 - **Discrete**: CartPole, LunarLander, Atari games
 - **Continuous**: Pendulum, MountainCar, MuJoCo (optional)
 - **Custom**: Modular environment framework
@@ -279,6 +282,7 @@ CA06_Policy_Gradient_Modular/
 ## Usage Examples
 
 ### Basic Training
+
 ```python
 from training_examples import train_reinforce_agent
 
@@ -291,6 +295,7 @@ results = train_reinforce_agent(
 ```
 
 ### Algorithm Comparison
+
 ```python
 from training_examples import compare_policy_gradient_variants
 
@@ -302,6 +307,7 @@ results = compare_policy_gradient_variants(
 ```
 
 ### Custom Agent
+
 ```python
 from agents.advanced_pg import PPOAgent
 import gymnasium as gym
@@ -331,6 +337,7 @@ After running the scripts, you'll find:
 ## Performance Metrics
 
 The framework tracks comprehensive metrics:
+
 - **Training Performance**: Episode rewards, convergence speed
 - **Sample Efficiency**: Episodes to reach target performance
 - **Stability**: Variance in final performance
@@ -339,6 +346,7 @@ The framework tracks comprehensive metrics:
 ## Contributing
 
 To extend the framework:
+
 1. Add new algorithms in `agents/`
 2. Create custom environments in `environments/`
 3. Implement new evaluation metrics in `evaluation/`

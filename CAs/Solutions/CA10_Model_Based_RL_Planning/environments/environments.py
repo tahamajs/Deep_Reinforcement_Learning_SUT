@@ -1,5 +1,11 @@
 import numpy as np
-import matplotlib.pyplot as plt
+
+try:
+    import matplotlib.pyplot as plt
+
+    MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    MATPLOTLIB_AVAILABLE = False
 
 
 class SimpleGridWorld:
@@ -51,7 +57,7 @@ class BlockingMaze:
         self.episode_count = 0
 
         self.start_pos = (0, 3)  # Start position
-        self.goal_pos = (8, 0)   # Goal position
+        self.goal_pos = (8, 0)  # Goal position
 
         self.blocked_cells = set()
         self.setup_initial_maze()

@@ -8,7 +8,7 @@ from .memory_networks import LSTMNetwork, GRUNetwork, MemoryNetwork
 
 __all__ = [
     "ActorNetwork",
-    "CriticNetwork", 
+    "CriticNetwork",
     "QNetwork",
     "PolicyNetwork",
     "AttentionLayer",

@@ -13,12 +13,14 @@ from datetime import datetime
 # Add current directory to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+
 def create_directories():
     """Create necessary directories"""
     directories = ["visualizations", "results", "logs"]
     for directory in directories:
         os.makedirs(directory, exist_ok=True)
         print(f"✅ Created directory: {directory}")
+
 
 def run_basic_reinforce():
     """Run basic REINFORCE experiment"""
@@ -35,33 +37,32 @@ def run_basic_reinforce():
         print("Training REINFORCE on CartPole-v1...")
         env = gym.make("CartPole-v1")
         agent = REINFORCEAgent(
-            state_dim=env.observation_space.shape[0], 
-            action_dim=env.action_space.n
+            state_dim=env.observation_space.shape[0], action_dim=env.action_space.n
         )
 
         rewards = []
         for episode in range(50):
             state, _ = env.reset()
             episode_rewards = []
-            
+
             for step in range(200):
                 action, log_prob = agent.select_action(state)
                 next_state, reward, terminated, truncated, _ = env.step(action)
-                
+
                 agent.store_transition(state, action, reward, log_prob)
                 episode_rewards.append(reward)
                 state = next_state
-                
+
                 if terminated or truncated:
                     break
-            
+
             agent.update()
             total_reward = sum(episode_rewards)
             rewards.append(total_reward)
             print(f"Episode {episode + 1}: Reward = {total_reward}")
 
         env.close()
-        
+
         avg_reward = np.mean(rewards[-10:])
         print(f"✅ REINFORCE completed! Average reward (last 10): {avg_reward:.2f}")
         return True
@@ -71,6 +72,7 @@ def run_basic_reinforce():
         traceback.print_exc()
         return False
 
+
 def run_basic_visualizations():
     """Run basic visualizations"""
     print("\n" + "=" * 60)
@@ -79,15 +81,15 @@ def run_basic_visualizations():
 
     try:
         from utils.policy_gradient_visualizer import PolicyGradientVisualizer
-        
+
         visualizer = PolicyGradientVisualizer()
-        
+
         print("Creating policy gradient intuition visualization...")
         results = visualizer.demonstrate_policy_gradient_intuition()
-        
+
         print("Creating value vs policy comparison...")
         visualizer.compare_value_vs_policy_methods()
-        
+
         print("✅ Basic visualizations completed!")
         return True
 
@@ -95,6 +97,7 @@ def run_basic_visualizations():
         print(f"❌ Visualizations failed: {e}")
         traceback.print_exc()
         return False
+
 
 def run_training_examples():
     """Run training examples"""
@@ -105,7 +108,7 @@ def run_training_examples():
     try:
         from training_examples import (
             plot_policy_gradient_convergence_analysis,
-            comprehensive_policy_gradient_comparison
+            comprehensive_policy_gradient_comparison,
         )
 
         print("Generating convergence analysis...")
@@ -126,6 +129,7 @@ def run_training_examples():
         traceback.print_exc()
         return False
 
+
 def create_summary_report():
     """Create a summary report"""
     print("\n" + "=" * 60)
@@ -139,7 +143,11 @@ def create_summary_report():
         viz_count = 0
         if os.path.exists("visualizations"):
             viz_count = len(
-                [f for f in os.listdir("visualizations") if f.endswith((".png", ".pdf"))]
+                [
+                    f
+                    for f in os.listdir("visualizations")
+                    if f.endswith((".png", ".pdf"))
+                ]
             )
 
         report_content = f"""
@@ -180,6 +188,7 @@ Quick execution completed successfully!
         traceback.print_exc()
         return False
 
+
 def main():
     """Main execution function"""
     print("=" * 80)
@@ -216,7 +225,9 @@ def main():
             print(f"❌ {experiment_name} failed with exception: {e}")
 
     print("\n" + "=" * 80)
-    print(f"QUICK EXECUTION SUMMARY: {successful}/{total} experiments completed successfully")
+    print(
+        f"QUICK EXECUTION SUMMARY: {successful}/{total} experiments completed successfully"
+    )
     print("=" * 80)
 
     if successful == total:
@@ -230,6 +241,7 @@ def main():
     print("=" * 80)
 
     return successful == total
+
 
 if __name__ == "__main__":
     success = main()
