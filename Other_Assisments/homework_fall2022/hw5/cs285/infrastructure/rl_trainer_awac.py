@@ -34,8 +34,8 @@ class RL_Trainer(object):
         torch.manual_seed(seed)
         ptu.init_gpu(use_gpu=not self.params["no_gpu"], gpu_id=self.params["which_gpu"])
         register_custom_envs()
-        self.env = gym.make(self.params["env_name"])
-        self.eval_env = gym.make(self.params["env_name"])
+        self.env = gym.make(self.params["env_name"], render_mode='rgb_array')
+        self.eval_env = gym.make(self.params["env_name"], render_mode='rgb_array')
         if not ("pointmass" in self.params["env_name"]):
             import matplotlib
 
@@ -52,7 +52,7 @@ class RL_Trainer(object):
 
         if "env_wrappers" in self.params:
 
-            self.env = wrappers.RecordEpisodeStatistics(self.env, deque_size=1000)
+            self.env = wrappers.RecordEpisodeStatistics(self.env)
             self.env = ReturnWrapper(self.env)
             self.env = wrappers.RecordVideo(
                 self.env,
@@ -62,7 +62,7 @@ class RL_Trainer(object):
             self.env = params["env_wrappers"](self.env)
 
             self.eval_env = wrappers.RecordEpisodeStatistics(
-                self.eval_env, deque_size=1000
+                self.eval_env
             )
             self.eval_env = ReturnWrapper(self.eval_env)
             self.eval_env = wrappers.RecordVideo(
