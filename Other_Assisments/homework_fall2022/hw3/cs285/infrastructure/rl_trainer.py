@@ -228,9 +228,60 @@ class RL_Trainer(object):
             envsteps_this_batch: the sum over the numbers of environment steps in paths
             train_video_paths: paths which also contain videos for visualization purposes
         """
+        if itr == 0:
+            if initial_expertdata is not None:
+                print("\nLoading initial expert data...")
+                with open(initial_expertdata, "rb") as f:
+                    expert_paths = pickle.load(f)
+                return expert_paths, 0, None
+            if save_expert_data_to_disk:
+                num_transitions_to_sample = self.params['batch_size_initial']
+
+        print("\nCollecting data to be used for training...")
+        paths, envsteps_this_batch = utils.sample_trajectories(
+            self.env,
+            collect_policy,
+            num_transitions_to_sample,
+            self.params['ep_len'],
+        )
+
+        train_video_paths = None
+        if self.logvideo:
+            print("\nCollecting train rollouts to be used for saving videos...")
+            train_video_paths = utils.sample_n_trajectories(
+                self.env,
+                collect_policy,
+                MAX_NVIDEO,
+                MAX_VIDEO_LEN,
+                True,
+            )
+
+        if save_expert_data_to_disk and itr == 0:
+            expert_path = os.path.join(
+                self.params['logdir'],
+                f"expert_data_{self.params['env_name']}.pkl",
+            )
+            with open(expert_path, 'wb') as f:
+                pickle.dump(paths, f)
+
         return paths, envsteps_this_batch, train_video_paths
 
     def train_agent(self):
+        all_logs = []
+        for train_step in range(self.params['num_agent_train_steps_per_iter']):
+            ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = (
+                self.agent.sample(self.params['train_batch_size'])
+            )
+            train_log = self.agent.train(
+                ob_batch,
+                ac_batch,
+                re_batch,
+                next_ob_batch,
+                terminal_batch,
+            )
+            all_logs.append(train_log)
+
+        return all_logs
     def perform_dqn_logging(self, all_logs):
         last_log = all_logs[-1]
 

@@ -1,28 +1,82 @@
 # Author: Taha Majlesi - 810101504, University of Tehran
-# Homework 5: Offline and Advanced Deep Reinforcement Learning
+# Homework 5: Offline Reinforcement Learning and Exploration
 
 **Author:** Taha Majlesi - 810101504, University of Tehran
 
 ## Overview
 
-This assignment focuses on offline reinforcement learning and advanced exploration techniques. You will implement and analyze algorithms that learn from fixed datasets without environment interaction, including Conservative Q-Learning (CQL), Advantage-Weighted Actor-Critic (AWAC), and Implicit Q-Learning (IQL). Additionally, you'll explore Random Network Distillation (RND) for intrinsic motivation and curiosity-driven exploration.
+This assignment explores the frontier of reinforcement learning, focusing on two critical areas: **Offline RL** and **Exploration**. You will move beyond traditional online learning and tackle the challenge of learning effective policies from static, pre-collected datasets. This is crucial for real-world applications where active data collection is expensive, risky, or impractical.
+
+The assignment is structured into three main parts:
+
+-   **Part 1: Exploration with Random Network Distillation (RND)**. You will first implement RND, a powerful curiosity-driven exploration technique. RND provides an "intrinsic reward" to the agent for visiting novel states, encouraging it to explore its environment thoroughly even when extrinsic rewards are sparse. You will combine this with an offline RL algorithm (CQL) to create an agent that can both explore and exploit effectively.
+
+-   **Part 2: Offline RL with Advantage-Weighted Actor-Critic (AWAC)**. You will implement AWAC, an offline actor-critic algorithm that leverages the advantages of actions in the dataset to guide policy learning. It's a simple yet effective method that constrains the learned policy to stay close to the behavior policy that generated the data, mitigating distribution shift.
+
+-   **Part 3: Offline RL with Implicit Q-Learning (IQL)**. You will implement IQL, a powerful offline RL algorithm that avoids the pitfalls of explicit policy constraints and Q-value maximization. Instead, it learns a Q-function implicitly via expectile regression and extracts a policy from it. This approach has proven to be highly effective and stable for offline learning.
 
 ## Learning Objectives
 
-- Master offline RL algorithms that work with static datasets
-- Understand conservative and advantage-weighted policy learning
-- Implement exploration bonuses using intrinsic motivation
-- Analyze the challenges of offline RL (distribution shift, bootstrapping error)
-- Combine exploration and exploitation in single agents
+-   Understand the fundamental challenges of **Offline Reinforcement Learning**, particularly **distributional shift**.
+-   Implement and analyze three distinct offline RL algorithms: **AWAC**, **IQL**, and **CQL**.
+-   Master **Random Network Distillation (RND)** as a technique for intrinsic motivation and curiosity-driven exploration.
+-   Learn how to combine exploration bonuses with exploitation policies.
+-   Implement **Conservative Q-Learning (CQL)**, which combats value overestimation in offline settings.
+-   Understand how **Advantage-Weighted Actor-Critic (AWAC)** uses implicit constraints for stable offline policy updates.
+-   Implement **Implicit Q-Learning (IQL)** using expectile regression to learn value functions without explicit Bellman backups on out-of-distribution actions.
 
 ## Key Concepts
 
-- **Offline RL**: Learning policies from pre-collected datasets without online interaction
-- **Conservative Q-Learning (CQL)**: Regularizing Q-values to prevent overestimation in offline settings
-- **Advantage-Weighted Actor-Critic (AWAC)**: Weighting policy updates by advantage for stable offline learning
-- **Implicit Q-Learning (IQL)**: Learning value functions via expectile regression for offline policy optimization
-- **Random Network Distillation (RND)**: Using prediction error as intrinsic reward for exploration
-- **Intrinsic vs Extrinsic Rewards**: Balancing curiosity-driven and task-driven learning
+### 1. Offline Reinforcement Learning
+
+Offline RL (also known as batch RL) is a paradigm where the agent learns from a fixed dataset `D` of transitions `(s, a, r, s')` collected by some unknown "behavior policy" `π_β`. The agent has **no access** to the live environment for further interaction.
+
+-   **The Challenge of Distributional Shift**: The primary obstacle in offline RL is distributional shift. Standard off-policy algorithms like Q-learning fail because they try to evaluate actions that are not present in the dataset. This leads to bootstrapping from erroneously high Q-values for out-of-distribution (OOD) actions, causing value overestimation and policy divergence.
+-   **The Goal**: The goal of offline RL is to learn the best possible policy that can be extracted from the given dataset, while avoiding the temptation to query actions that the dataset cannot provide information about. This is often achieved by constraining the learned policy to stay "close" to the behavior policy.
+
+### 2. Random Network Distillation (RND)
+
+RND is an exploration technique that provides the agent with an **intrinsic reward** for visiting novel states. It consists of two neural networks:
+1.  A **Target Network**: A randomly initialized network that is frozen. It takes a state `s` and produces a fixed, random embedding `f(s)`.
+2.  A **Predictor Network**: A trainable network that tries to predict the output of the target network: `f̂(s; θ)`.
+
+-   **Intrinsic Reward**: The prediction error `||f̂(s; θ) - f(s)||^2` serves as the intrinsic reward.
+    -   When the agent visits a state `s` for the first time, the predictor network will have a high error, generating a large intrinsic reward and encouraging the agent to explore that state.
+    -   As the agent visits the state more often, the predictor network learns to accurately predict the target network's output, and the intrinsic reward diminishes.
+-   **Total Reward**: The agent is trained on a combination of the extrinsic (environment) reward and the intrinsic (curiosity) reward: `r_total = r_extrinsic + β * r_intrinsic`.
+
+### 3. Conservative Q-Learning (CQL)
+
+CQL is an offline RL algorithm that directly addresses the problem of Q-value overestimation for OOD actions. It adds a regularization term to the standard Bellman error objective.
+
+-   **The CQL Objective**: The key idea is to simultaneously **minimize** the Q-values for actions chosen by the policy while **maximizing** the Q-values for actions that were actually present in the dataset.
+    $$ L_{\text{CQL}}(\theta) = \alpha \left( \mathbb{E}_{s \sim \mathcal{D}}[\log\sum_a \exp(Q(s,a;\theta))] - \mathbb{E}_{(s,a) \sim \mathcal{D}}[Q(s,a;\theta)] \right) + L_{\text{Bellman}}(\theta) $$
+    -   The first term pushes down the values of all actions in a state (sampled from the policy's distribution).
+    -   The second term pushes up the values of actions from the dataset.
+-   **Effect**: This conservative objective ensures that the Q-values for unseen actions are not arbitrarily high, forcing the policy to prefer actions that are well-supported by the data.
+
+### 4. Advantage-Weighted Actor-Critic (AWAC)
+
+AWAC is a simple and effective offline actor-critic algorithm. It constrains the policy to stay close to the behavior policy by weighting the policy update by the advantage of the actions in the dataset.
+
+-   **Policy Update**: The policy is updated via supervised learning on the actions from the dataset, but each action is weighted by the exponentiated advantage:
+    $$ \theta \leftarrow \arg\max_{\theta} \mathbb{E}_{(s,a) \sim \mathcal{D}}[\log \pi_{\theta}(a|s) \exp(\frac{1}{\lambda} A^{\pi_k}(s,a))] $$
+    where `A(s,a) = Q(s,a) - V(s)` is the advantage, and `λ` is a temperature parameter.
+-   **Intuition**:
+    -   Actions with high advantages (`A > 0`) receive a large weight, encouraging the policy to imitate them.
+    -   Actions with low advantages (`A < 0`) receive a small weight, discouraging the policy from imitating them.
+-   This acts as an implicit constraint, keeping the policy from deviating too far from the good parts of the behavior policy.
+
+### 5. Implicit Q-Learning (IQL)
+
+IQL is a powerful offline algorithm that avoids directly maximizing Q-values over OOD actions. Instead, it learns a Q-function and extracts a policy from it in a more robust way.
+
+-   **Key Ideas**:
+    1.  **Expectile Regression**: Instead of using the `max` operator in the Bellman backup (which causes OOD issues), IQL uses **expectile regression** to estimate the value function `V`. This provides an upper-envelope of the state's value without explicitly querying OOD actions.
+    2.  **Advantage-Weighted Regression**: The policy is then trained via supervised learning, similar to AWAC, by imitating actions from the dataset weighted by their exponentiated Q-values (which serve as an estimate of the advantage).
+-   **IQL Critic Update**: The Q-function is learned by minimizing a standard Bellman error, but the target uses the expectile-based value function `V`.
+-   **IQL Actor Update**: The policy is trained to maximize `E_{(s,a)~D}[exp(β(Q(s,a) - V(s))) log π(a|s)]`.
+-   **Result**: IQL learns a well-behaved Q-function and can extract a policy that significantly improves upon the behavior policy, making it one of the top-performing offline RL algorithms.
 
 ## Structure
 

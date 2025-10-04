@@ -38,18 +38,48 @@ def perform_actions(env, actions):
 
 def mean_squared_error(a, b):
     return np.mean((a-b)**2)
+
 def sample_trajectory(env, policy, max_path_length, render=False):
+    ob = env.reset()
+    obs, acs, rewards, next_obs, terminals, image_obs = [], [], [], [], [], []
+    steps = 0
+    while True:
+        obs.append(ob)
+        action = policy.get_action(ob)
+        if isinstance(action, np.ndarray) and action.ndim > 1:
+            action = action.squeeze(0)
+        acs.append(action)
+        ob, rew, done, _ = env.step(action)
+        next_obs.append(ob)
+        rewards.append(rew)
+        steps += 1
+        rollout_done = done or (steps >= max_path_length)
+        terminals.append(rollout_done)
+        if rollout_done:
+            break
+    return Path(obs, image_obs, acs, rewards, next_obs, terminals)
+
 def sample_trajectories(env, policy, min_timesteps_per_batch, max_path_length, render=False):
     """
         Collect rollouts using policy
         until we have collected min_timesteps_per_batch steps
     """
+    timesteps_this_batch = 0
+    paths = []
+    while timesteps_this_batch < min_timesteps_per_batch:
+        path = sample_trajectory(env, policy, max_path_length, render)
+        paths.append(path)
+        timesteps_this_batch += get_pathlength(path)
+        print('At timestep:    ', timesteps_this_batch, '/', min_timesteps_per_batch, end='\r')
     return paths, timesteps_this_batch
 
 def sample_n_trajectories(env, policy, ntraj, max_path_length, render=False):
     """
         Collect ntraj rollouts using policy
     """
+    paths = []
+    for _ in range(ntraj):
+        paths.append(sample_trajectory(env, policy, max_path_length, render))
     return paths
 def Path(obs, image_obs, acs, rewards, next_obs, terminals):
     """

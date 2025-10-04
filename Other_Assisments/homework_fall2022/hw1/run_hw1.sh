@@ -160,11 +160,31 @@ main() {
   require_command "${PYTHON_BIN}"
 
   resolve_paths
-  create_and_activate_venv
-  install_dependencies
+  
+  # Uninstall any existing cs285 package and install hw1's version
+  log "Ensuring hw1's cs285 package is installed..."
+  pip uninstall -y cs285 2>/dev/null || true
 
-  export MUJOCO_GL="${MUJOCO_GL:-egl}"
-  log "Set MUJOCO_GL=${MUJOCO_GL}."
+  # Clear Python cache to avoid stale bytecode
+  find "${PROJECT_ROOT}/cs285" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+  find "${PROJECT_ROOT}/cs285" -type f -name "*.pyc" -delete 2>/dev/null || true
+
+#   if [[ "${SKIP_INSTALL}" == "1" ]]; then
+#     log "Skipping dependency installation (SKIP_INSTALL=1)."
+#   else
+#     log "Installing hw1 requirements and package."
+#     pip install --upgrade pip wheel
+#     pip install -r "${PROJECT_ROOT}/requirements.txt"
+#     pip install -e "${PROJECT_ROOT}"
+#   fi
+
+  MUJOCO_GL="${MUJOCO_GL:-}"
+  if [[ -n "${MUJOCO_GL}" ]]; then
+    export MUJOCO_GL
+    log "Set MUJOCO_GL=${MUJOCO_GL}."
+  else
+    log "Using MuJoCo's auto-detected rendering backend."
+  fi
 
   run_behavior_cloning
   run_dagger

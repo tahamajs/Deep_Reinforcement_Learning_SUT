@@ -76,11 +76,26 @@ class FFModel(nn.Module, BaseModel):
                 unnormalized) output of the delta network. This is needed
         """
 
-        obs_normalized =
-        acs_normalized =
+        if obs_mean is None:
+            obs_mean = self.obs_mean
+        if obs_std is None:
+            obs_std = self.obs_std
+        if acs_mean is None:
+            acs_mean = self.acs_mean
+        if acs_std is None:
+            acs_std = self.acs_std
+        if delta_mean is None:
+            delta_mean = self.delta_mean
+        if delta_std is None:
+            delta_std = self.delta_std
+
+        eps = 1e-8
+        obs_normalized = (obs_unnormalized - obs_mean) / (obs_std + eps)
+        acs_normalized = (acs_unnormalized - acs_mean) / (acs_std + eps)
         concatenated_input = torch.cat([obs_normalized, acs_normalized], dim=1)
-        delta_pred_normalized =
-        next_obs_pred =
+        delta_pred_normalized = self.delta_network(concatenated_input)
+        delta_pred = delta_pred_normalized * (delta_std + eps) + delta_mean
+        next_obs_pred = obs_unnormalized + delta_pred
         return next_obs_pred, delta_pred_normalized
 
     def get_prediction(self, obs, acs, data_statistics):
@@ -97,7 +112,48 @@ class FFModel(nn.Module, BaseModel):
              - 'delta_std'
         :return: a numpy array of the predicted next-states (s_t+1)
         """
-        prediction =
+        if obs.ndim == 1:
+            obs = obs[None]
+        if acs.ndim == 1:
+            acs = acs[None]
+
+        obs_torch = ptu.from_numpy(obs)
+        acs_torch = ptu.from_numpy(acs)
+
+        stats = data_statistics or {}
+        obs_mean = stats.get('obs_mean', None)
+        obs_std = stats.get('obs_std', None)
+        acs_mean = stats.get('acs_mean', None)
+        acs_std = stats.get('acs_std', None)
+        delta_mean = stats.get('delta_mean', None)
+        delta_std = stats.get('delta_std', None)
+
+        if obs_mean is not None:
+            obs_mean = ptu.from_numpy(obs_mean)
+        if obs_std is not None:
+            obs_std = ptu.from_numpy(obs_std)
+        if acs_mean is not None:
+            acs_mean = ptu.from_numpy(acs_mean)
+        if acs_std is not None:
+            acs_std = ptu.from_numpy(acs_std)
+        if delta_mean is not None:
+            delta_mean = ptu.from_numpy(delta_mean)
+        if delta_std is not None:
+            delta_std = ptu.from_numpy(delta_std)
+
+        with torch.no_grad():
+            next_obs_pred, _ = self.forward(
+                obs_torch,
+                acs_torch,
+                obs_mean,
+                obs_std,
+                acs_mean,
+                acs_std,
+                delta_mean,
+                delta_std,
+            )
+
+        prediction = ptu.to_numpy(next_obs_pred)
         return prediction
 
     def update(self, observations, actions, next_observations, data_statistics):
@@ -115,8 +171,45 @@ class FFModel(nn.Module, BaseModel):
              - 'delta_std'
         :return:
         """
-        target =
-        loss =
+        if observations.ndim == 1:
+            observations = observations[None]
+        if actions.ndim == 1:
+            actions = actions[None]
+        if next_observations.ndim == 1:
+            next_observations = next_observations[None]
+
+        self.update_statistics(
+            data_statistics['obs_mean'],
+            data_statistics['obs_std'],
+            data_statistics['acs_mean'],
+            data_statistics['acs_std'],
+            data_statistics['delta_mean'],
+            data_statistics['delta_std'],
+        )
+
+        obs_torch = ptu.from_numpy(observations)
+        acs_torch = ptu.from_numpy(actions)
+        next_obs_torch = ptu.from_numpy(next_observations)
+
+        delta_target_np = normalize(
+            next_observations - observations,
+            data_statistics['delta_mean'],
+            data_statistics['delta_std'],
+        )
+        target = ptu.from_numpy(delta_target_np)
+
+        _, delta_pred_normalized = self.forward(
+            obs_torch,
+            acs_torch,
+            self.obs_mean,
+            self.obs_std,
+            self.acs_mean,
+            self.acs_std,
+            self.delta_mean,
+            self.delta_std,
+        )
+
+        loss = self.loss(delta_pred_normalized, target)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()

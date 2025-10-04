@@ -5,24 +5,69 @@
 
 ## Overview
 
-This assignment introduces model-based reinforcement learning, where agents learn a model of the environment's dynamics and use it for planning and policy improvement. You will implement model-based agents using neural network dynamics models, explore model predictive control (MPC), and investigate model-based policy optimization (MBPO) for sample-efficient learning.
+This assignment delves into **Model-Based Reinforcement Learning (MBRL)**, a paradigm focused on improving sample efficiency by learning a model of the environment's dynamics. Instead of interacting with the real world for every learning step (as in model-free RL), an MBRL agent learns a predictive model of how the world behaves. This "world model" can then be used as a simulator to plan actions, generate synthetic experience, and train a policy with far fewer real-world interactions.
+
+You will implement two major MBRL approaches:
+
+-   **Part 1: Model Predictive Control (MPC)**. You will first build a neural network that learns the environment's dynamics: `s_t+1, r_t = f(s_t, a_t)`. Then, you will implement an MPC controller that uses this model to "look ahead" and choose the best action at each step by optimizing a sequence of future actions. This involves sampling action sequences, predicting their outcomes with the learned model, and selecting the best one.
+
+-   **Part 2: Model-Based Policy Optimization (MBPO)**. You will implement MBPO, a more advanced algorithm that combines the benefits of model-based planning and model-free policy learning. MBPO uses the learned dynamics model to generate "rollouts"—short, simulated trajectories that start from real states. These synthetic rollouts are then added to the replay buffer of a powerful model-free algorithm (like Soft Actor-Critic), allowing the policy to be trained on a mix of real and imagined data, dramatically improving sample efficiency.
 
 ## Learning Objectives
 
-- Understand the principles of model-based RL
-- Implement neural network dynamics models
-- Develop model predictive control algorithms
-- Analyze the trade-offs between model-based and model-free approaches
-- Explore data augmentation and ensemble methods for robust modeling
+-   Understand the core principles of **Model-Based RL** and its advantages in sample efficiency.
+-   Implement a **neural network dynamics model** to predict state transitions and rewards.
+-   Develop a **Model Predictive Control (MPC)** agent that uses the learned model for online planning.
+-   Implement and understand action sequence optimization methods like **Random Shooting** and the **Cross-Entropy Method (CEM)**.
+-   Implement **Model-Based Policy Optimization (MBPO)**, a hybrid algorithm that uses model-generated data to train a model-free policy.
+-   Analyze the impact of model error and how techniques like short rollouts can mitigate it.
 
 ## Key Concepts
 
-- **Model-Based RL**: Learning a model of environment dynamics for planning
-- **Dynamics Models**: Neural networks that predict next states and rewards
-- **Model Predictive Control (MPC)**: Using the model for trajectory optimization
-- **Model-Based Policy Optimization (MBPO)**: Combining model-based and model-free learning
-- **Uncertainty Estimation**: Using ensembles for better exploration and robustness
-- **Sample Efficiency**: Achieving good performance with fewer environment interactions
+### 1. Dynamics Model
+
+The foundation of MBRL is the dynamics model, `f_φ(s_t, a_t)`, which is a supervised learning model trained to predict the next state and reward given the current state and action.
+$$ \hat{s}_{t+1}, \hat{r}_t = f_{\phi}(s_t, a_t) $$
+This model is typically a feedforward neural network trained on a dataset `D = {(s, a, r, s')}` of real transitions collected from the environment. The loss function is the Mean Squared Error (MSE) between the model's predictions and the true outcomes.
+$$ L(\phi) = \sum_{(s, a, r, s') \in \mathcal{D}} ||f_{\phi}(s, a) - (s', r)||^2 $$
+To handle stochastic environments and model uncertainty, an ensemble of dynamics models can be used.
+
+### 2. Model Predictive Control (MPC)
+
+MPC is an online planning algorithm that uses the learned dynamics model to select the best action at each time step. It works as follows:
+
+1.  **Observe** the current state `s_t`.
+2.  **Plan** a sequence of future actions `(a_t, a_{t+1}, ..., a_{t+H-1})` by optimizing a reward objective *inside the learned model*. This planning step involves:
+    a.  Generating a set of candidate action sequences.
+    b.  For each sequence, using the dynamics model `f_φ` to predict the resulting trajectory of states and rewards: `(s_{t+1}, r_t), (s_{t+2}, r_{t+1}), ...`.
+    c.  Evaluating each trajectory by summing the predicted rewards: `Σ r_i`.
+    d.  Selecting the action sequence that yields the highest total reward.
+3.  **Execute** only the *first* action `a_t` from the best sequence in the real environment.
+4.  **Discard** the rest of the plan and repeat the process from the new state `s_{t+1}`.
+
+This "plan, execute one step, replan" cycle makes MPC robust to model errors, as it constantly corrects its plan based on real-world feedback.
+
+-   **Action Sequence Sampling**:
+    -   **Random Shooting**: The simplest method, where `N` random action sequences are sampled and the best one is chosen.
+    -   **Cross-Entropy Method (CEM)**: An iterative optimization technique that refines the search for the best action sequence. It starts with a distribution over sequences (e.g., a Gaussian), selects the top "elite" sequences, and fits a new distribution to these elites. This process is repeated for several iterations to converge on a high-reward action sequence.
+
+### 3. Model-Based Policy Optimization (MBPO)
+
+MBPO is a hybrid algorithm that leverages a learned model to augment the training data for a model-free RL algorithm, typically an off-policy one like SAC. This approach combines the planning capabilities of a model with the asymptotic performance of a model-free policy.
+
+The MBPO loop is as follows:
+
+1.  **Collect** a small amount of real data from the environment using the current policy. Add this to a replay buffer `D_real`.
+2.  **Train** the dynamics model `f_φ` on the real data in `D_real`.
+3.  **Generate Synthetic Data**:
+    a.  Sample a state `s_t` from the real replay buffer `D_real`.
+    b.  Perform a `k`-step rollout using the learned model. At each step `i` in the rollout:
+        i.  The current policy `π` selects an action `a_i = π(s_i)`.
+        ii. The dynamics model predicts the next state `s_{i+1} = f_φ(s_i, a_i)`.
+    c.  Add these `k` synthetic transitions `(s_i, a_i, r_i, s_{i+1})` to a separate model-based replay buffer `D_model`.
+4.  **Train Policy**: Update the model-free agent (e.g., SAC) by sampling mini-batches from a mix of real data (`D_real`) and model-generated data (`D_model`).
+
+By using **short rollouts** (small `k`), MBPO mitigates the problem of compounding model error, where small prediction errors accumulate over long trajectories, leading to unrealistic and unhelpful synthetic data. This allows the policy to benefit from imagined experience without being led too far astray by an imperfect model.
 
 ## Structure
 

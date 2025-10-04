@@ -64,35 +64,36 @@ install_dependencies() {
 
 build_flag_array() {
   local preset="$1"
-  local -n __flags_ref=$2
-
-  __flags_ref=()
+  shift
+  # Return flags via stdout, caller captures with array assignment
+  
+  local flags=()
 
   case "${preset}" in
     vanilla)
       :
       ;;
     rtg)
-      __flags_ref+=("--reward_to_go")
+      flags+=("--reward_to_go")
       ;;
     baseline)
-      __flags_ref+=("--nn_baseline")
+      flags+=("--nn_baseline")
       ;;
     rtg_baseline)
-      __flags_ref+=("--reward_to_go" "--nn_baseline")
+      flags+=("--reward_to_go" "--nn_baseline")
       ;;
     gae)
-      __flags_ref+=("--reward_to_go" "--nn_baseline" "--gae_lambda" "${GAE_LAMBDA}")
+      flags+=("--reward_to_go" "--nn_baseline" "--gae_lambda" "${GAE_LAMBDA}")
       ;;
     no_std_adv)
-      __flags_ref+=("--dont_standardize_advantages")
+      flags+=("--dont_standardize_advantages")
       ;;
     custom)
       if [[ -z "${CUSTOM_FLAGS}" ]]; then
         log "ERROR: PRESETS includes 'custom' but CUSTOM_FLAGS is empty."
         exit 1
       fi
-      read -r -a __flags_ref <<< "${CUSTOM_FLAGS}"
+      read -r -a flags <<< "${CUSTOM_FLAGS}"
       ;;
     *)
       log "ERROR: Unknown preset '${preset}'."
@@ -100,14 +101,28 @@ build_flag_array() {
       exit 1
       ;;
   esac
+  
+  # Only output if there are flags to output
+  if [[ ${#flags[@]} -gt 0 ]]; then
+    echo "${flags[@]}"
+  fi
 }
 
 run_experiment() {
   local preset="$1"
   local run_idx="$2"
-  local -a flag_array=()
-
-  build_flag_array "${preset}" flag_array
+  
+  local flag_array=()
+  local flags_output=""
+  if flags_output="$(build_flag_array "${preset}")"; then
+    if [[ -n "${flags_output}" ]]; then
+      # shellcheck disable=SC2207
+      read -r -a flag_array <<< "${flags_output}"
+    fi
+  else
+    log "ERROR: Failed to build flags for preset '${preset}'."
+    exit 1
+  fi
 
   local exp_name="${EXP_NAME_PREFIX}_${preset}"
   local seed=$((SEED_START + run_idx))
@@ -130,7 +145,9 @@ run_experiment() {
     cmd+=(--ep_len "${EP_LEN}")
   fi
 
-  cmd+=("${flag_array[@]}")
+  if [[ ${#flag_array[@]} -gt 0 ]]; then
+    cmd+=("${flag_array[@]}")
+  fi
 
   if [[ -n "${CUSTOM_FLAGS}" && "${preset}" != "custom" ]]; then
     # Allow appending extra flags globally
@@ -145,11 +162,19 @@ run_experiment() {
 
 main() {
   require_command "${PYTHON_BIN}"
-  create_and_activate_venv
-  install_dependencies
+  
+  # Uninstall any existing cs285 package and install hw2's version
+  log "Ensuring hw2's cs285 package is installed..."
+  pip uninstall -y cs285 2>/dev/null || true
+  pip install -e "${PROJECT_ROOT}"
 
-  export MUJOCO_GL="${MUJOCO_GL:-egl}"
-  log "Set MUJOCO_GL=${MUJOCO_GL}."
+  MUJOCO_GL="${MUJOCO_GL:-}"
+  if [[ -n "${MUJOCO_GL}" ]]; then
+    export MUJOCO_GL
+    log "Set MUJOCO_GL=${MUJOCO_GL}."
+  else
+    log "Using MuJoCo's auto-detected rendering backend."
+  fi
 
   IFS=',' read -r -a preset_list <<< "${PRESETS_CSV}"
   local idx=0

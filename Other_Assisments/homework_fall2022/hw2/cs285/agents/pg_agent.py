@@ -30,6 +30,14 @@ class PGAgent(BaseAgent):
             Training a PG agent refers to updating its actor using the given observations/actions
             and the calculated qvals/advantages that come from the seen rewards.
         """
+        q_values = self.calculate_q_vals(rewards_list)
+        advantages = self.estimate_advantage(observations, rewards_list, q_values, terminals)
+        train_log = self.actor.update(
+            observations,
+            actions,
+            advantages,
+            q_values=q_values,
+        )
         return train_log
 
     def calculate_q_vals(self, rewards_list):
@@ -38,9 +46,15 @@ class PGAgent(BaseAgent):
             Monte Carlo estimation of the Q function.
         """
         if not self.reward_to_go:
-            TODO
+            q_values = np.concatenate([
+                self._discounted_return(np.array(path_rewards))
+                for path_rewards in rewards_list
+            ])
         else:
-            TODO
+            q_values = np.concatenate([
+                self._discounted_cumsum(np.array(path_rewards))
+                for path_rewards in rewards_list
+            ])
 
         return q_values
 
@@ -52,25 +66,37 @@ class PGAgent(BaseAgent):
         if self.nn_baseline:
             values_unnormalized = self.actor.run_baseline_prediction(obs)
             assert values_unnormalized.ndim == q_values.ndim
-            values = TODO
+            values = values_unnormalized * np.std(q_values) + np.mean(q_values)
 
             if self.gae_lambda is not None:
 
-                values = np.append(values, [0])
-                rews = np.concatenate(rews_list)
-                batch_size = obs.shape[0]
-                advantages = np.zeros(batch_size + 1)
-
-                for i in reversed(range(batch_size)):
-                advantages = advantages[:-1]
+                advantages_list = []
+                start = 0
+                for path_rewards in rews_list:
+                    path_rewards = np.array(path_rewards)
+                    path_len = len(path_rewards)
+                    end = start + path_len
+                    path_values = values[start:end]
+                    path_values = np.append(path_values, 0)
+                    path_terminals = terminals[start:end]
+                    path_advantages = np.zeros(path_len)
+                    gae = 0
+                    for t in reversed(range(path_len)):
+                        nonterminal = 1 - path_terminals[t]
+                        delta = path_rewards[t] + self.gamma * path_values[t + 1] * nonterminal - path_values[t]
+                        gae = delta + self.gamma * self.gae_lambda * nonterminal * gae
+                        path_advantages[t] = gae
+                    advantages_list.append(path_advantages)
+                    start = end
+                advantages = np.concatenate(advantages_list)
 
             else:
 
-                advantages = TODO
+                advantages = q_values - values
         else:
             advantages = q_values.copy()
         if self.standardize_advantages:
-            advantages = TODO
+            advantages = (advantages - np.mean(advantages)) / (np.std(advantages) + 1e-8)
 
         return advantages
     def add_to_replay_buffer(self, paths):
@@ -86,6 +112,10 @@ class PGAgent(BaseAgent):
 
             Output: list where each index t contains sum_{t'=0}^T gamma^t' r_{t'}
         """
+        rewards = np.array(rewards)
+        discounts = np.power(self.gamma, np.arange(len(rewards)))
+        total_return = np.sum(discounts * rewards)
+        list_of_discounted_returns = np.ones(len(rewards)) * total_return
 
         return list_of_discounted_returns
 
@@ -96,4 +126,11 @@ class PGAgent(BaseAgent):
             -and returns a list where the entry in each index t' is sum_{t'=t}^T gamma^(t'-t) * r_{t'}
         """
 
-        return list_of_discounted_cumsums
+        rewards = np.array(rewards)
+        discounted_cumsums = np.zeros(len(rewards))
+        running_total = 0
+        for t in reversed(range(len(rewards))):
+            running_total = rewards[t] + self.gamma * running_total
+            discounted_cumsums[t] = running_total
+
+        return discounted_cumsums

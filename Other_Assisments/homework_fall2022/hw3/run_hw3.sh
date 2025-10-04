@@ -8,7 +8,7 @@ VENV_PATH="${PROJECT_ROOT}/.venv"
 # General configuration
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 SKIP_INSTALL="${SKIP_INSTALL:-0}"
-MUJOCO_GL="${MUJOCO_GL:-egl}"
+MUJOCO_GL="${MUJOCO_GL:-}"
 
 RUN_DQN="${RUN_DQN:-1}"
 RUN_ACTOR_CRITIC="${RUN_ACTOR_CRITIC:-1}"
@@ -215,11 +215,23 @@ run_sac() {
 
 main() {
   require_command "${PYTHON_BIN}"
-  create_and_activate_venv
-  install_dependencies
+  
+  # Uninstall any existing cs285 package and install hw3's version
+  log "Ensuring hw3's cs285 package is installed..."
+  pip uninstall -y cs285 2>/dev/null || true
+  
+  # Clear Python cache to avoid stale bytecode
+  find "${PROJECT_ROOT}/cs285" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+  find "${PROJECT_ROOT}/cs285" -type f -name "*.pyc" -delete 2>/dev/null || true
+  
+  pip install -e "${PROJECT_ROOT}"
 
-  export MUJOCO_GL
-  log "Set MUJOCO_GL=${MUJOCO_GL}."
+  if [[ -n "${MUJOCO_GL}" ]]; then
+    export MUJOCO_GL
+    log "Set MUJOCO_GL=${MUJOCO_GL}."
+  else
+    log "Using MuJoCo's auto-detected rendering backend."
+  fi
 
   run_dqn
   run_actor_critic

@@ -6,20 +6,9 @@ import numpy as np
 import os
 import seaborn as sns
 from tqdm import tqdm
-class Env(object):
-    def __init__(self):
-        super(Env, self).__init__()
 
-    def reset(self):
-        raise NotImplementedError
-
-    def step(self, action):
-        raise NotImplementedError
-
-    def seed(self, seed):
-        raise NotImplementedError
-class PointMass(Env):
-    def __init__(self, max_episode_steps_coeff=1, scale=20, goal_padding=2.0):
+class PointMass(gym.Env):
+    def __init__(self, difficulty=0, max_episode_steps_coeff=1, scale=20, goal_padding=2.0):
         super(PointMass, self).__init__()
 
         self.scale = int(scale)
@@ -87,6 +76,11 @@ class PointMass(Env):
 
     def seed(self, seed):
         pass
+
+    def set_logdir(self, logdir):
+        """Set the logging directory for visualization."""
+        self.logdir = logdir
+        os.makedirs(logdir, exist_ok=True)
 
     def render(self):
 

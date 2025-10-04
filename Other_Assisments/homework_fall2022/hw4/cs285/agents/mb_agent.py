@@ -41,20 +41,20 @@ class MBAgent(BaseAgent):
         num_data = ob_no.shape[0]
         num_data_per_ens = int(num_data / self.ensemble_size)
 
-        for i in range(self.ensemble_size):
-            observations =
-            actions =
-            next_observations =
-            model =
-            log = model.update(observations, actions, next_observations,
-                                self.data_statistics)
-            loss = log['Training Loss']
+        start = 0
+        for model in self.dyn_models:
+            finish = start + num_data_per_ens
+
+            observations = ob_no[start:finish]
+            actions = ac_na[start:finish]
+            next_observations = next_ob_no[start:finish]
+            loss = model.update(observations, actions, next_observations, self.data_statistics)
             losses.append(loss)
 
+            start = finish
+
         avg_loss = np.mean(losses)
-        return {
-            'Training Loss': avg_loss,
-        }
+        return avg_loss
 
     def add_to_replay_buffer(self, paths, add_sl_noise=False):
         self.replay_buffer.add_rollouts(paths, noised=add_sl_noise)

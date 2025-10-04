@@ -39,8 +39,16 @@ class RL_Trainer(object):
             import matplotlib
 
             matplotlib.use("Agg")
-            self.env.set_logdir(self.params["logdir"] + "/expl_")
-            self.eval_env.set_logdir(self.params["logdir"] + "/eval_")
+            # Unwrap TimeLimit to access underlying PointMass env
+            if hasattr(self.env, 'env') and hasattr(self.env.env, 'set_logdir'):
+                self.env.env.set_logdir(self.params["logdir"] + "/expl_")
+            elif hasattr(self.env, 'set_logdir'):
+                self.env.set_logdir(self.params["logdir"] + "/expl_")
+            
+            if hasattr(self.eval_env, 'env') and hasattr(self.eval_env.env, 'set_logdir'):
+                self.eval_env.env.set_logdir(self.params["logdir"] + "/eval_")
+            elif hasattr(self.eval_env, 'set_logdir'):
+                self.eval_env.set_logdir(self.params["logdir"] + "/eval_")
 
         if self.params["video_log_freq"] > 0:
             self.episode_trigger = (

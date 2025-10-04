@@ -103,10 +103,54 @@ class RL_Trainer(object):
                 if self.params['save_params']:
                     self.agent.save('{}/agent_itr_{}.pt'.format(self.params['logdir'], itr))
     def collect_training_trajectories(self, itr, load_initial_expertdata, collect_policy, batch_size):
+        if itr == 0 and load_initial_expertdata:
+            print("\nLoading initial expert data...")
+            with open(load_initial_expertdata, "rb") as f:
+                loaded_paths = pickle.load(f)
+            return loaded_paths, 0, None
+
+        print("\nCollecting data to be used for training...")
+        paths, envsteps_this_batch = utils.sample_trajectories(
+            self.env,
+            collect_policy,
+            batch_size,
+            self.params['ep_len'],
+        )
+
+        train_video_paths = None
+        if self.logvideo:
+            print("\nCollecting train rollouts to be used for saving videos...")
+            train_video_paths = utils.sample_n_trajectories(
+                self.env,
+                collect_policy,
+                MAX_NVIDEO,
+                MAX_VIDEO_LEN,
+                True,
+            )
+
+        return paths, envsteps_this_batch, train_video_paths
+
     def train_agent(self):
+        all_logs = []
+        for train_step in range(self.params['num_agent_train_steps_per_iter']):
+            ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = (
+                self.agent.sample(self.params['train_batch_size'])
+            )
+            train_log = self.agent.train(
+                ob_batch,
+                ac_batch,
+                re_batch,
+                next_ob_batch,
+                terminal_batch,
+            )
+            if train_log is None:
+                train_log = {}
+            all_logs.append(train_log)
+
+        return all_logs
     def perform_logging(self, itr, paths, eval_policy, train_video_paths, all_logs):
 
-        last_log = all_logs[-1]
+        last_log = all_logs[-1] if all_logs else {}
         print("\nCollecting data for eval...")
         eval_paths, eval_envsteps_this_batch = utils.sample_trajectories(self.env, eval_policy, self.params['eval_batch_size'], self.params['ep_len'])
         if self.logvideo and train_video_paths != None:

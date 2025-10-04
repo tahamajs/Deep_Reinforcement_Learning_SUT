@@ -7,7 +7,7 @@ VENV_PATH="${PROJECT_ROOT}/.venv"
 
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 SKIP_INSTALL="${SKIP_INSTALL:-0}"
-MUJOCO_GL="${MUJOCO_GL:-egl}"
+MUJOCO_GL="${MUJOCO_GL:-}"
 
 RUN_EXPLORATION="${RUN_EXPLORATION:-1}"
 RUN_AWAC="${RUN_AWAC:-1}"
@@ -116,24 +116,25 @@ install_dependencies() {
 }
 
 append_common_flags() {
-  local -n __cmd_ref=$1
-  local use_rnd="$2"
-  local unsupervised="$3"
-  local offline_exploit="$4"
-  local use_boltzmann="$5"
+  local flags_to_add=()
+  local use_rnd="$1"
+  local unsupervised="$2"
+  local offline_exploit="$3"
+  local use_boltzmann="$4"
 
   if [[ "${use_rnd}" == "1" ]]; then
-    __cmd_ref+=(--use_rnd)
+    flags_to_add+=(--use_rnd)
   fi
   if [[ "${unsupervised}" == "1" ]]; then
-    __cmd_ref+=(--unsupervised_exploration)
+    flags_to_add+=(--unsupervised_exploration)
   fi
   if [[ "${offline_exploit}" == "1" ]]; then
-    __cmd_ref+=(--offline_exploitation)
+    flags_to_add+=(--offline_exploitation)
   fi
   if [[ "${use_boltzmann}" == "1" ]]; then
-    __cmd_ref+=(--use_boltzmann)
+    flags_to_add+=(--use_boltzmann)
   fi
+  echo "${flags_to_add[@]}"
 }
 
 run_exploration() {
@@ -156,7 +157,11 @@ run_exploration() {
     --rnd_n_layers "${EXPL_RND_N_LAYERS}"
     --rnd_size "${EXPL_RND_SIZE}")
 
-  append_common_flags cmd "${EXPL_USE_RND}" "${EXPL_UNSUPERVISED}" "${EXPL_OFFLINE_EXPLOITATION}" "${EXPL_USE_BOLTZMANN}"
+  # shellcheck disable=SC2207
+  local common_flags=( $(append_common_flags "${EXPL_USE_RND}" "${EXPL_UNSUPERVISED}" "${EXPL_OFFLINE_EXPLOITATION}" "${EXPL_USE_BOLTZMANN}") )
+  if [[ ${#common_flags[@]} -gt 0 ]]; then
+    cmd+=("${common_flags[@]}")
+  fi
 
   if [[ -n "${EXPL_EXTRA_FLAGS}" ]]; then
     # shellcheck disable=SC2206
@@ -193,7 +198,11 @@ run_awac() {
     --rnd_n_layers "${AWAC_RND_N_LAYERS}"
     --rnd_size "${AWAC_RND_SIZE}")
 
-  append_common_flags cmd "${AWAC_USE_RND}" "${AWAC_UNSUPERVISED}" "${AWAC_OFFLINE_EXPLOITATION}" "${AWAC_USE_BOLTZMANN}"
+  # shellcheck disable=SC2207
+  local common_flags=( $(append_common_flags "${AWAC_USE_RND}" "${AWAC_UNSUPERVISED}" "${AWAC_OFFLINE_EXPLOITATION}" "${AWAC_USE_BOLTZMANN}") )
+  if [[ ${#common_flags[@]} -gt 0 ]]; then
+    cmd+=("${common_flags[@]}")
+  fi
 
   if [[ -n "${AWAC_EXTRA_FLAGS}" ]]; then
     # shellcheck disable=SC2206
@@ -230,7 +239,11 @@ run_iql() {
     --rnd_n_layers "${IQL_RND_N_LAYERS}"
     --rnd_size "${IQL_RND_SIZE}")
 
-  append_common_flags cmd "${IQL_USE_RND}" "${IQL_UNSUPERVISED}" "${IQL_OFFLINE_EXPLOITATION}" "${IQL_USE_BOLTZMANN}"
+  # shellcheck disable=SC2207
+  local common_flags=( $(append_common_flags "${IQL_USE_RND}" "${IQL_UNSUPERVISED}" "${IQL_OFFLINE_EXPLOITATION}" "${IQL_USE_BOLTZMANN}") )
+  if [[ ${#common_flags[@]} -gt 0 ]]; then
+    cmd+=("${common_flags[@]}")
+  fi
 
   if [[ -n "${IQL_EXTRA_FLAGS}" ]]; then
     # shellcheck disable=SC2206
@@ -245,11 +258,23 @@ run_iql() {
 
 main() {
   require_command "${PYTHON_BIN}"
-  create_and_activate_venv
-  install_dependencies
+  
+  # Uninstall any existing cs285 package and install hw5's version
+  log "Ensuring hw5's cs285 package is installed..."
+  pip uninstall -y cs285 2>/dev/null || true
+  
+  # Clear Python cache to avoid stale bytecode
+  find "${PROJECT_ROOT}/cs285" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+  find "${PROJECT_ROOT}/cs285" -type f -name "*.pyc" -delete 2>/dev/null || true
+  
+  pip install -e "${PROJECT_ROOT}"
 
-  export MUJOCO_GL
-  log "Set MUJOCO_GL=${MUJOCO_GL}."
+  if [[ -n "${MUJOCO_GL}" ]]; then
+    export MUJOCO_GL
+    log "Set MUJOCO_GL=${MUJOCO_GL}."
+  else
+    log "Using MuJoCo's auto-detected rendering backend."
+  fi
 
   run_exploration
   run_awac

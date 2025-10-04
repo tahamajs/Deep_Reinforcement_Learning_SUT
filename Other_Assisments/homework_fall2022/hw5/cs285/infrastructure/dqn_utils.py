@@ -25,35 +25,35 @@ OptimizerSpec = namedtuple(
 def register_custom_envs():
     from gymnasium.envs.registration import registry
 
-    if "LunarLander-v3" not in registry.env_specs:
+    if "LunarLander-v3" not in registry:
         register(
             id="LunarLander-v3",
             entry_point="cs285.envs.box2d.lunar_lander:LunarLander",
             max_episode_steps=1000,
             reward_threshold=200,
         )
-    if "PointmassEasy-v0" not in registry.env_specs:
+    if "PointmassEasy-v0" not in registry:
         register(
             id="PointmassEasy-v0",
-            entry_point="cs285.envs.pointmass.pointmass:Pointmass",
+            entry_point="cs285.envs.pointmass:PointMass",
             kwargs={"difficulty": 0},
         )
-    if "PointmassMedium-v0" not in registry.env_specs:
+    if "PointmassMedium-v0" not in registry:
         register(
             id="PointmassMedium-v0",
-            entry_point="cs285.envs.pointmass.pointmass:Pointmass",
+            entry_point="cs285.envs.pointmass:PointMass",
             kwargs={"difficulty": 1},
         )
-    if "PointmassHard-v0" not in registry.env_specs:
+    if "PointmassHard-v0" not in registry:
         register(
             id="PointmassHard-v0",
-            entry_point="cs285.envs.pointmass.pointmass:Pointmass",
+            entry_point="cs285.envs.pointmass:PointMass",
             kwargs={"difficulty": 2},
         )
-    if "PointmassVeryHard-v0" not in registry.env_specs:
+    if "PointmassVeryHard-v0" not in registry:
         register(
             id="PointmassVeryHard-v0",
-            entry_point="cs285.envs.pointmass.pointmass:Pointmass",
+            entry_point="cs285.envs.pointmass:PointMass",
             kwargs={"difficulty": 3},
         )
 def get_env_kwargs(env_name):
