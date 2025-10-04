@@ -60,6 +60,23 @@ from .environments import (
     HierarchicalEnvironment,
 )
 
+from .environments.multidimensional_quantum_environment import (
+    MultidimensionalQuantumEnvironment,
+)
+
+from .agents.advanced_quantum_agent import (
+    AdvancedQuantumAgent,
+    QuantumStateEvolution,
+    QuantumInterferenceNetwork,
+)
+
+from .agents.advanced_neuromorphic_agent import (
+    AdvancedNeuromorphicAgent,
+    AdaptiveSTDPSynapse,
+    NeuromodulatedNeuron,
+    HierarchicalSpikingNetwork,
+)
+
 from .experiments import (
     QuantumNeuromorphicComparison,
     AblationStudy,
@@ -68,6 +85,20 @@ from .experiments import (
     run_quick_comparison,
     run_ablation_study,
     benchmark_scalability,
+)
+
+from .experiments.advanced_experiments import (
+    AdvancedExperimentSuite,
+    MultiObjectiveOptimizationExperiment,
+    ScalabilityRobustnessExperiment,
+    CrossDomainTransferExperiment,
+)
+
+from .analysis import (
+    QuantumCoherenceAnalyzer,
+    NeuromorphicEfficiencyAnalyzer,
+    HybridSystemAnalyzer,
+    AdvancedVisualizationEngine,
 )
 
 from .utils import (
@@ -336,14 +367,36 @@ def print_package_info():
 
 
 __all__ = [
+    # Basic Agents
     "HybridQuantumClassicalAgent",
     "NeuromorphicActorCritic",
     "QuantumEnhancedAgent",
+    # Advanced Agents
+    "AdvancedQuantumAgent",
+    "AdvancedNeuromorphicAgent",
+    "QuantumStateEvolution",
+    "QuantumInterferenceNetwork",
+    "AdaptiveSTDPSynapse",
+    "NeuromodulatedNeuron",
+    "HierarchicalSpikingNetwork",
+    # Environments
     "NeuromorphicEnvironment",
     "HybridQuantumClassicalEnvironment",
+    "MultidimensionalQuantumEnvironment",
     "SpaceStationEnvironment",
+    # Analysis Tools
+    "QuantumCoherenceAnalyzer",
+    "NeuromorphicEfficiencyAnalyzer",
+    "HybridSystemAnalyzer",
+    "AdvancedVisualizationEngine",
+    # Advanced Experiments
+    "AdvancedExperimentSuite",
+    "MultiObjectiveOptimizationExperiment",
+    "ScalabilityRobustnessExperiment",
+    "CrossDomainTransferExperiment",
     "QuantumNeuromorphicComparison",
     "ExperimentRunner",
+    # Utilities
     "MissionConfig",
     "PerformanceTracker",
     "ExperimentManager",

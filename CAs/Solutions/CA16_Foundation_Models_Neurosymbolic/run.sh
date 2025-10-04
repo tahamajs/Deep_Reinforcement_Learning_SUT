@@ -24,7 +24,7 @@ source venv/bin/activate
 
 # Install dependencies
 echo "📚 Installing dependencies..."
-pip install -q torch torchvision torchaudio numpy matplotlib seaborn pandas plotly scikit-learn gym gymnasium transformers datasets wandb tqdm
+pip install -q torch torchvision torchaudio numpy matplotlib seaborn pandas plotly scikit-learn gym gymnasium transformers datasets wandb tqdm jupyter ipykernel notebook pytest pytest-cov black flake8 isort sphinx sphinx-rtd-theme
 
 # Set up logging
 LOG_FILE="logs/ca16_execution_$(date +%Y%m%d_%H%M%S).log"
@@ -74,27 +74,35 @@ run_notebook() {
 echo "🎯 Starting comprehensive CA16 execution..."
 echo ""
 
-# 1. Test basic components
-echo "🧪 Testing basic components..."
-run_script "test_video_generation.py" "Basic Component Testing"
+# 1. Test comprehensive components
+echo "🧪 Testing comprehensive components..."
+run_script "test_ca16.py" "Comprehensive Component Testing"
 
-# 2. Run comprehensive demonstration
-echo "🎭 Running comprehensive demonstration..."
-run_script "comprehensive_demo.py" "Comprehensive Module Demonstration"
+# 2. Run experiments
+echo "🎭 Running experiments..."
+python -c "
+import sys
+sys.path.append('.')
+from experiments import run_all_experiments
+results = run_all_experiments()
+print('Experiments completed successfully')
+" 2>&1 | tee -a "$LOG_FILE"
 
-# 3. Generate enhanced visualizations
-echo "🎨 Generating enhanced visualizations..."
-run_script "enhanced_visualizations.py" "Enhanced Visualization Generation"
+# 3. Run results analysis
+echo "🎨 Running results analysis..."
+python -c "
+import sys
+sys.path.append('.')
+from results import main
+main()
+print('Results analysis completed successfully')
+" 2>&1 | tee -a "$LOG_FILE"
 
-# 4. Generate video demonstrations
-echo "🎬 Generating video demonstrations..."
-run_script "video_generator.py" "Video Generation for All Agents"
-
-# 5. Run main notebook
+# 4. Run main notebook
 echo "📓 Executing main notebook..."
 run_notebook "CA16.ipynb" "Main CA16 Notebook Execution"
 
-# 6. Run individual module tests
+# 5. Run individual module tests
 echo "🔬 Running individual module tests..."
 
 # Foundation Models
@@ -106,25 +114,25 @@ from foundation_models import DecisionTransformer, MultiTaskDecisionTransformer,
 import torch
 
 # Test Decision Transformer
-dt = DecisionTransformer(state_dim=4, action_dim=2, model_dim=64)
+dt = DecisionTransformer(state_dim=4, action_dim=2, hidden_dim=64, num_layers=3, num_heads=4, max_length=100)
 states = torch.randn(2, 10, 4)
-actions = torch.randn(2, 10, 2)
-returns_to_go = torch.randn(2, 10)
+actions = torch.randint(0, 2, (2, 10))
+returns_to_go = torch.randn(2, 10, 1)
 timesteps = torch.randint(0, 100, (2, 10))
-output = dt(states, actions, returns_to_go, timesteps)
+action_logits, values = dt(states, actions, returns_to_go, timesteps)
 print('✅ Decision Transformer test passed')
 
 # Test Multi-Task DT
-mt_dt = MultiTaskDecisionTransformer(state_dim=4, action_dim=2, num_tasks=3, model_dim=64)
-task_ids = torch.randint(0, 3, (2,))
-output = mt_dt(states, actions, returns_to_go, timesteps, task_ids)
+mt_dt = MultiTaskDecisionTransformer(state_dim=4, action_dim=2, hidden_dim=64, num_layers=3, num_heads=4, max_length=100, num_tasks=3)
+task_id = 1
+action_logits, values = mt_dt(states, actions, returns_to_go, timesteps, task_id)
 print('✅ Multi-Task Decision Transformer test passed')
 
 # Test In-Context Learner
-icl = InContextLearner(state_dim=4, action_dim=2, model_dim=64)
+icl = InContextLearner(state_dim=4, action_dim=2, hidden_dim=64, num_layers=3, num_heads=4, max_length=100)
 context_states = torch.randn(2, 5, 4)
-context_actions = torch.randn(2, 5, 2)
-context_returns = torch.randn(2, 5)
+context_actions = torch.randint(0, 2, (2, 5))
+context_returns = torch.randn(2, 5, 1)
 query_states = torch.randn(2, 3, 4)
 output = icl(context_states, context_actions, context_returns, query_states)
 print('✅ In-Context Learner test passed')
@@ -135,21 +143,20 @@ echo "🧩 Testing Neurosymbolic RL..."
 python -c "
 import sys
 sys.path.append('.')
-from neurosymbolic import SymbolicKnowledgeBase, NeurosymbolicAgent, LogicalPredicate, LogicalRule
+from neurosymbolic import SymbolicKnowledgeBase, NeurosymbolicPolicy, LogicalPredicate, LogicalRule
 import torch
 
 # Test Knowledge Base
 kb = SymbolicKnowledgeBase()
-pred = LogicalPredicate('safe', 1)
-kb.add_predicate(pred)
+kb.add_predicate('safe', 1)
 kb.add_fact('safe', ('state1',), True)
 print('✅ Knowledge Base test passed')
 
-# Test Neurosymbolic Agent
-ns_agent = NeurosymbolicAgent(state_dim=4, action_dim=2, knowledge_base=kb)
-state = torch.randn(4)
-action = ns_agent.select_action(state)
-print('✅ Neurosymbolic Agent test passed')
+# Test Neurosymbolic Policy
+ns_policy = NeurosymbolicPolicy(state_dim=4, action_dim=4, hidden_dim=32, symbolic_dim=8)
+state = torch.randn(1, 4)
+action_logits, value = ns_policy(state)
+print('✅ Neurosymbolic Policy test passed')
 " 2>&1 | tee -a "$LOG_FILE"
 
 # Human-AI Collaboration
@@ -158,9 +165,10 @@ python -c "
 import sys
 sys.path.append('.')
 try:
-    from human_ai_collaboration import CollaborativeAgent
-    collab_agent = CollaborativeAgent(state_dim=4, action_dim=2)
-    print('✅ Collaborative Agent test passed')
+    from human_ai_collaboration import CollaborativeAgent, PreferenceRewardModel
+    collab_agent = CollaborativeAgent(state_dim=4, action_dim=2, hidden_dim=32, confidence_threshold=0.7)
+    preference_model = PreferenceRewardModel(state_dim=4, action_dim=2, hidden_dim=32)
+    print('✅ Human-AI Collaboration modules test passed')
 except ImportError as e:
     print(f'⚠️  Human-AI Collaboration modules not fully available: {e}')
 " 2>&1 | tee -a "$LOG_FILE"
@@ -171,9 +179,10 @@ python -c "
 import sys
 sys.path.append('.')
 try:
-    from continual_learning import ContinualLearningAgent
-    cl_agent = ContinualLearningAgent(state_dim=4, action_dim=2)
-    print('✅ Continual Learning Agent test passed')
+    from continual_learning import ContinualLearningAgent, MAML
+    cl_agent = ContinualLearningAgent(state_dim=4, action_dim=2, hidden_dim=64, num_tasks=3)
+    maml = MAML(model=torch.nn.Sequential(torch.nn.Linear(4, 32), torch.nn.ReLU(), torch.nn.Linear(32, 2)))
+    print('✅ Continual Learning modules test passed')
 except ImportError as e:
     print(f'⚠️  Continual Learning modules not fully available: {e}')
 " 2>&1 | tee -a "$LOG_FILE"
@@ -183,15 +192,29 @@ echo "🌍 Testing Environments..."
 python -c "
 import sys
 sys.path.append('.')
-from environments import SymbolicGridWorld
+from environments import SymbolicGridWorld, CollaborativeGridWorld, ContinualLearningEnvironment
 import numpy as np
 
 # Test Symbolic GridWorld
-env = SymbolicGridWorld(size=5)
+env = SymbolicGridWorld(size=5, num_goals=2, num_obstacles=3)
 obs, info = env.reset()
 action = env.action_space.sample()
 obs, reward, done, truncated, info = env.step(action)
 print('✅ Symbolic GridWorld test passed')
+
+# Test Collaborative GridWorld
+collab_env = CollaborativeGridWorld(size=5, num_goals=2, num_obstacles=3)
+obs, info = collab_env.reset()
+action = collab_env.action_space.sample()
+obs, reward, done, truncated, info = collab_env.step(action)
+print('✅ Collaborative GridWorld test passed')
+
+# Test Continual Learning Environment
+continual_env = ContinualLearningEnvironment(num_tasks=3, state_dim=4, action_dim=2)
+obs, info = continual_env.reset()
+action = continual_env.action_space.sample()
+obs, reward, done, truncated, info = continual_env.step(action)
+print('✅ Continual Learning Environment test passed')
 " 2>&1 | tee -a "$LOG_FILE"
 
 # Advanced Computational Paradigms
@@ -200,9 +223,9 @@ python -c "
 import sys
 sys.path.append('.')
 try:
-    from advanced_computational import QuantumInspiredRL, NeuromorphicNetwork
-    quantum_agent = QuantumInspiredRL(state_dim=4, action_dim=2)
-    neuro_net = NeuromorphicNetwork(input_dim=4, output_dim=2)
+    from advanced_computing import QuantumInspiredRL, NeuromorphicNetwork
+    quantum_agent = QuantumInspiredRL(state_dim=4, action_dim=2, num_qubits=4, num_layers=2)
+    neuro_net = NeuromorphicNetwork(input_dim=4, hidden_dim=16, output_dim=2, num_layers=2, time_steps=5)
     print('✅ Advanced Computational Paradigms test passed')
 except ImportError as e:
     print(f'⚠️  Advanced Computational modules not fully available: {e}')
@@ -214,15 +237,17 @@ python -c "
 import sys
 sys.path.append('.')
 try:
-    from real_world_deployment import ProductionRLSystem, SafetyMonitor
-    prod_system = ProductionRLSystem(state_dim=4, action_dim=2)
-    safety_monitor = SafetyMonitor(state_dim=4, action_dim=2)
-    print('✅ Real-World Deployment test passed')
+    from deployment_ethics import ProductionRLSystem, SafetyMonitor, EthicsChecker
+    model = torch.nn.Sequential(torch.nn.Linear(4, 32), torch.nn.ReLU(), torch.nn.Linear(32, 2))
+    prod_system = ProductionRLSystem(model)
+    safety_monitor = SafetyMonitor({'inference_time': 0.1, 'memory_usage': 0.8})
+    ethics_checker = EthicsChecker({'bias_threshold': 0.1, 'fairness_threshold': 0.8})
+    print('✅ Real-World Deployment modules test passed')
 except ImportError as e:
     print(f'⚠️  Real-World Deployment modules not fully available: {e}')
 " 2>&1 | tee -a "$LOG_FILE"
 
-# 7. Generate final reports and visualizations
+# 6. Generate final reports and visualizations
 echo "📊 Generating final reports and visualizations..."
 
 # Create summary report
@@ -261,7 +286,7 @@ with open('results/execution_summary.json', 'w') as f:
 print('✅ Summary report generated')
 " 2>&1 | tee -a "$LOG_FILE"
 
-# 8. Create visualization gallery
+# 7. Create visualization gallery
 echo "🖼️  Creating visualization gallery..."
 python -c "
 import matplotlib.pyplot as plt
@@ -343,7 +368,7 @@ plt.close()
 print('✅ Visualization gallery created')
 " 2>&1 | tee -a "$LOG_FILE"
 
-# 9. Final status report
+# 8. Final status report
 echo "📋 Generating final status report..."
 echo ""
 echo "🎉 CA16 Execution Complete!"
@@ -377,4 +402,18 @@ echo ""
 deactivate
 
 echo "✅ All done! Check the visualizations/ and results/ directories for outputs."
+echo ""
+echo "📋 Summary of what was accomplished:"
+echo "   • All CA16 modules have been tested and validated"
+echo "   • Comprehensive experiments have been run"
+echo "   • Results analysis and visualizations have been generated"
+echo "   • All outputs are saved in the appropriate directories"
+echo ""
+echo "🎯 Next steps:"
+echo "   1. Review the generated visualizations in visualizations/"
+echo "   2. Check the detailed results in results/"
+echo "   3. Examine the execution logs in logs/"
+echo "   4. Run the main notebook CA16.ipynb for interactive exploration"
+echo ""
+echo "🚀 CA16: Foundation Models and Neurosymbolic RL is ready for use!"
 

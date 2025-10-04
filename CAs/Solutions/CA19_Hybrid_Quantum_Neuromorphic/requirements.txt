@@ -1,38 +1,101 @@
-# CA19 Modular Requirements
-# Core dependencies for advanced RL systems
+# CA19 Advanced Modular Requirements
+# Comprehensive dependencies for quantum-neuromorphic RL systems
 
-# Numerical computing and scientific computing
+# Core numerical computing and scientific computing
 numpy>=1.21.0
 scipy>=1.7.0
+sympy>=1.9.0
 
 # Deep learning framework
 torch>=1.12.0
 torchvision>=0.13.0
+torchaudio>=0.12.0
 
-# Quantum computing
+# Quantum computing and simulation
 qiskit>=0.39.0
 qiskit-aer>=0.11.0
+qiskit-optimization>=0.4.0
+qiskit-machine-learning>=0.5.0
+qiskit-nature>=0.5.0
+qiskit-finance>=0.4.0
+
+# Advanced quantum libraries
+cirq>=1.0.0
+pennylane>=0.28.0
+pennylane-qiskit>=0.28.0
 
 # Data visualization and analysis
 matplotlib>=3.5.0
 seaborn>=0.11.0
 pandas>=1.3.0
+plotly>=5.0.0
+bokeh>=2.4.0
 
-# Machine learning utilities
+# Machine learning and optimization
 scikit-learn>=1.0.0
+optuna>=3.0.0
+hyperopt>=0.2.7
+deap>=1.3.0
 
-# Optional: For advanced quantum simulations
-# qiskit-ibm-runtime>=0.11.0
+# Signal processing and time series
+scipy>=1.7.0
+statsmodels>=0.13.0
+
+# Parallel computing
+joblib>=1.1.0
+dask>=2022.1.0
+
+# Reinforcement learning environments
+gymnasium>=1.0.0
+gym>=0.21.0
+stable-baselines3>=1.6.0
+
+# Network analysis
+networkx>=2.6.0
+graph-tool>=2.45.0
+
+# Advanced mathematical libraries
+cvxpy>=1.2.0
+cvxopt>=1.3.0
+pulp>=2.6.0
+
+# Jupyter and interactive computing
+jupyter>=1.0.0
+ipywidgets>=7.6.0
+tqdm>=4.62.0
 
 # Development and testing
 pytest>=7.0.0
 pytest-cov>=3.0.0
+pytest-benchmark>=3.4.0
 
-# Code quality
+# Code quality and formatting
 black>=22.0.0
 flake8>=4.0.0
 mypy>=0.950
+isort>=5.10.0
 
 # Documentation
 sphinx>=4.5.0
 sphinx-rtd-theme>=1.0.0
+sphinx-autodoc-typehints>=1.12.0
+
+# Performance profiling
+memory-profiler>=0.60.0
+line-profiler>=3.5.0
+
+# Optional: GPU acceleration
+# cupy>=10.0.0  # For CUDA support
+# cudf>=22.0.0  # For GPU-accelerated DataFrames
+
+# Optional: Advanced quantum hardware
+# qiskit-ibm-runtime>=0.11.0
+# qiskit-braket-provider>=0.1.0
+
+# Optional: Neuromorphic computing
+# nengo>=3.2.0  # For neuromorphic simulation
+# brian2>=2.5.0  # For spiking neural networks
+
+# Optional: High-performance computing
+# mpi4py>=3.1.0  # For MPI parallel computing
+# ray>=2.0.0  # For distributed computing

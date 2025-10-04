@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# CA4: Policy Gradient Methods - Complete Run Script
-# این اسکریپت تمام فایل‌های پروژه را اجرا می‌کند و نتایج را در فولدر visualizations ذخیره می‌کند
+# CA4: Advanced Policy Gradient Methods - Complete Run Script
+# این اسکریپت تمام فایل‌های پروژه پیشرفته را اجرا می‌کند و نتایج را در فولدر visualizations ذخیره می‌کند
 
 echo "=========================================="
-echo "CA4: Policy Gradient Methods - اجرای کامل"
+echo "🚀 CA4: Advanced Policy Gradient Methods"
 echo "=========================================="
 
 # تنظیم متغیرهای محیطی
@@ -17,6 +17,9 @@ mkdir -p visualizations
 mkdir -p evaluation/results
 mkdir -p models/saved_models
 mkdir -p logs
+mkdir -p experiments/advanced
+mkdir -p benchmarks/results
+mkdir -p analysis/reports
 
 # نصب وابستگی‌ها
 echo "📦 نصب وابستگی‌ها..."
@@ -27,6 +30,10 @@ fi
 
 source venv/bin/activate
 pip install -r requirements.txt
+
+# نصب وابستگی‌های اضافی برای ویژگی‌های پیشرفته
+echo "📦 نصب وابستگی‌های پیشرفته..."
+pip install plotly networkx scikit-learn opencv-python
 
 # بررسی وجود فایل‌های مورد نیاز
 echo "🔍 بررسی فایل‌های پروژه..."
@@ -51,6 +58,193 @@ run_quick_test('CartPole-v1', 'reinforce', 50)
 print('تست Actor-Critic...')
 run_quick_test('CartPole-v1', 'actor_critic', 50)
 print('✅ تست‌های سریع تکمیل شدند')
+"
+
+# اجرای تست‌های الگوریتم‌های پیشرفته
+echo "🔬 اجرای تست‌های الگوریتم‌های پیشرفته..."
+source venv/bin/activate && python3 -c "
+import sys
+sys.path.append('.')
+from agents.advanced_algorithms import TRPOAgent, SACAgent, DDPGAgent
+from environments.advanced_environments import CustomMountainCarEnv, CustomPendulumEnv
+import numpy as np
+
+print('🧪 تست TRPO...')
+env = CustomMountainCarEnv()
+agent = TRPOAgent(env.observation_space.shape[0], env.action_space.n)
+results = agent.train(env, num_episodes=100, print_every=50)
+print(f'TRPO - میانگین امتیاز نهایی: {np.mean(results[\"scores\"][-10:]):.2f}')
+
+print('🧪 تست SAC...')
+env = CustomPendulumEnv()
+agent = SACAgent(env.observation_space.shape[0], env.action_space.shape[0])
+results = agent.train(env, num_episodes=100, print_every=50)
+print(f'SAC - میانگین امتیاز نهایی: {np.mean(results[\"scores\"][-10:]):.2f}')
+
+print('🧪 تست DDPG...')
+agent = DDPGAgent(env.observation_space.shape[0], env.action_space.shape[0])
+results = agent.train(env, num_episodes=100, print_every=50)
+print(f'DDPG - میانگین امتیاز نهایی: {np.mean(results[\"scores\"][-10:]):.2f}')
+
+print('✅ تست‌های الگوریتم‌های پیشرفته تکمیل شدند')
+"
+
+# اجرای تست‌های شبکه‌های عصبی پیشرفته
+echo "🧠 اجرای تست‌های شبکه‌های عصبی پیشرفته..."
+source venv/bin/activate && python3 -c "
+import sys
+sys.path.append('.')
+from agents.advanced_networks import (
+    CNNPolicyNetwork, LSTMPolicyNetwork, TransformerPolicyNetwork,
+    DeepResidualPolicyNetwork, AttentionPolicyNetwork, EnsemblePolicyNetwork
+)
+import torch
+import numpy as np
+
+print('🧠 تست CNN Policy Network...')
+cnn_net = CNNPolicyNetwork(input_channels=3, action_size=4)
+test_input = torch.randn(1, 3, 84, 84)
+output = cnn_net(test_input)
+print(f'CNN Output shape: {output.shape}')
+
+print('🧠 تست LSTM Policy Network...')
+lstm_net = LSTMPolicyNetwork(state_size=4, action_size=2)
+test_input = torch.randn(1, 4)
+output = lstm_net(test_input)
+print(f'LSTM Output shape: {output.shape}')
+
+print('🧠 تست Transformer Policy Network...')
+transformer_net = TransformerPolicyNetwork(state_size=4, action_size=2)
+test_input = torch.randn(1, 4)
+output = transformer_net(test_input)
+print(f'Transformer Output shape: {output.shape}')
+
+print('🧠 تست Deep Residual Policy Network...')
+residual_net = DeepResidualPolicyNetwork(state_size=4, action_size=2)
+test_input = torch.randn(1, 4)
+output = residual_net(test_input)
+print(f'Residual Output shape: {output.shape}')
+
+print('🧠 تست Attention Policy Network...')
+attention_net = AttentionPolicyNetwork(state_size=4, action_size=2)
+test_input = torch.randn(1, 4)
+output = attention_net(test_input)
+print(f'Attention Output shape: {output.shape}')
+
+print('🧠 تست Ensemble Policy Network...')
+ensemble_net = EnsemblePolicyNetwork(state_size=4, action_size=2)
+test_input = torch.randn(1, 4)
+output = ensemble_net(test_input)
+print(f'Ensemble Output shape: {output.shape}')
+
+print('✅ تست‌های شبکه‌های عصبی پیشرفته تکمیل شدند')
+"
+
+# اجرای تست‌های سیستم‌های Multi-Agent
+echo "👥 اجرای تست‌های سیستم‌های Multi-Agent..."
+source venv/bin/activate && python3 -c "
+import sys
+sys.path.append('.')
+from agents.multi_agent_systems import MultiAgentPolicyGradient, MetaLearningAgent
+from environments.advanced_environments import MultiAgentWrapper
+import gymnasium as gym
+
+print('👥 تست Multi-Agent System...')
+env = gym.make('CartPole-v1')
+env = MultiAgentWrapper(env, num_agents=2)
+multi_agent = MultiAgentPolicyGradient(num_agents=2, state_size=4, action_size=2)
+multi_agent.train(env, num_episodes=50, print_every=25)
+
+print('🧠 تست Meta-Learning Agent...')
+meta_agent = MetaLearningAgent(state_size=4, action_size=2)
+# Simulate task adaptation
+task_experiences = [{'state': [0.1, 0.2, 0.3, 0.4], 'action': 0, 'reward': 1.0, 'next_state': [0.2, 0.3, 0.4, 0.5], 'done': False}]
+adapted_network = meta_agent.adapt_to_task('task_1', task_experiences)
+print('Meta-learning adaptation completed')
+
+print('✅ تست‌های سیستم‌های Multi-Agent تکمیل شدند')
+"
+
+# اجرای تست‌های محیط‌های پیشرفته
+echo "🌍 اجرای تست‌های محیط‌های پیشرفته..."
+source venv/bin/activate && python3 -c "
+import sys
+sys.path.append('.')
+from environments.advanced_environments import (
+    AtariWrapper, CurriculumWrapper, NoisyObservationWrapper, RewardShapingWrapper
+)
+import gymnasium as gym
+
+print('🌍 تست Atari Wrapper...')
+env = gym.make('Breakout-v4')
+env = AtariWrapper(env)
+obs, info = env.reset()
+print(f'Atari observation shape: {obs.shape}')
+
+print('🌍 تست Curriculum Wrapper...')
+env = gym.make('CartPole-v1')
+env = CurriculumWrapper(env)
+obs, info = env.reset()
+print(f'Curriculum level: {info[\"level_name\"]}')
+
+print('🌍 تست Noisy Observation Wrapper...')
+env = gym.make('CartPole-v1')
+env = NoisyObservationWrapper(env, noise_std=0.1)
+obs, info = env.reset()
+print(f'Noisy observation shape: {obs.shape}')
+
+print('🌍 تست Reward Shaping Wrapper...')
+def shaping_func(prev_state, action, next_state, reward):
+    return 0.1 * (next_state[0] - prev_state[0])  # Position-based shaping
+env = gym.make('CartPole-v1')
+env = RewardShapingWrapper(env, shaping_function=shaping_func)
+obs, info = env.reset()
+print('Reward shaping wrapper initialized')
+
+print('✅ تست‌های محیط‌های پیشرفته تکمیل شدند')
+"
+
+# اجرای تست‌های تجسم پیشرفته
+echo "📊 اجرای تست‌های تجسم پیشرفته..."
+source venv/bin/activate && python3 -c "
+import sys
+sys.path.append('.')
+from utils.advanced_visualization import AdvancedPolicyVisualizer, AdvancedTrainingVisualizer
+import matplotlib.pyplot as plt
+import numpy as np
+
+print('📊 تست Advanced Policy Visualizer...')
+viz = AdvancedPolicyVisualizer()
+
+# Create dummy policy network for testing
+import torch.nn as nn
+policy_net = nn.Sequential(
+    nn.Linear(2, 64),
+    nn.ReLU(),
+    nn.Linear(64, 2)
+)
+
+state_space = np.array([[-2, 2], [-2, 2]])
+action_space = np.array([0, 1])
+
+print('Creating policy landscape visualization...')
+viz.plot_policy_landscape(policy_net, state_space, action_space)
+
+print('📊 تست Advanced Training Visualizer...')
+train_viz = AdvancedTrainingVisualizer()
+
+# Create dummy training metrics
+metrics = {
+    'scores': np.random.randn(1000).cumsum(),
+    'policy_losses': np.random.randn(1000),
+    'value_losses': np.random.randn(1000),
+    'entropy_losses': np.random.randn(1000)
+}
+
+print('Creating training metrics visualization...')
+train_viz.plot_training_metrics(metrics)
+
+print('✅ تست‌های تجسم پیشرفته تکمیل شدند')
 "
 
 # اجرای مثال‌های آموزشی
@@ -82,319 +276,167 @@ monitoring_results = train_with_monitoring('CartPole-v1', 200)
 print(f'میانگین نهایی: {sum(monitoring_results[\"scores\"][-10:])/10:.2f}')
 "
 
-# اجرای آزمایش‌های کامل
-echo "🔬 اجرای آزمایش‌های کامل..."
+# اجرای آزمایش‌های کامل پیشرفته
+echo "🔬 اجرای آزمایش‌های کامل پیشرفته..."
 source venv/bin/activate && python3 -c "
 import sys
 sys.path.append('.')
 from experiments.experiments import PolicyGradientExperiment, BenchmarkSuite
+from agents.advanced_algorithms import TRPOAgent, SACAgent, DDPGAgent
+from agents.advanced_networks import create_advanced_policy_network
+from environments.advanced_environments import create_advanced_environment
+from utils.advanced_visualization import AdvancedTrainingVisualizer, AdvancedAnalysisTools
 import matplotlib.pyplot as plt
 import numpy as np
-
-# آزمایش مقایسه الگوریتم‌ها
-print('🔄 آزمایش مقایسه الگوریتم‌ها...')
-experiment = PolicyGradientExperiment('CartPole-v1')
-comparison_results = experiment.run_comparison_experiment(
-    algorithms=['reinforce', 'actor_critic'], 
-    num_episodes=300
-)
-
-# ذخیره نتایج
 import pickle
-with open('evaluation/results/comparison_results.pkl', 'wb') as f:
-    pickle.dump(comparison_results, f)
 
-# ایجاد نمودارها
-from utils.visualization import TrainingVisualizer
-viz = TrainingVisualizer()
+print('🔄 آزمایش مقایسه الگوریتم‌های پیشرفته...')
 
-# نمودار مقایسه
-viz.plot_multiple_curves(
-    {alg: results['scores'] for alg, results in comparison_results.items()},
-    'مقایسه REINFORCE و Actor-Critic'
-)
-plt.savefig('visualizations/algorithm_comparison.png', dpi=300, bbox_inches='tight')
-plt.close()
+# Create advanced environments
+envs = {
+    'CartPole-v1': create_advanced_environment('CartPole-v1'),
+    'CustomMountainCar': create_advanced_environment('CustomMountainCar'),
+    'CustomPendulum': create_advanced_environment('CustomPendulum')
+}
 
-# نمودارهای جداگانه
-for alg_name, results in comparison_results.items():
-    viz.plot_learning_curves(results['scores'], f'منحنی یادگیری {alg_name}')
-    plt.savefig(f'visualizations/{alg_name}_learning_curve.png', dpi=300, bbox_inches='tight')
-    plt.close()
+# Test different algorithms
+algorithms = {
+    'REINFORCE': 'reinforce',
+    'Actor-Critic': 'actor_critic',
+    'TRPO': 'trpo',
+    'SAC': 'sac',
+    'DDPG': 'ddpg'
+}
+
+results = {}
+
+for env_name, env in envs.items():
+    print(f'Testing on {env_name}...')
+    env_results = {}
     
-    if 'actor_losses' in results and 'critic_losses' in results:
-        viz.plot_losses(results['actor_losses'], results['critic_losses'], f'تلفات {alg_name}')
-        plt.savefig(f'visualizations/{alg_name}_losses.png', dpi=300, bbox_inches='tight')
+    for alg_name, alg_type in algorithms.items():
+        print(f'  Testing {alg_name}...')
+        
+        if alg_type == 'trpo':
+            agent = TRPOAgent(env.observation_space.shape[0], env.action_space.n)
+        elif alg_type == 'sac':
+            agent = SACAgent(env.observation_space.shape[0], env.action_space.shape[0])
+        elif alg_type == 'ddpg':
+            agent = DDPGAgent(env.observation_space.shape[0], env.action_space.shape[0])
+        else:
+            # Use basic algorithms for comparison
+            experiment = PolicyGradientExperiment(env_name)
+            env_results[alg_name] = experiment.run_single_algorithm(alg_type, num_episodes=200)
+            continue
+        
+        # Train advanced algorithm
+        train_results = agent.train(env, num_episodes=200, print_every=50)
+        env_results[alg_name] = train_results
+    
+    results[env_name] = env_results
+
+# Save comprehensive results
+with open('evaluation/results/advanced_comparison_results.pkl', 'wb') as f:
+    pickle.dump(results, f)
+
+print('📊 ایجاد نمودارهای پیشرفته...')
+viz = AdvancedTrainingVisualizer()
+
+# Create comprehensive comparison plots
+for env_name, env_results in results.items():
+    if len(env_results) > 1:
+        viz.plot_learning_curves_comparison(env_results, window_size=50)
+        plt.savefig(f'visualizations/{env_name}_advanced_comparison.png', dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        viz.plot_performance_distribution(env_results)
+        plt.savefig(f'visualizations/{env_name}_performance_distribution.png', dpi=300, bbox_inches='tight')
         plt.close()
 
-print('✅ آزمایش‌های کامل تکمیل شدند')
+print('✅ آزمایش‌های کامل پیشرفته تکمیل شدند')
 "
 
-# اجرای آزمایش‌های اکتشاف
-echo "🔍 اجرای آزمایش‌های اکتشاف..."
+# اجرای تحلیل‌های پیشرفته
+echo "📈 اجرای تحلیل‌های پیشرفته..."
 source venv/bin/activate && python3 -c "
 import sys
 sys.path.append('.')
-from experiments.experiments import PolicyGradientExperiment
-from agents.exploration import ExplorationScheduler
-import matplotlib.pyplot as plt
-
-print('🎯 آزمایش استراتژی‌های اکتشاف...')
-experiment = PolicyGradientExperiment('CartPole-v1')
-
-# آزمایش استراتژی‌های مختلف اکتشاف
-exploration_results = experiment.run_exploration_experiment(
-    base_algorithm='reinforce',
-    exploration_strategies=['boltzmann', 'epsilon_greedy'],
-    num_episodes=200
-)
-
-# ذخیره نتایج اکتشاف
+from utils.advanced_visualization import AdvancedAnalysisTools
 import pickle
-with open('evaluation/results/exploration_results.pkl', 'wb') as f:
-    pickle.dump(exploration_results, f)
-
-# ایجاد نمودارهای اکتشاف
-from agents.exploration import ExplorationVisualizer
-exp_viz = ExplorationVisualizer()
-
-exp_viz.compare_exploration_strategies(
-    exploration_results,
-    'مقایسه استراتژی‌های اکتشاف'
-)
-plt.savefig('visualizations/exploration_comparison.png', dpi=300, bbox_inches='tight')
-plt.close()
-
-print('✅ آزمایش‌های اکتشاف تکمیل شدند')
-"
-
-# اجرای آزمایش‌های هایپرپارامتر
-echo "⚙️ اجرای آزمایش‌های هایپرپارامتر..."
-source venv/bin/activate && python3 -c "
-import sys
-sys.path.append('.')
-from experiments.experiments import PolicyGradientExperiment
-import matplotlib.pyplot as plt
 import numpy as np
 
-print('🔧 آزمایش‌های هایپرپارامتر...')
-experiment = PolicyGradientExperiment('CartPole-v1')
+print('📈 تحلیل‌های پیشرفته...')
+analysis_tools = AdvancedAnalysisTools()
 
-# آزمایش نرخ یادگیری مختلف
-lr_results = experiment.run_hyperparameter_sweep(
-    algorithm='reinforce',
-    param_name='lr',
-    param_values=[0.0001, 0.001, 0.01, 0.1],
-    num_episodes=150
-)
+# Load results
+with open('evaluation/results/advanced_comparison_results.pkl', 'rb') as f:
+    results = pickle.load(f)
 
-# ذخیره نتایج هایپرپارامتر
-import pickle
-with open('evaluation/results/hyperparameter_results.pkl', 'wb') as f:
-    pickle.dump(lr_results, f)
+# Generate comprehensive analysis report
+report = 'analysis/reports/comprehensive_analysis_report.txt'
+with open(report, 'w') as f:
+    f.write('=' * 80 + '\n')
+    f.write('COMPREHENSIVE POLICY GRADIENT ANALYSIS REPORT\n')
+    f.write('=' * 80 + '\n\n')
+    
+    for env_name, env_results in results.items():
+        f.write(f'ENVIRONMENT: {env_name}\n')
+        f.write('-' * 40 + '\n')
+        
+        for alg_name, alg_results in env_results.items():
+            f.write(f'\\nAlgorithm: {alg_name}\n')
+            
+            if 'scores' in alg_results:
+                scores = alg_results['scores']
+                conv_analysis = analysis_tools.analyze_policy_convergence(scores)
+                
+                f.write(f'  Final Performance: {np.mean(scores[-100:]):.2f} ± {np.std(scores[-100:]):.2f}\n')
+                f.write(f'  Best Performance: {np.max(scores):.2f}\n')
+                f.write(f'  Convergence: {conv_analysis[\"converged\"]}\n')
+                f.write(f'  Stability: {conv_analysis[\"stability\"]:.4f}\n')
+                
+                if conv_analysis['convergence_episode']:
+                    f.write(f'  Convergence Episode: {conv_analysis[\"convergence_episode\"]}\n')
+        
+        f.write('\\n' + '=' * 40 + '\\n')
 
-# ایجاد نمودار مقایسه هایپرپارامترها
-fig, ax = plt.subplots(figsize=(12, 8))
-for param_name, results in lr_results.items():
-    scores = results['scores']
-    if len(scores) >= 20:
-        moving_avg = [np.mean(scores[i-20:i]) for i in range(20, len(scores))]
-        ax.plot(range(20, len(scores)), moving_avg, label=param_name, linewidth=2)
-
-ax.set_title('مقایسه نرخ‌های یادگیری مختلف')
-ax.set_xlabel('اپیزود')
-ax.set_ylabel('میانگین امتیاز (20 اپیزود)')
-ax.legend()
-ax.grid(True, alpha=0.3)
-plt.savefig('visualizations/hyperparameter_comparison.png', dpi=300, bbox_inches='tight')
-plt.close()
-
-print('✅ آزمایش‌های هایپرپارامتر تکمیل شدند')
-"
-
-# اجرای آزمایش‌های محیط‌های مختلف
-echo "🌍 اجرای آزمایش‌های محیط‌های مختلف..."
-source venv/bin/activate && python3 -c "
-import sys
-sys.path.append('.')
-from experiments.experiments import BenchmarkSuite
-import matplotlib.pyplot as plt
-
-print('🏆 اجرای مجموعه آزمایش‌های جامع...')
-benchmark = BenchmarkSuite()
-benchmark_results = benchmark.run_benchmark(episodes_per_env=150)
-
-# ذخیره نتایج مجموعه آزمایش‌ها
-import pickle
-with open('evaluation/results/benchmark_results.pkl', 'wb') as f:
-    pickle.dump(benchmark_results, f)
-
-# ایجاد گزارش
-report = benchmark.create_report()
-with open('evaluation/results/benchmark_report.txt', 'w', encoding='utf-8') as f:
-    f.write(report)
-
-print('✅ آزمایش‌های محیط‌های مختلف تکمیل شدند')
+print(f'📊 گزارش تحلیل در {report} ذخیره شد')
+print('✅ تحلیل‌های پیشرفته تکمیل شدند')
 "
 
 # ایجاد گزارش نهایی
 echo "📋 ایجاد گزارش نهایی..."
 source venv/bin/activate && python3 -c "
-import sys
-sys.path.append('.')
 import os
-import pickle
-import matplotlib.pyplot as plt
-import numpy as np
+import glob
+import json
 from datetime import datetime
 
-print('📊 ایجاد گزارش جامع...')
+# Collect all results
+results_summary = {
+    'timestamp': datetime.now().isoformat(),
+    'visualizations': glob.glob('visualizations/*.png'),
+    'results': glob.glob('evaluation/results/*.pkl'),
+    'reports': glob.glob('analysis/reports/*.txt'),
+    'logs': glob.glob('logs/*.log')
+}
 
-# خواندن نتایج
-results = {}
-try:
-    with open('evaluation/results/comparison_results.pkl', 'rb') as f:
-        results['comparison'] = pickle.load(f)
-except:
-    print('نتایج مقایسه یافت نشد')
+# Save summary
+with open('evaluation/results/execution_summary.json', 'w') as f:
+    json.dump(results_summary, f, indent=2)
 
-try:
-    with open('evaluation/results/exploration_results.pkl', 'rb') as f:
-        results['exploration'] = pickle.load(f)
-except:
-    print('نتایج اکتشاف یافت نشد')
-
-try:
-    with open('evaluation/results/hyperparameter_results.pkl', 'rb') as f:
-        results['hyperparameter'] = pickle.load(f)
-except:
-    print('نتایج هایپرپارامتر یافت نشد')
-
-# ایجاد گزارش HTML
-html_report = f'''
-<!DOCTYPE html>
-<html dir=\"rtl\" lang=\"fa\">
-<head>
-    <meta charset=\"UTF-8\">
-    <title>گزارش CA4: Policy Gradient Methods</title>
-    <style>
-        body {{ font-family: 'Tahoma', Arial, sans-serif; margin: 20px; }}
-        .header {{ background-color: #2c3e50; color: white; padding: 20px; border-radius: 10px; }}
-        .section {{ margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }}
-        .results {{ background-color: #f8f9fa; padding: 10px; border-radius: 5px; }}
-        img {{ max-width: 100%; height: auto; margin: 10px 0; }}
-        .metric {{ display: inline-block; margin: 10px; padding: 10px; background-color: #e9ecef; border-radius: 5px; }}
-    </style>
-</head>
-<body>
-    <div class=\"header\">
-        <h1>گزارش CA4: Policy Gradient Methods</h1>
-        <p>تاریخ تولید: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-    </div>
-    
-    <div class=\"section\">
-        <h2>خلاصه نتایج</h2>
-        <div class=\"results\">
-'''
-
-if 'comparison' in results:
-    html_report += f'''
-            <h3>مقایسه الگوریتم‌ها</h3>
-            <p>تعداد الگوریتم‌های آزمایش شده: {len(results['comparison'])}</p>
-    '''
-    for alg_name, alg_results in results['comparison'].items():
-        if 'scores' in alg_results:
-            final_score = np.mean(alg_results['scores'][-10:]) if len(alg_results['scores']) >= 10 else np.mean(alg_results['scores'])
-            best_score = np.max(alg_results['scores'])
-            html_report += f'''
-                <div class=\"metric\">
-                    <strong>{alg_name.upper()}</strong><br>
-                    امتیاز نهایی: {final_score:.2f}<br>
-                    بهترین امتیاز: {best_score:.2f}
-                </div>
-            '''
-
-html_report += '''
-        </div>
-    </div>
-    
-    <div class=\"section\">
-        <h2>نمودارها</h2>
-        <p>نمودارهای تولید شده:</p>
-        <ul>
-            <li>مقایسه الگوریتم‌ها</li>
-            <li>منحنی‌های یادگیری</li>
-            <li>تلفات آموزش</li>
-            <li>مقایسه استراتژی‌های اکتشاف</li>
-            <li>مقایسه هایپرپارامترها</li>
-        </ul>
-    </div>
-    
-    <div class=\"section\">
-        <h2>فایل‌های تولید شده</h2>
-        <ul>
-            <li>visualizations/ - نمودارها و تصاویر</li>
-            <li>evaluation/results/ - نتایج آزمایش‌ها</li>
-            <li>models/saved_models/ - مدل‌های ذخیره شده</li>
-            <li>logs/ - فایل‌های لاگ</li>
-        </ul>
-    </div>
-</body>
-</html>
-'''
-
-# ذخیره گزارش HTML
-with open('evaluation/results/final_report.html', 'w', encoding='utf-8') as f:
-    f.write(html_report)
-
-# ذخیره گزارش متنی
-text_report = f'''
-گزارش CA4: Policy Gradient Methods
-=====================================
-تاریخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-خلاصه نتایج:
-'''
-
-if 'comparison' in results:
-    text_report += '\nمقایسه الگوریتم‌ها:\n'
-    for alg_name, alg_results in results['comparison'].items():
-        if 'scores' in alg_results:
-            final_score = np.mean(alg_results['scores'][-10:]) if len(alg_results['scores']) >= 10 else np.mean(alg_results['scores'])
-            best_score = np.max(alg_results['scores'])
-            text_report += f'  {alg_name}: نهایی={final_score:.2f}, بهترین={best_score:.2f}\n'
-
-text_report += '''
-فایل‌های تولید شده:
-- visualizations/: نمودارها و تصاویر
-- evaluation/results/: نتایج آزمایش‌ها  
-- models/saved_models/: مدل‌های ذخیره شده
-- logs/: فایل‌های لاگ
-
-پروژه با موفقیت تکمیل شد!
-'''
-
-with open('evaluation/results/final_report.txt', 'w', encoding='utf-8') as f:
-    f.write(text_report)
-
-print('✅ گزارش نهایی ایجاد شد')
+print('📋 خلاصه اجرا:')
+print(f'  - تعداد نمودارها: {len(results_summary[\"visualizations\"])}')
+print(f'  - تعداد نتایج: {len(results_summary[\"results\"])}')
+print(f'  - تعداد گزارش‌ها: {len(results_summary[\"reports\"])}')
+print(f'  - خلاصه در: evaluation/results/execution_summary.json')
 "
 
-# نمایش خلاصه نتایج
-echo "📊 خلاصه نتایج:"
-echo "=================="
-echo "📁 فولدرهای ایجاد شده:"
-ls -la visualizations/ 2>/dev/null || echo "  visualizations/ - نمودارها"
-ls -la evaluation/results/ 2>/dev/null || echo "  evaluation/results/ - نتایج"
-ls -la models/saved_models/ 2>/dev/null || echo "  models/saved_models/ - مدل‌ها"
-ls -la logs/ 2>/dev/null || echo "  logs/ - لاگ‌ها"
-
 echo ""
-echo "📈 فایل‌های تولید شده:"
-find visualizations/ -name "*.png" 2>/dev/null | wc -l | xargs echo "  تعداد نمودارها:"
-find evaluation/results/ -name "*.pkl" 2>/dev/null | wc -l | xargs echo "  تعداد فایل‌های نتایج:"
-
+echo "🎉 تمام فایل‌های پروژه پیشرفته اجرا شدند!"
+echo "📊 نتایج در فولدر visualizations ذخیره شدند"
+echo "📈 گزارش‌های تحلیل در فولدر analysis/reports موجودند"
+echo "💾 نتایج کامل در فولدر evaluation/results ذخیره شدند"
 echo ""
-echo "✅ پروژه CA4 با موفقیت تکمیل شد!"
-echo "📋 برای مشاهده گزارش کامل، فایل evaluation/results/final_report.html را باز کنید"
+echo "🚀 پروژه Policy Gradient Methods با موفقیت تکمیل شد!"
 echo "=========================================="
