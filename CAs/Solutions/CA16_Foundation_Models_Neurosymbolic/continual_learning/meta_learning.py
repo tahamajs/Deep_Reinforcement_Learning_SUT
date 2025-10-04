@@ -1,27 +1,19 @@
 """
-Meta Learning for Continual Learning
+Meta-Learning for Continual Learning
 
-This module implements meta-learning approaches for continual learning,
-including Model-Agnostic Meta-Learning (MAML) adapted for sequential tasks.
+This module implements meta-learning algorithms like MAML and Reptile for continual learning.
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.optim import Optimizer
-from typing import Dict, List, Tuple, Optional, Any, Callable, Union
 import numpy as np
-from collections import defaultdict
+from typing import Dict, List, Tuple, Optional, Any, Union
 import copy
 
 
-class MAMLAgent(nn.Module):
-    """
-    Model-Agnostic Meta-Learning (MAML) agent for continual learning.
-
-    MAML learns a good initialization that can be quickly adapted to new tasks
-    with few gradient steps.
-    """
+class MAML:
+    """Model-Agnostic Meta-Learning (MAML) implementation."""
 
     def __init__(
         self,
@@ -29,402 +21,418 @@ class MAMLAgent(nn.Module):
         inner_lr: float = 0.01,
         meta_lr: float = 0.001,
         adaptation_steps: int = 5,
+        device: str = "cpu",
     ):
-        super().__init__()
-
         self.model = model
         self.inner_lr = inner_lr
         self.meta_lr = meta_lr
         self.adaptation_steps = adaptation_steps
+        self.device = device
 
-        self.meta_optimizer = torch.optim.Adam(self.model.parameters(), lr=meta_lr)
+        # Meta-optimizer
+        self.meta_optimizer = torch.optim.Adam(model.parameters(), lr=meta_lr)
 
-        self.adapted_models: Dict[int, nn.Module] = {}
+        # Training history
+        self.meta_losses = []
+        self.adaptation_losses = []
 
-        self.task_adaptation_history: Dict[int, List[Dict[str, float]]] = {}
-
-    def adapt_to_task(
+    def meta_update(
         self,
-        task_id: int,
-        support_data: torch.utils.data.DataLoader,
+        support_sets: List[Dict[str, torch.Tensor]],
+        query_sets: List[Dict[str, torch.Tensor]],
+    ) -> Dict[str, float]:
+        """Perform meta-update using support and query sets."""
+        self.model.train()
+        
+        # Store original parameters
+        original_params = {name: param.clone() for name, param in self.model.named_parameters()}
+        
+        meta_losses = []
+        adaptation_losses = []
+
+        # Process each task
+        for support_set, query_set in zip(support_sets, query_sets):
+            # Inner loop: adapt to support set
+            adapted_params = self._adapt_to_task(support_set)
+            
+            # Compute adaptation loss
+            adaptation_loss = self._compute_loss(support_set, adapted_params)
+            adaptation_losses.append(adaptation_loss.item())
+
+            # Outer loop: compute meta-loss on query set
+            meta_loss = self._compute_loss(query_set, adapted_params)
+            meta_losses.append(meta_loss)
+
+        # Average meta-loss
+        avg_meta_loss = torch.stack(meta_losses).mean()
+
+        # Meta-update
+        self.meta_optimizer.zero_grad()
+        avg_meta_loss.backward()
+        self.meta_optimizer.step()
+
+        # Record losses
+        self.meta_losses.append(avg_meta_loss.item())
+        self.adaptation_losses.extend(adaptation_losses)
+
+        return {
+            "meta_loss": avg_meta_loss.item(),
+            "avg_adaptation_loss": np.mean(adaptation_losses),
+        }
+
+    def _adapt_to_task(self, support_set: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """Adapt model to a specific task using support set."""
+        # Create temporary optimizer for inner loop
+        temp_optimizer = torch.optim.SGD(self.model.parameters(), lr=self.inner_lr)
+        
+        # Store original parameters
+        original_params = {name: param.clone() for name, param in self.model.named_parameters()}
+        
+        # Adaptation steps
+        for _ in range(self.adaptation_steps):
+            # Forward pass
+            loss = self._compute_loss(support_set, original_params)
+            
+            # Compute gradients
+            temp_optimizer.zero_grad()
+            loss.backward()
+            temp_optimizer.step()
+
+        # Return adapted parameters
+        adapted_params = {name: param.clone() for name, param in self.model.named_parameters()}
+        
+        # Restore original parameters
+        for name, param in self.model.named_parameters():
+            param.data.copy_(original_params[name])
+        
+        return adapted_params
+
+    def _compute_loss(self, data: Dict[str, torch.Tensor], params: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """Compute loss for given data and parameters."""
+        # Temporarily set parameters
+        original_params = {name: param.clone() for name, param in self.model.named_parameters()}
+        
+        for name, param in self.model.named_parameters():
+            param.data.copy_(params[name])
+
+        # Forward pass
+        states = data["states"].to(self.device)
+        actions = data["actions"].to(self.device)
+        rewards = data["rewards"].to(self.device)
+
+        # Simple policy gradient loss
+        action_logits = self.model(states)
+        action_probs = F.softmax(action_logits, dim=-1)
+        log_probs = torch.log(action_probs.gather(1, actions.unsqueeze(1)))
+        loss = -(log_probs.squeeze() * rewards).mean()
+
+        # Restore original parameters
+        for name, param in self.model.named_parameters():
+            param.data.copy_(original_params[name])
+
+        return loss
+
+    def evaluate(
+        self,
+        test_tasks: List[Dict[str, torch.Tensor]],
         adaptation_steps: Optional[int] = None,
-    ) -> nn.Module:
-        """
-        Adapt the model to a new task using inner-loop adaptation.
-
-        Args:
-            task_id: Task identifier
-            support_data: Support set for adaptation
-            adaptation_steps: Number of adaptation steps (uses default if None)
-
-        Returns:
-            Adapted model for the task
-        """
+    ) -> Dict[str, float]:
+        """Evaluate MAML on test tasks."""
+        self.model.eval()
+        
         if adaptation_steps is None:
             adaptation_steps = self.adaptation_steps
 
-        adapted_model = copy.deepcopy(self.model)
-        adapted_model.train()
+        test_losses = []
+        test_rewards = []
 
-        inner_optimizer = torch.optim.SGD(adapted_model.parameters(), lr=self.inner_lr)
-
-        adaptation_history = []
-
-        for step in range(adaptation_steps):
-            try:
-                batch = next(iter(support_data))
-                inputs, targets = batch
-            except StopIteration:
-                support_iter = iter(support_data)
-                batch = next(support_iter)
-                inputs, targets = batch
-
-            inner_optimizer.zero_grad()
-
-            outputs = adapted_model(inputs)
-            loss = F.cross_entropy(outputs, targets)
-            loss.backward()
-            inner_optimizer.step()
-
-            adaptation_history.append({"step": step + 1, "loss": loss.item()})
-
-        self.adapted_models[task_id] = adapted_model
-        self.task_adaptation_history[task_id] = adaptation_history
-
-        return adapted_model
-
-    def meta_update(self, task_losses: Dict[int, torch.Tensor]):
-        """
-        Perform meta-update using losses from adapted models.
-
-        Args:
-            task_losses: Dictionary mapping task IDs to their losses
-        """
-        self.meta_optimizer.zero_grad()
-
-        meta_loss = sum(task_losses.values())
-
-        meta_loss.backward()
-        self.meta_optimizer.step()
-
-    def forward(self, x: torch.Tensor, task_id: Optional[int] = None) -> torch.Tensor:
-        """
-        Forward pass using adapted model if available, otherwise base model.
-
-        Args:
-            x: Input tensor
-            task_id: Task identifier (uses base model if None)
-
-        Returns:
-            Model output
-        """
-        if task_id is not None and task_id in self.adapted_models:
-            return self.adapted_models[task_id](x)
-        else:
-            return self.model(x)
-
-    def get_adaptation_stats(self, task_id: int) -> Optional[Dict[str, Any]]:
-        """Get adaptation statistics for a task."""
-        if task_id not in self.task_adaptation_history:
-            return None
-
-        history = self.task_adaptation_history[task_id]
+        with torch.no_grad():
+            for task in test_tasks:
+                # Adapt to task
+                adapted_params = self._adapt_to_task(task)
+                
+                # Evaluate on adapted model
+                loss = self._compute_loss(task, adapted_params)
+                test_losses.append(loss.item())
+                
+                # Compute reward (simplified)
+                reward = -loss.item()
+                test_rewards.append(reward)
 
         return {
-            "task_id": task_id,
-            "adaptation_steps": len(history),
-            "initial_loss": history[0]["loss"] if history else None,
-            "final_loss": history[-1]["loss"] if history else None,
-            "loss_improvement": (
-                (history[0]["loss"] - history[-1]["loss"]) if history else 0.0
-            ),
-            "loss_trajectory": [h["loss"] for h in history],
+            "avg_test_loss": np.mean(test_losses),
+            "avg_test_reward": np.mean(test_rewards),
+            "std_test_reward": np.std(test_rewards),
         }
 
 
-class ReptileAgent(nn.Module):
-    """
-    Reptile algorithm for meta-learning in continual scenarios.
-    
-    Reptile learns an initialization that works well for adaptation across tasks.
-    """
-    
-    def __init__(self, model: nn.Module, adaptation_lr: float = 0.01):
-        super().__init__()
-        self.model = model
-        self.adaptation_lr = adaptation_lr
-        self.task_initializations = {}
-        
-    def reset_model(self):
-        """Reset model to base initialization."""
-        # Reset parameters to original initialization would go here
-        pass
-        
-    def adapt_to_task(self, task_data, adaptation_steps=5):
-        """Adapt model to a specific task."""
-        self.model.train()
-        adapted_model = copy.deepcopy(self.model)
-        
-        optimizer = torch.optim.SGD(adapted_model.parameters(), lr=self.adaptation_lr)
-        
-        for step in range(adaptation_steps):
-            optimizer.zero_grad()
-            # Simplified loss computation
-            dummy_loss = torch.tensor(0.0, requires_grad=True)
-            dummy_loss.backward()
-            optimizer.step()
-            
-        return adapted_model
-
-
-class MetaLearner:
-    """
-    Meta-learning trainer for continual learning scenarios.
-
-    Manages the meta-learning process across multiple tasks with proper
-    train/validation splits for meta-training.
-    """
+class Reptile:
+    """Reptile meta-learning algorithm."""
 
     def __init__(
         self,
-        base_model: nn.Module,
-        device: str = "cpu",
+        model: nn.Module,
         inner_lr: float = 0.01,
         meta_lr: float = 0.001,
         adaptation_steps: int = 5,
+        device: str = "cpu",
     ):
+        self.model = model
+        self.inner_lr = inner_lr
+        self.meta_lr = meta_lr
+        self.adaptation_steps = adaptation_steps
         self.device = device
-        self.maml_agent = MAMLAgent(base_model, inner_lr, meta_lr, adaptation_steps)
-        self.maml_agent.to(device)
 
-        self.task_data: Dict[int, Dict[str, torch.utils.data.DataLoader]] = {}
+        # Meta-optimizer
+        self.meta_optimizer = torch.optim.Adam(model.parameters(), lr=meta_lr)
 
-        self.meta_training_history: List[Dict[str, Any]] = []
+        # Training history
+        self.meta_losses = []
+        self.adaptation_losses = []
 
-    def add_task(
+    def meta_update(
         self,
-        task_id: int,
-        train_loader: torch.utils.data.DataLoader,
-        val_loader: Optional[torch.utils.data.DataLoader] = None,
-        test_loader: Optional[torch.utils.data.DataLoader] = None,
-    ):
-        """
-        Add a new task to the meta-learner.
-
-        Args:
-            task_id: Unique task identifier
-            train_loader: Training data loader
-            val_loader: Validation data loader (optional)
-            test_loader: Test data loader (optional)
-        """
-        self.task_data[task_id] = {
-            "train": train_loader,
-            "val": val_loader,
-            "test": test_loader,
-        }
-
-    def meta_train_epoch(
-        self, tasks_per_batch: int = 4, adaptation_steps: Optional[int] = None
+        support_sets: List[Dict[str, torch.Tensor]],
+        query_sets: List[Dict[str, torch.Tensor]],
     ) -> Dict[str, float]:
-        """
-        Perform one epoch of meta-training.
+        """Perform meta-update using Reptile algorithm."""
+        self.model.train()
+        
+        # Store original parameters
+        original_params = {name: param.clone() for name, param in self.model.named_parameters()}
+        
+        meta_losses = []
+        adaptation_losses = []
+        parameter_updates = []
 
-        Args:
-            tasks_per_batch: Number of tasks to sample per meta-batch
-            adaptation_steps: Adaptation steps per task
+        # Process each task
+        for support_set, query_set in zip(support_sets, query_sets):
+            # Inner loop: adapt to support set
+            adapted_params, adaptation_loss = self._adapt_to_task(support_set)
+            adaptation_losses.append(adaptation_loss.item())
 
-        Returns:
-            Meta-training metrics
-        """
-        available_tasks = list(self.task_data.keys())
-        if len(available_tasks) < tasks_per_batch:
-            tasks_per_batch = len(available_tasks)
+            # Compute parameter update
+            param_update = {}
+            for name, param in self.model.named_parameters():
+                param_update[name] = adapted_params[name] - original_params[name]
+            parameter_updates.append(param_update)
 
-        sampled_tasks = np.random.choice(
-            available_tasks, tasks_per_batch, replace=False
-        )
+            # Compute meta-loss on query set
+            meta_loss = self._compute_loss(query_set, adapted_params)
+            meta_losses.append(meta_loss)
 
-        task_losses = {}
-        total_meta_loss = 0.0
+        # Average parameter updates
+        avg_param_update = {}
+        for name in original_params.keys():
+            updates = [param_update[name] for param_update in parameter_updates]
+            avg_param_update[name] = torch.stack(updates).mean(dim=0)
 
-        for task_id in sampled_tasks:
-            adapted_model = self.maml_agent.adapt_to_task(
-                task_id, self.task_data[task_id]["train"], adaptation_steps
-            )
+        # Apply averaged parameter update
+        for name, param in self.model.named_parameters():
+            param.data.add_(avg_param_update[name], alpha=self.meta_lr)
 
-            if self.task_data[task_id]["val"] is not None:
-                val_loss = self._compute_loss(
-                    adapted_model, self.task_data[task_id]["val"]
-                )
-                task_losses[task_id] = val_loss
-                total_meta_loss += val_loss.item()
+        # Record losses
+        avg_meta_loss = torch.stack(meta_losses).mean()
+        self.meta_losses.append(avg_meta_loss.item())
+        self.adaptation_losses.extend(adaptation_losses)
 
-        self.maml_agent.meta_update(task_losses)
-
-        epoch_metrics = {
-            "meta_loss": total_meta_loss / len(sampled_tasks),
-            "tasks_sampled": len(sampled_tasks),
-            "task_losses": {k: v.item() for k, v in task_losses.items()},
+        return {
+            "meta_loss": avg_meta_loss.item(),
+            "avg_adaptation_loss": np.mean(adaptation_losses),
         }
 
-        self.meta_training_history.append(epoch_metrics)
-
-        return epoch_metrics
-
-    def _compute_loss(
-        self, model: nn.Module, dataloader: torch.utils.data.DataLoader
-    ) -> torch.Tensor:
-        """Compute loss for a model on a dataset."""
-        model.eval()
+    def _adapt_to_task(self, support_set: Dict[str, torch.Tensor]) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
+        """Adapt model to a specific task using support set."""
+        # Create temporary optimizer for inner loop
+        temp_optimizer = torch.optim.SGD(self.model.parameters(), lr=self.inner_lr)
+        
+        # Store original parameters
+        original_params = {name: param.clone() for name, param in self.model.named_parameters()}
+        
+        # Adaptation steps
         total_loss = 0.0
-        num_samples = 0
+        for _ in range(self.adaptation_steps):
+            # Forward pass
+            loss = self._compute_loss(support_set, original_params)
+            total_loss += loss.item()
+            
+            # Compute gradients
+            temp_optimizer.zero_grad()
+            loss.backward()
+            temp_optimizer.step()
+
+        # Return adapted parameters
+        adapted_params = {name: param.clone() for name, param in self.model.named_parameters()}
+        
+        # Restore original parameters
+        for name, param in self.model.named_parameters():
+            param.data.copy_(original_params[name])
+        
+        return adapted_params, torch.tensor(total_loss / self.adaptation_steps)
+
+    def _compute_loss(self, data: Dict[str, torch.Tensor], params: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """Compute loss for given data and parameters."""
+        # Temporarily set parameters
+        original_params = {name: param.clone() for name, param in self.model.named_parameters()}
+        
+        for name, param in self.model.named_parameters():
+            param.data.copy_(params[name])
+
+        # Forward pass
+        states = data["states"].to(self.device)
+        actions = data["actions"].to(self.device)
+        rewards = data["rewards"].to(self.device)
+
+        # Simple policy gradient loss
+        action_logits = self.model(states)
+        action_probs = F.softmax(action_logits, dim=-1)
+        log_probs = torch.log(action_probs.gather(1, actions.unsqueeze(1)))
+        loss = -(log_probs.squeeze() * rewards).mean()
+
+        # Restore original parameters
+        for name, param in self.model.named_parameters():
+            param.data.copy_(original_params[name])
+
+        return loss
+
+    def evaluate(
+        self,
+        test_tasks: List[Dict[str, torch.Tensor]],
+        adaptation_steps: Optional[int] = None,
+    ) -> Dict[str, float]:
+        """Evaluate Reptile on test tasks."""
+        self.model.eval()
+        
+        if adaptation_steps is None:
+            adaptation_steps = self.adaptation_steps
+
+        test_losses = []
+        test_rewards = []
 
         with torch.no_grad():
-            for batch in dataloader:
-                inputs, targets = batch
-                inputs = inputs.to(self.device)
-                targets = targets.to(self.device)
-
-                outputs = model(inputs)
-                loss = F.cross_entropy(outputs, targets)
-
-                batch_size = inputs.size(0)
-                total_loss += loss.item() * batch_size
-                num_samples += batch_size
-
-        return torch.tensor(total_loss / num_samples)
-
-    def continual_learn(
-        self, new_task_id: int, epochs: int = 10, adaptation_steps: int = 5
-    ) -> Dict[str, Any]:
-        """
-        Continual learning: Adapt to new task while preserving knowledge.
-
-        Args:
-            new_task_id: ID of the new task
-            epochs: Number of meta-training epochs
-            adaptation_steps: Adaptation steps for new task
-
-        Returns:
-            Continual learning results
-        """
-        print(f"Starting continual learning for task {new_task_id}")
-
-        adapted_model = self.maml_agent.adapt_to_task(
-            new_task_id, self.task_data[new_task_id]["train"], adaptation_steps
-        )
-
-        for epoch in range(epochs):
-            metrics = self.meta_train_epoch(tasks_per_batch=len(self.task_data))
-            print(
-                f"Meta-training epoch {epoch+1}/{epochs}, Loss: {metrics['meta_loss']:.4f}"
-            )
-
-        all_task_performance = self.evaluate_all_tasks()
-
-        adaptation_stats = self.maml_agent.get_adaptation_stats(new_task_id)
+            for task in test_tasks:
+                # Adapt to task
+                adapted_params, _ = self._adapt_to_task(task)
+                
+                # Evaluate on adapted model
+                loss = self._compute_loss(task, adapted_params)
+                test_losses.append(loss.item())
+                
+                # Compute reward (simplified)
+                reward = -loss.item()
+                test_rewards.append(reward)
 
         return {
-            "new_task_id": new_task_id,
-            "adapted_model": adapted_model,
-            "final_performance": all_task_performance,
-            "adaptation_stats": adaptation_stats,
-            "meta_training_epochs": epochs,
+            "avg_test_loss": np.mean(test_losses),
+            "avg_test_reward": np.mean(test_rewards),
+            "std_test_reward": np.std(test_rewards),
         }
 
-    def evaluate_all_tasks(self) -> Dict[int, Dict[str, float]]:
-        """
-        Evaluate performance on all tasks.
 
-        Returns:
-            Dictionary mapping task IDs to performance metrics
-        """
-        results = {}
+class MetaLearningTrainer:
+    """Trainer for meta-learning algorithms."""
 
-        for task_id, loaders in self.task_data.items():
-            task_results = {}
+    def __init__(
+        self,
+        meta_algorithm,
+        num_meta_tasks: int = 5,
+        num_adaptation_tasks: int = 3,
+        batch_size: int = 32,
+    ):
+        self.meta_algorithm = meta_algorithm
+        self.num_meta_tasks = num_meta_tasks
+        self.num_adaptation_tasks = num_adaptation_tasks
+        self.batch_size = batch_size
 
-            model = self.maml_agent.adapted_models.get(task_id) or self.maml_agent.model
+        # Training history
+        self.training_history = {
+            "meta_losses": [],
+            "adaptation_losses": [],
+            "test_performances": [],
+        }
 
-            for split_name, loader in loaders.items():
-                if loader is not None:
-                    loss = self._compute_loss(model, loader)
-                    accuracy = self._compute_accuracy(model, loader)
+    def train_epoch(
+        self,
+        task_generator,
+        num_epochs: int = 1,
+    ) -> Dict[str, float]:
+        """Train for one epoch."""
+        epoch_meta_losses = []
+        epoch_adaptation_losses = []
 
-                    task_results[f"{split_name}_loss"] = loss.item()
-                    task_results[f"{split_name}_accuracy"] = accuracy
+        for _ in range(num_epochs):
+            # Generate meta-tasks
+            meta_tasks = []
+            for _ in range(self.num_meta_tasks):
+                task = task_generator.generate_task()
+                meta_tasks.append(task)
 
-            results[task_id] = task_results
+            # Split into support and query sets
+            support_sets = []
+            query_sets = []
+            
+            for task in meta_tasks:
+                # Split task data
+                split_idx = len(task["states"]) // 2
+                support_set = {
+                    "states": task["states"][:split_idx],
+                    "actions": task["actions"][:split_idx],
+                    "rewards": task["rewards"][:split_idx],
+                }
+                query_set = {
+                    "states": task["states"][split_idx:],
+                    "actions": task["actions"][split_idx:],
+                    "rewards": task["rewards"][split_idx:],
+                }
+                
+                support_sets.append(support_set)
+                query_sets.append(query_set)
 
-        return results
+            # Meta-update
+            meta_loss_info = self.meta_algorithm.meta_update(support_sets, query_sets)
+            
+            epoch_meta_losses.append(meta_loss_info["meta_loss"])
+            epoch_adaptation_losses.append(meta_loss_info["avg_adaptation_loss"])
 
-    def _compute_accuracy(
-        self, model: nn.Module, dataloader: torch.utils.data.DataLoader
-    ) -> float:
-        """Compute accuracy for a model on a dataset."""
-        model.eval()
-        correct = 0
-        total = 0
-
-        with torch.no_grad():
-            for batch in dataloader:
-                inputs, targets = batch
-                inputs = inputs.to(self.device)
-                targets = targets.to(self.device)
-
-                outputs = model(inputs)
-                _, predicted = torch.max(outputs.data, 1)
-
-                total += targets.size(0)
-                correct += (predicted == targets).sum().item()
-
-        return correct / total
-
-    def get_meta_learning_stats(self) -> Dict[str, Any]:
-        """Get meta-learning statistics."""
-        if not self.meta_training_history:
-            return {}
-
-        losses = [h["meta_loss"] for h in self.meta_training_history]
+        # Record training history
+        avg_meta_loss = np.mean(epoch_meta_losses)
+        avg_adaptation_loss = np.mean(epoch_adaptation_losses)
+        
+        self.training_history["meta_losses"].append(avg_meta_loss)
+        self.training_history["adaptation_losses"].append(avg_adaptation_loss)
 
         return {
-            "total_meta_epochs": len(self.meta_training_history),
-            "average_meta_loss": np.mean(losses),
-            "min_meta_loss": np.min(losses),
-            "max_meta_loss": np.max(losses),
-            "final_meta_loss": losses[-1],
-            "meta_loss_trajectory": losses,
-            "num_tasks": len(self.task_data),
+            "avg_meta_loss": avg_meta_loss,
+            "avg_adaptation_loss": avg_adaptation_loss,
         }
 
-    def save_checkpoint(self, path: str):
-        """Save meta-learner checkpoint."""
-        checkpoint = {
-            "maml_agent": self.maml_agent.state_dict(),
-            "meta_optimizer": self.maml_agent.meta_optimizer.state_dict(),
-            "task_data_keys": list(self.task_data.keys()),
-            "adapted_models": {
-                k: v.state_dict() for k, v in self.maml_agent.adapted_models.items()
-            },
-            "meta_training_history": self.meta_training_history,
-            "task_adaptation_history": self.maml_agent.task_adaptation_history,
+    def evaluate(
+        self,
+        task_generator,
+        num_test_tasks: int = 10,
+    ) -> Dict[str, float]:
+        """Evaluate meta-learning performance."""
+        # Generate test tasks
+        test_tasks = []
+        for _ in range(num_test_tasks):
+            task = task_generator.generate_task()
+            test_tasks.append(task)
+
+        # Evaluate
+        eval_results = self.meta_algorithm.evaluate(test_tasks)
+        
+        # Record test performance
+        self.training_history["test_performances"].append(eval_results["avg_test_reward"])
+
+        return eval_results
+
+    def get_training_statistics(self) -> Dict[str, Any]:
+        """Get training statistics."""
+        return {
+            "total_epochs": len(self.training_history["meta_losses"]),
+            "avg_meta_loss": np.mean(self.training_history["meta_losses"]) if self.training_history["meta_losses"] else 0.0,
+            "avg_adaptation_loss": np.mean(self.training_history["adaptation_losses"]) if self.training_history["adaptation_losses"] else 0.0,
+            "avg_test_performance": np.mean(self.training_history["test_performances"]) if self.training_history["test_performances"] else 0.0,
+            "latest_meta_loss": self.training_history["meta_losses"][-1] if self.training_history["meta_losses"] else 0.0,
+            "latest_test_performance": self.training_history["test_performances"][-1] if self.training_history["test_performances"] else 0.0,
         }
-
-        torch.save(checkpoint, path)
-
-    def load_checkpoint(self, path: str):
-        """Load meta-learner checkpoint."""
-        checkpoint = torch.load(path)
-
-        self.maml_agent.load_state_dict(checkpoint["maml_agent"])
-        self.maml_agent.meta_optimizer.load_state_dict(checkpoint["meta_optimizer"])
-
-        for task_id, state_dict in checkpoint.get("adapted_models", {}).items():
-            adapted_model = copy.deepcopy(self.maml_agent.model)
-            adapted_model.load_state_dict(state_dict)
-            self.maml_agent.adapted_models[task_id] = adapted_model
-
-        self.meta_training_history = checkpoint.get("meta_training_history", [])
-        self.maml_agent.task_adaptation_history = checkpoint.get(
-            "task_adaptation_history", {}
-        )

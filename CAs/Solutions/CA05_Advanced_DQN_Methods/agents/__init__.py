@@ -7,6 +7,12 @@ from .double_dqn import DoubleDQNAgent
 from .dueling_dqn import DuelingDQNAgent
 from .prioritized_replay import PrioritizedDQNAgent
 from .rainbow_dqn import RainbowDQNAgent
+from .advanced_dqn_algorithms import (
+    NoisyDQNAgent,
+    DistributionalDQNAgent,
+    MultiStepDQNAgent,
+    HierarchicalDQNAgent,
+)
 
 __all__ = [
     "DQNAgent",
@@ -14,4 +20,8 @@ __all__ = [
     "DuelingDQNAgent",
     "PrioritizedDQNAgent",
     "RainbowDQNAgent",
+    "NoisyDQNAgent",
+    "DistributionalDQNAgent",
+    "MultiStepDQNAgent",
+    "HierarchicalDQNAgent",
 ]

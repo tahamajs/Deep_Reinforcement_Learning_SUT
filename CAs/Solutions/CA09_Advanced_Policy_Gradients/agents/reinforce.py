@@ -64,7 +64,7 @@ class REINFORCEAgent:
         """Select action based on current policy"""
         action, log_prob = self.policy_network.get_action_and_log_prob(state)
         self.episode_log_probs.append(log_prob)
-        return action
+        return action, log_prob
 
     def store_reward(self, reward):
         """Store reward for current episode"""

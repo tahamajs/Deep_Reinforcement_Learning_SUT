@@ -1,487 +1,331 @@
 """
 Continual Learning Agent
 
-This module implements a continual learning agent that can learn multiple tasks sequentially.
+This module implements agents that can learn continuously without catastrophic forgetting.
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Any, Union
-from .ewc import ElasticWeightConsolidation, EWCNetwork
-from .progressive_networks import ProgressiveNetwork
-from .experience_replay import ExperienceReplay, ContinualExperienceReplay
+import copy
 
 
 class ContinualLearningAgent:
-    """Agent that can learn multiple tasks sequentially without forgetting."""
+    """RL agent that learns continuously across multiple tasks."""
 
     def __init__(
         self,
         state_dim: int,
         action_dim: int,
-        method: str = "ewc",
+        hidden_dim: int = 128,
+        num_tasks: int = 5,
         lr: float = 1e-3,
-        device: str = "cpu",
     ):
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.method = method
-        self.device = device
-
-        # Initialize network based on method
-        if method == "ewc":
-            self.policy = EWCNetwork(state_dim, action_dim)
-            self.policy.setup_ewc(device=device)
-        elif method == "progressive":
-            self.policy = ProgressiveNetwork(state_dim, action_dim)
-        else:
-            # Standard network
-            self.policy = nn.Sequential(
-                nn.Linear(state_dim, 128),
-                nn.ReLU(),
-                nn.Linear(128, 128),
-                nn.ReLU(),
-                nn.Linear(128, action_dim),
-            )
-
-        self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
-
-        # Experience replay
-        self.experience_replay = ContinualExperienceReplay(device=device)
-
-        # Task tracking
+        self.hidden_dim = hidden_dim
+        self.num_tasks = num_tasks
         self.current_task = 0
-        self.task_performances = {}
-        self.training_history = {"losses": [], "rewards": [], "task_transitions": []}
 
-    def select_action(self, state: torch.Tensor, task_id: int = None) -> int:
-        """Select action for current or specified task."""
+        # Shared backbone network
+        self.backbone = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+        )
+
+        # Task-specific heads
+        self.task_heads = nn.ModuleList([
+            nn.Linear(hidden_dim, action_dim) for _ in range(num_tasks)
+        ])
+
+        # Task-specific value heads
+        self.value_heads = nn.ModuleList([
+            nn.Linear(hidden_dim, 1) for _ in range(num_tasks)
+        ])
+
+        # Optimizer
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+
+        # Continual learning components
+        self.ewc_lambda = 1000.0
+        self.fisher_information = {}
+        self.optimal_params = {}
+
+        # Learning history
+        self.task_performances = {}
+        self.learning_history = {"losses": [], "rewards": [], "tasks": []}
+
+    def select_action(self, state: torch.Tensor, task_id: Optional[int] = None) -> int:
+        """Select action for given task."""
         if task_id is None:
             task_id = self.current_task
 
         with torch.no_grad():
-            if self.method == "progressive":
-                action_logits = self.policy(state.unsqueeze(0), task_id)
-            else:
-                action_logits = self.policy(state.unsqueeze(0))
-
+            features = self.backbone(state)
+            action_logits = self.task_heads[task_id](features)
             action_probs = F.softmax(action_logits, dim=-1)
             action = torch.multinomial(action_probs, 1)
 
             return action.item()
+
+    def get_action_probs(self, state: torch.Tensor, task_id: Optional[int] = None) -> torch.Tensor:
+        """Get action probabilities for given task."""
+        if task_id is None:
+            task_id = self.current_task
+
+        features = self.backbone(state)
+        action_logits = self.task_heads[task_id](features)
+        return F.softmax(action_logits, dim=-1)
+
+    def get_value(self, state: torch.Tensor, task_id: Optional[int] = None) -> torch.Tensor:
+        """Get state value for given task."""
+        if task_id is None:
+            task_id = self.current_task
+
+        features = self.backbone(state)
+        value = self.value_heads[task_id](features)
+        return value.squeeze(-1)
 
     def update(
         self,
         states: torch.Tensor,
         actions: torch.Tensor,
         rewards: torch.Tensor,
-        task_id: int = None,
-    ) -> float:
-        """Update policy for current task."""
-        if task_id is None:
-            task_id = self.current_task
+        task_id: int,
+        use_ewc: bool = True,
+    ) -> Dict[str, float]:
+        """Update agent on current task."""
+        self.current_task = task_id
 
         # Forward pass
-        if self.method == "progressive":
-            action_logits = self.policy(states, task_id)
-        else:
-            action_logits = self.policy(states)
+        features = self.backbone(states)
+        action_logits = self.task_heads[task_id](features)
+        values = self.value_heads[task_id](features).squeeze(-1)
 
+        # Compute losses
         action_probs = F.softmax(action_logits, dim=-1)
         log_probs = torch.log(action_probs.gather(1, actions.unsqueeze(1)))
-        policy_loss = -(log_probs * rewards.unsqueeze(1)).mean()
+        
+        # Policy loss (simplified REINFORCE)
+        policy_loss = -(log_probs.squeeze() * rewards).mean()
+        
+        # Value loss
+        value_loss = F.mse_loss(values, rewards)
 
-        # Add regularization based on method
-        if self.method == "ewc":
-            ewc_loss = self.policy.ewc.compute_ewc_loss(task_id)
-            total_loss = policy_loss + ewc_loss
-        else:
-            total_loss = policy_loss
+        # EWC penalty
+        ewc_penalty = torch.tensor(0.0)
+        if use_ewc and task_id > 0:
+            ewc_penalty = self._compute_ewc_penalty()
+
+        # Total loss
+        total_loss = policy_loss + 0.5 * value_loss + self.ewc_lambda * ewc_penalty
 
         # Backward pass
         self.optimizer.zero_grad()
         total_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=1.0)
         self.optimizer.step()
 
-        # Record training history
-        self.training_history["losses"].append(total_loss.item())
-        self.training_history["rewards"].append(rewards.mean().item())
+        # Record learning history
+        self.learning_history["losses"].append(total_loss.item())
+        self.learning_history["rewards"].append(rewards.mean().item())
+        self.learning_history["tasks"].append(task_id)
 
-        return total_loss.item()
+        return {
+            "policy_loss": policy_loss.item(),
+            "value_loss": value_loss.item(),
+            "ewc_penalty": ewc_penalty.item(),
+            "total_loss": total_loss.item(),
+        }
 
-    def add_task(self, task_id: int, output_dim: int = None):
-        """Add a new task to the agent."""
-        if self.method == "progressive":
-            self.policy.add_task_column(task_id, output_dim)
+    def _compute_ewc_penalty(self) -> torch.Tensor:
+        """Compute EWC penalty for previous tasks."""
+        penalty = torch.tensor(0.0)
+        
+        for task_id in range(self.current_task):
+            if task_id in self.fisher_information:
+                for name, param in self.named_parameters():
+                    if name in self.fisher_information[task_id]:
+                        fisher = self.fisher_information[task_id][name]
+                        optimal = self.optimal_params[task_id][name]
+                        penalty += (fisher * (param - optimal) ** 2).sum()
+        
+        return penalty
 
-        # Initialize task performance tracking
-        self.task_performances[task_id] = []
+    def compute_fisher_information(self, states: torch.Tensor, actions: torch.Tensor, task_id: int):
+        """Compute Fisher information matrix for current task."""
+        self.eval()
+        
+        # Forward pass
+        features = self.backbone(states)
+        action_logits = self.task_heads[task_id](features)
+        action_probs = F.softmax(action_logits, dim=-1)
+        log_probs = torch.log(action_probs.gather(1, actions.unsqueeze(1)))
 
-        # Record task transition
-        self.training_history["task_transitions"].append(
-            {"task_id": task_id, "timestamp": len(self.training_history["losses"])}
-        )
+        # Compute gradients
+        self.zero_grad()
+        log_probs.sum().backward()
+
+        # Store Fisher information
+        fisher_info = {}
+        optimal_params = {}
+        
+        for name, param in self.named_parameters():
+            if param.grad is not None:
+                fisher_info[name] = param.grad.data.clone() ** 2
+                optimal_params[name] = param.data.clone()
+
+        self.fisher_information[task_id] = fisher_info
+        self.optimal_params[task_id] = optimal_params
+
+        self.train()
 
     def switch_task(self, task_id: int):
         """Switch to a different task."""
+        if 0 <= task_id < self.num_tasks:
+            self.current_task = task_id
+
+    def get_task_performance(self, task_id: int) -> Dict[str, float]:
+        """Get performance metrics for a specific task."""
         if task_id not in self.task_performances:
-            self.add_task(task_id)
+            return {"avg_reward": 0.0, "episodes": 0}
 
-        self.current_task = task_id
+        return self.task_performances[task_id]
 
-    def evaluate_task(self, test_data: List[Tuple], task_id: int) -> Dict[str, float]:
-        """Evaluate performance on a specific task."""
+    def update_task_performance(self, task_id: int, reward: float):
+        """Update performance metrics for a task."""
         if task_id not in self.task_performances:
-            raise ValueError(f"Task {task_id} not found.")
+            self.task_performances[task_id] = {
+                "rewards": [],
+                "avg_reward": 0.0,
+                "episodes": 0,
+            }
 
-        total_reward = 0.0
-        num_episodes = len(test_data)
+        self.task_performances[task_id]["rewards"].append(reward)
+        self.task_performances[task_id]["episodes"] += 1
+        self.task_performances[task_id]["avg_reward"] = np.mean(
+            self.task_performances[task_id]["rewards"]
+        )
 
-        for states, actions, rewards in test_data:
-            episode_reward = 0.0
-            for i, (state, action, reward) in enumerate(zip(states, actions, rewards)):
-                # Get predicted action
-                predicted_action = self.select_action(state, task_id)
-
-                # Calculate reward (simplified)
-                if predicted_action == action:
-                    episode_reward += reward
-                else:
-                    episode_reward += reward * 0.5  # Partial credit
-
-            total_reward += episode_reward
-
-        avg_reward = total_reward / num_episodes
-        self.task_performances[task_id].append(avg_reward)
-
-        return {"avg_reward": avg_reward, "num_episodes": num_episodes}
-
-    def compute_forgetting_measure(self, task_id: int) -> float:
-        """Compute forgetting measure for a task."""
-        if (
-            task_id not in self.task_performances
-            or len(self.task_performances[task_id]) < 2
-        ):
-            return 0.0
-
-        performances = self.task_performances[task_id]
-        initial_performance = performances[0]
-        final_performance = performances[-1]
-
-        return max(0.0, initial_performance - final_performance)
-
-    def compute_transfer_measure(self, task_id: int) -> float:
-        """Compute transfer measure for a task."""
-        if (
-            task_id not in self.task_performances
-            or len(self.task_performances[task_id]) < 2
-        ):
-            return 0.0
-
-        performances = self.task_performances[task_id]
-        initial_performance = performances[0]
-        final_performance = performances[-1]
-
-        return max(0.0, final_performance - initial_performance)
-
-    def get_task_statistics(self, task_id: int) -> Dict[str, Any]:
-        """Get statistics for a specific task."""
-        if task_id not in self.task_performances:
-            return {}
-
+    def get_continual_learning_statistics(self) -> Dict[str, Any]:
+        """Get statistics about continual learning performance."""
         stats = {
-            "task_id": task_id,
-            "performances": self.task_performances[task_id].copy(),
-            "forgetting_measure": self.compute_forgetting_measure(task_id),
-            "transfer_measure": self.compute_transfer_measure(task_id),
-            "num_evaluations": len(self.task_performances[task_id]),
-        }
-
-        if self.method == "progressive":
-            stats.update(self.policy.get_column_statistics(task_id))
-        elif self.method == "ewc":
-            ewc_stats = self.policy.get_ewc_statistics()
-            stats["ewc_losses"] = ewc_stats.get("ewc_losses", [])
-
-        return stats
-
-    def get_overall_statistics(self) -> Dict[str, Any]:
-        """Get overall agent statistics."""
-        stats = {
-            "method": self.method,
             "current_task": self.current_task,
-            "num_tasks": len(self.task_performances),
-            "task_performances": {
-                k: v.copy() for k, v in self.task_performances.items()
-            },
-            "training_history": {
-                "losses": self.training_history["losses"].copy(),
-                "rewards": self.training_history["rewards"].copy(),
-                "task_transitions": self.training_history["task_transitions"].copy(),
-            },
+            "total_tasks": self.num_tasks,
+            "task_performances": self.task_performances,
+            "ewc_penalty": self.ewc_lambda,
+            "fisher_matrices": len(self.fisher_information),
         }
 
-        # Add method-specific statistics
-        if self.method == "progressive":
-            stats["network_statistics"] = self.policy.get_network_statistics()
-        elif self.method == "ewc":
-            stats["ewc_statistics"] = self.policy.get_ewc_statistics()
-
-        # Add experience replay statistics
-        stats["experience_replay"] = self.experience_replay.get_statistics()
+        # Compute forgetting metrics
+        if len(self.task_performances) > 1:
+            forgetting_metrics = self._compute_forgetting_metrics()
+            stats.update(forgetting_metrics)
 
         return stats
 
-    def save_model(self, filepath: str):
-        """Save the model to file."""
-        torch.save(
-            {
-                "policy_state_dict": self.policy.state_dict(),
-                "optimizer_state_dict": self.optimizer.state_dict(),
-                "current_task": self.current_task,
-                "task_performances": self.task_performances,
-                "training_history": self.training_history,
-                "method": self.method,
-            },
-            filepath,
-        )
+    def _compute_forgetting_metrics(self) -> Dict[str, float]:
+        """Compute forgetting metrics."""
+        if len(self.task_performances) < 2:
+            return {"forgetting": 0.0, "retention": 1.0}
 
-    def load_model(self, filepath: str):
-        """Load the model from file."""
-        checkpoint = torch.load(filepath, map_location=self.device)
+        # Compute average forgetting
+        forgetting_scores = []
+        retention_scores = []
 
-        self.policy.load_state_dict(checkpoint["policy_state_dict"])
-        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        self.current_task = checkpoint["current_task"]
-        self.task_performances = checkpoint["task_performances"]
-        self.training_history = checkpoint["training_history"]
-        self.method = checkpoint["method"]
+        for task_id in range(len(self.task_performances) - 1):
+            if task_id in self.task_performances:
+                task_perf = self.task_performances[task_id]
+                if len(task_perf["rewards"]) > 10:
+                    # Use first 10 episodes as baseline
+                    baseline_perf = np.mean(task_perf["rewards"][:10])
+                    # Use last 10 episodes as current performance
+                    current_perf = np.mean(task_perf["rewards"][-10:])
+                    
+                    forgetting = max(0, baseline_perf - current_perf)
+                    retention = current_perf / baseline_perf if baseline_perf > 0 else 0
+                    
+                    forgetting_scores.append(forgetting)
+                    retention_scores.append(retention)
 
-
-class LifelongLearner(ContinualLearningAgent):
-    """Extended continual learning agent with lifelong learning capabilities."""
-
-    def __init__(
-        self,
-        state_dim: int,
-        action_dim: int,
-        method: str = "ewc",
-        lr: float = 1e-3,
-        device: str = "cpu",
-    ):
-        super().__init__(state_dim, action_dim, method, lr, device)
-
-        # Lifelong learning specific components
-        self.task_importance_weights = {}
-        self.knowledge_transfer_matrix = {}
-        self.adaptation_history = {}
-
-        # Meta-learning components
-        self.meta_learning_rate = 1e-4
-        self.adaptation_steps = 5
-
-    def compute_task_importance(self, task_id: int) -> float:
-        """Compute importance weight for a task."""
-        if task_id not in self.task_performances:
-            return 1.0
-
-        performances = self.task_performances[task_id]
-        if not performances:
-            return 1.0
-
-        # Importance based on performance stability and recent performance
-        recent_performance = performances[-1] if performances else 0.0
-        performance_stability = (
-            1.0 - np.std(performances) if len(performances) > 1 else 1.0
-        )
-
-        importance = recent_performance * performance_stability
-        self.task_importance_weights[task_id] = importance
-
-        return importance
-
-    def update_knowledge_transfer(
-        self, source_task: int, target_task: int, transfer_strength: float
-    ):
-        """Update knowledge transfer matrix."""
-        if source_task not in self.knowledge_transfer_matrix:
-            self.knowledge_transfer_matrix[source_task] = {}
-
-        self.knowledge_transfer_matrix[source_task][target_task] = transfer_strength
-
-    def adapt_to_new_task(
-        self,
-        task_id: int,
-        adaptation_data: List[Tuple],
-        num_adaptation_steps: int = None,
-    ) -> float:
-        """Adapt to a new task using meta-learning."""
-        if num_adaptation_steps is None:
-            num_adaptation_steps = self.adaptation_steps
-
-        # Store original parameters
-        original_params = {
-            name: param.clone() for name, param in self.policy.named_parameters()
+        return {
+            "forgetting": np.mean(forgetting_scores) if forgetting_scores else 0.0,
+            "retention": np.mean(retention_scores) if retention_scores else 1.0,
         }
 
-        # Adaptation steps
-        adaptation_losses = []
-        for step in range(num_adaptation_steps):
-            step_loss = 0.0
-            num_batches = 0
+    def save_task_checkpoint(self, task_id: int, path: str):
+        """Save checkpoint for a specific task."""
+        checkpoint = {
+            "task_id": task_id,
+            "model_state_dict": self.state_dict(),
+            "fisher_information": self.fisher_information.get(task_id, {}),
+            "optimal_params": self.optimal_params.get(task_id, {}),
+            "task_performance": self.task_performances.get(task_id, {}),
+        }
+        torch.save(checkpoint, path)
 
-            for states, actions, rewards in adaptation_data:
-                # Forward pass
-                if self.method == "progressive":
-                    action_logits = self.policy(states, task_id)
-                else:
-                    action_logits = self.policy(states)
+    def load_task_checkpoint(self, path: str):
+        """Load checkpoint for a specific task."""
+        checkpoint = torch.load(path)
+        self.load_state_dict(checkpoint["model_state_dict"])
+        
+        task_id = checkpoint["task_id"]
+        if "fisher_information" in checkpoint:
+            self.fisher_information[task_id] = checkpoint["fisher_information"]
+        if "optimal_params" in checkpoint:
+            self.optimal_params[task_id] = checkpoint["optimal_params"]
+        if "task_performance" in checkpoint:
+            self.task_performances[task_id] = checkpoint["task_performance"]
 
-                action_probs = F.softmax(action_logits, dim=-1)
-                log_probs = torch.log(action_probs.gather(1, actions.unsqueeze(1)))
-                loss = -(log_probs * rewards.unsqueeze(1)).mean()
+    def parameters(self):
+        """Get all model parameters."""
+        return list(self.backbone.parameters()) + list(self.task_heads.parameters()) + list(self.value_heads.parameters())
 
-                # Gradient step
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
+    def named_parameters(self):
+        """Get named parameters."""
+        params = []
+        for name, param in self.backbone.named_parameters():
+            params.append((f"backbone.{name}", param))
+        for i, head in enumerate(self.task_heads):
+            for name, param in head.named_parameters():
+                params.append((f"task_heads.{i}.{name}", param))
+        for i, head in enumerate(self.value_heads):
+            for name, param in head.named_parameters():
+                params.append((f"value_heads.{i}.{name}", param))
+        return params
 
-                step_loss += loss.item()
-                num_batches += 1
+    def eval(self):
+        """Set model to evaluation mode."""
+        self.backbone.eval()
+        for head in self.task_heads:
+            head.eval()
+        for head in self.value_heads:
+            head.eval()
 
-            avg_loss = step_loss / num_batches
-            adaptation_losses.append(avg_loss)
+    def train(self):
+        """Set model to training mode."""
+        self.backbone.train()
+        for head in self.task_heads:
+            head.train()
+        for head in self.value_heads:
+            head.train()
 
-        # Record adaptation history
-        self.adaptation_history[task_id] = {
-            "losses": adaptation_losses,
-            "num_steps": num_adaptation_steps,
-            "final_loss": adaptation_losses[-1] if adaptation_losses else 0.0,
+    def state_dict(self):
+        """Get state dictionary."""
+        return {
+            "backbone": self.backbone.state_dict(),
+            "task_heads": [head.state_dict() for head in self.task_heads],
+            "value_heads": [head.state_dict() for head in self.value_heads],
         }
 
-        return adaptation_losses[-1] if adaptation_losses else 0.0
-
-    def get_lifelong_statistics(self) -> Dict[str, Any]:
-        """Get lifelong learning statistics."""
-        base_stats = self.get_overall_statistics()
-
-        lifelong_stats = {
-            "task_importance_weights": self.task_importance_weights.copy(),
-            "knowledge_transfer_matrix": self.knowledge_transfer_matrix.copy(),
-            "adaptation_history": self.adaptation_history.copy(),
-        }
-
-        # Compute lifelong learning metrics
-        if len(self.task_performances) > 1:
-            # Average forgetting across all tasks
-            forgetting_measures = [
-                self.compute_forgetting_measure(task_id)
-                for task_id in self.task_performances.keys()
-            ]
-            lifelong_stats["avg_forgetting"] = np.mean(forgetting_measures)
-
-            # Average transfer across all tasks
-            transfer_measures = [
-                self.compute_transfer_measure(task_id)
-                for task_id in self.task_performances.keys()
-            ]
-            lifelong_stats["avg_transfer"] = np.mean(transfer_measures)
-
-        base_stats["lifelong_learning"] = lifelong_stats
-        return base_stats
-
-
-class TransferLearningAgent(ContinualLearningAgent):
-    """Agent specialized for transfer learning between tasks."""
-
-    def __init__(
-        self,
-        state_dim: int,
-        action_dim: int,
-        method: str = "ewc",
-        lr: float = 1e-3,
-        device: str = "cpu",
-    ):
-        super().__init__(state_dim, action_dim, method, lr, device)
-
-        # Transfer learning specific components
-        self.transfer_weights = {}
-        self.similarity_matrix = {}
-        self.transfer_history = {}
-
-    def compute_task_similarity(self, task1: int, task2: int) -> float:
-        """Compute similarity between two tasks."""
-        if task1 not in self.task_performances or task2 not in self.task_performances:
-            return 0.0
-
-        # Simple similarity based on performance patterns
-        perf1 = self.task_performances[task1]
-        perf2 = self.task_performances[task2]
-
-        if not perf1 or not perf2:
-            return 0.0
-
-        # Compute correlation between performance patterns
-        min_len = min(len(perf1), len(perf2))
-        if min_len < 2:
-            return 0.0
-
-        corr = np.corrcoef(perf1[:min_len], perf2[:min_len])[0, 1]
-        return corr if not np.isnan(corr) else 0.0
-
-    def transfer_knowledge(
-        self, source_task: int, target_task: int, transfer_strength: float = 0.5
-    ) -> float:
-        """Transfer knowledge from source task to target task."""
-        if (
-            source_task not in self.task_performances
-            or target_task not in self.task_performances
-        ):
-            return 0.0
-
-        # Compute similarity
-        similarity = self.compute_task_similarity(source_task, target_task)
-
-        # Apply transfer
-        transfer_effect = similarity * transfer_strength
-
-        # Record transfer
-        if source_task not in self.transfer_history:
-            self.transfer_history[source_task] = {}
-
-        self.transfer_history[source_task][target_task] = {
-            "similarity": similarity,
-            "transfer_strength": transfer_strength,
-            "transfer_effect": transfer_effect,
-        }
-
-        return transfer_effect
-
-    def get_transfer_statistics(self) -> Dict[str, Any]:
-        """Get transfer learning statistics."""
-        stats = {
-            "transfer_weights": self.transfer_weights.copy(),
-            "similarity_matrix": self.similarity_matrix.copy(),
-            "transfer_history": self.transfer_history.copy(),
-        }
-
-        # Compute transfer metrics
-        if len(self.task_performances) > 1:
-            task_ids = list(self.task_performances.keys())
-            similarities = []
-
-            for i, task1 in enumerate(task_ids):
-                for j, task2 in enumerate(task_ids):
-                    if i != j:
-                        similarity = self.compute_task_similarity(task1, task2)
-                        similarities.append(similarity)
-
-            if similarities:
-                stats["avg_task_similarity"] = np.mean(similarities)
-                stats["max_task_similarity"] = np.max(similarities)
-                stats["min_task_similarity"] = np.min(similarities)
-
-        return stats
+    def load_state_dict(self, state_dict):
+        """Load state dictionary."""
+        self.backbone.load_state_dict(state_dict["backbone"])
+        for i, head_state in enumerate(state_dict["task_heads"]):
+            self.task_heads[i].load_state_dict(head_state)
+        for i, head_state in enumerate(state_dict["value_heads"]):
+            self.value_heads[i].load_state_dict(head_state)

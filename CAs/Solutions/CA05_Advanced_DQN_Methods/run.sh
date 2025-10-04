@@ -68,6 +68,7 @@ python3 -c "
 import sys
 sys.path.append('.')
 from environments.custom_envs import GridWorldEnv, make_env
+from environments.complex_envs import MultiAgentGridWorld, DynamicEnvironment, HierarchicalEnvironment, StochasticEnvironment
 import numpy as np
 
 print('Testing GridWorld environment...')
@@ -83,10 +84,48 @@ for i in range(5):
         break
 
 env.close()
-print('Custom environments test completed!')
+print('GridWorld test completed!')
+
+print('Testing Multi-Agent GridWorld...')
+try:
+    multi_env = MultiAgentGridWorld(size=4, num_agents=2, mode='cooperative')
+    obs = multi_env.reset()
+    print(f'Multi-agent observation shape: {obs.shape}')
+    
+    for i in range(3):
+        actions = [multi_env.action_space.sample() for _ in range(2)]
+        obs, rewards, dones, infos = multi_env.step(actions)
+        print(f'Multi-agent step {i}: Rewards={rewards}, Dones={dones}')
+        if any(dones):
+            break
+    
+    multi_env.close()
+    print('Multi-Agent GridWorld test completed!')
+except Exception as e:
+    print(f'Multi-Agent test failed: {e}')
+
+print('Testing Dynamic Environment...')
+try:
+    dyn_env = DynamicEnvironment(size=6, change_frequency=10)
+    obs = dyn_env.reset()
+    print(f'Dynamic environment observation shape: {obs.shape}')
+    
+    for i in range(5):
+        action = dyn_env.action_space.sample()
+        obs, reward, done, info = dyn_env.step(action)
+        print(f'Dynamic step {i}: Reward={reward:.2f}, Done={done}')
+        if done:
+            break
+    
+    dyn_env.close()
+    print('Dynamic Environment test completed!')
+except Exception as e:
+    print(f'Dynamic Environment test failed: {e}')
+
+print('All custom environments test completed!')
 "
 
-# Step 2: Test DQN agents
+# Step 2: Test DQN agents (including advanced algorithms)
 print_status "Step 2: Testing DQN agents..."
 python3 -c "
 import sys
@@ -95,6 +134,7 @@ from agents.dqn_base import DQNAgent
 from agents.double_dqn import DoubleDQNAgent
 from agents.dueling_dqn import DuelingDQNAgent
 from agents.prioritized_replay import PrioritizedDQNAgent
+from agents.advanced_dqn_algorithms import NoisyDQNAgent, DistributionalDQNAgent, MultiStepDQNAgent, HierarchicalDQNAgent
 import gym
 import numpy as np
 
@@ -120,7 +160,39 @@ for i in range(10):
     if done:
         state = env.reset()
 
-print('DQN agents test completed!')
+print('Vanilla DQN test completed!')
+
+# Test Advanced Algorithms
+print('Testing Advanced DQN Algorithms...')
+advanced_agents = {
+    'Noisy DQN': NoisyDQNAgent,
+    'Distributional DQN': DistributionalDQNAgent,
+    'Multi-Step DQN': MultiStepDQNAgent
+}
+
+for name, agent_class in advanced_agents.items():
+    try:
+        print(f'Testing {name}...')
+        agent = agent_class(
+            state_dim=env.observation_space.shape[0],
+            action_dim=env.action_space.n,
+            lr=1e-3
+        )
+        
+        state = env.reset()
+        for i in range(5):
+            action = agent.select_action(state)
+            next_state, reward, done, info = env.step(action)
+            agent.replay_buffer.push(state, action, reward, next_state, done)
+            state = next_state
+            if done:
+                state = env.reset()
+        
+        print(f'{name} test completed!')
+    except Exception as e:
+        print(f'{name} test failed: {e}')
+
+print('All DQN agents test completed!')
 env.close()
 "
 
@@ -152,18 +224,20 @@ with open('results/training_results.json', 'w') as f:
 print('Training results saved to results/training_results.json')
 "
 
-# Step 4: Run experiments
-print_status "Step 4: Running experiments..."
+# Step 4: Run complex experiments
+print_status "Step 4: Running complex experiments..."
 python3 -c "
 import sys
 sys.path.append('.')
 from experiments import ExperimentRunner, get_dqn_configs
+from experiments.complex_experiments import ComplexExperimentRunner, ComprehensiveEvaluator
 from agents.dqn_base import DQNAgent
 from agents.double_dqn import DoubleDQNAgent
 from agents.dueling_dqn import DuelingDQNAgent
 from agents.prioritized_replay import PrioritizedDQNAgent
+from agents.advanced_dqn_algorithms import NoisyDQNAgent, DistributionalDQNAgent
 
-print('Running comparison experiments...')
+print('Running basic comparison experiments...')
 runner = ExperimentRunner()
 
 # Get configurations
@@ -175,12 +249,70 @@ for config in configs:
     config.config['training']['num_episodes'] = 50
 
 comparison_results = runner.run_comparison_experiment(
-    configs[:2],  # Only first 2 for demo
+    configs[:2],  # First 2 for demo
     agent_classes[:2],
     'CartPole-v1'
 )
 
-print('Experiments completed!')
+print('Basic experiments completed!')
+
+print('Running complex experiments...')
+complex_runner = ComplexExperimentRunner()
+
+# Multi-environment study
+print('Running multi-environment study...')
+try:
+    agent_classes_dict = {
+        'DQN': DQNAgent,
+        'Double DQN': DoubleDQNAgent,
+        'Noisy DQN': NoisyDQNAgent
+    }
+    
+    environments = ['CartPole-v1', 'MountainCar-v0']
+    
+    multi_env_results = complex_runner.run_multi_environment_study(
+        agent_classes_dict,
+        environments,
+        num_episodes=100  # Reduced for demo
+    )
+    
+    print('Multi-environment study completed!')
+except Exception as e:
+    print(f'Multi-environment study failed: {e}')
+
+# Scalability study
+print('Running scalability study...')
+try:
+    scalability_results = complex_runner.run_scalability_study(
+        DQNAgent,
+        env_sizes=[4, 6, 8],
+        num_episodes=100  # Reduced for demo
+    )
+    
+    print('Scalability study completed!')
+except Exception as e:
+    print(f'Scalability study failed: {e}')
+
+# Hyperparameter sensitivity study
+print('Running hyperparameter sensitivity study...')
+try:
+    param_ranges = {
+        'lr': (1e-4, 1e-2, 5),
+        'gamma': (0.9, 0.99, 5)
+    }
+    
+    sensitivity_results = complex_runner.run_hyperparameter_sensitivity_study(
+        DQNAgent,
+        param_ranges,
+        'CartPole-v1',
+        num_episodes=50  # Reduced for demo
+    )
+    
+    print('Hyperparameter sensitivity study completed!')
+except Exception as e:
+    print(f'Hyperparameter sensitivity study failed: {e}')
+
+print('All complex experiments completed!')
 "
 
 # Step 5: Run evaluation
@@ -230,17 +362,17 @@ print('Evaluation completed!')
 env.close()
 "
 
-# Step 6: Generate visualizations
-print_status "Step 6: Generating visualizations..."
+# Step 6: Generate advanced visualizations
+print_status "Step 6: Generating advanced visualizations..."
 python3 -c "
 import sys
 sys.path.append('.')
-from training_examples import plot_q_value_landscape, plot_experience_replay_analysis
+from utils.advanced_analysis import AdvancedVisualizer, HyperparameterOptimizer, PerformanceAnalyzer
 from agents.dqn_base import DQNAgent
 import gym
 import matplotlib.pyplot as plt
 
-print('Generating visualizations...')
+print('Generating advanced visualizations...')
 env = gym.make('CartPole-v1')
 
 # Create and train agent for visualization
@@ -251,7 +383,8 @@ agent = DQNAgent(
 )
 
 # Quick training
-for episode in range(100):
+print('Training agent for visualization...')
+for episode in range(200):
     state = env.reset()
     done = False
     while not done:
@@ -261,16 +394,54 @@ for episode in range(100):
         if len(agent.replay_buffer) > agent.batch_size:
             agent.update()
         state = next_state
+    
+    # Update epsilon
+    agent.epsilon = max(agent.epsilon_end, agent.epsilon * agent.epsilon_decay)
 
-# Generate plots
+# Generate advanced visualizations
+visualizer = AdvancedVisualizer()
+
+print('Creating 3D Q-value heatmap...')
 try:
-    plot_q_value_landscape(agent, 'CartPole-v1', 'visualizations/q_value_landscape.png')
-    plot_experience_replay_analysis(agent.replay_buffer, 'visualizations/replay_analysis.png')
-    print('Visualizations saved to visualizations/ folder')
+    fig_3d = visualizer.plot_q_value_heatmap_3d(agent, env, 'visualizations/q_value_3d_heatmap.html')
+    print('3D Q-value heatmap created!')
 except Exception as e:
-    print(f'Visualization generation failed: {e}')
+    print(f'3D heatmap failed: {e}')
+
+print('Creating network architecture analysis...')
+try:
+    fig_arch = visualizer.plot_network_architecture_analysis(agent, 'visualizations/network_architecture_analysis.html')
+    print('Network architecture analysis created!')
+except Exception as e:
+    print(f'Network analysis failed: {e}')
+
+print('Creating experience replay analysis...')
+try:
+    fig_replay = visualizer.plot_experience_replay_analysis(agent.replay_buffer, 'visualizations/experience_replay_analysis.html')
+    print('Experience replay analysis created!')
+except Exception as e:
+    print(f'Experience replay analysis failed: {e}')
+
+# Performance analysis
+print('Running performance analysis...')
+try:
+    analyzer = PerformanceAnalyzer()
+    
+    # Simulate some episode rewards for analysis
+    episode_rewards = [np.random.normal(10, 5) for _ in range(100)]
+    episode_rewards.extend([np.random.normal(50, 10) for _ in range(100)])
+    
+    convergence_analysis = analyzer.analyze_convergence(episode_rewards)
+    sample_efficiency = analyzer.analyze_sample_efficiency(episode_rewards)
+    
+    print(f'Convergence analysis: {convergence_analysis}')
+    print(f'Sample efficiency: {sample_efficiency}')
+    
+except Exception as e:
+    print(f'Performance analysis failed: {e}')
 
 env.close()
+print('Advanced visualizations completed!')
 "
 
 # Step 7: Run Jupyter notebook (if available)

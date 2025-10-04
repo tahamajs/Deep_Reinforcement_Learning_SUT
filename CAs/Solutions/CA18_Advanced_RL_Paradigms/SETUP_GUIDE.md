@@ -3,10 +3,12 @@
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Python 3.8 or higher
 - pip (Python package installer)
 
 ### Option 1: Automated Setup (Recommended)
+
 ```bash
 # Make the script executable and run it
 chmod +x run.sh
@@ -14,6 +16,7 @@ chmod +x run.sh
 ```
 
 This will:
+
 - Create a virtual environment
 - Install all dependencies
 - Run all demos and tests
@@ -22,12 +25,14 @@ This will:
 ### Option 2: Manual Setup
 
 #### Step 1: Create Virtual Environment
+
 ```bash
 python3 -m venv ca18_env
 source ca18_env/bin/activate  # On Windows: ca18_env\Scripts\activate
 ```
 
 #### Step 2: Install Dependencies
+
 ```bash
 # Install from requirements.txt
 pip install -r requirements.txt
@@ -37,11 +42,13 @@ pip install torch numpy matplotlib seaborn pandas networkx scikit-learn scipy tq
 ```
 
 #### Step 3: Test Installation
+
 ```bash
 python test_modules.py
 ```
 
 #### Step 4: Run Demos
+
 ```bash
 # Run comprehensive demo
 python comprehensive_demo.py
@@ -99,14 +106,18 @@ CA18_Advanced_RL_Paradigms/
 ### Common Issues
 
 #### 1. "No module named 'torch'" Error
+
 **Solution**: Install PyTorch in your virtual environment
+
 ```bash
 source ca18_env/bin/activate
 pip install torch torchvision
 ```
 
 #### 2. Virtual Environment Issues
+
 **Solution**: Recreate the virtual environment
+
 ```bash
 rm -rf ca18_env
 python3 -m venv ca18_env
@@ -115,14 +126,18 @@ pip install -r requirements.txt
 ```
 
 #### 3. Permission Errors on macOS/Linux
+
 **Solution**: Make scripts executable
+
 ```bash
 chmod +x run.sh
 chmod +x test_modules.py
 ```
 
 #### 4. Import Errors
+
 **Solution**: Ensure you're in the correct directory and virtual environment is activated
+
 ```bash
 cd /path/to/CA18_Advanced_RL_Paradigms
 source ca18_env/bin/activate
@@ -132,6 +147,7 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 ## 🎯 Usage Examples
 
 ### Basic Usage
+
 ```python
 from quantum_rl.quantum_rl import QuantumQLearning
 from world_models.world_models import WorldModel
@@ -148,6 +164,7 @@ agent = MADDPGAgent(agent_idx=0, obs_dim=6, action_dim=2, n_agents=3)
 ```
 
 ### Running Experiments
+
 ```python
 from experiments.experiments import QuantumRLExperiment
 from quantum_rl.quantum_rl import QuantumQLearning
@@ -172,6 +189,7 @@ results = experiment.run_experiment(
 After running the demos, you'll find:
 
 ### Visualizations (`visualizations/`)
+
 - `quantum_rl_results.png` - Quantum learning curves
 - `world_models_training.png` - Model training losses
 - `multi_agent_rl_results.png` - Multi-agent coordination
@@ -183,11 +201,13 @@ After running the demos, you'll find:
 - `final_summary.png` - Overall completion status
 
 ### Results (`results/`)
+
 - `final_report.md` - Complete execution summary
 - `execution_summary.md` - Technical details
 - Various JSON files with detailed metrics
 
 ### Logs (`logs/`)
+
 - Detailed execution logs for each module
 - Error logs if any issues occurred
 - Performance metrics and timing information
@@ -195,7 +215,9 @@ After running the demos, you'll find:
 ## 🔬 Advanced Features
 
 ### Custom Configuration
+
 Edit `config.py` to modify hyperparameters:
+
 ```python
 from config import get_config, update_config
 
@@ -210,7 +232,9 @@ updated_config = update_config("quantum", {
 ```
 
 ### Custom Environments
+
 Create your own environments by extending the base classes:
+
 ```python
 from environments.environments import QuantumEnvironment
 
@@ -218,14 +242,16 @@ class CustomQuantumEnv(QuantumEnvironment):
     def __init__(self):
         super().__init__(n_qubits=6, max_steps=100)
         # Add custom initialization
-    
+
     def step(self, action):
         # Add custom dynamics
         return super().step(action)
 ```
 
 ### Custom Agents
+
 Extend existing agent classes:
+
 ```python
 from quantum_rl.quantum_rl import QuantumQLearning
 
@@ -233,7 +259,7 @@ class CustomQuantumAgent(QuantumQLearning):
     def __init__(self, custom_param=1.0, **kwargs):
         super().__init__(**kwargs)
         self.custom_param = custom_param
-    
+
     def custom_method(self):
         # Add custom functionality
         pass
@@ -257,6 +283,7 @@ class CustomQuantumAgent(QuantumQLearning):
 ## 🤝 Contributing
 
 To contribute to CA18:
+
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
@@ -270,6 +297,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🆘 Support
 
 If you encounter issues:
+
 1. Check this setup guide
 2. Review the logs in `logs/` directory
 3. Ensure all dependencies are installed
@@ -278,5 +306,5 @@ If you encounter issues:
 
 ---
 
-*CA18 Advanced RL Paradigms - Comprehensive Implementation*
-*Ready for cutting-edge reinforcement learning research*
+_CA18 Advanced RL Paradigms - Comprehensive Implementation_
+_Ready for cutting-edge reinforcement learning research_

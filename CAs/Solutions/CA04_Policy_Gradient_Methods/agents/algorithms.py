@@ -78,17 +78,25 @@ class REINFORCEAgent:
         self.states = []
         self.actions = []
 
-    def get_action(self, state: np.ndarray) -> Tuple[int, torch.Tensor]:
+    def get_action(
+        self, state: np.ndarray
+    ) -> Tuple[int, torch.Tensor, Optional[torch.Tensor]]:
         """Select action using current policy
 
         Args:
             state: Current state
 
         Returns:
-            Tuple of (action, log_probability)
+            Tuple of (action, log_probability, value)
         """
         state_tensor = torch.FloatTensor(state).unsqueeze(0)
-        return self.policy_net.sample_action(state_tensor)
+        action, log_prob = self.policy_net.sample_action(state_tensor)
+
+        value = None
+        if self.baseline:
+            value = self.value_net(state_tensor).squeeze()
+
+        return action, log_prob, value
 
     def store_transition(
         self, state: np.ndarray, action: int, reward: float, log_prob: torch.Tensor

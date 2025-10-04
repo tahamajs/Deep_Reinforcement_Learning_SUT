@@ -112,19 +112,28 @@ echo "📓 Step 8: Main Educational Notebook"
 echo "=================================="
 run_notebook "CA8.ipynb" "Main CA8 Educational Notebook"
 
-# 9. Generate comprehensive visualization suite
+# 9. Run Advanced Algorithms
 echo ""
-echo "🎨 Step 9: Generate Complete Visualization Suite"
-echo "================================================"
+echo "🔬 Step 9: Advanced Algorithm Testing"
+echo "====================================="
+run_script "algorithms/advanced_causal_discovery.py" "Advanced Causal Discovery Algorithms"
+run_script "algorithms/advanced_multimodal_fusion.py" "Advanced Multi-Modal Fusion Methods"
+run_script "algorithms/advanced_counterfactual_reasoning.py" "Advanced Counterfactual Reasoning"
+run_script "algorithms/advanced_meta_transfer_learning.py" "Advanced Meta-Learning & Transfer Learning"
+
+# 10. Generate comprehensive visualization suite
+echo ""
+echo "🎨 Step 10: Generate Complete Visualization Suite"
+echo "================================================="
 python3 -c "
 from training_examples import create_comprehensive_causal_multimodal_visualization_suite
 create_comprehensive_causal_multimodal_visualization_suite(save_dir='visualizations/')
 print('✅ Complete visualization suite generated!')
 "
 
-# 10. Final summary and cleanup
+# 11. Final summary and cleanup
 echo ""
-echo "📋 Step 10: Final Summary and Results"
+echo "📋 Step 11: Final Summary and Results"
 echo "====================================="
 
 echo ""

@@ -1,8 +1,8 @@
 """
 Visualization Utilities for World Models
 
-This module provides visualization utilities for world models, including
-training progress, model predictions, and analysis plots.
+This module provides comprehensive visualization functions for analyzing
+world models, RSSM, and Dreamer agents.
 """
 
 import matplotlib.pyplot as plt
@@ -11,492 +11,443 @@ import numpy as np
 import torch
 from typing import Dict, List, Any, Optional, Tuple
 import pandas as pd
+from pathlib import Path
 
 
 def plot_world_model_training(
-    trainer: Any,
+    losses: Dict[str, List[float]],
     title: str = "World Model Training Progress",
-    save_path: Optional[str] = None
+    save_path: Optional[str] = None,
 ) -> plt.Figure:
-    """
-    Plot world model training progress.
-    
-    Args:
-        trainer: World model trainer with loss history
-        title: Plot title
-        save_path: Path to save the plot
-    
-    Returns:
-        Matplotlib figure
-    """
+    """Plot world model training losses"""
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle(title, fontsize=16)
     
-    # Plot total loss
-    axes[0, 0].plot(trainer.loss_history['total_loss'], 'b-', linewidth=2)
-    axes[0, 0].set_title('Total Loss')
-    axes[0, 0].set_xlabel('Step')
-    axes[0, 0].set_ylabel('Loss')
+    # Total loss
+    axes[0, 0].plot(losses.get("total", []), "b-", linewidth=2)
+    axes[0, 0].set_title("Total Loss")
+    axes[0, 0].set_xlabel("Epoch")
+    axes[0, 0].set_ylabel("Loss")
     axes[0, 0].grid(True, alpha=0.3)
     
-    # Plot VAE loss
-    axes[0, 1].plot(trainer.loss_history['vae_loss'], 'g-', linewidth=2)
-    axes[0, 1].set_title('VAE Loss')
-    axes[0, 1].set_xlabel('Step')
-    axes[0, 1].set_ylabel('Loss')
+    # VAE loss
+    axes[0, 1].plot(losses.get("vae", []), "r-", linewidth=2)
+    axes[0, 1].set_title("VAE Loss")
+    axes[0, 1].set_xlabel("Epoch")
+    axes[0, 1].set_ylabel("Loss")
     axes[0, 1].grid(True, alpha=0.3)
     
-    # Plot dynamics loss
-    axes[1, 0].plot(trainer.loss_history['dynamics_loss'], 'r-', linewidth=2)
-    axes[1, 0].set_title('Dynamics Loss')
-    axes[1, 0].set_xlabel('Step')
-    axes[1, 0].set_ylabel('Loss')
+    # Dynamics loss
+    axes[1, 0].plot(losses.get("dynamics", []), "g-", linewidth=2)
+    axes[1, 0].set_title("Dynamics Loss")
+    axes[1, 0].set_xlabel("Epoch")
+    axes[1, 0].set_ylabel("Loss")
     axes[1, 0].grid(True, alpha=0.3)
     
-    # Plot reward loss
-    axes[1, 1].plot(trainer.loss_history['reward_loss'], 'purple', linewidth=2)
-    axes[1, 1].set_title('Reward Loss')
-    axes[1, 1].set_xlabel('Step')
-    axes[1, 1].set_ylabel('Loss')
+    # Reward loss
+    axes[1, 1].plot(losses.get("reward", []), "m-", linewidth=2)
+    axes[1, 1].set_title("Reward Loss")
+    axes[1, 1].set_xlabel("Epoch")
+    axes[1, 1].set_ylabel("Loss")
     axes[1, 1].grid(True, alpha=0.3)
     
+    plt.suptitle(title, fontsize=16)
     plt.tight_layout()
     
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
     
     return fig
 
 
 def plot_rssm_training(
-    trainer: Any,
+    losses: Dict[str, List[float]],
     title: str = "RSSM Training Progress",
-    save_path: Optional[str] = None
+    save_path: Optional[str] = None,
 ) -> plt.Figure:
-    """
-    Plot RSSM training progress.
-    
-    Args:
-        trainer: RSSM trainer with loss history
-        title: Plot title
-        save_path: Path to save the plot
-    
-    Returns:
-        Matplotlib figure
-    """
+    """Plot RSSM training losses"""
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle(title, fontsize=16)
     
-    # Plot total loss
-    axes[0, 0].plot(trainer.loss_history['total_loss'], 'b-', linewidth=2)
-    axes[0, 0].set_title('Total Loss')
-    axes[0, 0].set_xlabel('Step')
-    axes[0, 0].set_ylabel('Loss')
+    # Total loss
+    axes[0, 0].plot(losses.get("total", []), "b-", linewidth=2)
+    axes[0, 0].set_title("Total Loss")
+    axes[0, 0].set_xlabel("Epoch")
+    axes[0, 0].set_ylabel("Loss")
     axes[0, 0].grid(True, alpha=0.3)
     
-    # Plot reconstruction loss
-    axes[0, 1].plot(trainer.loss_history['reconstruction_loss'], 'g-', linewidth=2)
-    axes[0, 1].set_title('Reconstruction Loss')
-    axes[0, 1].set_xlabel('Step')
-    axes[0, 1].set_ylabel('Loss')
+    # Reconstruction loss
+    axes[0, 1].plot(losses.get("reconstruction", []), "r-", linewidth=2)
+    axes[0, 1].set_title("Reconstruction Loss")
+    axes[0, 1].set_xlabel("Epoch")
+    axes[0, 1].set_ylabel("Loss")
     axes[0, 1].grid(True, alpha=0.3)
     
-    # Plot reward loss
-    axes[1, 0].plot(trainer.loss_history['reward_loss'], 'r-', linewidth=2)
-    axes[1, 0].set_title('Reward Loss')
-    axes[1, 0].set_xlabel('Step')
-    axes[1, 0].set_ylabel('Loss')
+    # Reward loss
+    axes[1, 0].plot(losses.get("reward", []), "g-", linewidth=2)
+    axes[1, 0].set_title("Reward Loss")
+    axes[1, 0].set_xlabel("Epoch")
+    axes[1, 0].set_ylabel("Loss")
     axes[1, 0].grid(True, alpha=0.3)
     
-    # Plot KL loss
-    axes[1, 1].plot(trainer.loss_history['kl_loss'], 'purple', linewidth=2)
-    axes[1, 1].set_title('KL Divergence Loss')
-    axes[1, 1].set_xlabel('Step')
-    axes[1, 1].set_ylabel('Loss')
+    # KL loss
+    axes[1, 1].plot(losses.get("kl", []), "m-", linewidth=2)
+    axes[1, 1].set_title("KL Divergence Loss")
+    axes[1, 1].set_xlabel("Epoch")
+    axes[1, 1].set_ylabel("Loss")
     axes[1, 1].grid(True, alpha=0.3)
     
+    plt.suptitle(title, fontsize=16)
     plt.tight_layout()
     
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    
-    return fig
-
-
-def plot_world_model_predictions(
-    world_model: Any,
-    test_data: Dict[str, np.ndarray],
-    num_samples: int = 5,
-    title: str = "World Model Predictions",
-    save_path: Optional[str] = None
-) -> plt.Figure:
-    """
-    Plot world model predictions vs ground truth.
-    
-    Args:
-        world_model: Trained world model
-        test_data: Test data dictionary
-        num_samples: Number of samples to plot
-        title: Plot title
-        save_path: Path to save the plot
-    
-    Returns:
-        Matplotlib figure
-    """
-    world_model.eval()
-    
-    # Select random samples
-    indices = np.random.choice(len(test_data['observations']), num_samples, replace=False)
-    
-    fig, axes = plt.subplots(num_samples, 3, figsize=(15, 3 * num_samples))
-    if num_samples == 1:
-        axes = axes.reshape(1, -1)
-    
-    fig.suptitle(title, fontsize=16)
-    
-    with torch.no_grad():
-        for i, idx in enumerate(indices):
-            obs = torch.FloatTensor(test_data['observations'][idx]).unsqueeze(0)
-            action = torch.FloatTensor(test_data['actions'][idx]).unsqueeze(0)
-            true_next_obs = test_data['next_observations'][idx]
-            true_reward = test_data['rewards'][idx]
-            
-            # Get predictions
-            pred_next_obs, pred_reward = world_model.predict_next_state_and_reward(obs, action)
-            pred_next_obs = pred_next_obs.squeeze(0).cpu().numpy()
-            pred_reward = pred_reward.item()
-            
-            # Plot observations
-            obs_dim = len(obs.squeeze(0))
-            x = np.arange(obs_dim)
-            
-            axes[i, 0].bar(x - 0.2, obs.squeeze(0), width=0.4, label='Current', alpha=0.7)
-            axes[i, 0].bar(x + 0.2, true_next_obs, width=0.4, label='True Next', alpha=0.7)
-            axes[i, 0].set_title(f'Sample {i+1}: Observations')
-            axes[i, 0].set_xlabel('Dimension')
-            axes[i, 0].set_ylabel('Value')
-            axes[i, 0].legend()
-            axes[i, 0].grid(True, alpha=0.3)
-            
-            # Plot predictions
-            axes[i, 1].bar(x - 0.2, obs.squeeze(0), width=0.4, label='Current', alpha=0.7)
-            axes[i, 1].bar(x + 0.2, pred_next_obs, width=0.4, label='Predicted Next', alpha=0.7)
-            axes[i, 1].set_title(f'Sample {i+1}: Predictions')
-            axes[i, 1].set_xlabel('Dimension')
-            axes[i, 1].set_ylabel('Value')
-            axes[i, 1].legend()
-            axes[i, 1].grid(True, alpha=0.3)
-            
-            # Plot rewards
-            axes[i, 2].bar(['True', 'Predicted'], [true_reward, pred_reward], 
-                          color=['blue', 'red'], alpha=0.7)
-            axes[i, 2].set_title(f'Sample {i+1}: Rewards')
-            axes[i, 2].set_ylabel('Reward')
-            axes[i, 2].grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    
-    if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    
-    return fig
-
-
-def plot_trajectory_rollout(
-    world_model: Any,
-    initial_obs: np.ndarray,
-    actions: np.ndarray,
-    true_trajectory: Optional[np.ndarray] = None,
-    title: str = "Trajectory Rollout",
-    save_path: Optional[str] = None
-) -> plt.Figure:
-    """
-    Plot trajectory rollout from world model.
-    
-    Args:
-        world_model: Trained world model
-        initial_obs: Initial observation
-        actions: Sequence of actions
-        true_trajectory: True trajectory (optional)
-        title: Plot title
-        save_path: Path to save the plot
-    
-    Returns:
-        Matplotlib figure
-    """
-    world_model.eval()
-    
-    # Generate rollout
-    with torch.no_grad():
-        obs_tensor = torch.FloatTensor(initial_obs).unsqueeze(0)
-        actions_tensor = torch.FloatTensor(actions).unsqueeze(0)
-        
-        trajectory = world_model.imagine_trajectory(obs_tensor, actions_tensor, horizon=len(actions))
-        
-        pred_obs = trajectory['observations'].squeeze(0).cpu().numpy()
-        pred_rewards = trajectory['rewards'].squeeze(0).cpu().numpy()
-    
-    # Create plots
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle(title, fontsize=16)
-    
-    # Plot observations over time
-    obs_dim = pred_obs.shape[1]
-    time_steps = np.arange(len(pred_obs))
-    
-    for i in range(min(4, obs_dim)):
-        axes[0, 0].plot(time_steps, pred_obs[:, i], label=f'Dim {i}', linewidth=2)
-    
-    if true_trajectory is not None:
-        for i in range(min(4, true_trajectory.shape[1])):
-            axes[0, 0].plot(time_steps, true_trajectory[:, i], '--', 
-                           label=f'True Dim {i}', linewidth=2, alpha=0.7)
-    
-    axes[0, 0].set_title('Observations Over Time')
-    axes[0, 0].set_xlabel('Time Step')
-    axes[0, 0].set_ylabel('Value')
-    axes[0, 0].legend()
-    axes[0, 0].grid(True, alpha=0.3)
-    
-    # Plot rewards
-    axes[0, 1].plot(time_steps[1:], pred_rewards, 'g-o', linewidth=2, markersize=4)
-    axes[0, 1].set_title('Predicted Rewards')
-    axes[0, 1].set_xlabel('Time Step')
-    axes[0, 1].set_ylabel('Reward')
-    axes[0, 1].grid(True, alpha=0.3)
-    
-    # Plot observation heatmap
-    im = axes[1, 0].imshow(pred_obs.T, aspect='auto', cmap='viridis')
-    axes[1, 0].set_title('Observation Heatmap')
-    axes[1, 0].set_xlabel('Time Step')
-    axes[1, 0].set_ylabel('Observation Dimension')
-    plt.colorbar(im, ax=axes[1, 0])
-    
-    # Plot action sequence
-    if len(actions.shape) > 1:
-        for i in range(actions.shape[1]):
-            axes[1, 1].plot(time_steps[1:], actions[:, i], label=f'Action {i}', linewidth=2)
-    else:
-        axes[1, 1].plot(time_steps[1:], actions, 'r-o', linewidth=2, markersize=4)
-    
-    axes[1, 1].set_title('Action Sequence')
-    axes[1, 1].set_xlabel('Time Step')
-    axes[1, 1].set_ylabel('Action Value')
-    axes[1, 1].legend()
-    axes[1, 1].grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    
-    if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    
-    return fig
-
-
-def plot_latent_space_analysis(
-    world_model: Any,
-    data: Dict[str, np.ndarray],
-    title: str = "Latent Space Analysis",
-    save_path: Optional[str] = None
-) -> plt.Figure:
-    """
-    Plot latent space analysis for world model.
-    
-    Args:
-        world_model: Trained world model
-        data: Data dictionary
-        title: Plot title
-        save_path: Path to save the plot
-    
-    Returns:
-        Matplotlib figure
-    """
-    world_model.eval()
-    
-    # Encode observations to latent space
-    with torch.no_grad():
-        obs_tensor = torch.FloatTensor(data['observations'])
-        latents = world_model.encode_observations(obs_tensor).cpu().numpy()
-    
-    # Create plots
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle(title, fontsize=16)
-    
-    # Plot latent space distribution
-    latent_dim = latents.shape[1]
-    for i in range(min(4, latent_dim)):
-        axes[0, 0].hist(latents[:, i], bins=50, alpha=0.7, label=f'Dim {i}')
-    
-    axes[0, 0].set_title('Latent Space Distribution')
-    axes[0, 0].set_xlabel('Value')
-    axes[0, 0].set_ylabel('Frequency')
-    axes[0, 0].legend()
-    axes[0, 0].grid(True, alpha=0.3)
-    
-    # Plot latent space correlation
-    if latent_dim >= 2:
-        axes[0, 1].scatter(latents[:, 0], latents[:, 1], alpha=0.5, s=1)
-        axes[0, 1].set_title('Latent Space Correlation (Dim 0 vs Dim 1)')
-        axes[0, 1].set_xlabel('Latent Dim 0')
-        axes[0, 1].set_ylabel('Latent Dim 1')
-        axes[0, 1].grid(True, alpha=0.3)
-    
-    # Plot latent space over time
-    if len(latents) > 100:
-        sample_indices = np.random.choice(len(latents), 100, replace=False)
-        sample_latents = latents[sample_indices]
-        time_steps = np.arange(len(sample_latents))
-        
-        for i in range(min(4, latent_dim)):
-            axes[1, 0].plot(time_steps, sample_latents[:, i], label=f'Dim {i}', linewidth=1)
-        
-        axes[1, 0].set_title('Latent Space Over Time (Sample)')
-        axes[1, 0].set_xlabel('Time Step')
-        axes[1, 0].set_ylabel('Value')
-        axes[1, 0].legend()
-        axes[1, 0].grid(True, alpha=0.3)
-    
-    # Plot latent space heatmap
-    if latent_dim >= 2:
-        im = axes[1, 1].imshow(latents[:100].T, aspect='auto', cmap='viridis')
-        axes[1, 1].set_title('Latent Space Heatmap (First 100 samples)')
-        axes[1, 1].set_xlabel('Sample')
-        axes[1, 1].set_ylabel('Latent Dimension')
-        plt.colorbar(im, ax=axes[1, 1])
-    
-    plt.tight_layout()
-    
-    if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
     
     return fig
 
 
 def plot_dreamer_training(
-    dreamer_agent: Any,
+    dreamer_agent,
     title: str = "Dreamer Agent Training Progress",
-    save_path: Optional[str] = None
+    save_path: Optional[str] = None,
 ) -> plt.Figure:
-    """
-    Plot Dreamer agent training progress.
-    
-    Args:
-        dreamer_agent: Dreamer agent with training statistics
-        title: Plot title
-        save_path: Path to save the plot
-    
-    Returns:
-        Matplotlib figure
-    """
+    """Plot Dreamer agent training statistics"""
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle(title, fontsize=16)
     
-    # Plot actor loss
-    axes[0, 0].plot(dreamer_agent.stats['actor_loss'], 'b-', linewidth=2)
-    axes[0, 0].set_title('Actor Loss')
-    axes[0, 0].set_xlabel('Step')
-    axes[0, 0].set_ylabel('Loss')
-    axes[0, 0].grid(True, alpha=0.3)
+    stats = dreamer_agent.stats
     
-    # Plot critic loss
-    axes[0, 1].plot(dreamer_agent.stats['critic_loss'], 'r-', linewidth=2)
-    axes[0, 1].set_title('Critic Loss')
-    axes[0, 1].set_xlabel('Step')
-    axes[0, 1].set_ylabel('Loss')
-    axes[0, 1].grid(True, alpha=0.3)
+    # Actor loss
+    if "actor_loss" in stats and stats["actor_loss"]:
+        axes[0, 0].plot(stats["actor_loss"], "b-", linewidth=2)
+        axes[0, 0].set_title("Actor Loss")
+        axes[0, 0].set_xlabel("Training Step")
+        axes[0, 0].set_ylabel("Loss")
+        axes[0, 0].grid(True, alpha=0.3)
     
-    # Plot imagination reward
-    axes[1, 0].plot(dreamer_agent.stats['imagination_reward'], 'g-', linewidth=2)
-    axes[1, 0].set_title('Imagination Reward')
-    axes[1, 0].set_xlabel('Step')
-    axes[1, 0].set_ylabel('Reward')
-    axes[1, 0].grid(True, alpha=0.3)
+    # Critic loss
+    if "critic_loss" in stats and stats["critic_loss"]:
+        axes[0, 1].plot(stats["critic_loss"], "r-", linewidth=2)
+        axes[0, 1].set_title("Critic Loss")
+        axes[0, 1].set_xlabel("Training Step")
+        axes[0, 1].set_ylabel("Loss")
+        axes[0, 1].grid(True, alpha=0.3)
     
-    # Plot policy entropy
-    axes[1, 1].plot(dreamer_agent.stats['policy_entropy'], 'purple', linewidth=2)
-    axes[1, 1].set_title('Policy Entropy')
-    axes[1, 1].set_xlabel('Step')
-    axes[1, 1].set_ylabel('Entropy')
-    axes[1, 1].grid(True, alpha=0.3)
+    # Imagination reward
+    if "imagination_reward" in stats and stats["imagination_reward"]:
+        axes[1, 0].plot(stats["imagination_reward"], "g-", linewidth=2)
+        axes[1, 0].set_title("Imagination Reward")
+        axes[1, 0].set_xlabel("Training Step")
+        axes[1, 0].set_ylabel("Reward")
+        axes[1, 0].grid(True, alpha=0.3)
     
+    # Policy entropy
+    if "policy_entropy" in stats and stats["policy_entropy"]:
+        axes[1, 1].plot(stats["policy_entropy"], "m-", linewidth=2)
+        axes[1, 1].set_title("Policy Entropy")
+        axes[1, 1].set_xlabel("Training Step")
+        axes[1, 1].set_ylabel("Entropy")
+        axes[1, 1].grid(True, alpha=0.3)
+    
+    plt.suptitle(title, fontsize=16)
     plt.tight_layout()
     
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
     
     return fig
 
 
-def plot_comparison_metrics(
-    metrics: Dict[str, List[float]],
-    title: str = "Model Comparison",
-    save_path: Optional[str] = None
+def plot_episode_rewards(
+    rewards: List[float],
+    title: str = "Episode Rewards",
+    window_size: int = 50,
+    save_path: Optional[str] = None,
 ) -> plt.Figure:
-    """
-    Plot comparison metrics for different models.
+    """Plot episode rewards with moving average"""
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
     
-    Args:
-        metrics: Dictionary of metrics for different models
-        title: Plot title
-        save_path: Path to save the plot
+    # Raw rewards
+    ax1.plot(rewards, "b-", alpha=0.3, linewidth=1)
+    ax1.set_title(f"{title} - Raw")
+    ax1.set_xlabel("Episode")
+    ax1.set_ylabel("Reward")
+    ax1.grid(True, alpha=0.3)
     
-    Returns:
-        Matplotlib figure
-    """
+    # Moving average
+    if len(rewards) >= window_size:
+        moving_avg = pd.Series(rewards).rolling(window=window_size).mean()
+        ax2.plot(moving_avg, "r-", linewidth=2)
+        ax2.set_title(f"{title} - Moving Average (window={window_size})")
+        ax2.set_xlabel("Episode")
+        ax2.set_ylabel("Reward")
+        ax2.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    
+    return fig
+
+
+def plot_latent_space(
+    latents: np.ndarray,
+    labels: Optional[np.ndarray] = None,
+    title: str = "Latent Space Visualization",
+    save_path: Optional[str] = None,
+) -> plt.Figure:
+    """Plot 2D latent space visualization"""
+    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+    
+    if latents.shape[1] >= 2:
+        # 2D scatter plot
+        scatter = axes[0].scatter(
+            latents[:, 0], 
+            latents[:, 1], 
+            c=labels if labels is not None else "blue",
+            cmap="viridis" if labels is not None else None,
+            alpha=0.6
+        )
+        axes[0].set_xlabel("Latent Dimension 1")
+        axes[0].set_ylabel("Latent Dimension 2")
+        axes[0].set_title("2D Latent Space")
+        axes[0].grid(True, alpha=0.3)
+        
+        if labels is not None:
+            plt.colorbar(scatter, ax=axes[0], label="Label")
+    
+    # Latent distribution
+    if latents.shape[1] >= 2:
+        axes[1].hist2d(
+            latents[:, 0], 
+            latents[:, 1], 
+            bins=30, 
+            cmap="Blues"
+        )
+        axes[1].set_xlabel("Latent Dimension 1")
+        axes[1].set_ylabel("Latent Dimension 2")
+        axes[1].set_title("Latent Distribution")
+    
+    plt.suptitle(title, fontsize=16)
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    
+    return fig
+
+
+def plot_reconstruction_comparison(
+    original: np.ndarray,
+    reconstructed: np.ndarray,
+    title: str = "Reconstruction Comparison",
+    save_path: Optional[str] = None,
+) -> plt.Figure:
+    """Plot original vs reconstructed observations"""
+    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+    
+    # Plot first few dimensions
+    num_dims = min(3, original.shape[1])
+    
+    for i in range(num_dims):
+        # Original
+        axes[0, i].plot(original[:, i], "b-", linewidth=2, label="Original")
+        axes[0, i].plot(reconstructed[:, i], "r--", linewidth=2, label="Reconstructed")
+        axes[0, i].set_title(f"Dimension {i+1}")
+        axes[0, i].set_xlabel("Time Step")
+        axes[0, i].set_ylabel("Value")
+        axes[0, i].legend()
+        axes[0, i].grid(True, alpha=0.3)
+        
+        # Reconstruction error
+        error = np.abs(original[:, i] - reconstructed[:, i])
+        axes[1, i].plot(error, "g-", linewidth=2)
+        axes[1, i].set_title(f"Reconstruction Error - Dim {i+1}")
+        axes[1, i].set_xlabel("Time Step")
+        axes[1, i].set_ylabel("Absolute Error")
+        axes[1, i].grid(True, alpha=0.3)
+    
+    plt.suptitle(title, fontsize=16)
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    
+    return fig
+
+
+def plot_imagination_trajectory(
+    imagined_states: np.ndarray,
+    imagined_rewards: np.ndarray,
+    title: str = "Imagined Trajectory",
+    save_path: Optional[str] = None,
+) -> plt.Figure:
+    """Plot imagined trajectory from world model"""
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle(title, fontsize=16)
     
-    # Plot training loss comparison
-    for model_name, loss_history in metrics.items():
-        if 'loss' in model_name.lower():
-            axes[0, 0].plot(loss_history, label=model_name, linewidth=2)
+    # Imagined states
+    if imagined_states.shape[1] >= 2:
+        axes[0, 0].plot(imagined_states[:, 0], imagined_states[:, 1], "b-o", linewidth=2, markersize=4)
+        axes[0, 0].set_xlabel("State Dimension 1")
+        axes[0, 0].set_ylabel("State Dimension 2")
+        axes[0, 0].set_title("Imagined State Trajectory")
+    axes[0, 0].grid(True, alpha=0.3)
     
-    axes[0, 0].set_title('Training Loss Comparison')
-    axes[0, 0].set_xlabel('Step')
-    axes[0, 0].set_ylabel('Loss')
+    # Imagined rewards
+    axes[0, 1].plot(imagined_rewards, "r-o", linewidth=2, markersize=4)
+    axes[0, 1].set_xlabel("Time Step")
+    axes[0, 1].set_ylabel("Reward")
+    axes[0, 1].set_title("Imagined Rewards")
+    axes[0, 1].grid(True, alpha=0.3)
+    
+    # State evolution over time
+    if imagined_states.shape[1] >= 2:
+        for i in range(min(2, imagined_states.shape[1])):
+            axes[1, 0].plot(imagined_states[:, i], label=f"Dim {i+1}", linewidth=2)
+        axes[1, 0].set_xlabel("Time Step")
+        axes[1, 0].set_ylabel("State Value")
+        axes[1, 0].set_title("State Evolution")
+        axes[1, 0].legend()
+    axes[1, 0].grid(True, alpha=0.3)
+    
+    # Reward distribution
+    axes[1, 1].hist(imagined_rewards, bins=20, alpha=0.7, edgecolor="black")
+    axes[1, 1].set_xlabel("Reward")
+    axes[1, 1].set_ylabel("Frequency")
+    axes[1, 1].set_title("Imagined Reward Distribution")
+    axes[1, 1].grid(True, alpha=0.3)
+    
+    plt.suptitle(title, fontsize=16)
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    
+    return fig
+
+
+def plot_world_model_comparison(
+    results: Dict[str, Any],
+    title: str = "World Model Comparison",
+    save_path: Optional[str] = None,
+) -> plt.Figure:
+    """Plot comparison between different world model methods"""
+    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    
+    methods = list(results.keys())
+    
+    # Episode rewards comparison
+    for method in methods:
+        if "episode_rewards" in results[method]:
+            rewards = results[method]["episode_rewards"]
+            moving_avg = pd.Series(rewards).rolling(window=50).mean()
+            axes[0, 0].plot(moving_avg, label=method, linewidth=2)
+    
+    axes[0, 0].set_title("Episode Rewards Comparison")
+    axes[0, 0].set_xlabel("Episode")
+    axes[0, 0].set_ylabel("Reward")
     axes[0, 0].legend()
     axes[0, 0].grid(True, alpha=0.3)
     
-    # Plot reward comparison
-    for model_name, reward_history in metrics.items():
-        if 'reward' in model_name.lower():
-            axes[0, 1].plot(reward_history, label=model_name, linewidth=2)
+    # Final performance comparison
+    final_rewards = []
+    method_names = []
+    for method in methods:
+        if "final_avg_reward" in results[method]:
+            final_rewards.append(results[method]["final_avg_reward"])
+            method_names.append(method)
     
-    axes[0, 1].set_title('Reward Comparison')
-    axes[0, 1].set_xlabel('Step')
-    axes[0, 1].set_ylabel('Reward')
-    axes[0, 1].legend()
+    if final_rewards:
+        bars = axes[0, 1].bar(method_names, final_rewards, alpha=0.7)
+        axes[0, 1].set_title("Final Performance Comparison")
+        axes[0, 1].set_ylabel("Average Reward")
     axes[0, 1].grid(True, alpha=0.3)
+        
+        # Add value labels on bars
+        for bar, value in zip(bars, final_rewards):
+            axes[0, 1].text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+                           f'{value:.2f}', ha='center', va='bottom')
     
-    # Plot accuracy comparison
-    for model_name, accuracy_history in metrics.items():
-        if 'accuracy' in model_name.lower():
-            axes[1, 0].plot(accuracy_history, label=model_name, linewidth=2)
+    # Sample efficiency comparison
+    sample_efficiency = []
+    for method in methods:
+        if "episode_rewards" in results[method]:
+            rewards = results[method]["episode_rewards"]
+            # Calculate episodes to reach 80% of final performance
+            final_perf = np.mean(rewards[-50:])
+            target_perf = 0.8 * final_perf
+            episodes_to_target = len(rewards)
+            for i, reward in enumerate(rewards):
+                if np.mean(rewards[max(0, i-10):i+1]) >= target_perf:
+                    episodes_to_target = i
+                    break
+            sample_efficiency.append(episodes_to_target)
+        else:
+            sample_efficiency.append(0)
     
-    axes[1, 0].set_title('Accuracy Comparison')
-    axes[1, 0].set_xlabel('Step')
-    axes[1, 0].set_ylabel('Accuracy')
-    axes[1, 0].legend()
+    bars = axes[1, 0].bar(method_names, sample_efficiency, alpha=0.7, color="orange")
+    axes[1, 0].set_title("Sample Efficiency (Episodes to 80% Performance)")
+    axes[1, 0].set_ylabel("Episodes")
     axes[1, 0].grid(True, alpha=0.3)
     
-    # Plot final performance comparison
-    final_metrics = {}
-    for model_name, history in metrics.items():
-        if len(history) > 0:
-            final_metrics[model_name] = history[-1]
+    # Training stability comparison
+    stability_scores = []
+    for method in methods:
+        if "episode_rewards" in results[method]:
+            rewards = results[method]["episode_rewards"]
+            # Calculate coefficient of variation as stability measure
+            if len(rewards) > 100:
+                recent_rewards = rewards[-100:]
+                stability = 1.0 / (np.std(recent_rewards) / (np.mean(recent_rewards) + 1e-8))
+                stability_scores.append(stability)
+            else:
+                stability_scores.append(0)
+        else:
+            stability_scores.append(0)
     
-    if final_metrics:
-        model_names = list(final_metrics.keys())
-        values = list(final_metrics.values())
-        axes[1, 1].bar(model_names, values, alpha=0.7)
-        axes[1, 1].set_title('Final Performance Comparison')
-        axes[1, 1].set_ylabel('Final Value')
-        axes[1, 1].tick_params(axis='x', rotation=45)
+    bars = axes[1, 1].bar(method_names, stability_scores, alpha=0.7, color="green")
+    axes[1, 1].set_title("Training Stability")
+    axes[1, 1].set_ylabel("Stability Score")
         axes[1, 1].grid(True, alpha=0.3)
     
+    plt.suptitle(title, fontsize=16)
     plt.tight_layout()
     
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
     
     return fig
+
+
+def create_comprehensive_report(
+    results: Dict[str, Any],
+    save_dir: str = "visualizations",
+) -> None:
+    """Create comprehensive visualization report"""
+    save_path = Path(save_dir)
+    save_path.mkdir(exist_ok=True)
+    
+    print("Creating comprehensive visualization report...")
+    
+    # World model training plots
+    for method_name, method_results in results.items():
+        if "world_model_losses" in method_results:
+            plot_world_model_training(
+                method_results["world_model_losses"],
+                title=f"{method_name} - World Model Training",
+                save_path=save_path / f"{method_name}_world_model_training.png"
+            )
+        
+        if "episode_rewards" in method_results:
+            plot_episode_rewards(
+                method_results["episode_rewards"],
+                title=f"{method_name} - Episode Rewards",
+                save_path=save_path / f"{method_name}_episode_rewards.png"
+            )
+    
+    # Comparison plots
+    plot_world_model_comparison(
+        results,
+        title="World Model Methods Comparison",
+        save_path=save_path / "methods_comparison.png"
+    )
+    
+    print(f"Visualization report saved to: {save_path}")

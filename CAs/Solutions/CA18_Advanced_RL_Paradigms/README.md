@@ -16,6 +16,7 @@ This package transforms the monolithic CA18.ipynb notebook into a clean, maintai
 ## Installation
 
 ### Quick Start (Recommended)
+
 ```bash
 # Make the script executable and run it
 chmod +x run.sh
@@ -23,12 +24,14 @@ chmod +x run.sh
 ```
 
 This will automatically:
+
 - Create a virtual environment
-- Install all dependencies  
+- Install all dependencies
 - Run comprehensive demos
 - Generate visualizations and reports
 
 ### Manual Installation
+
 ```bash
 # Create virtual environment
 python3 -m venv ca18_env

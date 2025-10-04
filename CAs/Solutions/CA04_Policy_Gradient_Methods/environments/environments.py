@@ -3,7 +3,7 @@ Environment utilities for Policy Gradient Methods
 CA4: Policy Gradient Methods and Neural Networks in RL
 """
 
-import gym
+import gymnasium as gym
 import numpy as np
 import torch
 from typing import Optional, Tuple, Any
