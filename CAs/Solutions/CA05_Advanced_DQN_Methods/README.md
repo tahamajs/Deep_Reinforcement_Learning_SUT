@@ -1,269 +1,240 @@
-# CA5: Deep Q-Networks (DQN) and Advanced Value-Based Methods
+# CA5 Advanced DQN Methods
 
-## Overview
+این پروژه شامل پیاده‌سازی کامل روش‌های پیشرفته Deep Q-Network (DQN) است که شامل Double DQN، Dueling DQN، Prioritized Experience Replay و Rainbow DQN می‌باشد.
 
-This assignment provides a **comprehensive, production-ready implementation** of Deep Q-Networks (DQN) and advanced value-based reinforcement learning methods. The project features clean, modular code with all implementations in separate `.py` files, ready for import and use in the main notebook.
+## ویژگی‌های پروژه
 
-**Status**: ✅ **COMPLETE** - All sections implemented, tested, and documented
+### 🤖 Agent های پیاده‌سازی شده
 
-## Key Concepts
+- **Vanilla DQN**: پیاده‌سازی پایه DQN
+- **Double DQN**: حل مشکل overestimation bias
+- **Dueling DQN**: جداسازی value و advantage streams
+- **Prioritized DQN**: استفاده از Prioritized Experience Replay
+- **Rainbow DQN**: ترکیب تمام بهبودها
 
-### Deep Q-Networks (DQN)
+### 🌍 Environment های سفارشی
 
-- **Function Approximation**: Neural networks for Q-value estimation
-- **Experience Replay**: Breaking temporal correlations in training data
-- **Target Networks**: Stabilizing training with fixed Q-targets
-- **Convolutional Architectures**: Handling image-based observations
+- **GridWorld**: محیط ساده برای تست الگوریتم‌ها
+- **MountainCarContinuous**: محیط Mountain Car پیوسته
+- **LunarLander**: محیط Lunar Lander با reward shaping
 
-### Advanced DQN Variants
+### 🛠️ ابزارهای کمکی
 
-- **Double DQN**: Addressing overestimation bias in Q-learning
-- **Dueling DQN**: Separating state value and advantage estimation
-- **Prioritized Experience Replay**: Intelligent sampling based on TD error
-- **Rainbow DQN**: Combining multiple DQN improvements
+- **Replay Buffer**: Experience replay معمولی و اولویت‌دار
+- **Network Architectures**: معماری‌های مختلف شبکه عصبی
+- **Training Analysis**: ابزارهای تحلیل آموزش
+- **Performance Evaluation**: ارزیابی عملکرد agent ها
 
-## Project Structure
+## نصب و راه‌اندازی
 
-```
-CA5/
-├── CA5.ipynb                    # Main educational notebook
-├── dqn_base.py                  # Basic DQN implementation
-├── double_dqn.py                # Double DQN with bias correction
-├── dueling_dqn.py               # Dueling architecture implementation
-├── prioritized_replay.py        # Prioritized experience replay
-├── rainbow_dqn.py               # Rainbow DQN combination
-├── analysis_tools.py            # Performance analysis utilities
-├── ca5_helpers.py               # Helper functions and utilities
-├── ca5_main.py                  # Main training and evaluation script
-├── __init__.py                  # Package initialization
-└── requirements.txt             # Dependencies
-```
-
-## Algorithms Implemented
-
-### 1. Basic DQN (`dqn_base.py`)
-
-- **Core Components**:
-  - Fully connected and convolutional neural networks
-  - Experience replay buffer with uniform sampling
-  - Target network updates for stability
-  - ε-greedy exploration with decay
-- **Key Features**:
-  - Gradient clipping for training stability
-  - Configurable network architectures
-  - Comprehensive training metrics tracking
-
-### 2. Double DQN (`double_dqn.py`)
-
-- **Bias Correction**: Decouples action selection from evaluation
-- **Implementation**: Uses online network for action selection, target network for evaluation
-- **Analysis Tools**: Synthetic environments for bias demonstration
-- **Performance Comparison**: Statistical comparison with standard DQN
-
-### 3. Dueling DQN (`dueling_dqn.py`)
-
-- **Architecture**: Separate value and advantage streams
-- **Decomposition**: Q(s,a) = V(s) + A(s,a) - mean(A(s,·))
-- **Benefits**: Better state value learning, improved sample efficiency
-- **Variants**: Standard and convolutional dueling architectures
-
-### 4. Prioritized Experience Replay (`prioritized_replay.py`)
-
-- **Priority Calculation**: Based on TD error magnitude
-- **Data Structure**: Sum tree for efficient sampling
-- **Importance Sampling**: Bias correction weights
-- **Hyperparameters**: Configurable prioritization strength
-
-### 5. Rainbow DQN (`rainbow_dqn.py`)
-
-- **Combined Improvements**: Integrates all advanced techniques
-- **Multi-Head Networks**: Handles different aspects simultaneously
-- **Performance**: State-of-the-art DQN performance
-- **Modular Design**: Easy to enable/disable individual components
-
-## Key Features
-
-### Modular Architecture
-
-- **Base Classes**: Reusable components for all DQN variants
-- **Inheritance Hierarchy**: Easy extension and customization
-- **Configuration System**: Hyperparameter management
-- **Plugin Architecture**: Mix and match improvements
-
-### Comprehensive Analysis Tools (`analysis_tools.py`)
-
-- **Performance Metrics**: Learning curves, convergence analysis
-- **Statistical Comparison**: Multiple runs with confidence intervals
-- **Bias Analysis**: Overestimation bias visualization
-- **Architecture Comparison**: Parameter efficiency analysis
-
-### Training Framework (`ca5_main.py`)
-
-- **Experiment Runner**: Automated training and evaluation
-- **Hyperparameter Sweeps**: Systematic parameter optimization
-- **Benchmark Suite**: Multi-environment testing
-- **Result Visualization**: Comprehensive plotting utilities
-
-## Installation & Setup
-
-### Requirements
+### پیش‌نیازها
 
 ```bash
+Python 3.8+
+PyTorch 1.9+
+Gym/Gymnasium
+```
+
+### نصب
+
+```bash
+# کلون کردن پروژه
+git clone <repository-url>
+cd CA05_Advanced_DQN_Methods
+
+# نصب dependencies
 pip install -r requirements.txt
+
+# اجرای کامل پروژه
+./run.sh
 ```
 
-### Dependencies
+## استفاده سریع
 
-- **PyTorch**: Neural network implementation and optimization
-- **Gym/Gymnasium**: Reinforcement learning environments
-- **NumPy**: Numerical computations
-- **Matplotlib/Seaborn**: Visualization and plotting
-- **OpenCV**: Image processing for Atari environments
-
-## Usage Examples
-
-### Basic DQN Training
+### آموزش یک Agent
 
 ```python
-from dqn_base import DQNAgent, create_test_environment
+from agents import DQNAgent
+from training_examples import train_dqn_agent
 
-# Create environment and agent
-env, state_size, action_size = create_test_environment()
-agent = DQNAgent(state_size, action_size)
-
-# Train agent
-scores, losses = agent.train(env, num_episodes=1000)
-print(f"Final score: {scores[-1]:.2f}")
+# آموزش Vanilla DQN
+results = train_dqn_agent(
+    env_name='CartPole-v1',
+    agent_type='dqn',
+    num_episodes=1000
+)
 ```
 
-### Double DQN with Bias Analysis
+### مقایسه Agent های مختلف
 
 ```python
-from double_dqn import DoubleDQNAgent, OverestimationAnalysis
+from training_examples import dqn_variant_comparison
 
-# Train Double DQN agent
-agent = DoubleDQNAgent(state_size, action_size)
-scores, _ = agent.train(env, num_episodes=500)
-
-# Analyze overestimation bias
-bias_analysis = OverestimationAnalysis()
-results = bias_analysis.visualize_bias_analysis()
+# مقایسه تمام variant ها
+comparison_results = dqn_variant_comparison()
 ```
 
-### Algorithm Comparison
+### اجرای آزمایشات
 
 ```python
-from analysis_tools import DQNComparison
+from experiments import ExperimentRunner, get_dqn_configs
+from agents import DQNAgent, DoubleDQNAgent
 
-# Compare multiple algorithms
-comparison = DQNComparison(env, state_size, action_size)
-standard_results, double_results, _, _ = comparison.run_comparison()
-comparison.visualize_comparison(standard_results, double_results)
+runner = ExperimentRunner()
+configs = get_dqn_configs()
+agent_classes = [DQNAgent, DoubleDQNAgent]
+
+results = runner.run_comparison_experiment(
+    configs, agent_classes, 'CartPole-v1'
+)
 ```
 
-## Educational Content
+## ساختار پروژه
 
-### CA5.ipynb Features
+```
+CA05_Advanced_DQN_Methods/
+├── agents/                 # پیاده‌سازی agent ها
+│   ├── dqn_base.py        # DQN پایه
+│   ├── double_dqn.py      # Double DQN
+│   ├── dueling_dqn.py     # Dueling DQN
+│   ├── prioritized_replay.py # Prioritized DQN
+│   └── rainbow_dqn.py     # Rainbow DQN
+├── environments/          # محیط‌های سفارشی
+│   └── custom_envs.py     # تعریف محیط‌ها
+├── utils/                # ابزارهای کمکی
+│   ├── advanced_dqn_extensions.py
+│   ├── network_architectures.py
+│   ├── training_analysis.py
+│   ├── analysis_tools.py
+│   ├── ca5_helpers.py
+│   └── ca5_main.py
+├── experiments/          # تنظیمات آزمایشات
+│   └── __init__.py       # Experiment runner
+├── evaluation/           # ارزیابی عملکرد
+│   └── __init__.py       # Performance evaluator
+├── visualizations/       # نمودارها و تصاویر
+├── models/              # مدل‌های ذخیره شده
+├── results/             # نتایج آزمایشات
+├── training_examples.py # مثال‌های آموزش
+├── CA5.ipynb           # Jupyter notebook
+├── run.sh              # اسکریپت اجرای کامل
+└── requirements.txt    # Dependencies
+```
 
-- **DQN Fundamentals**: From tabular Q-learning to deep networks
-- **Experience Replay**: Understanding temporal correlation issues
-- **Target Networks**: Mathematical analysis of training stability
-- **Double DQN**: Overestimation bias theory and correction
-- **Dueling Architecture**: Value-advantage decomposition
-- **Prioritized Replay**: Intelligent sampling strategies
-- **Rainbow Integration**: Combining all improvements
-- **Atari Gaming**: Application to complex visual environments
+## اجرای کامل پروژه
 
-### Key Learning Objectives
+برای اجرای کامل تمام کامپوننت‌ها:
 
-1. **Deep Function Approximation**: Neural networks for value functions
-2. **Training Stability**: Target networks and gradient clipping
-3. **Sample Efficiency**: Experience replay and prioritization
-4. **Bias Correction**: Understanding and fixing overestimation
-5. **Architecture Design**: Dueling networks and multi-head architectures
-6. **Hyperparameter Tuning**: Systematic optimization strategies
+```bash
+./run.sh
+```
 
-## Performance & Results
+این اسکریپت:
 
-### Expected Performance (CartPole-v1)
+1. ✅ محیط مجازی ایجاد می‌کند
+2. ✅ Dependencies نصب می‌کند
+3. ✅ محیط‌های سفارشی تست می‌کند
+4. ✅ Agent ها تست می‌کند
+5. ✅ مثال‌های آموزش اجرا می‌کند
+6. ✅ آزمایشات مقایسه‌ای انجام می‌دهد
+7. ✅ ارزیابی عملکرد انجام می‌دهد
+8. ✅ نمودارها و تصاویر تولید می‌کند
+9. ✅ گزارش خلاصه ایجاد می‌کند
 
-- **Basic DQN**: ~150-200 average reward
-- **Double DQN**: ~180-250 average reward
-- **Dueling DQN**: ~200-280 average reward
-- **Rainbow DQN**: ~250-350 average reward
+## نتایج و خروجی‌ها
 
-### Training Stability Improvements
+پس از اجرای کامل، نتایج در پوشه‌های زیر ذخیره می‌شوند:
 
-- **Experience Replay**: Reduces variance by ~50%
-- **Target Networks**: Prevents divergence and oscillations
-- **Double DQN**: Reduces overestimation bias by ~20-30%
-- **Prioritized Replay**: Improves sample efficiency by ~30-50%
+- **visualizations/**: نمودارها و تصاویر
 
-## Advanced Topics
+  - `q_value_landscape.png`: نقشه Q-values
+  - `replay_analysis.png`: تحلیل experience replay
+  - `agent_comparison.png`: مقایسه agent ها
 
-### Convolutional Architectures
+- **results/**: نتایج آموزش و ارزیابی
 
-- **Atari Preprocessing**: Frame stacking and downsampling
-- **Network Design**: Convolutional layers for feature extraction
-- **Training Challenges**: High-dimensional input handling
+  - `training_results.json`: نتایج آموزش
+  - `summary_report.json`: گزارش خلاصه
 
-### Hyperparameter Sensitivity
+- **experiments/**: نتایج آزمایشات
+  - `comparison_results.json`: نتایج مقایسه‌ای
 
-- **Learning Rate**: Critical for stability (typically 1e-4 to 1e-3)
-- **Target Update Frequency**: Trade-off between adaptation and stability
-- **Replay Buffer Size**: Memory vs sample diversity balance
-- **Prioritization Strength**: α parameter tuning
+## مثال‌های استفاده
 
-### Extensions and Variations
+### آموزش Double DQN
 
-- **Distributional DQN**: Learning value distributions
-- **Noisy Networks**: Intrinsic exploration mechanisms
-- **Multi-Step Learning**: N-step returns for bootstrapping
-- **Population-Based Training**: Automated hyperparameter optimization
+```python
+from agents import DoubleDQNAgent
+import gym
 
-## Applications
+env = gym.make('CartPole-v1')
+agent = DoubleDQNAgent(
+    state_dim=env.observation_space.shape[0],
+    action_dim=env.action_space.n,
+    lr=1e-3,
+    gamma=0.99
+)
 
-### Game Playing
+# آموزش
+for episode in range(1000):
+    state = env.reset()
+    done = False
+    while not done:
+        action = agent.select_action(state)
+        next_state, reward, done, info = env.step(action)
+        agent.replay_buffer.push(state, action, reward, next_state, done)
+        if len(agent.replay_buffer) > agent.batch_size:
+            agent.update()
+        state = next_state
+```
 
-- **Atari Games**: Classic arcade game playing
-- **Board Games**: Go, Chess, and other strategy games
-- **Real-Time Strategy**: Complex multi-agent scenarios
+### استفاده از Prioritized Experience Replay
 
-### Robotics
+```python
+from agents import PrioritizedDQNAgent
 
-- **Continuous Control**: Motor control and manipulation
-- **Navigation**: Autonomous path planning
-- **Manipulation**: Object grasping and tool use
+agent = PrioritizedDQNAgent(
+    state_dim=4,
+    action_dim=2,
+    alpha=0.6,  # اولویت‌دهی
+    beta=0.4   # تصحیح bias
+)
+```
 
-### Resource Management
+## تنظیمات پیشرفته
 
-- **Network Routing**: Traffic optimization
-- **Power Systems**: Load balancing and scheduling
-- **Financial Trading**: Portfolio optimization
+### پارامترهای مهم
 
-## Troubleshooting
+- **Learning Rate**: `lr=1e-3` (پیش‌فرض)
+- **Discount Factor**: `gamma=0.99`
+- **Epsilon Decay**: `epsilon_decay=0.995`
+- **Buffer Size**: `buffer_size=10000`
+- **Batch Size**: `batch_size=32`
 
-### Common Issues
+### محیط‌های پشتیبانی شده
 
-- **Unstable Training**: Use target networks and gradient clipping
-- **Poor Sample Efficiency**: Implement prioritized replay
-- **Overestimation**: Switch to Double DQN
-- **Slow Convergence**: Adjust learning rates and network architecture
+- `CartPole-v1`: محیط کلاسیک
+- `MountainCar-v0`: محیط چالش‌برانگیز
+- `LunarLander-v2`: محیط پیچیده
+- `GridWorld`: محیط سفارشی
 
-### Performance Tips
+## مشارکت
 
-- **Batch Normalization**: Add to convolutional layers for stability
-- **Learning Rate Scheduling**: Decay learning rate over time
-- **Data Augmentation**: Artificially increase replay diversity
-- **Multi-Environment Training**: Transfer learning across tasks
+برای مشارکت در پروژه:
 
-### Debugging Tools
+1. Fork کنید
+2. Branch جدید ایجاد کنید
+3. تغییرات را commit کنید
+4. Pull request ارسال کنید
 
-- **Q-Value Monitoring**: Track average Q-values during training
-- **Gradient Analysis**: Monitor gradient magnitudes and distributions
-- **Replay Buffer Inspection**: Analyze stored experience distributions
-- **Network Output Visualization**: Understand what the network has learned
+## مجوز
+
+این پروژه تحت مجوز MIT منتشر شده است.
+
+## تماس
+
+برای سوالات و پشتیبانی، با تیم توسعه تماس بگیرید.
 
 ---
 
-_This assignment provides a comprehensive exploration of deep Q-learning, from basic DQN to state-of-the-art Rainbow DQN, with practical implementations and thorough analysis tools for understanding value-based reinforcement learning._
+**نکته**: این پروژه برای اهداف آموزشی و تحقیقاتی طراحی شده است. برای استفاده در محیط‌های production، تست‌های بیشتری مورد نیاز است.

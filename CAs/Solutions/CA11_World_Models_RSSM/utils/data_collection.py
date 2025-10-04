@@ -1,146 +1,160 @@
 """
 Data Collection Utilities for World Models
 
-This module provides utilities for collecting experience data from environments
-for training world models and model-based RL agents.
+This module provides utilities for collecting data from environments
+for training world models and reinforcement learning agents.
 """
 
 import numpy as np
 import torch
-from typing import Dict, List, Any, Tuple
-import gymnasium as gym
-from tqdm import tqdm
+from typing import Dict, List, Tuple, Any, Optional
+import random
+from collections import deque
+
+
+def set_seed(seed: int = 42) -> None:
+    """Set random seeds for reproducibility"""
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+
+def get_device() -> torch.device:
+    """Get the best available device"""
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def collect_world_model_data(
-    env: gym.Env,
+    env,
     steps: int = 1000,
-    episodes: int = None,
-    random_policy: bool = True,
-    seed: int = None
-) -> Dict[str, List]:
+    episodes: Optional[int] = None,
+    seed: int = 42,
+    action_noise: float = 0.1,
+    random_action_prob: float = 0.5,
+) -> Dict[str, List[np.ndarray]]:
     """
-    Collect experience data for world model training.
+    Collect data from environment for world model training
     
     Args:
-        env: Environment to collect data from
-        steps: Total number of steps to collect
-        episodes: Number of episodes to collect (if None, use steps)
-        random_policy: Whether to use random policy
-        seed: Random seed for reproducibility
+        env: Gymnasium environment
+        steps: Number of steps to collect
+        episodes: Number of episodes to collect (overrides steps if provided)
+        seed: Random seed
+        action_noise: Noise level for actions
+        random_action_prob: Probability of taking random action
     
     Returns:
-        Dictionary containing observations, actions, rewards, next_observations
+        Dictionary containing observations, actions, next_observations, rewards
     """
-    if seed is not None:
-        np.random.seed(seed)
-        env.reset(seed=seed)
+    set_seed(seed)
     
-    data = {
-        'observations': [],
-        'actions': [],
-        'rewards': [],
-        'next_observations': [],
-        'dones': []
-    }
+    observations = []
+    actions = []
+    next_observations = []
+    rewards = []
+    dones = []
     
-    obs, _ = env.reset()
-    current_steps = 0
-    current_episodes = 0
+    obs, _ = env.reset(seed=seed)
+    current_step = 0
+    episode_count = 0
     
-    # Determine collection strategy
-    if episodes is not None:
-        target = episodes
-        use_episodes = True
-    else:
-        target = steps
-        use_episodes = False
-    
-    pbar = tqdm(total=target, desc="Collecting data")
-    
-    while current_steps < steps and (episodes is None or current_episodes < episodes):
+    while True:
+        if episodes is not None and episode_count >= episodes:
+            break
+        if episodes is None and current_step >= steps:
+            break
+            
         # Select action
-        if random_policy:
-            if isinstance(env.action_space, gym.spaces.Box):
-                action = env.action_space.sample()
-            else:
+        if random.random() < random_action_prob:
+            # Random action
                 action = env.action_space.sample()
         else:
-            # Placeholder for custom policy
-            action = env.action_space.sample()
+            # Add noise to previous action or use zero
+            if len(actions) > 0:
+                action = np.clip(
+                    actions[-1] + np.random.normal(0, action_noise, size=env.action_space.shape),
+                    env.action_space.low,
+                    env.action_space.high
+                )
+            else:
+                action = np.zeros(env.action_space.shape, dtype=np.float32)
         
         # Take step
         next_obs, reward, terminated, truncated, _ = env.step(action)
         done = terminated or truncated
         
         # Store transition
-        data['observations'].append(obs.copy())
-        data['actions'].append(action.copy() if isinstance(action, np.ndarray) else [action])
-        data['rewards'].append(reward)
-        data['next_observations'].append(next_obs.copy())
-        data['dones'].append(done)
+        observations.append(obs.copy())
+        actions.append(action.copy())
+        next_observations.append(next_obs.copy())
+        rewards.append(reward)
+        dones.append(done)
         
-        # Update counters
-        current_steps += 1
-        if use_episodes:
-            pbar.update(1)
-        else:
-            pbar.update(1)
+        obs = next_obs
+        current_step += 1
         
-        # Reset if episode ended
         if done:
             obs, _ = env.reset()
-            current_episodes += 1
-        else:
-            obs = next_obs
+            episode_count += 1
     
-    pbar.close()
-    
-    # Convert to numpy arrays
-    for key in data:
-        data[key] = np.array(data[key])
-    
-    return data
+    return {
+        "observations": observations,
+        "actions": actions,
+        "next_observations": next_observations,
+        "rewards": rewards,
+        "dones": dones,
+    }
 
 
-def collect_sequence_data(
-    env: gym.Env,
-    episodes: int = 50,
-    episode_length: int = 20,
-    seed: int = None
-) -> List[Dict[str, List]]:
+def collect_rollout_data(
+    env,
+    agent,
+    num_episodes: int = 10,
+    max_steps: int = 200,
+    seed: int = 42,
+    deterministic: bool = False,
+) -> Dict[str, List[np.ndarray]]:
     """
-    Collect sequence data for temporal world model training.
+    Collect rollout data using a trained agent
     
     Args:
-        env: Environment to collect data from
-        episodes: Number of episodes to collect
-        episode_length: Length of each episode
-        seed: Random seed for reproducibility
+        env: Gymnasium environment
+        agent: Trained agent
+        num_episodes: Number of episodes to collect
+        max_steps: Maximum steps per episode
+        seed: Random seed
+        deterministic: Whether to use deterministic actions
     
     Returns:
-        List of episode dictionaries containing observations, actions, rewards
+        Dictionary containing rollout data
     """
-    if seed is not None:
-        np.random.seed(seed)
-        env.reset(seed=seed)
+    set_seed(seed)
     
-    episodes_data = []
+    all_observations = []
+    all_actions = []
+    all_rewards = []
+    all_dones = []
+    episode_rewards = []
+    episode_lengths = []
     
-    for episode in tqdm(range(episodes), desc="Collecting sequence data"):
-        episode_data = {
-            'observations': [],
-            'actions': [],
-            'rewards': []
-        }
+    for episode in range(num_episodes):
+        obs, _ = env.reset(seed=seed + episode)
+        episode_reward = 0
+        episode_length = 0
         
-        obs, _ = env.reset()
-        
-        for step in range(episode_length):
-            # Select action
-            if isinstance(env.action_space, gym.spaces.Box):
-                action = env.action_space.sample()
+        for step in range(max_steps):
+            # Get action from agent
+            if hasattr(agent, 'select_action'):
+                action = agent.select_action(obs, deterministic=deterministic)
+            elif hasattr(agent, 'act'):
+                obs_tensor = torch.FloatTensor(obs).unsqueeze(0)
+                action = agent.act(obs_tensor, deterministic=deterministic)
+                action = action.cpu().numpy()
             else:
+                # Fallback to random action
                 action = env.action_space.sample()
             
             # Take step
@@ -148,123 +162,84 @@ def collect_sequence_data(
             done = terminated or truncated
             
             # Store transition
-            episode_data['observations'].append(obs.copy())
-            episode_data['actions'].append(action.copy() if isinstance(action, np.ndarray) else [action])
-            episode_data['rewards'].append(reward)
+            all_observations.append(obs.copy())
+            all_actions.append(action.copy())
+            all_rewards.append(reward)
+            all_dones.append(done)
             
-            # Update observation
             obs = next_obs
+            episode_reward += reward
+            episode_length += 1
             
-            # Break if episode ended early
             if done:
                 break
         
-        episodes_data.append(episode_data)
+        episode_rewards.append(episode_reward)
+        episode_lengths.append(episode_length)
     
-    return episodes_data
+    return {
+        "observations": all_observations,
+        "actions": all_actions,
+        "rewards": all_rewards,
+        "dones": all_dones,
+        "episode_rewards": episode_rewards,
+        "episode_lengths": episode_lengths,
+    }
 
 
-def collect_rollout_data(
-    env: gym.Env,
-    agent: Any,
-    steps: int = 1000,
-    episodes: int = None,
-    seed: int = None
-) -> Dict[str, List]:
+def create_sequence_dataset(
+    data: Dict[str, List[np.ndarray]],
+    sequence_length: int = 10,
+    overlap: int = 5,
+) -> Dict[str, List[np.ndarray]]:
     """
-    Collect experience data using a specific agent.
+    Create sequence dataset from collected data
     
     Args:
-        env: Environment to collect data from
-        agent: Agent to use for action selection
-        steps: Total number of steps to collect
-        episodes: Number of episodes to collect (if None, use steps)
-        seed: Random seed for reproducibility
+        data: Dictionary containing transitions
+        sequence_length: Length of sequences
+        overlap: Overlap between sequences
     
     Returns:
-        Dictionary containing observations, actions, rewards, next_observations
+        Dictionary containing sequences
     """
-    if seed is not None:
-        np.random.seed(seed)
-        env.reset(seed=seed)
+    observations = data["observations"]
+    actions = data["actions"]
+    rewards = data["rewards"]
     
-    data = {
-        'observations': [],
-        'actions': [],
-        'rewards': [],
-        'next_observations': [],
-        'dones': []
+    seq_observations = []
+    seq_actions = []
+    seq_rewards = []
+    
+    step_size = max(1, sequence_length - overlap)
+    
+    for i in range(0, len(observations) - sequence_length + 1, step_size):
+        seq_obs = observations[i:i + sequence_length]
+        seq_act = actions[i:i + sequence_length]
+        seq_rew = rewards[i:i + sequence_length]
+        
+        seq_observations.append(np.array(seq_obs))
+        seq_actions.append(np.array(seq_act))
+        seq_rewards.append(np.array(seq_rew))
+    
+    return {
+        "observations": seq_observations,
+        "actions": seq_actions,
+        "rewards": seq_rewards,
     }
-    
-    obs, _ = env.reset()
-    current_steps = 0
-    current_episodes = 0
-    
-    # Determine collection strategy
-    if episodes is not None:
-        target = episodes
-        use_episodes = True
-    else:
-        target = steps
-        use_episodes = False
-    
-    pbar = tqdm(total=target, desc="Collecting rollout data")
-    
-    while current_steps < steps and (episodes is None or current_episodes < episodes):
-        # Select action using agent
-        if hasattr(agent, 'select_action'):
-            action = agent.select_action(obs)
-        elif hasattr(agent, 'act'):
-            action = agent.act(obs)
-        else:
-            # Fallback to random action
-            action = env.action_space.sample()
-        
-        # Take step
-        next_obs, reward, terminated, truncated, _ = env.step(action)
-        done = terminated or truncated
-        
-        # Store transition
-        data['observations'].append(obs.copy())
-        data['actions'].append(action.copy() if isinstance(action, np.ndarray) else [action])
-        data['rewards'].append(reward)
-        data['next_observations'].append(next_obs.copy())
-        data['dones'].append(done)
-        
-        # Update counters
-        current_steps += 1
-        if use_episodes:
-            pbar.update(1)
-        else:
-            pbar.update(1)
-        
-        # Reset if episode ended
-        if done:
-            obs, _ = env.reset()
-            current_episodes += 1
-        else:
-            obs = next_obs
-    
-    pbar.close()
-    
-    # Convert to numpy arrays
-    for key in data:
-        data[key] = np.array(data[key])
-    
-    return data
 
 
-def create_data_loader(
-    data: Dict[str, np.ndarray],
-    batch_size: int = 64,
+def create_dataloader(
+    data: Dict[str, List[np.ndarray]],
+    batch_size: int = 32,
     shuffle: bool = True,
-    device: torch.device = None
+    device: torch.device = None,
 ) -> torch.utils.data.DataLoader:
     """
-    Create a PyTorch DataLoader from collected data.
+    Create PyTorch DataLoader from collected data
     
     Args:
-        data: Dictionary containing experience data
+        data: Dictionary containing data arrays
         batch_size: Batch size for DataLoader
         shuffle: Whether to shuffle data
         device: Device to move tensors to
@@ -272,119 +247,136 @@ def create_data_loader(
     Returns:
         PyTorch DataLoader
     """
+    device = device or get_device()
+    
     # Convert to tensors
-    tensors = {}
-    for key, values in data.items():
-        if key == 'dones':
-            tensors[key] = torch.BoolTensor(values)
-        else:
-            tensors[key] = torch.FloatTensor(values)
+    dataset = {
+        "observations": torch.FloatTensor(np.array(data["observations"])),
+        "actions": torch.FloatTensor(np.array(data["actions"])),
+        "next_observations": torch.FloatTensor(np.array(data["next_observations"])),
+        "rewards": torch.FloatTensor(np.array(data["rewards"])),
+    }
+    
+    # Create dataset class
+    class TransitionDataset(torch.utils.data.Dataset):
+        def __init__(self, data_dict):
+            self.data = data_dict
         
-        if device is not None:
-            tensors[key] = tensors[key].to(device)
+        def __len__(self):
+            return len(self.data["observations"])
+        
+        def __getitem__(self, idx):
+            return {
+                key: tensor[idx] for key, tensor in self.data.items()
+            }
     
-    # Create dataset
-    dataset = torch.utils.data.TensorDataset(
-        tensors['observations'],
-        tensors['actions'],
-        tensors['rewards'],
-        tensors['next_observations'],
-        tensors['dones']
-    )
+    dataset = TransitionDataset(dataset)
     
-    # Create DataLoader
-    dataloader = torch.utils.data.DataLoader(
+    return torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size,
-        shuffle=shuffle
+        shuffle=shuffle,
+        num_workers=0,
     )
-    
-    return dataloader
 
 
-def split_data(
-    data: Dict[str, np.ndarray],
-    train_ratio: float = 0.8,
-    val_ratio: float = 0.1,
-    test_ratio: float = 0.1,
-    seed: int = None
-) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, np.ndarray]]:
+def create_sequence_dataloader(
+    data: Dict[str, List[np.ndarray]],
+    batch_size: int = 32,
+    shuffle: bool = True,
+    device: torch.device = None,
+) -> torch.utils.data.DataLoader:
     """
-    Split data into train, validation, and test sets.
+    Create PyTorch DataLoader for sequence data
     
     Args:
-        data: Dictionary containing experience data
-        train_ratio: Ratio of data for training
-        val_ratio: Ratio of data for validation
-        test_ratio: Ratio of data for testing
-        seed: Random seed for reproducibility
+        data: Dictionary containing sequence data
+        batch_size: Batch size for DataLoader
+        shuffle: Whether to shuffle data
+        device: Device to move tensors to
     
     Returns:
-        Tuple of (train_data, val_data, test_data)
+        PyTorch DataLoader
     """
-    if seed is not None:
-        np.random.seed(seed)
+    device = device or get_device()
     
-    # Check ratios
-    total_ratio = train_ratio + val_ratio + test_ratio
-    if abs(total_ratio - 1.0) > 1e-6:
-        raise ValueError(f"Ratios must sum to 1.0, got {total_ratio}")
+    # Convert to tensors
+    dataset = {
+        "observations": torch.FloatTensor(np.array(data["observations"])),
+        "actions": torch.FloatTensor(np.array(data["actions"])),
+        "rewards": torch.FloatTensor(np.array(data["rewards"])),
+    }
     
-    # Get data length
-    data_length = len(data['observations'])
+    # Create dataset class
+    class SequenceDataset(torch.utils.data.Dataset):
+        def __init__(self, data_dict):
+            self.data = data_dict
+        
+        def __len__(self):
+            return len(self.data["observations"])
+        
+        def __getitem__(self, idx):
+            return {
+                key: tensor[idx] for key, tensor in self.data.items()
+            }
     
-    # Create indices
-    indices = np.arange(data_length)
-    np.random.shuffle(indices)
+    dataset = SequenceDataset(dataset)
     
-    # Split indices
-    train_end = int(data_length * train_ratio)
-    val_end = int(data_length * (train_ratio + val_ratio))
-    
-    train_indices = indices[:train_end]
-    val_indices = indices[train_end:val_end]
-    test_indices = indices[val_end:]
-    
-    # Split data
-    train_data = {key: values[train_indices] for key, values in data.items()}
-    val_data = {key: values[val_indices] for key, values in data.items()}
-    test_data = {key: values[test_indices] for key, values in data.items()}
-    
-    return train_data, val_data, test_data
+    return torch.utils.data.DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=0,
+    )
 
 
-def augment_data(
-    data: Dict[str, np.ndarray],
-    noise_std: float = 0.01,
-    num_augmentations: int = 1
-) -> Dict[str, np.ndarray]:
+def normalize_data(data: Dict[str, List[np.ndarray]]) -> Tuple[Dict[str, List[np.ndarray]], Dict[str, Any]]:
     """
-    Augment data by adding noise to observations.
+    Normalize data using mean and std
     
     Args:
-        data: Dictionary containing experience data
-        noise_std: Standard deviation of noise to add
-        num_augmentations: Number of augmented copies to create
+        data: Dictionary containing data arrays
     
     Returns:
-        Augmented data dictionary
+        Tuple of (normalized_data, normalization_stats)
     """
-    augmented_data = {key: [] for key in data.keys()}
+    normalized_data = {}
+    normalization_stats = {}
     
-    for _ in range(num_augmentations):
         for key, values in data.items():
-            if key in ['observations', 'next_observations']:
-                # Add noise to observations
-                noise = np.random.normal(0, noise_std, values.shape)
-                augmented_values = values + noise
-            else:
-                # Keep other data unchanged
-                augmented_values = values.copy()
+        if key in ["observations", "actions", "next_observations"]:
+            values_array = np.array(values)
+            mean = np.mean(values_array, axis=0)
+            std = np.std(values_array, axis=0) + 1e-8  # Add small epsilon
             
-            augmented_data[key].append(augmented_values)
+            normalized_values = (values_array - mean) / std
+            normalized_data[key] = normalized_values.tolist()
+            
+            normalization_stats[key] = {
+                "mean": mean,
+                "std": std,
+            }
+        else:
+            normalized_data[key] = values
     
-    # Concatenate all augmentations
-    for key in augmented_data:
-        augmented_data[key] = np.concatenate(augmented_data[key], axis=0)
+    return normalized_data, normalization_stats
+
+
+def denormalize_data(data: np.ndarray, stats: Dict[str, Any], key: str) -> np.ndarray:
+    """
+    Denormalize data using stored statistics
     
-    return augmented_data
+    Args:
+        data: Normalized data
+        stats: Normalization statistics
+        key: Key for the data type
+        
+    Returns:
+        Denormalized data
+    """
+    if key in stats:
+        mean = stats[key]["mean"]
+        std = stats[key]["std"]
+        return data * std + mean
+    else:
+        return data

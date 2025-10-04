@@ -29,105 +29,77 @@ __version__ = "1.0.0"
 __author__ = "CA17 Modular RL Package"
 __description__ = "Next-Generation Deep Reinforcement Learning Implementations"
 
-from .world_models import (
-    RSSMCore,
-    WorldModel,
-    MPCPlanner,
-    ImaginationAugmentedAgent
-)
+from .world_models import RSSMCore, WorldModel, MPCPlanner, ImaginationAugmentedAgent
 
-from .multi_agent_rl import (
-    MADDPGAgent,
-    CommunicationNetwork,
-    PredatorPreyEnvironment
-)
+from .multi_agent_rl import MADDPGAgent, CommunicationNetwork, PredatorPreyEnvironment
 
 from .causal_rl import (
     CausalGraph,
     PCCausalDiscovery,
     CausalRLAgent,
-    CausalBanditEnvironment
+    CausalBanditEnvironment,
 )
 
 from .quantum_rl import (
     QuantumGate,
     QuantumCircuit,
     QuantumRLAgent,
-    QuantumControlEnvironment
+    QuantumControlEnvironment,
 )
 
-from .federated_rl import (
-    DifferentialPrivacy,
-    FederatedRLClient,
-    FederatedRLServer
-)
+from .federated_rl import DifferentialPrivacy, FederatedRLClient, FederatedRLServer
 
 from .advanced_safety import (
     SafetyConstraints,
     ConstrainedPolicyOptimization,
-    SafetyMonitor
+    SafetyMonitor,
 )
 
-from .utils import (
-    ReplayBuffer,
-    Config,
-    plot_learning_curve,
-    set_random_seed
-)
+from .utils import ReplayBuffer, Config, plot_learning_curve, set_random_seed
 
-from .environments import (
-    ContinuousMountainCar,
-    BaseEnvironment
-)
+from .environments import ContinuousMountainCar, BaseEnvironment
 
 from .experiments import (
     WorldModelExperiment,
     MultiAgentExperiment,
     ComparativeExperiment,
-    create_default_configs
+    create_default_configs,
 )
 
 __all__ = [
-    'RSSMCore',
-    'WorldModel',
-    'MPCPlanner',
-    'ImaginationAugmentedAgent',
-
-    'MADDPGAgent',
-    'CommunicationNetwork',
-    'PredatorPreyEnvironment',
-
-    'CausalGraph',
-    'PCCausalDiscovery',
-    'CausalRLAgent',
-    'CausalBanditEnvironment',
-
-    'QuantumGate',
-    'QuantumCircuit',
-    'QuantumRLAgent',
-    'QuantumControlEnvironment',
-
-    'DifferentialPrivacy',
-    'FederatedRLClient',
-    'FederatedRLServer',
-
-    'SafetyConstraints',
-    'ConstrainedPolicyOptimization',
-    'SafetyMonitor',
-
-    'ReplayBuffer',
-    'Config',
-    'plot_learning_curve',
-    'set_random_seed',
-
-    'ContinuousMountainCar',
-    'BaseEnvironment',
-
-    'WorldModelExperiment',
-    'MultiAgentExperiment',
-    'ComparativeExperiment',
-    'create_default_configs'
+    "RSSMCore",
+    "WorldModel",
+    "MPCPlanner",
+    "ImaginationAugmentedAgent",
+    "MADDPGAgent",
+    "CommunicationNetwork",
+    "PredatorPreyEnvironment",
+    "CausalGraph",
+    "PCCausalDiscovery",
+    "CausalRLAgent",
+    "CausalBanditEnvironment",
+    "QuantumGate",
+    "QuantumCircuit",
+    "QuantumRLAgent",
+    "QuantumControlEnvironment",
+    "DifferentialPrivacy",
+    "FederatedRLClient",
+    "FederatedRLServer",
+    "SafetyConstraints",
+    "ConstrainedPolicyOptimization",
+    "SafetyMonitor",
+    "ReplayBuffer",
+    "Config",
+    "plot_learning_curve",
+    "set_random_seed",
+    "ContinuousMountainCar",
+    "BaseEnvironment",
+    "WorldModelExperiment",
+    "MultiAgentExperiment",
+    "ComparativeExperiment",
+    "create_default_configs",
 ]
+
 
 def run_quick_demo():
     """Run a quick demonstration of the package capabilities"""
@@ -139,7 +111,7 @@ def run_quick_demo():
     configs = create_default_configs()
 
     print("\n📊 Running World Model Demo...")
-    config = configs['world_model']
+    config = configs["world_model"]
     config.n_episodes = 10
 
     experiment = WorldModelExperiment(config, save_dir="demo_results")
@@ -159,6 +131,7 @@ def run_quick_demo():
     print("   • utils - Utilities and helpers")
     print("   • environments - Custom environments")
     print("   • experiments - Evaluation suites")
+
 
 if __name__ == "__main__":
     run_quick_demo()

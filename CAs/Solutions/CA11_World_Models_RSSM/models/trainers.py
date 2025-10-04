@@ -2,14 +2,14 @@
 Training Utilities for World Models
 
 This module provides training utilities and trainers for world models,
-including VAE, dynamics, reward models, and RSSM.
+RSSM, and related components.
 """
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
-from typing import Dict, Any, List, Tuple
+import torch.nn.functional as F
+from typing import Dict, List, Tuple, Any, Optional
 import numpy as np
 from tqdm import tqdm
 
@@ -22,310 +22,255 @@ class WorldModelTrainer:
         world_model: nn.Module,
         learning_rate: float = 1e-3,
         device: torch.device = None,
-        beta_schedule: str = 'constant',
-        beta_value: float = 1.0
     ):
         self.world_model = world_model
-        self.device = device or torch.device('cpu')
-        self.world_model.to(self.device)
-        
-        # Optimizer
-        self.optimizer = optim.Adam(self.world_model.parameters(), lr=learning_rate)
-        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=100, gamma=0.9)
-        
-        # Training history
-        self.loss_history = {
-            'total_loss': [],
-            'vae_loss': [],
-            'dynamics_loss': [],
-            'reward_loss': []
+        self.device = device or torch.device("cpu")
+        self.optimizer = optim.Adam(world_model.parameters(), lr=learning_rate)
+
+        self.losses = {
+            "total": [],
+            "vae": [],
+            "dynamics": [],
+            "reward": [],
         }
-        
-        # Beta scheduling
-        self.beta_schedule = beta_schedule
-        self.beta_value = beta_value
-        self.step_count = 0
-
-    def get_beta(self) -> float:
-        """Get current beta value for VAE loss"""
-        if self.beta_schedule == 'constant':
-            return self.beta_value
-        elif self.beta_schedule == 'linear':
-            # Linear increase from 0 to beta_value over 1000 steps
-            return min(self.beta_value, self.step_count / 1000.0 * self.beta_value)
-        elif self.beta_schedule == 'cyclical':
-            # Cyclical beta schedule
-            cycle_length = 1000
-            cycle_position = self.step_count % cycle_length
-            return self.beta_value * (cycle_position / cycle_length)
-        else:
-            return self.beta_value
-
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
-        """Single training step"""
-        self.world_model.train()
-        self.optimizer.zero_grad()
-        
-        # Move batch to device
-        obs = batch['observations'].to(self.device)
-        actions = batch['actions'].to(self.device)
-        next_obs = batch['next_observations'].to(self.device)
-        rewards = batch['rewards'].to(self.device)
-        
-        # Compute loss
-        beta = self.get_beta()
-        losses = self.world_model.compute_loss(obs, actions, next_obs, rewards, beta)
-        
-        # Backward pass
-        losses['total_loss'].backward()
-        torch.nn.utils.clip_grad_norm_(self.world_model.parameters(), 1.0)
-        self.optimizer.step()
-        self.scheduler.step()
-        
-        # Update step count
-        self.step_count += 1
-        
-        # Store losses
-        for key, value in losses.items():
-            self.loss_history[key].append(value.item())
-        
-        return {key: value.item() for key, value in losses.items()}
 
     def train_epoch(
-        self, 
-        data_loader: DataLoader, 
-        num_batches: int = None
+        self, dataloader, beta: float = 1.0, clip_grad_norm: float = 1.0
     ) -> Dict[str, float]:
         """Train for one epoch"""
-        total_losses = {key: 0.0 for key in self.loss_history.keys()}
-        num_batches_processed = 0
-        
-        for batch in data_loader:
-            if num_batches and num_batches_processed >= num_batches:
-                break
-                
-            losses = self.train_step(batch)
-            
-            for key, value in losses.items():
-                total_losses[key] += value
-            
-            num_batches_processed += 1
-        
-        # Average losses
-        avg_losses = {key: value / num_batches_processed for key, value in total_losses.items()}
-        return avg_losses
+        epoch_losses = {"total": 0, "vae": 0, "dynamics": 0, "reward": 0}
 
-    def evaluate(self, data_loader: DataLoader) -> Dict[str, float]:
-        """Evaluate world model"""
-        self.world_model.eval()
-        total_losses = {key: 0.0 for key in self.loss_history.keys()}
-        num_batches = 0
-        
-        with torch.no_grad():
-            for batch in data_loader:
-                # Move batch to device
-                obs = batch['observations'].to(self.device)
-                actions = batch['actions'].to(self.device)
-                next_obs = batch['next_observations'].to(self.device)
-                rewards = batch['rewards'].to(self.device)
-                
-                # Compute loss
-                beta = self.get_beta()
-                losses = self.world_model.compute_loss(obs, actions, next_obs, rewards, beta)
-                
-                for key, value in losses.items():
-                    total_losses[key] += value.item()
-                
-                num_batches += 1
-        
+        self.world_model.train()
+
+        for batch in dataloader:
+            # Move batch to device
+            obs = batch["observations"].to(self.device)
+            actions = batch["actions"].to(self.device)
+            next_obs = batch["next_observations"].to(self.device)
+            rewards = batch["rewards"].to(self.device)
+
+            # Zero gradients
+            self.optimizer.zero_grad()
+
+            # Forward pass
+            losses = self.world_model.compute_loss(
+                obs, actions, next_obs, rewards, beta
+            )
+
+            # Backward pass
+            losses["total_loss"].backward()
+            torch.nn.utils.clip_grad_norm_(
+                self.world_model.parameters(), clip_grad_norm
+            )
+            self.optimizer.step()
+
+            # Accumulate losses
+            for key in epoch_losses:
+                if key in losses:
+                    epoch_losses[key] += losses[key].item()
+
         # Average losses
-        avg_losses = {key: value / num_batches for key, value in total_losses.items()}
-        return avg_losses
+        num_batches = len(dataloader)
+        for key in epoch_losses:
+            epoch_losses[key] /= num_batches
+            self.losses[key].append(epoch_losses[key])
+
+        return epoch_losses
+
+    def train(
+        self, dataloader, epochs: int = 100, beta: float = 1.0, print_interval: int = 10
+    ) -> Dict[str, List[float]]:
+        """Train the world model"""
+        print(f"Training world model for {epochs} epochs...")
+
+        for epoch in tqdm(range(epochs)):
+            epoch_losses = self.train_epoch(dataloader, beta)
+
+            if (epoch + 1) % print_interval == 0:
+                print(
+                    f"Epoch {epoch+1}/{epochs}: "
+                    f"Total Loss = {epoch_losses['total']:.4f}, "
+                    f"VAE Loss = {epoch_losses['vae']:.4f}, "
+                    f"Dynamics Loss = {epoch_losses['dynamics']:.4f}, "
+                    f"Reward Loss = {epoch_losses['reward']:.4f}"
+                )
+
+        return self.losses
 
 
 class RSSMTrainer:
-    """Trainer for Recurrent State Space Models"""
+    """Trainer for RSSM models"""
 
     def __init__(
         self,
         rssm: nn.Module,
         learning_rate: float = 1e-3,
-        device: torch.device = None
+        device: torch.device = None,
     ):
         self.rssm = rssm
-        self.device = device or torch.device('cpu')
-        self.rssm.to(self.device)
-        
-        # Optimizer
-        self.optimizer = optim.Adam(self.rssm.parameters(), lr=learning_rate)
-        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=50, gamma=0.95)
-        
-        # Training history
-        self.loss_history = {
-            'total_loss': [],
-            'reconstruction_loss': [],
-            'reward_loss': [],
-            'kl_loss': []
+        self.device = device or torch.device("cpu")
+        self.optimizer = optim.Adam(rssm.parameters(), lr=learning_rate)
+
+        self.losses = {
+            "total": [],
+            "reconstruction": [],
+            "reward": [],
+            "kl": [],
         }
 
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
-        """Single training step"""
-        self.rssm.train()
-        self.optimizer.zero_grad()
-        
-        # Move batch to device
-        obs_seq = batch['observations'].to(self.device)
-        action_seq = batch['actions'].to(self.device)
-        reward_seq = batch['rewards'].to(self.device)
-        
-        # Initialize hidden state
-        batch_size = obs_seq.shape[0]
-        initial_hidden = torch.zeros(batch_size, self.rssm.hidden_dim, device=self.device)
-        
-        # Compute loss
-        losses = self.rssm.compute_loss(obs_seq, action_seq, reward_seq, initial_hidden)
-        
-        # Backward pass
-        losses['total_loss'].backward()
-        torch.nn.utils.clip_grad_norm_(self.rssm.parameters(), 1.0)
-        self.optimizer.step()
-        self.scheduler.step()
-        
-        # Store losses
-        for key, value in losses.items():
-            self.loss_history[key].append(value.item())
-        
-        return {key: value.item() for key, value in losses.items()}
-
     def train_epoch(
-        self, 
-        data_loader: DataLoader, 
-        num_batches: int = None
+        self, dataloader, kl_weight: float = 0.1, clip_grad_norm: float = 1.0
     ) -> Dict[str, float]:
         """Train for one epoch"""
-        total_losses = {key: 0.0 for key in self.loss_history.keys()}
-        num_batches_processed = 0
-        
-        for batch in data_loader:
-            if num_batches and num_batches_processed >= num_batches:
-                break
-                
-            losses = self.train_step(batch)
-            
-            for key, value in losses.items():
-                total_losses[key] += value
-            
-            num_batches_processed += 1
-        
-        # Average losses
-        avg_losses = {key: value / num_batches_processed for key, value in total_losses.items()}
-        return avg_losses
+        epoch_losses = {"total": 0, "reconstruction": 0, "reward": 0, "kl": 0}
 
-    def evaluate(self, data_loader: DataLoader) -> Dict[str, float]:
-        """Evaluate RSSM"""
-        self.rssm.eval()
-        total_losses = {key: 0.0 for key in self.loss_history.keys()}
-        num_batches = 0
-        
-        with torch.no_grad():
-            for batch in data_loader:
-                # Move batch to device
-                obs_seq = batch['observations'].to(self.device)
-                action_seq = batch['actions'].to(self.device)
-                reward_seq = batch['rewards'].to(self.device)
-                
-                # Initialize hidden state
-                batch_size = obs_seq.shape[0]
-                initial_hidden = torch.zeros(batch_size, self.rssm.hidden_dim, device=self.device)
-                
-                # Compute loss
-                losses = self.rssm.compute_loss(obs_seq, action_seq, reward_seq, initial_hidden)
-                
-                for key, value in losses.items():
-                    total_losses[key] += value.item()
-                
-                num_batches += 1
-        
+        self.rssm.train()
+
+        for batch in dataloader:
+            # Move batch to device
+            obs_seq = batch["observations"].to(self.device)
+            action_seq = batch["actions"].to(self.device)
+            reward_seq = batch["rewards"].to(self.device)
+
+            batch_size = obs_seq.shape[0]
+            initial_hidden = torch.zeros(batch_size, self.rssm.deter_dim).to(
+                self.device
+            )
+
+            # Zero gradients
+            self.optimizer.zero_grad()
+
+            # Forward pass
+            losses = self.rssm.compute_loss(
+                obs_seq, action_seq, reward_seq, initial_hidden
+            )
+
+            # Adjust KL weight
+            losses["kl_loss"] = kl_weight * losses["kl_loss"]
+            losses["total_loss"] = (
+                losses["reconstruction_loss"]
+                + losses["reward_loss"]
+                + losses["kl_loss"]
+            )
+
+            # Backward pass
+            losses["total_loss"].backward()
+            torch.nn.utils.clip_grad_norm_(self.rssm.parameters(), clip_grad_norm)
+            self.optimizer.step()
+
+            # Accumulate losses
+            for key in epoch_losses:
+                if key in losses:
+                    epoch_losses[key] += losses[key].item()
+
         # Average losses
-        avg_losses = {key: value / num_batches for key, value in total_losses.items()}
-        return avg_losses
+        num_batches = len(dataloader)
+        for key in epoch_losses:
+            epoch_losses[key] /= num_batches
+            self.losses[key].append(epoch_losses[key])
+
+        return epoch_losses
+
+    def train(
+        self,
+        dataloader,
+        epochs: int = 100,
+        kl_weight: float = 0.1,
+        print_interval: int = 10,
+    ) -> Dict[str, List[float]]:
+        """Train the RSSM"""
+        print(f"Training RSSM for {epochs} epochs...")
+
+        for epoch in tqdm(range(epochs)):
+            epoch_losses = self.train_epoch(dataloader, kl_weight)
+
+            if (epoch + 1) % print_interval == 0:
+                print(
+                    f"Epoch {epoch+1}/{epochs}: "
+                    f"Total Loss = {epoch_losses['total']:.4f}, "
+                    f"Reconstruction Loss = {epoch_losses['reconstruction']:.4f}, "
+                    f"Reward Loss = {epoch_losses['reward']:.4f}, "
+                    f"KL Loss = {epoch_losses['kl']:.4f}"
+                )
+
+        return self.losses
 
 
 class VAETrainer:
-    """Trainer for Variational Autoencoders"""
+    """Trainer for VAE models"""
 
     def __init__(
         self,
         vae: nn.Module,
         learning_rate: float = 1e-3,
         device: torch.device = None,
-        beta_schedule: str = 'constant',
-        beta_value: float = 1.0
     ):
         self.vae = vae
-        self.device = device or torch.device('cpu')
-        self.vae.to(self.device)
-        
-        # Optimizer
-        self.optimizer = optim.Adam(self.vae.parameters(), lr=learning_rate)
-        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=100, gamma=0.9)
-        
-        # Training history
-        self.loss_history = {
-            'total_loss': [],
-            'reconstruction_loss': [],
-            'kl_loss': []
+        self.device = device or torch.device("cpu")
+        self.optimizer = optim.Adam(vae.parameters(), lr=learning_rate)
+
+        self.losses = {
+            "total": [],
+            "reconstruction": [],
+            "kl": [],
         }
-        
-        # Beta scheduling
-        self.beta_schedule = beta_schedule
-        self.beta_value = beta_value
-        self.step_count = 0
 
-    def get_beta(self) -> float:
-        """Get current beta value"""
-        if self.beta_schedule == 'constant':
-            return self.beta_value
-        elif self.beta_schedule == 'linear':
-            return min(self.beta_value, self.step_count / 1000.0 * self.beta_value)
-        else:
-            return self.beta_value
+    def train_epoch(
+        self, dataloader, beta: float = 1.0, clip_grad_norm: float = 1.0
+    ) -> Dict[str, float]:
+        """Train for one epoch"""
+        epoch_losses = {"total": 0, "reconstruction": 0, "kl": 0}
 
-    def train_step(self, batch: torch.Tensor) -> Dict[str, float]:
-        """Single training step"""
         self.vae.train()
-        self.optimizer.zero_grad()
-        
-        # Move batch to device
-        obs = batch.to(self.device)
-        
-        # Forward pass
-        recon_obs, mean, log_var, z = self.vae(obs)
-        
-        # Compute loss
-        beta = self.get_beta()
-        total_loss = self.vae.loss_function(recon_obs, obs, mean, log_var, beta)
-        
-        # Backward pass
-        total_loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.vae.parameters(), 1.0)
-        self.optimizer.step()
-        self.scheduler.step()
-        
-        # Update step count
-        self.step_count += 1
-        
-        # Compute individual losses
-        recon_loss = torch.nn.functional.mse_loss(recon_obs, obs, reduction='sum')
-        kl_loss = self.vae.kl_divergence(mean, log_var)
-        
-        # Store losses
-        self.loss_history['total_loss'].append(total_loss.item())
-        self.loss_history['reconstruction_loss'].append(recon_loss.item())
-        self.loss_history['kl_loss'].append(kl_loss.item())
-        
-        return {
-            'total_loss': total_loss.item(),
-            'reconstruction_loss': recon_loss.item(),
-            'kl_loss': kl_loss.item()
-        }
+
+        for batch in dataloader:
+            # Move batch to device
+            obs = batch.to(self.device)
+
+            # Zero gradients
+            self.optimizer.zero_grad()
+
+            # Forward pass
+            recon_obs, mean, log_var, z = self.vae(obs)
+
+            # Compute loss
+            recon_loss = F.mse_loss(recon_obs, obs, reduction="sum")
+            kl_loss = -0.5 * torch.sum(1 + log_var - mean.pow(2) - log_var.exp())
+            total_loss = recon_loss + beta * kl_loss
+
+            # Backward pass
+            total_loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.vae.parameters(), clip_grad_norm)
+            self.optimizer.step()
+
+            # Accumulate losses
+            epoch_losses["total"] += total_loss.item()
+            epoch_losses["reconstruction"] += recon_loss.item()
+            epoch_losses["kl"] += kl_loss.item()
+
+        # Average losses
+        num_batches = len(dataloader)
+        for key in epoch_losses:
+            epoch_losses[key] /= num_batches
+            self.losses[key].append(epoch_losses[key])
+
+        return epoch_losses
+
+    def train(
+        self, dataloader, epochs: int = 100, beta: float = 1.0, print_interval: int = 10
+    ) -> Dict[str, List[float]]:
+        """Train the VAE"""
+        print(f"Training VAE for {epochs} epochs...")
+
+        for epoch in tqdm(range(epochs)):
+            epoch_losses = self.train_epoch(dataloader, beta)
+
+            if (epoch + 1) % print_interval == 0:
+                print(
+                    f"Epoch {epoch+1}/{epochs}: "
+                    f"Total Loss = {epoch_losses['total']:.4f}, "
+                    f"Reconstruction Loss = {epoch_losses['reconstruction']:.4f}, "
+                    f"KL Loss = {epoch_losses['kl']:.4f}"
+                )
+
+        return self.losses

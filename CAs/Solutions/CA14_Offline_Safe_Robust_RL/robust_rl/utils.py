@@ -9,7 +9,10 @@ robustness evaluation metrics.
 import numpy as np
 import torch
 import torch.nn.functional as F
+import copy
 from typing import Dict, List, Tuple, Any
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def generate_domain_randomized_trajectory(env, agent, max_steps=1000):

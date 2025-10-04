@@ -1,31 +1,15 @@
 """
-Deep Q-Networks Package
-=======================
-
-This package contains implementations of various DQN algorithms and utilities.
-
-Modules:
-- core: Basic DQN implementation with experience replay and target networks
-- double_dqn: Double DQN to address overestimation bias
-- dueling_dqn: Dueling DQN with value-advantage decomposition
-- utils: Visualization and analysis utilities
-
-Author: CA7 Implementation
+Agents package for CA07 DQN experiments
+=======================================
 """
 
-from .core import DQN, ReplayBuffer, DQNAgent, Experience
+from .core import DQNAgent, QNetwork, ReplayBuffer
 from .double_dqn import DoubleDQNAgent
-from .dueling_dqn import DuelingDQN, DuelingDQNAgent
-from .utils import QNetworkVisualization, PerformanceAnalyzer
+from .dueling_dqn import DuelingDQNAgent, DuelingQNetwork, DuelingDoubleDQNAgent
+from .utils import DQNVisualizer, DQNAnalyzer
 
 __all__ = [
-    "DQN",
-    "ReplayBuffer",
-    "DQNAgent",
-    "Experience",
-    "DoubleDQNAgent",
-    "DuelingDQN",
-    "DuelingDQNAgent",
-    "QNetworkVisualization",
-    "PerformanceAnalyzer",
+    'DQNAgent', 'DoubleDQNAgent', 'DuelingDQNAgent', 'DuelingDoubleDQNAgent',
+    'QNetwork', 'DuelingQNetwork', 'ReplayBuffer',
+    'DQNVisualizer', 'DQNAnalyzer'
 ]

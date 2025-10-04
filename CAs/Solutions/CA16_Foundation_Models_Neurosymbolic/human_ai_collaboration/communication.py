@@ -1,354 +1,354 @@
 """
 Communication Protocols for Human-AI Collaboration
 
-This module implements communication systems for human-AI interaction.
+This module implements communication protocols and advice systems for human-AI interaction.
 """
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Any, Union
-from dataclasses import dataclass
-from collections import deque
 import time
-from .preference_model import HumanFeedback
+from dataclasses import dataclass
 
 
 @dataclass
 class CommunicationMessage:
     """Represents a communication message between human and AI."""
-
-    sender: str  # 'human' or 'ai'
-    message_type: str  # 'advice', 'question', 'explanation', 'feedback'
-    content: str
+    sender: str  # "human" or "ai"
+    message_type: str
+    content: Any
     timestamp: float
-    context: Dict[str, Any] = None
+    priority: int = 1  # 1=low, 2=medium, 3=high
+    explanation: str = ""
+
+
+@dataclass
+class Advice:
+    """Represents advice from human to AI or vice versa."""
+    advisor: str  # "human" or "ai"
+    advice_type: str
+    content: str
+    confidence: float
+    context: Dict[str, Any]
+    timestamp: float
 
 
 class CommunicationProtocol:
-    """Protocol for human-AI communication."""
+    """Protocol for managing communication between human and AI."""
 
-    def __init__(self, max_message_history: int = 1000):
-        self.max_message_history = max_message_history
-        self.message_history = deque(maxlen=max_message_history)
-        self.active_conversations = {}
-        self.communication_statistics = {
-            "total_messages": 0,
-            "human_messages": 0,
-            "ai_messages": 0,
-            "avg_response_time": 0.0,
+    def __init__(self):
+        self.message_queue = []
+        self.communication_history = []
+        self.protocol_rules = {
+            "max_queue_size": 100,
+            "message_timeout": 30.0,  # seconds
+            "priority_weights": {1: 0.1, 2: 0.5, 3: 1.0},
         }
 
-    def send_message(self, message: CommunicationMessage) -> str:
-        """Send a message and return message ID."""
-        message_id = f"{message.sender}_{int(time.time() * 1000)}"
+    def send_message(self, message: CommunicationMessage) -> bool:
+        """Send a message through the protocol."""
+        # Check queue size
+        if len(self.message_queue) >= self.protocol_rules["max_queue_size"]:
+            # Remove oldest low-priority message
+            self._cleanup_queue()
 
-        # Add to history
-        self.message_history.append(message)
+        # Add message to queue
+        self.message_queue.append(message)
+        self.communication_history.append(message)
 
-        # Update statistics
-        self.communication_statistics["total_messages"] += 1
-        if message.sender == "human":
-            self.communication_statistics["human_messages"] += 1
+        return True
+
+    def receive_message(self, sender: str) -> Optional[CommunicationMessage]:
+        """Receive a message from a specific sender."""
+        # Find highest priority message from sender
+        for message in sorted(self.message_queue, key=lambda m: m.priority, reverse=True):
+            if message.sender == sender:
+                self.message_queue.remove(message)
+                return message
+
+        return None
+
+    def get_all_messages(self, message_type: Optional[str] = None) -> List[CommunicationMessage]:
+        """Get all messages, optionally filtered by type."""
+        if message_type is None:
+            return self.message_queue.copy()
         else:
-            self.communication_statistics["ai_messages"] += 1
+            return [msg for msg in self.message_queue if msg.message_type == message_type]
 
-        return message_id
-
-    def get_recent_messages(self, limit: int = 10) -> List[CommunicationMessage]:
-        """Get recent messages."""
-        return list(self.message_history)[-limit:]
-
-    def get_conversation_context(
-        self, conversation_id: str
-    ) -> List[CommunicationMessage]:
-        """Get messages from a specific conversation."""
-        if conversation_id in self.active_conversations:
-            return self.active_conversations[conversation_id]
-        return []
-
-    def start_conversation(self, conversation_id: str) -> str:
-        """Start a new conversation."""
-        self.active_conversations[conversation_id] = []
-        return conversation_id
-
-    def end_conversation(self, conversation_id: str) -> List[CommunicationMessage]:
-        """End a conversation and return all messages."""
-        if conversation_id in self.active_conversations:
-            messages = self.active_conversations[conversation_id]
-            del self.active_conversations[conversation_id]
-            return messages
-        return []
+    def _cleanup_queue(self):
+        """Clean up old and low-priority messages."""
+        current_time = time.time()
+        
+        # Remove timed out messages
+        self.message_queue = [
+            msg for msg in self.message_queue
+            if current_time - msg.timestamp < self.protocol_rules["message_timeout"]
+        ]
+        
+        # Remove lowest priority messages if still over limit
+        if len(self.message_queue) >= self.protocol_rules["max_queue_size"]:
+            self.message_queue.sort(key=lambda m: m.priority)
+            excess = len(self.message_queue) - self.protocol_rules["max_queue_size"] + 1
+            self.message_queue = self.message_queue[excess:]
 
     def get_communication_statistics(self) -> Dict[str, Any]:
         """Get communication statistics."""
-        return self.communication_statistics.copy()
+        if not self.communication_history:
+            return {"total_messages": 0}
+
+        sender_counts = {}
+        type_counts = {}
+        priority_counts = {1: 0, 2: 0, 3: 0}
+
+        for message in self.communication_history:
+            sender_counts[message.sender] = sender_counts.get(message.sender, 0) + 1
+            type_counts[message.message_type] = type_counts.get(message.message_type, 0) + 1
+            priority_counts[message.priority] += 1
+
+        return {
+            "total_messages": len(self.communication_history),
+            "queue_size": len(self.message_queue),
+            "sender_distribution": sender_counts,
+            "type_distribution": type_counts,
+            "priority_distribution": priority_counts,
+        }
 
 
 class AdviceSystem:
-    """System for providing and receiving advice."""
+    """System for managing advice between human and AI."""
 
-    def __init__(self, state_dim: int, action_dim: int):
-        self.state_dim = state_dim
-        self.action_dim = action_dim
-
-        # Advice storage
-        self.advice_database = {}
-        self.advice_statistics = {
-            "total_advice_given": 0,
-            "advice_acceptance_rate": 0.0,
-            "advice_effectiveness": 0.0,
+    def __init__(self):
+        self.advice_history = []
+        self.advice_rules = {
+            "max_advice_age": 300.0,  # 5 minutes
+            "confidence_threshold": 0.7,
+            "advice_weight": 0.3,
         }
-
-        # Advice quality assessment
-        self.advice_quality_model = nn.Sequential(
-            nn.Linear(state_dim + action_dim + 1, 64),  # +1 for outcome
-            nn.ReLU(),
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Linear(32, 1),
-            nn.Sigmoid(),
-        )
 
     def provide_advice(
-        self, state: torch.Tensor, action: torch.Tensor, explanation: str = ""
-    ) -> Dict[str, Any]:
-        """Provide advice for a state-action pair."""
-        advice_id = f"advice_{int(time.time() * 1000)}"
+        self,
+        advisor: str,
+        advice_type: str,
+        content: str,
+        confidence: float,
+        context: Dict[str, Any],
+    ) -> Advice:
+        """Provide advice from advisor to recipient."""
+        advice = Advice(
+            advisor=advisor,
+            advice_type=advice_type,
+            content=content,
+            confidence=confidence,
+            context=context,
+            timestamp=time.time(),
+        )
 
-        advice = {
-            "id": advice_id,
-            "state": state.cpu().numpy(),
-            "action": action.cpu().numpy(),
-            "explanation": explanation,
-            "timestamp": time.time(),
-            "quality_score": self._assess_advice_quality(state, action),
-            "accepted": False,
-            "outcome": None,
-        }
-
-        self.advice_database[advice_id] = advice
-        self.advice_statistics["total_advice_given"] += 1
-
+        self.advice_history.append(advice)
         return advice
 
-    def accept_advice(self, advice_id: str, outcome: float = None):
-        """Mark advice as accepted and record outcome."""
-        if advice_id in self.advice_database:
-            advice = self.advice_database[advice_id]
-            advice["accepted"] = True
-            advice["outcome"] = outcome
+    def get_relevant_advice(
+        self,
+        current_context: Dict[str, Any],
+        advice_type: Optional[str] = None,
+        min_confidence: Optional[float] = None,
+    ) -> List[Advice]:
+        """Get relevant advice for current context."""
+        current_time = time.time()
+        relevant_advice = []
 
-            # Update statistics
-            self._update_advice_statistics()
+        for advice in self.advice_history:
+            # Check age
+            if current_time - advice.timestamp > self.advice_rules["max_advice_age"]:
+                continue
 
-    def _assess_advice_quality(
-        self, state: torch.Tensor, action: torch.Tensor
-    ) -> float:
-        """Assess the quality of advice."""
-        with torch.no_grad():
-            # Simple quality assessment based on state-action features
-            input_features = torch.cat(
-                [state, action, torch.tensor([0.0])]
-            )  # 0.0 for unknown outcome
-            quality_score = self.advice_quality_model(input_features.unsqueeze(0))
-            return quality_score.item()
+            # Check type filter
+            if advice_type is not None and advice.advice_type != advice_type:
+                continue
 
-    def _update_advice_statistics(self):
-        """Update advice statistics."""
-        total_advice = len(self.advice_database)
-        accepted_advice = sum(
-            1 for advice in self.advice_database.values() if advice["accepted"]
+            # Check confidence filter
+            if min_confidence is not None and advice.confidence < min_confidence:
+                continue
+
+            # Check context relevance (simplified)
+            if self._is_context_relevant(advice.context, current_context):
+                relevant_advice.append(advice)
+
+        # Sort by confidence and recency
+        relevant_advice.sort(
+            key=lambda a: (a.confidence, current_time - a.timestamp),
+            reverse=True
         )
 
-        if total_advice > 0:
-            self.advice_statistics["advice_acceptance_rate"] = (
-                accepted_advice / total_advice
-            )
+        return relevant_advice
 
-        # Calculate effectiveness (simplified)
-        effective_advice = sum(
-            1
-            for advice in self.advice_database.values()
-            if advice["accepted"]
-            and advice["outcome"] is not None
-            and advice["outcome"] > 0
-        )
+    def _is_context_relevant(
+        self, advice_context: Dict[str, Any], current_context: Dict[str, Any]
+    ) -> bool:
+        """Check if advice context is relevant to current context."""
+        # Simple relevance check based on shared keys
+        shared_keys = set(advice_context.keys()) & set(current_context.keys())
+        if len(shared_keys) == 0:
+            return False
 
-        if accepted_advice > 0:
-            self.advice_statistics["advice_effectiveness"] = (
-                effective_advice / accepted_advice
-            )
+        # Check if values are similar for shared keys
+        relevance_score = 0
+        for key in shared_keys:
+            if advice_context[key] == current_context[key]:
+                relevance_score += 1
+
+        return relevance_score > 0
 
     def get_advice_statistics(self) -> Dict[str, Any]:
         """Get advice system statistics."""
-        return self.advice_statistics.copy()
+        if not self.advice_history:
+            return {"total_advice": 0}
 
-    def get_advice_history(self, limit: int = None) -> List[Dict[str, Any]]:
-        """Get advice history."""
-        advice_list = list(self.advice_database.values())
-        if limit is None:
-            return advice_list
-        return advice_list[-limit:]
+        advisor_counts = {}
+        type_counts = {}
+        confidence_scores = []
+
+        for advice in self.advice_history:
+            advisor_counts[advice.advisor] = advisor_counts.get(advice.advisor, 0) + 1
+            type_counts[advice.advice_type] = type_counts.get(advice.advice_type, 0) + 1
+            confidence_scores.append(advice.confidence)
+
+        return {
+            "total_advice": len(self.advice_history),
+            "advisor_distribution": advisor_counts,
+            "type_distribution": type_counts,
+            "avg_confidence": np.mean(confidence_scores),
+            "confidence_std": np.std(confidence_scores),
+        }
 
 
 class DemonstrationCollector:
-    """Collects and manages human demonstrations."""
+    """Collects and manages demonstrations for learning."""
 
     def __init__(self, state_dim: int, action_dim: int):
         self.state_dim = state_dim
         self.action_dim = action_dim
+        self.demonstrations = []
+        self.collection_active = True
 
-        # Demonstration storage
-        self.demonstrations = {}
-        self.demonstration_statistics = {
-            "total_demonstrations": 0,
-            "avg_demonstration_length": 0.0,
-            "demonstration_quality": 0.0,
+    def start_demonstration(self, demo_id: str) -> str:
+        """Start collecting a demonstration."""
+        if not self.collection_active:
+            raise ValueError("Demonstration collection is not active")
+
+        demo = {
+            "demo_id": demo_id,
+            "trajectory": [],
+            "start_time": time.time(),
+            "completed": False,
         }
 
-        # Quality assessment
-        self.quality_assessor = nn.Sequential(
-            nn.Linear(state_dim + action_dim, 64),
-            nn.ReLU(),
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Linear(32, 1),
-            nn.Sigmoid(),
-        )
-
-    def add_demonstration(
-        self,
-        states: List[torch.Tensor],
-        actions: List[torch.Tensor],
-        metadata: Dict[str, Any] = None,
-    ) -> str:
-        """Add a human demonstration."""
-        demo_id = f"demo_{int(time.time() * 1000)}"
-
-        if metadata is None:
-            metadata = {}
-
-        # Assess demonstration quality
-        quality_score = self._assess_demonstration_quality(states, actions)
-
-        demonstration = {
-            "id": demo_id,
-            "states": [state.cpu().numpy() for state in states],
-            "actions": [action.cpu().numpy() for action in actions],
-            "metadata": metadata,
-            "timestamp": time.time(),
-            "quality_score": quality_score,
-            "length": len(states),
-        }
-
-        self.demonstrations[demo_id] = demonstration
-        self.demonstration_statistics["total_demonstrations"] += 1
-
-        # Update statistics
-        self._update_demonstration_statistics()
-
+        self.demonstrations.append(demo)
         return demo_id
 
-    def get_demonstration(self, demo_id: str) -> Optional[Dict[str, Any]]:
-        """Get a specific demonstration."""
-        return self.demonstrations.get(demo_id)
+    def add_demonstration_step(
+        self, demo_id: str, state: torch.Tensor, action: torch.Tensor, reward: float
+    ):
+        """Add a step to an ongoing demonstration."""
+        demo = self._find_demonstration(demo_id)
+        if demo is None:
+            raise ValueError(f"Demonstration {demo_id} not found")
+
+        step = {
+            "state": state.clone(),
+            "action": action.clone(),
+            "reward": reward,
+            "timestamp": time.time(),
+        }
+
+        demo["trajectory"].append(step)
+
+    def end_demonstration(self, demo_id: str) -> Dict[str, Any]:
+        """End a demonstration and return summary."""
+        demo = self._find_demonstration(demo_id)
+        if demo is None:
+            raise ValueError(f"Demonstration {demo_id} not found")
+
+        demo["completed"] = True
+        demo["end_time"] = time.time()
+        demo["duration"] = demo["end_time"] - demo["start_time"]
+
+        # Compute statistics
+        rewards = [step["reward"] for step in demo["trajectory"]]
+        demo["statistics"] = {
+            "total_steps": len(demo["trajectory"]),
+            "total_reward": sum(rewards),
+            "avg_reward": np.mean(rewards),
+            "duration": demo["duration"],
+        }
+
+        return demo["statistics"]
+
+    def _find_demonstration(self, demo_id: str) -> Optional[Dict[str, Any]]:
+        """Find a demonstration by ID."""
+        for demo in self.demonstrations:
+            if demo["demo_id"] == demo_id:
+                return demo
+        return None
+
+    def get_demonstration_trajectory(self, demo_id: str) -> Optional[List[Dict[str, Any]]]:
+        """Get the trajectory of a specific demonstration."""
+        demo = self._find_demonstration(demo_id)
+        if demo is None:
+            return None
+        return demo["trajectory"]
 
     def get_all_demonstrations(self) -> List[Dict[str, Any]]:
         """Get all demonstrations."""
-        return list(self.demonstrations.values())
+        return self.demonstrations.copy()
 
-    def get_high_quality_demonstrations(
-        self, threshold: float = 0.7
-    ) -> List[Dict[str, Any]]:
-        """Get demonstrations above quality threshold."""
-        return [
-            demo
-            for demo in self.demonstrations.values()
-            if demo["quality_score"] >= threshold
-        ]
-
-    def _assess_demonstration_quality(
-        self, states: List[torch.Tensor], actions: List[torch.Tensor]
-    ) -> float:
-        """Assess the quality of a demonstration."""
-        if not states or not actions:
-            return 0.0
-
-        # Simple quality assessment based on consistency and length
-        consistency_score = self._compute_consistency(states, actions)
-        length_score = min(len(states) / 100.0, 1.0)  # Normalize length
-
-        # Combine scores
-        quality_score = 0.7 * consistency_score + 0.3 * length_score
-
-        return quality_score
-
-    def _compute_consistency(
-        self, states: List[torch.Tensor], actions: List[torch.Tensor]
-    ) -> float:
-        """Compute consistency score for demonstration."""
-        if len(states) < 2:
-            return 1.0
-
-        # Compute state transitions
-        state_changes = []
-        for i in range(1, len(states)):
-            change = torch.norm(states[i] - states[i - 1]).item()
-            state_changes.append(change)
-
-        # Consistency based on smoothness of transitions
-        if state_changes:
-            avg_change = np.mean(state_changes)
-            consistency = 1.0 / (
-                1.0 + avg_change
-            )  # Higher consistency for smoother transitions
-        else:
-            consistency = 1.0
-
-        return consistency
-
-    def _update_demonstration_statistics(self):
-        """Update demonstration statistics."""
-        if not self.demonstrations:
-            return
-
-        # Update average length
-        total_length = sum(demo["length"] for demo in self.demonstrations.values())
-        self.demonstration_statistics["avg_demonstration_length"] = total_length / len(
-            self.demonstrations
-        )
-
-        # Update average quality
-        total_quality = sum(
-            demo["quality_score"] for demo in self.demonstrations.values()
-        )
-        self.demonstration_statistics["demonstration_quality"] = total_quality / len(
-            self.demonstrations
-        )
+    def get_completed_demonstrations(self) -> List[Dict[str, Any]]:
+        """Get only completed demonstrations."""
+        return [demo for demo in self.demonstrations if demo["completed"]]
 
     def get_demonstration_statistics(self) -> Dict[str, Any]:
-        """Get demonstration statistics."""
-        return self.demonstration_statistics.copy()
+        """Get statistics about collected demonstrations."""
+        if not self.demonstrations:
+            return {"total_demonstrations": 0}
 
-    def export_demonstrations(self, format: str = "numpy") -> Dict[str, Any]:
-        """Export demonstrations in specified format."""
-        if format == "numpy":
-            return {
-                "demonstrations": self.demonstrations,
-                "statistics": self.demonstration_statistics,
-            }
-        else:
-            raise ValueError(f"Unsupported export format: {format}")
+        completed_demos = self.get_completed_demonstrations()
+        total_steps = sum(len(demo["trajectory"]) for demo in completed_demos)
+        total_rewards = [
+            demo["statistics"]["total_reward"] for demo in completed_demos
+        ]
 
-    def import_demonstrations(self, data: Dict[str, Any]):
-        """Import demonstrations from data."""
-        if "demonstrations" in data:
-            self.demonstrations.update(data["demonstrations"])
+        return {
+            "total_demonstrations": len(self.demonstrations),
+            "completed_demonstrations": len(completed_demos),
+            "total_steps": total_steps,
+            "avg_steps_per_demo": total_steps / len(completed_demos) if completed_demos else 0,
+            "avg_total_reward": np.mean(total_rewards) if total_rewards else 0,
+            "reward_std": np.std(total_rewards) if total_rewards else 0,
+        }
 
-        if "statistics" in data:
-            self.demonstration_statistics.update(data["statistics"])
+    def clear_demonstrations(self):
+        """Clear all demonstrations."""
+        self.demonstrations.clear()
 
-        # Recompute statistics
-        self._update_demonstration_statistics()
+    def export_demonstrations(self) -> Dict[str, Any]:
+        """Export demonstrations in a format suitable for training."""
+        completed_demos = self.get_completed_demonstrations()
+        
+        if not completed_demos:
+            return {"states": [], "actions": [], "rewards": []}
+
+        all_states = []
+        all_actions = []
+        all_rewards = []
+
+        for demo in completed_demos:
+            for step in demo["trajectory"]:
+                all_states.append(step["state"])
+                all_actions.append(step["action"])
+                all_rewards.append(step["reward"])
+
+        return {
+            "states": torch.stack(all_states) if all_states else torch.tensor([]),
+            "actions": torch.stack(all_actions) if all_actions else torch.tensor([]),
+            "rewards": torch.tensor(all_rewards) if all_rewards else torch.tensor([]),
+        }

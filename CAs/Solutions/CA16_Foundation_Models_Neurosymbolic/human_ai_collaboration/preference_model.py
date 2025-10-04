@@ -1,45 +1,42 @@
 """
 Preference Models for Human-AI Collaboration
 
-This module implements preference-based learning and reward modeling.
+This module implements preference learning models including Bradley-Terry models.
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Any, Union
 from dataclasses import dataclass
-from abc import ABC, abstractmethod
 
 
 @dataclass
 class HumanPreference:
-    """Represents a human preference between two actions or trajectories."""
+    """Represents a human preference between two options."""
 
     state: torch.Tensor
     action1: torch.Tensor
     action2: torch.Tensor
     preference: int  # 0 for action1, 1 for action2
     confidence: float = 1.0
-    timestamp: float = 0.0
+    explanation: str = ""
 
 
 @dataclass
 class HumanFeedback:
-    """Represents human feedback on an action or trajectory."""
+    """Represents human feedback on an action."""
 
     state: torch.Tensor
     action: torch.Tensor
-    feedback_type: str  # 'positive', 'negative', 'neutral'
-    feedback_value: float  # -1 to 1
+    reward: float
+    confidence: float = 1.0
     explanation: str = ""
-    timestamp: float = 0.0
 
 
 class PreferenceRewardModel(nn.Module):
-    """Neural network for modeling human preferences."""
+    """Learn human preferences using Bradley-Terry model."""
 
     def __init__(self, state_dim: int, action_dim: int, hidden_dim: int = 128):
         super().__init__()
@@ -47,29 +44,17 @@ class PreferenceRewardModel(nn.Module):
         self.action_dim = action_dim
         self.hidden_dim = hidden_dim
 
-        # State encoder
-        self.state_encoder = nn.Sequential(
-            nn.Linear(state_dim, hidden_dim),
+        # Reward prediction networks
+        self.reward_net = nn.Sequential(
+            nn.Linear(state_dim + action_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
+            nn.Linear(hidden_dim, 1),
         )
 
-        # Action encoder
-        self.action_encoder = nn.Sequential(
-            nn.Linear(action_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-        )
-
-        # Reward predictor
-        self.reward_predictor = nn.Sequential(
-            nn.Linear(hidden_dim * 2, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, 1)
-        )
-
-        # Confidence predictor
-        self.confidence_predictor = nn.Sequential(
+        # Preference prediction network
+        self.preference_net = nn.Sequential(
             nn.Linear(hidden_dim * 2, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 1),
@@ -79,229 +64,349 @@ class PreferenceRewardModel(nn.Module):
     def forward(
         self, states: torch.Tensor, actions: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Forward pass to predict rewards and confidence."""
-        # Encode states and actions
-        state_features = self.state_encoder(states)
-        action_features = self.action_encoder(actions)
+        """Forward pass for reward prediction."""
+        # Combine state and action
+        inputs = torch.cat([states, actions], dim=-1)
 
-        # Combine features
-        combined_features = torch.cat([state_features, action_features], dim=-1)
+        # Predict rewards
+        rewards = self.reward_net(inputs)
 
-        # Predict rewards and confidence
-        rewards = self.reward_predictor(combined_features)
-        confidence = self.confidence_predictor(combined_features)
+        # Predict preferences
+        if states.shape[0] % 2 == 0:
+            # Assuming paired inputs for preference prediction
+            batch_size = states.shape[0] // 2
+            state1, state2 = states[:batch_size], states[batch_size:]
+            action1, action2 = actions[:batch_size], actions[batch_size:]
 
-        return rewards.squeeze(-1), confidence.squeeze(-1)
+            reward1 = self.reward_net(torch.cat([state1, action1], dim=-1))
+            reward2 = self.reward_net(torch.cat([state2, action2], dim=-1))
 
-    def predict_reward(self, state: torch.Tensor, action: torch.Tensor) -> float:
-        """Predict reward for a single state-action pair."""
-        with torch.no_grad():
-            reward, _ = self.forward(state.unsqueeze(0), action.unsqueeze(0))
-            return reward.item()
+            # Predict preference (probability that action1 is preferred)
+            preference_input = torch.cat([reward1, reward2], dim=-1)
+            preferences = self.preference_net(preference_input)
+        else:
+            preferences = torch.zeros(states.shape[0], 1)
+
+        return rewards, preferences
+
+    def preference_probability(
+        self, state: torch.Tensor, action1: torch.Tensor, action2: torch.Tensor
+    ) -> torch.Tensor:
+        """Compute probability that action1 is preferred over action2."""
+        reward1 = self.reward_net(torch.cat([state, action1], dim=-1))
+        reward2 = self.reward_net(torch.cat([state, action2], dim=-1))
+
+        preference_input = torch.cat([reward1, reward2], dim=-1)
+        preference_prob = self.preference_net(preference_input)
+
+        return preference_prob
+
+    def train_step(
+        self,
+        states: torch.Tensor,
+        actions: torch.Tensor,
+        preferences: torch.Tensor,
+        rewards: Optional[torch.Tensor] = None,
+    ) -> Dict[str, float]:
+        """Single training step."""
+        predicted_rewards, predicted_preferences = self.forward(states, actions)
+
+        # Preference loss (Bradley-Terry model)
+        preference_loss = F.binary_cross_entropy(
+            predicted_preferences.squeeze(), preferences.float()
+        )
+
+        # Reward loss (if available)
+        reward_loss = torch.tensor(0.0)
+        if rewards is not None:
+            reward_loss = F.mse_loss(predicted_rewards.squeeze(), rewards)
+
+        # Total loss
+        total_loss = preference_loss + 0.1 * reward_loss
+
+        return {
+            "preference_loss": preference_loss.item(),
+            "reward_loss": reward_loss.item(),
+            "total_loss": total_loss.item(),
+        }
 
 
 class BradleyTerryModel(nn.Module):
-    """Bradley-Terry model for pairwise preference learning."""
+    """Bradley-Terry model for pairwise preferences."""
 
-    def __init__(self, state_dim: int, action_dim: int, hidden_dim: int = 128):
+    def __init__(self, feature_dim: int, hidden_dim: int = 64):
         super().__init__()
-        self.state_dim = state_dim
-        self.action_dim = action_dim
+        self.feature_dim = feature_dim
         self.hidden_dim = hidden_dim
 
-        # Preference model
-        self.preference_model = PreferenceRewardModel(state_dim, action_dim, hidden_dim)
+        # Feature extraction
+        self.feature_extractor = nn.Sequential(
+            nn.Linear(feature_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+        )
 
-        # Temperature parameter for softmax
-        self.temperature = nn.Parameter(torch.tensor(1.0))
+        # Preference head
+        self.preference_head = nn.Sequential(
+            nn.Linear(hidden_dim * 2, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1),
+        )
 
-    def forward(
-        self, states: torch.Tensor, actions1: torch.Tensor, actions2: torch.Tensor
-    ) -> torch.Tensor:
-        """Forward pass for pairwise preference prediction."""
-        # Get rewards for both actions
-        rewards1, _ = self.preference_model(states, actions1)
-        rewards2, _ = self.preference_model(states, actions2)
+    def forward(self, features1: torch.Tensor, features2: torch.Tensor) -> torch.Tensor:
+        """Compute preference probability."""
+        # Extract features
+        feat1 = self.feature_extractor(features1)
+        feat2 = self.feature_extractor(features2)
 
-        # Compute preference probabilities using Bradley-Terry model
-        logits = (rewards1 - rewards2) / self.temperature
-        preference_probs = torch.sigmoid(logits)
+        # Combine features
+        combined = torch.cat([feat1, feat2], dim=-1)
 
-        return preference_probs
+        # Predict preference
+        preference_logits = self.preference_head(combined)
+        preference_prob = torch.sigmoid(preference_logits)
 
-    def predict_preference(
-        self, state: torch.Tensor, action1: torch.Tensor, action2: torch.Tensor
-    ) -> float:
-        """Predict preference probability for two actions."""
-        with torch.no_grad():
-            prob = self.forward(
-                state.unsqueeze(0), action1.unsqueeze(0), action2.unsqueeze(0)
-            )
-            return prob.item()
+        return preference_prob
 
-    def compute_loss(
+    def train_step(
         self,
-        states: torch.Tensor,
-        actions1: torch.Tensor,
-        actions2: torch.Tensor,
+        features1: torch.Tensor,
+        features2: torch.Tensor,
         preferences: torch.Tensor,
-    ) -> torch.Tensor:
-        """Compute Bradley-Terry loss."""
-        preference_probs = self.forward(states, actions1, actions2)
+    ) -> Dict[str, float]:
+        """Single training step."""
+        predicted_preferences = self.forward(features1, features2)
+        loss = F.binary_cross_entropy(
+            predicted_preferences.squeeze(), preferences.float()
+        )
 
-        # Binary cross-entropy loss
-        loss = F.binary_cross_entropy(preference_probs, preferences.float())
-
-        return loss
+        return {"loss": loss.item()}
 
 
-class PreferenceLearner:
-    """Learner for human preferences."""
+class PreferenceDataset:
+    """Dataset for storing and managing human preferences."""
 
-    def __init__(self, state_dim: int, action_dim: int, lr: float = 1e-3):
-        self.state_dim = state_dim
-        self.action_dim = action_dim
+    def __init__(self):
+        self.preferences = []
+        self.feedback = []
+        self.metadata = {}
 
-        # Bradley-Terry model
-        self.model = BradleyTerryModel(state_dim, action_dim)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
+    def add_preference(self, preference: HumanPreference):
+        """Add a preference to the dataset."""
+        self.preferences.append(preference)
 
-        # Training history
-        self.training_history = {
-            "losses": [],
-            "accuracies": [],
-            "preferences_learned": 0,
+    def add_feedback(self, feedback: HumanFeedback):
+        """Add feedback to the dataset."""
+        self.feedback.append(feedback)
+
+    def get_preference_batch(
+        self, batch_size: int
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Get a batch of preferences for training."""
+        if len(self.preferences) < batch_size:
+            batch_size = len(self.preferences)
+
+        indices = np.random.choice(len(self.preferences), batch_size, replace=False)
+
+        states = []
+        actions1 = []
+        actions2 = []
+        preferences = []
+
+        for idx in indices:
+            pref = self.preferences[idx]
+            states.append(pref.state)
+            actions1.append(pref.action1)
+            actions2.append(pref.action2)
+            preferences.append(pref.preference)
+
+        return (
+            torch.stack(states),
+            torch.stack(actions1),
+            torch.stack(actions2),
+            torch.tensor(preferences),
+        )
+
+    def get_feedback_batch(
+        self, batch_size: int
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Get a batch of feedback for training."""
+        if len(self.feedback) < batch_size:
+            batch_size = len(self.feedback)
+
+        indices = np.random.choice(len(self.feedback), batch_size, replace=False)
+
+        states = []
+        actions = []
+        rewards = []
+
+        for idx in indices:
+            fb = self.feedback[idx]
+            states.append(fb.state)
+            actions.append(fb.action)
+            rewards.append(fb.reward)
+
+        return (
+            torch.stack(states),
+            torch.stack(actions),
+            torch.tensor(rewards),
+        )
+
+    def get_statistics(self) -> Dict[str, Any]:
+        """Get dataset statistics."""
+        if not self.preferences and not self.feedback:
+            return {"total_preferences": 0, "total_feedback": 0}
+
+        stats = {
+            "total_preferences": len(self.preferences),
+            "total_feedback": len(self.feedback),
         }
 
-    def learn_preference(self, preference: HumanPreference) -> float:
-        """Learn from a single preference."""
-        # Prepare data
-        state = preference.state.unsqueeze(0)
-        action1 = preference.action1.unsqueeze(0)
-        action2 = preference.action2.unsqueeze(0)
-        target = torch.tensor([preference.preference], dtype=torch.float32)
+        if self.preferences:
+            preferences = [p.preference for p in self.preferences]
+            stats.update(
+                {
+                    "preference_distribution": {
+                        "action1_preferred": sum(1 for p in preferences if p == 0),
+                        "action2_preferred": sum(1 for p in preferences if p == 1),
+                    },
+                    "avg_confidence": np.mean([p.confidence for p in self.preferences]),
+                }
+            )
 
-        # Forward pass
+        if self.feedback:
+            rewards = [f.reward for f in self.feedback]
+            stats.update(
+                {
+                    "feedback_rewards": {
+                        "mean": np.mean(rewards),
+                        "std": np.std(rewards),
+                        "min": np.min(rewards),
+                        "max": np.max(rewards),
+                    },
+                    "avg_feedback_confidence": np.mean(
+                        [f.confidence for f in self.feedback]
+                    ),
+                }
+            )
+
+        return stats
+
+    def clear(self):
+        """Clear all data."""
+        self.preferences.clear()
+        self.feedback.clear()
+        self.metadata.clear()
+
+
+class PreferenceTrainer:
+    """Trainer for preference models."""
+
+    def __init__(
+        self,
+        model: PreferenceRewardModel,
+        lr: float = 1e-3,
+        weight_decay: float = 1e-5,
+    ):
+        self.model = model
+        self.optimizer = torch.optim.Adam(
+            model.parameters(), lr=lr, weight_decay=weight_decay
+        )
+        self.training_history = {"losses": [], "accuracies": []}
+
+    def train_epoch(
+        self, dataset: PreferenceDataset, batch_size: int = 32
+    ) -> Dict[str, float]:
+        """Train for one epoch."""
         self.model.train()
-        preference_prob = self.model(state, action1, action2)
-
-        # Compute loss
-        loss = F.binary_cross_entropy(preference_prob, target)
-
-        # Backward pass
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-
-        # Record training history
-        self.training_history["losses"].append(loss.item())
-        self.training_history["preferences_learned"] += 1
-
-        # Compute accuracy
-        predicted_preference = 1 if preference_prob.item() > 0.5 else 0
-        accuracy = 1.0 if predicted_preference == preference.preference else 0.0
-        self.training_history["accuracies"].append(accuracy)
-
-        return loss.item()
-
-    def learn_preferences(self, preferences: List[HumanPreference]) -> Dict[str, float]:
-        """Learn from multiple preferences."""
         total_loss = 0.0
-        total_accuracy = 0.0
+        total_preference_loss = 0.0
+        total_reward_loss = 0.0
+        num_batches = 0
 
-        for preference in preferences:
-            loss = self.learn_preference(preference)
-            total_loss += loss
+        # Train on preferences
+        if len(dataset.preferences) > 0:
+            pref_states, pref_actions1, pref_actions2, pref_labels = (
+                dataset.get_preference_batch(batch_size)
+            )
 
-        # Compute average metrics
-        avg_loss = total_loss / len(preferences)
-        avg_accuracy = np.mean(self.training_history["accuracies"][-len(preferences) :])
+            # Combine actions for forward pass
+            combined_states = torch.cat([pref_states, pref_states], dim=0)
+            combined_actions = torch.cat([pref_actions1, pref_actions2], dim=0)
+
+            losses = self.model.train_step(
+                combined_states, combined_actions, pref_labels
+            )
+
+            total_loss += losses["total_loss"]
+            total_preference_loss += losses["preference_loss"]
+            total_reward_loss += losses["reward_loss"]
+            num_batches += 1
+
+        # Train on feedback
+        if len(dataset.feedback) > 0:
+            fb_states, fb_actions, fb_rewards = dataset.get_feedback_batch(batch_size)
+
+            losses = self.model.train_step(fb_states, fb_actions, None, fb_rewards)
+
+            total_loss += losses["total_loss"]
+            total_reward_loss += losses["reward_loss"]
+            num_batches += 1
+
+        if num_batches > 0:
+            avg_loss = total_loss / num_batches
+            avg_preference_loss = total_preference_loss / num_batches
+            avg_reward_loss = total_reward_loss / num_batches
+
+            self.training_history["losses"].append(avg_loss)
 
         return {
             "avg_loss": avg_loss,
-            "avg_accuracy": avg_accuracy,
-            "total_preferences": len(preferences),
+            "avg_preference_loss": avg_preference_loss,
+            "avg_reward_loss": avg_reward_loss,
         }
 
-    def predict_preference(
-        self, state: torch.Tensor, action1: torch.Tensor, action2: torch.Tensor
-    ) -> float:
-        """Predict preference between two actions."""
-        return self.model.predict_preference(state, action1, action2)
+        return {"avg_loss": 0.0, "avg_preference_loss": 0.0, "avg_reward_loss": 0.0}
 
-    def get_reward_model(self) -> PreferenceRewardModel:
-        """Get the underlying reward model."""
-        return self.model.preference_model
-
-    def evaluate(self, test_preferences: List[HumanPreference]) -> Dict[str, float]:
-        """Evaluate on test preferences."""
+    def evaluate(
+        self, dataset: PreferenceDataset, batch_size: int = 32
+    ) -> Dict[str, float]:
+        """Evaluate model on dataset."""
         self.model.eval()
         total_loss = 0.0
         correct_predictions = 0
+        total_predictions = 0
 
         with torch.no_grad():
-            for preference in test_preferences:
-                state = preference.state.unsqueeze(0)
-                action1 = preference.action1.unsqueeze(0)
-                action2 = preference.action2.unsqueeze(0)
-                target = torch.tensor([preference.preference], dtype=torch.float32)
+            # Evaluate on preferences
+            if len(dataset.preferences) > 0:
+                pref_states, pref_actions1, pref_actions2, pref_labels = (
+                    dataset.get_preference_batch(batch_size)
+                )
 
-                preference_prob = self.model(state, action1, action2)
-                loss = F.binary_cross_entropy(preference_prob, target)
-                total_loss += loss.item()
+                combined_states = torch.cat([pref_states, pref_states], dim=0)
+                combined_actions = torch.cat([pref_actions1, pref_actions2], dim=0)
 
-                predicted_preference = 1 if preference_prob.item() > 0.5 else 0
-                if predicted_preference == preference.preference:
-                    correct_predictions += 1
+                losses = self.model.train_step(
+                    combined_states, combined_actions, pref_labels
+                )
+                total_loss += losses["total_loss"]
 
-        accuracy = correct_predictions / len(test_preferences)
-        avg_loss = total_loss / len(test_preferences)
+                # Compute accuracy
+                predicted_preferences = self.model.preference_probability(
+                    pref_states, pref_actions1, pref_actions2
+                )
+                predicted_labels = (predicted_preferences > 0.5).long().squeeze()
+                correct_predictions += (predicted_labels == pref_labels).sum().item()
+                total_predictions += len(pref_labels)
 
-        return {
-            "accuracy": accuracy,
-            "avg_loss": avg_loss,
-            "total_predictions": len(test_preferences),
-        }
-
-
-class ActivePreferenceLearner(PreferenceLearner):
-    """Active learning for human preferences."""
-
-    def __init__(self, state_dim: int, action_dim: int, lr: float = 1e-3):
-        super().__init__(state_dim, action_dim, lr)
-        self.uncertainty_threshold = 0.1
-
-    def select_informative_pairs(
-        self,
-        states: List[torch.Tensor],
-        actions: List[torch.Tensor],
-        num_pairs: int = 10,
-    ) -> List[Tuple[int, int]]:
-        """Select most informative action pairs for preference queries."""
-        informative_pairs = []
-
-        for i, state in enumerate(states):
-            for j, action1 in enumerate(actions):
-                for k, action2 in enumerate(actions):
-                    if j >= k:  # Avoid duplicate pairs
-                        continue
-
-                    # Compute uncertainty
-                    preference_prob = self.predict_preference(state, action1, action2)
-                    uncertainty = abs(preference_prob - 0.5)  # Distance from 0.5
-
-                    if uncertainty < self.uncertainty_threshold:
-                        informative_pairs.append((j, k))
-
-        # Sort by uncertainty and return top pairs
-        informative_pairs.sort(
-            key=lambda x: abs(
-                self.predict_preference(states[0], actions[x[0]], actions[x[1]]) - 0.5
-            )
+        accuracy = (
+            correct_predictions / total_predictions if total_predictions > 0 else 0.0
         )
 
-        return informative_pairs[:num_pairs]
-
-    def update_uncertainty_threshold(self, new_threshold: float):
-        """Update uncertainty threshold for active learning."""
-        self.uncertainty_threshold = new_threshold
+        return {
+            "loss": total_loss,
+            "accuracy": accuracy,
+            "correct_predictions": correct_predictions,
+            "total_predictions": total_predictions,
+        }

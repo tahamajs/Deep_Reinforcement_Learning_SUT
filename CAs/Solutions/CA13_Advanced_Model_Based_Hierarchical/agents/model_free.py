@@ -75,6 +75,7 @@ class DQNAgent(ModelFreeAgent):
 
         # Experience replay buffer
         from ..buffers.replay_buffer import ReplayBuffer
+
         self.replay_buffer = ReplayBuffer(buffer_size)
 
         # Training statistics

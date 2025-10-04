@@ -23,7 +23,7 @@ class ComprehensiveEvaluator:
         efficiency_scores = {}
 
         for method_name, rewards in training_curves.items():
-            if not rewards:
+            if len(rewards) == 0:
                 efficiency_scores[method_name] = float("inf")
                 continue
 
@@ -48,7 +48,9 @@ class ComprehensiveEvaluator:
             if len(rewards) >= final_episodes:
                 asymptotic_scores[method_name] = np.mean(rewards[-final_episodes:])
             else:
-                asymptotic_scores[method_name] = np.mean(rewards) if rewards else 0.0
+                asymptotic_scores[method_name] = (
+                    np.mean(rewards) if len(rewards) > 0 else 0.0
+                )
 
         return asymptotic_scores
 

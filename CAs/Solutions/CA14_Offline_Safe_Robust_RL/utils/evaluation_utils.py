@@ -1,7 +1,7 @@
 """Utilities module for CA14 advanced RL implementations."""
 
 import numpy as np
-from ..robust_rl.environment import RobustEnvironment
+from robust_rl.environment import RobustEnvironment
 
 
 def create_evaluation_environments():

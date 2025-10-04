@@ -1,340 +1,419 @@
 """
 Collaborative Agent for Human-AI Interaction
 
-This module implements collaborative agents that work with humans.
+This module implements collaborative agents that work with human feedback and preferences.
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Any, Union
-from .preference_model import HumanPreference, PreferenceLearner
-from .feedback_collector import HumanFeedbackCollector, TrustModel
+import random
 
 
 class CollaborativeAgent:
-    """Agent that collaborates with humans."""
+    """RL agent that collaborates with human feedback and preferences."""
 
-    def __init__(self, state_dim: int, action_dim: int, lr: float = 1e-3):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        hidden_dim: int = 128,
+        collaboration_threshold: float = 0.7,
+        lr: float = 1e-3,
+    ):
         self.state_dim = state_dim
         self.action_dim = action_dim
+        self.hidden_dim = hidden_dim
+        self.collaboration_threshold = collaboration_threshold
 
         # Policy network
-        self.policy = nn.Sequential(
-            nn.Linear(state_dim, 128),
+        self.policy_net = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(128, 128),
+            nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(128, action_dim),
+            nn.Linear(hidden_dim, action_dim),
         )
 
-        self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
+        # Value network
+        self.value_net = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1),
+        )
 
-        # Human collaboration components
-        self.preference_learner = PreferenceLearner(state_dim, action_dim, lr)
-        self.feedback_collector = HumanFeedbackCollector()
-        self.trust_model = TrustModel(state_dim, action_dim)
+        # Confidence estimation network
+        self.confidence_net = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1),
+            nn.Sigmoid(),
+        )
 
-        # Collaboration parameters
-        self.collaboration_threshold = 0.3  # When to ask for human help
-        self.confidence_history = []
+        # Optimizer
+        self.optimizer = torch.optim.Adam(
+            list(self.policy_net.parameters())
+            + list(self.value_net.parameters())
+            + list(self.confidence_net.parameters()),
+            lr=lr,
+        )
 
-        # Training history
-        self.training_history = {
-            "losses": [],
-            "rewards": [],
-            "collaboration_events": [],
-        }
+        # Human feedback storage
+        self.human_feedback = []
+        self.preference_data = []
 
-    def select_action(
-        self, state: torch.Tensor, human_available: bool = False
-    ) -> Tuple[int, float]:
-        """Select action with optional human collaboration."""
+        # Trust and collaboration metrics
+        self.trust_score = 0.5
+        self.collaboration_history = []
+
+    def select_action(self, state: torch.Tensor) -> Tuple[int, Dict[str, Any]]:
+        """Select action with confidence estimation."""
         with torch.no_grad():
-            action_logits = self.policy(state.unsqueeze(0))
+            # Get action probabilities
+            action_logits = self.policy_net(state)
             action_probs = F.softmax(action_logits, dim=-1)
 
-            # Calculate confidence
-            confidence = torch.max(action_probs).item()
-            self.confidence_history.append(confidence)
+            # Get confidence
+            confidence = self.confidence_net(state).item()
 
-            # Decide whether to collaborate with human
-            if human_available and confidence < self.collaboration_threshold:
-                # Request human input
-                return self._request_human_input(state, action_probs)
-            else:
-                # Use AI decision
-                action = torch.multinomial(action_probs, 1)
-                return action.item(), confidence
+            # Select action
+            action = torch.multinomial(action_probs, 1).item()
 
-    def _request_human_input(
-        self, state: torch.Tensor, action_probs: torch.Tensor
-    ) -> Tuple[int, float]:
-        """Request human input for action selection."""
-        # Simulate human providing input
-        human_action = torch.argmax(action_probs).item()
-        human_confidence = 0.8
+            # Determine if human collaboration is needed
+            needs_collaboration = confidence < self.collaboration_threshold
 
-        # Record collaboration event
-        self.training_history["collaboration_events"].append(
-            {
-                "state": state.cpu().numpy(),
-                "ai_action": torch.argmax(action_probs).item(),
-                "human_action": human_action,
-                "human_confidence": human_confidence,
+            collaboration_info = {
+                "action": action,
+                "confidence": confidence,
+                "action_probs": action_probs.cpu().numpy(),
+                "needs_collaboration": needs_collaboration,
+                "trust_score": self.trust_score,
             }
-        )
 
-        return human_action, human_confidence
+            return action, collaboration_info
 
-    def update(
+    def update_with_feedback(
         self,
         states: torch.Tensor,
         actions: torch.Tensor,
         rewards: torch.Tensor,
-        human_feedbacks: List = None,
+        human_feedback: Optional[torch.Tensor] = None,
     ) -> Dict[str, float]:
-        """Update policy using rewards and human feedback."""
+        """Update agent with human feedback."""
         # Standard policy gradient update
-        action_logits = self.policy(states)
+        action_logits = self.policy_net(states)
         action_probs = F.softmax(action_logits, dim=-1)
         log_probs = torch.log(action_probs.gather(1, actions.unsqueeze(1)))
-        policy_loss = -(log_probs * rewards.unsqueeze(1)).mean()
 
-        # Human feedback update
-        feedback_loss = 0.0
-        if human_feedbacks:
-            feedback_loss = self.preference_learner.learn_preferences(human_feedbacks)[
-                "avg_loss"
-            ]
+        # Value function update
+        values = self.value_net(states).squeeze(-1)
+        value_loss = F.mse_loss(values, rewards)
+
+        # Policy loss with human feedback
+        if human_feedback is not None:
+            # Weight policy loss by human feedback
+            policy_loss = -(log_probs.squeeze() * human_feedback).mean()
+        else:
+            # Standard policy gradient
+            advantages = rewards - values.detach()
+            policy_loss = -(log_probs.squeeze() * advantages).mean()
 
         # Total loss
-        total_loss = policy_loss + 0.1 * feedback_loss
+        total_loss = policy_loss + 0.5 * value_loss
 
         # Backward pass
         self.optimizer.zero_grad()
         total_loss.backward()
+        torch.nn.utils.clip_grad_norm_(
+            list(self.policy_net.parameters())
+            + list(self.value_net.parameters())
+            + list(self.confidence_net.parameters()),
+            max_norm=1.0,
+        )
         self.optimizer.step()
-
-        # Record training history
-        self.training_history["losses"].append(total_loss.item())
-        self.training_history["rewards"].append(rewards.mean().item())
 
         return {
             "policy_loss": policy_loss.item(),
-            "feedback_loss": feedback_loss,
+            "value_loss": value_loss.item(),
             "total_loss": total_loss.item(),
         }
 
-    def get_collaboration_statistics(self) -> Dict[str, Any]:
-        """Get collaboration statistics."""
+    def add_human_feedback(
+        self, state: torch.Tensor, action: int, feedback: float, explanation: str = ""
+    ):
+        """Add human feedback to the agent's memory."""
+        self.human_feedback.append(
+            {
+                "state": state.cpu().numpy(),
+                "action": action,
+                "feedback": feedback,
+                "explanation": explanation,
+                "timestamp": len(self.human_feedback),
+            }
+        )
+
+    def update_trust(self, predicted_outcome: float, actual_outcome: float):
+        """Update trust score based on prediction accuracy."""
+        prediction_error = abs(predicted_outcome - actual_outcome)
+        
+        # Update trust score (higher error = lower trust)
+        trust_update = 0.1 * (1.0 - prediction_error)
+        self.trust_score = np.clip(self.trust_score + trust_update, 0.0, 1.0)
+
+    def get_collaboration_recommendation(self, state: torch.Tensor) -> Dict[str, Any]:
+        """Get recommendation for human collaboration."""
+        with torch.no_grad():
+            confidence = self.confidence_net(state).item()
+            
+            recommendation = {
+                "should_collaborate": confidence < self.collaboration_threshold,
+                "confidence": confidence,
+                "trust_level": self.trust_score,
+                "collaboration_type": self._determine_collaboration_type(confidence),
+                "explanation": self._generate_explanation(confidence),
+            }
+            
+            return recommendation
+
+    def _determine_collaboration_type(self, confidence: float) -> str:
+        """Determine the type of collaboration needed."""
+        if confidence < 0.3:
+            return "full_guidance"
+        elif confidence < 0.5:
+            return "partial_guidance"
+        elif confidence < 0.7:
+            return "confirmation"
+        else:
+            return "monitoring"
+
+    def _generate_explanation(self, confidence: float) -> str:
+        """Generate explanation for collaboration recommendation."""
+        if confidence < 0.3:
+            return "Low confidence - full human guidance recommended"
+        elif confidence < 0.5:
+            return "Moderate confidence - partial human guidance helpful"
+        elif confidence < 0.7:
+            return "Good confidence - human confirmation suggested"
+        else:
+            return "High confidence - minimal human intervention needed"
+
+    def get_feedback_statistics(self) -> Dict[str, Any]:
+        """Get statistics about human feedback."""
+        if not self.human_feedback:
+            return {"total_feedback": 0, "avg_feedback": 0.0}
+
+        feedbacks = [f["feedback"] for f in self.human_feedback]
+        
         return {
-            "collaboration_events": len(self.training_history["collaboration_events"]),
-            "avg_confidence": (
-                np.mean(self.confidence_history) if self.confidence_history else 0.0
-            ),
-            "feedback_statistics": self.feedback_collector.get_feedback_statistics(),
-            "trust_metrics": self.trust_model.compute_trust_metrics(),
+            "total_feedback": len(self.human_feedback),
+            "avg_feedback": np.mean(feedbacks),
+            "std_feedback": np.std(feedbacks),
+            "positive_feedback": sum(1 for f in feedbacks if f > 0),
+            "negative_feedback": sum(1 for f in feedbacks if f < 0),
+            "neutral_feedback": sum(1 for f in feedbacks if f == 0),
         }
 
 
 class SharedAutonomyController:
     """Controller for shared autonomy between human and AI."""
 
-    def __init__(self, state_dim: int, action_dim: int):
-        self.state_dim = state_dim
-        self.action_dim = action_dim
+    def __init__(self, agent: CollaborativeAgent, human_weight: float = 0.5):
+        self.agent = agent
+        self.human_weight = human_weight
+        self.ai_weight = 1.0 - human_weight
+        
+        # Autonomy levels
+        self.autonomy_levels = {
+            "full_ai": 0.0,
+            "mostly_ai": 0.2,
+            "balanced": 0.5,
+            "mostly_human": 0.8,
+            "full_human": 1.0,
+        }
+        
+        self.current_autonomy = "balanced"
 
-        # Arbitration parameters
-        self.human_authority_threshold = 0.7
-        self.ai_authority_threshold = 0.3
-        self.blending_weight = 0.5
-
-        # Authority history
-        self.authority_history = []
-
-    def arbitrate(
-        self,
-        ai_action: int,
-        human_action: int,
-        ai_confidence: float,
-        human_confidence: float,
-    ) -> int:
-        """Arbitrate between AI and human actions."""
-        # Determine authority levels
-        ai_authority = self._compute_ai_authority(ai_confidence)
-        human_authority = self._compute_human_authority(human_confidence)
-
-        # Record authority decision
-        self.authority_history.append(
-            {
-                "ai_action": ai_action,
-                "human_action": human_action,
-                "ai_authority": ai_authority,
-                "human_authority": human_authority,
-                "final_action": None,
+    def get_combined_action(
+        self, state: torch.Tensor, human_action: Optional[int] = None
+    ) -> Tuple[int, Dict[str, Any]]:
+        """Get combined action from AI and human."""
+        ai_action, ai_info = self.agent.select_action(state)
+        
+        if human_action is None:
+            # No human input, use AI action
+            return ai_action, {
+                "action": ai_action,
+                "source": "ai",
+                "autonomy_level": self.current_autonomy,
+                "confidence": ai_info["confidence"],
             }
-        )
-
-        # Make arbitration decision
-        if human_authority > self.human_authority_threshold:
-            final_action = human_action
-        elif ai_authority > self.ai_authority_threshold:
+        
+        # Combine AI and human actions
+        if self.current_autonomy == "full_ai":
             final_action = ai_action
+            source = "ai"
+        elif self.current_autonomy == "full_human":
+            final_action = human_action
+            source = "human"
         else:
-            # Blend actions
-            final_action = self._blend_actions(
-                ai_action, human_action, ai_authority, human_authority
-            )
-
-        # Update history
-        self.authority_history[-1]["final_action"] = final_action
-
-        return final_action
-
-    def _compute_ai_authority(self, ai_confidence: float) -> float:
-        """Compute AI authority level."""
-        return ai_confidence
-
-    def _compute_human_authority(self, human_confidence: float) -> float:
-        """Compute human authority level."""
-        return human_confidence
-
-    def _blend_actions(
-        self,
-        ai_action: int,
-        human_action: int,
-        ai_authority: float,
-        human_authority: float,
-    ) -> int:
-        """Blend AI and human actions."""
-        # Simple blending - choose action with higher authority
-        if ai_authority > human_authority:
-            return ai_action
+            # Weighted combination
+            human_weight = self.autonomy_levels[self.current_autonomy]
+            ai_weight = 1.0 - human_weight
+            
+            # Simple weighted selection (in practice, this could be more sophisticated)
+            if random.random() < human_weight:
+                final_action = human_action
+                source = "human"
         else:
-            return human_action
+                final_action = ai_action
+                source = "ai"
+        
+        return final_action, {
+            "action": final_action,
+            "source": source,
+            "ai_action": ai_action,
+            "human_action": human_action,
+            "autonomy_level": self.current_autonomy,
+            "ai_confidence": ai_info["confidence"],
+            "human_weight": self.autonomy_levels[self.current_autonomy],
+            "ai_weight": 1.0 - self.autonomy_levels[self.current_autonomy],
+        }
 
-    def get_authority_statistics(self) -> Dict[str, Any]:
-        """Get authority arbitration statistics."""
-        if not self.authority_history:
-            return {"total_decisions": 0, "ai_wins": 0, "human_wins": 0, "blended": 0}
+    def adjust_autonomy(self, performance_metric: float, human_satisfaction: float):
+        """Adjust autonomy level based on performance and human satisfaction."""
+        # Simple autonomy adjustment logic
+        if performance_metric > 0.8 and human_satisfaction > 0.7:
+            # High performance and satisfaction - increase AI autonomy
+            if self.current_autonomy == "full_human":
+                self.current_autonomy = "mostly_human"
+            elif self.current_autonomy == "mostly_human":
+                self.current_autonomy = "balanced"
+            elif self.current_autonomy == "balanced":
+                self.current_autonomy = "mostly_ai"
+        elif performance_metric < 0.5 or human_satisfaction < 0.5:
+            # Low performance or satisfaction - increase human autonomy
+            if self.current_autonomy == "full_ai":
+                self.current_autonomy = "mostly_ai"
+            elif self.current_autonomy == "mostly_ai":
+                self.current_autonomy = "balanced"
+            elif self.current_autonomy == "balanced":
+                self.current_autonomy = "mostly_human"
 
-        ai_wins = sum(
-            1
-            for entry in self.authority_history
-            if entry["final_action"] == entry["ai_action"]
-        )
-        human_wins = sum(
-            1
-            for entry in self.authority_history
-            if entry["final_action"] == entry["human_action"]
-        )
-        blended = len(self.authority_history) - ai_wins - human_wins
-
+    def get_autonomy_info(self) -> Dict[str, Any]:
+        """Get information about current autonomy level."""
         return {
-            "total_decisions": len(self.authority_history),
-            "ai_wins": ai_wins,
-            "human_wins": human_wins,
-            "blended": blended,
-            "ai_win_rate": ai_wins / len(self.authority_history),
-            "human_win_rate": human_wins / len(self.authority_history),
+            "current_autonomy": self.current_autonomy,
+            "human_weight": self.autonomy_levels[self.current_autonomy],
+            "ai_weight": 1.0 - self.autonomy_levels[self.current_autonomy],
+            "available_levels": list(self.autonomy_levels.keys()),
         }
 
 
 class HumanAICoordinator:
-    """Coordinates between human and AI agents."""
+    """Coordinates interaction between human and AI agents."""
 
-    def __init__(self, state_dim: int, action_dim: int):
-        self.state_dim = state_dim
-        self.action_dim = action_dim
+    def __init__(self, agent: CollaborativeAgent, controller: SharedAutonomyController):
+        self.agent = agent
+        self.controller = controller
+        
+        # Communication protocols
+        self.communication_log = []
+        self.interaction_history = []
 
-        # Coordination components
-        self.collaborative_agent = CollaborativeAgent(state_dim, action_dim)
-        self.shared_autonomy = SharedAutonomyController(state_dim, action_dim)
-
-        # Coordination parameters
-        self.coordination_mode = (
-            "collaborative"  # 'collaborative', 'autonomous', 'supervised'
+    def coordinate_interaction(
+        self, state: torch.Tensor, human_input: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Coordinate interaction between human and AI."""
+        # Get AI recommendation
+        ai_action, ai_info = self.agent.select_action(state)
+        
+        # Get collaboration recommendation
+        collaboration_rec = self.agent.get_collaboration_recommendation(state)
+        
+        # Determine if human input is needed
+        needs_human_input = (
+            collaboration_rec["should_collaborate"]
+            or self.controller.current_autonomy in ["mostly_human", "full_human"]
         )
-        self.human_availability = True
-
-        # Coordination history
-        self.coordination_history = []
-
-    def coordinate_action(
-        self,
-        state: torch.Tensor,
-        human_action: int = None,
-        human_confidence: float = 0.5,
-    ) -> Tuple[int, Dict[str, Any]]:
-        """Coordinate action selection between human and AI."""
-        # Get AI action
-        ai_action, ai_confidence = self.collaborative_agent.select_action(
-            state, human_available=self.human_availability
-        )
-
-        # Coordinate based on mode
-        if self.coordination_mode == "collaborative":
-            if human_action is not None:
-                final_action = self.shared_autonomy.arbitrate(
-                    ai_action, human_action, ai_confidence, human_confidence
+        
+        # Process human input if provided
+        human_action = None
+        if human_input is not None:
+            human_action = human_input.get("action", None)
+            if "feedback" in human_input:
+                self.agent.add_human_feedback(
+                    state,
+                    human_action or ai_action,
+                    human_input["feedback"],
+                    human_input.get("explanation", ""),
                 )
-            else:
-                final_action = ai_action
-        elif self.coordination_mode == "autonomous":
-            final_action = ai_action
-        else:  # supervised
-            final_action = human_action if human_action is not None else ai_action
-
-        # Record coordination event
-        coordination_info = {
+        
+        # Get combined action
+        final_action, action_info = self.controller.get_combined_action(
+            state, human_action
+        )
+        
+        # Log interaction
+        interaction = {
             "state": state.cpu().numpy(),
             "ai_action": ai_action,
             "human_action": human_action,
             "final_action": final_action,
-            "ai_confidence": ai_confidence,
-            "human_confidence": human_confidence,
-            "coordination_mode": self.coordination_mode,
+            "needs_human_input": needs_human_input,
+            "collaboration_recommendation": collaboration_rec,
+            "action_info": action_info,
+            "timestamp": len(self.interaction_history),
         }
-
-        self.coordination_history.append(coordination_info)
-
-        return final_action, coordination_info
-
-    def update_coordination(
-        self,
-        states: torch.Tensor,
-        actions: torch.Tensor,
-        rewards: torch.Tensor,
-        human_feedbacks: List = None,
-    ):
-        """Update coordination based on experience."""
-        # Update collaborative agent
-        update_info = self.collaborative_agent.update(
-            states, actions, rewards, human_feedbacks
-        )
-
-        return update_info
-
-    def set_coordination_mode(self, mode: str):
-        """Set coordination mode."""
-        if mode in ["collaborative", "autonomous", "supervised"]:
-            self.coordination_mode = mode
-        else:
-            raise ValueError(f"Invalid coordination mode: {mode}")
-
-    def set_human_availability(self, available: bool):
-        """Set human availability."""
-        self.human_availability = available
-
-    def get_coordination_statistics(self) -> Dict[str, Any]:
-        """Get coordination statistics."""
+        
+        self.interaction_history.append(interaction)
+        
         return {
-            "coordination_mode": self.coordination_mode,
-            "human_availability": self.human_availability,
-            "total_coordinations": len(self.coordination_history),
-            "collaboration_stats": self.collaborative_agent.get_collaboration_statistics(),
-            "authority_stats": self.shared_autonomy.get_authority_statistics(),
+            "action": final_action,
+            "needs_human_input": needs_human_input,
+            "ai_recommendation": ai_action,
+            "human_input": human_action,
+            "collaboration_info": collaboration_rec,
+            "autonomy_info": self.controller.get_autonomy_info(),
+            "interaction_log": interaction,
         }
+
+    def update_performance(
+        self, performance_metric: float, human_satisfaction: float
+    ):
+        """Update system performance and adjust autonomy."""
+        self.controller.adjust_autonomy(performance_metric, human_satisfaction)
+        
+        # Log performance update
+        self.communication_log.append({
+            "type": "performance_update",
+            "performance": performance_metric,
+            "satisfaction": human_satisfaction,
+            "new_autonomy": self.controller.current_autonomy,
+            "timestamp": len(self.communication_log),
+        })
+
+    def get_system_status(self) -> Dict[str, Any]:
+        """Get overall system status."""
+        return {
+            "agent_trust": self.agent.trust_score,
+            "autonomy_level": self.controller.current_autonomy,
+            "total_interactions": len(self.interaction_history),
+            "feedback_statistics": self.agent.get_feedback_statistics(),
+            "communication_log_size": len(self.communication_log),
+            "system_health": self._assess_system_health(),
+        }
+
+    def _assess_system_health(self) -> str:
+        """Assess overall system health."""
+        if self.agent.trust_score > 0.8 and len(self.interaction_history) > 10:
+            return "excellent"
+        elif self.agent.trust_score > 0.6 and len(self.interaction_history) > 5:
+            return "good"
+        elif self.agent.trust_score > 0.4:
+            return "fair"
+        else:
+            return "needs_attention"

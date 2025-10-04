@@ -15,14 +15,33 @@ This package transforms the monolithic CA18.ipynb notebook into a clean, maintai
 
 ## Installation
 
+### Quick Start (Recommended)
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd CA18
+# Make the script executable and run it
+chmod +x run.sh
+./run.sh
+```
+
+This will automatically:
+- Create a virtual environment
+- Install all dependencies  
+- Run comprehensive demos
+- Generate visualizations and reports
+
+### Manual Installation
+```bash
+# Create virtual environment
+python3 -m venv ca18_env
+source ca18_env/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Test installation
+python test_modules.py
 ```
+
+For detailed setup instructions, see [SETUP_GUIDE.md](SETUP_GUIDE.md).
 
 ## Quick Start
 

@@ -1,18 +1,18 @@
 """
-Latent Dynamics Models for World Models
+Dynamics Model for World Models
 
-This module implements dynamics models that predict next latent states
-given current latent states and actions.
+This module implements latent dynamics models for predicting next states
+in the latent space of world models.
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Tuple, Optional
+from typing import Tuple
 
 
 class LatentDynamicsModel(nn.Module):
-    """Dynamics model for predicting next latent states"""
+    """Dynamics model for latent space transitions"""
 
     def __init__(
         self,
@@ -33,95 +33,77 @@ class LatentDynamicsModel(nn.Module):
             layers.extend([nn.Linear(prev_dim, hidden_dim), nn.ReLU(), nn.Dropout(0.1)])
             prev_dim = hidden_dim
 
+        self.dynamics_net = nn.Sequential(*layers)
+
         if stochastic:
-            # Output mean and log variance for stochastic dynamics
+            # Output layers for mean and log variance
             self.mean_layer = nn.Linear(prev_dim, latent_dim)
             self.log_var_layer = nn.Linear(prev_dim, latent_dim)
         else:
-            # Output deterministic next state
+            # Deterministic output
             self.output_layer = nn.Linear(prev_dim, latent_dim)
-
-        self.network = nn.Sequential(*layers)
 
     def forward(
         self, latent: torch.Tensor, action: torch.Tensor
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]:
-        """Predict next latent state"""
-        x = torch.cat([latent, action], dim=-1)
-        features = self.network(x)
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Forward pass through dynamics model
+
+        Args:
+            latent: Current latent state [batch, latent_dim]
+            action: Action taken [batch, action_dim]
+
+        Returns:
+            next_latent: Predicted next latent state
+            mean: Mean of predicted distribution (if stochastic)
+            log_var: Log variance of predicted distribution (if stochastic)
+        """
+        # Combine latent and action
+        combined = torch.cat([latent, action], dim=-1)
+
+        # Forward through dynamics network
+        dynamics_out = self.dynamics_net(combined)
 
         if self.stochastic:
-            mean = self.mean_layer(features)
-            log_var = self.log_var_layer(features)
-            log_var = torch.clamp(log_var, -10, 2)  # Prevent numerical instability
+            # Sample from predicted distribution
+            mean = self.mean_layer(dynamics_out)
+            log_var = self.log_var_layer(dynamics_out)
+            log_var = torch.clamp(log_var, -20, 2)  # Clamp for numerical stability
 
-            # Sample next state
             std = torch.exp(0.5 * log_var)
             eps = torch.randn_like(std)
             next_latent = mean + eps * std
 
             return next_latent, mean, log_var
         else:
-            next_latent = self.output_layer(features)
+            # Deterministic prediction
+            next_latent = self.output_layer(dynamics_out)
             return next_latent, None, None
 
     def predict_deterministic(
         self, latent: torch.Tensor, action: torch.Tensor
     ) -> torch.Tensor:
-        """Predict deterministic next state (use mean for stochastic models)"""
-        if self.stochastic:
-            x = torch.cat([latent, action], dim=-1)
-            features = self.network(x)
-            mean = self.mean_layer(features)
-            return mean
-        else:
+        """Predict next latent state deterministically"""
+        if not self.stochastic:
             return self.forward(latent, action)[0]
 
+        # For stochastic model, use mean
+        combined = torch.cat([latent, action], dim=-1)
+        dynamics_out = self.dynamics_net(combined)
+        mean = self.mean_layer(dynamics_out)
+        return mean
 
-class EnsembleDynamicsModel(nn.Module):
-    """Ensemble of dynamics models for uncertainty estimation"""
-
-    def __init__(
-        self,
-        latent_dim: int,
-        action_dim: int,
-        hidden_dims: list = [256, 128],
-        num_models: int = 5,
-        stochastic: bool = True,
-    ):
-        super().__init__()
-        self.num_models = num_models
-        self.models = nn.ModuleList(
-            [
-                LatentDynamicsModel(latent_dim, action_dim, hidden_dims, stochastic)
-                for _ in range(num_models)
-            ]
-        )
-
-    def forward(
+    def sample_next_state(
         self, latent: torch.Tensor, action: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Predict next states using ensemble"""
-        predictions = []
-        for model in self.models:
-            pred = model.forward(latent, action)[0]
-            predictions.append(pred)
-
-        predictions = torch.stack(predictions, dim=0)  # [num_models, batch, latent_dim]
-        mean_pred = predictions.mean(dim=0)
-        var_pred = predictions.var(dim=0)
-
-        return mean_pred, var_pred
-
-    def sample_predictions(
-        self, latent: torch.Tensor, action: torch.Tensor, num_samples: int = 1
     ) -> torch.Tensor:
-        """Sample predictions from ensemble"""
-        all_predictions = []
+        """Sample next latent state from predicted distribution"""
+        if self.stochastic:
+            return self.forward(latent, action)[0]
+        else:
+            return self.predict_deterministic(latent, action)
 
-        for _ in range(num_samples):
-            model_idx = torch.randint(0, self.num_models, (1,)).item()
-            pred = self.models[model_idx].forward(latent, action)[0]
-            all_predictions.append(pred)
-
-        return torch.stack(all_predictions, dim=0)  # [num_samples, batch, latent_dim]
+    def compute_kl_divergence(
+        self, mean: torch.Tensor, log_var: torch.Tensor
+    ) -> torch.Tensor:
+        """Compute KL divergence with standard normal"""
+        return -0.5 * torch.sum(1 + log_var - mean.pow(2) - log_var.exp())

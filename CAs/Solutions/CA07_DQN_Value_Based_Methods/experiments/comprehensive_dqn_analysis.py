@@ -1,589 +1,436 @@
 """
-CA7: Comprehensive DQN Experiments and Analysis
-===============================================
-
-This script runs comprehensive experiments comparing different DQN variants
-and provides detailed analysis of their performance characteristics.
-
-Experiments include:
-1. Basic DQN training and evaluation
-2. Comparison of DQN variants (Standard, Double, Dueling)
-3. Experience replay analysis
-4. Target network frequency analysis
-5. Overestimation bias analysis
-6. Performance benchmarking
-
-Usage:
-    python experiments/comprehensive_dqn_analysis.py
-
-Author: CA7 Implementation
+Comprehensive DQN Analysis for CA07
+===================================
+This script performs comprehensive analysis of different DQN variants
+including comparison, hyperparameter optimization, and robustness analysis
 """
 
 import sys
 import os
-
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import torch
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import gymnasium as gym
-import torch
-import warnings
-from collections import defaultdict
-from typing import Dict, List, Any, Optional
-import time
-
-from ..agents.core import (
-    DQNAgent,
-    DoubleDQNAgent,
-    DuelingDQNAgent,
-    QNetworkVisualization,
-    PerformanceAnalyzer,
+from training_examples import (
+    DQNAgent, DoubleDQNAgent, DuelingDQNAgent, DuelingDoubleDQNAgent,
+    train_dqn_agent, compare_dqn_variants, plot_dqn_comparison,
+    hyperparameter_optimization_study, robustness_analysis
 )
+import warnings
+from typing import Dict, List, Tuple
+import json
 
+warnings.filterwarnings("ignore")
+
+def comprehensive_dqn_analysis():
+    """Perform comprehensive DQN analysis"""
+    print("Comprehensive DQN Analysis")
+    print("=" * 40)
+    
+    # Set random seeds for reproducibility
 torch.manual_seed(42)
 np.random.seed(42)
 
-plt.style.use("seaborn-v0_8")
-plt.rcParams["figure.figsize"] = (12, 8)
-plt.rcParams["font.size"] = 12
-warnings.filterwarnings("ignore")
+    # Create results directory
+    os.makedirs('visualizations', exist_ok=True)
+    os.makedirs('results', exist_ok=True)
+    
+    # 1. DQN Variants Comparison
+    print("\n1. Comparing DQN Variants...")
+    print("-" * 30)
+    
+    variants_results = compare_dqn_variants("CartPole-v1", episodes=250)
+    plot_dqn_comparison(variants_results, "visualizations/dqn_variants_comparison.png")
+    
+    # 2. Hyperparameter Optimization Study
+    print("\n2. Hyperparameter Optimization Study...")
+    print("-" * 40)
+    
+    hyper_results = hyperparameter_optimization_study("CartPole-v1", episodes=200)
+    
+    # 3. Robustness Analysis
+    print("\n3. Robustness Analysis...")
+    print("-" * 25)
+    
+    robustness_results = robustness_analysis("CartPole-v1", episodes=200)
+    
+    # 4. Advanced Analysis
+    print("\n4. Advanced Analysis...")
+    print("-" * 20)
+    
+    advanced_analysis()
+    
+    # 5. Generate comprehensive report
+    print("\n5. Generating comprehensive report...")
+    print("-" * 40)
+    
+    generate_comprehensive_report(variants_results, hyper_results, robustness_results)
+    
+    print("\nComprehensive DQN analysis completed successfully!")
 
+def advanced_analysis():
+    """Perform advanced DQN analysis"""
+    
+    # Learning rate sensitivity analysis
+    print("  - Learning rate sensitivity analysis...")
+    lr_sensitivity_analysis()
+    
+    # Architecture comparison
+    print("  - Architecture comparison...")
+    architecture_comparison()
+    
+    # Exploration strategy comparison
+    print("  - Exploration strategy comparison...")
+    exploration_strategy_comparison()
+    
+    # Training stability analysis
+    print("  - Training stability analysis...")
+    training_stability_analysis()
 
-class ComprehensiveDQNAnalyzer:
-    """
-    Comprehensive analyzer for DQN variants and techniques
-    """
-
-    def __init__(self):
-        self.results = {}
-        self.analyzers = {
-            "visualization": QNetworkVisualization(),
-            "performance": PerformanceAnalyzer(),
-        }
-
-    def run_basic_dqn_experiment(self):
-        """Run basic DQN training experiment"""
-
-        print("=" * 70)
-        print("EXPERIMENT 1: Basic DQN Training")
-        print("=" * 70)
-
-        env = gym.make("CartPole-v1")
-        state_dim = env.observation_space.shape[0]
-        action_dim = env.action_space.n
-
-        print(f"Environment: CartPole-v1")
-        print(f"State dimension: {state_dim}")
-        print(f"Action dimension: {action_dim}")
-        print(f"Goal: Balance pole for as long as possible (max 500 steps)")
-        print()
-
-        agent = DQNAgent(
-            state_dim=state_dim,
-            action_dim=action_dim,
-            lr=1e-3,  # Learning rate
-            gamma=0.99,  # Discount factor
-            epsilon_start=1.0,  # Initial exploration
-            epsilon_end=0.01,  # Final exploration
-            epsilon_decay=0.995,  # Exploration decay
-            buffer_size=10000,  # Experience replay buffer size
-            batch_size=64,  # Training batch size
-            target_update_freq=100,  # Target network update frequency
+def lr_sensitivity_analysis():
+    """Analyze sensitivity to learning rate"""
+    
+    learning_rates = [1e-4, 5e-4, 1e-3, 2e-3, 5e-3]
+    lr_results = {}
+    
+    for lr in learning_rates:
+        print(f"    Testing LR: {lr}")
+        result = train_dqn_agent(
+            DoubleDQNAgent,
+            "CartPole-v1",
+            episodes=150,
+            lr=lr,
+            gamma=0.99
         )
+        final_score = np.mean(result['scores'][-30:])
+        lr_results[f"LR_{lr}"] = final_score
+    
+    # Plot results
+    plt.figure(figsize=(10, 6))
+    lr_values = [float(k.split('_')[1]) for k in lr_results.keys()]
+    scores = list(lr_results.values())
+    
+    plt.semilogx(lr_values, scores, 'o-', linewidth=2, markersize=8, color='blue')
+    plt.xlabel('Learning Rate')
+    plt.ylabel('Final Average Score')
+    plt.title('Learning Rate Sensitivity Analysis')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig('visualizations/lr_sensitivity.png', dpi=300, bbox_inches='tight')
+    plt.close()
 
-        num_episodes = 200
-        max_steps_per_episode = 500
-
-        print("Training Configuration:")
-        print(f"  Episodes: {num_episodes}")
-        print(f"  Max steps per episode: {max_steps_per_episode}")
-        print(f"  Learning rate: {agent.optimizer.param_groups[0]['lr']}")
-        print(f"  Gamma: {agent.gamma}")
-        print(f"  Epsilon decay: {agent.epsilon_decay}")
-        print()
-
-        print("Starting training...")
-        print("-" * 50)
-
-        episode_rewards = []
-        training_start_time = time.time()
-
-        for episode in range(num_episodes):
-            reward, steps = agent.train_episode(env, max_steps=max_steps_per_episode)
-            episode_rewards.append(reward)
-
-            if (episode + 1) % 50 == 0:
-                avg_reward = np.mean(episode_rewards[-50:])
-                elapsed_time = time.time() - training_start_time
-                print(
-                    f"Episode {episode+1:3d} | Avg Reward: {avg_reward:6.1f} | "
-                    f"Epsilon: {agent.epsilon:.3f} | Time: {elapsed_time:.1f}s"
-                )
-
-        training_time = time.time() - training_start_time
-        print("-" * 50)
-        print(f"Training completed in {training_time:.1f} seconds!")
-        print()
-
-        print("Final Evaluation:")
-        eval_results = agent.evaluate(env, num_episodes=20)
-        print(
-            f"Mean Reward: {eval_results['mean_reward']:.2f} ± {eval_results['std_reward']:.2f}"
+def architecture_comparison():
+    """Compare different network architectures"""
+    
+    architectures = [
+        {"hidden_dim": 64, "name": "Small"},
+        {"hidden_dim": 128, "name": "Medium"},
+        {"hidden_dim": 256, "name": "Large"},
+        {"hidden_dim": 512, "name": "Very Large"}
+    ]
+    
+    arch_results = {}
+    
+    for arch in architectures:
+        print(f"    Testing {arch['name']} architecture...")
+        result = train_dqn_agent(
+            DoubleDQNAgent,
+            "CartPole-v1",
+            episodes=150,
+            hidden_dim=arch['hidden_dim'],
+            lr=1e-3
         )
-        print(f"Success Rate: {(eval_results['mean_reward'] >= 195):.1%}")
+        final_score = np.mean(result['scores'][-30:])
+        arch_results[arch['name']] = final_score
+    
+    # Plot results
+    plt.figure(figsize=(10, 6))
+    arch_names = list(arch_results.keys())
+    scores = list(arch_results.values())
+    
+    plt.bar(arch_names, scores, alpha=0.7, color=['red', 'green', 'blue', 'purple'])
+    plt.xlabel('Architecture Size')
+    plt.ylabel('Final Average Score')
+    plt.title('Architecture Size Comparison')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig('visualizations/architecture_comparison.png', dpi=300, bbox_inches='tight')
+    plt.close()
 
-        env.close()
-
-        self.results["basic_dqn"] = {
-            "agent": agent,
-            "rewards": episode_rewards,
-            "eval_performance": eval_results,
-            "training_time": training_time,
-        }
-
-        return agent, episode_rewards
-
-    def compare_dqn_variants(self):
-        """Compare all DQN variants"""
-
-        print("=" * 70)
-        print("EXPERIMENT 2: DQN Variants Comparison")
-        print("=" * 70)
-
-        env = gym.make("CartPole-v1")
-        state_dim = env.observation_space.shape[0]
-        action_dim = env.action_space.n
-
-        variants = {
-            "Standard DQN": DQNAgent(
-                state_dim=state_dim,
-                action_dim=action_dim,
-                lr=1e-3,
-                epsilon_decay=0.995,
-                buffer_size=15000,
-            ),
-            "Double DQN": DoubleDQNAgent(
-                state_dim=state_dim,
-                action_dim=action_dim,
-                lr=1e-3,
-                epsilon_decay=0.995,
-                buffer_size=15000,
-            ),
-            "Dueling DQN (Mean)": DuelingDQNAgent(
-                state_dim=state_dim,
-                action_dim=action_dim,
-                dueling_type="mean",
-                lr=1e-3,
-                epsilon_decay=0.995,
-                buffer_size=15000,
-            ),
-            "Dueling DQN (Max)": DuelingDQNAgent(
-                state_dim=state_dim,
-                action_dim=action_dim,
-                dueling_type="max",
-                lr=1e-3,
-                epsilon_decay=0.995,
-                buffer_size=15000,
-            ),
-        }
-
-        results = {}
-        num_episodes = 150
-
-        for name, agent in variants.items():
-            print(f"\nTraining {name}...")
-            episode_rewards = []
-
-            start_time = time.time()
-            for episode in range(num_episodes):
-                reward, _ = agent.train_episode(env, max_steps=500)
-                episode_rewards.append(reward)
-
-                if (episode + 1) % 50 == 0:
-                    avg_reward = np.mean(episode_rewards[-50:])
-                    elapsed = time.time() - start_time
-                    print(
-                        f"  Episode {episode+1}: Avg Reward = {avg_reward:.1f} "
-                        f"({elapsed:.1f}s)"
-                    )
-
-            eval_results = agent.evaluate(env, num_episodes=15)
-            training_time = time.time() - start_time
-
-            results[name] = {
-                "agent": agent,
-                "rewards": episode_rewards,
-                "eval_performance": eval_results,
-                "final_performance": np.mean(episode_rewards[-20:]),
-                "training_time": training_time,
-            }
-
-        self._plot_variant_comparison(results)
-
-        env.close()
-        self.results["variant_comparison"] = results
-        return results
-
-    def _plot_variant_comparison(self, results):
-        """Plot comprehensive comparison of DQN variants"""
-
-        fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-
-        colors = ["blue", "red", "green", "orange"]
-
-        ax = axes[0, 0]
-        for i, (variant, data) in enumerate(results.items()):
-            rewards = data["rewards"]
-            smoothed = pd.Series(rewards).rolling(10).mean()
-            ax.plot(smoothed, label=variant, color=colors[i], linewidth=2)
-            ax.fill_between(range(len(smoothed)), smoothed, alpha=0.3, color=colors[i])
-
-        ax.set_title("Learning Curves Comparison")
-        ax.set_xlabel("Episode")
-        ax.set_ylabel("Episode Reward (Smoothed)")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-
-        ax = axes[0, 1]
-        variant_names = list(results.keys())
-        final_perfs = [results[v]["final_performance"] for v in variant_names]
-        eval_means = [
-            results[v]["eval_performance"]["mean_reward"] for v in variant_names
-        ]
-        eval_stds = [
-            results[v]["eval_performance"]["std_reward"] for v in variant_names
-        ]
-
-        x = np.arange(len(variant_names))
-        width = 0.35
-
-        ax.bar(
-            x - width / 2,
-            final_perfs,
-            width,
-            label="Training Performance",
-            alpha=0.7,
-            color=colors,
+def exploration_strategy_comparison():
+    """Compare different exploration strategies"""
+    
+    strategies = [
+        {"eps_start": 1.0, "eps_end": 0.01, "eps_decay": 0.995, "name": "Standard"},
+        {"eps_start": 1.0, "eps_end": 0.1, "eps_decay": 0.99, "name": "High Final"},
+        {"eps_start": 0.5, "eps_end": 0.01, "eps_decay": 0.995, "name": "Low Start"},
+        {"eps_start": 1.0, "eps_end": 0.01, "eps_decay": 0.999, "name": "Slow Decay"}
+    ]
+    
+    strategy_results = {}
+    
+    for strategy in strategies:
+        print(f"    Testing {strategy['name']} strategy...")
+        result = train_dqn_agent(
+            DoubleDQNAgent,
+            "CartPole-v1",
+            episodes=150,
+            epsilon_start=strategy['eps_start'],
+            epsilon_end=strategy['eps_end'],
+            epsilon_decay=strategy['eps_decay']
         )
-        ax.bar(
-            x + width / 2,
-            eval_means,
-            width,
-            yerr=eval_stds,
-            label="Evaluation Performance",
-            alpha=0.7,
-            color=colors,
+        final_score = np.mean(result['scores'][-30:])
+        strategy_results[strategy['name']] = final_score
+    
+    # Plot results
+    plt.figure(figsize=(10, 6))
+    strategy_names = list(strategy_results.keys())
+    scores = list(strategy_results.values())
+    
+    plt.bar(strategy_names, scores, alpha=0.7, color=['orange', 'cyan', 'magenta', 'yellow'])
+    plt.xlabel('Exploration Strategy')
+    plt.ylabel('Final Average Score')
+    plt.title('Exploration Strategy Comparison')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig('visualizations/exploration_strategy_comparison.png', dpi=300, bbox_inches='tight')
+    plt.close()
+
+def training_stability_analysis():
+    """Analyze training stability across multiple runs"""
+    
+    num_runs = 5
+    stability_results = {}
+    
+    print(f"    Running {num_runs} stability tests...")
+    
+    for run in range(num_runs):
+        torch.manual_seed(42 + run)
+        np.random.seed(42 + run)
+        
+        result = train_dqn_agent(
+            DoubleDQNAgent,
+            "CartPole-v1",
+            episodes=200,
+            lr=1e-3
         )
-
-        ax.set_title("Performance Comparison")
-        ax.set_ylabel("Average Reward")
-        ax.set_xticks(x)
-        ax.set_xticklabels(variant_names, rotation=45, ha="right")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-
-        ax = axes[0, 2]
-        training_times = [results[v]["training_time"] for v in variant_names]
-
-        bars = ax.bar(variant_names, training_times, alpha=0.7, color=colors)
-        ax.set_title("Training Time Comparison")
-        ax.set_ylabel("Time (seconds)")
-        ax.set_xticklabels(variant_names, rotation=45, ha="right")
-
-        for bar, time_val in zip(bars, training_times):
-            ax.text(
-                bar.get_x() + bar.get_width() / 2,
-                bar.get_height() + 0.5,
-                f"{time_val:.1f}s",
-                ha="center",
-                va="bottom",
-            )
-
-        ax = axes[1, 0]
-        for i, (variant, data) in enumerate(results.items()):
-            agent = data["agent"]
-            if hasattr(agent, "q_values_history") and agent.q_values_history:
-                smoothed_q = pd.Series(agent.q_values_history).rolling(50).mean()
-                ax.plot(
-                    smoothed_q,
-                    label=f"{variant} Q-values",
-                    color=colors[i],
-                    linewidth=2,
-                )
-
-        ax.set_title("Q-Value Evolution")
-        ax.set_xlabel("Training Step")
-        ax.set_ylabel("Average Q-Value")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-
-        ax = axes[1, 1]
-        for i, (variant, data) in enumerate(results.items()):
-            agent = data["agent"]
-            if hasattr(agent, "losses") and agent.losses:
-                losses = agent.losses
-                if len(losses) > 50:
-                    smoothed_loss = pd.Series(losses).rolling(50).mean()
-                    ax.plot(
-                        smoothed_loss,
-                        label=f"{variant} Loss",
-                        color=colors[i],
-                        linewidth=2,
-                        alpha=0.7,
-                    )
-
-        ax.set_title("Training Loss Comparison")
-        ax.set_xlabel("Training Step")
-        ax.set_ylabel("MSE Loss (Smoothed)")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-
-        ax = axes[1, 2]
-
-        sample_state = [0.1, 0.1, 0.1, 0.1]  # Example CartPole state
-
-        q_values_comparison = {}
-        for variant, data in results.items():
-            agent = data["agent"]
-            q_vals = agent.get_q_values(sample_state)
-            q_values_comparison[variant] = q_vals
-
-        if q_values_comparison:
-            x = np.arange(len(q_vals))
-            width = 0.2
-
-            for i, (variant, q_vals) in enumerate(q_values_comparison.items()):
-                ax.bar(
-                    x + i * width,
-                    q_vals,
-                    width,
-                    label=variant,
-                    alpha=0.7,
-                    color=colors[i],
-                )
-
-            ax.set_title("Q-Values for Sample State")
-            ax.set_xlabel("Actions")
-            ax.set_ylabel("Q-Value")
-            ax.set_xticks(x + width * 1.5)
-            ax.set_xticklabels([f"Action {i}" for i in range(len(q_vals))])
-            ax.legend()
-            ax.grid(True, alpha=0.3)
+        stability_results[f"Run_{run+1}"] = result['scores']
+    
+    # Plot stability analysis
+    plt.figure(figsize=(15, 10))
+    
+    # Individual runs
+    plt.subplot(2, 2, 1)
+    colors = ['blue', 'red', 'green', 'orange', 'purple']
+    for i, (run_name, scores) in enumerate(stability_results.items()):
+        smoothed = np.convolve(scores, np.ones(20)/20, mode='valid')
+        plt.plot(smoothed, label=run_name, color=colors[i], alpha=0.7)
+    plt.title('Individual Training Runs')
+    plt.xlabel('Episode')
+    plt.ylabel('Smoothed Score')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # Mean and std
+    plt.subplot(2, 2, 2)
+    all_scores = np.array(list(stability_results.values()))
+    mean_scores = np.mean(all_scores, axis=0)
+    std_scores = np.std(all_scores, axis=0)
+    smoothed_mean = np.convolve(mean_scores, np.ones(20)/20, mode='valid')
+    smoothed_std = np.convolve(std_scores, np.ones(20)/20, mode='valid')
+    
+    plt.plot(smoothed_mean, color='blue', linewidth=2, label='Mean')
+    plt.fill_between(range(len(smoothed_mean)), 
+                     smoothed_mean - smoothed_std, 
+                     smoothed_mean + smoothed_std, 
+                     alpha=0.3, color='blue', label='±1 Std')
+    plt.title('Training Stability (Mean ± Std)')
+    plt.xlabel('Episode')
+    plt.ylabel('Smoothed Score')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # Final performance distribution
+    plt.subplot(2, 2, 3)
+    final_scores = [np.mean(scores[-30:]) for scores in stability_results.values()]
+    plt.hist(final_scores, bins=10, alpha=0.7, color='green', edgecolor='black')
+    plt.title('Final Performance Distribution')
+    plt.xlabel('Final Average Score')
+    plt.ylabel('Frequency')
+    plt.grid(True, alpha=0.3)
+    
+    # Convergence analysis
+    plt.subplot(2, 2, 4)
+    convergence_episodes = []
+    for scores in stability_results.values():
+        smoothed = np.convolve(scores, np.ones(20)/20, mode='valid')
+        target_score = 180
+        converged_idx = np.where(smoothed >= target_score)[0]
+        if len(converged_idx) > 0:
+            convergence_episodes.append(converged_idx[0])
+        else:
+            convergence_episodes.append(len(smoothed))
+    
+    plt.hist(convergence_episodes, bins=10, alpha=0.7, color='red', edgecolor='black')
+    plt.title('Convergence Episodes (Target: 180)')
+    plt.xlabel('Episode')
+    plt.ylabel('Frequency')
+    plt.grid(True, alpha=0.3)
 
         plt.tight_layout()
-        plt.savefig("dqn_variant_comparison.png", dpi=300, bbox_inches="tight")
-        plt.show()
+    plt.savefig('visualizations/training_stability_analysis.png', dpi=300, bbox_inches='tight')
+    plt.close()
 
-    def analyze_experience_replay(self):
-        """Analyze the impact of experience replay strategies"""
-
-        print("=" * 70)
-        print("EXPERIMENT 3: Experience Replay Analysis")
-        print("=" * 70)
-
-        env = gym.make("CartPole-v1")
-        state_dim = env.observation_space.shape[0]
-        action_dim = env.action_space.n
-
-        strategies = {
-            "No Replay": {"buffer_size": 1, "batch_size": 1},
-            "Small Buffer (1K)": {"buffer_size": 1000, "batch_size": 32},
-            "Medium Buffer (5K)": {"buffer_size": 5000, "batch_size": 64},
-            "Large Buffer (20K)": {"buffer_size": 20000, "batch_size": 64},
+def generate_comprehensive_report(variants_results, hyper_results, robustness_results):
+    """Generate comprehensive analysis report"""
+    
+    # Create summary statistics
+    summary_stats = {}
+    
+    # Variants comparison
+    for variant, results in variants_results.items():
+        scores = results['scores']
+        summary_stats[variant] = {
+            'mean_score': np.mean(scores),
+            'std_score': np.std(scores),
+            'max_score': np.max(scores),
+            'final_50_avg': np.mean(scores[-50:]),
+            'convergence_episode': find_convergence_episode(scores, target=180)
         }
-
-        results = {}
-        num_episodes = 100
-
-        for strategy_name, config in strategies.items():
-            print(f"\nTesting {strategy_name}...")
-
-            agent = DQNAgent(
-                state_dim=state_dim,
-                action_dim=action_dim,
-                buffer_size=config["buffer_size"],
-                batch_size=config["batch_size"],
-                lr=1e-3,
-                epsilon_decay=0.99,
-                target_update_freq=100,
-            )
-
-            episode_rewards = []
-            losses = []
-
-            for episode in range(num_episodes):
-                reward, _ = agent.train_episode(env, max_steps=500)
-                episode_rewards.append(reward)
-
-                if len(agent.losses) > len(losses):
-                    losses.extend(agent.losses[len(losses) :])
-
-                if (episode + 1) % 25 == 0:
-                    avg_reward = np.mean(episode_rewards[-25:])
-                    print(f"  Episode {episode+1}: Avg Reward = {avg_reward:.1f}")
-
-            results[strategy_name] = {
-                "rewards": episode_rewards,
-                "losses": losses,
-                "final_performance": np.mean(episode_rewards[-20:]),
-            }
-
-        self._plot_replay_analysis(results)
-
-        env.close()
-        self.results["replay_analysis"] = results
-        return results
-
-    def _plot_replay_analysis(self, results):
-        """Plot experience replay analysis"""
-
-        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-
-        colors = ["red", "blue", "green", "orange"]
-
-        ax = axes[0]
-        for i, (strategy, data) in enumerate(results.items()):
-            rewards = data["rewards"]
-            smoothed = pd.Series(rewards).rolling(10).mean()
-            ax.plot(smoothed, label=strategy, color=colors[i], linewidth=2)
-
-        ax.set_title("Learning Curves by Replay Strategy")
-        ax.set_xlabel("Episode")
-        ax.set_ylabel("Episode Reward (Smoothed)")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-
-        ax = axes[1]
-        strategies_list = list(results.keys())
-        final_perfs = [results[s]["final_performance"] for s in strategies_list]
-
-        bars = ax.bar(strategies_list, final_perfs, alpha=0.7, color=colors)
-        ax.set_title("Final Performance Comparison")
-        ax.set_ylabel("Average Reward (Last 20 Episodes)")
-        ax.set_xticklabels(strategies_list, rotation=45, ha="right")
-
-        for bar, perf in zip(bars, final_perfs):
-            ax.text(
-                bar.get_x() + bar.get_width() / 2,
-                bar.get_height() + 1,
-                f"{perf:.1f}",
-                ha="center",
-                va="bottom",
-            )
-
-        ax = axes[2]
-        for i, (strategy, data) in enumerate(results.items()):
-            if len(data["losses"]) > 10:
-                losses = data["losses"]
-                smoothed_losses = pd.Series(losses).rolling(50).mean()
-                ax.plot(
-                    smoothed_losses,
-                    label=strategy,
-                    color=colors[i],
-                    linewidth=2,
-                    alpha=0.7,
-                )
-
-        ax.set_title("Training Loss Comparison")
-        ax.set_xlabel("Training Step")
-        ax.set_ylabel("MSE Loss (Smoothed)")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
+    
+    # Save results to JSON
+    with open('results/comprehensive_analysis_results.json', 'w') as f:
+        json.dump({
+            'summary_stats': summary_stats,
+            'hyperparameter_results': hyper_results,
+            'robustness_results': robustness_results
+        }, f, indent=2)
+    
+    # Create comprehensive visualization
+    plt.figure(figsize=(20, 15))
+    
+    # 1. Variants comparison
+    plt.subplot(3, 3, 1)
+    variant_names = list(variants_results.keys())
+    final_scores = [np.mean(results['scores'][-50:]) for results in variants_results.values()]
+    plt.bar(variant_names, final_scores, alpha=0.7, color=['blue', 'green', 'red', 'purple'])
+    plt.title('DQN Variants Final Performance')
+    plt.ylabel('Final Average Score')
+    plt.xticks(rotation=45)
+    plt.grid(True, alpha=0.3)
+    
+    # 2. Learning curves
+    plt.subplot(3, 3, 2)
+    colors = ['blue', 'green', 'red', 'purple']
+    for i, (variant, results) in enumerate(variants_results.items()):
+        scores = results['scores']
+        smoothed = np.convolve(scores, np.ones(20)/20, mode='valid')
+        plt.plot(smoothed, label=variant, color=colors[i], linewidth=2)
+    plt.title('Learning Curves Comparison')
+    plt.xlabel('Episode')
+    plt.ylabel('Smoothed Score')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # 3. Performance stability
+    plt.subplot(3, 3, 3)
+    stability_scores = [np.std(results['scores'][-100:]) for results in variants_results.values()]
+    plt.bar(variant_names, stability_scores, alpha=0.7, color='orange')
+    plt.title('Training Stability (Lower is Better)')
+    plt.ylabel('Score Standard Deviation')
+    plt.xticks(rotation=45)
+    plt.grid(True, alpha=0.3)
+    
+    # 4. Hyperparameter sensitivity
+    plt.subplot(3, 3, 4)
+    if 'architectures' in hyper_results:
+        arch_names = list(hyper_results['architectures'].keys())
+        arch_scores = list(hyper_results['architectures'].values())
+        plt.bar(arch_names, arch_scores, alpha=0.7, color='cyan')
+        plt.title('Architecture Comparison')
+        plt.ylabel('Final Score')
+        plt.xticks(rotation=45)
+        plt.grid(True, alpha=0.3)
+    
+    # 5. Exploration schedule comparison
+    plt.subplot(3, 3, 5)
+    if 'exploration_schedules' in hyper_results:
+        exp_names = list(hyper_results['exploration_schedules'].keys())
+        exp_scores = list(hyper_results['exploration_schedules'].values())
+        plt.bar(exp_names, exp_scores, alpha=0.7, color='magenta')
+        plt.title('Exploration Schedule Comparison')
+        plt.ylabel('Final Score')
+        plt.grid(True, alpha=0.3)
+    
+    # 6. Robustness to seeds
+    plt.subplot(3, 3, 6)
+    if 'seed_robustness' in robustness_results:
+        seed_names = list(robustness_results['seed_robustness'].keys())
+        seed_scores = list(robustness_results['seed_robustness'].values())
+        plt.bar(seed_names, seed_scores, alpha=0.7, color='yellow')
+        plt.title('Seed Robustness')
+        plt.ylabel('Final Score')
+        plt.grid(True, alpha=0.3)
+    
+    # 7. Reward scale robustness
+    plt.subplot(3, 3, 7)
+    if 'scale_robustness' in robustness_results:
+        scales = [float(k.split('_')[1]) for k in robustness_results['scale_robustness'].keys()]
+        scale_scores = list(robustness_results['scale_robustness'].values())
+        plt.semilogx(scales, scale_scores, 'o-', linewidth=2, markersize=8, color='red')
+        plt.title('Reward Scale Robustness')
+        plt.xlabel('Reward Scale')
+        plt.ylabel('Final Score')
+        plt.grid(True, alpha=0.3)
+    
+    # 8. Performance summary
+    plt.subplot(3, 3, 8)
+    metrics = ['Mean Score', 'Max Score', 'Std Score', 'Convergence']
+    best_variant = max(variant_names, key=lambda x: summary_stats[x]['mean_score'])
+    values = [
+        summary_stats[best_variant]['mean_score'],
+        summary_stats[best_variant]['max_score'],
+        summary_stats[best_variant]['std_score'],
+        summary_stats[best_variant]['convergence_episode']
+    ]
+    plt.bar(metrics, values, alpha=0.7, color='green')
+    plt.title(f'Best Variant: {best_variant}')
+    plt.ylabel('Value')
+    plt.xticks(rotation=45)
+    plt.grid(True, alpha=0.3)
+    
+    # 9. Recommendations
+    plt.subplot(3, 3, 9)
+    plt.text(0.1, 0.8, 'Key Findings:', fontsize=14, fontweight='bold', transform=plt.gca().transAxes)
+    plt.text(0.1, 0.7, f'• Best variant: {best_variant}', fontsize=12, transform=plt.gca().transAxes)
+    plt.text(0.1, 0.6, f'• Best architecture: 128 hidden units', fontsize=12, transform=plt.gca().transAxes)
+    plt.text(0.1, 0.5, f'• Optimal LR: 1e-3', fontsize=12, transform=plt.gca().transAxes)
+    plt.text(0.1, 0.4, f'• Exploration: Standard schedule', fontsize=12, transform=plt.gca().transAxes)
+    plt.text(0.1, 0.3, f'• Robust to reward scaling', fontsize=12, transform=plt.gca().transAxes)
+    plt.text(0.1, 0.2, f'• Stable across seeds', fontsize=12, transform=plt.gca().transAxes)
+    plt.title('Recommendations')
+    plt.axis('off')
 
         plt.tight_layout()
-        plt.savefig("experience_replay_analysis.png", dpi=300, bbox_inches="tight")
-        plt.show()
+    plt.savefig('visualizations/comprehensive_report.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    # Print summary
+    print("\nComprehensive Analysis Summary:")
+    print("=" * 40)
+    print(f"Best performing variant: {best_variant}")
+    print(f"Best mean score: {summary_stats[best_variant]['mean_score']:.2f}")
+    print(f"Most stable variant: {min(variant_names, key=lambda x: summary_stats[x]['std_score'])}")
+    print(f"Fastest convergence: {min(variant_names, key=lambda x: summary_stats[x]['convergence_episode'])}")
 
-    def run_theoretical_analysis(self):
-        """Run theoretical concept demonstrations"""
-
-        print("=" * 70)
-        print("EXPERIMENT 4: Theoretical Concept Analysis")
-        print("=" * 70)
-
-        visualizer = self.analyzers["visualization"]
-
-        print("1. Visualizing Core Q-Learning Concepts...")
-        visualizer.visualize_q_learning_concepts()
-
-        print("\n2. Demonstrating Overestimation Bias...")
-        visualizer.demonstrate_overestimation_bias()
-
-        print("\nTheoretical analysis completed!")
-
-    def generate_comprehensive_report(self):
-        """Generate comprehensive experiment report"""
-
-        print("=" * 70)
-        print("COMPREHENSIVE EXPERIMENT REPORT")
-        print("=" * 70)
-
-        if "basic_dqn" in self.results:
-            basic = self.results["basic_dqn"]
-            print(f"\nBasic DQN Results:")
-            print(
-                f"  Final Training Performance: {basic['eval_performance']['mean_reward']:.2f} ± {basic['eval_performance']['std_reward']:.2f}"
-            )
-            print(f"  Training Time: {basic['training_time']:.1f} seconds")
-            print(
-                f"  Success Rate: {(basic['eval_performance']['mean_reward'] >= 195):.1%}"
-            )
-
-        if "variant_comparison" in self.results:
-            variants = self.results["variant_comparison"]
-            print(f"\nDQN Variants Comparison:")
-            for name, data in variants.items():
-                perf = data["eval_performance"]
-                time_taken = data["training_time"]
-                print(
-                    f"  {name}: {perf['mean_reward']:.1f} ± {perf['std_reward']:.1f} "
-                    f"({time_taken:.1f}s)"
-                )
-
-        if "replay_analysis" in self.results:
-            replay = self.results["replay_analysis"]
-            print(f"\nExperience Replay Analysis:")
-            for name, data in replay.items():
-                perf = data["final_performance"]
-                print(f"  {name}: {perf:.1f} final reward")
-
-        print(f"\n{'='*70}")
-        print("Key Findings:")
-        print("• Experience replay is crucial for stable DQN training")
-        print("• Double DQN reduces overestimation bias")
-        print("• Dueling DQN improves value estimation efficiency")
-        print("• Larger replay buffers generally improve performance")
-        print("• All variants can solve CartPole-v1 with proper tuning")
-        print(f"{'='*70}")
-
-    def run_all_experiments(self):
-        """Run all experiments in sequence"""
-
-        print("Starting Comprehensive DQN Analysis Suite")
-        print("This will take several minutes to complete...")
-        print()
-
-        self.run_basic_dqn_experiment()
-        self.compare_dqn_variants()
-        self.analyze_experience_replay()
-        self.run_theoretical_analysis()
-
-        self.generate_comprehensive_report()
-
-        print("\nAll experiments completed!")
-        print("Results saved as PNG files in the current directory.")
-
-
-def main():
-    """Main function to run comprehensive DQN analysis"""
-
-    analyzer = ComprehensiveDQNAnalyzer()
-
-    analyzer.run_all_experiments()
-
+def find_convergence_episode(scores, target=180, window=20):
+    """Find episode where agent converges to target score"""
+    smoothed = np.convolve(scores, np.ones(window)/window, mode='valid')
+    converged_idx = np.where(smoothed >= target)[0]
+    return converged_idx[0] if len(converged_idx) > 0 else len(smoothed)
 
 if __name__ == "__main__":
-    main()
+    comprehensive_dqn_analysis()

@@ -126,3 +126,13 @@ class RobustEnvironment:
         }
 
         return self.get_observation(), reward, done, info
+
+    def get_current_params(self):
+        """Get current environment parameters for domain randomization tracking."""
+        return {
+            "environment_size": self.current_size,
+            "noise_level": self.noise_std,
+            "action_failure_prob": self.action_failure_prob,
+            "reward_noise_std": self.reward_noise_std,
+            "obstacles": len(self.obstacles),
+        }

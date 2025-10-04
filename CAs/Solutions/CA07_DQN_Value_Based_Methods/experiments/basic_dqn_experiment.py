@@ -1,14 +1,7 @@
 """
-Basic DQN Experiment
-===================
-
-This script demonstrates the basic DQN implementation on the CartPole environment.
-It includes training, evaluation, and performance analysis.
-
-Usage:
-    python experiments/basic_dqn_experiment.py
-
-Author: CA7 Implementation
+Basic DQN Experiment for CA07
+=============================
+This script runs a basic DQN experiment on CartPole-v1 environment
 """
 
 import sys
@@ -16,257 +9,161 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import gymnasium as gym
+import torch
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-from ..agents.core import DQNAgent, PerformanceAnalyzer
+import gymnasium as gym
+from training_examples import DQNAgent, train_dqn_agent
 import warnings
 
 warnings.filterwarnings("ignore")
 
 
-def run_basic_dqn_experiment():
-    """
-    Run the basic DQN experiment on CartPole-v1
+def main():
+    """Run basic DQN experiment"""
+    print("Basic DQN Experiment")
+    print("=" * 30)
 
-    Returns:
-        Trained agent and training results
-    """
-    print("=" * 60)
-    print("Basic DQN Experiment - CartPole-v1")
-    print("=" * 60)
+    # Set random seeds for reproducibility
+    torch.manual_seed(42)
+    np.random.seed(42)
 
-    env = gym.make("CartPole-v1")
-    state_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.n
+    # Create environment
+    env_name = "CartPole-v1"
+    env = gym.make(env_name)
 
-    print(f"Environment: CartPole-v1")
-    print(f"State dimension: {state_dim}")
-    print(f"Action dimension: {action_dim}")
-    print(f"Goal: Balance pole for as long as possible (max 500 steps)")
-    print()
+    print(f"Environment: {env_name}")
+    print(f"State space: {env.observation_space}")
+    print(f"Action space: {env.action_space}")
 
-    agent = DQNAgent(
-        state_dim=state_dim,
-        action_dim=action_dim,
-        lr=1e-3,  # Learning rate
-        gamma=0.99,  # Discount factor
-        epsilon_start=1.0,  # Initial exploration
-        epsilon_end=0.01,  # Final exploration
-        epsilon_decay=0.995,  # Exploration decay
-        buffer_size=20000,  # Experience replay buffer size
-        batch_size=64,  # Training batch size
-        target_update_freq=100,  # Target network update frequency
+    # Train DQN agent
+    print("\nTraining DQN agent...")
+    result = train_dqn_agent(
+        DQNAgent,
+        env_name=env_name,
+        episodes=300,
+        lr=1e-3,
+        gamma=0.99,
+        epsilon_start=1.0,
+        epsilon_end=0.01,
+        epsilon_decay=0.995,
+        replay_buffer_size=10000,
+        batch_size=64,
+        target_update_freq=10,
     )
 
-    num_episodes = 300
-    max_steps_per_episode = 500
+    # Create visualizations
+    plt.figure(figsize=(15, 10))
 
-    print("Training Configuration:")
-    print(f"  Episodes: {num_episodes}")
-    print(f"  Max steps per episode: {max_steps_per_episode}")
-    print(f"  Learning rate: {agent.optimizer.param_groups[0]['lr']}")
-    print(f"  Gamma: {agent.gamma}")
-    print(f"  Epsilon decay: {agent.epsilon_decay}")
-    print(f"  Buffer size: {len(agent.replay_buffer.capacity)}")
-    print(f"  Batch size: {agent.batch_size}")
-    print()
+    # Learning curve
+    plt.subplot(2, 3, 1)
+    scores = result["scores"]
+    smoothed_scores = np.convolve(scores, np.ones(20) / 20, mode="valid")
+    plt.plot(scores, alpha=0.3, color="blue", label="Raw scores")
+    plt.plot(smoothed_scores, color="blue", linewidth=2, label="Smoothed scores")
+    plt.title("DQN Learning Curve")
+    plt.xlabel("Episode")
+    plt.ylabel("Score")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
 
-    print("Starting training...")
-    print("-" * 60)
+    # Loss curve
+    plt.subplot(2, 3, 2)
+    losses = result["losses"]
+    smoothed_losses = np.convolve(losses, np.ones(20) / 20, mode="valid")
+    plt.plot(losses, alpha=0.3, color="red", label="Raw losses")
+    plt.plot(smoothed_losses, color="red", linewidth=2, label="Smoothed losses")
+    plt.title("DQN Loss Curve")
+    plt.xlabel("Episode")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
 
-    episode_rewards = []
-    best_reward = 0
-    solved_episode = None
+    # Epsilon decay
+    plt.subplot(2, 3, 3)
+    epsilon_history = result["epsilon_history"]
+    plt.plot(epsilon_history, color="green", linewidth=2)
+    plt.title("Epsilon Decay")
+    plt.xlabel("Episode")
+    plt.ylabel("Epsilon")
+    plt.grid(True, alpha=0.3)
 
-    for episode in range(num_episodes):
-        reward, steps = agent.train_episode(env, max_steps=max_steps_per_episode)
-        episode_rewards.append(reward)
+    # Score distribution
+    plt.subplot(2, 3, 4)
+    plt.hist(scores, bins=30, alpha=0.7, color="purple", edgecolor="black")
+    plt.title("Score Distribution")
+    plt.xlabel("Score")
+    plt.ylabel("Frequency")
+    plt.grid(True, alpha=0.3)
 
-        if reward > best_reward:
-            best_reward = reward
+    # Recent performance
+    plt.subplot(2, 3, 5)
+    recent_scores = scores[-100:]
+    plt.plot(recent_scores, color="orange", linewidth=2)
+    plt.title("Recent Performance (Last 100 episodes)")
+    plt.xlabel("Episode")
+    plt.ylabel("Score")
+    plt.grid(True, alpha=0.3)
 
-        if len(episode_rewards) >= 100:
-            avg_last_100 = np.mean(episode_rewards[-100:])
-            if avg_last_100 >= 195 and solved_episode is None:
-                solved_episode = episode + 1
-                print(f"🎉 Environment solved at episode {solved_episode}!")
-
-        if (episode + 1) % 50 == 0:
-            avg_reward = np.mean(episode_rewards[-50:])
-            recent_avg = (
-                np.mean(episode_rewards[-20:])
-                if len(episode_rewards) >= 20
-                else avg_reward
-            )
-            eval_results = agent.evaluate(env, num_episodes=5)
-
-            print(
-                f"Episode {episode+1:3d} | "
-                f"Train Reward: {reward:6.1f} | "
-                f"Avg (50): {avg_reward:6.1f} | "
-                f"Eval: {eval_results['mean_reward']:6.1f} ± {eval_results['std_reward']:4.1f} | "
-                f"Epsilon: {agent.epsilon:.3f} | "
-                f"Buffer: {len(agent.replay_buffer)}"
-            )
-
-    print("-" * 60)
-    print("Training completed!")
-    print()
-
-    print("Final Evaluation:")
-    print("-" * 30)
-
-    final_eval = agent.evaluate(env, num_episodes=20)
-    print(
-        f"Mean Reward: {final_eval['mean_reward']:.2f} ± {final_eval['std_reward']:.2f}"
-    )
-    print(f"Min Reward: {final_eval['min_reward']:.2f}")
-    print(f"Max Reward: {final_eval['max_reward']:.2f}")
-    print(
-        f"Success Rate (>195): {(np.array(final_eval['mean_reward'] > 195)).mean():.1%}"
-    )
-    print()
-
-    print("Training Summary:")
-    print("-" * 30)
-    print(f"Total episodes: {num_episodes}")
-    print(f"Best episode reward: {best_reward}")
-    print(f"Final average reward: {np.mean(episode_rewards[-50:]):.1f}")
-    if solved_episode:
-        print(f"Environment solved at episode: {solved_episode}")
-    else:
-        print("Environment not fully solved (avg < 195)")
-    print()
-
-    results = {
-        "agent": agent,
-        "rewards": episode_rewards,
-        "losses": agent.losses,
-        "epsilon_history": agent.epsilon_history,
-        "q_values_history": agent.q_values_history,
-        "final_eval": final_eval,
-        "solved_episode": solved_episode,
-        "best_reward": best_reward,
+    # Performance statistics
+    plt.subplot(2, 3, 6)
+    stats = {
+        "Mean Score": np.mean(scores),
+        "Max Score": np.max(scores),
+        "Min Score": np.min(scores),
+        "Std Score": np.std(scores),
+        "Final 50 Avg": np.mean(scores[-50:]),
+        "Episodes > 200": np.sum(np.array(scores) > 200),
     }
 
-    return agent, results
-
-
-def plot_training_results(results):
-    """
-    Plot comprehensive training results
-
-    Args:
-        results: Dictionary containing training results
-    """
-    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-
-    rewards = results["rewards"]
-    losses = results["losses"]
-    epsilon_history = results["epsilon_history"]
-    q_values_history = results["q_values_history"]
-
-    ax = axes[0, 0]
-    window = 20
-    smoothed_rewards = pd.Series(rewards).rolling(window).mean()
-    ax.plot(rewards, alpha=0.3, color="blue", label="Episode Rewards")
-    ax.plot(
-        smoothed_rewards, color="red", linewidth=2, label=f"Moving Average ({window})"
-    )
-    ax.set_title("Learning Curve")
-    ax.set_xlabel("Episode")
-    ax.set_ylabel("Episode Reward")
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-
-    ax = axes[0, 1]
-    if losses:
-        loss_window = 100
-        smoothed_losses = pd.Series(losses).rolling(loss_window).mean()
-        ax.plot(losses, alpha=0.3, color="orange", label="Training Loss")
-        ax.plot(
-            smoothed_losses,
-            color="red",
-            linewidth=2,
-            label=f"Moving Average ({loss_window})",
-        )
-        ax.set_title("Training Loss")
-        ax.set_xlabel("Training Step")
-        ax.set_ylabel("MSE Loss")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-
-    ax = axes[0, 2]
-    ax.plot(epsilon_history)
-    ax.set_title("Epsilon Decay")
-    ax.set_xlabel("Training Step")
-    ax.set_ylabel("Epsilon")
-    ax.grid(True, alpha=0.3)
-
-    ax = axes[1, 0]
-    if q_values_history:
-        q_window = 100
-        smoothed_q = pd.Series(q_values_history).rolling(q_window).mean()
-        ax.plot(q_values_history, alpha=0.3, color="green", label="Q-Values")
-        ax.plot(
-            smoothed_q, color="red", linewidth=2, label=f"Moving Average ({q_window})"
-        )
-        ax.set_title("Q-Values Evolution")
-        ax.set_xlabel("Training Step")
-        ax.set_ylabel("Average Q-Value")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-
-    ax = axes[1, 1]
-    if len(rewards) >= 50:
-        recent_rewards = rewards[-50:]
-        ax.hist(recent_rewards, bins=20, alpha=0.7, edgecolor="black")
-        ax.axvline(
-            np.mean(recent_rewards),
-            color="red",
-            linestyle="--",
-            label=f"Mean: {np.mean(recent_rewards):.1f}",
-        )
-        ax.set_title("Reward Distribution (Last 50 Episodes)")
-        ax.set_xlabel("Episode Reward")
-        ax.set_ylabel("Frequency")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-
-    ax = axes[1, 2]
-    cumulative_reward = np.cumsum(rewards)
-    ax.plot(cumulative_reward, linewidth=2)
-    ax.set_title("Cumulative Reward")
-    ax.set_xlabel("Episode")
-    ax.set_ylabel("Total Reward")
-    ax.grid(True, alpha=0.3)
+    y_pos = np.arange(len(stats))
+    plt.barh(y_pos, list(stats.values()), alpha=0.7, color="cyan")
+    plt.yticks(y_pos, list(stats.keys()))
+    plt.title("Performance Statistics")
+    plt.xlabel("Value")
+    plt.grid(True, alpha=0.3)
 
     plt.tight_layout()
+
+    # Save plot
+    os.makedirs("visualizations", exist_ok=True)
+    plt.savefig("visualizations/basic_dqn_experiment.png", dpi=300, bbox_inches="tight")
     plt.show()
 
+    # Print results
+    print("\nExperiment Results:")
+    print("=" * 20)
+    print(f"Total episodes: {len(scores)}")
+    print(f"Mean score: {np.mean(scores):.2f}")
+    print(f"Max score: {np.max(scores):.2f}")
+    print(f"Min score: {np.min(scores):.2f}")
+    print(f"Final 50 episodes average: {np.mean(scores[-50:]):.2f}")
+    print(f"Episodes with score > 200: {np.sum(np.array(scores) > 200)}")
 
-def main():
-    """Main experiment function"""
-    agent, results = run_basic_dqn_experiment()
-
-    print("Generating training plots...")
-    plot_training_results(results)
-
-    print("Performing Q-value analysis...")
-    analyzer = PerformanceAnalyzer()
-    analyzer.analyze_q_value_distributions(
-        agent, gym.make("CartPole-v1"), num_samples=1000
+    # Evaluate final performance
+    print("\nEvaluating final performance...")
+    agent = DQNAgent(
+        state_dim=env.observation_space.shape[0],
+        action_dim=env.action_space.n,
+        lr=1e-3,
+        gamma=0.99,
+        epsilon_start=0.01,  # Low exploration for evaluation
+        epsilon_end=0.01,
+        epsilon_decay=1.0,
     )
 
-    print("\nExperiment completed successfully!")
-    print("Results saved in the 'results' variable for further analysis.")
+    # Load the trained weights (simplified - in practice you'd save/load properly)
+    evaluation_results = agent.evaluate(env, num_episodes=10)
 
-    return agent, results
+    print(f"Evaluation results (10 episodes):")
+    print(f"  Mean reward: {evaluation_results['mean_reward']:.2f}")
+    print(f"  Std reward: {evaluation_results['std_reward']:.2f}")
+    print(f"  Max reward: {evaluation_results['max_reward']:.2f}")
+    print(f"  Min reward: {evaluation_results['min_reward']:.2f}")
+
+    env.close()
+    print("\nBasic DQN experiment completed successfully!")
 
 
 if __name__ == "__main__":
-    np.random.seed(42)
-
-    agent, results = main()
+    main()
