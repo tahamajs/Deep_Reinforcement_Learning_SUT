@@ -905,3 +905,4 @@ def create_interactive_visualization(results: Dict[str, Any]) -> go.Figure:
     )
     
     return fig
+

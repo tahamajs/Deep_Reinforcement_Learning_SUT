@@ -520,3 +520,4 @@ class MultidimensionalQuantumEnvironment(gym.Env):
     def close(self):
         """Close environment"""
         pass
+

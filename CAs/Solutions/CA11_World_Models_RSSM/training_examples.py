@@ -968,7 +968,7 @@ def analyze_world_model_representations(save_path: Optional[str] = None) -> plt.
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
-    plt.show()
+    plt.close()  # Close instead of show to avoid display issues
 
     print("World model representation analysis completed!")
 
@@ -1195,7 +1195,7 @@ def comprehensive_world_models_analysis(
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
-    plt.show()
+    plt.close()  # Close instead of show to avoid display issues
 
     # Print comprehensive analysis
     print("\n" + "=" * 55)

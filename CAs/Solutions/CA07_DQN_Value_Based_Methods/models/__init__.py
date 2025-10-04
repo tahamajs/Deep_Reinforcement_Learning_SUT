@@ -325,3 +325,4 @@ def get_model_info(model: nn.Module) -> dict:
         "architecture": str(model),
     }
 
+

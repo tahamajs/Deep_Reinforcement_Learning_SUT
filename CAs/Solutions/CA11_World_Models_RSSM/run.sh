@@ -12,6 +12,7 @@ echo "Creating directories..."
 mkdir -p visualizations
 mkdir -p results
 mkdir -p logs
+mkdir -p logs/experiments
 
 # Set environment variables
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
@@ -214,4 +215,5 @@ echo ""
 echo "=========================================="
 echo "CA11 Experiments Completed Successfully!"
 echo "=========================================="
+
 

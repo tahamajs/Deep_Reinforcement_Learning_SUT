@@ -616,3 +616,4 @@ class VariationalLatentPlanner(nn.Module):
 
         return total_loss.item()
 
+

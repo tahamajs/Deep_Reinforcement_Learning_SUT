@@ -719,3 +719,4 @@ if __name__ == "__main__":
     print("=" * 60)
     print("Check the 'test_results' directory for detailed results.")
     print("All components have been tested and results saved.")
+

@@ -52,7 +52,7 @@ stable-baselines3>=1.6.0
 
 # Network analysis
 networkx>=2.6.0
-graph-tool>=2.45.0
+# graph-tool>=2.45.0  # Commented out - difficult to install on macOS via pip
 
 # Advanced mathematical libraries
 cvxpy>=1.2.0

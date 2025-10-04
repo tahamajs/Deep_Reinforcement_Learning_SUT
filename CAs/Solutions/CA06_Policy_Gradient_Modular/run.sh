@@ -222,3 +222,4 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     open visualizations/
 fi
 
+

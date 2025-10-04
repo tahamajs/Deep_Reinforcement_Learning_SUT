@@ -20,6 +20,16 @@ mkdir -p logs
 # Set Python path
 export PYTHONPATH="${PROJECT_DIR}:${PYTHONPATH}"
 
+# Set Python version to use (change this if you want a different version)
+# Options: python3, python3.10, python3.11, python3.13, etc.
+PYTHON_CMD="python3"  # Default: uses system default python3
+PIP_CMD="pip3"        # Default: uses system default pip3
+
+# Uncomment one of these to use a specific version:
+# PYTHON_CMD="python3.10" && PIP_CMD="pip3.10"
+# PYTHON_CMD="python3.11" && PIP_CMD="pip3.11"
+# PYTHON_CMD="python3.13" && PIP_CMD="pip3.13"
+
 # Function to log with timestamp
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a logs/execution.log
@@ -39,12 +49,12 @@ log "🎯 Starting CA19 Advanced RL Systems Execution"
 
 # Step 1: Install dependencies
 log "📦 Installing dependencies..."
-pip install -r requirements.txt > logs/install.log 2>&1
+$PIP_CMD install -r requirements.txt > logs/install.log 2>&1
 check_success "Dependency installation"
 
 # Step 2: Test package imports and basic functionality
 log "🧪 Testing package functionality..."
-python test_package.py > logs/test_results.log 2>&1
+$PYTHON_CMD test_package.py > logs/test_results.log 2>&1
 check_success "Package testing"
 
 # Step 3: Run Jupyter notebook conversion and execution
@@ -54,7 +64,7 @@ if command -v jupyter &> /dev/null; then
     jupyter nbconvert --to python CA19.ipynb --output-dir=. > logs/notebook_convert.log 2>&1
     
     # Execute the converted Python script
-    python CA19.py > logs/notebook_execution.log 2>&1
+    $PYTHON_CMD CA19.py > logs/notebook_execution.log 2>&1
     check_success "Jupyter notebook execution"
 else
     log "⚠️ Jupyter not found, skipping notebook execution"
@@ -65,7 +75,7 @@ log "🔬 Testing individual modules..."
 
 # Test Quantum RL Module
 log "Testing Quantum RL Module..."
-python -c "
+$PYTHON_CMD -c "
 import sys
 sys.path.insert(0, '.')
 try:
@@ -96,9 +106,8 @@ except Exception as e:
 " > logs/quantum_rl_test.log 2>&1
 check_success "Quantum RL module test"
 
-# Test Neuromorphic RL Module
 log "Testing Neuromorphic RL Module..."
-python -c "
+$PYTHON_CMD -c "
 import sys
 sys.path.insert(0, '.')
 try:
@@ -130,7 +139,7 @@ check_success "Neuromorphic RL module test"
 
 # Test Hybrid Quantum-Classical Module
 log "Testing Hybrid Quantum-Classical Module..."
-python -c "
+$PYTHON_CMD -c "
 import sys
 sys.path.insert(0, '.')
 try:
@@ -162,7 +171,7 @@ check_success "Hybrid Quantum-Classical module test"
 
 # Test Environments Module
 log "Testing Environments Module..."
-python -c "
+$PYTHON_CMD -c "
 import sys
 sys.path.insert(0, '.')
 try:
@@ -200,7 +209,7 @@ check_success "Environments module test"
 # Step 5: Run comprehensive experiments
 log "🧪 Running comprehensive experiments..."
 
-python -c "
+$PYTHON_CMD -c "
 import sys
 import os
 import numpy as np
@@ -754,7 +763,7 @@ check_success "Advanced comprehensive experiments"
 # Step 6: Generate final report
 log "📊 Generating final report..."
 
-python -c "
+$PYTHON_CMD -c "
 import os
 import json
 import glob

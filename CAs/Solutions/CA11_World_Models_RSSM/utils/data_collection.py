@@ -70,7 +70,7 @@ def collect_world_model_data(
         # Select action
         if random.random() < random_action_prob:
             # Random action
-                action = env.action_space.sample()
+            action = env.action_space.sample()
         else:
             # Add noise to previous action or use zero
             if len(actions) > 0:
@@ -330,6 +330,214 @@ def create_sequence_dataloader(
     )
 
 
+def collect_sequence_data(
+    env,
+    episodes: int = 50,
+    episode_length: int = 20,
+    seed: int = 42,
+    random_action_prob: float = 0.3,
+    action_noise: float = 0.05,
+) -> Dict[str, List[np.ndarray]]:
+    """Collect sequential data from the environment for RSSM/Dreamer training.
+
+    The function generates fixed-length sequences of observations, actions, rewards,
+    and done flags by interacting with the environment using a stochastic policy.
+
+    Args:
+        env: Gymnasium-compatible environment.
+        episodes: Number of rollouts to collect.
+        episode_length: Maximum length of each collected sequence.
+        seed: Random seed used for reproducibility.
+        random_action_prob: Probability of taking a completely random action.
+        action_noise: Standard deviation of Gaussian noise added to previous action
+            for continuous control tasks.
+
+    Returns:
+        Dictionary containing lists of numpy arrays with shape
+        (episode_length, *obs_dim) for observations and similarly for other keys.
+    """
+
+    set_seed(seed)
+
+    obs_shape = env.observation_space.shape
+    action_shape = getattr(env.action_space, "shape", ())
+    is_discrete_action = len(action_shape) == 0
+
+    zero_obs = np.zeros(obs_shape, dtype=np.float32)
+    zero_action = 0 if is_discrete_action else np.zeros(action_shape, dtype=np.float32)
+
+    sequences = {
+        "observations": [],
+        "actions": [],
+        "rewards": [],
+        "dones": [],
+    }
+
+    for episode in range(episodes):
+        obs, _ = env.reset(seed=seed + episode)
+        episode_obs: List[np.ndarray] = []
+        episode_actions: List[np.ndarray] = []
+        episode_rewards: List[float] = []
+        episode_dones: List[bool] = []
+
+        prev_action: Optional[np.ndarray] = None
+
+        for step in range(episode_length):
+            take_random = random.random() < random_action_prob or prev_action is None
+
+            if take_random:
+                action = env.action_space.sample()
+            else:
+                if is_discrete_action:
+                    action = prev_action
+                else:
+                    noise = np.random.normal(0, action_noise, size=action_shape)
+                    action = np.clip(
+                        prev_action + noise,
+                        env.action_space.low,
+                        env.action_space.high,
+                    )
+
+            next_obs, reward, terminated, truncated, _ = env.step(action)
+            done = bool(terminated or truncated)
+
+            episode_obs.append(np.array(obs, dtype=np.float32))
+            if is_discrete_action:
+                episode_actions.append(np.array(action, dtype=np.int64))
+            else:
+                episode_actions.append(np.array(action, dtype=np.float32))
+            episode_rewards.append(float(reward))
+            episode_dones.append(done)
+
+            obs = next_obs
+            prev_action = (
+                np.array(action, copy=True)
+                if not is_discrete_action
+                else np.array(action, dtype=np.int64)
+            )
+
+            if done:
+                prev_action = None
+                break
+
+        if len(episode_obs) == 0:
+            continue
+
+        def _pad_sequence(values: List[Any], target_len: int, pad_value: Any):
+            if len(values) >= target_len:
+                return values[:target_len]
+            padded = list(values)
+            while len(padded) < target_len:
+                if len(padded) == 0:
+                    padded.append(np.array(pad_value, copy=True))
+                else:
+                    padded.append(np.array(padded[-1], copy=True))
+            return padded
+
+        padded_obs = _pad_sequence(episode_obs, episode_length, zero_obs)
+        padded_actions = _pad_sequence(episode_actions, episode_length, zero_action)
+        padded_rewards = _pad_sequence(
+            [np.array(r, dtype=np.float32) for r in episode_rewards],
+            episode_length,
+            np.array(0.0, dtype=np.float32),
+        )
+        padded_dones = _pad_sequence(
+            [np.array(d, dtype=bool) for d in episode_dones],
+            episode_length,
+            np.array(True, dtype=bool),
+        )
+
+        sequences["observations"].append(np.stack(padded_obs))
+        sequences["actions"].append(np.stack(padded_actions))
+        sequences["rewards"].append(np.stack(padded_rewards))
+        sequences["dones"].append(np.stack(padded_dones))
+
+    return sequences
+
+
+def create_data_loader(*args, **kwargs):
+    """Alias for :func:`create_dataloader` for backwards compatibility."""
+
+    return create_dataloader(*args, **kwargs)
+
+
+def split_data(
+    data: Dict[str, List[Any]],
+    train_ratio: float = 0.8,
+    val_ratio: float = 0.1,
+    shuffle: bool = True,
+    seed: int = 42,
+) -> Tuple[Dict[str, List[Any]], Dict[str, List[Any]], Dict[str, List[Any]]]:
+    """Split data dictionary into train/validation/test partitions."""
+
+    if not data:
+        return {}, {}, {}
+
+    first_key = next(iter(data))
+    total_samples = len(data[first_key])
+    if total_samples == 0:
+        return {k: [] for k in data}, {k: [] for k in data}, {k: [] for k in data}
+
+    indices = list(range(total_samples))
+    if shuffle:
+        rng = np.random.default_rng(seed)
+        rng.shuffle(indices)
+
+    train_end = int(total_samples * train_ratio)
+    val_end = train_end + int(total_samples * val_ratio)
+
+    train_idx = indices[:train_end]
+    val_idx = indices[train_end:val_end]
+    test_idx = indices[val_end:]
+
+    def _subset(idxs: List[int]) -> Dict[str, List[Any]]:
+        return {key: [data[key][i] for i in idxs] for key in data}
+
+    # Ensure split dictionaries are explicit copies to avoid accidental mutations
+    train_data = _subset(train_idx)
+    val_data = _subset(val_idx)
+    test_data = _subset(test_idx)
+
+    return train_data, val_data, test_data
+
+
+def augment_data(
+    data: Dict[str, List[Any]],
+    noise_std: float = 0.01,
+    include_original: bool = True,
+    seed: int = 42,
+) -> Dict[str, List[Any]]:
+    """Apply lightweight data augmentation to numeric entries in the dataset."""
+
+    if not data:
+        return {}
+
+    rng = np.random.default_rng(seed)
+    augmented = {key: [] for key in data}
+
+    total_samples = len(next(iter(data.values())))
+
+    for idx in range(total_samples):
+        for key, values in data.items():
+            value = values[idx]
+            array_value = np.array(value)
+            if array_value.dtype.kind in {"f", "i", "u"}:
+                noise = rng.normal(0.0, noise_std, size=array_value.shape)
+                augmented_value = array_value + noise
+                augmented[key].append(augmented_value.astype(array_value.dtype, copy=False))
+            else:
+                augmented[key].append(array_value)
+
+    if include_original:
+        combined = {key: [] for key in data}
+        for key, values in data.items():
+            combined[key].extend([np.array(v) for v in values])
+            combined[key].extend(augmented[key])
+        return combined
+
+    return augmented
+
+
 def normalize_data(data: Dict[str, List[np.ndarray]]) -> Tuple[Dict[str, List[np.ndarray]], Dict[str, Any]]:
     """
     Normalize data using mean and std
@@ -343,7 +551,7 @@ def normalize_data(data: Dict[str, List[np.ndarray]]) -> Tuple[Dict[str, List[np
     normalized_data = {}
     normalization_stats = {}
     
-        for key, values in data.items():
+    for key, values in data.items():
         if key in ["observations", "actions", "next_observations"]:
             values_array = np.array(values)
             mean = np.mean(values_array, axis=0)

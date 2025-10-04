@@ -300,3 +300,4 @@ def cleanup_old_files(directory: str, file_pattern: str = "*.png", max_files: in
 
     print(f"Cleaned up {len(files_to_remove)} old files from {directory}")
 
+

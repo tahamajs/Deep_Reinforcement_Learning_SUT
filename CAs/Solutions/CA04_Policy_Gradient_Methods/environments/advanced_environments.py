@@ -681,3 +681,4 @@ def get_environment_info(env: gym.Env) -> Dict[str, Any]:
         current_env = current_env.env
     
     return info
+

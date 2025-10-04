@@ -722,3 +722,4 @@ class AdvancedVisualizationEngine:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
         
         return fig
+

@@ -548,3 +548,4 @@ class QualityAssurance:
             "avg_quality_score": avg_quality_score,
             "quality_thresholds": self.quality_thresholds,
         }
+

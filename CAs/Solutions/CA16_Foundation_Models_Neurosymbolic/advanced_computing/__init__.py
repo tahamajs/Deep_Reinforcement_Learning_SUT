@@ -535,3 +535,4 @@ class EnergyEfficientRL:
             "avg_energy_per_step": np.mean(self.energy_history) if self.energy_history else 0.0,
         }
 
+

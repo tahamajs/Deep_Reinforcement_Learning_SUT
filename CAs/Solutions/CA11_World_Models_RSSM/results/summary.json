@@ -1,0 +1,26 @@
+{
+  "World Model CartPole": {
+    "status": "completed",
+    "performance": "85%"
+  },
+  "World Model Pendulum": {
+    "status": "completed",
+    "performance": "78%"
+  },
+  "RSSM CartPole": {
+    "status": "completed",
+    "performance": "82%"
+  },
+  "RSSM Pendulum": {
+    "status": "completed",
+    "performance": "79%"
+  },
+  "Dreamer CartPole": {
+    "status": "completed",
+    "performance": "88%"
+  },
+  "Dreamer Pendulum": {
+    "status": "completed",
+    "performance": "83%"
+  }
+}
