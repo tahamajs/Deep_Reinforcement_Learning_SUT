@@ -425,6 +425,180 @@ def plot_world_model_comparison(
     return fig
 
 
+def plot_world_model_predictions(
+    actual: np.ndarray,
+    predicted: np.ndarray,
+    title: str = "World Model Predictions",
+    save_path: Optional[str] = None,
+) -> plt.Figure:
+    """Visualize model predictions against ground truth observations."""
+
+    if actual.ndim != 2 or predicted.ndim != 2:
+        raise ValueError("Expected actual and predicted tensors with shape (T, D)")
+
+    time_axis = np.arange(actual.shape[0])
+    num_dims = min(3, actual.shape[1])
+
+    fig, axes = plt.subplots(num_dims, 1, figsize=(12, 4 * num_dims))
+    if num_dims == 1:
+        axes = [axes]
+
+    for idx in range(num_dims):
+        axes[idx].plot(time_axis, actual[:, idx], label="Actual", linewidth=2)
+        axes[idx].plot(time_axis, predicted[:, idx], "--", label="Predicted", linewidth=2)
+        axes[idx].set_xlabel("Time Step")
+        axes[idx].set_ylabel(f"Dimension {idx+1}")
+        axes[idx].grid(True, alpha=0.3)
+        axes[idx].legend()
+
+    fig.suptitle(title, fontsize=16)
+    fig.tight_layout()
+
+    if save_path:
+        fig.savefig(save_path, dpi=300, bbox_inches="tight")
+
+    return fig
+
+
+def plot_trajectory_rollout(
+    states: np.ndarray,
+    actions: np.ndarray,
+    rewards: Optional[np.ndarray] = None,
+    title: str = "Trajectory Rollout",
+    save_path: Optional[str] = None,
+) -> plt.Figure:
+    """Plot a rollout trajectory consisting of states, actions, and rewards."""
+
+    if states.ndim != 2:
+        raise ValueError("states should have shape (T, state_dim)")
+
+    time_axis = np.arange(states.shape[0])
+    fig, axes = plt.subplots(3, 1, figsize=(12, 12), sharex=True)
+
+    axes[0].plot(states)
+    axes[0].set_ylabel("State Value")
+    axes[0].set_title("State Trajectory")
+    axes[0].grid(True, alpha=0.3)
+
+    if actions.ndim == 1:
+        axes[1].plot(time_axis, actions, color="orange")
+    else:
+        axes[1].plot(time_axis, actions)
+    axes[1].set_ylabel("Action Value")
+    axes[1].set_title("Action Sequence")
+    axes[1].grid(True, alpha=0.3)
+
+    if rewards is not None:
+        axes[2].plot(time_axis, rewards, color="green")
+        axes[2].set_ylabel("Reward")
+        axes[2].set_title("Reward Sequence")
+        axes[2].grid(True, alpha=0.3)
+    else:
+        axes[2].axis("off")
+
+    axes[-1].set_xlabel("Time Step")
+    fig.suptitle(title, fontsize=16)
+    fig.tight_layout()
+
+    if save_path:
+        fig.savefig(save_path, dpi=300, bbox_inches="tight")
+
+    return fig
+
+
+def plot_latent_space_analysis(
+    latent_states: np.ndarray,
+    reconstructed_states: Optional[np.ndarray] = None,
+    rewards: Optional[np.ndarray] = None,
+    title: str = "Latent Space Analysis",
+    save_path: Optional[str] = None,
+) -> plt.Figure:
+    """Provide a quick overview of latent space statistics."""
+
+    if latent_states.ndim != 2:
+        raise ValueError("latent_states should have shape (N, latent_dim)")
+
+    fig = plt.figure(figsize=(16, 6))
+
+    ax1 = fig.add_subplot(1, 3, 1)
+    ax1.plot(latent_states)
+    ax1.set_title("Latent Dimensions Over Time")
+    ax1.set_xlabel("Time Step")
+    ax1.set_ylabel("Latent Value")
+    ax1.grid(True, alpha=0.3)
+
+    ax2 = fig.add_subplot(1, 3, 2)
+    ax2.hist(latent_states.flatten(), bins=40, color="steelblue", alpha=0.8)
+    ax2.set_title("Latent Distribution")
+    ax2.set_xlabel("Value")
+    ax2.set_ylabel("Count")
+
+    ax3 = fig.add_subplot(1, 3, 3)
+    if reconstructed_states is not None and reconstructed_states.shape == latent_states.shape:
+        reconstruction_error = np.mean((latent_states - reconstructed_states) ** 2, axis=1)
+        ax3.plot(reconstruction_error, color="darkred")
+        ax3.set_ylabel("MSE Error")
+        ax3.set_title("Reconstruction Error")
+    elif rewards is not None:
+        ax3.plot(rewards, color="darkgreen")
+        ax3.set_ylabel("Reward")
+        ax3.set_title("Reward Trace")
+    else:
+        ax3.axis("off")
+
+    ax3.set_xlabel("Time Step")
+
+    fig.suptitle(title, fontsize=16)
+    fig.tight_layout()
+
+    if save_path:
+        fig.savefig(save_path, dpi=300, bbox_inches="tight")
+
+    return fig
+
+
+def plot_comparison_metrics(
+    metrics: Dict[str, Dict[str, float]],
+    title: str = "Comparison Metrics",
+    save_path: Optional[str] = None,
+) -> plt.Figure:
+    """Plot aggregated metrics for multiple models or experiments."""
+
+    if not metrics:
+        raise ValueError("metrics dictionary cannot be empty")
+
+    metric_names = sorted({metric for model_metrics in metrics.values() for metric in model_metrics})
+    models = list(metrics.keys())
+
+    data = np.zeros((len(models), len(metric_names)))
+    for i, model in enumerate(models):
+        for j, metric in enumerate(metric_names):
+            data[i, j] = metrics[model].get(metric, np.nan)
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    im = ax.imshow(data, cmap="viridis", aspect="auto")
+
+    ax.set_xticks(np.arange(len(metric_names)))
+    ax.set_xticklabels(metric_names, rotation=45, ha="right")
+    ax.set_yticks(np.arange(len(models)))
+    ax.set_yticklabels(models)
+    ax.set_title(title)
+
+    for i in range(len(models)):
+        for j in range(len(metric_names)):
+            value = data[i, j]
+            if not np.isnan(value):
+                ax.text(j, i, f"{value:.2f}", ha="center", va="center", color="white")
+
+    fig.colorbar(im, ax=ax, label="Metric Value")
+    fig.tight_layout()
+
+    if save_path:
+        fig.savefig(save_path, dpi=300, bbox_inches="tight")
+
+    return fig
+
+
 def create_comprehensive_report(
     results: Dict[str, Any],
     save_dir: str = "visualizations",

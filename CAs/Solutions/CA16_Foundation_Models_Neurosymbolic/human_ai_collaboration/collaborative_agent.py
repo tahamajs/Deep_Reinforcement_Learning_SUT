@@ -268,7 +268,7 @@ class SharedAutonomyController:
             if random.random() < human_weight:
                 final_action = human_action
                 source = "human"
-        else:
+            else:
                 final_action = ai_action
                 source = "ai"
         
