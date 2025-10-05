@@ -58,7 +58,7 @@ class ElasticWeightConsolidation:
                 # Move batch to device
                 batch = {k: v.to(self.device) for k, v in batch.items()}
 
-            # Forward pass
+                # Forward pass
                 states = batch["states"]
                 actions = batch["actions"]
                 rewards = batch["rewards"]
@@ -68,16 +68,16 @@ class ElasticWeightConsolidation:
                 action_probs = F.softmax(action_logits, dim=-1)
                 log_probs = torch.log(action_probs.gather(1, actions.unsqueeze(1)))
 
-            # Compute gradients
-            self.model.zero_grad()
+                # Compute gradients
+                self.model.zero_grad()
                 log_probs.sum().backward()
 
-            # Accumulate Fisher information
-            for name, param in self.model.named_parameters():
-                if param.grad is not None:
-                        fisher_info[name] += param.grad.data ** 2
+                # Accumulate Fisher information
+                for name, param in self.model.named_parameters():
+                    if param.grad is not None:
+                        fisher_info[name] += param.grad.data**2
 
-            sample_count += len(states)
+                sample_count += len(states)
 
         # Average Fisher information
         for name in fisher_info:
@@ -114,7 +114,7 @@ class ElasticWeightConsolidation:
     def compute_total_ewc_penalty(self) -> torch.Tensor:
         """Compute total EWC penalty for all previous tasks."""
         total_penalty = torch.tensor(0.0, device=self.device)
-        
+
         for task_id in self.fisher_information:
             penalty = self.compute_ewc_penalty(task_id)
             total_penalty += penalty
@@ -130,7 +130,7 @@ class ElasticWeightConsolidation:
     ):
         """Update EWC parameters for a task."""
         self.model.eval()
-        
+
         # Initialize Fisher information
         fisher_info = {}
         for name, param in self.model.named_parameters():
@@ -139,14 +139,14 @@ class ElasticWeightConsolidation:
         # Compute Fisher information on provided data
         with torch.no_grad():
             for i in range(min(num_samples, len(states))):
-                state = states[i:i+1].to(self.device)
-                action = actions[i:i+1].to(self.device)
+                state = states[i : i + 1].to(self.device)
+                action = actions[i : i + 1].to(self.device)
 
                 # Compute log-likelihood
                 action_logits = self.model(state)
                 action_probs = F.softmax(action_logits, dim=-1)
                 log_probs = torch.log(action_probs.gather(1, action.unsqueeze(1)))
-                
+
                 # Compute gradients
                 self.model.zero_grad()
                 log_probs.sum().backward()
@@ -154,7 +154,7 @@ class ElasticWeightConsolidation:
                 # Accumulate Fisher information
                 for name, param in self.model.named_parameters():
                     if param.grad is not None:
-                        fisher_info[name] += param.grad.data ** 2
+                        fisher_info[name] += param.grad.data**2
 
         # Average Fisher information
         for name in fisher_info:
@@ -229,13 +229,13 @@ class OnlineEWC:
     ):
         """Update Fisher information online."""
         self.model.eval()
-        
+
         # Initialize Fisher information if not exists
         if task_id not in self.fisher_information:
             self.fisher_information[task_id] = {}
             self.optimal_params[task_id] = {}
             self.task_weights[task_id] = 1.0
-            
+
             for name, param in self.model.named_parameters():
                 self.fisher_information[task_id][name] = torch.zeros_like(param.data)
                 self.optimal_params[task_id][name] = param.data.clone()
@@ -243,14 +243,14 @@ class OnlineEWC:
         # Compute Fisher information on provided data
         with torch.no_grad():
             for i in range(min(num_samples, len(states))):
-                state = states[i:i+1].to(self.device)
-                action = actions[i:i+1].to(self.device)
+                state = states[i : i + 1].to(self.device)
+                action = actions[i : i + 1].to(self.device)
 
                 # Compute log-likelihood
                 action_logits = self.model(state)
                 action_probs = F.softmax(action_logits, dim=-1)
                 log_probs = torch.log(action_probs.gather(1, action.unsqueeze(1)))
-                
+
                 # Compute gradients
                 self.model.zero_grad()
                 log_probs.sum().backward()
@@ -258,7 +258,7 @@ class OnlineEWC:
                 # Update Fisher information
                 for name, param in self.model.named_parameters():
                     if param.grad is not None:
-                        self.fisher_information[task_id][name] += param.grad.data ** 2
+                        self.fisher_information[task_id][name] += param.grad.data**2
 
         # Average Fisher information
         for name in self.fisher_information[task_id]:
@@ -273,7 +273,7 @@ class OnlineEWC:
     def compute_online_ewc_penalty(self) -> torch.Tensor:
         """Compute online EWC penalty."""
         total_penalty = torch.tensor(0.0, device=self.device)
-        
+
         for task_id in self.fisher_information:
             weight = self.task_weights[task_id]
             fisher_info = self.fisher_information[task_id]
@@ -332,14 +332,14 @@ class EWCWrapper:
         if use_ewc and task_id > 0:
             ewc_penalty = self.ewc.compute_total_ewc_penalty()
 
-                # Total loss
+        # Total loss
         total_loss = main_loss + self.ewc.lambda_ewc * ewc_penalty
 
-                # Backward pass
-                optimizer.zero_grad()
-                total_loss.backward()
+        # Backward pass
+        optimizer.zero_grad()
+        total_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-                optimizer.step()
+        optimizer.step()
 
         return {
             "main_loss": main_loss.item(),

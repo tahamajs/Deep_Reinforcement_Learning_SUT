@@ -33,23 +33,23 @@ class ProgressiveNetwork(nn.Module):
         # Create columns
         self.columns = nn.ModuleList()
         self.lateral_layers = nn.ModuleList()
-        
+
         # Initialize first column
         self._add_column()
 
     def _add_column(self):
         """Add a new column to the network."""
         column_id = len(self.columns)
-        
+
         # Create main column
         layers = []
         prev_dim = self.input_dim
-        
+
         for hidden_dim in self.hidden_dims:
             layers.append(nn.Linear(prev_dim, hidden_dim))
             layers.append(nn.ReLU())
             prev_dim = hidden_dim
-        
+
         layers.append(nn.Linear(prev_dim, self.output_dim))
         column = nn.Sequential(*layers)
         self.columns.append(column)
@@ -59,7 +59,9 @@ class ProgressiveNetwork(nn.Module):
             lateral_layer = nn.ModuleList()
             for prev_column_id in range(column_id):
                 # Lateral connection from previous column
-                lateral_dim = self.hidden_dims[-1] if self.hidden_dims else self.output_dim
+                lateral_dim = (
+                    self.hidden_dims[-1] if self.hidden_dims else self.output_dim
+                )
                 lateral_conn = nn.Linear(lateral_dim, lateral_dim)
                 lateral_layer.append(lateral_conn)
             self.lateral_layers.append(lateral_layer)
@@ -75,13 +77,15 @@ class ProgressiveNetwork(nn.Module):
         # Add lateral connections if available
         if self.lateral_connections and column_id < len(self.lateral_layers):
             lateral_outputs = []
-            for prev_column_id, lateral_conn in enumerate(self.lateral_layers[column_id]):
+            for prev_column_id, lateral_conn in enumerate(
+                self.lateral_layers[column_id]
+            ):
                 # Get output from previous column
                 prev_output = self.columns[prev_column_id](x)
                 # Apply lateral connection
                 lateral_output = lateral_conn(prev_output)
                 lateral_outputs.append(lateral_output)
-            
+
             # Combine lateral outputs
             if lateral_outputs:
                 combined_lateral = torch.stack(lateral_outputs, dim=0).sum(dim=0)
@@ -113,7 +117,7 @@ class ProgressiveNetwork(nn.Module):
 
         column = self.columns[column_id]
         total_params = sum(p.numel() for p in column.parameters())
-        
+
         stats = {
             "column_id": column_id,
             "total_parameters": total_params,
@@ -123,7 +127,8 @@ class ProgressiveNetwork(nn.Module):
         # Add lateral connection statistics
         if self.lateral_connections and column_id < len(self.lateral_layers):
             lateral_params = sum(
-                p.numel() for lateral_layer in self.lateral_layers[column_id]
+                p.numel()
+                for lateral_layer in self.lateral_layers[column_id]
                 for p in lateral_layer.parameters()
             )
             stats["lateral_parameters"] = lateral_params
@@ -144,12 +149,12 @@ class ProgressiveNetwork(nn.Module):
         # Column-wise statistics
         column_stats = []
         total_params = 0
-        
+
         for column_id in range(len(self.columns)):
             col_stats = self.get_column_statistics(column_id)
             column_stats.append(col_stats)
             total_params += col_stats["total_parameters"]
-            
+
             if "lateral_parameters" in col_stats:
                 total_params += col_stats["lateral_parameters"]
 
@@ -176,12 +181,12 @@ class DynamicProgressiveNetwork(nn.Module):
         self.output_dim = output_dim
         self.max_columns = max_columns
         self.lateral_connections = lateral_connections
-        
+
         # Create columns
         self.columns = nn.ModuleList()
         self.lateral_layers = nn.ModuleList()
         self.column_weights = nn.Parameter(torch.ones(1))  # Will be expanded
-        
+
         # Task assignment
         self.task_to_column = {}
         self.column_to_task = {}
@@ -192,33 +197,35 @@ class DynamicProgressiveNetwork(nn.Module):
     def _add_column(self):
         """Add a new column to the network."""
         column_id = len(self.columns)
-        
+
         # Create main column
         layers = []
         prev_dim = self.input_dim
-        
+
         for hidden_dim in self.hidden_dims:
             layers.append(nn.Linear(prev_dim, hidden_dim))
             layers.append(nn.ReLU())
             prev_dim = hidden_dim
-        
+
         layers.append(nn.Linear(prev_dim, self.output_dim))
         column = nn.Sequential(*layers)
         self.columns.append(column)
-        
+
         # Create lateral connections if enabled
         if self.lateral_connections and column_id > 0:
             lateral_layer = nn.ModuleList()
             for prev_column_id in range(column_id):
-                lateral_dim = self.hidden_dims[-1] if self.hidden_dims else self.output_dim
+                lateral_dim = (
+                    self.hidden_dims[-1] if self.hidden_dims else self.output_dim
+                )
                 lateral_conn = nn.Linear(lateral_dim, lateral_dim)
                 lateral_layer.append(lateral_conn)
             self.lateral_layers.append(lateral_layer)
 
         # Update column weights
         new_weights = torch.ones(len(self.columns))
-        if hasattr(self, 'column_weights'):
-            new_weights[:len(self.columns)-1] = self.column_weights.data
+        if hasattr(self, "column_weights"):
+            new_weights[: len(self.columns) - 1] = self.column_weights.data
         self.column_weights = nn.Parameter(new_weights)
 
     def add_task_column(self, task_id: int) -> int:
@@ -236,7 +243,12 @@ class DynamicProgressiveNetwork(nn.Module):
 
         return column_id
 
-    def forward(self, x: torch.Tensor, task_id: Optional[int] = None, column_id: Optional[int] = None) -> torch.Tensor:
+    def forward(
+        self,
+        x: torch.Tensor,
+        task_id: Optional[int] = None,
+        column_id: Optional[int] = None,
+    ) -> torch.Tensor:
         """Forward pass through the network."""
         if column_id is None:
             if task_id is None:
@@ -254,30 +266,32 @@ class DynamicProgressiveNetwork(nn.Module):
         # Add lateral connections if available
         if self.lateral_connections and column_id < len(self.lateral_layers):
             lateral_outputs = []
-            for prev_column_id, lateral_conn in enumerate(self.lateral_layers[column_id]):
+            for prev_column_id, lateral_conn in enumerate(
+                self.lateral_layers[column_id]
+            ):
                 prev_output = self.columns[prev_column_id](x)
                 lateral_output = lateral_conn(prev_output)
                 lateral_outputs.append(lateral_output)
-        
+
             if lateral_outputs:
                 combined_lateral = torch.stack(lateral_outputs, dim=0).sum(dim=0)
                 output = output + combined_lateral
-        
+
         return output
-    
+
     def _forward_weighted(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass using weighted combination of all columns."""
         outputs = []
         weights = F.softmax(self.column_weights, dim=0)
-        
+
         for column_id in range(len(self.columns)):
             output = self.forward(x, column_id=column_id)
             outputs.append(output)
-        
+
         # Weighted combination
         weighted_output = torch.stack(outputs, dim=0)
         weighted_output = (weighted_output * weights.view(-1, 1, 1)).sum(dim=0)
-        
+
         return weighted_output
 
     def get_task_column(self, task_id: int) -> int:
@@ -320,7 +334,7 @@ class DynamicProgressiveNetwork(nn.Module):
         stats["column_usage"] = column_usage
 
         # Weight statistics
-        if hasattr(self, 'column_weights'):
+        if hasattr(self, "column_weights"):
             weights = F.softmax(self.column_weights, dim=0)
             stats["column_weights"] = weights.detach().cpu().numpy().tolist()
             stats["dominant_column"] = torch.argmax(weights).item()
@@ -354,7 +368,9 @@ class ProgressiveNetworkTrainer:
     def _create_optimizers(self, lr: float):
         """Create optimizers for all columns."""
         for column_id in range(len(self.network.columns)):
-            optimizer = torch.optim.Adam(self.network.columns[column_id].parameters(), lr=lr)
+            optimizer = torch.optim.Adam(
+                self.network.columns[column_id].parameters(), lr=lr
+            )
             self.optimizers[column_id] = optimizer
 
     def train_column(
@@ -367,29 +383,33 @@ class ProgressiveNetworkTrainer:
         """Train a specific column."""
         if column_id >= len(self.network.columns):
             raise ValueError(f"Column {column_id} does not exist")
-                
-                # Forward pass
+
+        # Forward pass
         action_logits = self.network.forward(states, column_id=column_id)
         action_probs = F.softmax(action_logits, dim=-1)
         log_probs = torch.log(action_probs.gather(1, actions.unsqueeze(1)))
-                
-                # Compute loss
+
+        # Compute loss
         loss = -(log_probs.squeeze() * rewards).mean()
-                
-                # Backward pass
+
+        # Backward pass
         optimizer = self.optimizers[column_id]
-                optimizer.zero_grad()
-                loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.network.columns[column_id].parameters(), max_norm=1.0)
-                optimizer.step()
+        optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(
+            self.network.columns[column_id].parameters(), max_norm=1.0
+        )
+        optimizer.step()
 
         # Record training history
         if column_id not in self.training_history["column_losses"]:
             self.training_history["column_losses"][column_id] = []
             self.training_history["column_performances"][column_id] = []
-        
+
         self.training_history["column_losses"][column_id].append(loss.item())
-        self.training_history["column_performances"][column_id].append(rewards.mean().item())
+        self.training_history["column_performances"][column_id].append(
+            rewards.mean().item()
+        )
 
         return {
             "loss": loss.item(),
@@ -401,10 +421,12 @@ class ProgressiveNetworkTrainer:
         """Add a new column and its optimizer."""
         old_num_columns = len(self.network.columns)
         self.network.add_column()
-        
+
         # Create optimizer for new column
         new_column_id = len(self.network.columns) - 1
-        optimizer = torch.optim.Adam(self.network.columns[new_column_id].parameters(), lr=lr)
+        optimizer = torch.optim.Adam(
+            self.network.columns[new_column_id].parameters(), lr=lr
+        )
         self.optimizers[new_column_id] = optimizer
 
         return new_column_id
@@ -420,15 +442,15 @@ class ProgressiveNetworkTrainer:
         # Compute average losses and performances
         avg_losses = {}
         avg_performances = {}
-        
+
         for column_id in self.training_history["column_losses"]:
             losses = self.training_history["column_losses"][column_id]
             performances = self.training_history["column_performances"][column_id]
-            
+
             avg_losses[column_id] = np.mean(losses) if losses else 0.0
             avg_performances[column_id] = np.mean(performances) if performances else 0.0
 
         stats["avg_losses"] = avg_losses
         stats["avg_performances"] = avg_performances
-        
+
         return stats

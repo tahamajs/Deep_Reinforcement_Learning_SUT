@@ -9,50 +9,49 @@ This module contains implementations of continual learning components including:
 - Dynamic Architectures
 """
 
-from .ewc import ElasticWeightConsolidation, EWCNetwork
+from .ewc import ElasticWeightConsolidation, OnlineEWC, EWCWrapper
 
 from .progressive_networks import (
     ProgressiveNetwork,
-    ProgressiveColumn,
-    LateralConnection,
+    DynamicProgressiveNetwork,
+    ProgressiveNetworkTrainer,
 )
 
 from .experience_replay import (
+    Experience,
     ExperienceReplay,
     PrioritizedExperienceReplay,
-    ContinualExperienceReplay,
+    TaskBalancedReplay,
+    ContinualReplay,
 )
 
-from .meta_learning import MAMLAgent as MAML, ReptileAgent as Reptile, MetaLearner
+from .meta_learning import MAML, Reptile, MetaLearningTrainer
 
 from .dynamic_architectures import (
     DynamicNetwork,
-    TaskSpecificHead,
-    KnowledgeDistillation,
+    AdaptiveNetwork,
+    ModularNetwork,
 )
 
-from .continual_agent import (
-    ContinualLearningAgent,
-    LifelongLearner,
-    TransferLearningAgent,
-)
+from .continual_agent import ContinualLearningAgent
 
 __all__ = [
     "ElasticWeightConsolidation",
-    "EWCNetwork",
+    "OnlineEWC",
+    "EWCWrapper",
     "ProgressiveNetwork",
-    "ProgressiveColumn",
-    "LateralConnection",
+    "DynamicProgressiveNetwork",
+    "ProgressiveNetworkTrainer",
+    "Experience",
     "ExperienceReplay",
     "PrioritizedExperienceReplay",
-    "ContinualExperienceReplay",
+    "TaskBalancedReplay",
+    "ContinualReplay",
     "MAML",
     "Reptile",
-    "MetaLearner",
+    "MetaLearningTrainer",
     "DynamicNetwork",
-    "TaskSpecificHead",
-    "KnowledgeDistillation",
+    "AdaptiveNetwork",
+    "ModularNetwork",
     "ContinualLearningAgent",
-    "LifelongLearner",
-    "TransferLearningAgent",
 ]
