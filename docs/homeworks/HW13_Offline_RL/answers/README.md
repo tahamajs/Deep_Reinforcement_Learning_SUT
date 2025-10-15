@@ -9,43 +9,51 @@ This directory contains complete solutions for Homework 13 on Offline Reinforcem
 **`HW13_Complete_Solutions.md`** - Comprehensive IEEE-format solution document covering:
 
 1. **Introduction to Offline RL**
+
    - Motivation and real-world applications
    - Problem formulation
    - Fundamental differences from online RL
 
 2. **The Distributional Shift Problem**
+
    - Mathematical analysis
    - Error accumulation
    - Overestimation bias
 
 3. **Conservative Q-Learning (CQL)**
+
    - Theoretical foundation
    - Loss function design
    - Implementation details
    - Theoretical guarantees
 
 4. **Implicit Q-Learning (IQL)**
+
    - Expectile regression
    - Avoiding explicit maximization
    - Algorithm details
    - Advantages over CQL
 
 5. **Behavior Regularization Methods**
+
    - Batch-Constrained Q-Learning (BCQ)
    - Advantage-Weighted Regression (AWR)
    - KL-regularized approaches
 
 6. **Model-Based Offline RL (MOPO)**
+
    - Uncertainty quantification
    - Pessimistic reward adjustment
    - Ensemble dynamics models
 
 7. **Evaluation and Benchmarking**
+
    - D4RL benchmark
    - Off-policy evaluation methods
    - Doubly robust estimation
 
 8. **Discussion Questions (Fully Answered)**
+
    - Why is distributional shift more severe in offline RL?
    - How does CQL prevent overestimation without being overly conservative?
    - Trade-offs between behavior regularization and value regularization
@@ -53,6 +61,7 @@ This directory contains complete solutions for Homework 13 on Offline Reinforcem
    - How to evaluate without environment access?
 
 9. **Implementation and Results**
+
    - Experimental setup
    - Performance comparisons
    - Ablation studies
@@ -73,26 +82,31 @@ This directory contains complete solutions for Homework 13 on Offline Reinforcem
 ## Key Features
 
 ✅ **Complete Mathematical Formulations**
+
 - All equations properly formatted with LaTeX
 - Rigorous theoretical foundations
 - Proofs and guarantees
 
 ✅ **Detailed Implementations**
+
 - Production-ready Python code
 - Clear comments and documentation
 - Follows best practices
 
 ✅ **Comprehensive Experiments**
+
 - D4RL benchmark results
 - Ablation studies
 - Comparative analysis
 
 ✅ **In-Depth Discussions**
+
 - All discussion questions fully answered
 - Practical insights and recommendations
 - Trade-off analysis
 
 ✅ **IEEE Format**
+
 - Professional document structure
 - Proper citations and references
 - Publication-quality presentation
@@ -115,6 +129,7 @@ pandoc HW13_Complete_Solutions.md -o HW13_Solutions.pdf \
 ### Understanding the Algorithms
 
 Each algorithm section includes:
+
 1. Theoretical motivation
 2. Mathematical formulation
 3. Implementation code
@@ -124,6 +139,7 @@ Each algorithm section includes:
 ### Replicating Results
 
 The implementations can be found in:
+
 ```
 ../code/
 ├── cql_implementation.py
@@ -138,16 +154,19 @@ The implementations can be found in:
 ### Main Insights
 
 1. **Distributional Shift is Fundamental**
+
    - Core challenge: policy queries out-of-distribution actions
    - Errors compound through Bellman updates
    - Requires careful regularization
 
 2. **Multiple Successful Approaches**
+
    - **Conservative methods** (CQL, IQL): Lower-bound Q-values
    - **Behavior regularization** (BCQ): Constrain to dataset actions
    - **Model-based** (MOPO): Uncertainty-aware planning
 
 3. **Practical Performance**
+
    - State-of-the-art achieves 60-80% of expert performance
    - 3-4x sample efficiency improvement over online RL
    - Robust across different dataset qualities
@@ -178,6 +197,7 @@ else:
 All references are properly cited in IEEE format in the main document.
 
 Key papers:
+
 - Kumar et al. (2020) - Conservative Q-Learning
 - Kostrikov et al. (2021) - Implicit Q-Learning
 - Fujimoto et al. (2019) - BCQ
@@ -187,6 +207,7 @@ Key papers:
 ## Contact
 
 For questions or clarifications, please refer to:
+
 - Course materials in `../../README.md`
 - Official papers cited in references
 - D4RL documentation: https://github.com/rail-berkeley/d4rl
@@ -194,10 +215,10 @@ For questions or clarifications, please refer to:
 ---
 
 **Note:** This solution document provides comprehensive coverage of offline RL theory, methods, and practice. It is designed to be:
+
 - Self-contained and complete
 - Mathematically rigorous
 - Practically useful
 - Publication-quality
 
 All implementations follow best practices and are production-ready.
-
