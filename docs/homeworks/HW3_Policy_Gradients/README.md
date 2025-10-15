@@ -46,11 +46,13 @@ HW3_Policy_Gradients/
 The **Policy Gradient Theorem** provides the foundation for all policy gradient methods. It shows how to compute the gradient of expected return with respect to policy parameters.
 
 **Objective:**
+
 ```
 J(θ) = 𝔼τ~πθ[∑t γᵗ r(st, at)]
 ```
 
 **Policy Gradient:**
+
 ```
 ∇θ J(θ) = 𝔼τ~πθ[∑t ∇θ log πθ(at|st) Gt]
 
@@ -60,6 +62,7 @@ where Gt = ∑k=t^T γᵏ⁻ᵗ rk (return from time t)
 **Key Insight:** We can estimate gradients using samples, without knowing environment dynamics!
 
 **Intuition:**
+
 - `∇θ log πθ(at|st)`: Direction that increases probability of action at
 - `Gt`: How good was this action (return after taking it)
 - Together: Increase probability of actions that led to high returns
@@ -69,6 +72,7 @@ where Gt = ∑k=t^T γᵏ⁻ᵗ rk (return from time t)
 **REINFORCE** (REward Increment = Nonnegative Factor × Offset Reinforcement × Characteristic Eligibility) is the Monte Carlo policy gradient algorithm.
 
 **Algorithm:**
+
 ```python
 Initialize policy parameters θ
 for each episode:
@@ -79,6 +83,7 @@ for each episode:
 ```
 
 **Properties:**
+
 - **Unbiased**: Gradient estimate is correct in expectation
 - **High Variance**: Monte Carlo estimates have high variance
 - **On-Policy**: Must sample from current policy
@@ -86,6 +91,7 @@ for each episode:
 
 **Why It Works:**
 The log-derivative trick converts policy gradient into expectation over trajectories:
+
 ```
 ∇θ 𝔼[R] = ∇θ ∑τ P(τ|θ)R(τ)
          = ∑τ P(τ|θ) ∇θ log P(τ|θ) R(τ)
@@ -97,11 +103,13 @@ The log-derivative trick converts policy gradient into expectation over trajecto
 **Problem:** High variance in gradient estimates leads to slow, unstable learning.
 
 **Solution:** Subtract a baseline b(st) from returns without introducing bias:
+
 ```
 ∇θ J(θ) = 𝔼[∑t ∇θ log πθ(at|st) (Gt - b(st))]
 ```
 
 **Why Baselines Work:**
+
 ```
 𝔼[∇θ log πθ(at|st) b(st)] = ∑a πθ(a|st) ∇θ log πθ(a|st) b(st)
                             = b(st) ∇θ ∑a πθ(a|st)
@@ -111,22 +119,27 @@ The log-derivative trick converts policy gradient into expectation over trajecto
 **Common Baselines:**
 
 #### a) Constant Baseline
+
 ```
 b(st) = 𝔼[Gt]  (average return)
 ```
 
 #### b) Value Function Baseline
+
 ```
 b(st) = V(st)  (state value function)
 ```
+
 This is optimal in terms of variance reduction!
 
 #### c) Advantage Function
+
 ```
 A(st, at) = Q(st, at) - V(st) = Gt - V(st)
 ```
 
 **Advantage Interpretation:**
+
 - Positive: Action is better than average
 - Negative: Action is worse than average
 - Zero: Action is average
@@ -134,13 +147,14 @@ A(st, at) = Q(st, at) - V(st) = Gt - V(st)
 ### 4. Policy Parameterization
 
 #### Discrete Actions (Softmax Policy)
+
 ```python
 class DiscretePolicy(nn.Module):
     def __init__(self, state_dim, action_dim):
         super().__init__()
         self.fc1 = nn.Linear(state_dim, 128)
         self.fc2 = nn.Linear(128, action_dim)
-    
+
     def forward(self, state):
         x = F.relu(self.fc1(state))
         logits = self.fc2(x)
@@ -148,11 +162,13 @@ class DiscretePolicy(nn.Module):
 ```
 
 **Log Probability:**
+
 ```python
 log_prob = torch.log(probs[action] + 1e-8)
 ```
 
 #### Continuous Actions (Gaussian Policy)
+
 ```python
 class ContinuousPolicy(nn.Module):
     def __init__(self, state_dim, action_dim):
@@ -160,7 +176,7 @@ class ContinuousPolicy(nn.Module):
         self.fc1 = nn.Linear(state_dim, 128)
         self.mean = nn.Linear(128, action_dim)
         self.log_std = nn.Parameter(torch.zeros(action_dim))
-    
+
     def forward(self, state):
         x = F.relu(self.fc1(state))
         mean = self.mean(x)
@@ -169,29 +185,32 @@ class ContinuousPolicy(nn.Module):
 ```
 
 **Why Gaussian?**
+
 - Naturally handles continuous actions
 - Easy to compute log probabilities
 - Adjustable exploration via std
 
 ### 5. REINFORCE vs Value-Based Methods
 
-| Aspect | REINFORCE | DQN |
-|--------|-----------|-----|
-| **What is learned** | Policy πθ(a\|s) | Value Q(s,a) |
-| **Action selection** | Sample from πθ | argmax Q |
-| **Continuous actions** | Natural | Difficult |
-| **Convergence** | Local optimum | Global optimum (in tabular) |
-| **Sample efficiency** | Lower | Higher |
-| **Variance** | Higher | Lower |
-| **Stochastic policies** | Yes | No (except ε-greedy) |
+| Aspect                  | REINFORCE       | DQN                         |
+| ----------------------- | --------------- | --------------------------- |
+| **What is learned**     | Policy πθ(a\|s) | Value Q(s,a)                |
+| **Action selection**    | Sample from πθ  | argmax Q                    |
+| **Continuous actions**  | Natural         | Difficult                   |
+| **Convergence**         | Local optimum   | Global optimum (in tabular) |
+| **Sample efficiency**   | Lower           | Higher                      |
+| **Variance**            | Higher          | Lower                       |
+| **Stochastic policies** | Yes             | No (except ε-greedy)        |
 
 **When to use Policy Gradients:**
+
 - Continuous action spaces
 - Stochastic policies needed
 - High-dimensional action spaces
 - Non-differentiable policies
 
 **When to use Value-Based:**
+
 - Discrete actions
 - Deterministic policies
 - Sample efficiency critical
@@ -200,12 +219,14 @@ class ContinuousPolicy(nn.Module):
 ### 6. Genetic Algorithms vs REINFORCE
 
 **Genetic Algorithms (GA):**
+
 - Population-based evolutionary approach
 - No gradient information used
 - Random mutations and selection
 - Parallel evaluation
 
 **Comparison:**
+
 - **GA**: Derivative-free, highly parallel, but sample inefficient
 - **REINFORCE**: Uses gradient information, more sample efficient
 - **GA**: Works with non-differentiable policies
@@ -218,12 +239,14 @@ class ContinuousPolicy(nn.Module):
 **Objective:** Compare gradient-based (REINFORCE) with evolutionary (GA) approaches.
 
 **Tasks:**
+
 1. Implement basic REINFORCE algorithm
 2. Implement genetic algorithm with mutation and crossover
 3. Compare sample efficiency and final performance
 4. Analyze convergence speed
 
 **Expected Observations:**
+
 - REINFORCE converges faster with fewer samples
 - GA requires larger population but is more parallelizable
 - REINFORCE more stable with proper hyperparameters
@@ -233,25 +256,28 @@ class ContinuousPolicy(nn.Module):
 **Objective:** Demonstrate variance reduction using baselines.
 
 **Tasks:**
+
 1. Implement REINFORCE without baseline
 2. Implement value function baseline (V(s))
 3. Compare training stability and variance
 4. Visualize gradient variance across training
 
 **Baseline Network:**
+
 ```python
 class ValueBaseline(nn.Module):
     def __init__(self, state_dim):
         super().__init__()
         self.fc1 = nn.Linear(state_dim, 128)
         self.fc2 = nn.Linear(128, 1)
-    
+
     def forward(self, state):
         x = F.relu(self.fc1(state))
         return self.fc2(x)
 ```
 
 **Training Loop:**
+
 ```python
 # Policy loss
 advantages = returns - baseline_values
@@ -265,6 +291,7 @@ loss = policy_loss + baseline_loss
 ```
 
 **Expected Results:**
+
 - 50-70% variance reduction with baseline
 - Faster convergence
 - More stable training
@@ -274,12 +301,14 @@ loss = policy_loss + baseline_loss
 **Objective:** Apply REINFORCE to continuous action space.
 
 **Tasks:**
+
 1. Implement Gaussian policy for continuous actions
 2. Handle action bounds and scaling
 3. Tune exploration (std parameter)
 4. Analyze policy learned
 
 **Gaussian Policy:**
+
 ```python
 # Forward pass
 dist = Normal(mean, std)
@@ -291,6 +320,7 @@ loss = -(log_prob * returns).mean()
 ```
 
 **Challenges:**
+
 - MountainCar has sparse rewards
 - Requires good exploration
 - May need reward shaping
@@ -300,12 +330,14 @@ loss = -(log_prob * returns).mean()
 **Objective:** Direct comparison of policy-based and value-based methods.
 
 **Tasks:**
+
 1. Implement both REINFORCE and DQN on same environment
 2. Compare sample efficiency
 3. Compare final performance
 4. Analyze learned policies (stochastic vs deterministic)
 
 **Metrics to Compare:**
+
 - Episodes to convergence
 - Final average reward
 - Training stability (variance across runs)
@@ -371,16 +403,19 @@ jupyter notebook code/HW3_P4_REINFORCEvsDQN.ipynb
 ## 📈 Expected Results
 
 ### CartPole
+
 - **Without Baseline**: Converges in ~500-1000 episodes, high variance
 - **With Baseline**: Converges in ~300-500 episodes, lower variance
 - **Final Performance**: 195+ average reward
 
 ### MountainCar Continuous
+
 - **Challenge**: Sparse rewards, exploration critical
 - **Convergence**: 200-500 episodes with good hyperparameters
 - **Final Performance**: 90+ average reward
 
 ### REINFORCE vs DQN
+
 - **DQN**: Faster convergence, more sample efficient
 - **REINFORCE**: Naturally handles stochastic policies
 - **Performance**: Similar final performance, different learning curves
@@ -388,30 +423,38 @@ jupyter notebook code/HW3_P4_REINFORCEvsDQN.ipynb
 ## 🐛 Common Issues & Solutions
 
 ### Issue 1: Policy Collapses (No Exploration)
+
 **Symptoms:** Policy becomes deterministic early, stops learning
 **Solutions:**
+
 - Add entropy bonus to loss: `loss = policy_loss - β * entropy`
 - Use larger initial std for Gaussian policies
 - Ensure sufficient exploration episodes
 
 ### Issue 2: High Variance, Unstable Training
+
 **Symptoms:** Reward fluctuates wildly, doesn't converge
 **Solutions:**
+
 - Implement baseline
 - Normalize returns: `returns = (returns - mean) / (std + 1e-8)`
 - Reduce learning rate
 - Increase batch size (more episodes per update)
 
 ### Issue 3: Gradients Vanishing/Exploding
+
 **Symptoms:** Loss becomes NaN or doesn't change
 **Solutions:**
+
 - Clip gradients: `torch.nn.utils.clip_grad_norm_(params, max_norm=0.5)`
 - Check log probabilities for numerical issues (add small epsilon)
 - Normalize advantages
 
 ### Issue 4: MountainCar Not Learning
+
 **Symptoms:** Agent doesn't reach goal
 **Solutions:**
+
 - Implement reward shaping (penalize for time, reward for height)
 - Increase exploration (larger std)
 - Use longer episodes (increase max_steps)
@@ -422,18 +465,20 @@ jupyter notebook code/HW3_P4_REINFORCEvsDQN.ipynb
 ### Seminal Papers
 
 1. **Williams, R. J. (1992)**
+
    - "Simple statistical gradient-following algorithms for connectionist reinforcement learning"
-   - *Machine Learning, 8*(3-4), 229-256
+   - _Machine Learning, 8_(3-4), 229-256
    - [Paper](https://link.springer.com/article/10.1007/BF00992696)
 
 2. **Sutton, R. S., et al. (2000)**
+
    - "Policy gradient methods for reinforcement learning with function approximation"
-   - *NIPS*
+   - _NIPS_
    - [Paper](https://proceedings.neurips.cc/paper/1999/file/464d828b85b0bed98e80ade0a5c43b0f-Paper.pdf)
 
 3. **Greensmith, E., Bartlett, P. L., & Baxter, J. (2004)**
    - "Variance reduction techniques for gradient estimates in reinforcement learning"
-   - *Journal of Machine Learning Research, 5*, 1471-1530
+   - _Journal of Machine Learning Research, 5_, 1471-1530
 
 ### Books & Tutorials
 
@@ -444,7 +489,6 @@ jupyter notebook code/HW3_P4_REINFORCEvsDQN.ipynb
 ## 💡 Discussion Questions
 
 1. **Why do policy gradients have high variance compared to value-based methods?**
-   
 2. **How does a baseline reduce variance without introducing bias?**
 
 3. **When would you prefer policy gradients over value-based methods?**
@@ -458,16 +502,19 @@ jupyter notebook code/HW3_P4_REINFORCEvsDQN.ipynb
 ## 🎓 Extensions & Challenges
 
 ### Easy
+
 - Implement entropy regularization
 - Try different baseline functions
 - Visualize policy evolution
 
 ### Medium
+
 - Implement advantage actor-critic (A2C)
 - Add importance sampling for off-policy learning
 - Implement natural policy gradients
 
 ### Hard
+
 - Implement Trust Region Policy Optimization (TRPO)
 - Add generalized advantage estimation (GAE)
 - Apply to high-dimensional environments
@@ -475,7 +522,7 @@ jupyter notebook code/HW3_P4_REINFORCEvsDQN.ipynb
 ## 📝 Assignment Deliverables
 
 1. **Code**: All 4 Jupyter notebooks with executed cells
-2. **Report**: 
+2. **Report**:
    - Comparison plots (with/without baseline, REINFORCE vs DQN)
    - Variance analysis
    - Discussion of results
@@ -491,7 +538,6 @@ jupyter notebook code/HW3_P4_REINFORCEvsDQN.ipynb
 ---
 
 **Course:** Deep Reinforcement Learning  
-**Last Updated:** 2024  
+**Last Updated:** 2024
 
 For questions, contact course staff or open an issue in the repository.
-
