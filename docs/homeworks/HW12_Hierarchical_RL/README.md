@@ -34,6 +34,7 @@ HW12_Hierarchical_RL/
 ### 1. Motivation for Hierarchy
 
 **Challenges in Flat RL:**
+
 ```
 Long Horizons: Credit assignment difficult over 1000+ steps
 Sparse Rewards: Random exploration ineffective
@@ -42,6 +43,7 @@ Transfer: Hard to reuse learned behaviors
 ```
 
 **Human Example:**
+
 ```
 Task: Make dinner
 ├─ Shop for ingredients
@@ -56,6 +58,7 @@ Task: Make dinner
 ```
 
 **Benefits of Hierarchy:**
+
 - Temporal abstraction (plan at multiple scales)
 - Reusable skills/subpolicies
 - Exploration structure
@@ -67,6 +70,7 @@ Task: Make dinner
 **Option:** Temporally extended action
 
 **Formal Definition:**
+
 ```
 Option ω = (I_ω, π_ω, β_ω)
 
@@ -77,6 +81,7 @@ where:
 ```
 
 **Semi-Markov Decision Process (SMDP):**
+
 ```
 Instead of choosing action at each step,
 choose option, execute until termination
@@ -85,6 +90,7 @@ Q(s, ω) = Expected return from executing option ω in state s
 ```
 
 **Option-Value Functions:**
+
 ```python
 def intra_option_learning(s, omega, r, s_next):
     """
@@ -95,22 +101,23 @@ def intra_option_learning(s, omega, r, s_next):
         target = r + gamma * Q(s_next, omega)
     else:  # Option terminates
         target = r + gamma * max_omega_prime Q(s_next, omega_prime)
-    
+
     Q(s, omega) += alpha * (target - Q(s, omega))
 ```
 
 **Option Discovery:**
 
 #### 1. Handcrafted Options
+
 ```python
 class NavigateOption:
     def __init__(self, goal_location):
         self.goal = goal_location
         self.policy = train_policy_to_reach(goal)
-    
+
     def initiation_set(self, state):
         return True  # Can start anywhere
-    
+
     def termination(self, state):
         return distance(state, self.goal) < threshold
 ```
@@ -118,48 +125,50 @@ class NavigateOption:
 #### 2. Learned Options
 
 **Eigenoptions:** Use graph Laplacian eigenvectors
+
 ```
 Eigenvectors of state transition graph
 → Diverse exploration directions
 ```
 
 **Option-Critic:**
+
 ```python
 class OptionCritic(nn.Module):
     def __init__(self, state_dim, num_options, action_dim):
         super().__init__()
-        
+
         # Shared representation
         self.encoder = nn.Sequential(
             nn.Linear(state_dim, 128),
             nn.ReLU()
         )
-        
+
         # Option policies
         self.option_policies = nn.ModuleList([
-            nn.Linear(128, action_dim) 
+            nn.Linear(128, action_dim)
             for _ in range(num_options)
         ])
-        
+
         # Termination functions
         self.terminations = nn.Sequential(
             nn.Linear(128, num_options),
             nn.Sigmoid()
         )
-        
+
         # Q-value over options
         self.q_omega = nn.Linear(128, num_options)
-    
+
     def forward(self, state, current_option=None):
         features = self.encoder(state)
-        
+
         if current_option is not None:
             # Get action from current option
             action_logits = self.option_policies[current_option](features)
-            
+
             # Termination probability
             beta = self.terminations(features)[:, current_option]
-            
+
             return action_logits, beta
         else:
             # Select option
@@ -168,36 +177,37 @@ class OptionCritic(nn.Module):
 ```
 
 **Training:**
+
 ```python
 def train_option_critic(env, model, episodes):
     for episode in range(episodes):
         state = env.reset()
         option = select_option(model, state)
-        
+
         while not done:
             # Get action and termination
             action, beta = model(state, option)
-            
+
             # Execute
             next_state, reward, done = env.step(action)
-            
+
             # Update Q over options
             q_loss = compute_q_loss(state, option, reward, next_state, beta)
-            
+
             # Update intra-option policy
             policy_loss = compute_policy_loss(state, option, action, advantage)
-            
+
             # Update termination function
             term_loss = compute_termination_loss(state, option, next_state)
-            
+
             # Optimize
             total_loss = q_loss + policy_loss + term_loss
             optimize(total_loss)
-            
+
             # Termination
             if sample() < beta or done:
                 option = select_option(model, next_state)
-            
+
             state = next_state
 ```
 
@@ -206,74 +216,76 @@ def train_option_critic(env, model, episodes):
 **Key Idea:** Manager sets goals, Worker achieves them
 
 **FeudalNet (Feudal Networks):**
+
 ```python
 class FeudalNet(nn.Module):
     def __init__(self, state_dim, action_dim, goal_dim, c=10):
         super().__init__()
-        
+
         # Perception module (shared)
         self.perception = nn.Sequential(
             nn.Linear(state_dim, 256),
             nn.ReLU()
         )
-        
+
         # Manager (sets goals)
         self.manager = nn.LSTM(256, goal_dim)
-        
+
         # Worker (achieves goals)
         self.worker = nn.LSTM(256 + goal_dim, 256)
         self.worker_policy = nn.Linear(256, action_dim)
-        
+
         self.c = c  # Manager horizon
-    
+
     def forward(self, state, manager_hidden, worker_hidden, t):
         # Shared perception
         z = self.perception(state)
-        
+
         # Manager operates every c timesteps
         if t % self.c == 0:
             # Manager sets goal
             g, manager_hidden = self.manager(z.unsqueeze(0), manager_hidden)
             g = F.normalize(g, dim=-1)  # Normalize goal
-        
+
         # Worker receives goal and state
         w_input = torch.cat([z, g.squeeze(0)], dim=-1)
         w, worker_hidden = self.worker(w_input.unsqueeze(0), worker_hidden)
-        
+
         # Worker action
         action_logits = self.worker_policy(w.squeeze(0))
-        
+
         return action_logits, g, manager_hidden, worker_hidden
 ```
 
 **Training:**
+
 ```python
 def train_feudal(trajectories):
     for trajectory in trajectories:
         states, actions, rewards = trajectory
-        
+
         # Manager reward: transition embedding cosine similarity
         # Encourages setting goals in direction of state change
         z_t = perception(states[:-1])
         z_t_plus_c = perception(states[c:])
-        
+
         manager_reward = cosine_similarity(
-            goals[:-1], 
+            goals[:-1],
             z_t_plus_c - z_t
         )
-        
+
         # Worker reward: intrinsic + extrinsic
         # Intrinsic: progress toward goal
         worker_intrinsic = cosine_similarity(
             goals[:-1],
             z_t_plus_1 - z_t
         )
-        
+
         worker_reward = rewards + alpha * worker_intrinsic
-        
+
         # Update manager with manager_reward
         manager_loss = compute_policy_gradient(manager_reward)
-        
+
         # Update worker with worker_reward
         worker_loss = compute_policy_gradient(worker_reward)
 ```
@@ -283,11 +295,12 @@ def train_feudal(trajectories):
 **Key Idea:** Train policy to reach any goal state
 
 **Universal Value Function Approximators (UVFA):**
+
 ```python
 class GoalConditionedPolicy(nn.Module):
     def __init__(self, state_dim, goal_dim, action_dim):
         super().__init__()
-        
+
         self.policy = nn.Sequential(
             nn.Linear(state_dim + goal_dim, 256),
             nn.ReLU(),
@@ -295,7 +308,7 @@ class GoalConditionedPolicy(nn.Module):
             nn.ReLU(),
             nn.Linear(256, action_dim)
         )
-    
+
     def forward(self, state, goal):
         """
         Policy conditioned on current state and goal
@@ -305,16 +318,17 @@ class GoalConditionedPolicy(nn.Module):
 ```
 
 **Hindsight Experience Replay (HER):**
+
 ```python
 def hindsight_experience_replay(trajectory, strategy='future'):
     """
     Augment failed trajectories with alternative goals
     """
     states, actions, goals, rewards = trajectory
-    
+
     # Original experience
     buffer.add(states, actions, goals, rewards)
-    
+
     # Hindsight: "what if goal was different?"
     for t in range(len(states)):
         if strategy == 'future':
@@ -325,16 +339,17 @@ def hindsight_experience_replay(trajectory, strategy='future'):
             new_goal = states[-1]
         elif strategy == 'random':
             new_goal = sample_random_goal()
-        
+
         # Recompute rewards with new goal
-        new_rewards = [compute_reward(s, new_goal) 
+        new_rewards = [compute_reward(s, new_goal)
                       for s in states]
-        
+
         # Store modified experience
         buffer.add(states, actions, [new_goal]*len(states), new_rewards)
 ```
 
 **Why HER Works:**
+
 ```
 Even failed episode teaches agent something:
 "How to reach the state I accidentally ended up at"
@@ -347,56 +362,58 @@ Dramatically improves sample efficiency in sparse reward settings
 **Diversity is All You Need (DIAYN):**
 
 **Objective:** Learn diverse skills without rewards
+
 ```python
 class DIAYN:
     def __init__(self, num_skills, state_dim, action_dim):
         # Skill-conditioned policy
         self.policy = SkillConditionedPolicy(state_dim, num_skills, action_dim)
-        
+
         # Discriminator: predict skill from state
         self.discriminator = nn.Sequential(
             nn.Linear(state_dim, 128),
             nn.ReLU(),
             nn.Linear(128, num_skills)
         )
-    
+
     def intrinsic_reward(self, state, skill):
         """
         Reward for making states predictive of skill
         """
         logits = self.discriminator(state)
         log_p_skill = F.log_softmax(logits, dim=-1)[skill]
-        
+
         # Information-theoretic reward
         return log_p_skill - log(1/num_skills)
-    
+
     def train(self, env):
         for episode in range(N):
             # Sample random skill
             skill = random.randint(0, num_skills)
-            
+
             state = env.reset()
             trajectory = []
-            
+
             while not done:
                 # Policy conditioned on skill
                 action = self.policy(state, skill)
                 next_state, _, done = env.step(action)
-                
+
                 # Intrinsic reward
                 reward = self.intrinsic_reward(next_state, skill)
-                
+
                 trajectory.append((state, skill, action, reward, next_state))
                 state = next_state
-            
+
             # Update policy with intrinsic rewards
             update_policy(trajectory)
-            
+
             # Update discriminator
             update_discriminator(trajectory)
 ```
 
 **What Emerges:**
+
 - Diverse behaviors without reward engineering
 - Reusable skills for downstream tasks
 - Exploration through skill diversity
@@ -411,19 +428,20 @@ class AbstractMachine:
         self.states = []
         self.transitions = {}
         self.choice_points = {}
-    
+
     def add_state(self, name, actions):
         """
         Add state with possible actions
         """
         self.states.append(name)
         self.choice_points[name] = actions
-    
+
     def add_transition(self, from_state, action, to_state):
         self.transitions[(from_state, action)] = to_state
 ```
 
 **Example: Room Navigation**
+
 ```
 Root
 ├─ Navigate(room1)
