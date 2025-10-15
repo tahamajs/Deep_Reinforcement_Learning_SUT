@@ -34,23 +34,27 @@ hws/
 ## 📚 Assignment Details
 
 ### HW0: Introduction and Setup
+
 **Due:** Week 2  
 **Weight:** 5%  
 **Difficulty:** ⭐☆☆☆☆
 
 **Objectives:**
+
 - Set up Python environment for RL
 - Understand MDP formulation
 - Practice with OpenAI Gym
 - Implement basic environment interactions
 
 **Contents:**
+
 - Installation guide
 - MDP exercises
 - Simple CartPole interaction
 - Visualization basics
 
 **Skills:**
+
 - Python setup and package management
 - Gym API usage
 - Basic numpy operations
@@ -59,18 +63,22 @@ hws/
 ---
 
 ### HW1: Tabular RL Methods
+
 **Due:** Week 6  
 **Weight:** 20%  
 **Difficulty:** ⭐⭐⭐☆☆
 
 **Topics:**
+
 - Monte Carlo methods
 - Temporal Difference learning
 - Q-learning implementation
 - SARSA implementation
 
 **Notebooks:**
+
 1. **RL_HW1_Tabular.ipynb**
+
    - Implement MC prediction
    - Implement TD(0) prediction
    - Compare convergence rates
@@ -83,12 +91,14 @@ hws/
    - Compare on-policy vs off-policy
 
 **Key Concepts:**
+
 - Bootstrapping vs Monte Carlo
 - On-policy vs off-policy learning
 - Exploration strategies
 - Convergence properties
 
 **Common Challenges:**
+
 - State space discretization
 - Choosing learning rates
 - Balancing exploration/exploitation
@@ -97,11 +107,13 @@ hws/
 ---
 
 ### HW2: Policy Gradient Methods
+
 **Due:** Week 9  
 **Weight:** 20%  
 **Difficulty:** ⭐⭐⭐⭐☆
 
 **Topics:**
+
 - REINFORCE algorithm
 - Baseline methods
 - Continuous action spaces
@@ -111,24 +123,28 @@ hws/
 **RL_HW2_PPO_vs_DDPG.ipynb**
 
 **Part 1: REINFORCE Implementation**
+
 - Implement basic REINFORCE
 - Add value function baseline
 - Analyze variance reduction
 - CartPole experiments
 
 **Part 2: Continuous Control**
+
 - Implement Gaussian policy
 - MountainCar Continuous
 - Compare with DQN
 - Hyperparameter tuning
 
 **Key Concepts:**
+
 - Policy gradient theorem
 - High variance problem
 - Baseline benefits
 - Continuous action handling
 
 **Common Challenges:**
+
 - Numerical stability in log probabilities
 - Choosing baseline architecture
 - Reward normalization
@@ -137,18 +153,22 @@ hws/
 ---
 
 ### HW3: Model-Based RL & Planning
+
 **Due:** Week 12  
 **Weight:** 25%  
 **Difficulty:** ⭐⭐⭐⭐⭐
 
 **Topics:**
+
 - Dyna-Q architecture
 - Monte Carlo Tree Search
 - Model Predictive Control
 - Planning with learned models
 
 **Notebooks:**
+
 1. **RL_HW3_MCTS.ipynb**
+
    - Implement MCTS with UCB
    - TicTacToe or Connect4
    - Analyze tree growth
@@ -161,12 +181,14 @@ hws/
    - Compare with UCB
 
 **Key Concepts:**
+
 - Model learning vs model-free
 - Planning efficiency
 - Exploration in tree search
 - Sample complexity trade-offs
 
 **Common Challenges:**
+
 - Model accuracy and bias
 - Computational cost of planning
 - Tree memory management
@@ -175,11 +197,13 @@ hws/
 ---
 
 ### HW4: Advanced Off-Policy Methods
+
 **Due:** Week 15  
 **Weight:** 30%  
 **Difficulty:** ⭐⭐⭐⭐⭐
 
 **Topics:**
+
 - Soft Actor-Critic (SAC)
 - Off-policy evaluation
 - Maximum entropy RL
@@ -189,24 +213,28 @@ hws/
 **RL_HW4_Soft_Actor_Critic.ipynb**
 
 **Implementation:**
+
 - SAC algorithm from scratch
 - Twin Q-networks
 - Automatic temperature tuning
 - Continuous control tasks
 
 **Analysis:**
+
 - Compare with DDPG and PPO
 - Sample efficiency study
 - Exploration behavior analysis
 - Hyperparameter sensitivity
 
 **Key Concepts:**
+
 - Maximum entropy framework
 - Off-policy actor-critic
 - Clipped double Q-learning
 - Entropy regularization
 
 **Common Challenges:**
+
 - Numerical stability
 - Tuning multiple networks
 - Replay buffer management
@@ -231,6 +259,7 @@ HW4: State-of-the-Art (modern deep RL)
 ### Skill Development
 
 **Programming Skills:**
+
 - Week 2: Basic Python, Gym API
 - Week 6: Algorithm implementation, debugging
 - Week 9: Neural networks, PyTorch
@@ -238,6 +267,7 @@ HW4: State-of-the-Art (modern deep RL)
 - Week 15: Production-quality code, experiments
 
 **Theoretical Understanding:**
+
 - Gradual introduction of concepts
 - Each assignment builds on previous
 - Theory-practice connection emphasized
@@ -264,12 +294,14 @@ pip install pandas seaborn tqdm
 ### Dependencies by Assignment
 
 **HW0-HW1:**
+
 - Python 3.8+
 - NumPy
 - Matplotlib
 - Gym 0.21
 
 **HW2-HW4:**
+
 - Above +
 - PyTorch 1.x
 - Seaborn (visualization)
@@ -278,24 +310,28 @@ pip install pandas seaborn tqdm
 ## 📊 Grading Rubric
 
 ### Code Quality (30%)
+
 - Correctness of implementation
 - Code organization and readability
 - Comments and documentation
 - Efficient algorithms
 
 ### Experimental Results (35%)
+
 - Successful training
 - Convergence achieved
 - Hyperparameter exploration
 - Multiple runs with error bars
 
 ### Analysis and Insights (25%)
+
 - Understanding demonstrated
 - Thoughtful discussion
 - Comparison of methods
 - Connection to theory
 
 ### Presentation (10%)
+
 - Clear plots and visualizations
 - Well-structured report
 - Professional documentation
@@ -304,6 +340,7 @@ pip install pandas seaborn tqdm
 ## 🐛 Common Issues and Solutions
 
 ### HW1 Issues
+
 **Problem:** Q-learning not converging
 **Solution:** Check learning rate, exploration schedule, discretization
 
@@ -311,6 +348,7 @@ pip install pandas seaborn tqdm
 **Solution:** Tune exploration parameter, increase episodes
 
 ### HW2 Issues
+
 **Problem:** REINFORCE high variance
 **Solution:** Add baseline, normalize returns, use more episodes
 
@@ -318,6 +356,7 @@ pip install pandas seaborn tqdm
 **Solution:** Add epsilon to log, clip gradients, check reward scale
 
 ### HW3 Issues
+
 **Problem:** MCTS too slow
 **Solution:** Optimize tree storage, prune branches, parallelize
 
@@ -325,6 +364,7 @@ pip install pandas seaborn tqdm
 **Solution:** More training data, better architecture, regularization
 
 ### HW4 Issues
+
 **Problem:** SAC not learning
 **Solution:** Check all three networks updating, tune learning rates
 
@@ -342,6 +382,7 @@ pip install pandas seaborn tqdm
 **HW4:** SAC paper, Spinning Up SAC documentation
 
 ### Additional Materials
+
 - Lecture slides for each topic
 - Office hour recordings
 - Discussion forum Q&A

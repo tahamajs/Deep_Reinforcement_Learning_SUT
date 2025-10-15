@@ -36,18 +36,21 @@ exams/
 ### Topics Covered
 
 #### Core Concepts (40%)
+
 - Markov Decision Processes
 - Bellman equations
 - Dynamic programming algorithms
 - Policy and value iteration
 
 #### Tabular Methods (35%)
+
 - Monte Carlo methods
 - Temporal Difference learning
 - Q-learning and SARSA
 - Exploration strategies
 
 #### Theoretical Questions (25%)
+
 - Convergence proofs
 - Derivations
 - Comparison of algorithms
@@ -56,16 +59,19 @@ exams/
 ### Question Types
 
 1. **Definitions and Concepts** (20 points)
+
    - Define key terms
    - Explain relationships
    - Provide intuitions
 
 2. **Mathematical Derivations** (30 points)
+
    - Derive Bellman equations
    - Prove convergence properties
    - Show optimality conditions
 
 3. **Algorithm Design** (25 points)
+
    - Implement algorithms in pseudocode
    - Analyze time complexity
    - Modify for specific scenarios
@@ -93,24 +99,28 @@ exams/
 ### Topics Covered
 
 #### Deep Reinforcement Learning (30%)
+
 - Function approximation
 - Deep Q-Networks
 - Experience replay
 - Target networks
 
 #### Policy Gradient Methods (30%)
+
 - REINFORCE algorithm
 - Actor-critic architectures
 - Variance reduction techniques
 - Natural policy gradients
 
 #### Advanced Topics (25%)
+
 - Model-based RL
 - Off-policy learning
 - Importance sampling
 - Trust region methods
 
 #### Integration and Comparison (15%)
+
 - Compare algorithm families
 - Design considerations
 - Practical applications
@@ -119,21 +129,25 @@ exams/
 ### Question Types
 
 1. **Conceptual Understanding** (35 points)
+
    - Explain core concepts deeply
    - Compare and contrast methods
    - Discuss trade-offs
 
 2. **Mathematical Analysis** (40 points)
+
    - Derive gradient updates
    - Analyze convergence
    - Prove properties
 
 3. **Algorithm Implementation** (30 points)
+
    - Write detailed pseudocode
    - Explain design choices
    - Handle edge cases
 
 4. **Open-Ended Design** (20 points)
+
    - Propose solutions to novel problems
    - Justify architectural choices
    - Discuss potential issues
@@ -161,6 +175,7 @@ exams/
 
 **Week:** 3  
 **Topics:**
+
 - MDP formulation (states, actions, rewards, transitions)
 - Bellman expectation and optimality equations
 - Policy evaluation
@@ -169,12 +184,14 @@ exams/
 - Asynchronous DP
 
 **Sample Questions:**
-- Define the Bellman optimality equation for V*
+
+- Define the Bellman optimality equation for V\*
 - Given small MDP, compute optimal policy by hand
 - Prove policy improvement theorem
 - Compare policy vs value iteration
 
 **Key Skills:**
+
 - Write Bellman equations
 - Compute value functions manually
 - Understand optimality conditions
@@ -186,6 +203,7 @@ exams/
 
 **Week:** 5  
 **Topics:**
+
 - Monte Carlo prediction
 - Monte Carlo control
 - TD(0) prediction
@@ -194,12 +212,14 @@ exams/
 - Expected SARSA
 
 **Sample Questions:**
+
 - Explain bias-variance trade-off MC vs TD
 - Derive Q-learning update rule
 - Why is Q-learning off-policy?
 - Given trajectory, show TD updates
 
 **Key Skills:**
+
 - Distinguish MC from TD
 - Understand bootstrapping
 - Know on-policy vs off-policy
@@ -211,6 +231,7 @@ exams/
 
 **Week:** 8  
 **Topics:**
+
 - Linear function approximation
 - Gradient descent methods
 - Semi-gradient methods
@@ -220,12 +241,14 @@ exams/
 - Target networks
 
 **Sample Questions:**
+
 - What is the deadly triad and why is it problematic?
 - Explain how experience replay helps DQN
 - Derive semi-gradient TD update
 - Why use target networks?
 
 **Key Skills:**
+
 - Understand function approximation challenges
 - Know DQN innovations
 - Explain stability techniques
@@ -237,6 +260,7 @@ exams/
 
 **Week:** 11  
 **Topics:**
+
 - Policy gradient theorem
 - REINFORCE algorithm
 - Baseline methods
@@ -245,12 +269,14 @@ exams/
 - Natural gradients
 
 **Sample Questions:**
+
 - State and explain policy gradient theorem
 - Why do policy gradients have high variance?
 - How do baselines reduce variance without bias?
 - Compare value-based vs policy-based methods
 
 **Key Skills:**
+
 - Derive policy gradients
 - Understand variance reduction
 - Know actor-critic synergy
@@ -262,6 +288,7 @@ exams/
 
 **Week:** 14  
 **Topics:**
+
 - Importance sampling
 - Off-policy evaluation
 - Trust region methods
@@ -270,12 +297,14 @@ exams/
 - Practical considerations
 
 **Sample Questions:**
+
 - Derive importance sampling ratio
 - Explain trust region constraint in TRPO
 - What is maximum entropy objective in SAC?
 - Compare on-policy vs off-policy sample efficiency
 
 **Key Skills:**
+
 - Understand off-policy corrections
 - Know trust region motivation
 - Explain entropy regularization
@@ -284,18 +313,21 @@ exams/
 ## 📈 Grading Rubric
 
 ### Midterm Breakdown
+
 - **Correctness** (60%): Accurate answers and derivations
 - **Clarity** (20%): Clear explanations and notation
 - **Completeness** (15%): Address all parts of questions
 - **Insight** (5%): Demonstrate deep understanding
 
 ### Final Exam Breakdown
+
 - **Technical Accuracy** (50%): Correct solutions
 - **Conceptual Understanding** (25%): Deep comprehension
 - **Communication** (15%): Clear presentation
 - **Creativity** (10%): Novel insights and connections
 
 ### Quiz Grading
+
 - **Accuracy** (70%): Correct answers
 - **Reasoning** (20%): Logical explanations
 - **Presentation** (10%): Neat and organized
@@ -303,6 +335,7 @@ exams/
 ## 💡 Exam Preparation Tips
 
 ### General Strategy
+
 1. **Start Early:** Don't cram
 2. **Active Review:** Work problems, don't just read
 3. **Study Groups:** Explain to others
@@ -310,18 +343,21 @@ exams/
 5. **Office Hours:** Ask clarifying questions
 
 ### For Theoretical Questions
+
 - Understand derivations, don't memorize
 - Practice writing proofs
 - Know all assumptions in theorems
 - Connect math to intuition
 
 ### For Applied Questions
+
 - Practice on toy problems
 - Trace algorithms by hand
 - Understand when algorithms fail
 - Know practical considerations
 
 ### Common Pitfalls
+
 - Confusing on-policy vs off-policy
 - Mixing up different value functions
 - Forgetting discount factors in calculations
@@ -330,18 +366,21 @@ exams/
 ## 📚 Additional Study Resources
 
 ### Recommended Review
+
 - Sutton & Barto: All chapters covered in class
 - Lecture slides: Focus on derivations
 - Homework solutions: Understand every step
 - Quiz solutions: Study error patterns
 
 ### Practice Problems
+
 - Textbook exercises
 - Past exam problems (if available)
 - Online problem sets
 - Create your own examples
 
 ### Key Equations to Know
+
 - Bellman equations (expectation and optimality)
 - TD error and updates
 - Policy gradient theorem
@@ -354,4 +393,3 @@ exams/
 **Note:** These exams test deep understanding, not just memorization. Focus on concepts, derivations, and intuitions.
 
 **Last Updated:** 2024 (Archive)
-

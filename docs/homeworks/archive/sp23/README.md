@@ -38,6 +38,7 @@ sp23/
 ### Instructional Philosophy
 
 **Spring 2023 Approach:**
+
 - **Theory First:** Strong mathematical foundations
 - **Gradual Progression:** From simple to complex
 - **Classical Methods:** Thorough coverage of pre-deep-learning RL
@@ -55,55 +56,65 @@ sp23/
 ### Module Breakdown
 
 #### Week 1-3: Foundations
+
 - **Topics:** MDPs, Bellman equations, dynamic programming
 - **Assignment:** HW0 (Course setup, basic concepts)
 - **Assessment:** Quiz 1
 
 **Key Concepts:**
+
 - Markov property
 - Value functions
 - Policy evaluation and improvement
 - Contraction mappings
 
 #### Week 4-6: Tabular Methods
+
 - **Topics:** Monte Carlo, TD learning, Q-learning, SARSA
 - **Assignment:** HW1 (Implementation of tabular methods)
 - **Assessment:** Quiz 2, Midterm
 
 **Key Concepts:**
+
 - Bootstrapping
 - On-policy vs off-policy
 - Exploration strategies
 - Convergence guarantees
 
 #### Week 7-9: Function Approximation
+
 - **Topics:** Linear FA, gradient methods, DQN introduction
 - **Assignment:** HW2 (Policy gradients, REINFORCE)
 - **Assessment:** Quiz 4
 
 **Key Concepts:**
+
 - Generalization
 - The deadly triad
 - Experience replay
 - Target networks
 
 #### Week 10-12: Policy Gradients
+
 - **Topics:** REINFORCE, actor-critic, baseline methods
 - **Assignment:** HW3 (MCTS, Dyna, planning)
 - **Assessment:** Quiz 5
 
 **Key Concepts:**
+
 - Policy parameterization
 - Variance reduction
 - Advantage functions
 - Natural gradients
 
 #### Week 13-15: Advanced Topics
+
 - **Topics:** Importance sampling, off-policy evaluation
 - **Assignment:** HW4 (Soft Actor-Critic, advanced methods)
 - **Assessment:** Quiz 6, Final Exam
 
 **Key Concepts:**
+
 - Off-policy learning
 - Trust regions
 - Maximum entropy RL
@@ -114,18 +125,21 @@ sp23/
 ### HW0: Introduction and Setup (Week 1-2)
 
 **Objectives:**
+
 - Set up development environment
 - Understand MDP formulation
 - Implement basic environment interactions
 - Practice with OpenAI Gym
 
 **Skills Developed:**
+
 - Python programming for RL
 - Environment wrappers
 - Visualization techniques
 - Basic debugging
 
 **Typical Issues:**
+
 - Environment installation
 - API understanding
 - Numpy operations
@@ -135,16 +149,19 @@ sp23/
 ### HW1: Tabular Methods (Week 4-6)
 
 **Part 1: CartPole with Tabular Methods**
+
 - Discretize continuous state space
 - Implement Q-learning
 - Compare with SARSA
 
 **Part 2: GridWorld Navigation**
+
 - Implement MC prediction
 - TD(0) prediction
 - Compare convergence rates
 
 **Key Learning:**
+
 - Trade-offs between MC and TD
 - Importance of exploration
 - Convergence properties
@@ -154,16 +171,19 @@ sp23/
 ### HW2: Policy Gradients (Week 7-9)
 
 **Part 1: REINFORCE on CartPole**
+
 - Implement basic REINFORCE
 - Add baseline
 - Analyze variance
 
 **Part 2: Continuous Action Spaces**
+
 - Gaussian policies
 - MountainCar continuous
 - Reward shaping
 
 **Key Learning:**
+
 - High variance in policy gradients
 - Baseline importance
 - Continuous action handling
@@ -173,21 +193,25 @@ sp23/
 ### HW3: Model-Based Methods (Week 10-12)
 
 **Part 1: Dyna-Q**
+
 - Implement model learning
 - Planning with model
 - Compare sample efficiency
 
 **Part 2: MCTS**
+
 - Tree search implementation
 - UCB selection
 - Game playing (TicTacToe)
 
 **Part 3: MPC**
+
 - Learn dynamics model
 - Random shooting
 - CEM optimization
 
 **Key Learning:**
+
 - Model-based vs model-free trade-offs
 - Planning efficiency
 - Model errors
@@ -197,16 +221,19 @@ sp23/
 ### HW4: Advanced Off-Policy Methods (Week 13-15)
 
 **Part 1: Importance Sampling**
+
 - Off-policy evaluation
 - IS correction
 - Practical challenges
 
 **Part 2: Soft Actor-Critic**
+
 - Implement SAC
 - Automatic temperature tuning
 - Compare with DDPG
 
 **Key Learning:**
+
 - Off-policy learning challenges
 - Maximum entropy framework
 - State-of-the-art continuous control
@@ -216,6 +243,7 @@ sp23/
 ### Quiz Structure
 
 **Format:**
+
 - 20-30 minutes
 - Multiple choice and short answer
 - Focuses on recent material
@@ -232,6 +260,7 @@ sp23/
 ### Exams
 
 **Midterm Exam** (Week 7)
+
 - Covers weeks 1-6
 - Mix of theory and application
 - 2 hours
@@ -242,6 +271,7 @@ sp23/
   - Short proofs
 
 **Final Exam** (Finals Week)
+
 - Comprehensive
 - Emphasis on weeks 7-15
 - 3 hours
@@ -290,6 +320,7 @@ pip install numpy matplotlib torch
 **Sutton & Barto (2018)** - Reinforcement Learning: An Introduction
 
 **Chapter Mapping:**
+
 - Weeks 1-3: Chapters 3-4 (MDPs, DP)
 - Weeks 4-6: Chapters 5-6 (MC, TD)
 - Weeks 7-9: Chapters 9-10 (Function Approximation)
@@ -369,11 +400,13 @@ pip install numpy matplotlib torch
 ### For Self-Study
 
 **Advantages:**
+
 - Thorough theoretical coverage
 - Well-structured progression
 - Comprehensive assessments
 
 **Considerations:**
+
 - Time-intensive
 - May need to update code
 - Heavy on mathematics
@@ -391,4 +424,3 @@ pip install numpy matplotlib torch
 **Instructor:** [Instructor Name]  
 **Format:** In-person lectures, online resources  
 **Last Updated:** Archive maintained 2024
-
