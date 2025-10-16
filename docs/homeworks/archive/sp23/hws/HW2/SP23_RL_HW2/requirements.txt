@@ -1,0 +1,24 @@
+# Requirements for PPO vs DDPG Notebook
+# Deep Reinforcement Learning - HW2
+
+# Core RL Libraries
+gym>=0.21.0
+torch>=1.10.0
+numpy>=1.21.0
+
+# Visualization
+matplotlib>=3.4.0
+IPython>=7.30.0
+
+# Optional: For Colab compatibility
+pyvirtualdisplay>=2.2.0
+
+# Optional: For better rendering
+pillow>=8.4.0
+
+# Optional: Video rendering
+opencv-python>=4.5.0
+
+# Note: If using newer gym versions (>=0.26.0), you might need:
+# gymnasium>=0.26.0
+
