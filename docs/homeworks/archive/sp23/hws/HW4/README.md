@@ -367,3 +367,4 @@ def soft_update_targets(self, tau=0.005):
 **Key Skills**: MaxEnt RL, advanced actor-critic
 
 SAC represents the state-of-the-art in continuous control. Enjoy implementing it!
+

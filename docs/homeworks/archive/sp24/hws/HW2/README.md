@@ -268,3 +268,4 @@ def compute_ddqn_loss(policy_net, target_net, batch, gamma=0.99):
 **Difficulty**: ⭐⭐⭐☆☆ (Moderate)  
 **Prerequisites**: HW1, PyTorch basics  
 **Key Skills**: Function approximation, deep RL
+

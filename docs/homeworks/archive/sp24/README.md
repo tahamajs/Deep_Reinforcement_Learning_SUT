@@ -421,3 +421,4 @@ See `posters/README.md` for detailed descriptions.
 **Instructor:** [Instructor Name]  
 **Format:** Hybrid (in-person + online resources)  
 **Last Updated:** Archive maintained 2024
+

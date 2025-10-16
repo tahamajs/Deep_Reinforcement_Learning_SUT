@@ -1524,3 +1524,4 @@ As RL systems become more prevalent in critical applications, the field of Safe 
 ---
 
 _This document provides comprehensive solutions to HW14 on Safe Reinforcement Learning, covering theoretical foundations, algorithmic implementations, experimental results, and practical applications. All code examples are provided in Python with PyTorch, following best practices for safe RL research and development._
+

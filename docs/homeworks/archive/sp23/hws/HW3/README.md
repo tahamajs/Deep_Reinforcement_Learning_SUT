@@ -452,3 +452,4 @@ Both achieve logarithmic regret, which is optimal.
 **Key Skills**: Planning, Bayesian methods, exploration-exploitation
 
 Good luck exploring model-based RL and bandits!
+

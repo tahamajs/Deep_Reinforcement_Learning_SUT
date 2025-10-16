@@ -424,3 +424,4 @@ pip install numpy matplotlib torch
 **Instructor:** [Instructor Name]  
 **Format:** In-person lectures, online resources  
 **Last Updated:** Archive maintained 2024
+

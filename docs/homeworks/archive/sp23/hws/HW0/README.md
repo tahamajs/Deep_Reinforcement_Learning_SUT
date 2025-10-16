@@ -288,3 +288,4 @@ This assignment prepares you for:
 **Prerequisites**: Probability, basic linear algebra
 
 Good luck! This foundation is crucial for the entire course.
+

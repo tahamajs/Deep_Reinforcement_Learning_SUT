@@ -485,3 +485,4 @@ Violating academic integrity policies can result in serious consequences.
 ---
 
 For current course information and materials, visit the main course website.
+
