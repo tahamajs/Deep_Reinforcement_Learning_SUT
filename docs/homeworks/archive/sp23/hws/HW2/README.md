@@ -29,11 +29,13 @@ HW2/
 ### Why Policy Gradients?
 
 **Value-based methods (DQN):**
+
 - Learn Q(s,a) → derive policy
 - Works well for discrete actions
 - Struggles with continuous action spaces
 
 **Policy-based methods:**
+
 - Learn π(a|s) directly
 - Natural for continuous actions
 - Can learn stochastic policies
@@ -42,16 +44,19 @@ HW2/
 ### Policy Gradient Theorem
 
 **Objective:** Maximize expected return
+
 ```
 J(θ) = E_{τ~π_θ}[∑_t r_t]
 ```
 
 **Gradient:**
+
 ```
 ∇_θ J(θ) = E_{τ~π_θ}[∑_t ∇_θ log π_θ(a_t|s_t) G_t]
 ```
 
 **With Baseline:**
+
 ```
 ∇_θ J(θ) = E[∇_θ log π_θ(a|s) A^π(s,a)]
 ```
@@ -63,6 +68,7 @@ where A^π(s,a) = Q^π(s,a) - V^π(s) is the advantage function.
 ### Algorithm Overview
 
 PPO is an on-policy algorithm that:
+
 - Uses importance sampling for multiple update epochs
 - Clips policy updates to avoid destructive large changes
 - Combines policy gradient with value function learning
@@ -79,7 +85,7 @@ class PolicyNetwork(nn.Module):
         self.fc2 = nn.Linear(64, 64)
         self.mean = nn.Linear(64, action_dim)
         self.log_std = nn.Parameter(torch.zeros(action_dim))
-    
+
     def forward(self, state):
         x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))
@@ -97,7 +103,7 @@ class ValueNetwork(nn.Module):
         self.fc1 = nn.Linear(state_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.value = nn.Linear(64, 1)
-    
+
     def forward(self, state):
         x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))
@@ -110,18 +116,19 @@ class ValueNetwork(nn.Module):
 def compute_gae(rewards, values, next_value, gamma=0.99, lambda_=0.95):
     advantages = []
     gae = 0
-    
+
     for t in reversed(range(len(rewards))):
         delta = rewards[t] + gamma * next_value - values[t]
         gae = delta + gamma * lambda_ * gae
         advantages.insert(0, gae)
         next_value = values[t]
-    
+
     returns = [adv + val for adv, val in zip(advantages, values)]
     return advantages, returns
 ```
 
 **Why GAE?**
+
 - Reduces variance while controlling bias
 - λ=0: low variance, high bias (TD)
 - λ=1: high variance, low bias (MC)
@@ -134,25 +141,26 @@ def ppo_loss(policy, old_policy, states, actions, advantages, epsilon=0.2):
     # Current policy
     dist = policy(states)
     log_probs = dist.log_prob(actions)
-    
+
     # Old policy (fixed)
     old_dist = old_policy(states)
     old_log_probs = old_dist.log_prob(actions).detach()
-    
+
     # Importance sampling ratio
     ratio = torch.exp(log_probs - old_log_probs)
-    
+
     # Clipped objective
     clip_ratio = torch.clamp(ratio, 1 - epsilon, 1 + epsilon)
     policy_loss = -torch.min(
         ratio * advantages,
         clip_ratio * advantages
     ).mean()
-    
+
     return policy_loss
 ```
 
 **Why Clipping?**
+
 - Prevents too large policy updates
 - Maintains trust region
 - Improves training stability
@@ -171,30 +179,30 @@ batch_size = 64
 for iteration in range(num_iterations):
     # Collect trajectories
     states, actions, rewards, values = collect_trajectories(policy, env)
-    
+
     # Compute advantages and returns
     advantages, returns = compute_gae(rewards, values, gamma, lambda_gae)
     advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-    
+
     # Multiple epochs of optimization
     for epoch in range(ppo_epochs):
         # Sample mini-batches
         for batch in get_batches(states, actions, advantages, returns):
             # Policy loss
             policy_loss = ppo_loss(policy, old_policy, batch, epsilon_clip)
-            
+
             # Value loss
             value_pred = value_net(batch.states)
             value_loss = F.mse_loss(value_pred, batch.returns)
-            
+
             # Total loss
             loss = policy_loss + 0.5 * value_loss
-            
+
             # Update
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-    
+
     # Update old policy
     old_policy.load_state_dict(policy.state_dict())
 ```
@@ -204,6 +212,7 @@ for iteration in range(num_iterations):
 ### Algorithm Overview
 
 DDPG is an off-policy actor-critic algorithm for continuous control:
+
 - Deterministic policy gradient
 - Experience replay
 - Target networks for stability
@@ -221,7 +230,7 @@ class Actor(nn.Module):
         self.fc2 = nn.Linear(400, 300)
         self.fc3 = nn.Linear(300, action_dim)
         self.max_action = max_action
-    
+
     def forward(self, state):
         x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))
@@ -239,7 +248,7 @@ class Critic(nn.Module):
         self.fc1 = nn.Linear(state_dim + action_dim, 400)
         self.fc2 = nn.Linear(400, 300)
         self.fc3 = nn.Linear(300, 1)
-    
+
     def forward(self, state, action):
         x = torch.cat([state, action], dim=1)
         x = F.relu(self.fc1(x))
@@ -258,7 +267,7 @@ class OUNoise:
         self.theta = theta
         self.sigma = sigma
         self.state = np.ones(action_dim) * mu
-    
+
     def sample(self):
         dx = self.theta * (self.mu - self.state) + \
              self.sigma * np.random.randn(self.action_dim)
@@ -267,6 +276,7 @@ class OUNoise:
 ```
 
 **Why OU Noise?**
+
 - Temporally correlated noise
 - Better exploration than Gaussian
 - Mean-reverting process
@@ -291,40 +301,40 @@ noise = OUNoise(action_dim)
 for episode in range(num_episodes):
     state = env.reset()
     episode_reward = 0
-    
+
     for step in range(max_steps):
         # Select action with exploration noise
         action = actor(state).detach() + noise.sample()
         action = np.clip(action, -max_action, max_action)
-        
+
         # Environment step
         next_state, reward, done, _ = env.step(action)
         replay_buffer.push(state, action, reward, next_state, done)
-        
+
         # Train
         if len(replay_buffer) > batch_size:
             batch = replay_buffer.sample(batch_size)
-            
+
             # Critic update
             with torch.no_grad():
                 next_action = actor_target(batch.next_states)
                 target_q = critic_target(batch.next_states, next_action)
                 target_q = batch.rewards + gamma * target_q * (1 - batch.dones)
-            
+
             current_q = critic(batch.states, batch.actions)
             critic_loss = F.mse_loss(current_q, target_q)
-            
+
             critic_optimizer.zero_grad()
             critic_loss.backward()
             critic_optimizer.step()
-            
+
             # Actor update
             actor_loss = -critic(batch.states, actor(batch.states)).mean()
-            
+
             actor_optimizer.zero_grad()
             actor_loss.backward()
             actor_optimizer.step()
-            
+
             # Soft update target networks
             soft_update(actor_target, actor, tau=0.005)
             soft_update(critic_target, critic, tau=0.005)
@@ -343,11 +353,13 @@ def soft_update(target, source, tau):
 ## 📊 Environments
 
 ### For PPO (Discrete Actions)
+
 - **CartPole-v1**: Simple balancing task
 - **LunarLander-v2**: Spacecraft landing
 - **Pong**: Atari game (optional)
 
 ### For DDPG (Continuous Actions)
+
 - **Pendulum-v1**: Swing up and balance
 - **MountainCarContinuous-v0**: Drive up hill
 - **BipedalWalker-v3**: Walking robot (challenging)
@@ -357,6 +369,7 @@ def soft_update(target, source, tau):
 ### Required Experiments
 
 #### 1. Learning Curves
+
 - Plot episode reward vs episode
 - Compare PPO vs DDPG on same environment
 - Show mean ± std over 5 seeds
@@ -364,11 +377,13 @@ def soft_update(target, source, tau):
 #### 2. Hyperparameter Sensitivity
 
 **PPO:**
+
 - Clip epsilon: [0.1, 0.2, 0.3]
 - GAE lambda: [0.9, 0.95, 0.99]
 - PPO epochs: [5, 10, 20]
 
 **DDPG:**
+
 - Tau (soft update): [0.001, 0.005, 0.01]
 - Noise sigma: [0.1, 0.2, 0.3]
 - Actor vs critic learning rates
@@ -376,12 +391,14 @@ def soft_update(target, source, tau):
 #### 3. Ablation Studies
 
 **PPO without clipping:**
+
 ```python
 # Remove clipping to see importance
 policy_loss = -(ratio * advantages).mean()
 ```
 
 **DDPG without target networks:**
+
 ```python
 # Use same network for targets
 target_q = critic(next_states, actor(next_states))
@@ -398,6 +415,7 @@ target_q = critic(next_states, actor(next_states))
 ## 💡 Implementation Tips
 
 ### PPO Tips
+
 - ✅ Normalize advantages (zero mean, unit variance)
 - ✅ Use orthogonal initialization for networks
 - ✅ Clip value function loss
@@ -405,6 +423,7 @@ target_q = critic(next_states, actor(next_states))
 - ✅ Use learning rate annealing
 
 ### DDPG Tips
+
 - ✅ Normalize state inputs
 - ✅ Use batch normalization
 - ✅ Start with small noise, decay over time
@@ -414,12 +433,14 @@ target_q = critic(next_states, actor(next_states))
 ### Debugging
 
 **PPO not learning:**
+
 - Check advantage computation
 - Verify clip range not too small
 - Ensure sufficient exploration
 - Monitor KL divergence
 
 **DDPG unstable:**
+
 - Reduce learning rates
 - Increase target network tau
 - Add gradient clipping
@@ -430,15 +451,18 @@ target_q = critic(next_states, actor(next_states))
 ### Key Papers
 
 1. **Schulman et al. (2017)** - Proximal Policy Optimization
+
    - [arXiv:1707.06347](https://arxiv.org/abs/1707.06347)
 
 2. **Lillicrap et al. (2015)** - Continuous Control with Deep RL
+
    - [arXiv:1509.02971](https://arxiv.org/abs/1509.02971)
 
 3. **Schulman et al. (2015)** - High-Dimensional Continuous Control Using GAE
    - [arXiv:1506.02438](https://arxiv.org/abs/1506.02438)
 
 ### Additional Reading
+
 - Sutton & Barto Chapter 13 (Policy Gradient Methods)
 - OpenAI Spinning Up: [PPO](https://spinningup.openai.com/en/latest/algorithms/ppo.html) | [DDPG](https://spinningup.openai.com/en/latest/algorithms/ddpg.html)
 
@@ -463,4 +487,3 @@ target_q = critic(next_states, actor(next_states))
 **Key Skills**: Advanced RL algorithms, continuous control
 
 This is a challenging but rewarding assignment. Start early!
-

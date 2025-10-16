@@ -19,15 +19,18 @@ sp24/hws/
 ## 📚 Homework Assignments
 
 ### HW1: Introduction to Reinforcement Learning
+
 **Topics:** MDP Fundamentals, Tabular RL Methods
 
 **Contents:**
+
 - `RL_HW1.pdf` - Problem set and assignment description
 - `RL_HW1_Solution.pdf` - Complete solutions
 - `SP24_RL_HW1.zip` - Assignment package
 - `SP24_RL_HW1_Solution.zip` - Solution package
 
 **Key Topics:**
+
 - Markov Decision Processes (MDPs)
 - Bellman Equations and Optimality
 - Value Iteration and Policy Iteration
@@ -36,6 +39,7 @@ sp24/hws/
 - Tabular methods on GridWorld
 
 **Learning Objectives:**
+
 - Understand MDP formulation
 - Implement dynamic programming methods
 - Master TD learning algorithms
@@ -44,9 +48,11 @@ sp24/hws/
 ---
 
 ### HW2: Value-Based Deep Reinforcement Learning
+
 **Topics:** Monte Carlo, TD Learning, DQN, Double DQN
 
 **Contents:**
+
 - `RL_HW2.pdf` - Assignment description
 - `RL_HW2_MC_TD.ipynb` - Monte Carlo and TD methods
 - `RL_HW2_DQN.ipynb` - Deep Q-Network implementation
@@ -54,6 +60,7 @@ sp24/hws/
 - `SP24_RL_HW2.zip` - Assignment package
 
 **Part 1: Monte Carlo and TD Methods**
+
 - First-Visit Monte Carlo
 - TD(0) and TD(λ)
 - N-step TD methods
@@ -61,23 +68,25 @@ sp24/hws/
 - Comparison on simple environments
 
 **Part 2: Deep Q-Networks**
+
 - **DQN Implementation:**
   - Neural network Q-function approximation
   - Experience replay buffer
   - Target network stabilization
   - ε-greedy exploration
-  
 - **Double DQN:**
   - Addressing overestimation bias
   - Decoupled action selection and evaluation
   - Performance comparison
 
 **Environments:**
+
 - CliffWalking (tabular)
 - CartPole-v1 (DQN)
 - LunarLander-v2 (optional)
 
 **Learning Objectives:**
+
 - Understand MC vs TD trade-offs
 - Implement function approximation
 - Master experience replay
@@ -87,9 +96,11 @@ sp24/hws/
 ---
 
 ### HW3: On-Policy Methods
+
 **Topics:** Policy Gradients, REINFORCE, A2C, PPO
 
 **Contents:**
+
 - `RL_HW3.pdf` - Assignment description
 - `RL_HW3_On_Policy.ipynb` - Policy gradient implementations
 - `SP24_RL_HW3.zip` - Assignment package
@@ -97,11 +108,13 @@ sp24/hws/
 **Implementations:**
 
 1. **REINFORCE Algorithm:**
+
    - Basic policy gradient
    - Monte Carlo returns
    - Baseline for variance reduction
 
 2. **Advantage Actor-Critic (A2C):**
+
    - Simultaneous policy and value learning
    - Advantage function estimation
    - Synchronous updates
@@ -113,17 +126,20 @@ sp24/hws/
    - Multiple epochs on same data
 
 **Environments:**
+
 - CartPole-v1
 - LunarLander-v2
 - Continuous control (optional)
 
 **Comparison:**
+
 - Sample efficiency
 - Stability across runs
 - Computational cost
 - Hyperparameter sensitivity
 
 **Learning Objectives:**
+
 - Master policy gradient theorem
 - Implement actor-critic methods
 - Understand variance reduction techniques
@@ -133,9 +149,11 @@ sp24/hws/
 ---
 
 ### HW4: Practical Reinforcement Learning
+
 **Topics:** Real-World Applications, Advanced Techniques
 
 **Contents:**
+
 - `RL_HW4.pdf` - Assignment description
 - `RL_HW4_Practical.ipynb` - Practical implementations
 - `SP24_RL_HW4.zip` - Assignment package
@@ -143,18 +161,21 @@ sp24/hws/
 **Project Components:**
 
 1. **Hyperparameter Tuning:**
+
    - Learning rate schedules
    - Exploration strategies
    - Network architectures
    - Batch sizes and buffer sizes
 
 2. **Algorithm Comparison:**
+
    - DQN vs PPO vs SAC
    - On-policy vs off-policy
    - Sample efficiency analysis
    - Computational requirements
 
 3. **Practical Challenges:**
+
    - Training stability
    - Reward shaping
    - State preprocessing
@@ -167,6 +188,7 @@ sp24/hws/
    - Results and analysis
 
 **Learning Objectives:**
+
 - Apply RL to practical problems
 - Understand hyperparameter impact
 - Diagnose training issues
@@ -197,12 +219,14 @@ pip install tensorboard  # For logging
 ### Running Assignments
 
 1. **Download and extract:**
+
    ```bash
    unzip SP24_RL_HW2.zip
    cd SP24_RL_HW2/
    ```
 
 2. **Launch Jupyter:**
+
    ```bash
    jupyter notebook
    ```
@@ -223,19 +247,20 @@ pip install tensorboard  # For logging
 
 Typical assignment structure:
 
-| Component | Weight | Description |
-|-----------|--------|-------------|
-| Implementation | 40-50% | Correct, efficient code |
-| Experiments | 20-30% | Comprehensive evaluation |
-| Analysis | 15-25% | Insights and discussion |
-| Written Questions | 10-15% | Theoretical understanding |
-| Code Quality | 5-10% | Style, documentation, reproducibility |
+| Component         | Weight | Description                           |
+| ----------------- | ------ | ------------------------------------- |
+| Implementation    | 40-50% | Correct, efficient code               |
+| Experiments       | 20-30% | Comprehensive evaluation              |
+| Analysis          | 15-25% | Insights and discussion               |
+| Written Questions | 10-15% | Theoretical understanding             |
+| Code Quality      | 5-10%  | Style, documentation, reproducibility |
 
 ## 🔧 Common Issues & Fixes
 
 ### Installation Issues
 
 **Problem:** Gymnasium installation fails
+
 ```bash
 # Solution
 pip install setuptools wheel
@@ -243,6 +268,7 @@ pip install gymnasium
 ```
 
 **Problem:** PyTorch CUDA not detected
+
 ```bash
 # Check CUDA availability
 python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}')"
@@ -254,6 +280,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cu118
 ### Training Issues
 
 **Problem:** Agent not learning
+
 - Check reward scaling
 - Verify gradient flow
 - Tune learning rate
@@ -261,6 +288,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cu118
 - Check environment setup
 
 **Problem:** Training unstable
+
 - Reduce learning rate
 - Increase batch size
 - Use gradient clipping
@@ -270,6 +298,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cu118
 ### Performance Issues
 
 **Problem:** Training too slow
+
 - Use GPU if available
 - Vectorize operations
 - Reduce logging frequency
@@ -279,6 +308,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cu118
 ## 📖 Resources
 
 ### Required Reading
+
 1. **Sutton & Barto (2018)** - Reinforcement Learning: An Introduction
    - Chapters 1-13 (core material)
    - [Free PDF](http://incompleteideas.net/book/the-book-2nd.html)
@@ -286,22 +316,27 @@ pip install torch --index-url https://download.pytorch.org/whl/cu118
 ### Papers by Assignment
 
 **HW1:**
+
 - Watkins & Dayan (1992) - Q-Learning
 
 **HW2:**
+
 - Mnih et al. (2015) - DQN
 - van Hasselt et al. (2016) - Double DQN
 
 **HW3:**
+
 - Williams (1992) - REINFORCE
 - Schulman et al. (2017) - PPO
 - Mnih et al. (2016) - A3C
 
 **HW4:**
+
 - Haarnoja et al. (2018) - SAC
 - Henderson et al. (2018) - Deep RL Reproducibility
 
 ### Online Resources
+
 - [Gymnasium Docs](https://gymnasium.farama.org/)
 - [OpenAI Spinning Up](https://spinningup.openai.com/)
 - [Stable Baselines3 Docs](https://stable-baselines3.readthedocs.io/)
@@ -310,6 +345,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cu118
 ## 💡 Best Practices
 
 ### Code Organization
+
 ```python
 # Recommended structure
 project/
@@ -322,6 +358,7 @@ project/
 ```
 
 ### Debugging Tips
+
 1. **Start Simple**: Test on CartPole first
 2. **Visualize**: Plot learning curves continuously
 3. **Check Gradients**: Monitor gradient magnitudes
@@ -329,6 +366,7 @@ project/
 5. **Reproduce**: Use fixed random seeds
 
 ### Experiment Tracking
+
 ```python
 # Use TensorBoard
 from torch.utils.tensorboard import SummaryWriter
@@ -344,26 +382,31 @@ writer.add_scalar('loss/value', loss, step)
 Upon completing these assignments, you will be able to:
 
 ✅ **Foundational Skills:**
+
 - Formulate problems as MDPs
 - Implement tabular RL algorithms
 - Understand convergence guarantees
 
 ✅ **Deep RL Skills:**
+
 - Build neural network function approximators
 - Implement experience replay and target networks
 - Handle high-dimensional state spaces
 
 ✅ **Advanced Skills:**
+
 - Implement policy gradient methods
 - Use advantage estimation and baselines
 - Apply trust region methods
 
 ✅ **Practical Skills:**
+
 - Debug and tune RL agents
 - Compare algorithms systematically
 - Build end-to-end RL applications
 
 ✅ **Research Skills:**
+
 - Read and understand RL papers
 - Reproduce published results
 - Analyze algorithm behavior
@@ -371,6 +414,7 @@ Upon completing these assignments, you will be able to:
 ## 📝 Submission Guidelines
 
 ### What to Submit
+
 1. **Notebooks**: All cells executed with outputs
 2. **Code**: Clean, documented, reproducible
 3. **Report**: Analysis and answers to questions
@@ -378,6 +422,7 @@ Upon completing these assignments, you will be able to:
 5. **README**: How to run your code
 
 ### Code Quality
+
 - Use meaningful variable names
 - Add comments for complex logic
 - Follow PEP 8 style guide
@@ -385,6 +430,7 @@ Upon completing these assignments, you will be able to:
 - Remove debug code
 
 ### Reproducibility
+
 ```python
 # Set all random seeds
 import random
@@ -401,6 +447,7 @@ def set_seed(seed=42):
 ## 🏆 Challenge Problems
 
 For extra practice:
+
 1. Implement Rainbow DQN (combines 6 extensions)
 2. Apply PPO to Atari games
 3. Build a custom environment
@@ -438,4 +485,3 @@ Violating academic integrity policies can result in serious consequences.
 ---
 
 For current course information and materials, visit the main course website.
-

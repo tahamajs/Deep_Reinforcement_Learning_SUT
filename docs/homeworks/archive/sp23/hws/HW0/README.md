@@ -16,6 +16,7 @@ HW0/
 ## 🎯 Learning Objectives
 
 By completing this assignment, you will:
+
 - ✅ Understand Markov Decision Processes (MDPs)
 - ✅ Master Bellman equations for value functions
 - ✅ Analyze policy evaluation and improvement
@@ -25,6 +26,7 @@ By completing this assignment, you will:
 ## 📚 Topics Covered
 
 ### 1. Markov Decision Processes (MDPs)
+
 - **States (S)**: Set of all possible states
 - **Actions (A)**: Set of available actions
 - **Transitions (P)**: State transition probabilities
@@ -36,12 +38,14 @@ By completing this assignment, you will:
 ### 2. Value Functions
 
 **State Value Function:**
+
 ```
 V^π(s) = E_π[G_t | S_t = s]
        = E_π[∑(γ^k * R_{t+k+1}) | S_t = s]
 ```
 
 **Action Value Function (Q-function):**
+
 ```
 Q^π(s,a) = E_π[G_t | S_t = s, A_t = a]
 ```
@@ -49,11 +53,13 @@ Q^π(s,a) = E_π[G_t | S_t = s, A_t = a]
 ### 3. Bellman Equations
 
 **Bellman Expectation Equation:**
+
 ```
 V^π(s) = ∑_a π(a|s) * ∑_{s',r} p(s',r|s,a)[r + γV^π(s')]
 ```
 
 **Bellman Optimality Equation:**
+
 ```
 V*(s) = max_a ∑_{s',r} p(s',r|s,a)[r + γV*(s')]
 ```
@@ -64,16 +70,18 @@ V*(s) = max_a ∑_{s',r} p(s',r|s,a)[r + γV*(s')]
 
 **Stochastic Policy:** π(a|s) → [0, 1]
 
-**Optimal Policy:** π* = argmax_π V^π(s) for all s
+**Optimal Policy:** π\* = argmax_π V^π(s) for all s
 
 ### 5. Returns and Discounting
 
 **Finite Horizon Return:**
+
 ```
 G_t = R_{t+1} + R_{t+2} + ... + R_T
 ```
 
 **Infinite Horizon Discounted Return:**
+
 ```
 G_t = R_{t+1} + γR_{t+2} + γ^2R_{t+3} + ...
     = ∑_{k=0}^∞ γ^k R_{t+k+1}
@@ -84,35 +92,42 @@ G_t = R_{t+1} + γR_{t+2} + γ^2R_{t+3} + ...
 The assignment typically includes:
 
 ### Theoretical Questions
+
 1. **MDP Formulation**: Defining MDPs for given scenarios
 2. **Bellman Derivations**: Proving properties of value functions
 3. **Policy Analysis**: Comparing different policies
 4. **Return Calculations**: Computing expected returns
 
 ### Computational Problems
+
 1. **Value Iteration**: Manual iterations on small MDPs
 2. **Policy Evaluation**: Computing V^π for given policies
-3. **Optimal Policy**: Finding π* through analysis
+3. **Optimal Policy**: Finding π\* through analysis
 4. **Discount Factor Effects**: Analyzing γ impact
 
 ## 🔑 Key Concepts
 
 ### Why MDPs?
+
 MDPs provide a mathematical framework for sequential decision-making under uncertainty, capturing the essential elements of RL problems.
 
 ### The Markov Property
+
 ```
-P(S_{t+1} | S_t, A_t, S_{t-1}, A_{t-1}, ..., S_0, A_0) 
+P(S_{t+1} | S_t, A_t, S_{t-1}, A_{t-1}, ..., S_0, A_0)
 = P(S_{t+1} | S_t, A_t)
 ```
+
 The future is independent of the past given the present.
 
 ### Policy vs Value
+
 - **Policy**: What to do (action selection strategy)
 - **Value**: How good it is (expected return)
 - **Relationship**: Optimal policy achieves highest value
 
 ### Discount Factor (γ)
+
 - **γ = 0**: Myopic (only immediate reward)
 - **γ = 1**: Farsighted (all future rewards equal)
 - **0 < γ < 1**: Balanced (prefer nearer rewards)
@@ -120,18 +135,21 @@ The future is independent of the past given the present.
 ## 💡 Problem-Solving Tips
 
 ### For Bellman Equations
+
 1. Start with the definition of value function
 2. Expand expectation over actions (policy)
 3. Expand expectation over next states (dynamics)
 4. Apply recursive structure
 
 ### For Value Iteration
+
 1. Initialize V(s) = 0 for all states
 2. Update: V(s) ← max_a ∑ p(s'|s,a)[r + γV(s')]
 3. Repeat until convergence
 4. Extract policy: π(s) = argmax_a Q(s,a)
 
 ### For Policy Evaluation
+
 1. Fix policy π
 2. Solve system of linear equations:
    ```
@@ -142,11 +160,13 @@ The future is independent of the past given the present.
 ## 📖 Reference Materials
 
 ### Sutton & Barto (2018)
+
 - **Chapter 3**: Finite MDPs
 - **Chapter 4**: Dynamic Programming
 - Sections 3.1-3.6 are essential
 
 ### Additional Resources
+
 - [UCL RL Course Lecture 2](https://www.davidsilver.uk/teaching/) - MDPs
 - [Stanford CS234 Lecture 2](http://web.stanford.edu/class/cs234/) - MDP Formulation
 
@@ -155,6 +175,7 @@ The future is independent of the past given the present.
 ### Problem: GridWorld MDP
 
 **Setup:**
+
 - 3x3 grid
 - Start: (0,0)
 - Goal: (2,2), reward = +1
@@ -163,9 +184,10 @@ The future is independent of the past given the present.
 - Deterministic transitions
 - γ = 0.9
 
-**Question:** Compute V*(s) for all states.
+**Question:** Compute V\*(s) for all states.
 
 **Solution Approach:**
+
 1. **Initialize:** V(s) = 0 for all s
 2. **Iterate:**
    ```
@@ -200,6 +222,7 @@ Before submitting, ensure you can answer:
 ## 📊 Grading Breakdown
 
 Typical grading:
+
 - MDP Formulation (20%)
 - Bellman Equations (25%)
 - Value Computations (30%)
@@ -246,6 +269,7 @@ Q-V Relationship: Q^π(s,a) = R(s,a) + γ∑_{s'} P(s'|s,a)V^π(s')
 ## 🔗 Related Topics
 
 This assignment prepares you for:
+
 - **HW1**: Implementing value iteration and policy iteration
 - **HW2**: Policy gradient methods
 - **Future Topics**: Model-free RL, function approximation
@@ -261,7 +285,6 @@ This assignment prepares you for:
 
 **Difficulty**: ⭐⭐☆☆☆ (Foundational)  
 **Estimated Time**: 7-11 hours  
-**Prerequisites**: Probability, basic linear algebra  
+**Prerequisites**: Probability, basic linear algebra
 
 Good luck! This foundation is crucial for the entire course.
-
