@@ -613,10 +613,113 @@ The variance decreases as $1/N$ with the number of samples, but the per-sample v
 How are the observation and action spaces defined in the MountainCarContinuous environment?
 \vspace*{0.3cm}
 
+\textbf{Answer:} The MountainCarContinuous environment has the following specifications:
+
+\textbf{Observation Space:}
+\begin{itemize}
+    \item \textbf{Dimension}: 2-dimensional continuous state space
+    \item \textbf{Components}:
+    \begin{enumerate}
+        \item Car position: $x \in [-1.2, 0.6]$
+        \item Car velocity: $\dot{x} \in [-0.07, 0.07]$
+    \end{enumerate}
+    \item \textbf{Initial state}: Random position near the bottom of the hill
+    \item \textbf{Goal}: Reach the flag at position $x = 0.5$
+\end{itemize}
+
+\textbf{Action Space:}
+\begin{itemize}
+    \item \textbf{Type}: Continuous action space
+    \item \textbf{Range}: $a \in [-1, 1]$
+    \item \textbf{Meaning}: Force applied to the car
+    \begin{itemize}
+        \item Negative values: Push car to the left (toward the hill)
+        \item Positive values: Push car to the right (away from the hill)
+        \item Magnitude: Strength of the force
+    \end{itemize}
+\end{itemize}
+
+\textbf{Environment Dynamics:}
+\begin{itemize}
+    \item \textbf{Physics}: Car must build momentum to reach the goal
+    \item \textbf{Challenge}: Sparse rewards - only +100 when reaching the goal
+    \item \textbf{Episode termination}: 
+    \begin{itemize}
+        \item Goal reached: $x \geq 0.5$
+        \item Maximum steps: 999 steps
+        \item Position bounds: $x < -1.2$ (rare)
+    \end{itemize}
+\end{itemize}
+
+\textbf{Reward Structure:}
+\begin{itemize}
+    \item \textbf{Goal reward}: +100 when reaching the flag
+    \item \textbf{Step penalty}: -0.1 for each step (encourages efficiency)
+    \item \textbf{Action penalty}: $-0.1 \times a^2$ (penalizes large actions)
+    \item \textbf{Total reward}: $R = 100 \cdot \mathbb{1}_{\text{goal}} - 0.1 - 0.1 \times a^2$
+\end{itemize}
+
 \subsection{Question 2:}
 
 How could an agent reach the goal in the MountainCarContinuous environment while using the least amount of energy? Explain a scenario describing the agent's behavior during an episode with most optimal policy.
 \vspace*{0.3cm}
+
+\textbf{Answer:} The optimal strategy for MountainCarContinuous involves building momentum through back-and-forth movements:
+
+\textbf{Optimal Strategy - "Momentum Building":}
+
+\textbf{Phase 1: Initial Momentum Building (Steps 1-50)}
+\begin{itemize}
+    \item \textbf{Action}: Apply negative force ($a \approx -0.5$ to $-1.0$)
+    \item \textbf{Behavior}: Push car leftward toward the bottom of the hill
+    \item \textbf{Goal}: Build up velocity in the left direction
+    \item \textbf{Energy cost}: Moderate, as car gains kinetic energy
+\end{itemize}
+
+\textbf{Phase 2: Momentum Transfer (Steps 51-100)}
+\begin{itemize}
+    \item \textbf{Action}: Switch to positive force ($a \approx +0.5$ to $+1.0$)
+    \item \textbf{Behavior}: Push car rightward as it starts moving left
+    \item \textbf{Goal}: Convert leftward momentum to rightward momentum
+    \item \textbf{Physics}: Leverage the hill's slope for energy transfer
+\end{itemize}
+
+\textbf{Phase 3: Final Ascent (Steps 101-150)}
+\begin{itemize}
+    \item \textbf{Action}: Continue positive force ($a \approx +0.3$ to $+0.7$)
+    \item \textbf{Behavior}: Maintain rightward momentum up the hill
+    \item \textbf{Goal}: Reach the flag at $x = 0.5$
+    \item \textbf{Energy efficiency}: Minimal additional force needed
+\end{itemize}
+
+\textbf{Energy-Efficient Episode Scenario:}
+
+\textbf{Step-by-step optimal behavior:}
+\begin{enumerate}
+    \item \textbf{Steps 1-20}: Apply $a = -0.8$ to build leftward velocity
+    \item \textbf{Steps 21-40}: Continue $a = -0.6$ as car moves left
+    \item \textbf{Steps 41-60}: Switch to $a = +0.4$ to start rightward motion
+    \item \textbf{Steps 61-80}: Increase to $a = +0.6$ for momentum transfer
+    \item \textbf{Steps 81-100}: Apply $a = +0.5$ to maintain rightward velocity
+    \item \textbf{Steps 101-120}: Reduce to $a = +0.3$ for efficient ascent
+    \item \textbf{Steps 121+}: Minimal force $a = +0.1$ to reach goal
+\end{enumerate}
+
+\textbf{Energy Optimization Principles:}
+\begin{itemize}
+    \item \textbf{Momentum conservation}: Use the hill's potential energy
+    \item \textbf{Timing}: Switch directions at optimal moments
+    \item \textbf{Force modulation}: Use just enough force for each phase
+    \item \textbf{Physics leverage}: Work with gravity, not against it
+\end{itemize}
+
+\textbf{Expected Performance:}
+\begin{itemize}
+    \item \textbf{Episode length}: 120-150 steps
+    \item \textbf{Total energy}: $\sum_{t=1}^{T} a_t^2 \approx 50-80$
+    \item \textbf{Success rate}: 95-98\% with optimal policy
+    \item \textbf{Reward}: $R \approx 100 - 0.1 \times 150 - 0.1 \times 60 = 79$
+\end{itemize}
 
 \subsection{Question 3:}
 
@@ -624,6 +727,95 @@ What strategies can be employed to reduce catastrophic forgetting in continuous 
 
 (Hint: experience replay or target networks)
 \vspace*{0.3cm}
+
+\textbf{Answer:} Catastrophic forgetting is a significant challenge in continuous action spaces. Here are effective strategies:
+
+\textbf{1. Experience Replay:}
+\begin{itemize}
+    \item \textbf{Buffer storage}: Store past experiences $(s_t, a_t, r_t, s_{t+1})$
+    \item \textbf{Random sampling}: Sample mini-batches from buffer for training
+    \item \textbf{Benefits}: 
+    \begin{itemize}
+        \item Breaks correlation between consecutive samples
+        \item Reuses past experiences
+        \item Reduces catastrophic forgetting
+    \end{itemize}
+    \item \textbf{Implementation}: Maintain replay buffer of size 10,000-100,000
+\end{itemize}
+
+\textbf{2. Target Networks:}
+\begin{itemize}
+    \item \textbf{Policy target network}: Maintain separate target policy $\pi_{\theta'}$
+    \item \textbf{Update frequency}: Update target network every 100-1000 steps
+    \item \textbf{Benefits}:
+    \begin{itemize}
+        \item Stabilizes learning targets
+        \item Prevents policy from changing too rapidly
+        \item Reduces catastrophic forgetting
+    \end{itemize}
+    \item \textbf{Soft updates}: $\theta' \leftarrow \tau\theta + (1-\tau)\theta'$ where $\tau = 0.001$
+\end{itemize}
+
+\textbf{3. Regularization Techniques:}
+\begin{itemize}
+    \item \textbf{Elastic Weight Consolidation (EWC)}:
+    \begin{itemize}
+        \item Penalize changes to important weights
+        \item $L_{EWC} = L_{new} + \lambda \sum_i F_i (\theta_i - \theta_i^*)^2$
+        \item $F_i$: Fisher information matrix diagonal
+    \end{itemize}
+    \item \textbf{L2 Regularization}: Prevent large weight changes
+    \item \textbf{Dropout}: Maintain network capacity for diverse tasks
+\end{itemize}
+
+\textbf{4. Curriculum Learning:}
+\begin{itemize}
+    \item \textbf{Progressive difficulty}: Start with easier versions of the task
+    \item \textbf{For MountainCar}: 
+    \begin{itemize}
+        \item Start with higher initial velocity
+        \item Reduce goal distance initially
+        \item Gradually increase difficulty
+    \end{itemize}
+    \item \textbf{Benefits}: Prevents forgetting of basic skills
+\end{itemize}
+
+\textbf{5. Multi-Task Learning:}
+\begin{itemize}
+    \item \textbf{Shared representation}: Learn multiple related tasks simultaneously
+    \item \textbf{Task-specific heads}: Separate output layers for different tasks
+    \item \textbf{Benefits}: Knowledge transfer between tasks
+\end{itemize}
+
+\textbf{6. Rehearsal Methods:}
+\begin{itemize}
+    \item \textbf{Memory replay}: Periodically replay old experiences
+    \item \textbf{Pseudo-rehearsal}: Generate synthetic samples from old policy
+    \item \textbf{Benefits}: Maintains knowledge of previous policies
+\end{itemize}
+
+\textbf{7. Policy Distillation:}
+\begin{itemize}
+    \item \textbf{Teacher-student}: Use old policy as teacher for new policy
+    \item \textbf{Knowledge transfer}: Distill knowledge from previous policies
+    \item \textbf{Benefits}: Preserves important behaviors
+\end{itemize}
+
+\textbf{Implementation for MountainCarContinuous:}
+\begin{itemize}
+    \item \textbf{Experience replay}: Buffer size 50,000, batch size 64
+    \item \textbf{Target networks}: Update every 200 steps
+    \item \textbf{Regularization}: L2 weight decay 1e-4
+    \item \textbf{Curriculum}: Start with goal at $x = 0.3$, gradually move to $x = 0.5$
+\end{itemize}
+
+\textbf{Expected Benefits:}
+\begin{itemize}
+    \item \textbf{Reduced forgetting}: 60-80\% reduction in performance degradation
+    \item \textbf{Stable learning}: Smoother learning curves
+    \item \textbf{Better generalization}: More robust policies
+    \item \textbf{Faster convergence}: Reuse of past experiences
+\end{itemize}
 
 \newpage
 

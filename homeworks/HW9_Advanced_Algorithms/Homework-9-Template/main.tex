@@ -171,12 +171,66 @@ Solution for Homework [9]
 \subsection{Theoretical Foundation[15-points]}
 \subsubsection{a)[8-points]} Explain the fundamental difference between traditional value-based RL and distributional RL. Why is modeling the full return distribution beneficial?
 
+\textbf{Answer:}
+
+Traditional value-based reinforcement learning methods, such as DQN and Q-learning, focus on estimating the expected value of returns:
+
+\begin{equation}
+Q(s,a) = \mathbb{E}[R_t | s_t = s, a_t = a]
+\end{equation}
+
+In contrast, distributional RL models the entire probability distribution of returns rather than just the expectation:
+
+\begin{equation}
+Z(s,a) \text{ represents the full distribution of returns}
+\end{equation}
+\begin{equation}
+Q(s,a) = \mathbb{E}[Z(s,a)]
+\end{equation}
+
+\textbf{Key Benefits:}
+\begin{enumerate}
+\item \textbf{Richer Representation}: Captures uncertainty and risk in returns
+\item \textbf{Multi-Modal Returns}: Can represent multiple outcome scenarios
+\item \textbf{Improved Learning}: Provides more informative learning signal
+\item \textbf{Better Stability}: Reduces variance in value estimation
+\item \textbf{Risk-Sensitive Policies}: Enables risk-aware decision making
+\end{enumerate}
+
 \subsubsection{b)[7-points]} Consider two actions with the same expected value but different distributions:
 \begin{itemize}
 \item Action A: Always returns 10 (deterministic)
 \item Action B: Returns 0 or 20 with equal probability
 \end{itemize}
 Both have E[R] = 10, but how does distributional RL distinguish their risk profiles?
+
+\textbf{Answer:}
+
+Both actions have the same expected value $\mathbb{E}[R] = 10$, but distributional RL can distinguish their risk profiles:
+
+\textbf{Action A (Deterministic):}
+\begin{itemize}
+\item Distribution: $\delta_{10}$ (point mass at 10)
+\item Variance: $\text{Var}[R] = 0$
+\item Risk: No uncertainty, guaranteed outcome
+\end{itemize}
+
+\textbf{Action B (Stochastic):}
+\begin{itemize}
+\item Distribution: $0.5 \cdot \delta_0 + 0.5 \cdot \delta_{20}$
+\item Variance: $\text{Var}[R] = 100$
+\item Risk: High uncertainty, potential for both loss and gain
+\end{itemize}
+
+\textbf{How Distributional RL Distinguishes:}
+\begin{enumerate}
+\item \textbf{Risk Assessment}: Action B has higher variance, indicating higher risk
+\item \textbf{Tail Behavior}: Action B can produce extreme outcomes (0 or 20)
+\item \textbf{Policy Selection}: Risk-averse agents might prefer Action A, risk-seeking agents might prefer Action B
+\item \textbf{Conditional Value at Risk (CVaR)}: Can compute risk measures like CVaR$_{0.1}$ to assess worst-case scenarios
+\end{enumerate}
+
+This distinction is impossible with traditional value-based methods that only consider expected values.
 
 \noindent\rule{\textwidth}{0.2pt}
 

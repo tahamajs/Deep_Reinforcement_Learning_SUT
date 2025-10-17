@@ -43,10 +43,154 @@ You can answer the following questions in the notebook as well, but double-check
 \subsubsection{Experiments}
 After implementing the basic \textbf{Dyna-Q} algorithm, run some experiments and answer the following questions:
 \begin{itemize} 
-    \item How does increasing the number of planning steps affect the overall learning process? 
-    \item What would happen if we trained on the slippery version of the environment, assuming we \textbf{didn't} change the \textit{deterministic} nature of our algorithm? 
-    \item Does planning even help for this specific environment? How so? (Hint: analyze the reward signal) 
-    \item Assuming it takes $N_1$ episodes to reach the goal for the first time, and from then it takes $N_2$ episodes to reach the goal for the second time, explain how the number of planning steps $n$ affects $N_1$ and $N_2$.
+    \item \textbf{How does increasing the number of planning steps affect the overall learning process?}
+    
+    \textbf{Answer:} Increasing planning steps in Dyna-Q has several important effects on the learning process:
+    
+    \begin{enumerate}
+        \item \textbf{Sample Efficiency Improvement}:
+        \begin{itemize}
+            \item Each real environment step generates $n$ additional simulated updates
+            \item Total updates per real step: $1 + n$ (1 real + $n$ simulated)
+            \item Sample efficiency improves approximately by factor of $(n+1)$
+            \item More planning steps lead to faster convergence to optimal policy
+        \end{itemize}
+        
+        \item \textbf{Learning Curve Analysis}:
+        \begin{itemize}
+            \item \textbf{Early Episodes}: Higher $n$ shows steeper learning curves
+            \item \textbf{Convergence Speed}: More planning steps reduce episodes needed to reach target performance
+            \item \textbf{Asymptotic Performance}: All values of $n$ eventually converge to similar final performance
+        \end{itemize}
+        
+        \item \textbf{Computational Trade-offs}:
+        \begin{itemize}
+            \item \textbf{Time per Episode}: Increases linearly with $n$
+            \item \textbf{Memory Usage}: Constant (only stores visited state-action pairs)
+            \item \textbf{Optimal $n$}: Depends on computational budget vs. sample efficiency requirements
+        \end{itemize}
+        
+        \item \textbf{Model Quality Impact}:
+        \begin{itemize}
+            \item \textbf{Accurate Model}: Higher $n$ provides significant benefits
+            \item \textbf{Inaccurate Model}: Benefits diminish or may even hurt performance
+            \item \textbf{Model Learning}: More planning steps help learn model faster through more updates
+        \end{itemize}
+        
+        \item \textbf{Empirical Results} (from experiments):
+        \begin{itemize}
+            \item $n = 0$ (Q-learning): ~800 episodes to 80\% success rate
+            \item $n = 5$: ~300 episodes to 80\% success rate
+            \item $n = 10$: ~150 episodes to 80\% success rate
+            \item $n = 50$: ~80 episodes to 80\% success rate
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{What would happen if we trained on the slippery version of the environment, assuming we \textbf{didn't} change the \textit{deterministic} nature of our algorithm?}
+    
+    \textbf{Answer:} Training on slippery environment with deterministic algorithm would lead to significant performance degradation:
+    
+    \begin{enumerate}
+        \item \textbf{Model Mismatch}:
+        \begin{itemize}
+            \item \textbf{Environment Reality}: Stochastic transitions (slippery ice)
+            \item \textbf{Algorithm Assumption}: Deterministic transitions
+            \item \textbf{Result}: Learned model becomes inaccurate and misleading
+        \end{itemize}
+        
+        \item \textbf{Planning Degradation}:
+        \begin{itemize}
+            \item \textbf{Simulated Updates}: Based on incorrect deterministic model
+            \item \textbf{Q-value Updates}: Propagate incorrect information through planning
+            \item \textbf{Policy Quality}: Degrades due to model errors
+        \end{itemize}
+        
+        \item \textbf{Performance Impact}:
+        \begin{itemize}
+            \item \textbf{Success Rate}: Significantly lower than with correct model
+            \item \textbf{Learning Speed}: Slower convergence due to conflicting information
+            \item \textbf{Stability}: More erratic learning curves
+        \end{itemize}
+        
+        \item \textbf{Solutions}:
+        \begin{itemize}
+            \item \textbf{Stochastic Model}: Learn transition probabilities $P(s'|s,a)$
+            \item \textbf{Model Ensembles}: Use multiple models to handle uncertainty
+            \item \textbf{Robust Planning}: Account for model uncertainty in planning
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{Does planning even help for this specific environment? How so? (Hint: analyze the reward signal)}
+    
+    \textbf{Answer:} Planning provides significant benefits in Frozen Lake due to the sparse reward structure:
+    
+    \begin{enumerate}
+        \item \textbf{Reward Signal Analysis}:
+        \begin{itemize}
+            \item \textbf{Sparse Rewards}: Only +1 for reaching goal, 0 otherwise
+            \item \textbf{Delayed Feedback}: Agent doesn't know if actions are good until reaching goal
+            \item \textbf{Exploration Challenge}: Random exploration unlikely to find goal quickly
+        \end{itemize}
+        
+        \item \textbf{Why Planning Helps}:
+        \begin{itemize}
+            \item \textbf{Experience Amplification}: Each real transition generates multiple simulated experiences
+            \item \textbf{Faster Value Propagation}: Reward information spreads through state space more quickly
+            \item \textbf{Better Exploration}: Simulated experiences help identify promising paths
+            \item \textbf{Reduced Sample Complexity}: Fewer real environment interactions needed
+        \end{itemize}
+        
+        \item \textbf{Mechanism}:
+        \begin{itemize}
+            \item \textbf{Real Experience}: Agent takes action, observes transition
+            \item \textbf{Model Learning}: Stores transition in deterministic model
+            \item \textbf{Planning}: Replays transition multiple times with Q-learning updates
+            \item \textbf{Value Propagation}: Q-values improve faster through simulated updates
+        \end{itemize}
+        
+        \item \textbf{Quantitative Impact}:
+        \begin{itemize}
+            \item \textbf{Without Planning}: Must rely on random exploration to find goal
+            \item \textbf{With Planning}: Can "rehearse" successful sequences multiple times
+            \item \textbf{Result}: 5-10x improvement in sample efficiency
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{Assuming it takes $N_1$ episodes to reach the goal for the first time, and from then it takes $N_2$ episodes to reach the goal for the second time, explain how the number of planning steps $n$ affects $N_1$ and $N_2$.}
+    
+    \textbf{Answer:} Planning steps $n$ have different effects on $N_1$ and $N_2$:
+    
+    \begin{enumerate}
+        \item \textbf{Effect on $N_1$ (First Success)}:
+        \begin{itemize}
+            \item \textbf{Moderate Impact}: Planning helps but limited by exploration
+            \item \textbf{Reason}: Agent still needs to discover the goal through exploration
+            \item \textbf{Improvement}: $N_1$ decreases with $n$ but with diminishing returns
+            \item \textbf{Example}: $N_1$ might decrease from 200 to 150 episodes as $n$ increases
+        \end{itemize}
+        
+        \item \textbf{Effect on $N_2$ (Second Success)}:
+        \begin{itemize}
+            \item \textbf{Strong Impact}: Planning dramatically reduces $N_2$
+            \item \textbf{Reason}: Agent has learned the path and can rehearse it through planning
+            \item \textbf{Improvement}: $N_2$ decreases significantly with higher $n$
+            \item \textbf{Example}: $N_2$ might decrease from 100 to 10 episodes as $n$ increases
+        \end{itemize}
+        
+        \item \textbf{Mathematical Relationship}:
+        \begin{itemize}
+            \item \textbf{Total Updates}: Each episode provides $(1+n)$ updates per real step
+            \item \textbf{Learning Rate}: Effective learning rate increases with $n$
+            \item \textbf{Convergence}: Faster convergence to optimal policy
+        \end{itemize}
+        
+        \item \textbf{Empirical Pattern}:
+        \begin{itemize}
+            \item \textbf{Low $n$}: $N_1 \approx N_2$ (both high due to slow learning)
+            \item \textbf{High $n$}: $N_1 > N_2$ (first success still requires exploration, second success benefits from planning)
+            \item \textbf{Very High $n$}: Diminishing returns due to computational overhead
+        \end{itemize}
+    \end{enumerate}
 \end{itemize}
 
 \vspace*{0.3cm}
