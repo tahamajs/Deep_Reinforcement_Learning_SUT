@@ -1,21 +1,17 @@
-# Complete MCTS Implementation for RL_HW5_MCTS.ipynb
+# Complete MCTS Implementation - Copy these implementations into the notebook
 
-
-# BufferReplay.add_trajectories implementation
-def implement_add_trajectories():
-    return """
+# 1. BufferReplay.add_trajectories method
+"""
         for trajectory in new_trajectories:
             if len(self.memory) < self.capacity:
                 self.memory.append(trajectory)
             else:
                 self.memory[self.position] = trajectory
             self.position = (self.position + 1) % self.capacity
-    """
+"""
 
-
-# RepresentationNet implementation
-def implement_representation_net():
-    return """
+# 2. RepresentationNet.__init__ and forward
+"""
         super().__init__()
         self.fc1 = nn.Linear(input_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
@@ -25,12 +21,10 @@ def implement_representation_net():
         x = self.relu(self.fc1(x))
         x = self.relu(self.fc2(x))
         return x
-    """
+"""
 
-
-# DynamicsNet implementation
-def implement_dynamics_net():
-    return """
+# 3. DynamicsNet.__init__ and forward
+"""
         super().__init__()
         self.fc1 = nn.Linear(hidden_dim + 1, hidden_dim)  # +1 for action encoding
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
@@ -42,12 +36,10 @@ def implement_dynamics_net():
         next_state = self.relu(self.fc2(x))
         reward = self.reward_head(next_state)
         return next_state, reward.squeeze(-1)
-    """
+"""
 
-
-# PredictionNet implementation
-def implement_prediction_net():
-    return """
+# 4. PredictionNet.__init__ and forward
+"""
         super().__init__()
         self.fc1 = nn.Linear(hidden_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
@@ -62,19 +54,16 @@ def implement_prediction_net():
         value = self.value_head(x)
         policy = F.softmax(policy_logits, dim=-1)
         return policy, value.squeeze(-1)
-    """
+"""
 
-
-# MCTS implementations
-def implement_mcts_init():
-    return """
+# 5. MCTS.__init__ exploration constants
+"""
         self.c1 = 1.25
         self.c2 = 19652
-    """
+"""
 
-
-def implement_mcts_run():
-    return """
+# 6. MCTS.run method
+"""
         # Create the root
         init_policy, init_value = self.prediction_model(root_state)
         init_policy, init_val = init_policy.detach(), init_value.detach()
@@ -107,11 +96,10 @@ def implement_mcts_run():
         # Return (visit distribution, root value)
         visit_counts = self._compute_pi()
         return visit_counts, self.root_node.avg_value()
-    """
+"""
 
-
-def implement_mcts_expand_node():
-    return """
+# 7. MCTS._expand_node method
+"""
         next_s, new_pi, new_v, new_reward = self.agent.rollout_step(
             parent_node.state_rep, torch.tensor([chosen_action], device=device)
         )
@@ -132,11 +120,10 @@ def implement_mcts_expand_node():
             new_node.edges[i] = TreeNode(new_pi_np[0, i])
 
         return new_v
-    """
+"""
 
-
-def implement_mcts_backpropagate():
-    return """
+# 8. MCTS._backpropagate method
+"""
         for node in reversed(self.search_path):
             node.total_value_sum += leaf_value
             node.visit_count += 1
@@ -145,11 +132,10 @@ def implement_mcts_backpropagate():
                 self.value_tracker.update(node.reward_est + self.gamma * leaf_value)
             
             leaf_value = node.reward_est + self.gamma * leaf_value
-    """
+"""
 
-
-def implement_mcts_calc_ucb():
-    return """
+# 9. MCTS._calc_ucb method
+"""
         # Compute the exploration factor (pb_c) using c1, c2, parent.visit_count, etc.
         pb_c = math.log((parent.visit_count + self.c2 + 1) / self.c2) + self.c1
 
@@ -168,21 +154,18 @@ def implement_mcts_calc_ucb():
         
         # Add exploration and value to get final score
         return prior_val + normalized_val.item()
-    """
+"""
 
-
-def implement_mcts_compute_pi():
-    return """
+# 10. MCTS._compute_pi method
+"""
         visits = []
         for i in range(self.num_actions):
             visits.append(self.root_node.edges[i].visit_count)
         return np.array(visits)
-    """
+"""
 
-
-# Naive depth search implementation
-def implement_naive_depth_search():
-    return """
+# 11. naive_depth_search function
+"""
     # Initialize any data structures for storing accumulated rewards/values
     possible_acts = np.arange(act_count)
 
@@ -221,12 +204,10 @@ def implement_naive_depth_search():
 
     # Pick the first action from that sequence and return it alongside root value
     return best_action_idx, root_value
-    """
+"""
 
-
-# Agent implementations
-def implement_agent_inference():
-    return """
+# 12. Agent.inference method
+"""
         # convert observation to hidden
         hidden = self.rep_net(obs_tensor)
 
@@ -257,19 +238,17 @@ def implement_agent_inference():
             pol_np = pol_np / np.sum(pol_np)
             chosen_act = np.random.choice(self.num_actions, p=pol_np)
             return chosen_act, pol_np, val
-    """
+"""
 
-
-def implement_agent_initial_step():
-    return """
+# 13. Agent.initial_step method
+"""
         s = self.rep_net(obs)
         pol, v = self.pred_net(s)
         return s, pol, v
-    """
+"""
 
-
-def implement_agent_rollout_step():
-    return """
+# 14. Agent.rollout_step method
+"""
         batch_sz = hidden_s.shape[0]
         # Normalize action to [0,1]
         act_enc = chosen_actions.unsqueeze(1).float()
@@ -283,12 +262,10 @@ def implement_agent_rollout_step():
         p, v = self.pred_net(next_hidden)
 
         return next_hidden, p, v, predicted_reward
-    """
+"""
 
-
-# Training function implementation
-def implement_training_function():
-    return """
+# 15. Training function implementation
+"""
     # Models
     representation_model = RepresentationNet(num_in, num_hidden)
     dynamics_model = DynamicsNet(num_hidden, num_actions)
@@ -387,52 +364,4 @@ def implement_training_function():
             plt.show()
 
     return runner.episode_returns
-    """
-
-
-# Print all implementations
-if __name__ == "__main__":
-    print("BufferReplay.add_trajectories:")
-    print(implement_add_trajectories())
-
-    print("\nRepresentationNet:")
-    print(implement_representation_net())
-
-    print("\nDynamicsNet:")
-    print(implement_dynamics_net())
-
-    print("\nPredictionNet:")
-    print(implement_prediction_net())
-
-    print("\nMCTS.__init__:")
-    print(implement_mcts_init())
-
-    print("\nMCTS.run:")
-    print(implement_mcts_run())
-
-    print("\nMCTS._expand_node:")
-    print(implement_mcts_expand_node())
-
-    print("\nMCTS._backpropagate:")
-    print(implement_mcts_backpropagate())
-
-    print("\nMCTS._calc_ucb:")
-    print(implement_mcts_calc_ucb())
-
-    print("\nMCTS._compute_pi:")
-    print(implement_mcts_compute_pi())
-
-    print("\nnaive_depth_search:")
-    print(implement_naive_depth_search())
-
-    print("\nAgent.inference:")
-    print(implement_agent_inference())
-
-    print("\nAgent.initial_step:")
-    print(implement_agent_initial_step())
-
-    print("\nAgent.rollout_step:")
-    print(implement_agent_rollout_step())
-
-    print("\nTraining function:")
-    print(implement_training_function())
+"""
