@@ -1,0 +1,422 @@
+# Complete MCTS Implementation for RL_HW5_MCTS.ipynb
+
+# BufferReplay.add_trajectories implementation
+def implement_add_trajectories():
+    return """
+        for trajectory in new_trajectories:
+            if len(self.memory) < self.capacity:
+                self.memory.append(trajectory)
+            else:
+                self.memory[self.position] = trajectory
+            self.position = (self.position + 1) % self.capacity
+    """
+
+# RepresentationNet implementation
+def implement_representation_net():
+    return """
+        super().__init__()
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.relu(self.fc1(x))
+        x = self.relu(self.fc2(x))
+        return x
+    """
+
+# DynamicsNet implementation
+def implement_dynamics_net():
+    return """
+        super().__init__()
+        self.fc1 = nn.Linear(hidden_dim + 1, hidden_dim)  # +1 for action encoding
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.reward_head = nn.Linear(hidden_dim, 1)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.relu(self.fc1(x))
+        next_state = self.relu(self.fc2(x))
+        reward = self.reward_head(next_state)
+        return next_state, reward.squeeze(-1)
+    """
+
+# PredictionNet implementation
+def implement_prediction_net():
+    return """
+        super().__init__()
+        self.fc1 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.policy_head = nn.Linear(hidden_dim, num_actions)
+        self.value_head = nn.Linear(hidden_dim, 1)
+        self.relu = nn.ReLU()
+
+    def forward(self, hidden_x):
+        x = self.relu(self.fc1(hidden_x))
+        x = self.relu(self.fc2(x))
+        policy_logits = self.policy_head(x)
+        value = self.value_head(x)
+        policy = F.softmax(policy_logits, dim=-1)
+        return policy, value.squeeze(-1)
+    """
+
+# MCTS implementations
+def implement_mcts_init():
+    return """
+        self.c1 = 1.25
+        self.c2 = 19652
+    """
+
+def implement_mcts_run():
+    return """
+        # Create the root
+        init_policy, init_value = self.prediction_model(root_state)
+        init_policy, init_val = init_policy.detach(), init_value.detach()
+        self.root_node = self._initialize_root(root_state, init_policy)
+
+        # track min/max for value normalization
+        self.value_tracker = AdaptiveNormalizer()
+
+        # Perform MCTS simulations
+        for _ in range(sims_count):
+            self.search_path = []
+            self.search_path.append(self.root_node)
+            self.action_path = []
+            
+            current_node = self.root_node
+            # Traverse down the tree
+            while current_node.is_expanded():
+                act_chosen, next_node = self._select_ucb_action(current_node)
+                self.search_path.append(next_node)
+                self.action_path.append(act_chosen)
+                current_node = next_node
+
+            # Expand the newly reached leaf
+            leaf_parent = self.search_path[-2]
+            new_value = self._expand_node(leaf_parent, current_node, self.action_path[-1])
+
+            # Backup
+            self._backpropagate(new_value)
+
+        # Return (visit distribution, root value)
+        visit_counts = self._compute_pi()
+        return visit_counts, self.root_node.avg_value()
+    """
+
+def implement_mcts_expand_node():
+    return """
+        next_s, new_pi, new_v, new_reward = self.agent.rollout_step(
+            parent_node.state_rep, torch.tensor([chosen_action], device=device)
+        )
+
+        # detach the new values
+        next_s = next_s.detach()
+        new_pi = new_pi.detach()
+        new_v = new_v.detach()
+        new_reward = new_reward.detach()
+        
+        # update the new node
+        new_node.state_rep = next_s
+        new_node.reward_est = new_reward
+
+        # create children edges
+        new_pi_np = new_pi.cpu().numpy()
+        for i in range(self.num_actions):
+            new_node.edges[i] = TreeNode(new_pi_np[0, i])
+
+        return new_v
+    """
+
+def implement_mcts_backpropagate():
+    return """
+        for node in reversed(self.search_path):
+            node.total_value_sum += leaf_value
+            node.visit_count += 1
+            
+            if node.reward_est is not None:
+                self.value_tracker.update(node.reward_est + self.gamma * leaf_value)
+            
+            leaf_value = node.reward_est + self.gamma * leaf_value
+    """
+
+def implement_mcts_calc_ucb():
+    return """
+        # Compute the exploration factor (pb_c) using c1, c2, parent.visit_count, etc.
+        pb_c = math.log((parent.visit_count + self.c2 + 1) / self.c2) + self.c1
+
+        # Multiply pb_c by child.prior_prob
+        prior_val = pb_c * child.prior_prob * math.sqrt(parent.visit_count) / (child.visit_count + 1)
+
+        # Calculate the value term = reward + gamma * avg_value
+        if child.visit_count > 0:
+            val_score = child.reward_est + self.gamma * child.avg_value()
+        else:
+            val_score = child.reward_est if child.reward_est is not None else 0.0
+            
+
+        # Normalize the value term if needed
+        normalized_val = self.value_tracker.normalize(torch.tensor(val_score))
+        
+        # Add exploration and value to get final score
+        return prior_val + normalized_val.item()
+    """
+
+def implement_mcts_compute_pi():
+    return """
+        visits = []
+        for i in range(self.num_actions):
+            visits.append(self.root_node.edges[i].visit_count)
+        return np.array(visits)
+    """
+
+# Naive depth search implementation
+def implement_naive_depth_search():
+    return """
+    # Initialize any data structures for storing accumulated rewards/values
+    possible_acts = np.arange(act_count)
+
+    # Just get the root value
+    _, root_v = agent.prediction_model(hidden_s)
+    root_value = root_v
+
+    combined_rewards = torch.tensor([0.0], device=device)
+
+    # For depth in range(search_depth), enumerate actions and states
+    for depth in range(search_depth):
+        state = hidden_s.repeat(act_count, 1)  # repeat the states for each action
+        repeated_acts = torch.tensor(possible_acts, device=device, dtype=torch.float32)
+
+        # Use agent.rollout_step() to get next_s, leaf_val, leaf_r for each branch
+        next_s, leaf_pi, leaf_val, leaf_r = agent.rollout_step(state, repeated_acts)
+
+        # keep in mind to detach the tensors. you don't want the gradients to flow back to the model
+        next_s = next_s.detach()
+        leaf_pi = leaf_pi.detach()
+        leaf_val = leaf_val.detach()
+        leaf_r = leaf_r.detach()
+
+        # Expand reward sum
+        combined_rewards = combined_rewards.repeat(act_count)  # repeat the rewards for each action
+        adjusted_r = leaf_r * (gamma_val ** depth)
+        combined_rewards += adjusted_r
+
+    # Accumulate discounted rewards and final value
+    final_vals = combined_rewards + leaf_val * (gamma_val ** search_depth)
+    # total
+    final_vals = final_vals
+
+    # Determine which sequence has the maximum total return
+    best_action_idx = torch.argmax(final_vals).item()
+
+    # Pick the first action from that sequence and return it alongside root value
+    return best_action_idx, root_value
+    """
+
+# Agent implementations
+def implement_agent_inference():
+    return """
+        # convert observation to hidden
+        hidden = self.rep_net(obs_tensor)
+
+        if self.mcts:
+            # MCTS-based
+            child_visits, root_val = self.mcts.run(self.simulations, hidden)
+            action_probs = child_visits / np.sum(child_visits)
+
+            # Apply temperature
+            adjusted_pi = action_probs ** (1.0 / self.temperature)
+            adjusted_pi = adjusted_pi / np.sum(adjusted_pi)
+            picked_action = np.random.choice(self.num_actions, p=adjusted_pi)
+            return picked_action, action_probs, root_val
+        elif self.search_type == "naive":
+            # naive search
+            best_a, r_val = naive_depth_search(self, hidden, self.num_actions, self.gamma, self.naive_search_depth)
+            # either uniform or one-hot for distribution
+            result_pi = np.zeros(self.num_actions, dtype=np.float32)
+            result_pi[best_a] = 1.0
+            return best_a, result_pi, r_val
+        else:
+            # direct prediction
+            with torch.no_grad():
+                pol, val = self.pred_net(hidden)
+            # sample from pol^1/T
+            pol_np = pol.cpu().numpy()[0]
+            pol_np = pol_np ** (1.0 / self.temperature)
+            pol_np = pol_np / np.sum(pol_np)
+            chosen_act = np.random.choice(self.num_actions, p=pol_np)
+            return chosen_act, pol_np, val
+    """
+
+def implement_agent_initial_step():
+    return """
+        s = self.rep_net(obs)
+        pol, v = self.pred_net(s)
+        return s, pol, v
+    """
+
+def implement_agent_rollout_step():
+    return """
+        batch_sz = hidden_s.shape[0]
+        # Normalize action to [0,1]
+        act_enc = chosen_actions.unsqueeze(1).float()
+        act_enc /= self.num_actions
+
+        # feed dynamics
+        dyn_input = torch.cat([hidden_s, act_enc], dim=1)
+        next_hidden, predicted_reward = self.dyn_net(dyn_input)
+
+        # get next policy + value
+        p, v = self.pred_net(next_hidden)
+
+        return next_hidden, p, v, predicted_reward
+    """
+
+# Training function implementation
+def implement_training_function():
+    return """
+    # Models
+    representation_model = RepresentationNet(num_in, num_hidden)
+    dynamics_model = DynamicsNet(num_hidden, num_actions)
+    prediction_model = PredictionNet(num_hidden, num_actions)
+
+    # Create the agent with the chosen search policy
+    agent = Agent(
+        sim_count=num_simulations,
+        act_count=num_actions,
+        rep_net=representation_model,
+        dyn_net=dynamics_model,
+        pred_net=prediction_model,
+        search_type=search_type,
+        disc_factor=0.99,
+        naive_len=3
+    )
+
+    mse_loss = nn.MSELoss()
+    optimizer = optim.Adam(agent.parameters(), lr=lr)
+
+    # Training loop
+    for episode in range(2000):
+        trajectory = runner.run(agent)
+        replay_buffer.add_trajectories([trajectory])
+
+        if len(replay_buffer) < 15:
+            continue
+
+        # Temperature scheduling
+        if episode < 250:
+           agent.temperature = 1
+        elif episode < 300:
+            agent.temperature = 0.75
+        elif episode < 400:
+            agent.temperature = 0.65
+        elif episode < 500:
+            agent.temperature = 0.55
+        elif episode < 600:
+            agent.temperature = 0.3
+        else:
+            agent.temperature = 0.25
+
+        # Compute the loss and update the model
+        for i in range(16):
+            optimizer.zero_grad()
+
+            data = replay_buffer.sample_batch(batch_size, k, n, discount=0.99)
+
+            representation_in = torch.stack(
+                [torch.flatten(data[i]["obs"]) for i in range(batch_size)]
+            ).to(device).to(dtype)
+
+            actions = np.stack([np.array(data[i]["actions"], dtype=np.int64)
+                                for i in range(batch_size)])
+            rewards_target = torch.stack([torch.tensor(data[i]["rewards"])
+                                          for i in range(batch_size)]).to(device).to(dtype)
+            policy_target = torch.stack([torch.stack(data[i]["pi"])
+                                         for i in range(batch_size)]).to(device).to(dtype)
+            value_target = torch.stack([torch.tensor(data[i]["return"])
+                                        for i in range(batch_size)]).to(device).to(dtype)
+
+            loss = torch.tensor(0).to(device).to(dtype)
+
+            # Initial step
+            state, p, v = agent.initial_step(representation_in)
+            policy_loss = mse_loss(p, policy_target[:, 0])
+            
+            value_loss = mse_loss(v, value_target[:, 0])
+            loss += (policy_loss + value_coef * value_loss) / 2
+
+            # k unroll steps
+            for step in range(1, k+1):
+                step_action = actions[:, step - 1]
+                state, p, v, rewards = agent.rollout_step(state, step_action)
+                
+
+                pol_loss = mse_loss(p, policy_target[:, step])
+                
+                val_loss = mse_loss(v, value_target[:, step])
+                rew_loss = mse_loss(rewards, rewards_target[:, step-1])
+
+                loss += (pol_loss + value_coef * val_loss + reward_coef * rew_loss) / k
+
+            loss.backward()
+            optimizer.step()
+
+        # Live plotting every so often
+        if (episode + 1) % 5 == 0:
+            clear_output(True)
+            plt.figure(figsize=(7,5))
+            plt.plot(runner.episode_returns, label=f'{search_type} returns')
+            plt.title(f'{search_type} - Episode {episode+1}')
+            plt.xlabel('Episode')
+            plt.ylabel('Return')
+            plt.legend()
+            plt.show()
+
+    return runner.episode_returns
+    """
+
+# Print all implementations
+if __name__ == "__main__":
+    print("BufferReplay.add_trajectories:")
+    print(implement_add_trajectories())
+    
+    print("\nRepresentationNet:")
+    print(implement_representation_net())
+    
+    print("\nDynamicsNet:")
+    print(implement_dynamics_net())
+    
+    print("\nPredictionNet:")
+    print(implement_prediction_net())
+    
+    print("\nMCTS.__init__:")
+    print(implement_mcts_init())
+    
+    print("\nMCTS.run:")
+    print(implement_mcts_run())
+    
+    print("\nMCTS._expand_node:")
+    print(implement_mcts_expand_node())
+    
+    print("\nMCTS._backpropagate:")
+    print(implement_mcts_backpropagate())
+    
+    print("\nMCTS._calc_ucb:")
+    print(implement_mcts_calc_ucb())
+    
+    print("\nMCTS._compute_pi:")
+    print(implement_mcts_compute_pi())
+    
+    print("\nnaive_depth_search:")
+    print(implement_naive_depth_search())
+    
+    print("\nAgent.inference:")
+    print(implement_agent_inference())
+    
+    print("\nAgent.initial_step:")
+    print(implement_agent_initial_step())
+    
+    print("\nAgent.rollout_step:")
+    print(implement_agent_rollout_step())
+    
+    print("\nTraining function:")
+    print(implement_training_function())
