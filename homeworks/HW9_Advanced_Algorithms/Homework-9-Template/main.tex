@@ -124,9 +124,9 @@ Solution for Homework [9]
 {\color{RoyalPurple} { \small By:} } \\
 \vspace{10pt}
 
-{\color{Blue} { \LARGE [Full Name] } } \\
+{\color{Blue} { \LARGE Taha Majlesi } } \\
 \vspace{5pt}
-{\color{RoyalBlue} { \Large [Student Number] } }
+{\color{RoyalBlue} { \Large 810101504 } }
 
 
 \vspace*{\fill}
@@ -1887,7 +1887,456 @@ def fisher_vector_product(policy, states, vector):
 \subsection{TRPO Algorithm[20-points]}
 \subsubsection{a)[10-points]} Provide complete TRPO algorithm with all implementation details.
 
+\textbf{Answer:}
+
+\textbf{Complete TRPO Algorithm:}
+
+\begin{verbatim}
+Algorithm: Trust Region Policy Optimization
+
+Hyperparameters:
+  - δ: KL divergence constraint (typical: 0.01)
+  - damping: CG damping coefficient (typical: 0.1)
+  - max_backtracks: Line search iterations (typical: 10)
+  - backtrack_coeff: Line search decay (typical: 0.8)
+
+for iteration = 1 to N do:
+    1. Collect Trajectories:
+       Run policy π_θ_old for T timesteps
+       Store states, actions, rewards
+
+    2. Compute Advantages:
+       Use GAE or Monte Carlo
+       A(s,a) = Q(s,a) - V(s)
+
+    3. Compute Surrogate Loss:
+       L(θ) = (1/T) Σ [π_θ(a|s)/π_θ_old(a|s)] * A(s,a)
+
+    4. Compute Policy Gradient:
+       g = ∇_θ L(θ)|_θ=θ_old
+
+    5. Compute Fisher-Vector Product Function:
+       Fvp(v) = ∇_θ [KL(π_θ_old || π_θ)]^T v|_θ=θ_old
+
+    6. Solve for Natural Gradient using Conjugate Gradient:
+       x = F^{-1} g where Fx ≈ g
+
+    7. Compute Full Step:
+       β = √(2δ / x^T F x)
+       θ_full = θ_old + β * x
+
+    8. Line Search (Backtracking):
+       for j = 0 to max_backtracks do:
+           θ_new = θ_old + (backtrack_coeff)^j * β * x
+
+           if L(θ_new) > 0 and KL(π_θ_old || π_θ_new) ≤ δ:
+               Accept θ_new
+               break
+
+       if no acceptable step found:
+           θ_new = θ_old
+
+    9. Update Value Function:
+       Fit V_φ to Monte Carlo returns using MSE
+
+    θ_old = θ_new
+end for
+\end{verbatim}
+
+\textbf{Detailed Implementation:}
+
+\begin{verbatim}
+class TRPOAgent:
+    def __init__(self, policy_net, value_net, max_kl=0.01, damping=0.1, 
+                 cg_iters=10, backtrack_iters=10, backtrack_coeff=0.8):
+        
+        self.policy = policy_net
+        self.value_function = value_net
+        self.max_kl = max_kl
+        self.damping = damping
+        self.cg_iters = cg_iters
+        self.backtrack_iters = backtrack_iters
+        self.backtrack_coeff = backtrack_coeff
+
+        self.value_optimizer = torch.optim.Adam(
+            self.value_function.parameters(), lr=1e-3
+        )
+
+    def select_action(self, state):
+        """Sample action from policy"""
+        state = torch.FloatTensor(state).unsqueeze(0)
+        with torch.no_grad():
+            probs = self.policy(state)
+            dist = Categorical(probs)
+            action = dist.sample()
+        return action.item()
+
+    def compute_advantages(self, states, rewards, dones, gamma=0.99, lam=0.95):
+        """Compute GAE advantages"""
+        with torch.no_grad():
+            values = self.value_function(states).squeeze()
+
+        advantages = []
+        gae = 0
+
+        for t in reversed(range(len(rewards))):
+            if t == len(rewards) - 1:
+                next_value = 0 if dones[t] else values[t]
+            else:
+                next_value = values[t + 1]
+
+            delta = rewards[t] + gamma * next_value * (1 - dones[t]) - values[t]
+            gae = delta + gamma * lam * (1 - dones[t]) * gae
+            advantages.insert(0, gae)
+
+        advantages = torch.FloatTensor(advantages)
+        returns = advantages + values
+
+        # Normalize advantages
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+
+        return advantages, returns
+
+    def surrogate_loss(self, states, actions, advantages, old_log_probs):
+        """Compute surrogate objective"""
+        probs = self.policy(states)
+        dist = Categorical(probs)
+        log_probs = dist.log_prob(actions)
+
+        # Importance sampling ratio
+        ratio = torch.exp(log_probs - old_log_probs)
+
+        # Surrogate loss
+        loss = (ratio * advantages).mean()
+
+        return loss
+
+    def kl_divergence(self, states, old_probs):
+        """Compute KL(old || new)"""
+        new_probs = self.policy(states)
+
+        # KL divergence
+        kl = (old_probs * (torch.log(old_probs) - torch.log(new_probs))).sum(dim=-1).mean()
+
+        return kl
+
+    def fisher_vector_product(self, states, vector, old_probs):
+        """Compute Fisher information matrix-vector product"""
+        # Compute KL divergence
+        kl = self.kl_divergence(states, old_probs)
+
+        # Compute gradient of KL w.r.t. parameters
+        grads = torch.autograd.grad(kl, self.policy.parameters(), create_graph=True)
+        flat_grad_kl = torch.cat([grad.view(-1) for grad in grads])
+
+        # Compute gradient-vector product
+        kl_v = (flat_grad_kl * vector).sum()
+
+        # Compute gradient of the gradient-vector product (Hessian-vector product)
+        grads = torch.autograd.grad(kl_v, self.policy.parameters())
+        flat_grad_grad_kl = torch.cat([grad.contiguous().view(-1) for grad in grads])
+
+        return flat_grad_grad_kl + vector * self.damping
+
+    def conjugate_gradient(self, fvp_fn, b):
+        """Solve Fx = b using conjugate gradient"""
+        x = torch.zeros_like(b)
+        r = b.clone()
+        p = b.clone()
+        rdotr = torch.dot(r, r)
+
+        for i in range(self.cg_iters):
+            Ap = fvp_fn(p)
+            alpha = rdotr / torch.dot(p, Ap)
+            x += alpha * p
+            r -= alpha * Ap
+            new_rdotr = torch.dot(r, r)
+
+            if new_rdotr < 1e-10:
+                break
+
+            beta = new_rdotr / rdotr
+            p = r + beta * p
+            rdotr = new_rdotr
+
+        return x
+
+    def line_search(self, states, actions, advantages, old_log_probs, old_probs,
+                    full_step, expected_improve):
+        """Backtracking line search to ensure improvement and KL constraint"""
+        # Flatten parameters
+        old_params = torch.cat([param.view(-1) for param in self.policy.parameters()])
+
+        # Compute old loss
+        old_loss = self.surrogate_loss(states, actions, advantages, old_log_probs)
+
+        for i in range(self.backtrack_iters):
+            # Compute new parameters
+            step_frac = self.backtrack_coeff ** i
+            new_params = old_params + step_frac * full_step
+
+            # Update policy parameters
+            offset = 0
+            for param in self.policy.parameters():
+                numel = param.numel()
+                param.data.copy_(new_params[offset:offset+numel].view_as(param))
+                offset += numel
+
+            # Compute new loss and KL
+            new_loss = self.surrogate_loss(states, actions, advantages, old_log_probs)
+            kl = self.kl_divergence(states, old_probs)
+
+            # Check improvement and KL constraint
+            actual_improve = new_loss - old_loss
+            expected_improve_frac = expected_improve * step_frac
+            improve_ratio = actual_improve / expected_improve_frac
+
+            if improve_ratio > 0.1 and kl <= self.max_kl:
+                return True
+
+        # Restore old parameters if no good step found
+        offset = 0
+        for param in self.policy.parameters():
+            numel = param.numel()
+            param.data.copy_(old_params[offset:offset+numel].view_as(param))
+            offset += numel
+
+        return False
+
+    def train_step(self, states, actions, rewards, dones):
+        """Perform one TRPO update"""
+        # Convert to tensors
+        states = torch.FloatTensor(states)
+        actions = torch.LongTensor(actions)
+
+        # Compute advantages
+        advantages, returns = self.compute_advantages(states, rewards, dones)
+
+        # Get old policy distribution
+        with torch.no_grad():
+            old_probs = self.policy(states)
+            dist = Categorical(old_probs)
+            old_log_probs = dist.log_prob(actions)
+
+        # Compute policy gradient
+        loss = self.surrogate_loss(states, actions, advantages, old_log_probs)
+        grads = torch.autograd.grad(loss, self.policy.parameters())
+        policy_gradient = torch.cat([grad.view(-1) for grad in grads])
+
+        # Compute Fisher-vector product function
+        def fvp(v):
+            return self.fisher_vector_product(states, v, old_probs)
+
+        # Solve F * step_dir = g using conjugate gradient
+        step_dir = self.conjugate_gradient(fvp, policy_gradient)
+
+        # Compute full step
+        shs = 0.5 * torch.dot(step_dir, fvp(step_dir))
+        lm = torch.sqrt(2 * self.max_kl / shs)
+        full_step = lm * step_dir
+
+        # Expected improvement
+        expected_improve = torch.dot(policy_gradient, full_step)
+
+        # Perform line search
+        success = self.line_search(
+            states, actions, advantages, old_log_probs, old_probs,
+            full_step, expected_improve
+        )
+
+        # Update value function
+        for _ in range(5):
+            value_loss = ((self.value_function(states).squeeze() - returns) ** 2).mean()
+            self.value_optimizer.zero_grad()
+            value_loss.backward()
+            self.value_optimizer.step()
+
+        return {
+            'policy_loss': loss.item(),
+            'value_loss': value_loss.item(),
+            'kl': self.kl_divergence(states, old_probs).item(),
+            'line_search_success': success
+        }
+\end{verbatim}
+
+\textbf{Key Implementation Details:}
+
+\textbf{1. Conjugate Gradient Stability:}
+\begin{verbatim}
+# Add damping to Fisher matrix for numerical stability
+Fvp(v) = F*v + damping*v
+\end{verbatim}
+
+\textbf{2. Line Search Criteria:}
+\begin{verbatim}
+# Accept step if:
+# 1. Improves objective by at least 10% of expected
+# 2. Satisfies KL constraint
+if improve_ratio > 0.1 and kl <= max_kl:
+    accept_step()
+\end{verbatim}
+
+\textbf{3. GAE for Advantage Estimation:}
+\begin{verbatim}
+# Generalized Advantage Estimation reduces variance
+A_t = δ_t + (γλ)δ_{t+1} + (γλ)²δ_{t+2} + ...
+where δ_t = r_t + γV(s_{t+1}) - V(s_t)
+\end{verbatim}
+
+\textbf{Hyperparameter Guidelines:}
+\begin{verbatim}
+TRPO_CONFIG = {
+    'max_kl': 0.01,        # Larger = faster but less stable
+    'damping': 0.1,         # CG numerical stability
+    'cg_iters': 10,         # More = more accurate natural gradient
+    'backtrack_iters': 10,  # Line search attempts
+    'backtrack_coeff': 0.8, # Step size decay rate
+    'gamma': 0.99,          # Discount factor
+    'lam': 0.95,            # GAE lambda
+}
+\end{verbatim}
+
 \subsubsection{b)[10-points]} Implement the conjugate gradient method for computing natural gradients.
+
+\textbf{Answer:}
+
+\textbf{Conjugate Gradient Implementation:}
+
+\begin{verbatim}
+def conjugate_gradient(Fvp, b, num_iterations=10, tolerance=1e-10):
+    """
+    Solve Fx = b using conjugate gradient method
+    
+    Args:
+        Fvp: Function computing Fisher-vector product F * v
+        b: Right-hand side vector (policy gradient)
+        num_iterations: Maximum number of iterations
+        tolerance: Convergence tolerance
+    
+    Returns:
+        x: Solution to Fx = b
+    """
+    x = torch.zeros_like(b)
+    r = b.clone()  # Residual
+    p = b.clone()  # Search direction
+    rdotr = torch.dot(r, r)
+    
+    for i in range(num_iterations):
+        # Compute F * p
+        Ap = Fvp(p)
+        
+        # Compute step size
+        alpha = rdotr / torch.dot(p, Ap)
+        
+        # Update solution
+        x += alpha * p
+        
+        # Update residual
+        r -= alpha * Ap
+        
+        # Check convergence
+        new_rdotr = torch.dot(r, r)
+        if new_rdotr < tolerance:
+            break
+        
+        # Compute new search direction
+        beta = new_rdotr / rdotr
+        p = r + beta * p
+        rdotr = new_rdotr
+    
+    return x
+\end{verbatim}
+
+\textbf{Mathematical Background:}
+
+The conjugate gradient method solves the linear system $Fx = b$ iteratively:
+
+\begin{enumerate}
+\item \textbf{Initialize:} $x_0 = 0$, $r_0 = b$, $p_0 = b$
+\item \textbf{For k = 0, 1, 2, ...:}
+\begin{align}
+\alpha_k &= \frac{r_k^T r_k}{p_k^T F p_k} \\
+x_{k+1} &= x_k + \alpha_k p_k \\
+r_{k+1} &= r_k - \alpha_k F p_k \\
+\beta_k &= \frac{r_{k+1}^T r_{k+1}}{r_k^T r_k} \\
+p_{k+1} &= r_{k+1} + \beta_k p_k
+\end{align}
+\end{enumerate}
+
+\textbf{Key Properties:}
+
+\textbf{1. Convergence:}
+\begin{itemize}
+\item Guaranteed to converge in at most n iterations (where n is dimension)
+\item Typically converges much faster in practice
+\item Convergence rate depends on condition number of F
+\end{itemize}
+
+\textbf{2. Memory Efficiency:}
+\begin{itemize}
+\item Only requires matrix-vector products, not full matrix
+\item Memory usage: O(n) instead of O(n²)
+\item Perfect for large neural networks
+\end{itemize}
+
+\textbf{3. Numerical Stability:}
+\begin{itemize}
+\item Add damping: $F_{\text{damped}} = F + \lambda I$
+\item Prevents numerical issues with ill-conditioned F
+\item Typical damping: $\lambda = 0.1$
+\end{itemize}
+
+\textbf{Complete Natural Gradient Computation:}
+
+\begin{verbatim}
+def compute_natural_gradient(policy, states, advantages, old_log_probs, 
+                           damping=0.1, cg_iters=10):
+    """
+    Compute natural gradient using conjugate gradient
+    
+    Args:
+        policy: Policy network
+        states: Batch of states
+        advantages: Computed advantages
+        old_log_probs: Log probabilities from old policy
+        damping: Damping coefficient for Fisher matrix
+        cg_iters: Number of conjugate gradient iterations
+    
+    Returns:
+        natural_grad: Natural gradient direction
+    """
+    # Compute policy gradient
+    loss = surrogate_loss(policy, states, advantages, old_log_probs)
+    grads = torch.autograd.grad(loss, policy.parameters())
+    policy_gradient = torch.cat([grad.view(-1) for grad in grads])
+    
+    # Define Fisher-vector product function
+    def Fvp(v):
+        return fisher_vector_product(policy, states, v, old_probs) + damping * v
+    
+    # Solve F * natural_grad = policy_gradient
+    natural_grad = conjugate_gradient(Fvp, policy_gradient, cg_iters)
+    
+    return natural_grad
+\end{verbatim}
+
+\textbf{Advantages over Direct Inversion:}
+
+\begin{itemize}
+\item \textbf{Scalability:} Works with millions of parameters
+\item \textbf{Efficiency:} O(kn) instead of O(n³) for inversion
+\item \textbf{Stability:} Numerically stable with damping
+\item \textbf{Flexibility:} Can adjust accuracy vs speed trade-off
+\end{itemize}
+
+\textbf{Practical Considerations:}
+
+\begin{itemize}
+\item \textbf{Iterations:} 10-20 iterations usually sufficient
+\item \textbf{Tolerance:} 1e-10 for high precision, 1e-6 for speed
+\item \textbf{Damping:} Start with 0.1, adjust based on convergence
+\item \textbf{Monitoring:} Track residual norm to check convergence
+\end{itemize}
 
 \noindent\rule{\textwidth}{0.2pt}
 }}
