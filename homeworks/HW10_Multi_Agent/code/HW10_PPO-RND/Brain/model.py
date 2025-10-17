@@ -24,7 +24,7 @@ class PolicyModel(nn.Module, ABC):
         self.conv = nn.Sequential(
             nn.Conv2d(c, 32, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.Flatten()
+            nn.Flatten(),
         )
         flatten_size = 32 * 7 * 7
 
@@ -48,7 +48,7 @@ class PolicyModel(nn.Module, ABC):
         if inputs.ndim == 5:
             inputs = inputs.squeeze(1)
 
-        x = inputs / 255.
+        x = inputs / 255.0
         x = self.conv(x)
         x = F.relu(self.fc1(x))
         h = self.gru(x, hidden_state)
@@ -74,19 +74,19 @@ class TargetModel(nn.Module, ABC):
         # Define 3 convolutional layers followed by a fully connected layer.
         # The output should be a 512-dimensional encoded feature vector.
         c, w, h = state_shape
-        
+
         # Convolutional layers
         self.conv1 = nn.Conv2d(c, 32, kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
-        
+
         # Calculate flattened size after convolutions
         # For MiniGrid 7x7: 128 * 7 * 7 = 6272
         flatten_size = 128 * w * h
-        
+
         # Fully connected layer to 512 features
         self.encoded_features = nn.Linear(flatten_size, 512)
-        
+
         self._init_weights()  # Call this after defining layers
 
     def _init_weights(self):
@@ -104,16 +104,16 @@ class TargetModel(nn.Module, ABC):
         # Normalize input, pass through conv layers, flatten, and return encoded features.
         # Normalize input to [0, 1] range
         x = inputs / 255.0
-        
+
         # Pass through convolutional layers with ReLU activations
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
-        
+
         # Flatten and pass through fully connected layer
         x = x.view(x.size(0), -1)  # Flatten
         encoded_features = self.encoded_features(x)
-        
+
         return encoded_features
 
 
@@ -126,19 +126,19 @@ class PredictorModel(nn.Module, ABC):
         # and then include 1 or 2 additional linear layers.
         # End with a layer that outputs a 512-dim feature vector (same as TargetModel).
         c, w, h = state_shape
-        
+
         # Convolutional layers (same as TargetModel)
         self.conv1 = nn.Conv2d(c, 32, kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
-        
+
         # Calculate flattened size after convolutions
         flatten_size = 128 * w * h
-        
+
         # Additional fully connected layers for prediction
         self.fc1 = nn.Linear(flatten_size, 512)
         self.fc2 = nn.Linear(512, 512)
-        
+
         self._init_weights()  # Call this after defining layers
 
     def _init_weights(self):
@@ -160,15 +160,15 @@ class PredictorModel(nn.Module, ABC):
         # Normalize input, pass through conv layers and extra FC layers, then return final encoded vector.
         # Normalize input to [0, 1] range
         x = inputs / 255.0
-        
+
         # Pass through convolutional layers with ReLU activations
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
-        
+
         # Flatten and pass through fully connected layers
         x = x.view(x.size(0), -1)  # Flatten
         x = F.relu(self.fc1(x))
         encoded_features = self.fc2(x)
-        
+
         return encoded_features

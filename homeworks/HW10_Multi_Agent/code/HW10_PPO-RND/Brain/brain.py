@@ -9,13 +9,16 @@ from Common.utils import mean_of_list, RunningMeanStd
 
 torch.backends.cudnn.benchmark = True  # Optional performance boost for CNNs
 
+
 class Brain:
     def __init__(self, **config):
         self.config = config
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # --- Models ---
-        self.current_policy = PolicyModel(config["state_shape"], config["n_actions"]).to(self.device)
+        self.current_policy = PolicyModel(
+            config["state_shape"], config["n_actions"]
+        ).to(self.device)
         self.predictor_model = PredictorModel(config["obs_shape"]).to(self.device)
         self.target_model = TargetModel(config["obs_shape"]).to(self.device)
         for param in self.target_model.parameters():
@@ -23,8 +26,9 @@ class Brain:
 
         # --- Optimizer ---
         self.optimizer = Adam(
-            list(self.current_policy.parameters()) + list(self.predictor_model.parameters()),
-            lr=config["lr"]
+            list(self.current_policy.parameters())
+            + list(self.predictor_model.parameters()),
+            lr=config["lr"],
         )
 
         # --- Normalization buffers ---
@@ -36,18 +40,26 @@ class Brain:
         obs_tensor = obs_tensor.to(self.device)
         hidden_state = hidden_state.to(self.device)
         with torch.no_grad():
-            dist, int_val, ext_val, probs, new_hidden = self.current_policy(obs_tensor, hidden_state)
+            dist, int_val, ext_val, probs, new_hidden = self.current_policy(
+                obs_tensor, hidden_state
+            )
             action = dist.sample()
             log_prob = dist.log_prob(action)
-        return action.cpu(), int_val.cpu(), ext_val.cpu(), log_prob.cpu(), probs.cpu(), new_hidden.cpu()
+        return (
+            action.cpu(),
+            int_val.cpu(),
+            ext_val.cpu(),
+            log_prob.cpu(),
+            probs.cpu(),
+            new_hidden.cpu(),
+        )
 
     def calculate_int_rewards(self, next_obs, batch=True):
         if not batch:
             next_obs = np.expand_dims(next_obs, axis=0)
 
         norm_obs = np.clip(
-            (next_obs - self.state_rms.mean) / (self.state_rms.var ** 0.5),
-            -5, 5
+            (next_obs - self.state_rms.mean) / (self.state_rms.var**0.5), -5, 5
         ).astype(np.float32)
 
         norm_obs = torch.tensor(norm_obs).to(self.device)
@@ -56,17 +68,17 @@ class Brain:
         # Use predictor_model and target_model to extract features
         # Compute squared error (MSE) between predicted and target features
         # Take mean over feature dimension (dim=1)
-        
+
         with torch.no_grad():
             # Get target features (fixed random network)
             target_features = self.target_model(norm_obs)
-            
+
             # Get predicted features (trainable predictor)
             pred_features = self.predictor_model(norm_obs)
-            
+
             # Compute prediction error (squared difference)
             prediction_error = torch.mean((pred_features - target_features) ** 2, dim=1)
-            
+
             # Convert to numpy array
             int_reward = prediction_error.cpu().numpy()
 
@@ -102,16 +114,41 @@ class Brain:
         return np.array(advantages)
 
     @mean_of_list
-    def train(self, states, actions, int_rewards, ext_rewards, dones,
-              int_values, ext_values, log_probs, next_int_values,
-              next_ext_values, total_next_obs, hidden_states):
+    def train(
+        self,
+        states,
+        actions,
+        int_rewards,
+        ext_rewards,
+        dones,
+        int_values,
+        ext_values,
+        log_probs,
+        next_int_values,
+        next_ext_values,
+        total_next_obs,
+        hidden_states,
+    ):
 
         # --- Advantage Calculation ---
-        int_returns = self.get_gae([int_rewards], [int_values], [next_int_values], [np.zeros_like(dones)], self.config["int_gamma"])[0]
-        ext_returns = self.get_gae([ext_rewards], [ext_values], [next_ext_values], [dones], self.config["ext_gamma"])[0]
+        int_returns = self.get_gae(
+            [int_rewards],
+            [int_values],
+            [next_int_values],
+            [np.zeros_like(dones)],
+            self.config["int_gamma"],
+        )[0]
+        ext_returns = self.get_gae(
+            [ext_rewards],
+            [ext_values],
+            [next_ext_values],
+            [dones],
+            self.config["ext_gamma"],
+        )[0]
 
-        advs = (ext_returns - ext_values) * self.config["ext_adv_coeff"] + \
-               (int_returns - int_values) * self.config["int_adv_coeff"]
+        advs = (ext_returns - ext_values) * self.config["ext_adv_coeff"] + (
+            int_returns - int_values
+        ) * self.config["int_adv_coeff"]
 
         advs = torch.tensor(advs, dtype=torch.float32, device=self.device)
         ext_returns = torch.tensor(ext_returns, dtype=torch.float32, device=self.device)
@@ -125,7 +162,13 @@ class Brain:
         next_obs = torch.tensor(total_next_obs, dtype=torch.float32).to(self.device)
 
         # --- PPO Training ---
-        pg_losses, ext_v_losses, int_v_losses, rnd_losses, entropies = [], [], [], [], []
+        pg_losses, ext_v_losses, int_v_losses, rnd_losses, entropies = (
+            [],
+            [],
+            [],
+            [],
+            [],
+        )
 
         for _ in range(self.config["n_epochs"]):
             dist, int_val, ext_val, _, _ = self.current_policy(states, hidden_states)
@@ -135,7 +178,12 @@ class Brain:
 
             # PPO objective
             surr1 = ratio * advs
-            surr2 = torch.clamp(ratio, 1 - self.config["clip_range"], 1 + self.config["clip_range"]) * advs
+            surr2 = (
+                torch.clamp(
+                    ratio, 1 - self.config["clip_range"], 1 + self.config["clip_range"]
+                )
+                * advs
+            )
             pg_loss = -torch.min(surr1, surr2).mean()
 
             # Value losses
@@ -150,7 +198,9 @@ class Brain:
             loss = pg_loss + critic_loss + rnd_loss - self.config["ent_coeff"] * entropy
             self.optimizer.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.current_policy.parameters(), self.config["max_grad_norm"])
+            torch.nn.utils.clip_grad_norm_(
+                self.current_policy.parameters(), self.config["max_grad_norm"]
+            )
             self.optimizer.step()
 
             # Logging
@@ -160,31 +210,41 @@ class Brain:
             rnd_losses.append(rnd_loss.item())
             entropies.append(entropy.item())
 
-        return pg_losses, ext_v_losses, int_v_losses, rnd_losses, entropies, int_values, int_returns, ext_values, ext_returns
+        return (
+            pg_losses,
+            ext_v_losses,
+            int_v_losses,
+            rnd_losses,
+            entropies,
+            int_values,
+            int_returns,
+            ext_values,
+            ext_returns,
+        )
 
     def calculate_rnd_loss(self, obs):
         # === TODO: RND Loss Computation ===
         # Use predictor_model and target_model on obs to compute prediction error
         # Compute squared error, apply dropout mask using config["predictor_proportion"]
         # Reduce the loss to a scalar value
-        
+
         # Get target features (fixed random network)
         target = self.target_model(obs)
-        
+
         # Get predicted features (trainable predictor)
         pred = self.predictor_model(obs)
-        
+
         # Compute squared error between predicted and target features
         loss = (pred - target) ** 2
-        
+
         # Apply dropout mask using predictor_proportion
         # This randomly selects a fraction of features to train on each batch
         mask = torch.rand_like(loss) < self.config["predictor_proportion"]
         masked_loss = loss * mask.float()
-        
+
         # Reduce to scalar loss (mean over all dimensions)
         final_loss = masked_loss.mean()
-        
+
         return final_loss
 
     def set_from_checkpoint(self, checkpoint):
