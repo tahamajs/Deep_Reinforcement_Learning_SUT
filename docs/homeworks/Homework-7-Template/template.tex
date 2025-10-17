@@ -1,0 +1,488 @@
+\documentclass[12pt]{article}
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=1.5cm, right=1.5cm]{geometry}
+\usepackage{amsmath, amsfonts, amssymb, mathtools}
+\usepackage{fancyhdr, setspace, parskip}
+\usepackage{graphicx, caption, subfig, array, multirow}
+\usepackage{hyperref, enumitem, cancel}
+\usepackage[T1]{fontenc}
+\usepackage{tgtermes}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tocloft}
+\usepackage{titlesec}
+\usepackage{lipsum}  
+
+\definecolor{DarkBlue}{RGB}{10, 0, 80}
+
+% Hyperlink setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=DarkBlue,
+    filecolor=BrickRed,      
+    urlcolor=RoyalBlue,
+}
+
+
+% Header and footer customization
+\fancyhead{}
+\fancyhead[L]{
+{\fontfamily{lmss}{\color{DarkBlue}
+\textbf{\leftmark}
+}}
+}
+\fancyhead[R]{
+{\fontfamily{ppl}\selectfont {\color{DarkBlue}
+{Deep RL Course [Spring 2025]}
+}}
+}
+
+\fancyfoot{}
+\fancyfoot[C]{
+{\fontfamily{lmss}{\color{BrickRed}
+\textbf{\thepage}
+}}
+}
+
+\renewcommand{\sectionmark}[1]{ \markboth{\thesection\quad #1}{} }
+
+\renewcommand{\headrule}{{\color{BrickRed}\hrule width\headwidth height 0.5pt}}
+\renewcommand{\footrulewidth}{0pt}
+
+
+% Table of Contents customizations
+\renewcommand{\cftsecafterpnum}{\vskip6pt}
+\renewcommand{\cftsubsecafterpnum}{\vskip3pt}
+\renewcommand{\cftsubsubsecafterpnum}{\vskip3pt}
+\renewcommand{\cftsecfont}{\sffamily\large}
+\renewcommand{\cftsubsecfont}{\sffamily}
+\renewcommand{\cftsubsubsecfont}{\sffamily}
+% \renewcommand{\cftsecdotsep}{1}
+\renewcommand{\cftsubsecdotsep}{1}
+\renewcommand{\cftsubsubsecdotsep}{1}
+
+
+% Section title styles
+\titleformat*{\section}{\LARGE\bfseries\color{DarkBlue}}
+\titleformat*{\subsection}{\Large\bfseries\color{DarkBlue}}
+\titleformat*{\subsubsection}{\large\bfseries\color{DarkBlue}}
+
+\definecolor{light-gray}{gray}{0.95}
+\newcommand{\code}[1]{\colorbox{light-gray}{\texttt{#1}}}
+
+% Start of the document
+\pagestyle{fancy}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\pagenumbering{gobble}
+\thispagestyle{plain}
+
+\begin{center}
+
+\vspace*{-1.5cm}
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.7\linewidth]{figs/cover-std.png}
+\end{figure}
+
+{
+\fontfamily{ppl}
+
+{\color{DarkBlue} {\fontsize{30}{50} \textbf{
+Deep Reinforcement Learning
+}}}
+
+{\color{DarkBlue} {\Large
+Professor Mohammad Hossein Rohban
+}}
+}
+
+
+\vspace{20pt}
+
+{
+\fontfamily{lmss}
+
+
+{\color{RedOrange}
+{\Large
+Homework 7:
+}\\
+}
+{\color{BrickRed}
+\rule{12cm}{0.5pt}
+
+{\Huge
+Value-Based Theory
+}
+\rule{12cm}{0.5pt}
+}
+
+\vspace{10pt}
+
+{\color{RoyalPurple} { \small By:} } \\
+\vspace{10pt}
+
+{\color{Blue} { \LARGE [Full Name] } } \\
+\vspace{5pt}
+{\color{RoyalBlue} { \Large [Student Number] } }
+
+
+\vspace*{\fill}
+\begin{center}
+\begin{tabular}{ccc}
+    \includegraphics[width=0.14\linewidth]{figs/sharif-logo.png} & \includegraphics[width=0.14\linewidth]{figs/riml-logo.png} & \includegraphics[width=0.14\linewidth]{figs/dlr-logo.png} \\
+\end{tabular}
+\end{center}
+
+
+\vspace*{-.25cm}
+
+{\color{YellowOrange} {
+\rule{10cm}{0.5pt} \\
+\vspace{2pt}
+\large Spring 2025}
+}}
+\vspace*{-1cm}
+
+\end{center}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+\thispagestyle{plain}
+{\fontfamily{lmss}\selectfont {\color{BrickRed} \textbf{\tableofcontents} }}
+
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+
+\subsection*{Grading}
+
+The grading will be based on the following criteria, with a total of 100 points:
+
+\[
+\begin{array}{|l|l|}
+\hline
+\textbf{Section} & \textbf{Points} \\
+\hline
+\text{Positive Rewards} & 15 \\
+ \text{General Rewards} & 10 \\
+\text{Policy Turn} & 25 \\
+% \hline
+% \text{Clarity and Quality of Code} & 5 \\
+% \text{Clarity and Quality of Report} & 5 \\
+\hline
+\text{Bellman Operators} & 15 \\
+\text{Bellman Residuals} & 35 \\
+\hline
+\text{Bonus 1: Writing your report in Latex} & 5 \\
+\text{Bonus 2: Question 2.2.11} & 5 \\
+\hline
+\end{array}
+\]
+
+}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+\pagenumbering{arabic}
+
+
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+
+\section{Iteration Family}
+Let \( M = (S, A, R, P, \gamma) \) be a finite MDP with \( |S| < \infty \), \( |A| < \infty \), bounded rewards \( |R(s,a)| \leq R_{\text{max}} \ \forall (s,a) \), and discount factor \( \gamma \in [0, 1) \).
+In this section, we will first explore an alternative proof approach for the value iteration algorithm, then we cover policy iteration which is discussed in the class more precisely.
+
+\subsection{Positive Rewards}
+Assume \( R(s, a) \geq 0 \) for all \( s, a \).
+\begin{enumerate}
+    \item  
+    Derive an upper bound for the optimal \( k \)-step value function \( V_k^* \).
+
+    \item
+    Prove \( V_k^* \) is non-decreasing in \( k \). Giving a policy \( \pi \) such that:
+    \[
+    V_{k+1}^\pi \geq V_k^*.
+    \]
+    Use this to show convergence of Value Iteration to a solution satisfying the Bellman equation.
+
+    \item  
+    By taking the limit in the Bellman equation, prove that the \( V^* \) is optimal.
+ \end{enumerate}
+   \subsection{General Rewards}
+   
+    Remove the non-negativity constraint on \( R(s, a) \). Assume no terminating states exist.
+    Consider a new MDP defined by adding a constant reward \( r_0 \) to all rewards of the current MDP. That is, for all \( (s, a) \), the new reward is:
+\[
+\hat{R}(s, a) = R(s, a) + r_0
+\]
+    % Define a new MDP \( \hat{M} \) with rewards \( \hat{R}(s, a) = R(s, a) + \epsilon \)
+    
+    \begin{enumerate}[resume*]
+      
+        \item 
+        By deriving the optimal action and \( V^*_k \) in terms of the original MDP’s values and $r_0$, show that Value Iteration still converges to the optimal value function \( V^* \) (and optimal policy) of the original MDP even if rewards are negative. Also compute the new value \( V^* \).  
+  %        Show that Value Iteration still converges to the optimal value function \( V^* \) (and optimal policy) of the original MDP even if rewards are negative, by choosing an appropriate value of \( r_0 \).
+  % Derive the optimal value function \( \hat{V}^* \) in terms of the original \( V^* \) and \( r_0 \).
+  
+        % Show Value Iteration converges to \( \hat{V}^* \) in \( \hat{M} \).
+        % \item Express \( \hat{V}^* \) in terms of \( V^* \) and \( \epsilon \).
+   
+
+    \item  
+    Why is it necessary to assume the absence of a terminating state? Try to explain with a counterexample.  
+\end{enumerate}
+
+
+% \lipsum[1-2]
+
+\subsection{Policy Turn}
+In this part we want to dive into the mathematical proof of policy iteration.
+\begin{enumerate}[resume*]
+\item Let \( \pi_k \) be the policy at iteration \( k \). Prove the following:
+    \[
+    V^{\pi_{k+1}}(s) \geq V^{\pi_k}(s) \quad \forall s \in S,
+    \]
+    with strict inequality for at least one state unless \( \pi_k \) is already optimal. Use the definition of the greedy policy and explain why policy improvement leads to a better or equal value function.
+
+    \item Prove that Policy Iteration always converges to the optimal policy in a finite MDP. Specifically, show that after a finite number of policy evaluations and improvements, the algorithm reaches a policy \( \pi^* \) that satisfies the Bellman optimality equation.  
+    You may use theorems discussed in class, but if a result was not proven, please provide a full justification.
+    
+\item Prove that Value Iteration and Policy Iteration both converge to the same optimal value function \( V^* \), even if the policies may differ. How the policies are still optimal despite possible differences?
+
+    \item Compare and contrast the computational cost of one step of Policy Iteration (i.e., full Policy Evaluation + Policy Improvement) versus one iteration of Value Iteration.  
+    % Discuss in which scenarios each algorithm may be preferable in practice.
+
+    \item In the context of a (MDP) with an infinite horizon, when the discount factor \( \gamma = 1 \), analyze how both Value Iteration and Policy Iteration behave.
+    %     \item The MDP has a finite horizon
+    % \end{itemize}
+    % What challenges arise in this setting, and how does it differ from the discounted case?
+
+% \item Let \( \pi_k \) be the policy at iteration \( k \). Prove that:  
+% \[
+% V^{\pi_{k+1}}(s) \geq V^{\pi_k}(s) \quad \forall s \in S,
+% \]  
+% with strict inequality unless \( \pi_k \) is optimal.
+
+% \item Show that Policy Iteration terminates after finite number of iterations and the final policy \( \pi^* \) satisfies the Bellman optimality equation.   
+
+% \item Prove that Value Iteration and Policy Iteration converge to the same \( V^* \), even if their policies differ.  
+
+% \item Prove that Policy Iteration converges to the optimal policy in a finite MDP. Specifically, prove that after a finite number of policy evaluations and improvements, the algorithm will converge to a policy that satisfies the Bellman optimality equation.
+
+% \item Compare and contrast computational cost of Policy Evaluation vs. Value Iteration.
+
+
+% Show that if both algorithms are applied to the same MDP, they will converge to the same optimal value function \( V^* \) and an optimal policy (Which is not necessary the same. ) \( \pi^* \).
+
+
+% \item What happens if $\gamma =1$ (undiscounted case) in both case of Horizen infinite or finite?
+
+
+
+
+
+
+
+% \item 
+% Let \( \hat{M} = (S, A, \hat{R}, P, \gamma) \), where \( |\hat{R}(s, a) - R(s, a)| \leq \epsilon \) for all \( s \in S \) and \( a \in A \). Besides the rewards, all other components of \( \hat{M} \) stay the same as in \( M \). Prove that 
+
+% \[
+% V^* - \hat{V}^* \leq \frac{\epsilon}{1 - \gamma}.
+% \]
+
+% Will \( M \) and \( \hat{M} \) have the same optimal policy? 
+
+% \item 
+% Now, let $\hat{M} = (S, A, \hat{R}, P, \gamma)$ where $\hat{R}(s, a) - R(s, a) = \epsilon$ for all $s \in S$ and $a \in A$ for some constant $\epsilon$. How are $V^*$ and $\hat{V}^*$ related? Express $\hat{V}^*$ in terms of $V^*$. Will $M$ and $\hat{M}$ have the same optimal policy? 
+
+
+% \lipsum[1-2]
+\end{enumerate}
+
+
+% \lipsum[1-2]
+
+% \subsection{Section 2}
+
+% % \lipsum[1-2]
+ 
+
+
+% \subsubsection{SubSection 1}
+
+% \lipsum[1-2]
+
+}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+
+\section{Bellman or Bellwoman}
+\cite{CS234} Recall that a value function is a $|S|$-dimensional vector where $|S|$ is the number of states of the MDP. When we use the term $V$ in these expressions as an “arbitrary value function”, we mean that $V$ is an arbitrary $|S|$-dimensional vector which need not be aligned with the definition of the MDP at all. On the other hand, $V^{\pi}$ is a value function that is achieved by some policy $\pi$ in the MDP. For example, say the MDP has 2 states and only negative immediate rewards. $V = [1, 1]$ would be a valid choice for $V$ even though this value function can never be achieved by any policy $\pi$, but we can never have a $V^{\pi} = [1, 1]$. This distinction between $V$ and $V^{\pi}$ is important for this question and more broadly in reinforcement learning.
+\subsection{Bellman Operators}
+In the first part of this problem, we will explore some general and useful properties of the Bellman backup operator. We know that the Bellman backup operator $B$, defined below, is a contraction with the fixed point as $V^{\ast}$, the optimal value function of the MDP. The symbols have their usual meanings. $\gamma$ is the discount factor and $0 \leq \gamma < 1$. In all parts, $\|v\| = \max_s |v(s)|$ is the infinity norm of the vector.
+
+\[
+(BV)(s) = \max_a \left[ r(s, a) + \gamma \sum_{s' \in S} p(s'|s, a)V(s') \right]
+\]
+
+We also saw the contraction operator $B^{\pi}$ with the fixed point $V^{\pi}$, which is the Bellman backup operator for a particular policy given below:
+
+\[
+(B^{\pi}V)(s) = r(s, \pi(s)) + \gamma \sum_{s' \in S} p(s'|s, \pi(s))V(s')
+\]
+
+In this case, we’ll assume $\pi$ is deterministic, but it doesn’t have to be in general. You have seen that $\|BV - BV'\| \leq \gamma \|V - V'\|$ for two arbitrary value functions $V$ and $V'$.
+
+\begin{enumerate}[]
+    \item Show that the analogous inequality, $\|B^{\pi}V - B^{\pi}V'\| \leq \gamma \|V - V'\|$, holds. 
+    % \hfill [3 pts]
+    
+    \item Prove that the fixed point for $B^{\pi}$ is unique. Recall that the fixed point is defined as $V$ satisfying $V = B^{\pi}V$. You may assume that a fixed point exists. 
+    % \textit{Hint: Consider proof by contradiction.} \hfill [3 pts]
+    
+    \item Suppose that $V$ and $V'$ are vectors satisfying $V(s) \leq V'(s)$ for all $s$. Show that $B^{\pi}V(s) \leq B^{\pi}V'(s)$ for all $s$. 
+    \textit{Note: all of these inequalities are elementwise.} 
+    
+    % \hfill [3 pts]
+\end{enumerate}
+
+\subsection{Bellman Residuals} 
+We can extract a greedy policy $\pi$ from an arbitrary value function $V$ using the equation below:
+
+\[
+\pi(s) = \arg\max_a \left[ r(s, a) + \gamma \sum_{s' \in S} p(s'|s, a)V(s') \right]
+\]
+
+It is often helpful to know what the performance will be if we extract a greedy policy from an arbitrary value function. To see this, we introduce the notion of a Bellman residual.
+
+Define the Bellman residual to be $(BV - V)$ and the Bellman error magnitude to be $\|BV - V\|$.
+
+\begin{enumerate}[resume*]
+    \item For what value function $V$ does the Bellman error magnitude $\|BV - V\|$ equal 0? Why?    
+    % \hfill [2 pts]
+    \item Prove the following statements for an arbitrary value function $V$ and any policy $\pi$. 
+    % \textit{Hint: Try leveraging the triangle inequality by inserting a zero term.} 
+    
+    % \hfill [5 pts]
+    \[
+    \|V - V^{\pi}\| \leq \frac{\|V - B^{\pi}V\|}{1 - \gamma}\] \[
+    \|V - V^{\ast}\| \leq \frac{\|V - BV\|}{1 - \gamma}
+    \]
+    \end{enumerate}
+    % The result you proved in 5 will be useful in proving a bound on the policy performance in the next few parts. Given the Bellman residual, we will now try to derive a bound on the policy performance, $V^{\pi}$.
+
+\begin{enumerate}[resume*]
+    \item Let $V$ be an arbitrary value function and $\pi$ be the greedy policy extracted from $V$. Let $\varepsilon = \|BV - V\|$ be the Bellman error magnitude for $V$. Prove the following for any state $s$. 
+    
+    % \textit{Hint: Use the results from part (e).} \hfill [5 pts]
+    \[
+    V^{\pi}(s) \geq V^{\ast}(s) - \frac{2\varepsilon}{1 - \gamma}
+    \]
+    
+    \item Give an example real-world application or domain where having a lower bound on $V^{\pi}(s)$ would be useful. 
+    % \hfill [2 pts]
+    
+    \item Suppose we have another value function $V'$ and extract its greedy policy $\pi'$. $\|BV' - V'\| = \varepsilon = \|BV - V\|$. Does the above lower bound imply that $V^{\pi}(s) = V^{\pi'}(s)$ at any $s$? 
+ \end{enumerate}
+    Say $V \leq V'$ if $\forall s$, $V(s) \leq V'(s)$.
+    % \hfill [2 pts]
+\\
+What if our algorithm returns a $V$ that satisfies $V^* \leq V$? I.e., it returns a value function that is better than the optimal value function of the MDP. Once again, remember that $V$ can be any vector, not necessarily achievable in the MDP, but we would still like to bound the performance of $V^{\pi}$ where $\pi$ is extracted from said $V$. We will show that if this condition is met, then we can achieve an even tighter bound on policy performance.
+\begin{enumerate}[resume*]
+    \item Using the same notation and setup as part 5, if $V^{\ast} \leq V$, show the following holds for any state $s$. \textit{Recall that for all $\pi$, $V^{\pi} \leq V^{\ast}$ (why?)} 
+    % \hfill [5 pts]
+    \[
+    V^{\pi}(s) \geq V^{\ast}(s) - \frac{\varepsilon}{1 - \gamma}
+    \]
+\end{enumerate}
+
+\paragraph{Intuition:} A useful way to interpret the results from parts (8) and (9) is based on the observation that a constant immediate reward of $r$ at every time-step leads to an overall discounted reward of 
+\[
+r + \gamma r + \gamma^2 r + \dots = \frac{r}{1 - \gamma}
+\]
+Thus, the above results say that a state value function $V$ with Bellman error magnitude $\varepsilon$ yields a greedy policy whose reward per step (on average), differs from optimal by at most $2\varepsilon$. So, if we develop an algorithm that reduces the Bellman residual, we’re also able to bound the performance of the policy extracted from the value function outputted by that algorithm, which is very useful!
+
+% \paragraph{(Optional)} Try to prove the following if you’re interested. These parts will not be graded.
+
+% \begin{enumerate}[label=(\alph*), start=10]
+\begin{enumerate}[resume*]
+    \item It’s not easy to show that the condition $V^{\ast} \leq V$ holds because we often don’t know $V^{\ast}$ of the MDP. Show that if $BV \leq V$ then $V^{\ast} \leq V$. Note that this sufficient condition is much easier
+to check and does not require knowledge of $V^{\ast}$.
+
+Hint: Try to apply induction. What is $\lim_{n \to \infty} B^nV$?
+    
+    \item (Bonus) It is possible to make the bounds from parts (9) and (10) tighter. Let $V$ be an arbitrary value function and $\pi$ be the greedy policy extracted from $V$. Let $\varepsilon = \|BV - V\|$ be the Bellman error magnitude for $V$. Prove the following for any state $s$:
+    \[
+    V^{\pi}(s) \geq V^{\ast}(s) - \frac{2\gamma \varepsilon}{1 - \gamma}
+    \]
+    Further, if $V^{\ast} \leq V$, prove for any state $s$
+    \[
+    V^{\pi}(s) \geq V^{\ast}(s) - \frac{\gamma \varepsilon}{1 - \gamma}
+    \]
+\end{enumerate}
+
+\\
+% \lipsum[1-2]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \newpage
+
+% {\fontfamily{lmss}\selectfont {\color{DarkBlue}
+
+% \section{Part 1}
+
+% % \lipsum[1-2]
+
+% \subsection{Section 1}
+
+% % \lipsum[1-2]
+
+% \subsubsection{SubSection 1}
+
+% % \lipsum[1-2]
+
+% \subsubsection{SubSection 2}
+
+% % \lipsum[1-2]
+
+% \subsection{Section 2}
+
+% % \lipsum[1-2]
+
+% \subsubsection{SubSection 1}
+
+% % \lipsum[1-2]
+
+% }}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+
+\begin{thebibliography}{9}
+
+\bibitem{CS234}
+Baesed on CS 234: Reinforcement Learning, Stanford University. Spring 2024.
+\bibitem{Freepik}
+\href{https://www.freepik.com/free-vector/cute-artificial-intelligence-robot-isometric-icon_16717130.htm}{Cover image designed by freepik}
+
+\end{thebibliography}
+
+
+}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

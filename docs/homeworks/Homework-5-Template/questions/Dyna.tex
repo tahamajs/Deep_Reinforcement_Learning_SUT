@@ -1,0 +1,61 @@
+\section{Task 2: Dyna-Q}
+
+\subsection{Task Overview} 
+In this notebook, we focus on \textbf{Model-Based Reinforcement Learning (MBRL)} methods, including \textbf{Dyna-Q} and \textbf{Prioritized Sweeping}. 
+We use the \href{https://gymnasium.farama.org/environments/toy_text/frozen_lake/}{Frozen Lake} environment from \href{https://gymnasium.farama.org}{Gymnasium}. 
+The primary setting for our experiments is the \texttt{$8 \times 8$} map, which is non-slippery as we set \texttt{is\_slippery=False}. 
+However, you are welcome to experiment with the \texttt{$4 \times 4$} map to better understand the hyperparameters.
+
+\textbf{Sections to be Implemented and Completed}
+
+This notebook contains several placeholders (\texttt{TODO}) for missing implementations as well as some markdowns (\texttt{Your Answer:}), which are also referenced in section \ref{sec:dyna-questions}.
+
+\subsubsection{Planning and Learning} 
+In the \textbf{Dyna-Q} workshop session, we implemented this algorithm for \textit{stochastic} environments. 
+You can refer to that implementation to get a sense of what you should do. 
+However, to receive full credit, you must implement this algorithm for \textit{deterministic} environments.
+
+\subsubsection{Experimentation and Exploration} 
+The \textbf{Experiments} section and \textbf{Are you having troubles?} section of this notebook are \textbf{extremely important}. 
+Your task is to explore and experiment with different hyperparameters. 
+We don't want you to blindly try different values until you find the correct solution. 
+In these sections, you must reason about the outcomes of your experiments and act accordingly. 
+The questions provided in section \ref{sec:dyna-questions} can help you focus on better solutions.
+
+\subsubsection{Reward Shaping} 
+It is no secret that \href{https://www.alexirpan.com/2018/02/14/rl-hard.html#reward-function-design-is-difficult}{Reward Function Design is Difficult} in \textbf{Reinforcement Learning}. 
+Here we ask you to improve the reward function by utilizing some basic principles. 
+To design a good reward function, you will first need to analyze the current reward signal. 
+By running some experiments, you might be able to understand the shortcomings of the original reward function.
+
+\subsubsection{Prioritized Sweeping} 
+In the \textbf{Dyna-Q} algorithm, we perform the planning steps by uniformly selecting state-action pairs. 
+You can probably tell that this approach might be inefficient. \href{http://incompleteideas.net/book/ebook/node98.html}{Prioritized Sweeping} can increase planning efficiency.
+
+\subsubsection{Extra Points} 
+If you found the previous sections too easy, feel free to use the ideas we discussed for the \textit{stochastic} version of the environment by setting \texttt{is\_slippery=True}. 
+You must implement the \textbf{Prioritized Sweeping} algorithm for \textit{stochastic} environments. 
+By combining ideas from previous sections, you should be able to solve this version of the environment as well!
+
+\subsection{Questions}\label{sec:dyna-questions} 
+You can answer the following questions in the notebook as well, but double-check to make sure you don't miss anything.
+
+\subsubsection{Experiments}
+After implementing the basic \textbf{Dyna-Q} algorithm, run some experiments and answer the following questions:
+\begin{itemize} 
+    \item How does increasing the number of planning steps affect the overall learning process? 
+    \item What would happen if we trained on the slippery version of the environment, assuming we \textbf{didn't} change the \textit{deterministic} nature of our algorithm? 
+    \item Does planning even help for this specific environment? How so? (Hint: analyze the reward signal) 
+    \item Assuming it takes $N_1$ episodes to reach the goal for the first time, and from then it takes $N_2$ episodes to reach the goal for the second time, explain how the number of planning steps $n$ affects $N_1$ and $N_2$.
+\end{itemize}
+
+\vspace*{0.3cm}
+\subsubsection{Improvement Strategies}
+Explain how each of these methods might help us with solving this environment:
+\begin{itemize} 
+    \item Adding a baseline to the Q-values. 
+    \item Changing the value of $\varepsilon$ over time or using a policy other than the $\varepsilon$-greedy policy. 
+    \item Changing the number of planning steps $n$ over time. 
+    \item Modifying the reward function. 
+    \item Altering the planning function to prioritize some state–action pairs over others. (Hint: explain how \textbf{Prioritized Sweeping} helps) 
+\end{itemize}

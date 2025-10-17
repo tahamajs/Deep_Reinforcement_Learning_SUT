@@ -1,0 +1,143 @@
+\section{Trust Region Policy Optimization}
+
+In this question, we will dive deep into the mathematical theories behind the TRPO algorithm. As a roadmap, we first prove that minimizing a certain surrogate objective function guarantees policy improvement with non-trivial step sizes. Then, we make a series of approximations to the theoretically justified algorithm, yielding a practical algorithm, which has been called trust region policy optimization (TRPO). 
+
+\subsection{Notations and Preliminaries}
+
+Let $\pi$ denote a stochastic policy and let $\eta(\pi)$ denote its expected discounted reward:
+
+\begin{align*}
+    \eta(\pi) = \mathbb{E}_{s_0, a_0, \ldots} [\sum_{t = 0}^{\infty} \gamma^t r(s_t)]
+\end{align*}
+
+where
+
+\begin{align*}
+    s_0 \sim \rho_0(s_0), a_t \sim \pi(a_t | s_t), s_{t + 1} \sim P(s_{t + 1} | s_t, a_t).
+\end{align*}
+
+Also, we will use the following standard definitions of the state-action value function $Q_\pi$, the value function $V_\pi$, and the advantage function $A_\pi$:
+
+\begin{align*}
+    &Q_\pi(s_t, a_t) = \mathbb{E}_{s_{t+1}, a_{t+1}, \ldots} [\sum_{l = 0}^{\infty} \gamma^l r(s_{t + l})] \\
+    &V_\pi(s_t) = \mathbb{E}_{a_t, s_{t+1}, \ldots} [\sum_{l = 0}^{\infty} \gamma^l r(s_{t + l})] \\
+    &A_\pi(s, a) = Q_\pi(s, a) - V_\pi(s)
+\end{align*}
+
+
+a) Prove the following identity:
+
+\begin{align}\label{eq_3}
+    \eta(\pi')=\eta(\pi)+\mathbb{E}_{s_{0}, a_{0}, \ldots \sim \pi'} [\sum_{t = 0}^{\infty} \gamma^t A_\pi(s_t, a_t)]
+\end{align}
+
+Equation \ref{eq_3} basically shows that the difference between the expected total rewards of any two policies $\pi'$ and $\pi$ depends on the advantage function of policy $\pi$ if the trajectory is sampled by running $\pi'$. We will use this equation to derive an optimization scheme further to maximize the expected total reward using the advantage function of policy $\pi$ to obtain policy $\pi'$.
+
+Let $\rho_\pi$ be the unnormalized discounted visitation frequencies:
+
+\begin{align*}
+    \rho_\pi(s) = P(s_0 = s)+\gamma P(s_1 = s) + \gamma^2 P(s_2 = s) + \ldots
+\end{align*}
+
+b) Prove the following identity:
+
+\begin{align}\label{true_objective}
+    \eta(\pi') = \eta(\pi) + \sum_{s}\rho_{\textcolor{red}{\pi'}}(s)\sum_{a}\pi'(a|s)A_{\pi}(s, a)
+\end{align}
+
+Equation \ref{true_objective} can be used as an optimization objective in reinforcement learning. Note that this equation has been considered difficult to optimize directly due to the complex dependency of $\rho_{\pi'}(s)$ on $\pi'$. Instead, the following local approximation of $\eta$ has been introduced for optimization:
+
+\begin{align}\label{approx_objective}
+    L_{\pi}(\pi') = \eta(\pi) + \sum_{s}\rho_{\textcolor{red}{\pi}}(s)\sum_{a}\pi'(a|s)A_{\pi}(s, a)
+\end{align}
+
+Note that $L_{\pi}$ uses the visitation frequency $\rho_{\pi}$ rather than $\rho_{\pi'}$, ignoring changes in state visitation density due to changes in the policy. In the next section, we will derive an algorithm to guarantee a monotonic improvement in our policy using equation \ref{approx_objective} as our objective function, showing that equation \ref{approx_objective} is good enough in our case.
+
+\subsection{Monotonic Improvement Guarantee for General Stochastic Policies}
+
+In this section, we build the theoretical foundations to consider the policy optimization problem, assuming that the policy can be evaluated at all states. The ultimate goal of this section is to prove the following theorem:
+
+\begin{theorem}\label{thm:policy-bound}
+    Let $\pi, \pi'$ be two stochastic policies. Then, the following bound holds:
+    \begin{align*}
+    &\eta(\pi') \ge L_{\pi}(\pi') - \frac{4\epsilon\gamma}{(1-\gamma)^2}D_{KL}^{\max}(\pi, \pi') \\
+    &\text{where } \epsilon = \max_{s, a} |A_{\pi}(s, a)|
+    \end{align*}
+\end{theorem}
+
+During this section, we use the following definitions and inequality for the total variation and KL divergence:
+
+\begin{align*}
+    &D_{TV}(p||q) = \frac{1}{2}\sum_{i}|p_i - q_i| \\
+    &D_{TV}^{\max}(\pi, \pi') = \max_{s} D_{TV}(\pi(.|s)||\pi'(.|s))\\
+    &D_{KL}^{\max}(\pi, \pi') = \max_{s} D_{KL}(\pi(.|s)||\pi'(.|s))\\
+    &D_{TV}(p||q)^2 \le D_{KL}(p||q)
+\end{align*}
+
+We will prove theorem \ref{thm:policy-bound} step by step, and you are required to complete the proof as indicated below. To begin the proof, we denote trajectories by $\tau$ and define $\bar{A}(s)$ as follows:
+
+\begin{align*}
+    \bar{A}(s) = \mathbb{E}_{a \sim \pi'(.|s)}[A_{\pi}(s, a)]
+\end{align*}
+
+Then we can rewrite equations \ref{true_objective} and \ref{approx_objective} as follows:
+
+\begin{align}
+    \eta(\pi') = \eta(\pi) + \mathbb{E}_{\tau \sim \pi'}[\sum_{t = 0}^{\infty}\gamma^t \bar{A}(s_t)] \\
+    L_{\pi}(\pi') = \eta(\pi) + \mathbb{E}_{\tau \sim \pi}[\sum_{t = 0}^{\infty}\gamma^t \bar{A}(s_t)] 
+\end{align}
+
+The only difference in these two equations is whether the states are sampled using $\pi$ or $\pi'$. To bound the difference between $\eta(\pi')$ and $L_{\pi}(\pi')$, we first need to introduce a measure of how much $\pi$ and $\pi'$ agree. Specifically, we'll couple the policies so that they define a joint distribution over pairs of actions. We use the following definition of $\alpha$-coupled policy pairs:
+
+\begin{definition}
+    $(\pi, \pi')$ is an $\alpha$-coupled policy pair if it defines a joint distribution $(a, a')|s$ such that $P(a \neq a'|s) \le \alpha$ for all $s$. $\pi$ and $\pi'$ will denote the marginal distributions of $a$ and $a'$, respectively.
+\end{definition}
+
+c) Prove the following lemma:
+
+\begin{lemma}
+    Given that $\pi, \pi'$ are $\alpha$-coupled policies, for all $s$,
+    \begin{align*}
+        |\bar{A}(s)| \le 2\alpha \max_{s, a}|A_{\pi}(s,a)|
+    \end{align*}
+\end{lemma}
+
+d) Prove the following lemma:
+
+\begin{lemma}
+    Let $(\pi, \pi')$ be an $\alpha$-coupled policy pair. Then:
+    \begin{align*}
+        |\mathbb{E}_{s_t \sim \pi'}[\bar{A}(s_t)] - \mathbb{E}_{s_t \sim \pi}[\bar{A}(s_t)]| \le 4\alpha(1-(1-\alpha)^t)\max_{s, a}|A_\pi(s, a)|
+    \end{align*}
+\end{lemma}
+
+e) Prove the following lemma:
+
+\begin{lemma}
+    Let $(\pi, \pi')$ be an $\alpha$-coupled policy pair. Then:
+    \begin{align*}
+        |\eta(\pi')-L_{\pi}(\pi')| \le \frac{4\alpha^2\gamma\epsilon}{(1-\gamma)^2}
+    \end{align*}
+\end{lemma}
+
+f) Prove theorem \ref{thm:policy-bound}. Hint: Use the fact that if we have two policies $\pi$ and $\pi'$ such that $D_{TV}^{\max} (\pi, \pi') \le \alpha$, then we can define an $\alpha$-couples policy pair $(\pi, \pi')$ with appropriate marginals.\footnote{There is no need to prove this hint!}
+
+
+Note that the inequality in theorem \ref{thm:policy-bound} becomes an equality in $\pi' = \pi$. Thus, the following optimization problem guarantees a non-decreasing expected return $\eta$:
+\begin{align*}
+    &\pi_{i + 1} = \argmax_{\pi} L_{\pi_i}(\pi) - CD_{KL}^{\max}(\pi_i, \pi)\\
+    &\text{where } C = \frac{4\epsilon\gamma}{(1-\gamma)^2}\\
+    &\text{and } L_{\pi_i}(\pi) = \eta(\pi_i) + \sum_{s}\rho_{\pi_i}(s)\sum_{a}\pi(a|s)A_{\pi_i}(s, a)
+\end{align*}
+
+In practice, if we use the penalty coefficient $C$ as recommended by the theory above, the step sizes would be very small. One way to take larger steps in a robust way is to use a constraint on the KL divergence between the two policies as a trust region:
+\begin{align*}
+    &\pi_{i + 1} = \argmax_{\pi} L_{\pi_i}(\pi)\\
+    &\text{subject to } D_{KL}^{\max}(\pi_i, \pi) \le \delta
+\end{align*}
+
+This problem imposes a constraint that the KL divergence is bounded at every point in the state space. While it is motivated by the theory, this problem is impractical to solve due to the large number of constraints. Instead, we can use a heuristic approximation by considering the average KL divergence. The following optimization problem has been proposed as the TRPO algorithm:
+\begin{align*}
+    &\pi_{i + 1} = \argmax_{\pi} L_{\pi_i}(\pi)\\
+    &\text{subject to } \mathbb{E}_{s \sim \rho}[D_{KL}(\pi_i (.|s) || \pi(.|s))] \le \delta
+\end{align*}

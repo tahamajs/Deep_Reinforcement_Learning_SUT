@@ -1,0 +1,88 @@
+\section{Task 1: Monte Carlo Tree Search}
+
+\subsection{Task Overview}
+This notebook implements a \textbf{MuZero-inspired reinforcement learning (RL) framework}, integrating \textbf{planning, learning, and model-based approaches}. The primary objective is to develop an RL agent that can learn from \textbf{environment interactions} and improve decision-making using \textbf{Monte Carlo Tree Search (MCTS)}.
+
+The key components of this implementation include:
+
+\subsubsection{Representation, Dynamics, and Prediction Networks}
+\begin{itemize}
+    \item Transform raw observations into \textbf{latent hidden states}.
+    \item Simulate \textbf{future state transitions} and predict \textbf{rewards}.
+    \item Output \textbf{policy distributions} (probability of actions) and \textbf{value estimates} (expected returns).
+\end{itemize}
+
+\subsubsection{Search Algorithms}
+\begin{itemize}
+    \item \textbf{Monte Carlo Tree Search (MCTS)}: A structured search algorithm that simulates future decisions and \textbf{backpropagates values} to guide action selection.
+    \item \textbf{Naive Depth Search}: A simpler approach that expands all actions up to a fixed depth, evaluating rewards.
+\end{itemize}
+
+\subsubsection{Buffer Replay (Experience Memory)}
+\begin{itemize}
+    \item Stores entire \textbf{trajectories} (state-action-reward sequences).
+    \item Samples \textbf{mini-batches} of past experiences for training.
+    \item Enables \textbf{n-step return calculations} for updating value estimates.
+\end{itemize}
+
+\subsubsection{Agent}
+\begin{itemize}
+    \item Integrates \textbf{search algorithms} and \textbf{deep networks} to infer actions.
+    \item Uses a \textbf{latent state representation} instead of raw observations.
+    \item Selects actions using \textbf{MCTS, Naive Search, or Direct Policy Inference}.
+\end{itemize}
+
+\subsubsection{Training Loop}
+\begin{enumerate}
+    \item \textbf{Step 1}: Collects trajectories through environment interaction.
+    \item \textbf{Step 2}: Stores experiences in the \textbf{replay buffer}.
+    \item \textbf{Step 3}: Samples sub-trajectories for \textbf{model updates}.
+    \item \textbf{Step 4}: Unrolls the learned model \textbf{over multiple steps}.
+    \item \textbf{Step 5}: Computes \textbf{loss functions} (policy, value, and reward prediction errors).
+    \item \textbf{Step 6}: Updates the neural network parameters.
+\end{enumerate}
+
+\textbf{Sections to be Implemented}
+
+The notebook contains several placeholders (\texttt{TODO}) for missing implementations.
+\subsection{Questions}
+
+\subsubsection{MCTS Fundamentals}
+\begin{itemize}
+    \item What are the four main phases of MCTS (Selection, Expansion, Simulation, Backpropagation), and what is the conceptual purpose of each phase?
+    \item How does MCTS balance exploration and exploitation in its node selection strategy (i.e., how does the UCB formula address this balance)?
+\end{itemize}
+
+\subsubsection{Tree Policy and Rollouts}
+\begin{itemize} 
+   \item Why do we run multiple simulations from each node rather than a single simulation?  
+   \item What role do random rollouts (or simulated playouts) play in estimating the value of a position?
+\end{itemize}
+
+
+\subsubsection{Integration with Neural Networks}
+\begin{itemize}
+    \item In the context of Neural MCTS (e.g., AlphaGo-style approaches), how are policy networks and value networks incorporated into the search procedure?  
+    \item What is the role of the policy network’s output (“prior probabilities”) in the Expansion phase, and how does it influence which moves get explored?
+\end{itemize}
+
+
+\subsubsection{Backpropagation and Node Statistics}
+\begin{itemize}
+    \item During backpropagation, how do we update node visit counts and value estimates?  
+    \item Why is it important to aggregate results carefully (e.g., averaging or summing outcomes) when multiple simulations pass through the same node?
+\end{itemize}
+
+
+\subsubsection{Hyperparameters and Practical Considerations}
+\begin{itemize}
+    \item How does the exploration constant (often denoted \( c_{puct} \) or \( c \)) in the UCB formula affect the search behavior, and how would you tune it?  
+    \item In what ways can the “temperature” parameter (if used) shape the final move selection, and why might you lower the temperature as training progresses?
+\end{itemize}
+
+
+\subsubsection{Comparisons to Other Methods}
+\begin{itemize}
+    \item How does MCTS differ from classical minimax search or alpha-beta pruning in handling deep or complex game trees?  
+    \item What unique advantages does MCTS provide when the state space is extremely large or when an accurate heuristic evaluation function is not readily available?
+\end{itemize}

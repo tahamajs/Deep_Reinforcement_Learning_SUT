@@ -1,0 +1,285 @@
+\documentclass[12pt]{article}
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=1.5cm, right=1.5cm]{geometry}
+\usepackage{amsmath, amsfonts, amssymb, mathtools}
+\usepackage{fancyhdr, setspace, parskip}
+\usepackage{graphicx, caption, subfig, array, multirow}
+\usepackage{hyperref, enumitem, cancel}
+\usepackage[T1]{fontenc}
+\usepackage{tgtermes}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tocloft}
+\usepackage{titlesec}
+\usepackage{lipsum}  
+
+\definecolor{DarkBlue}{RGB}{10, 0, 80}
+
+% Hyperlink setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=DarkBlue,
+    filecolor=BrickRed,      
+    urlcolor=RoyalBlue,
+}
+
+
+% Header and footer customization
+\fancyhead{}
+\fancyhead[L]{
+{\fontfamily{lmss}{\color{DarkBlue}
+\textbf{\leftmark}
+}}
+}
+\fancyhead[R]{
+{\fontfamily{ppl}\selectfont {\color{DarkBlue}
+{Deep Reinforcement Learning [Spring 2025]}
+}}
+}
+
+\fancyfoot{}
+\fancyfoot[C]{
+{\fontfamily{lmss}{\color{BrickRed}
+\textbf{\thepage}
+}}
+}
+
+\renewcommand{\sectionmark}[1]{ \markboth{\thesection\quad #1}{} }
+
+\renewcommand{\headrule}{{\color{BrickRed}\hrule width\headwidth height 0.5pt}}
+\renewcommand{\footrulewidth}{0pt}
+
+
+% Table of Contents customizations
+\renewcommand{\cftsecafterpnum}{\vskip6pt}
+\renewcommand{\cftsubsecafterpnum}{\vskip3pt}
+\renewcommand{\cftsubsubsecafterpnum}{\vskip3pt}
+\renewcommand{\cftsecfont}{\sffamily\large}
+\renewcommand{\cftsubsecfont}{\sffamily}
+\renewcommand{\cftsubsubsecfont}{\sffamily}
+% \renewcommand{\cftsecdotsep}{1}
+\renewcommand{\cftsubsecdotsep}{1}
+\renewcommand{\cftsubsubsecdotsep}{1}
+
+
+% Section title styles
+\titleformat*{\section}{\LARGE\bfseries\color{DarkBlue}}
+\titleformat*{\subsection}{\Large\bfseries\color{DarkBlue}}
+\titleformat*{\subsubsection}{\large\bfseries\color{DarkBlue}}
+
+\definecolor{light-gray}{gray}{0.95}
+\newcommand{\code}[1]{\colorbox{light-gray}{\texttt{#1}}}
+
+% Start of the document
+\pagestyle{fancy}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\pagenumbering{gobble}
+\thispagestyle{plain}
+
+\begin{center}
+
+\vspace*{-1.5cm}
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.7\linewidth]{figs/cover-std.png}
+\end{figure}
+
+{
+\fontfamily{ppl}
+
+{\color{DarkBlue} {\fontsize{30}{50} \textbf{
+Deep Reinforcement Learning
+}}}
+
+{\color{DarkBlue} {\Large
+Professor Mohammad Hossein Rohban
+}}
+}
+
+
+\vspace{20pt}
+
+{
+\fontfamily{lmss}
+
+
+{\color{RedOrange}
+{\Large
+Homework 2:
+}\\
+}
+{\color{BrickRed}
+\rule{12cm}{0.5pt}
+
+{\Huge
+Value-Based Methods
+}
+\rule{12cm}{0.5pt}
+}
+
+\vspace{10pt}
+
+{\color{RoyalPurple} { \small By:} } \\
+\vspace{10pt}
+
+{\color{Blue} { \LARGE [Full Name] } } \\
+\vspace{5pt}
+{\color{RoyalBlue} { \Large [Student Number] } }
+
+
+\vspace*{\fill}
+\begin{center}
+\begin{tabular}{ccc}
+    \includegraphics[width=0.14\linewidth]{figs/sharif-logo.png} & \includegraphics[width=0.14\linewidth]{figs/riml-logo.png} & \includegraphics[width=0.14\linewidth]{figs/dlr-logo.png} \\
+\end{tabular}
+\end{center}
+
+\vspace*{-.25cm}
+
+{\color{YellowOrange} {
+\rule{10cm}{0.5pt} \\
+\vspace{2pt}
+\large Spring 2025}
+}}w
+\vspace*{-1cm}
+
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\newpage
+\pagenumbering{gobble}
+\thispagestyle{plain}
+{\fontfamily{lmss}\selectfont {\color{BrickRed} \textbf{\tableofcontents} }}
+
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+
+\newpage
+
+\subsection*{Grading}
+
+The grading will be based on the following criteria, with a total of 100 points:
+
+\[
+\begin{array}{|l|l|}
+\hline
+\textbf{Task} & \textbf{Points} \\
+\hline
+\text{Task 1: Epsilon Greedy \& N-step Sarsa/Q-learning} & 40 \\
+\hline
+\quad \text{Jupyter Notebook} & 25 \\
+\quad \text{Analysis and Deduction} & 15 \\
+\hline
+\text{Task 2: DQN vs. DDQN} & 50 \\
+\hline
+\quad \text{Jupyter Notebook} & 30 \\
+\quad \text{Analysis and Deduction} & 20 \\
+\hline
+\text{Clarity and Quality of Code} & 5 \\
+\text{Clarity and Quality of Report} & 5 \\
+\hline
+\text{Bonus 1: Writing your report in Latex } & 10 \\
+\hline
+\end{array}
+\]
+
+\textbf{Notes:}
+\begin{itemize}
+    \item Include well-commented code and relevant plots in your notebook.
+    \item Clearly present all comparisons and analyses in your report.
+    \item Ensure reproducibility by specifying all dependencies and configurations.
+\end{itemize}
+
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+\pagenumbering{arabic}
+
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+
+% \section{N-Step Sarsa and N-Step Q-learning}
+\section{Epsilon Greedy}
+\subsection{Epsilon 0.1 initially has a high regret rate but decreases quickly. Why is that? [2.5-points]}
+\subsection{Both epsilon 0.1 and 0.5 show jumps. What is the reason for this? [2.5-points]}
+\subsection{Epsilon 0.9 changes linearly. Why? [2.5-points]}
+
+\subsection{Compare the policy for epsilon values 0.1 and 0.9. How do they differ, and why do they look different? [2.5-points]}
+
+\subsection{In the epsilon decay section, analyze the optimal policy for the row adjacent to the cliff (the lowest row). Then, compare the different learned policies and their corresponding rewards. [2.5-points]}
+
+\section{N-step Sarsa and N-step Q-learning}
+\subsection{What is the difference between Q-learning and sarsa? [2.5-points]}
+\subsection{Compare how different values of n affect each algorithm's performance separately. [2.5-points]}
+\subsection{Is a Higher or Lower n Always Better? Explain the advantages and disadvantages of both low and high n values. [2.5-points]}
+
+}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+
+\section{DQN vs. DDQN}
+
+\subsection{Which algorithm performs better and why? [3-points]}
+
+\subsection{Which algorithm has a tighter upper and lower bound for rewards. [2-points]}
+\subsection{Based on your previous answer, can we conclude that this algorithm exhibits greater stability in
+learning? Explain your reasoning.
+ [2-points]}
+\subsection{What are the general issues with DQN?
+ [2-points]}
+\subsection{How can some of these issues be mitigated? (You may refer to external sources such as research
+papers and blog posts be sure to cite them properly.)
+ [3-points]}
+\subsection{Based on the plotted values in the notebook, can the main purpose of DDQN be observed in the
+results?
+ [2-points]}
+\subsection{The DDQN paper states that different environments influence the algorithm in various ways. Explain
+these characteristics (e.g., complexity, dynamics of the environment) and their impact on DDQN\textquotesingle s performance. Then, compare them to the CartPole environment. Does CartPole exhibit these
+characteristics or not? [4-points]}
+\subsection{How do you think DQN can be further improved? (This question is for your own analysis, but
+you may refer to external sources such as research papers and blog posts be sure to cite them
+properly.) [2-points]}
+
+
+
+}}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+
+\begin{thebibliography}{9}
+
+\bibitem{SuttonBarto}
+R. Sutton and A. Barto, Reinforcement Learning: An Introduction, 2nd Edition, 2020. Available: \href{http://incompleteideas.net/book/the-book-2nd.html}{http://incompleteideas.net/book/the-book-2nd.html}.
+
+\bibitem{SuttonBarto}
+Gymnasium Documentation. Available: \href{https://gymnasium.farama.org/}{https://gymnasium.farama.org/}
+
+\bibitem{SuttonBarto}
+Grokking Deep Reinforcement Learning. Available: \href{https://www.manning.com/books/grokking-deep-reinforcement-learning}{https://www.manning.com/books/grokking-deep-reinforcement-learning}
+
+\bibitem{SuttonBarto}
+Deep Reinforcement Learning with Double Q-learning. Available: \href{https://arxiv.org/abs/1509.06461}{https://arxiv.org/abs/1509.06461}
+
+\bibitem{SuttonBarto}
+\href{https://www.freepik.com/free-vector/cute-artificial-intelligence-robot-isometric-icon_16717130.htm}{Cover image designed by freepik}
+
+\end{thebibliography}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

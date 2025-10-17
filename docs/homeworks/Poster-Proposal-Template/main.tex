@@ -1,0 +1,142 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper, top=2.5cm, bottom=3.5cm, left=1.5cm, right=1.5cm, footskip=0cm]{geometry} % Adjusted footskip
+\usepackage{amsmath, amsfonts, amssymb, mathtools}
+\usepackage{fancyhdr, setspace, parskip}
+\usepackage{graphicx, caption, array, multirow} % Removed subfig as it wasn't used and can conflict
+\usepackage{hyperref, enumitem, cancel, xcolor}
+\usepackage[T1]{fontenc}
+\usepackage{tgtermes} % Termes font for text
+\usepackage{tocloft} % Included in template, though not obviously used here
+\usepackage{titlesec} % Included in template
+\usepackage{tikz} % Included in template
+\usepackage{tcolorbox} % For the question/answer boxes
+
+% Removed duplicate geometry call
+
+\definecolor{DarkBlue}{RGB}{10, 0, 80}
+\definecolor{BrickRed}{RGB}{178, 34, 34}
+\definecolor{RoyalPurple}{RGB}{120, 81, 169}
+\definecolor{Orange}{RGB}{255, 140, 0} % Defined but not used in example
+\definecolor{Mahogany}{RGB}{192, 64, 0}
+\definecolor{Gray}{RGB}{240, 240, 240}
+\definecolor{RoyalBlue}{RGB}{65, 105, 225} % Added for urlcolor consistency
+
+% Hyperlink setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=DarkBlue,
+    filecolor=BrickRed,
+    urlcolor=RoyalBlue, % Use defined RoyalBlue or another suitable color
+    pdftitle={Reinforcement Learning Exploration Assessment Questions}, % Added descriptive title
+    pdfauthor={Expert Analysis}, % Added author
+    pdfpagemode=UseNone, % Changed from FullScreen for better usability
+}
+
+% Fancy Header Configuration
+\fancypagestyle{header}{
+    \fancyhead[L]{
+        \begin{minipage}{0.7\textwidth}
+            \raggedright {
+            \fontfamily{ppl}\selectfont{\color{DarkBlue}\textbf{\Large{Deep Reinforcement Learning (Sp25)}}}\\ % PPL font family for header
+            \vspace{.05cm}
+            {\color{RoyalPurple}\textbf{Instructor: Dr. Mohammad Hossein Rohban}}\\
+            \vspace{.25cm}
+            {\color{Mahogany}{\fontfamily{lmss}\selectfont \textbf{Poster Session Research Proposal}}} % LMSS font family for sub-header
+            
+            }
+        \end{minipage}
+    }
+    \fancyhead[R]{
+        \begin{minipage}{0.3\textwidth}
+            \raggedleft
+
+            \href{https://sharif.edu}{\includegraphics[width=.28\textwidth]{figs/sharif-logo.png}}% Reduce size slightly
+            \hspace{0.02\textwidth}% Add small space
+            \href{https://t.me/RIMLLab}{\includegraphics[width=.28\textwidth]{figs/riml-logo.png}}%
+            \hspace{0.02\textwidth}% Add small space
+            \href{https://deeprlcourse.github.io/}{\includegraphics[width=.28\textwidth]{figs/dlr-logo.png}}
+
+        \end{minipage}
+    }
+    \fancyfoot{} % Clear default footer
+    \fancyfoot[C]{{\fontfamily{lmss}\selectfont\color{BrickRed}\textbf{\thepage}}} % LMSS font for page number
+    \renewcommand{\headrule}{{\color{BrickRed}\hrule width\headwidth height 0.5pt}}
+    \renewcommand{\footrulewidth}{0pt} % No foot rule
+}
+
+
+% Custom environment for questions
+\newtcolorbox{questionbox}{
+    colback=Gray!5!white, % Background color
+    colframe=DarkBlue,     % Frame color
+    arc=4pt,               % Corner radius
+    boxrule=0.75pt,        % Frame thickness
+    % width=\textwidth,      % Box width (default is often fine)
+    left=3mm, right=3mm, top=3mm, bottom=3mm % Padding
+}
+
+% Answer explanation box
+\newtcolorbox{answerbox}{
+    colback=Gray!10!white, % Slightly darker background
+    colframe=BrickRed,       % Frame color
+    arc=4pt,                 % Corner radius
+    boxrule=0.75pt,          % Frame thickness
+    % width=\textwidth,        % Box width
+    left=3mm, right=3mm, top=3mm, bottom=3mm % Padding
+}
+
+% Document settings
+\pagestyle{header} % Apply the custom header/footer
+\pagenumbering{arabic}
+\setlength{\parindent}{0pt} % No paragraph indentation
+\setlength{\parskip}{1ex} % Space between paragraphs
+
+% Set headsep *after* fancyhdr setup is complete
+\setlength{\headsep}{0.8in} % Adjust distance between header rule and text (1in seemed large)
+
+% Start of the document content
+\begin{document}
+
+\thispagestyle{header} % Ensure first page also uses the header style
+
+\vspace{0.5cm}
+
+\section*{\color{DarkBlue}Topic}
+\vspace{0.2cm}
+\noindent
+% Replace the text below with your topic
+\textbf{[Enter your research proposal topic here.]}
+
+\vspace{0.8cm}
+
+\section*{\color{DarkBlue}Abstract (About 300 Words)}
+\vspace{0.2cm}
+\noindent
+% Replace the text below with your abstract
+[Write a concise abstract that describes your research problem, motivation, and goals.]
+
+\vspace{0.8cm}
+
+\section*{\color{DarkBlue}Relevant Papers (MLA Citation Format)}
+\vspace{0.2cm}
+\begin{itemize}
+    \item Author(s). \textit{Title of the paper}. Journal/Conference, Year. \href{URL}{Link}
+    \item Author(s). \textit{Title of the paper}. Journal/Conference, Year. \href{URL}{Link}
+    % Add more as needed
+\end{itemize}
+
+\vspace{0.8cm}
+
+\section*{\color{DarkBlue}Student(s) Information}
+\vspace{0.2cm}
+\noindent
+\textbf{Name:} [Full Name] \\
+\textbf{Student ID:} [Student ID] \\
+\textbf{Email:} \href{mailto:your.email@example.com}{your.email@example.com}
+
+\textbf{Name:} [Full Name] \\
+\textbf{Student ID:} [Student ID] \\
+\textbf{Email:} \href{mailto:your.email@example.com}{your.email@example.com}
+
+
+\end{document}

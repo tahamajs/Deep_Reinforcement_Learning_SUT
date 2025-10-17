@@ -1,0 +1,54 @@
+\section{Policy Gradient Theorem}
+
+In this question, we will prove the policy gradient theorem and provide a set of sufficient conditions that allow us to use function approximations as a critic for the $Q$-value function so that the policy gradient using our function approximation remains exact.
+
+\subsection{Notations}
+
+Consider a normal finite MDP with bounded rewards. $P(s'|s, a)$ represents the transition model, which corresponds to the probability of transitioning from state $s$ to $s'$ due to action $a$. Also, the reward model is represented by $r: \mathcal{S}\times\mathcal{A}\xrightarrow{}[0, 1]$ where $r(s, a)$ is the immediate reward associated with taking action $a$ in state $s$. Parameter $\gamma \in [0, 1)$ corresponds to the discount factor, and $s_0$ indicates the starting state of our MDP. 
+
+A parametrized policy $\pi_{\theta}$ induces a distribution over trajectories $\tau = (s_t, a_t, r_t)|_{t = 0}^\infty$ where $s_0$ is the starting state, and for all subsequent timesteps $t$, $a_t \sim \pi(.|s_t)$, $s_{t + 1}\sim P(.|s_t, a_t)$. The state value function and the state-action value ($Q$-value) functions are defined as follows by the Bellman operator:
+\begin{align*}
+    &V^{\pi_\theta}(s) = \mathbb{E}_{a\sim \pi_\theta(.|s)} [Q^{\pi_\theta}(s,a)]\\
+    &Q^{\pi_\theta}(s,a) = r(s, a) + \gamma\mathbb{E}_{s'\sim P(.|s, a)} [V^{\pi_\theta}(s')] 
+\end{align*}
+
+We also define the discounted state visitation distribution $d^{\pi}_{s_0}$ of a policy $\pi$ as:
+\begin{align}
+    d^{\pi}_{s_0}(s) = (1-\gamma)\sum_{t = 0}^{\infty}\gamma^t Pr^{\pi}(s_t = s|s_0),
+\end{align}
+where $Pr^{\pi}(s_t = s|s_0)$ is the state visitation probability that $s_t = s$, after we execute $\pi$ starting at state $s_0$.
+
+\subsection{Proving the Policy Gradient Theorem}
+
+The objective function of our RL problem is defined as $J(\theta) = V^{\pi_\theta}(s_0)$. The policy gradient method uses the gradient ascent algorithm to optimize $\theta$. This can be done by the direct differentiation of the objective function.
+
+a) Prove the following identity, which is known as the Policy Gradient Theorem:
+
+\begin{align}\label{policy_grad}
+    \nabla_\theta J(\theta) = \frac{1}{1-\gamma}\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\theta \log \pi_\theta (a|s) Q^{\pi_\theta} (s, a)]
+\end{align}
+
+
+\subsection{Compatible Function Approximation Theorem}
+
+Now, consider the case in which $Q^{\pi_\theta}$ is approximated by a learned function approximator. If the approximation is sufficiently good, we might hope to use it in place of $Q^{\pi_\theta}$ in equation \ref{policy_grad}. If we use the function approximator $Q_{\phi}(s, a)$, the convergence of our method is not necessarily maintained due to the fact that our gradient will not be exact anymore. The following theorem provides sufficient conditions for our function approximator so that our gradient using the approximator remains exact.
+
+\begin{theorem}\label{thm:compatible_approximator}
+    (Compatible Function Approximation). If the following two conditions are satisfied for any function approximator with parameter $\phi$:
+    \begin{enumerate}
+        \item Critic gradient is compatible with the Actor score function, i.e., 
+        \begin{align*}
+            \nabla_{\phi} Q_\phi(s, a) = \nabla_\theta \log \pi_\theta (a|s)
+        \end{align*}
+        \item Critic parameters $\phi$ minimize the following mean-squared error\footnote{Assume that the mean-squared error has only one critical point which corresponds to its minimum.}: 
+        \begin{align*}
+            \epsilon = \mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [(Q^{\pi_\theta} (s, a) - Q_\phi(s, a))^2]
+        \end{align*}
+    \end{enumerate}
+    Then, the policy gradient using critic $Q_\phi(s, a)$ is exact, i.e., 
+    \begin{align*}
+            \nabla_\theta J(\theta) = \frac{1}{1-\gamma}\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\theta \log \pi_\theta (a|s) Q_\phi (s, a)]
+    \end{align*}
+\end{theorem}
+
+b) Prove theorem \ref{thm:compatible_approximator}.

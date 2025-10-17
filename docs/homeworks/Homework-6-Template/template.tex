@@ -1,0 +1,364 @@
+\documentclass[12pt]{article}
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=1.5cm, right=1.5cm]{geometry}
+\usepackage{amsmath, amsfonts, amssymb, mathtools}
+\usepackage{fancyhdr, setspace, parskip}
+\usepackage{graphicx, caption, subfig, array, multirow}
+\usepackage{hyperref, enumitem, cancel}
+\usepackage[T1]{fontenc}
+\usepackage{tgtermes}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tocloft}
+\usepackage{titlesec}
+\usepackage{lipsum}  
+
+\definecolor{DarkBlue}{RGB}{10, 0, 80}
+
+% Hyperlink setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=DarkBlue,
+    filecolor=BrickRed,      
+    urlcolor=RoyalBlue,
+}
+
+
+% Header and footer customization
+\fancyhead{}
+\fancyhead[L]{
+{\fontfamily{lmss}{\color{DarkBlue}
+\textbf{\leftmark}
+}}
+}
+\fancyhead[R]{
+{\fontfamily{ppl}\selectfont {\color{DarkBlue}
+{Deep RL [Spring 2025]}
+}}
+}
+
+\fancyfoot{}
+\fancyfoot[C]{
+{\fontfamily{lmss}{\color{BrickRed}
+\textbf{\thepage}
+}}
+}
+
+\renewcommand{\sectionmark}[1]{ \markboth{\thesection\quad #1}{} }
+
+\renewcommand{\headrule}{{\color{BrickRed}\hrule width\headwidth height 0.5pt}}
+\renewcommand{\footrulewidth}{0pt}
+
+
+% Table of Contents customizations
+\renewcommand{\cftsecafterpnum}{\vskip6pt}
+\renewcommand{\cftsubsecafterpnum}{\vskip3pt}
+\renewcommand{\cftsubsubsecafterpnum}{\vskip3pt}
+\renewcommand{\cftsecfont}{\sffamily\large}
+\renewcommand{\cftsubsecfont}{\sffamily}
+\renewcommand{\cftsubsubsecfont}{\sffamily}
+% \renewcommand{\cftsecdotsep}{1}
+\renewcommand{\cftsubsecdotsep}{1}
+\renewcommand{\cftsubsubsecdotsep}{1}
+
+
+% Section title styles
+\titleformat*{\section}{\LARGE\bfseries\color{DarkBlue}}
+\titleformat*{\subsection}{\Large\bfseries\color{DarkBlue}}
+\titleformat*{\subsubsection}{\large\bfseries\color{DarkBlue}}
+
+\definecolor{light-gray}{gray}{0.95}
+\newcommand{\code}[1]{\colorbox{light-gray}{\texttt{#1}}}
+
+% Start of the document
+\pagestyle{fancy}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\pagenumbering{gobble}
+\thispagestyle{plain}
+
+\begin{center}
+
+\vspace*{-1.5cm}
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.7\linewidth]{figs/cover-std.png}
+\end{figure}
+
+{
+\fontfamily{ppl}
+
+{\color{DarkBlue} {\fontsize{30}{50} \textbf{
+Deep Reinforcement Learning
+}}}
+
+{\color{DarkBlue} {\Large
+Professor Mohammad Hossein Rohban
+}}
+}
+
+
+\vspace{20pt}
+
+{
+\fontfamily{lmss}
+
+
+{\color{RedOrange}
+{\Large
+Homework 6:
+}\\
+}
+{\color{BrickRed}
+\rule{12cm}{0.5pt}
+
+{\Huge
+Multi-Armed Bandits
+}
+\rule{12cm}{0.5pt}
+}
+
+\vspace{10pt}
+
+{\color{RoyalPurple} { \small By:} } \\
+\vspace{10pt}
+
+{\color{Blue} { \LARGE [Full Name] } } \\
+\vspace{5pt}
+{\color{RoyalBlue} { \Large [Student Number] } }
+
+
+\vspace*{\fill}
+\begin{center}
+\begin{tabular}{ccc}
+    \includegraphics[width=0.14\linewidth]{figs/sharif-logo.png} & \includegraphics[width=0.14\linewidth]{figs/riml-logo.png} & \includegraphics[width=0.14\linewidth]{figs/dlr-logo.png} \\
+\end{tabular}
+\end{center}
+
+
+\vspace*{-.25cm}
+
+{\color{YellowOrange} {
+\rule{10cm}{0.5pt} \\
+\vspace{2pt}
+\large Spring 2025}
+}}
+\vspace*{-1cm}
+
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\newpage
+\pagenumbering{gobble}
+\thispagestyle{plain}
+{\fontfamily{lmss}\selectfont {\color{BrickRed} \textbf{\tableofcontents} }}
+
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+
+\subsection*{Grading}
+
+The grading will be based on the following criteria, with a total of 105.25 points:
+
+\[
+\begin{array}{|l|l|}
+\hline
+\textbf{Task} & \textbf{Points} \\
+\hline
+\text{Task 1: Oracle Agent} & 3.5 \\
+\text{Task 2: Random Agent} & 2 \\
+\text{Task 3: Explore-First Agent} & 5.75 \\
+\text{Task 4: UCB Agent} & 7 \\
+\text{Task 5: Epsilon-Greedy Agent} & 2.25 \\
+\text{Task 6: LinUCB Agent} & 27.5 \\
+\text{Task 7: Final Comparison and Analysis} & 6 \\
+\text{Task 8: Final Deep-Dive Questions} & 41.25
+ \\
+\hline
+\text{Clarity and Quality of Code} & 5 \\
+\text{Clarity and Quality of Report} & 5 \\
+\hline
+\text{Bonus 1: Writing your report in Latex } & 10 \\
+\hline
+\end{array}
+\]
+
+}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+\pagenumbering{arabic}
+
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+
+\section{Task 1: Oracle Agent}
+\begin{itemize}[noitemsep]
+    \item The Oracle uses privileged information to determine the maximum expected reward.
+    \item \textbf{TODO:} Compute the oracle reward (2 points).
+    \item Questions:
+    \begin{itemize}[noitemsep]
+        \item What insight does the oracle reward provide? (0.75 points)
+        \item Why is the oracle considered “cheating”? (0.75 points)
+    \end{itemize}
+\end{itemize}
+
+\section{Task 2: Random Agent (RndAg)}
+\begin{itemize}[noitemsep]
+    \item This agent selects actions uniformly at random.
+    \item \textbf{TODO:} Choose a random action (1 point).
+    \item Questions:
+    \begin{itemize}[noitemsep]
+        \item Why is its reward lower and highly variable? (0.25 points)
+        \item How could the agent be improved without learning? (0.75 points)
+    \end{itemize}
+\end{itemize}
+
+\section{Task 3: Explore-First Agent (ExpFstAg)}
+\begin{itemize}[noitemsep]
+    \item The agent explores randomly for a fixed number of steps and then exploits the best arm.
+    \item \textbf{TODOs:}
+    \begin{itemize}[noitemsep]
+        \item Update Q-value (3 points)
+        \item Choose action based on exploration versus exploitation (1 point)
+    \end{itemize}
+    \item Questions:
+    \begin{itemize}[noitemsep]
+        \item Why might a short exploration phase lead to fluctuations? (0.75 points)
+        \item What are the trade-offs of using a fixed exploration phase? (1 point)
+    \end{itemize}
+\end{itemize}
+
+\section{Task 4: UCB Agent (UCB\_Ag)}
+\begin{itemize}[noitemsep]
+    \item Uses an exploration bonus to balance learning.
+    \item \textbf{TODOs:}
+    \begin{itemize}[noitemsep]
+        \item Update Q-value (3 points)
+        \item Compute the exploration bonus (4 points)
+    \end{itemize}
+\end{itemize}
+
+\section{Task 5: Epsilon-Greedy Agent (EpsGdAg)}
+\begin{itemize}[noitemsep]
+    \item Selects the best-known action with probability \(1-\varepsilon\) and a random action with probability \(\varepsilon\).
+    \item \textbf{TODO:} Choose a random action based on \(\varepsilon\) (1 point)
+    \item Questions:
+    \begin{itemize}[noitemsep]
+        \item Why does a high \(\varepsilon\) result in lower immediate rewards? (0.5 points)
+        \item What benefits might decaying \(\varepsilon\) over time offer? (0.75 points)
+    \end{itemize}
+\end{itemize}
+
+\section{Task 6: LinUCB Agent (Contextual Bandits)}
+\begin{itemize}[noitemsep]
+    \item Leverages contextual features using a linear model.
+    \item \textbf{TODOs:}
+    \begin{itemize}[noitemsep]
+        \item Compute UCB for an arm given context (7 points)
+        \item Update parameters \(A\) and \(b\) for an arm (7 points)
+        \item Compute UCB estimates for all arms (7 points)
+        \item Choose the arm with the highest UCB (4 points)
+    \end{itemize}
+    \item Questions:
+    \begin{itemize}[noitemsep]
+        \item How does LinUCB leverage context to outperform classical methods? (1.25 points)
+        \item What role does the \(\alpha\) parameter play in the exploration bonus? (1.25 points)
+    \end{itemize}
+\end{itemize}
+
+\section{Task 7: Final Comparison and Analysis}
+\begin{itemize}[noitemsep]
+    \item \textbf{Comparison:} UCB vs. Explore-First agents.
+    \begin{itemize}[noitemsep]
+        \item Under what conditions might an explore-first strategy outperform UCB? (1.25 points)
+        \item How do design choices affect short-term vs. long-term performance? (1.25 points)
+    \end{itemize}
+    \item Impact of extending the exploration phase (e.g., 20 vs. 5 steps). (1.5 points total)
+    \item Discussion on why ExpFstAg might sometimes outperform UCB in practice. (2 points)
+\end{itemize}
+
+\section{Task 8: Final Deep-Dive Questions}
+\begin{itemize}[noitemsep]
+    \item \textbf{Finite-Horizon Regret and Asymptotic Guarantees} (4 points)
+    
+    \vspace{0.25cm}
+    Many algorithms (e.g., UCB) are analyzed using asymptotic (long‑term) regret bounds. In a finite‑horizon scenario (say, 500–1000 steps), explain intuitively why an algorithm that is asymptotically optimal may still yield poor performance. What trade‑offs arise between aggressive early exploration and cautious long‑term learning?
+    Deep Dive:
+    Discuss how the exploration bonus, tuned for asymptotic behavior, might delay exploitation in finite time, leading to high early regret despite eventual convergence.
+    \vspace{0.5cm}
+    \item \textbf{Hyperparameter Sensitivity and Exploration–Exploitation Balance} (4.5 points)
+
+    \vspace{0.25cm}
+    Consider the impact of hyperparameters such as $\epsilon$ in $\epsilon$‑greedy, the exploration constant in UCB, and the $\alpha$ parameter in LinUCB. Explain intuitively how slight mismatches in these parameters can lead to either under‑exploration (missing the best arm) or over‑exploration (wasting pulls on suboptimal arms). How would you design a self‑adaptive mechanism to balance this trade‑off in practice?
+    Deep Dive:
+    Provide insight into the “fragility” of these parameters in finite runs and how a meta‑algorithm might monitor performance indicators (e.g., variance in rewards) to adjust its exploration dynamically.
+    \vspace{0.5cm}
+    
+    \newpage
+    
+    \item \textbf{Context Incorporation and Overfitting in LinUCB} (4 points)
+
+    \vspace{0.25cm}
+    LinUCB uses context features to estimate arm rewards, assuming a linear relation. Intuitively, why might this linear assumption hurt performance when the true relationship is complex or when the context is high‑dimensional and noisy? Under what conditions can adding context lead to worse performance than classical (context‑free) UCB?
+    Deep Dive:
+    Discuss the risk of overfitting to noisy or irrelevant features, the curse of dimensionality, and possible mitigation strategies (e.g., dimensionality reduction or regularization).
+    \vspace{0.5cm}
+    \item \textbf{Adaptive Strategy Selection} (4.25 points)
+
+    \vspace{0.25cm}
+    Imagine designing a hybrid bandit agent that can switch between an explore‑first strategy and UCB based on observed performance. What signals (e.g., variance of reward estimates, stabilization of Q‑values, or sudden drops in reward) might indicate that a switch is warranted? Provide an intuitive justification for how and why such a meta‑strategy might outperform either strategy alone in a finite‑time setting.
+    Deep Dive:
+    Explain the challenges in detecting when exploration is “enough” and how early exploitation might capture transient improvements even if the long‑term guarantee favors UCB.
+    \vspace{0.5cm}
+    \item \textbf{Non-Stationarity and Forgetting Mechanisms} (4 points)
+
+    \vspace{0.25cm}
+    In non‑stationary environments where reward probabilities drift or change abruptly, standard bandit algorithms struggle because they assume stationarity. Intuitively, explain how and why a “forgetting” or discounting mechanism might improve performance. What challenges arise in choosing the right decay rate, and how might it interact with the exploration bonus?
+    Deep Dive:
+    Describe the delicate balance between retaining useful historical information and quickly adapting to new trends, and the potential for “chasing noise” if the decay is too aggressive.
+    \vspace{0.5cm}
+    \item \textbf{Exploration Bonus Calibration in UCB} (3.75 points)
+
+    \vspace{0.25cm}
+    The UCB algorithm adds a bonus term that decreases with the number of times an arm is pulled. Intuitively, why might a “conservative” (i.e., high) bonus slow down learning—even if it guarantees asymptotic optimality? Under what circumstances might a less conservative bonus be beneficial, and what risks does it carry?
+    Deep Dive:
+    Analyze how a high bonus may force the algorithm to continue sampling even when an arm’s estimated reward is clearly suboptimal, thereby delaying convergence. Conversely, discuss the risk of prematurely discarding an arm if the bonus is too low.
+    \vspace{0.5cm}
+    \item \textbf{Exploration Phase Duration in Explore-First Strategies} (4 points)
+    
+    \vspace{0.25cm}
+    In the Explore‑First agent (ExpFstAg), how does the choice of a fixed exploration period (e.g., 5 vs. 20 steps) affect the regret and performance variability? Provide a scenario in which a short exploration phase might yield unexpectedly high regret, and another scenario where a longer phase might delay exploitation unnecessarily.
+    Deep Dive:
+    Discuss how the “optimal” exploration duration can depend heavily on the underlying reward distribution’s variance and the gap between the best and other arms, and why a one‑size‑fits‑all approach may not work in practice.
+    \vspace{0.5cm}
+    \item \textbf{Bayesian vs. Frequentist Approaches in MAB} (4 points)
+    
+    \vspace{0.25cm}
+    Compare the intuition behind Bayesian approaches (such as Thompson Sampling) to frequentist methods (like UCB) in handling uncertainty. Under what conditions might the Bayesian approach yield superior practical performance, and how do the underlying assumptions about prior knowledge influence the exploration–exploitation balance?
+    Deep Dive:
+    Explore the benefits of incorporating prior beliefs and the risk of bias if the prior is mis-specified, as well as how Bayesian updating naturally adjusts the exploration bonus as more data is collected.
+    \vspace{0.5cm}
+    \item \textbf{Impact of Skewed Reward Distributions} (3.75 points)
+    
+    \vspace{0.25cm}
+    In environments where one arm is significantly better (skewed probabilities), explain intuitively why agents like UCB or ExpFstAg might still struggle to consistently identify and exploit that arm. What role does variance play in these algorithms, and how might the skew exacerbate errors in reward estimation?
+    Deep Dive:
+    Discuss how the variability of rare but high rewards can mislead the agent’s estimates and cause prolonged exploration of suboptimal arms.
+    \vspace{0.5cm}
+    \item \textbf{Designing for High-Dimensional, Sparse Contexts} (5 points)
+    
+    \vspace{0.25cm}
+    In contextual bandits where the context is high-dimensional but only a few features are informative, what are the intuitive challenges that arise in using a linear model like LinUCB? How might techniques such as feature selection, regularization, or non-linear function approximation help, and what are the trade-offs involved?
+    Deep Dive:
+    Provide insights into the risks of overfitting versus underfitting, the increased variance in estimates from high-dimensional spaces, and the potential computational costs versus performance gains when moving from a simple linear model to a more complex one.
+    \vspace{0.5cm}
+\end{itemize}
+
+}}
+
+\end{document}

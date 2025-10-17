@@ -1,0 +1,23 @@
+\section{Task 3: Model Predictive Control (MPC)}
+
+\subsection{Task Overview} In this notebook, we use \href{https://locuslab.github.io/mpc.pytorch/}{MPC PyTorch}, which is a fast and differentiable model predictive control solver for PyTorch. 
+Our goal is to solve the \href{https://gymnasium.farama.org/environments/classic_control/pendulum/}{Pendulum} environment from \href{https://gymnasium.farama.org}{Gymnasium}, where we want to swing a pendulum to an upright position and keep it balanced there.
+
+There are many helper functions and classes that provide the necessary tools for solving this environment using \textbf{MPC}. Some of these tools might be a little overwhelming, and that's fine, just try to understand the general ideas. Our primary objective is to learn more about \textbf{MPC}, not focusing on the physics of the pendulum environment.
+
+On a final note, you might benefit from exploring the \href{https://github.com/locuslab/mpc.pytorch/}{source code} for \href{https://locuslab.github.io/mpc.pytorch/}{MPC PyTorch}, as this allows you to see how PyTorch is used in other contexts. To learn more about \textbf{MPC} and \textbf{mpc.pytorch}, you can check out \href{https://arxiv.org/abs/1703.00443}{OptNet} and \href{https://arxiv.org/abs/1810.13400}{Differentiable MPC}.
+
+\textbf{Sections to be Implemented and Completed}
+
+This notebook contains several placeholders (\texttt{TODO}) for missing implementations. In the final section, you can answer the questions asked in a markdown cell, which are the same as the questions in section \ref{sec:mpc-questions}.
+
+\subsection{Questions}\label{sec:mpc-questions} 
+You can answer the following questions in the notebook as well, but double-check to make sure you don't miss anything.
+\subsubsection{Analyze the Results} 
+Answer the following questions after running your experiments: 
+\begin{itemize} 
+    \item How does the number of LQR iterations affect the MPC? 
+    \item What if we didn't have access to the model dynamics? Could we still use MPC? 
+    \item Do \texttt{TIMESTEPS} or \texttt{N\_BATCH} matter here? Explain. 
+    \item Why do you think we chose to set the initial state of the environment to the downward position? \item As time progresses (later iterations), what happens to the actions and rewards? Why
+\end{itemize}
