@@ -517,11 +517,289 @@ L(\theta) = \mathbb{E}_{(s,a,r,s')} \left[ \sum_{i=1}^N \rho_{\tau_i}(r + \gamma
 \subsection{Rainbow Components[30-points]}
 \subsubsection{a)[5-points]} List and briefly describe the six components that Rainbow DQN combines.
 
+\textbf{Answer:}
+
+Rainbow DQN integrates six orthogonal improvements to DQN:
+
+\begin{enumerate}
+\item \textbf{Double Q-Learning}: Reduces overestimation bias by decoupling action selection from evaluation
+\item \textbf{Prioritized Experience Replay}: Samples important transitions more frequently based on TD error
+\item \textbf{Dueling Networks}: Separates value and advantage streams for better generalization
+\item \textbf{Multi-Step Returns}: Uses n-step bootstrapping for faster reward propagation
+\item \textbf{Distributional RL}: Models full return distributions instead of just expectations
+\item \textbf{Noisy Networks}: Adds parametric noise to network weights for state-dependent exploration
+\end{enumerate}
+
+\textbf{Synergies:}
+\begin{itemize}
+\item PER + n-step: Faster learning from important sequences
+\item Dueling + Distributional: Better value decomposition
+\item Noisy Nets + PER: Exploration prioritizes promising regions
+\item Double Q + Distributional: Reduces bias in distributional targets
+\end{itemize}
+
 \subsubsection{b)[8-points]} Explain how Double Q-Learning reduces overestimation bias in DQN.
+
+\textbf{Answer:}
+
+\textbf{The Overestimation Problem:}
+
+Standard DQN suffers from overestimation bias due to the max operator:
+
+\begin{equation}
+Q_{\text{target}} = r + \gamma \max_{a'} Q_{\text{target}}(s', a')
+\end{equation}
+
+\textbf{Why Overestimation Occurs:}
+\begin{itemize}
+\item Q-function approximation errors are typically positive
+\item Max operator selects the most overestimated action
+\item Policy exploits these overestimations
+\item Leads to poor performance and instability
+\end{itemize}
+
+\textbf{Double Q-Learning Solution:}
+
+Decouple action selection from evaluation using two networks:
+
+\begin{verbatim}
+# Standard DQN (problematic)
+Q_target = r + γ * max_a' Q_target(s', a')
+
+# Double DQN (solution)
+a' = argmax_a' Q_online(s', a')  # Use online net for selection
+Q_target = r + γ * Q_target(s', a')  # Use target net for evaluation
+\end{verbatim}
+
+\textbf{Mathematical Justification:}
+
+Let $Q_1$ and $Q_2$ be two independent estimates of $Q^*$:
+
+\begin{align}
+\mathbb{E}[\max(Q_1, Q_2)] &\geq \max(\mathbb{E}[Q_1], \mathbb{E}[Q_2]) \\
+\mathbb{E}[\min(Q_1, Q_2)] &\leq \min(\mathbb{E}[Q_1], \mathbb{E}[Q_2])
+\end{align}
+
+Since both networks overestimate, taking the minimum provides a more conservative estimate.
+
+\textbf{Implementation:}
+
+\begin{verbatim}
+def double_q_update(states, actions, rewards, next_states, dones):
+    with torch.no_grad():
+        # Use online network for action selection
+        next_actions = online_net(next_states).argmax(dim=1)
+        
+        # Use target network for evaluation
+        next_q_values = target_net(next_states)[range(batch_size), next_actions]
+        targets = rewards + gamma * (1 - dones) * next_q_values
+    
+    # Update online network
+    current_q_values = online_net(states)[range(batch_size), actions]
+    loss = F.mse_loss(current_q_values, targets)
+    
+    return loss
+\end{verbatim}
+
+\textbf{Benefits:}
+\begin{itemize}
+\item Reduces overestimation bias by ~25-30\%
+\item More stable learning
+\item Better final performance
+\item Simple to implement
+\end{itemize}
 
 \subsubsection{c)[8-points]} Describe Prioritized Experience Replay. How does it improve sample efficiency?
 
+\textbf{Answer:}
+
+\textbf{Motivation:}
+
+Standard experience replay samples transitions uniformly, but some transitions are more important for learning than others.
+
+\textbf{Priority Metric:}
+
+Use TD error magnitude as importance measure:
+
+\begin{equation}
+p_i = |\delta_i| + \epsilon
+\end{equation}
+
+where $\delta_i$ is the TD error for transition $i$.
+
+\textbf{Sampling Probability:}
+
+\begin{equation}
+P(i) = \frac{p_i^\alpha}{\sum_k p_k^\alpha}
+\end{equation}
+
+where $\alpha$ controls the prioritization strength ($\alpha = 0$ gives uniform sampling).
+
+\textbf{Implementation with SumTree:}
+
+\begin{verbatim}
+class PrioritizedReplayBuffer:
+    def __init__(self, capacity, alpha=0.6, beta=0.4):
+        self.alpha = alpha  # Priority exponent
+        self.beta = beta    # Importance sampling correction
+        self.tree = SumTree(capacity)
+        self.max_priority = 1.0
+
+    def add(self, experience, td_error=None):
+        if td_error is None:
+            priority = self.max_priority
+        else:
+            priority = (abs(td_error) + 1e-6) ** self.alpha
+        
+        self.tree.add(priority, experience)
+        self.max_priority = max(self.max_priority, priority)
+
+    def sample(self, batch_size):
+        segment = self.tree.total() / batch_size
+        priorities = []
+        experiences = []
+        indices = []
+
+        for i in range(batch_size):
+            s = random.uniform(segment * i, segment * (i + 1))
+            idx, priority, experience = self.tree.get(s)
+            priorities.append(priority)
+            experiences.append(experience)
+            indices.append(idx)
+
+        # Importance sampling weights
+        prob = np.array(priorities) / self.tree.total()
+        weights = (len(self.tree) * prob) ** (-self.beta)
+        weights /= weights.max()
+
+        return experiences, weights, indices
+\end{verbatim}
+
+\textbf{Importance Sampling Correction:}
+
+Since we're sampling non-uniformly, we need to correct for bias:
+
+\begin{equation}
+w_i = \left(\frac{1}{N} \cdot \frac{1}{P(i)}\right)^\beta
+\end{equation}
+
+where $\beta$ controls the correction strength.
+
+\textbf{Benefits:}
+\begin{itemize}
+\item 2-3x sample efficiency improvement
+\item Faster learning from important transitions
+\item Better performance on sparse reward tasks
+\item Works well with other improvements
+\end{itemize}
+
+\textbf{Trade-offs:}
+\begin{itemize}
+\item Increased computational cost (SumTree operations)
+\item Need to tune $\alpha$ and $\beta$ parameters
+\item Can be unstable if priorities change too rapidly
+\end{itemize}
+
 \subsubsection{d)[9-points]} Implement the Dueling Network architecture. Explain why mean subtraction is used in the combination.
+
+\textbf{Answer:}
+
+\textbf{Dueling Network Architecture:}
+
+Separates value and advantage streams to better learn state values independently of action values.
+
+\begin{verbatim}
+class DuelingDQN(nn.Module):
+    def __init__(self, state_dim, action_dim, hidden_dim=128):
+        super().__init__()
+
+        # Shared feature extractor
+        self.feature_layer = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU()
+        )
+
+        # Value stream: V(s)
+        self.value_stream = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1)  # Single scalar output
+        )
+
+        # Advantage stream: A(s,a)
+        self.advantage_stream = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, action_dim)  # One per action
+        )
+
+    def forward(self, state):
+        features = self.feature_layer(state)
+
+        # Compute value and advantages
+        value = self.value_stream(features)
+        advantages = self.advantage_stream(features)
+
+        # Combine using mean subtraction
+        q_values = value + (advantages - advantages.mean(dim=-1, keepdim=True))
+
+        return q_values
+\end{verbatim}
+
+\textbf{Why Mean Subtraction?}
+
+\textbf{The Identifiability Problem:}
+
+The decomposition $Q(s,a) = V(s) + A(s,a)$ is not unique:
+
+\begin{align}
+Q(s,a) &= V_1(s) + A_1(s,a) \\
+&= V_2(s) + A_2(s,a)
+\end{align}
+
+where $V_2(s) = V_1(s) + c$ and $A_2(s,a) = A_1(s,a) - c$ for any constant $c$.
+
+\textbf{Mean Subtraction Solution:}
+
+Force advantages to have zero mean:
+
+\begin{equation}
+Q(s,a) = V(s) + \left(A(s,a) - \frac{1}{|\mathcal{A}|}\sum_{a'} A(s,a')\right)
+\end{equation}
+
+\textbf{Properties:}
+\begin{itemize}
+\item \textbf{Unique Decomposition}: $\bar{A}(s) = 0$ ensures uniqueness
+\item \textbf{Value Interpretation}: $V(s) = \frac{1}{|\mathcal{A}|}\sum_a Q(s,a)$
+\item \textbf{Advantage Interpretation}: $A(s,a) = Q(s,a) - V(s)$
+\end{itemize}
+
+\textbf{Alternative: Max Subtraction}
+
+Some implementations use max instead of mean:
+
+\begin{equation}
+Q(s,a) = V(s) + \left(A(s,a) - \max_{a'} A(s,a')\right)
+\end{equation}
+
+This makes the greedy action have advantage 0, but can be less stable.
+
+\textbf{Benefits of Dueling Architecture:}
+\begin{itemize}
+\item \textbf{Better Generalization}: Value stream learns state quality independently
+\item \textbf{Faster Learning}: Value updated from every action
+\item \textbf{More Stable}: Value provides baseline for Q-estimates
+\item \textbf{Interpretable}: Can analyze state values vs action advantages
+\end{itemize}
+
+\textbf{Empirical Results:}
+\begin{itemize}
+\item +30\% improvement over standard DQN on Atari
+\item Largest gains on games with many redundant actions
+\item Particularly effective for continuous action requirements
+\end{itemize}
 
 \noindent\rule{\textwidth}{0.2pt}
 
