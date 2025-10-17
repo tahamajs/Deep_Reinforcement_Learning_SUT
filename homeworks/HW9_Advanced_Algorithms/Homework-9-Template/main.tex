@@ -107,14 +107,14 @@ Professor Mohammad Hossein Rohban
 
 {\color{RedOrange}
 {\Large
-Solution forHomework [9]
+Solution for Homework [9]
 }\\
 }
 {\color{BrickRed}
 \rule{12cm}{0.5pt}
 
 {\Huge
-[Exploration Methods]
+[Advanced RL Algorithms]
 }
 \rule{12cm}{0.5pt}
 }
@@ -164,22 +164,33 @@ Solution forHomework [9]
 {\fontfamily{lmss}\selectfont {\color{DarkBlue}
 \noindent\rule{\textwidth}{1.5pt}
 
-
-\section{Light-tailed Distributions[25-points]}
+\section{Distributional Reinforcement Learning[40-points]}
 \noindent\rule{\textwidth}{1.5pt}
 \noindent\rule{\textwidth}{0.2pt}
-\subsection{Hoeffding's Inequality[10-points]}
-\subsubsection{a)[6-points]}
-\subsubsection{b)[4-points]}
-\noindent\rule{\textwidth}{0.2pt}
-\noindent\rule{\textwidth}{0.2pt}
-\subsection{Sub-Gaussian[15-points]}
-\subsubsection{a-1)[2-points]}
-\subsubsection{a-2)[2-points]}
-\subsubsection{a-3)[2-points]}
 
-\subsubsection{b)[3-points]}
-\subsubsection{c)[4-points]}
+\subsection{Theoretical Foundation[15-points]}
+\subsubsection{a)[8-points]} Explain the fundamental difference between traditional value-based RL and distributional RL. Why is modeling the full return distribution beneficial?
+
+\subsubsection{b)[7-points]} Consider two actions with the same expected value but different distributions:
+\begin{itemize}
+\item Action A: Always returns 10 (deterministic)
+\item Action B: Returns 0 or 20 with equal probability
+\end{itemize}
+Both have E[R] = 10, but how does distributional RL distinguish their risk profiles?
+
+\noindent\rule{\textwidth}{0.2pt}
+
+\subsection{C51 Algorithm[15-points]}
+\subsubsection{a)[8-points]} Describe the C51 algorithm in detail. How does it represent and update return distributions? Include the projection step.
+
+\subsubsection{b)[7-points]} Implement the projection algorithm for C51. Show how to project the Bellman-updated distribution back onto the fixed support.
+
+\noindent\rule{\textwidth}{0.2pt}
+
+\subsection{Quantile Regression DQN[10-points]}
+\subsubsection{a)[5-points]} Explain QR-DQN and how it differs from C51. What are the advantages of using quantile regression?
+
+\subsubsection{b)[5-points]} Implement the quantile Huber loss function for QR-DQN.
 
 \noindent\rule{\textwidth}{0.2pt}
 }}
@@ -190,49 +201,104 @@ Solution forHomework [9]
 
 {\fontfamily{lmss}\selectfont {\color{DarkBlue}
 \noindent\rule{\textwidth}{1.5pt}
-\section{UCB[75-points]}
+\section{Rainbow DQN[50-points]}
 \noindent\rule{\textwidth}{1.5pt}
 \noindent\rule{\textwidth}{0.2pt}
-\subsection{The Upper Confidence Bound Algorithm[40-points]}
 
-\subsubsection{a)[2-points]}
-\subsubsection{b)[4-points]}
-\subsubsection{c)[4-points]}
-\subsubsection{d)[4-points]}
-\subsubsection{e)[6-points]}
-\subsubsection{f)[4-points]}
-\subsubsection{g)[6-points]}
-\subsubsection{h)[5-points]}
-\subsubsection{i)[5-points]}
+\subsection{Rainbow Components[30-points]}
+\subsubsection{a)[5-points]} List and briefly describe the six components that Rainbow DQN combines.
+
+\subsubsection{b)[8-points]} Explain how Double Q-Learning reduces overestimation bias in DQN.
+
+\subsubsection{c)[8-points]} Describe Prioritized Experience Replay. How does it improve sample efficiency?
+
+\subsubsection{d)[9-points]} Implement the Dueling Network architecture. Explain why mean subtraction is used in the combination.
 
 \noindent\rule{\textwidth}{0.2pt}
+
+\subsection{Integration and Implementation[20-points]}
+\subsubsection{a)[10-points]} Show how to integrate all six Rainbow components in a single architecture.
+
+\subsubsection{b)[10-points]} What are the main implementation challenges in Rainbow DQN? How can they be addressed?
+
 \noindent\rule{\textwidth}{0.2pt}
-
-\subsection{Power of 2 version of UCB Algorithm^*(Bonus)[35-points]}
-
-
-
 }}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \newpage
-\noindent\rule{\textwidth}{1.5pt}
-\section{Online Learning[50-points]}
-\noindent\rule{\textwidth}{1.5pt}
-\noindent\rule{\textwidth}{0.2pt}
-\subsection{Randomized Weighted Majority Algorithm[35-points]}
-\subsubsection{a)[5-points]}
 
-\subsubsection{b)[8-points]}
-\subsubsection{c)[15-points]}
-\subsubsection{d)[7-points]}
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+\noindent\rule{\textwidth}{1.5pt}
+\section{Twin Delayed DDPG (TD3)[40-points]}
+\noindent\rule{\textwidth}{1.5pt}
 \noindent\rule{\textwidth}{0.2pt}
-\noindent\rule{\textwidth}{0.2pt}
-\subsection{Hedge Algorithm^*(Bonus)[15-points]}
-\subsubsection{a)[6-points]}
-\subsubsection{b)[7-points]}
-\subsubsection{c)[2-points]}
 
-\noindent\rule{\textwidth}{0.4pt}
+\subsection{Core Innovations[20-points]}
+\subsubsection{a)[7-points]} Explain the three key innovations in TD3 and why each is necessary.
+
+\subsubsection{b)[6-points]} Why does taking the minimum of two Q-networks reduce overestimation?
+
+\subsubsection{c)[7-points]} Describe target policy smoothing and its theoretical justification.
+
+\noindent\rule{\textwidth}{0.2pt}
+
+\subsection{Algorithm Implementation[20-points]}
+\subsubsection{a)[10-points]} Provide complete pseudocode for TD3 and explain the key differences from DDPG.
+
+\subsubsection{b)[10-points]} Analyze the contribution of each TD3 component through ablation studies.
+
+\noindent\rule{\textwidth}{0.2pt}
+}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+\noindent\rule{\textwidth}{1.5pt}
+\section{Trust Region Policy Optimization (TRPO)[35-points]}
+\noindent\rule{\textwidth}{1.5pt}
+\noindent\rule{\textwidth}{0.2pt}
+
+\subsection{Trust Region Concept[15-points]}
+\subsubsection{a)[8-points]} Explain the trust region concept in policy optimization. Why is it important?
+
+\subsubsection{b)[7-points]} What is the natural policy gradient? How does it relate to TRPO?
+
+\noindent\rule{\textwidth}{0.2pt}
+
+\subsection{TRPO Algorithm[20-points]}
+\subsubsection{a)[10-points]} Provide complete TRPO algorithm with all implementation details.
+
+\subsubsection{b)[10-points]} Implement the conjugate gradient method for computing natural gradients.
+
+\noindent\rule{\textwidth}{0.2pt}
+}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+\noindent\rule{\textwidth}{1.5pt}
+\section{Advanced Value Functions[25-points]}
+\noindent\rule{\textwidth}{1.5pt}
+\noindent\rule{\textwidth}{0.2pt}
+
+\subsection{Dueling Networks[15-points]}
+\subsubsection{a)[8-points]} Explain the dueling network architecture. Why is it beneficial?
+
+\subsubsection{b)[7-points]} Implement the dueling DQN and explain the mean subtraction technique.
+
+\noindent\rule{\textwidth}{0.2pt}
+
+\subsection{Retrace(λ)[10-points]}
+\subsubsection{a)[5-points]} Explain the Retrace(λ) algorithm and its advantages for off-policy learning.
+
+\subsubsection{b)[5-points]} Implement the Retrace(λ) target computation.
+
+\noindent\rule{\textwidth}{0.2pt}
 
 
 
