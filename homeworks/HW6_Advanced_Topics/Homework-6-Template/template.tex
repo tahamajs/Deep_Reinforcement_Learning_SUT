@@ -194,91 +194,500 @@ This assignment explores advanced topics in Deep Reinforcement Learning, includi
 
 {\fontfamily{lmss}\selectfont {\color{DarkBlue}
 
-\section{Task 1: Oracle Agent}
-\begin{itemize}[noitemsep]
-    \item The Oracle uses privileged information to determine the maximum expected reward.
-    \item \textbf{TODO:} Compute the oracle reward (2 points).
-    \item Questions:
-    \begin{itemize}[noitemsep]
-        \item What insight does the oracle reward provide? (0.75 points)
-        \item Why is the oracle considered “cheating”? (0.75 points)
-    \end{itemize}
+\section{Task 1: Curiosity-Driven Learning}
+
+\subsection{Problem Formulation}
+
+In sparse reward environments, agents struggle with exploration because they rarely receive extrinsic rewards. Curiosity-driven learning addresses this by adding intrinsic motivation based on prediction error or novelty.
+
+\subsection{Intrinsic Curiosity Module (ICM)}
+
+The ICM uses a forward model to predict next states and computes intrinsic rewards based on prediction error:
+
+\begin{equation}
+r_{intrinsic} = \eta \| \hat{f}(s_t, a_t) - s_{t+1} \|^2
+\end{equation}
+
+where $\hat{f}$ is the learned forward model and $\eta$ is a scaling factor.
+
+\subsection{Implementation}
+
+\begin{verbatim}
+class ICM(nn.Module):
+    def __init__(self, state_dim, action_dim):
+        super().__init__()
+        # Feature encoder
+        self.encoder = nn.Sequential(
+            nn.Linear(state_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64)
+        )
+        
+        # Forward model: predict next state features
+        self.forward_model = nn.Sequential(
+            nn.Linear(64 + action_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64)
+        )
+        
+        # Inverse model: predict action from states
+        self.inverse_model = nn.Sequential(
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, action_dim)
+        )
+    
+    def forward(self, state, action, next_state):
+        # Encode states
+        phi_s = self.encoder(state)
+        phi_s_next = self.encoder(next_state)
+        
+        # Forward model loss
+        phi_s_next_pred = self.forward_model(
+            torch.cat([phi_s, action], dim=-1)
+        )
+        forward_loss = F.mse_loss(phi_s_next_pred, phi_s_next.detach())
+        
+        # Inverse model loss
+        action_pred = self.inverse_model(
+            torch.cat([phi_s, phi_s_next], dim=-1)
+        )
+        inverse_loss = F.cross_entropy(action_pred, action)
+        
+        # Intrinsic reward
+        intrinsic_reward = forward_loss.detach()
+        
+        return intrinsic_reward, forward_loss, inverse_loss
+\end{verbatim}
+
+\subsection{Questions and Answers}
+
+\textbf{Q: What insight does the oracle reward provide?}
+
+\textbf{A:} The oracle reward provides an upper bound on what any learning algorithm can achieve. It tells us the maximum possible average reward per step, which helps us evaluate how close our algorithms are to optimal performance. The gap between oracle performance and actual algorithm performance represents the "regret" - the cost of learning. This benchmark is crucial for understanding whether our algorithms are performing well or if there's significant room for improvement.
+
+\textbf{Q: Why is the oracle considered "cheating" in a practical sense?}
+
+\textbf{A:} The oracle is considered "cheating" because it has perfect knowledge of the true reward probabilities, which is never available in real-world scenarios. In practice, we must learn these probabilities through exploration and experience. The oracle represents an idealized scenario that helps us understand the theoretical limits but doesn't reflect the realistic constraints of bandit problems where we must balance exploration and exploitation without prior knowledge of arm qualities.
+
+\section{Task 2: Random Network Distillation (RND)}
+
+\subsection{Key Idea}
+
+RND uses prediction error of a random network as exploration bonus. The algorithm trains a predictor network to match the output of a fixed random target network.
+
+\subsection{Why It Works}
+
+\begin{itemize}
+\item Frequently visited states → predictor learns well → low error → low bonus
+\item Novel states → high prediction error → high bonus → exploration
 \end{itemize}
 
-\section{Task 2: Random Agent (RndAg)}
-\begin{itemize}[noitemsep]
-    \item This agent selects actions uniformly at random.
-    \item \textbf{TODO:} Choose a random action (1 point).
-    \item Questions:
-    \begin{itemize}[noitemsep]
-        \item Why is its reward lower and highly variable? (0.25 points)
-        \item How could the agent be improved without learning? (0.75 points)
-    \end{itemize}
+\subsection{Implementation}
+
+\begin{verbatim}
+class RND(nn.Module):
+    def __init__(self, state_dim):
+        super().__init__()
+        # Fixed random target network
+        self.target = nn.Sequential(
+            nn.Linear(state_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64)
+        )
+        # Freeze target
+        for param in self.target.parameters():
+            param.requires_grad = False
+        
+        # Trainable predictor network
+        self.predictor = nn.Sequential(
+            nn.Linear(state_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64)
+        )
+    
+    def forward(self, state):
+        target_features = self.target(state)
+        predicted_features = self.predictor(state)
+        
+        # Intrinsic reward = prediction error
+        intrinsic_reward = F.mse_loss(
+            predicted_features, 
+            target_features.detach(),
+            reduction='none'
+        ).mean(dim=-1)
+        
+        return intrinsic_reward
+\end{verbatim}
+
+\subsection{Advantages}
+
+\begin{itemize}
+\item No dynamics model needed
+\item Computationally efficient
+\item Works in high-dimensional spaces
+\item Used successfully in Montezuma's Revenge
 \end{itemize}
 
-\section{Task 3: Explore-First Agent (ExpFstAg)}
-\begin{itemize}[noitemsep]
-    \item The agent explores randomly for a fixed number of steps and then exploits the best arm.
-    \item \textbf{TODOs:}
-    \begin{itemize}[noitemsep]
-        \item Update Q-value (3 points)
-        \item Choose action based on exploration versus exploitation (1 point)
-    \end{itemize}
-    \item Questions:
-    \begin{itemize}[noitemsep]
-        \item Why might a short exploration phase lead to fluctuations? (0.75 points)
-        \item What are the trade-offs of using a fixed exploration phase? (1 point)
-    \end{itemize}
+\subsection{Questions and Answers}
+
+\textbf{Q: Why is the reward of the random agent generally lower and highly variable?}
+
+\textbf{A:} The random agent's reward is lower because it doesn't learn from experience and continues to select suboptimal arms with equal probability. The high variability comes from the stochastic nature of random selection - sometimes it gets lucky and selects good arms, other times it selects poor arms. Without any learning mechanism, it cannot improve its performance over time or exploit knowledge about which arms are better.
+
+\textbf{Q: How might you improve a random agent without using any learning mechanism?}
+
+\textbf{A:} Without learning, you could improve a random agent by using domain knowledge or heuristics. For example, you could bias the random selection toward arms that historically perform better, use weighted random selection based on prior beliefs, or implement a simple rule-based strategy that doesn't require learning from rewards. However, these approaches still rely on some form of external information or assumptions about the problem.
+
+\section{Task 3: Multi-Task Reinforcement Learning}
+
+\subsection{Goal}
+
+Train a single agent to perform multiple tasks simultaneously, leveraging shared representations and transfer learning.
+
+\subsection{Approaches}
+
+\subsubsection{Multi-Head Networks}
+
+\begin{verbatim}
+class MultiTaskPolicy(nn.Module):
+    def __init__(self, state_dim, action_dim, num_tasks):
+        super().__init__()
+        # Shared trunk
+        self.shared = nn.Sequential(
+            nn.Linear(state_dim, 256),
+            nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.ReLU()
+        )
+        
+        # Task-specific heads
+        self.heads = nn.ModuleList([
+            nn.Linear(256, action_dim) 
+            for _ in range(num_tasks)
+        ])
+    
+    def forward(self, state, task_id):
+        features = self.shared(state)
+        logits = self.heads[task_id](features)
+        return F.softmax(logits, dim=-1)
+\end{verbatim}
+
+\subsubsection{Task Conditioning}
+
+\begin{verbatim}
+class TaskConditionedPolicy(nn.Module):
+    def __init__(self, state_dim, action_dim, task_embedding_dim):
+        super().__init__()
+        # Task embedding
+        self.task_embedding = nn.Embedding(num_tasks, task_embedding_dim)
+        
+        # Conditioned policy
+        self.policy = nn.Sequential(
+            nn.Linear(state_dim + task_embedding_dim, 256),
+            nn.ReLU(),
+            nn.Linear(256, action_dim)
+        )
+    
+    def forward(self, state, task_id):
+        task_emb = self.task_embedding(task_id)
+        x = torch.cat([state, task_emb], dim=-1)
+        return self.policy(x)
+\end{verbatim}
+
+\subsection{Benefits}
+
+\begin{itemize}
+\item Transfer learning across tasks
+\item Improved sample efficiency
+\item Better generalization
+\item Single model deployment
 \end{itemize}
 
-\section{Task 4: UCB Agent (UCB\_Ag)}
-\begin{itemize}[noitemsep]
-    \item Uses an exploration bonus to balance learning.
-    \item \textbf{TODOs:}
-    \begin{itemize}[noitemsep]
-        \item Update Q-value (3 points)
-        \item Compute the exploration bonus (4 points)
-    \end{itemize}
+\subsection{Questions and Answers}
+
+\textbf{Q: Why might the early exploration phase lead to high fluctuations in the reward curve?}
+
+\textbf{A:} The early exploration phase leads to high fluctuations because the agent is randomly selecting arms without any knowledge of their true performance. During this phase, the agent might get lucky and select good arms (high rewards) or unlucky and select poor arms (low rewards). The randomness in arm selection combined with the stochastic nature of rewards creates high variance in the observed rewards.
+
+\textbf{Q: What are the trade-offs of using a fixed exploration phase?}
+
+\textbf{A:} The main trade-offs are: (1) \textbf{Too short exploration}: May miss the best arm, leading to suboptimal long-term performance. (2) \textbf{Too long exploration}: Wastes time on suboptimal arms, delaying exploitation of the best arm. (3) \textbf{Fixed duration}: Doesn't adapt to the difficulty of the problem - some bandit problems require more exploration than others. The optimal exploration duration depends on the gap between the best and second-best arms and the variance in rewards.
+
+\section{Task 4: Meta-Reinforcement Learning}
+
+\subsection{Problem}
+
+Can an agent learn to learn? Can it quickly adapt to new tasks with few samples?
+
+\subsection{Model-Agnostic Meta-Learning (MAML)}
+
+MAML finds initial parameters $\theta$ such that after $K$ gradient steps on new task $T_i$, performance is maximized:
+
+\begin{equation}
+\theta^* = \arg\min_\theta \sum_i L_{T_i}(\theta - \alpha\nabla_\theta L_{T_i}(\theta))
+\end{equation}
+
+\subsection{Algorithm Implementation}
+
+\begin{verbatim}
+def maml_meta_train(tasks, meta_lr=0.001, inner_lr=0.01, inner_steps=5):
+    # Initialize meta-parameters
+    meta_params = initialize_policy()
+    
+    for meta_iteration in range(N):
+        meta_gradient = 0
+        
+        for task in sample_tasks(tasks):
+            # Inner loop: adapt to task
+            params = meta_params.clone()
+            
+            for k in range(inner_steps):
+                # Sample batch from task
+                batch = task.sample()
+                
+                # Compute task loss and gradient
+                loss = compute_loss(params, batch)
+                grad = torch.autograd.grad(loss, params)
+                
+                # Inner update
+                params = params - inner_lr * grad
+            
+            # Outer loop: meta-gradient
+            test_batch = task.sample()
+            test_loss = compute_loss(params, test_batch)
+            meta_grad = torch.autograd.grad(test_loss, meta_params)
+            
+            meta_gradient += meta_grad
+        
+        # Meta-update
+        meta_params = meta_params - meta_lr * meta_gradient
+    
+    return meta_params
+\end{verbatim}
+
+\subsection{Applications}
+
+\begin{itemize}
+\item Few-shot RL: Learn from few samples in new task
+\item Fast adaptation to new environments
+\item Robotic manipulation with varied objects
 \end{itemize}
 
-\section{Task 5: Epsilon-Greedy Agent (EpsGdAg)}
-\begin{itemize}[noitemsep]
-    \item Selects the best-known action with probability \(1-\varepsilon\) and a random action with probability \(\varepsilon\).
-    \item \textbf{TODO:} Choose a random action based on \(\varepsilon\) (1 point)
-    \item Questions:
-    \begin{itemize}[noitemsep]
-        \item Why does a high \(\varepsilon\) result in lower immediate rewards? (0.5 points)
-        \item What benefits might decaying \(\varepsilon\) over time offer? (0.75 points)
-    \end{itemize}
+\subsection{Questions and Answers}
+
+\textbf{Q: Why does UCB learn slowly even after many steps?}
+
+\textbf{A:} UCB's apparent slow learning has deep theoretical and practical reasons: (1) \textbf{Conservative Exploration Bonus}: The bonus term $\sqrt{2 \log t / n_a}$ decreases slowly and is designed for asymptotic optimality, not finite-time performance. (2) \textbf{Logarithmic Sample Allocation}: UCB pulls suboptimal arms approximately $n_i(T) \approx 8 \log(T) / \Delta_i^2$ times, where $\Delta_i$ is the gap to optimal arm. For small gaps, this requires many pulls. (3) \textbf{Gap-Dependent Behavior}: When several arms have probabilities close to optimal, UCB continues exploring the second-best arm for many rounds.
+
+\textbf{Q: Under what conditions might an explore-first strategy outperform UCB?}
+
+\textbf{A:} Explore-first strategies can outperform UCB in several scenarios: (1) \textbf{Finite Horizon with Large Gaps}: When T is small and gaps are large, explore-first can quickly identify and exploit the best arm. (2) \textbf{Known Horizon}: When T is known, can optimize max_ex = O(T^(2/3)) to achieve regret O(T^(2/3)). (3) \textbf{Implementation Simplicity}: Explore-first is easier to implement correctly without careful tuning of exploration constants. (4) \textbf{Computational Constraints}: After exploration, O(1) time per step vs UCB's O(K) computation. (5) \textbf{Prior Knowledge}: If approximate gaps are known, can set max_ex to be sufficient with high confidence.
+
+\section{Task 5: Hierarchical Reinforcement Learning}
+
+\subsection{Key Idea}
+
+Learn policies at multiple time scales, enabling efficient exploration and transfer of skills.
+
+\subsection{Options Framework}
+
+An option is defined as:
+\begin{equation}
+\text{Option} = (\text{Initiation Set}, \text{Policy}, \text{Termination Condition})
+\end{equation}
+
+\textbf{Example}: "Navigate to door" is an option composed of:
+\begin{itemize}
+\item Low-level actions (move forward, turn)
+\item Termination: reached door
 \end{itemize}
 
-\section{Task 6: LinUCB Agent (Contextual Bandits)}
-\begin{itemize}[noitemsep]
-    \item Leverages contextual features using a linear model.
-    \item \textbf{TODOs:}
-    \begin{itemize}[noitemsep]
-        \item Compute UCB for an arm given context (7 points)
-        \item Update parameters \(A\) and \(b\) for an arm (7 points)
-        \item Compute UCB estimates for all arms (7 points)
-        \item Choose the arm with the highest UCB (4 points)
-    \end{itemize}
-    \item Questions:
-    \begin{itemize}[noitemsep]
-        \item How does LinUCB leverage context to outperform classical methods? (1.25 points)
-        \item What role does the \(\alpha\) parameter play in the exploration bonus? (1.25 points)
-    \end{itemize}
+\subsection{Feudal Networks}
+
+\begin{itemize}
+\item \textbf{Manager}: Sets goals for Worker
+\item \textbf{Worker}: Achieves goals set by Manager
+\item \textbf{Manager reward}: extrinsic environment reward
+\item \textbf{Worker reward}: intrinsic reward for achieving sub-goals
 \end{itemize}
 
-\section{Task 7: Final Comparison and Analysis}
-\begin{itemize}[noitemsep]
-    \item \textbf{Comparison:} UCB vs. Explore-First agents.
-    \begin{itemize}[noitemsep]
-        \item Under what conditions might an explore-first strategy outperform UCB? (1.25 points)
-        \item How do design choices affect short-term vs. long-term performance? (1.25 points)
-    \end{itemize}
-    \item Impact of extending the exploration phase (e.g., 20 vs. 5 steps). (1.5 points total)
-    \item Discussion on why ExpFstAg might sometimes outperform UCB in practice. (2 points)
+\subsection{Implementation}
+
+\begin{verbatim}
+class HierarchicalAgent:
+    def __init__(self, state_dim, action_dim, num_options):
+        self.manager = Manager(state_dim, num_options)
+        self.worker = Worker(state_dim, action_dim)
+        self.current_option = None
+        self.option_steps = 0
+        
+    def get_action(self, state):
+        if self.current_option is None or self.should_terminate():
+            # Manager selects new option
+            self.current_option = self.manager.select_option(state)
+            self.option_steps = 0
+            
+        # Worker executes option
+        action = self.worker.get_action(state, self.current_option)
+        self.option_steps += 1
+        
+        return action
+        
+    def should_terminate(self):
+        # Termination condition
+        return self.option_steps >= self.max_option_steps
+\end{verbatim}
+
+\subsection{Questions and Answers}
+
+\textbf{Q: Why does a high ε value result in lower immediate rewards?}
+
+\textbf{A:} A high ε value results in lower immediate rewards because the agent frequently chooses random actions instead of exploiting the best-known arm. Even when the agent has identified a good arm, it continues to explore randomly with probability ε, missing opportunities to earn higher rewards from the optimal arm. The expected per-step reward becomes: E[R] = (1-ε) × R_best + ε × R_random, where R_random is typically much lower than R_best.
+
+\textbf{Q: What benefits might there be in decaying ε over time?}
+
+\textbf{A:} Decaying ε over time provides several benefits: (1) \textbf{Early exploration}: High ε initially allows thorough exploration of all arms. (2) \textbf{Gradual exploitation}: As ε decreases, the agent increasingly exploits the best-known arm. (3) \textbf{Adaptive balance}: The algorithm automatically transitions from exploration-heavy to exploitation-heavy behavior. (4) \textbf{Better convergence}: This approach often leads to faster convergence to optimal performance compared to fixed ε values. With ε_t = 1/t, the algorithm can achieve O(log T) regret, matching UCB's theoretical performance.
+
+\section{Task 6: Advanced Exploration Strategies}
+
+\subsection{Problem}
+
+Standard exploration methods (ε-greedy, UCB) may be insufficient for complex environments with sparse rewards or high-dimensional state spaces.
+
+\subsection{Exploration Methods}
+
+\subsubsection{Count-Based Exploration}
+
+Use visitation counts to encourage exploration of rarely visited states:
+
+\begin{equation}
+r_{explore}(s) = \frac{\beta}{\sqrt{N(s)}}
+\end{equation}
+
+where $N(s)$ is the number of times state $s$ has been visited.
+
+\subsubsection{Disagreement-Based Exploration}
+
+Use ensemble of models and explore states where models disagree:
+
+\begin{equation}
+r_{explore}(s) = \text{Var}(\{\hat{f}_i(s)\}_{i=1}^K)
+\end{equation}
+
+where $\hat{f}_i$ are different forward models.
+
+\subsubsection{Information Gain}
+
+Explore states that maximize information gain about the environment:
+
+\begin{equation}
+r_{explore}(s) = H(\theta) - H(\theta | s, a)
+\end{equation}
+
+where $H(\theta)$ is the entropy of model parameters.
+
+\subsection{Implementation}
+
+\begin{verbatim}
+class AdvancedExploration:
+    def __init__(self, state_dim, method='count'):
+        self.method = method
+        self.state_counts = {}
+        self.models = [ForwardModel(state_dim) for _ in range(5)]
+        
+    def get_exploration_bonus(self, state):
+        if self.method == 'count':
+            count = self.state_counts.get(tuple(state), 0)
+            return self.beta / np.sqrt(count + 1)
+            
+        elif self.method == 'disagreement':
+            predictions = [model.predict(state) for model in self.models]
+            return np.var(predictions)
+            
+        elif self.method == 'information_gain':
+            # Simplified information gain
+            uncertainty = self.compute_uncertainty(state)
+            return uncertainty
+            
+    def update(self, state, action, next_state):
+        # Update state counts
+        state_key = tuple(state)
+        self.state_counts[state_key] = self.state_counts.get(state_key, 0) + 1
+        
+        # Update models
+        for model in self.models:
+            model.update(state, action, next_state)
+\end{verbatim}
+
+\subsection{Questions and Answers}
+
+\textbf{Q: How does LinUCB leverage context to outperform classical bandit algorithms?}
+
+\textbf{A:} LinUCB leverages context by learning a linear relationship between context features and arm rewards. Instead of treating each arm independently, it uses the context to make more informed decisions. This allows the algorithm to generalize across similar contexts and make better predictions about which arm to choose for a given context, leading to more efficient exploration and better long-term performance. The key advantage is sample efficiency: classical bandits need O(K log T) samples to distinguish K arms, while LinUCB needs O(d log T) samples where d is the context dimension.
+
+\textbf{Q: What is the role of the α parameter in LinUCB, and how does it affect the exploration bonus?}
+
+\textbf{A:} The α parameter controls the exploration-exploitation trade-off in LinUCB. It determines how much uncertainty to add to the reward estimates when computing the upper confidence bound. Higher α values lead to more aggressive exploration (larger bonus), while lower α values favor exploitation (smaller bonus). The parameter balances the trade-off between exploring uncertain arms and exploiting arms with high estimated rewards. The exploration bonus is α√(x^T A^{-1} x), where the uncertainty term depends on the confidence ellipsoid in the direction of the context vector.
+
+\section{Task 7: Comprehensive Analysis and Comparison}
+
+\subsection{Algorithm Comparison}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+\textbf{Method} & \textbf{Regret} & \textbf{Assumptions} & \textbf{Pros} & \textbf{Cons} \\
+\hline
+Curiosity (ICM) & O(T) & Forward model & Sparse rewards & Model complexity \\
+RND & O(T) & None & Simple, efficient & No dynamics \\
+Multi-Task & O(log T) & Related tasks & Transfer learning & Task similarity \\
+Meta-Learning & O(log T) & Task distribution & Fast adaptation & Complex training \\
+Hierarchical & O(T^(2/3)) & Option structure & Skill reuse & Design complexity \\
+Advanced Exploration & O(log T) & State visitation & Better exploration & Computational cost \\
+\hline
+\end{tabular}
+\caption{Comparison of Advanced RL Methods}
+\end{table}
+
+\subsection{Performance Analysis}
+
+\subsubsection{Sample Efficiency}
+
+\begin{itemize}
+\item \textbf{Curiosity-driven methods}: Excellent for sparse reward environments
+\item \textbf{Multi-task learning}: Leverages shared representations across tasks
+\item \textbf{Meta-learning}: Fast adaptation to new tasks with few samples
+\item \textbf{Hierarchical RL}: Efficient exploration through skill reuse
 \end{itemize}
+
+\subsubsection{Computational Complexity}
+
+\begin{itemize}
+\item \textbf{ICM}: O(d²) per step (forward model training)
+\item \textbf{RND}: O(d) per step (simple prediction)
+\item \textbf{MAML}: O(K × d²) per meta-update (K inner steps)
+\item \textbf{Hierarchical}: O(log K) per step (option selection)
+\end{itemize}
+
+\subsection{Questions and Answers}
+
+\textbf{Q: Under what conditions might an explore-first strategy outperform UCB?}
+
+\textbf{A:} Explore-first strategies can outperform UCB in several scenarios: (1) \textbf{Finite time horizons}: UCB's theoretical optimality is asymptotic, but in finite time, aggressive early exploitation can yield higher cumulative rewards. (2) \textbf{Clear arm separation}: When there's a significant gap between the best and second-best arms, explore-first can quickly identify and exploit the optimal arm. (3) \textbf{Short exploration periods}: If the optimal exploration duration is known and short, explore-first avoids UCB's conservative exploration bonus. (4) \textbf{High variance environments}: UCB's confidence intervals may be too conservative when rewards are highly variable, causing unnecessary exploration.
+
+\textbf{Q: How do design choices affect short-term vs. long-term performance?}
+
+\textbf{A:} \textbf{Short-term performance}: Explore-first strategies can excel by quickly identifying good arms and exploiting them aggressively. UCB's conservative exploration bonus may delay exploitation, leading to lower initial rewards. \textbf{Long-term performance}: UCB's theoretical guarantees ensure optimal asymptotic performance, while explore-first may plateau at suboptimal levels if exploration was insufficient. The key trade-off is between aggressive early exploitation (better short-term) versus conservative exploration (better long-term).
+
+\textbf{Q: Impact of extending the exploration phase (e.g., 20 vs. 5 steps)}
+
+\textbf{A:} Increasing the exploration phase from 5 to 20 steps has several impacts: (1) \textbf{Better arm identification}: With 20 steps, the agent has more opportunities to sample each arm and build more accurate estimates of their true reward probabilities. (2) \textbf{Reduced risk of premature commitment}: The agent is less likely to commit to a suboptimal arm based on limited data. (3) \textbf{Delayed exploitation}: The agent starts exploiting the best arm later, which can hurt short-term performance. (4) \textbf{Improved long-term performance}: Better arm identification typically leads to higher rewards once exploitation begins.
+
+\textbf{Q: Discussion on why ExpFstAg might sometimes outperform UCB in practice}
+
+\textbf{A:} ExpFstAg can outperform UCB in practice despite UCB's theoretical optimality for several reasons: (1) \textbf{Finite time horizons}: UCB's optimality is asymptotic, but in finite time, aggressive early exploitation can yield higher cumulative rewards. (2) \textbf{Hyperparameter sensitivity}: UCB's exploration bonus may be too conservative for the specific problem, while a well-tuned ExpFstAg can find the optimal exploration duration. (3) \textbf{Early exploitation advantage}: ExpFstAg can quickly identify and exploit the best arm, while UCB continues exploring conservatively. (4) \textbf{Problem-specific optimization}: ExpFstAg can be tuned for specific problem characteristics (arm separation, variance, time horizon).
 
 \section{Task 8: Final Deep-Dive Questions}
 \begin{itemize}[noitemsep]

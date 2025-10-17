@@ -197,9 +197,194 @@ After implementing the basic \textbf{Dyna-Q} algorithm, run some experiments and
 \subsubsection{Improvement Strategies}
 Explain how each of these methods might help us with solving this environment:
 \begin{itemize} 
-    \item Adding a baseline to the Q-values. 
-    \item Changing the value of $\varepsilon$ over time or using a policy other than the $\varepsilon$-greedy policy. 
-    \item Changing the number of planning steps $n$ over time. 
-    \item Modifying the reward function. 
-    \item Altering the planning function to prioritize some state–action pairs over others. (Hint: explain how \textbf{Prioritized Sweeping} helps) 
+    \item \textbf{Adding a baseline to the Q-values.}
+    
+    \textbf{Answer:} Adding a baseline to Q-values can improve learning stability and convergence:
+    
+    \begin{enumerate}
+        \item \textbf{Baseline Benefits}:
+        \begin{itemize}
+            \item \textbf{Variance Reduction}: Reduces variance in Q-value updates
+            \item \textbf{Numerical Stability}: Prevents Q-values from becoming too large or small
+            \item \textbf{Faster Convergence}: More stable learning leads to faster convergence
+        \end{itemize}
+        
+        \item \textbf{Common Baselines}:
+        \begin{itemize}
+            \item \textbf{Constant Baseline}: Subtract a fixed value from all Q-values
+            \item \textbf{State Value Baseline}: Use $V(s)$ as baseline for $Q(s,a)$
+            \item \textbf{Running Average}: Maintain running average of rewards as baseline
+        \end{itemize}
+        
+        \item \textbf{Implementation}:
+        \begin{itemize}
+            \item Modify Q-learning update: $Q(s,a) \leftarrow Q(s,a) + \alpha[r + \gamma \max_{a'} Q(s',a') - Q(s,a) - b]$
+            \item Where $b$ is the baseline value
+        \end{itemize}
+        
+        \item \textbf{Effect on Frozen Lake}:
+        \begin{itemize}
+            \item Helps with sparse rewards (mostly 0, occasionally +1)
+            \item Prevents Q-values from drifting due to lack of reward signal
+            \item Improves exploration by providing more stable value estimates
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{Changing the value of $\varepsilon$ over time or using a policy other than the $\varepsilon$-greedy policy.}
+    
+    \textbf{Answer:} Adaptive exploration strategies can significantly improve performance:
+    
+    \begin{enumerate}
+        \item \textbf{$\varepsilon$-Decay Strategies}:
+        \begin{itemize}
+            \item \textbf{Linear Decay}: $\varepsilon_t = \varepsilon_0 - \frac{t}{T}(\varepsilon_0 - \varepsilon_{min})$
+            \item \textbf{Exponential Decay}: $\varepsilon_t = \varepsilon_0 \cdot \gamma^t$
+            \item \textbf{Inverse Decay}: $\varepsilon_t = \frac{\varepsilon_0}{1 + \beta t}$
+        \end{itemize}
+        
+        \item \textbf{Alternative Policies}:
+        \begin{itemize}
+            \item \textbf{Upper Confidence Bound (UCB)}: $a = \arg\max_a [Q(s,a) + c\sqrt{\frac{\ln N(s)}{N(s,a)}}]$
+            \item \textbf{Boltzmann Exploration}: $P(a|s) = \frac{e^{Q(s,a)/\tau}}{\sum_{a'} e^{Q(s',a')/\tau}}$
+            \item \textbf{Thompson Sampling}: Sample from posterior distribution over Q-values
+        \end{itemize}
+        
+        \item \textbf{Benefits for Frozen Lake}:
+        \begin{itemize}
+            \item \textbf{Early Exploration}: High $\varepsilon$ ensures sufficient exploration
+            \item \textbf{Late Exploitation}: Low $\varepsilon$ focuses on learned optimal policy
+            \item \textbf{Adaptive Balance}: Automatically adjusts exploration vs. exploitation
+        \end{itemize}
+        
+        \item \textbf{Practical Considerations}:
+        \begin{itemize}
+            \item \textbf{Decay Schedule}: Must balance exploration and exploitation
+            \item \textbf{Environment-Specific}: Different environments may need different schedules
+            \item \textbf{Performance Monitoring}: Track success rate to tune decay parameters
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{Changing the number of planning steps $n$ over time.}
+    
+    \textbf{Answer:} Adaptive planning can optimize the exploration-exploitation trade-off:
+    
+    \begin{enumerate}
+        \item \textbf{Adaptive Planning Strategies}:
+        \begin{itemize}
+            \item \textbf{Increasing $n$}: Start with low $n$, increase as model improves
+            \item \textbf{Decreasing $n$}: Start with high $n$, decrease as policy converges
+            \item \textbf{Performance-Based}: Adjust $n$ based on recent performance
+        \end{itemize}
+        
+        \item \textbf{Model Quality Considerations}:
+        \begin{itemize}
+            \item \textbf{Early Training}: Low $n$ when model is inaccurate
+            \item \textbf{Late Training}: High $n$ when model is reliable
+            \item \textbf{Model Confidence}: Use model uncertainty to guide $n$
+        \end{itemize}
+        
+        \item \textbf{Computational Budget}:
+        \begin{itemize}
+            \item \textbf{Available Time}: Adjust $n$ based on computational constraints
+            \item \textbf{Real-Time Requirements}: Lower $n$ for faster decision making
+            \item \textbf{Batch Processing}: Higher $n$ when computational time is available
+        \end{itemize}
+        
+        \item \textbf{Implementation Approaches}:
+        \begin{itemize}
+            \item \textbf{Episode-Based}: Change $n$ every $k$ episodes
+            \item \textbf{Performance-Based}: Adjust $n$ based on success rate
+            \item \textbf{Model-Based}: Use model accuracy to determine $n$
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{Modifying the reward function.}
+    
+    \textbf{Answer:} Reward shaping can dramatically improve learning efficiency:
+    
+    \begin{enumerate}
+        \item \textbf{Reward Shaping Principles}:
+        \begin{itemize}
+            \item \textbf{Distance-Based}: Reward based on distance to goal
+            \item \textbf{Progress-Based}: Reward for making progress toward goal
+            \item \textbf{Safety-Based}: Penalty for approaching holes
+            \item \textbf{Exploration-Based}: Bonus for visiting new states
+        \end{itemize}
+        
+        \item \textbf{Specific Improvements for Frozen Lake}:
+        \begin{itemize}
+            \item \textbf{Distance Reward}: $r_{shaped} = r_{original} - \alpha \cdot d(s, goal)$
+            \item \textbf{Hole Penalty}: $r_{shaped} = r_{original} - \beta \cdot \mathbb{I}(near\_hole)$
+            \item \textbf{Progress Bonus}: $r_{shaped} = r_{original} + \gamma \cdot \mathbb{I}(closer\_to\_goal)$
+        \end{itemize}
+        
+        \item \textbf{Mathematical Formulation}:
+        \begin{itemize}
+            \item \textbf{Potential-Based}: $r_{shaped} = r_{original} + \gamma \Phi(s') - \Phi(s)$
+            \item Where $\Phi(s)$ is a potential function (e.g., negative distance to goal)
+            \item Preserves optimal policy while improving learning speed
+        \end{itemize}
+        
+        \item \textbf{Benefits}:
+        \begin{itemize}
+            \item \textbf{Faster Learning}: Provides immediate feedback
+            \item \textbf{Better Exploration}: Guides agent toward promising regions
+            \item \textbf{Reduced Sample Complexity}: Fewer episodes needed to learn
+        \end{itemize}
+        
+        \item \textbf{Pitfalls}:
+        \begin{itemize}
+            \item \textbf{Suboptimal Policies}: Poor reward design can lead to suboptimal behavior
+            \item \textbf{Overfitting}: Agent may exploit reward function rather than solve task
+            \item \textbf{Tuning Required}: Requires careful parameter tuning
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{Altering the planning function to prioritize some state–action pairs over others. (Hint: explain how \textbf{Prioritized Sweeping} helps)}
+    
+    \textbf{Answer:} Prioritized Sweeping dramatically improves planning efficiency by focusing on important updates:
+    
+    \begin{enumerate}
+        \item \textbf{Prioritized Sweeping Concept}:
+        \begin{itemize}
+            \item \textbf{Priority Queue}: Maintain priority queue of state-action pairs
+            \item \textbf{Priority Function}: $p(s,a) = |r + \gamma \max_{a'} Q(s',a') - Q(s,a)|$
+            \item \textbf{Update Order}: Process highest priority updates first
+        \end{itemize}
+        
+        \item \textbf{Why It Helps}:
+        \begin{itemize}
+            \item \textbf{TD Error Magnitude}: Higher priority for larger prediction errors
+            \item \textbf{Value Propagation}: Important updates propagate faster
+            \item \textbf{Computational Efficiency}: Focus computation on most impactful updates
+        \end{itemize}
+        
+        \item \textbf{Algorithm Details}:
+        \begin{itemize}
+            \item \textbf{Backward Updates}: When $Q(s,a)$ changes, update predecessors
+            \item \textbf{Priority Propagation}: Changes propagate through state space
+            \item \textbf{Queue Management}: Maintain priority queue of pending updates
+        \end{itemize}
+        
+        \item \textbf{Benefits for Frozen Lake}:
+        \begin{itemize}
+            \item \textbf{Faster Convergence}: Important updates processed first
+            \item \textbf{Better Sample Efficiency}: More effective use of planning steps
+            \item \textbf{Value Propagation}: Goal reward propagates faster through state space
+        \end{itemize}
+        
+        \item \textbf{Implementation Considerations}:
+        \begin{itemize}
+            \item \textbf{Predecessor Tracking}: Must track which states lead to each state
+            \item \textbf{Queue Size}: Limit queue size to prevent memory issues
+            \item \textbf{Update Frequency}: Balance between accuracy and computational cost
+        \end{itemize}
+        
+        \item \textbf{Theoretical Advantage}:
+        \begin{itemize}
+            \item \textbf{Convergence Rate}: Faster convergence to optimal policy
+            \item \textbf{Computational Complexity}: More efficient than uniform sampling
+            \item \textbf{Sample Complexity}: Fewer total updates needed for convergence
+        \end{itemize}
+    \end{enumerate}
 \end{itemize}

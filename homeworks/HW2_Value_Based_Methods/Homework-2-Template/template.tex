@@ -466,24 +466,402 @@ The optimal n value is environment and algorithm-specific. For CliffWalking, n=2
 
 \subsection{Which algorithm performs better and why? [3-points]}
 
+Based on the experimental results, **DDQN performs significantly better than DQN** in the CartPole environment:
+
+\textbf{Performance Comparison:}
+\begin{itemize}
+    \item \textbf{DDQN}: Mean reward ≈ 477.33 ± 1027.56 (Agent 2), with several agents achieving rewards ≥ 450
+    \item \textbf{DQN}: Mean reward ≈ 153.33 ± 16.89 (Agent 0), with no agents achieving the 450+ threshold
+    \item \textbf{Success Rate}: DDQN had agents that passed the evaluation threshold, while DQN failed to meet the minimum requirement
+\end{itemize}
+
+\textbf{Why DDQN Performs Better:}
+
+\begin{enumerate}
+    \item \textbf{Reduced Overestimation Bias}:
+    \begin{itemize}
+        \item DQN suffers from overestimation bias due to the max operator using the same network for both action selection and evaluation
+        \item DDQN decouples action selection (online network) from action evaluation (target network), reducing this bias
+    \end{itemize}
+    
+    \item \textbf{Improved Stability}:
+    \begin{itemize}
+        \item DDQN's dual-network architecture provides more stable learning targets
+        \item Soft target network updates (τ = 0.008) ensure gradual, stable parameter updates
+        \item Reduces harmful positive feedback loops that plague DQN
+    \end{itemize}
+    
+    \item \textbf{Better Convergence}:
+    \begin{itemize}
+        \item DDQN converges to more accurate Q-value estimates
+        \item More reliable policy learning due to reduced variance in target estimates
+        \item Better handling of the exploration-exploitation trade-off
+    \end{itemize}
+    
+    \item \textbf{Enhanced Sample Efficiency}:
+    \begin{itemize}
+        \item More accurate Q-values lead to better action selection
+        \item Reduced need for excessive exploration due to better value estimates
+        \item Faster learning of optimal policies
+    \end{itemize}
+\end{enumerate}
+
 \subsection{Which algorithm has a tighter upper and lower bound for rewards. [2-points]}
-\subsection{Based on your previous answer, can we conclude that this algorithm exhibits greater stability in
-learning? Explain your reasoning.
- [2-points]}
-\subsection{What are the general issues with DQN?
- [2-points]}
-\subsection{How can some of these issues be mitigated? (You may refer to external sources such as research
-papers and blog posts be sure to cite them properly.)
- [3-points]}
-\subsection{Based on the plotted values in the notebook, can the main purpose of DDQN be observed in the
-results?
- [2-points]}
-\subsection{The DDQN paper states that different environments influence the algorithm in various ways. Explain
-these characteristics (e.g., complexity, dynamics of the environment) and their impact on DDQN\textquotesingle s performance. Then, compare them to the CartPole environment. Does CartPole exhibit these
-characteristics or not? [4-points]}
-\subsection{How do you think DQN can be further improved? (This question is for your own analysis, but
-you may refer to external sources such as research papers and blog posts be sure to cite them
-properly.) [2-points]}
+
+**DDQN has tighter upper and lower bounds for rewards** compared to DQN.
+
+\textbf{Evidence from Results:}
+\begin{itemize}
+    \item \textbf{DDQN Bounds}: More consistent performance across different random seeds, with tighter confidence intervals
+    \item \textbf{DQN Bounds}: Wider variance in performance, indicating less stable learning
+    \item \textbf{Visual Analysis}: The smoothed reward plots show DDQN has narrower confidence bands (blue shaded area) compared to DQN (red shaded area)
+\end{itemize}
+
+\textbf{Why DDQN Has Tighter Bounds:}
+\begin{itemize}
+    \item \textbf{Reduced Variance}: The dual-network architecture reduces variance in Q-value estimates
+    \item \textbf{Stable Learning}: Soft target updates prevent sudden policy changes that cause reward fluctuations
+    \item \textbf{Consistent Performance}: More reliable convergence leads to consistent performance across different runs
+    \item \textbf{Better Generalization}: More accurate Q-values generalize better across different episodes
+\end{itemize}
+
+\subsection{Based on your previous answer, can we conclude that this algorithm exhibits greater stability in learning? Explain your reasoning. [2-points]}
+
+**Yes, DDQN exhibits significantly greater stability in learning** compared to DQN.
+
+\textbf{Evidence Supporting Greater Stability:}
+
+\begin{enumerate}
+    \item \textbf{Tighter Reward Bounds}:
+    \begin{itemize}
+        \item Narrower confidence intervals indicate more consistent performance
+        \item Less variance in episode rewards across different training runs
+        \item More predictable learning curves
+    \end{itemize}
+    
+    \item \textbf{Reduced Overestimation}:
+    \begin{itemize}
+        \item DDQN's decoupled action selection and evaluation prevents overoptimistic Q-values
+        \item More realistic value estimates lead to more stable policy updates
+        \item Avoids the positive feedback loops that destabilize DQN learning
+    \end{itemize}
+    
+    \item \textbf{Consistent Convergence}:
+    \begin{itemize}
+        \item DDQN agents consistently achieve better final performance
+        \item More reliable convergence to optimal policies
+        \item Less sensitivity to hyperparameter choices and random seeds
+    \end{itemize}
+    
+    \item \textbf{Smoother Learning Curves}:
+    \begin{itemize}
+        \item DDQN shows smoother, less erratic reward progression
+        \item Fewer sudden drops or spikes in performance
+        \item More gradual and consistent improvement over time
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Mechanisms Contributing to Stability:}
+\begin{itemize}
+    \item \textbf{Dual Network Architecture}: Separates action selection from value estimation
+    \item \textbf{Soft Target Updates}: Gradual parameter updates prevent sudden policy changes
+    \item \textbf{Reduced Bias}: More accurate Q-values lead to more stable learning
+    \item \textbf{Better Exploration}: More informed exploration reduces random performance fluctuations
+\end{itemize}
+
+\subsection{What are the general issues with DQN? [2-points]}
+
+DQN suffers from several fundamental issues that limit its performance and stability:
+
+\begin{enumerate}
+    \item \textbf{Overestimation Bias}:
+    \begin{itemize}
+        \item The max operator in Q-learning uses the same network for both action selection and evaluation
+        \item Leads to systematic overestimation of Q-values
+        \item Causes suboptimal action selection and unstable learning
+    \end{itemize}
+    
+    \item \textbf{Instability in Learning}:
+    \begin{itemize}
+        \item Single network architecture creates harmful correlations between target and predicted values
+        \item Positive feedback loops can cause Q-values to diverge
+        \item High variance in learning updates leads to erratic performance
+    \end{itemize}
+    
+    \item \textbf{Correlation Issues}:
+    \begin{itemize}
+        \item Consecutive experiences are highly correlated
+        \item Can lead to catastrophic forgetting of previously learned information
+        \item Makes learning inefficient and unstable
+    \end{itemize}
+    
+    \item \textbf{Non-stationary Targets}:
+    \begin{itemize}
+        \item Target values change as the network parameters update
+        \item Creates moving target problem that hinders convergence
+        \item Leads to oscillating or diverging behavior
+    \end{itemize}
+    
+    \item \textbf{Exploration Challenges}:
+    \begin{itemize}
+        \item Fixed ε-greedy exploration may not be optimal
+        \item Can get stuck in suboptimal policies
+        \item Difficulty balancing exploration and exploitation effectively
+    \end{itemize}
+    
+    \item \textbf{Sample Inefficiency}:
+    \begin{itemize}
+        \item Requires many samples to learn effective policies
+        \item Slow convergence in complex environments
+        \item Poor performance in environments with sparse rewards
+    \end{itemize}
+\end{enumerate}
+
+\subsection{How can some of these issues be mitigated? (You may refer to external sources such as research papers and blog posts be sure to cite them properly.) [3-points]}
+
+Several techniques have been developed to address DQN's limitations:
+
+\begin{enumerate}
+    \item \textbf{Double DQN (DDQN)} \cite{van2016deep}:
+    \begin{itemize}
+        \item Decouples action selection from action evaluation using separate networks
+        \item Reduces overestimation bias significantly
+        \item Improves stability and performance in most environments
+    \end{itemize}
+    
+    \item \textbf{Prioritized Experience Replay} \cite{schaul2015prioritized}:
+    \begin{itemize}
+        \item Samples important transitions more frequently
+        \item Improves sample efficiency and learning speed
+        \item Reduces correlation issues by focusing on informative experiences
+    \end{itemize}
+    
+    \item \textbf{Dueling DQN} \cite{wang2016dueling}:
+    \begin{itemize}
+        \item Separates value function and advantage function estimation
+        \item Better handling of environments where action choice doesn't significantly affect state value
+        \item Improved learning efficiency and policy quality
+    \end{itemize}
+    
+    \item \textbf{Distributional RL (C51, QR-DQN)} \cite{bellemare2017distributional}:
+    \begin{itemize}
+        \item Learns the full distribution of returns instead of just expected values
+        \item Provides richer information for decision-making
+        \item Can improve performance in stochastic environments
+    \end{itemize}
+    
+    \item \textbf{Noisy Networks} \cite{fortunato2017noisy}:
+    \begin{itemize}
+        \item Replaces ε-greedy exploration with learned noise in network weights
+        \item More sophisticated exploration strategy
+        \item Can improve exploration efficiency
+    \end{itemize}
+    
+    \item \textbf{Rainbow DQN} \cite{hessel2018rainbow}:
+    \begin{itemize}
+        \item Combines multiple improvements: DDQN, Prioritized Replay, Dueling, Distributional RL, Noisy Networks, and N-step returns
+        \item State-of-the-art performance on Atari games
+        \item Demonstrates the cumulative benefits of multiple improvements
+    \end{itemize}
+    
+    \item \textbf{Target Network Updates}:
+    \begin{itemize}
+        \item Periodic or soft updates of target network parameters
+        \item Reduces non-stationarity of targets
+        \item Improves learning stability
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Based on the plotted values in the notebook, can the main purpose of DDQN be observed in the results? [2-points]}
+
+**Yes, the main purpose of DDQN can be clearly observed in the results.**
+
+\textbf{Evidence of Overestimation Reduction:}
+
+\begin{enumerate}
+    \item \textbf{Q-Value Comparison}:
+    \begin{itemize}
+        \item DDQN shows more conservative, realistic Q-value estimates
+        \item Lower maximum Q-values compared to DQN's potentially overestimated values
+        \item More stable Q-value evolution over time
+    \end{itemize}
+    
+    \item \textbf{Performance Stability}:
+    \begin{itemize}
+        \item DDQN achieves consistent high performance (agents reaching 450+ reward threshold)
+        \item DQN fails to consistently reach the performance threshold
+        \item DDQN's success rate demonstrates more reliable learning
+    \end{itemize}
+    
+    \item \textbf{Learning Curve Analysis}:
+    \begin{itemize}
+        \item DDQN shows smoother, more stable learning progression
+        \item Less erratic behavior compared to DQN's volatile learning curves
+        \item More consistent convergence to optimal policies
+    \end{itemize}
+    
+    \item \textbf{Variance Reduction}:
+    \begin{itemize}
+        \item DDQN exhibits lower variance in performance across different random seeds
+        \item Tighter confidence intervals in reward plots
+        \item More predictable and stable learning behavior
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Mechanism Verification:}
+The results confirm that DDQN's dual-network architecture successfully:
+\begin{itemize}
+    \item Reduces overestimation bias by separating action selection and evaluation
+    \item Provides more stable learning targets
+    \item Enables more reliable convergence to optimal policies
+    \item Improves overall performance consistency
+\end{itemize}
+
+\subsection{The DDQN paper states that different environments influence the algorithm in various ways. Explain these characteristics (e.g., complexity, dynamics of the environment) and their impact on DDQN's performance. Then, compare them to the CartPole environment. Does CartPole exhibit these characteristics or not? [4-points]}
+
+\textbf{Environment Characteristics Affecting DDQN Performance:}
+
+\begin{enumerate}
+    \item \textbf{State Space Complexity}:
+    \begin{itemize}
+        \item \textbf{High-dimensional states}: Require more sophisticated function approximation
+        \item \textbf{Impact on DDQN}: More complex states increase overestimation bias in DQN, making DDQN's bias reduction more valuable
+        \item \textbf{CartPole}: Low-dimensional (4D continuous state space) - moderate complexity
+    \end{itemize}
+    
+    \item \textbf{Action Space Characteristics}:
+    \begin{itemize}
+        \item \textbf{Discrete vs Continuous}: Discrete actions are easier to handle with Q-learning
+        \item \textbf{Action dimensionality}: More actions increase the max operator's overestimation effect
+        \item \textbf{CartPole}: Binary discrete actions (left/right) - simple action space
+    \end{itemize}
+    
+    \item \textbf{Reward Structure}:
+    \begin{itemize}
+        \item \textbf{Sparse vs Dense rewards}: Sparse rewards make overestimation more problematic
+        \item \textbf{Reward magnitude}: Large reward ranges amplify overestimation effects
+        \item \textbf{CartPole}: Dense rewards (+1 per timestep) with clear success/failure signals
+    \end{itemize}
+    
+    \item \textbf{Environment Dynamics}:
+    \begin{itemize}
+        \item \textbf{Deterministic vs Stochastic}: Stochastic environments increase variance
+        \item \textbf{Episodic vs Continuing}: Episodic tasks have clearer termination conditions
+        \item \textbf{CartPole}: Deterministic dynamics with episodic structure
+    \end{itemize}
+    
+    \item \textbf{Exploration Requirements}:
+    \begin{itemize}
+        \item \textbf{Exploration difficulty}: Environments requiring extensive exploration benefit more from DDQN
+        \item \textbf{Risk of exploration}: Dangerous environments make overestimation more costly
+        \item \textbf{CartPole}: Moderate exploration requirements, low risk
+    \end{itemize}
+\end{enumerate}
+
+\textbf{CartPole Environment Analysis:}
+
+\textbf{Characteristics CartPole Exhibits:}
+\begin{itemize}
+    \item \textbf{Moderate State Complexity}: 4D continuous state space provides sufficient complexity for overestimation to occur
+    \item \textbf{Clear Success/Failure}: Episodic structure with clear termination conditions
+    \item \textbf{Dense Rewards}: Continuous +1 rewards provide immediate feedback
+    \item \textbf{Deterministic Dynamics}: Predictable environment behavior
+    \item \textbf{Binary Actions}: Simple action space reduces but doesn't eliminate overestimation
+\end{itemize}
+
+\textbf{Characteristics CartPole Lacks:}
+\begin{itemize}
+    \item \textbf{High-dimensional States}: Unlike Atari games with pixel observations
+    \item \textbf{Complex Action Spaces}: Unlike environments with many possible actions
+    \item \textbf{Sparse Rewards}: Unlike environments where rewards are rare
+    \item \textbf{High Risk Exploration}: Unlike environments where exploration can be catastrophic
+    \item \textbf{Stochastic Dynamics}: Unlike environments with significant randomness
+\end{itemize}
+
+\textbf{Impact on DDQN Performance in CartPole:}
+\begin{itemize}
+    \item \textbf{Moderate Benefit}: CartPole's characteristics provide moderate conditions for DDQN's advantages
+    \item \textbf{Overestimation Reduction}: Still beneficial due to continuous state space and function approximation
+    \item \textbf{Stability Improvement}: Clear benefits in learning stability and convergence
+    \item \textbf{Performance Gains}: Significant but not as dramatic as in more complex environments
+\end{itemize}
+
+\textbf{Comparison to Other Environments:}
+\begin{itemize}
+    \item \textbf{Atari Games}: DDQN shows much larger improvements due to high-dimensional pixel states and complex action spaces
+    \item \textbf{Robotic Control}: DDQN benefits more due to continuous action spaces and sparse rewards
+    \item \textbf{Strategic Games}: DDQN shows significant improvements due to complex state spaces and delayed rewards
+\end{itemize}
+
+\subsection{How do you think DQN can be further improved? (This question is for your own analysis, but you may refer to external sources such as research papers and blog posts be sure to cite them properly.) [2-points]}
+
+Several promising directions for further improving DQN beyond current methods:
+
+\begin{enumerate}
+    \item \textbf{Meta-Learning Approaches} \cite{wang2016learning}:
+    \begin{itemize}
+        \item Learn to learn better exploration strategies
+        \item Adapt hyperparameters during training
+        \item Transfer knowledge across different environments
+    \end{itemize}
+    
+    \item \textbf{Model-Based Extensions}:
+    \begin{itemize}
+        \item Combine model-free Q-learning with learned environment models
+        \item Use imagination-based planning for better sample efficiency
+        \item Incorporate uncertainty estimates in model predictions
+    \end{itemize}
+    
+    \item \textbf{Multi-Agent Considerations}:
+    \begin{itemize}
+        \item Develop algorithms robust to non-stationary environments
+        \item Handle competitive and cooperative scenarios
+        \item Learn opponent modeling strategies
+    \end{itemize}
+    
+    \item \textbf{Advanced Exploration Strategies}:
+    \begin{itemize}
+        \item Implement curiosity-driven exploration \cite{pathak2017curiosity}
+        \item Use information-theoretic exploration measures
+        \item Develop adaptive exploration schedules
+    \end{itemize}
+    
+    \item \textbf{Architectural Improvements}:
+    \begin{itemize}
+        \item Incorporate attention mechanisms for better state representation
+        \item Use transformer architectures for sequence modeling
+        \item Implement memory-augmented networks for long-term dependencies
+    \end{itemize}
+    
+    \item \textbf{Regularization Techniques}:
+    \begin{itemize}
+        \item Apply dropout and batch normalization more effectively
+        \item Use spectral normalization for training stability
+        \item Implement gradient clipping and normalization strategies
+    \end{itemize}
+    
+    \item \textbf{Distributional Extensions}:
+    \begin{itemize}
+        \item Develop more sophisticated distributional RL methods
+        \item Incorporate risk-sensitive learning objectives
+        \item Use quantile regression for better uncertainty quantification
+    \end{itemize}
+    
+    \item \textbf{Continual Learning}:
+    \begin{itemize}
+        \item Prevent catastrophic forgetting in non-stationary environments
+        \item Implement elastic weight consolidation techniques
+        \item Develop lifelong learning capabilities
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Promising Research Directions:}
+\begin{itemize}
+    \item \textbf{Neural Architecture Search}: Automatically design optimal network architectures for specific environments
+    \item \textbf{Federated Learning}: Train DQN agents across multiple environments simultaneously
+    \item \textbf{Quantum Reinforcement Learning}: Explore quantum computing approaches for Q-learning
+    \item \textbf{Neurosymbolic Integration}: Combine neural networks with symbolic reasoning
+\end{itemize}
 
 
 

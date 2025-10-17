@@ -237,14 +237,269 @@ This distinction is impossible with traditional value-based methods that only co
 \subsection{C51 Algorithm[15-points]}
 \subsubsection{a)[8-points]} Describe the C51 algorithm in detail. How does it represent and update return distributions? Include the projection step.
 
+\textbf{Answer:}
+
+C51 (Categorical 51) discretizes the return distribution into a fixed number of atoms (typically 51).
+
+\textbf{Architecture:}
+\begin{itemize}
+\item Network outputs probabilities for each atom per action
+\item Output shape: [batch\_size, num\_actions, num\_atoms]
+\item Support: V\_MIN to V\_MAX discretized into num\_atoms bins
+\end{itemize}
+
+\textbf{Distribution Representation:}
+\begin{equation}
+Z(s,a) \approx \sum_i p_i(s,a) \delta_{z_i} \text{ where } z_i \in [V_{\text{MIN}}, V_{\text{MAX}}]
+\end{equation}
+
+\textbf{Distributional Bellman Operator:}
+\begin{equation}
+T^\pi Z(s,a) = R(s,a) + \gamma Z(s', \pi(s'))
+\end{equation}
+
+\textbf{Projection Algorithm:}
+The key innovation is projecting the Bellman-updated distribution back onto the fixed support:
+
+\begin{enumerate}
+\item \textbf{Compute Target Distribution:}
+\begin{equation}
+T_{z_j} = r + \gamma \cdot z_j
+\end{equation}
+
+\item \textbf{Project onto Support:}
+For each atom $z_j$:
+\begin{itemize}
+\item Compute projected location: $b_j = \frac{T_{z_j} - V_{\text{MIN}}}{\Delta z}$
+\item Distribute probability to neighboring atoms
+\end{itemize}
+
+\item \textbf{Loss Function:}
+\begin{equation}
+L = -\sum_i (p_{\text{target}})_i \log((p_{\text{current}})_i)
+\end{equation}
+Cross-entropy between target and current distributions
+\end{enumerate}
+
+\textbf{Implementation Details:}
+\begin{verbatim}
+class C51Network(nn.Module):
+    def __init__(self, state_dim, action_dim, num_atoms=51):
+        super().__init__()
+        self.num_atoms = num_atoms
+        self.v_min = -10
+        self.v_max = 10
+        self.delta_z = (self.v_max - self.v_min) / (num_atoms - 1)
+        self.support = torch.linspace(self.v_min, self.v_max, num_atoms)
+
+        self.network = nn.Sequential(
+            nn.Linear(state_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 256),
+            nn.ReLU(),
+            nn.Linear(256, action_dim * num_atoms)
+        )
+
+    def forward(self, state):
+        logits = self.network(state)
+        logits = logits.view(-1, self.action_dim, self.num_atoms)
+        probs = F.softmax(logits, dim=-1)
+        return probs
+\end{verbatim}
+
+\textbf{Advantages:}
+\begin{itemize}
+\item More stable learning than DQN
+\item Better performance on Atari games
+\item Provides uncertainty estimates
+\end{itemize}
+
 \subsubsection{b)[7-points]} Implement the projection algorithm for C51. Show how to project the Bellman-updated distribution back onto the fixed support.
+
+\textbf{Answer:}
+
+\textbf{Projection Algorithm Implementation:}
+
+\begin{verbatim}
+def project_distribution(next_dist, rewards, dones, gamma, support):
+    """
+    Project T_z (distributional Bellman) onto support
+    
+    Args:
+        next_dist: [batch_size, num_atoms] - next state distribution
+        rewards: [batch_size] - immediate rewards
+        dones: [batch_size] - episode termination flags
+        gamma: discount factor
+        support: [num_atoms] - support points
+    """
+    batch_size = rewards.shape[0]
+    num_atoms = support.shape[0]
+    v_min, v_max = support[0], support[-1]
+    delta_z = (v_max - v_min) / (num_atoms - 1)
+    
+    # Compute projected values: r + γ * support
+    proj_support = rewards.unsqueeze(-1) + \
+                   gamma * (1 - dones.unsqueeze(-1)) * support
+    
+    # Clamp to valid range
+    proj_support = proj_support.clamp(v_min, v_max)
+    
+    # Map to categorical distribution
+    b = (proj_support - v_min) / delta_z
+    l = b.floor().long()
+    u = b.ceil().long()
+    
+    # Ensure indices are within bounds
+    l = l.clamp(0, num_atoms - 1)
+    u = u.clamp(0, num_atoms - 1)
+    
+    # Distribute probability
+    projected_dist = torch.zeros_like(next_dist)
+    
+    for i in range(num_atoms):
+        # Handle case where l == u (exact match)
+        mask_lu = (l[:, i] == u[:, i])
+        projected_dist[mask_lu, l[mask_lu, i]] += next_dist[mask_lu, i]
+        
+        # Handle case where l != u (interpolation)
+        mask_diff = (l[:, i] != u[:, i])
+        projected_dist[mask_diff, l[mask_diff, i]] += \
+            next_dist[mask_diff, i] * (u[mask_diff, i] - b[mask_diff, i])
+        projected_dist[mask_diff, u[mask_diff, i]] += \
+            next_dist[mask_diff, i] * (b[mask_diff, i] - l[mask_diff, i])
+    
+    return projected_dist
+\end{verbatim}
+
+\textbf{Key Steps:}
+\begin{enumerate}
+\item \textbf{Compute Target Locations}: $T_{z_j} = r + \gamma \cdot z_j$
+\item \textbf{Clamp to Support}: Ensure targets are within $[V_{\text{MIN}}, V_{\text{MAX}}]$
+\item \textbf{Map to Indices}: Convert continuous values to discrete indices
+\item \textbf{Distribute Probability}: Use linear interpolation to distribute probability mass
+\end{enumerate}
+
+\textbf{Mathematical Details:}
+\begin{itemize}
+\item For each atom $z_j$, compute $b_j = \frac{T_{z_j} - V_{\text{MIN}}}{\Delta z}$
+\item Lower index: $l_j = \lfloor b_j \rfloor$
+\item Upper index: $u_j = \lceil b_j \rceil$
+\item Probability distribution:
+\begin{align}
+p_{\text{proj}}[l_j] &\leftarrow p_{\text{proj}}[l_j] + p_j \cdot (u_j - b_j) \\
+p_{\text{proj}}[u_j] &\leftarrow p_{\text{proj}}[u_j] + p_j \cdot (b_j - l_j)
+\end{align}
+\end{itemize}
 
 \noindent\rule{\textwidth}{0.2pt}
 
 \subsection{Quantile Regression DQN[10-points]}
 \subsubsection{a)[5-points]} Explain QR-DQN and how it differs from C51. What are the advantages of using quantile regression?
 
+\textbf{Answer:}
+
+\textbf{QR-DQN Overview:}
+
+Unlike C51 which uses fixed locations (atoms) with learned probabilities, QR-DQN uses fixed probabilities (quantiles) with learned locations.
+
+\textbf{Quantile Function:}
+\begin{equation}
+F^{-1}_Z(\tau) = \inf\{z : F_Z(z) \geq \tau\} \text{ where } \tau \in [0,1]
+\end{equation}
+
+\textbf{Key Differences from C51:}
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Aspect} & \textbf{C51} & \textbf{QR-DQN} \\
+\hline
+Support & Fixed locations & Learned locations \\
+Probabilities & Learned & Fixed (uniform) \\
+Loss & Cross-entropy & Quantile Huber loss \\
+Flexibility & Fixed range & Adaptive range \\
+\hline
+\end{tabular}
+\end{center}
+
+\textbf{Advantages of QR-DQN:}
+\begin{enumerate}
+\item \textbf{Adaptive Support}: Automatically adjusts value range
+\item \textbf{No Projection}: Simpler updates without distribution projection
+\item \textbf{Better Tail Modeling}: Captures extreme values better
+\item \textbf{Risk-Sensitive}: Easy to extract CVaR and other risk measures
+\end{enumerate}
+
+\textbf{Risk Metrics:}
+\begin{verbatim}
+def compute_cvar(quantiles, alpha=0.1):
+    """Conditional Value at Risk"""
+    num_quantiles = quantiles.shape[-1]
+    cvar_quantiles = int(alpha * num_quantiles)
+    return quantiles[..., :cvar_quantiles].mean(dim=-1)
+\end{verbatim}
+
 \subsubsection{b)[5-points]} Implement the quantile Huber loss function for QR-DQN.
+
+\textbf{Answer:}
+
+\textbf{Quantile Huber Loss Implementation:}
+
+\begin{verbatim}
+def quantile_huber_loss(quantiles, targets, taus, kappa=1.0):
+    """
+    Quantile Huber loss for QR-DQN
+    
+    Args:
+        quantiles: [N, num_quantiles] - predicted quantiles
+        targets: [N, num_quantiles] - target quantiles
+        taus: [num_quantiles] - quantile fractions
+        kappa: Huber loss threshold
+    """
+    td_errors = targets - quantiles
+    
+    # Huber loss
+    huber_loss = torch.where(
+        td_errors.abs() <= kappa,
+        0.5 * td_errors.pow(2),
+        kappa * (td_errors.abs() - 0.5 * kappa)
+    )
+    
+    # Quantile loss
+    quantile_loss = abs(taus - (td_errors < 0).float()) * huber_loss
+    
+    return quantile_loss.sum(dim=-1).mean()
+\end{verbatim}
+
+\textbf{Mathematical Formulation:}
+
+The quantile Huber loss combines:
+\begin{enumerate}
+\item \textbf{Huber Loss}: Robust to outliers
+\begin{equation}
+L_\kappa(u) = \begin{cases}
+\frac{1}{2}u^2 & \text{if } |u| \leq \kappa \\
+\kappa(|u| - \frac{1}{2}\kappa) & \text{otherwise}
+\end{cases}
+\end{equation}
+
+\item \textbf{Quantile Loss}: Asymmetric penalty
+\begin{equation}
+\rho_\tau(u) = u(\tau - \mathbf{1}_{u < 0})
+\end{equation}
+
+\item \textbf{Combined Loss}:
+\begin{equation}
+L(\theta) = \mathbb{E}_{(s,a,r,s')} \left[ \sum_{i=1}^N \rho_{\tau_i}(r + \gamma Q_{\tau_i}(s', a') - Q_{\tau_i}(s,a)) \right]
+\end{equation}
+\end{enumerate}
+
+\textbf{Key Properties:}
+\begin{itemize}
+\item \textbf{Asymmetric}: Penalizes overestimation vs underestimation differently
+\item \textbf{Robust}: Huber loss reduces sensitivity to outliers
+\item \textbf{Multi-quantile}: Learns multiple quantiles simultaneously
+\end{itemize}
 
 \noindent\rule{\textwidth}{0.2pt}
 }}
