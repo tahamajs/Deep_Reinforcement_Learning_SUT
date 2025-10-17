@@ -195,11 +195,97 @@ The grading will be based on the following criteria, with a total of 100 points:
 \subsection{Question 1:}
 How do these two methods differ in terms of their effectiveness for solving reinforcement learning tasks? 
 
+\textbf{Answer:} REINFORCE and Genetic Algorithms (GA) differ fundamentally in their approach to solving RL tasks:
+
+\textbf{REINFORCE (Policy Gradient):}
+\begin{itemize}
+    \item \textbf{Gradient-based}: Uses gradient information to directly optimize policy parameters
+    \item \textbf{Sample efficient}: Leverages gradient information for faster convergence
+    \item \textbf{On-policy}: Requires sampling from current policy, limiting data reuse
+    \item \textbf{Continuous optimization}: Smooth parameter updates using backpropagation
+    \item \textbf{High variance}: Monte Carlo estimates lead to noisy gradients
+\end{itemize}
+
+\textbf{Genetic Algorithm:}
+\begin{itemize}
+    \item \textbf{Evolutionary}: Uses population-based search without gradient information
+    \item \textbf{Derivative-free}: Works with non-differentiable policies
+    \item \textbf{Parallelizable}: Evaluates multiple policies simultaneously
+    \item \textbf{Discrete optimization}: Uses mutation and crossover operations
+    \item \textbf{Global search}: Can escape local optima through random mutations
+\end{itemize}
+
 \subsection{Question 2:}
 Discuss the key differences in their \textbf{performance}, \textbf{convergence rates}, and \textbf{stability}. 
 
+\textbf{Answer:} 
+
+\textbf{Performance:}
+\begin{itemize}
+    \item \textbf{REINFORCE}: Generally achieves higher final performance due to gradient-based optimization
+    \item \textbf{GA}: May struggle with fine-tuning but can find diverse solutions
+    \item \textbf{REINFORCE} excels in smooth, differentiable environments
+    \item \textbf{GA} performs better in discrete, combinatorial problems
+\end{itemize}
+
+\textbf{Convergence Rates:}
+\begin{itemize}
+    \item \textbf{REINFORCE}: Faster initial convergence (300-500 episodes) due to gradient information
+    \item \textbf{GA}: Slower convergence (500-1000+ episodes) due to random search
+    \item \textbf{REINFORCE}: More predictable convergence trajectory
+    \item \textbf{GA}: Convergence depends heavily on population size and mutation rates
+\end{itemize}
+
+\textbf{Stability:}
+\begin{itemize}
+    \item \textbf{REINFORCE}: High variance in gradient estimates leads to unstable training
+    \item \textbf{GA}: More stable but slower progress due to population averaging
+    \item \textbf{REINFORCE}: Sensitive to hyperparameters (learning rate, baseline)
+    \item \textbf{GA}: More robust to parameter settings but requires larger populations
+\end{itemize}
+
 \subsection{Question 3:}
 Additionally, explore how each method handles exploration and exploitation, and suggest situations where one might be preferred over the other. 
+
+\textbf{Answer:} 
+
+\textbf{Exploration vs Exploitation:}
+
+\textbf{REINFORCE:}
+\begin{itemize}
+    \item \textbf{Exploration}: Natural stochastic policy provides exploration
+    \item \textbf{Exploitation}: Gradient ascent exploits promising directions
+    \item \textbf{Balance}: Controlled by policy entropy and learning rate
+    \item \textbf{Challenge}: Can get stuck in local optima
+\end{itemize}
+
+\textbf{Genetic Algorithm:}
+\begin{itemize}
+    \item \textbf{Exploration}: Mutation provides random exploration
+    \item \textbf{Exploitation}: Selection pressure exploits good solutions
+    \item \textbf{Balance}: Controlled by mutation rate and selection pressure
+    \item \textbf{Advantage}: Maintains population diversity
+\end{itemize}
+
+\textbf{When to prefer each method:}
+
+\textbf{Choose REINFORCE when:}
+\begin{itemize}
+    \item Policy is differentiable (neural networks)
+    \item Sample efficiency is important
+    \item Smooth reward landscapes
+    \item Continuous action spaces
+    \item Limited computational resources
+\end{itemize}
+
+\textbf{Choose GA when:}
+\begin{itemize}
+    \item Policy is non-differentiable
+    \item Discrete action spaces
+    \item Rugged reward landscapes with many local optima
+    \item Parallel computing available
+    \item Need diverse solution strategies
+\end{itemize} 
 
 \newpage
 

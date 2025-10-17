@@ -205,17 +205,254 @@ The grading will be based on the following criteria, with a total of 100 points:
 % \section{N-Step Sarsa and N-Step Q-learning}
 \section{Epsilon Greedy}
 \subsection{Epsilon 0.1 initially has a high regret rate but decreases quickly. Why is that? [2.5-points]}
+
+Epsilon 0.1 initially has a high regret rate because the agent starts with limited knowledge of the environment and must explore to discover the optimal policy. However, it decreases quickly because:
+
+\begin{itemize}
+    \item \textbf{Low exploration rate}: With $\epsilon = 0.1$, the agent exploits 90\% of the time, allowing it to quickly converge to a good policy once it discovers promising actions.
+    \item \textbf{Fast learning}: The CliffWalking environment has deterministic dynamics, so the agent can quickly learn the consequences of actions and identify the optimal path.
+    \item \textbf{Balanced exploration-exploitation}: The 10\% exploration rate is sufficient to discover the optimal path without excessive random actions that would increase regret.
+\end{itemize}
+
+The rapid decrease in regret indicates that epsilon 0.1 provides an effective balance between exploration and exploitation for this environment.
+
 \subsection{Both epsilon 0.1 and 0.5 show jumps. What is the reason for this? [2.5-points]}
+
+The jumps in regret for both epsilon 0.1 and 0.5 are caused by:
+
+\begin{itemize}
+    \item \textbf{Cliff encounters}: When the agent explores and falls off the cliff (receiving -100 reward), it experiences a sudden spike in regret compared to the optimal reward of -13.
+    \item \textbf{Exploration variance}: Random exploration can lead to suboptimal actions, especially in dangerous areas near the cliff, causing temporary increases in regret.
+    \item \textbf{Policy updates}: As the Q-values are updated, the agent may temporarily switch between different policies, leading to fluctuations in performance.
+    \item \textbf{Learning instability}: During the early stages of learning, the agent's policy is still evolving, causing occasional poor decisions that manifest as jumps in regret.
+\end{itemize}
+
+These jumps become less frequent as the agent learns and converges to a stable policy.
+
 \subsection{Epsilon 0.9 changes linearly. Why? [2.5-points]}
+
+Epsilon 0.9 shows linear regret because:
+
+\begin{itemize}
+    \item \textbf{High exploration rate}: With $\epsilon = 0.9$, the agent explores 90\% of the time, meaning it takes random actions most of the time.
+    \item \textbf{Consistent suboptimal behavior}: Since the agent rarely exploits its learned knowledge, it consistently performs worse than optimal, leading to a steady, linear increase in cumulative regret.
+    \item \textbf{Limited learning}: The high exploration rate prevents the agent from effectively learning and exploiting good policies, so regret accumulates at a roughly constant rate.
+    \item \textbf{Random walk behavior}: The agent essentially performs a random walk through the environment, with regret increasing linearly as it fails to converge to the optimal policy.
+\end{itemize}
+
+The linear trend indicates that excessive exploration (epsilon 0.9) prevents effective learning and policy improvement.
 
 \subsection{Compare the policy for epsilon values 0.1 and 0.9. How do they differ, and why do they look different? [2.5-points]}
 
+The policies learned with epsilon 0.1 and 0.9 differ significantly:
+
+\textbf{Epsilon 0.1 Policy:}
+\begin{itemize}
+    \item Learns a more deterministic, goal-oriented policy
+    \item Shows clear directional preferences (typically moving right toward the goal)
+    \item Avoids dangerous areas near the cliff due to sufficient exploitation of learned safe actions
+    \item Achieves better final performance (mean reward ≈ -17 to -21)
+\end{itemize}
+
+\textbf{Epsilon 0.9 Policy:}
+\begin{itemize}
+    \item Remains largely random due to high exploration rate
+    \item Shows no clear directional preferences or learned patterns
+    \item Frequently encounters the cliff due to excessive random exploration
+    \item Achieves poor final performance (mean reward ≈ -17, but with high variance)
+\end{itemize}
+
+\textbf{Why they differ:}
+\begin{itemize}
+    \item \textbf{Exploration vs Exploitation balance}: Epsilon 0.1 allows sufficient exploitation to learn and follow good policies, while epsilon 0.9 prevents effective policy learning.
+    \item \textbf{Learning efficiency}: Lower epsilon enables faster convergence to stable policies, while higher epsilon maintains random behavior.
+    \item \textbf{Risk management}: Epsilon 0.1 learns to avoid dangerous cliff areas, while epsilon 0.9 continues to explore randomly, including dangerous areas.
+\end{itemize}
+
 \subsection{In the epsilon decay section, analyze the optimal policy for the row adjacent to the cliff (the lowest row). Then, compare the different learned policies and their corresponding rewards. [2.5-points]}
+
+\textbf{Optimal Policy Analysis for Cliff-Adjacent Row:}
+The row adjacent to the cliff (lowest row) requires careful navigation. The optimal policy should:
+\begin{itemize}
+    \item Move rightward toward the goal when possible
+    \item Avoid moving down (which leads to the cliff and -100 reward)
+    \item Use up/down movements only when necessary to reach the goal
+\end{itemize}
+
+\textbf{Comparison of Different Epsilon Decay Strategies:}
+
+\textbf{Fast Decay (Decay Rate = 0.005):}
+\begin{itemize}
+    \item Quickly transitions from exploration to exploitation
+    \item Learns safe policies faster, avoiding cliff encounters
+    \item Achieves good performance (mean reward ≈ -17)
+    \item May converge to suboptimal policies due to insufficient exploration
+\end{itemize}
+
+\textbf{Medium Decay (Decay Rate = 0.002):}
+\begin{itemize}
+    \item Balanced transition between exploration and exploitation
+    \item Allows sufficient exploration to discover optimal policies
+    \item Achieves good performance (mean reward ≈ -17)
+    \item Provides good balance between learning speed and policy quality
+\end{itemize}
+
+\textbf{Slow Decay (Decay Rate = 0.001):}
+\begin{itemize}
+    \item Maintains high exploration for longer periods
+    \item May discover better policies but takes longer to converge
+    \item Achieves slightly worse performance (mean reward ≈ -19)
+    \item Higher variance due to continued exploration
+\end{itemize}
+
+\textbf{Key Observations:}
+\begin{itemize}
+    \item All decay strategies eventually learn to avoid the cliff
+    \item Medium decay provides the best balance between exploration and exploitation
+    \item Fast decay converges quickly but may miss optimal policies
+    \item Slow decay explores more but may not converge effectively within the training period
+\end{itemize}
 
 \section{N-step Sarsa and N-step Q-learning}
 \subsection{What is the difference between Q-learning and sarsa? [2.5-points]}
+
+The fundamental difference between Q-learning and SARSA lies in their update mechanisms and policy evaluation approaches:
+
+\textbf{Q-Learning (Off-Policy):}
+\begin{itemize}
+    \item \textbf{Update Rule}: $Q(s,a) \leftarrow Q(s,a) + \alpha[r + \gamma \max_{a'} Q(s',a') - Q(s,a)]$
+    \item \textbf{Target Policy}: Uses the optimal policy (greedy) for the next state, regardless of the action actually taken
+    \item \textbf{Learning Objective}: Learns the optimal Q-function $Q^*$ independent of the policy being followed
+    \item \textbf{Behavior}: Can learn optimal policy while following any exploratory policy
+    \item \textbf{Convergence}: Guaranteed to converge to optimal policy under certain conditions
+\end{itemize}
+
+\textbf{SARSA (On-Policy):}
+\begin{itemize}
+    \item \textbf{Update Rule}: $Q(s,a) \leftarrow Q(s,a) + \alpha[r + \gamma Q(s',a') - Q(s,a)]$
+    \item \textbf{Target Policy}: Uses the same policy (including exploration) that was used to select the next action
+    \item \textbf{Learning Objective}: Learns Q-values for the policy actually being followed
+    \item \textbf{Behavior}: Learns the consequences of the current policy, including exploration
+    \item \textbf{Convergence}: Converges to Q-values of the policy being followed
+\end{itemize}
+
+\textbf{Key Implications:}
+\begin{itemize}
+    \item \textbf{Risk Management}: SARSA learns safer policies in dangerous environments (like CliffWalking) because it accounts for exploration
+    \item \textbf{Optimality}: Q-learning finds optimal policies but may be riskier during learning
+    \item \textbf{Stability}: SARSA is more conservative and stable, while Q-learning is more aggressive in seeking optimality
+\end{itemize}
+
 \subsection{Compare how different values of n affect each algorithm's performance separately. [2.5-points]}
+
+\textbf{Effect of n on SARSA Performance:}
+
+\textbf{n = 1 (1-step SARSA):}
+\begin{itemize}
+    \item Mean reward: -100 (agent falls off cliff frequently)
+    \item High variance and instability
+    \item Slow convergence due to single-step updates
+    \item Prone to cliff encounters during learning
+\end{itemize}
+
+\textbf{n = 2 (2-step SARSA):}
+\begin{itemize}
+    \item Mean reward: -17 (significant improvement)
+    \item Better stability and faster convergence
+    \item Learns to avoid cliff more effectively
+    \item More efficient learning through 2-step lookahead
+\end{itemize}
+
+\textbf{n = 5 (5-step SARSA):}
+\begin{itemize}
+    \item Mean reward: -17 (similar to n=2)
+    \item Good stability but diminishing returns
+    \item Longer lookahead helps with cliff avoidance
+    \item May be slower to converge due to longer update delays
+\end{itemize}
+
+\textbf{Effect of n on Q-Learning Performance:}
+
+\textbf{n = 1 (1-step Q-Learning):}
+\begin{itemize}
+    \item Mean reward: -13 (optimal performance)
+    \item Fast convergence to optimal policy
+    \item Efficient learning with single-step updates
+    \item Finds shortest path to goal
+\end{itemize}
+
+\textbf{n = 2 (2-step Q-Learning):}
+\begin{itemize}
+    \item Mean reward: -13 (maintains optimal performance)
+    \item Similar convergence speed
+    \item Benefits from multi-step returns
+    \item Stable optimal policy learning
+\end{itemize}
+
+\textbf{n = 5 (5-step Q-Learning):}
+\begin{itemize}
+    \item Mean reward: -100 (performance degradation)
+    \item Increased cliff encounters
+    \item Longer lookahead may lead to overestimation
+    \item Less stable learning process
+\end{itemize}
+
+\textbf{Key Observations:}
+\begin{itemize}
+    \item SARSA benefits significantly from increasing n (1→2), but diminishing returns beyond n=2
+    \item Q-Learning performs optimally with n=1 and n=2, but degrades with n=5
+    \item Multi-step methods help SARSA learn safer policies by considering longer-term consequences
+    \item Q-Learning's optimal performance is robust to moderate n values but sensitive to very high n
+\end{itemize}
+
 \subsection{Is a Higher or Lower n Always Better? Explain the advantages and disadvantages of both low and high n values. [2.5-points]}
+
+\textbf{No, higher n is not always better.} The optimal n value depends on the environment characteristics and algorithm:
+
+\textbf{Advantages of Low n Values (n = 1, 2):}
+\begin{itemize}
+    \item \textbf{Fast Updates}: Immediate feedback allows quick policy adjustments
+    \item \textbf{Low Variance}: Shorter update horizons reduce variance in target estimates
+    \item \textbf{Computational Efficiency}: Less memory and computation required
+    \item \textbf{Stability}: More frequent updates can lead to more stable learning
+    \item \textbf{Environment Suitability}: Works well in environments where immediate rewards are informative
+\end{itemize}
+
+\textbf{Disadvantages of Low n Values:}
+\begin{itemize}
+    \item \textbf{Bootstrap Bias}: Single-step updates may not capture long-term consequences
+    \item \textbf{Slow Convergence}: May require more episodes to learn complex policies
+    \item \textbf{Exploration Issues}: May not effectively learn from delayed rewards
+\end{itemize}
+
+\textbf{Advantages of High n Values (n = 5, 10+):}
+\begin{itemize}
+    \item \textbf{Long-term Planning}: Better capture of delayed rewards and consequences
+    \item \textbf{Reduced Bootstrap Bias}: More accurate estimates of true returns
+    \item \textbf{Better Exploration}: Can learn from sequences of actions
+    \item \textbf{Complex Environments}: Effective in environments with sparse or delayed rewards
+\end{itemize}
+
+\textbf{Disadvantages of High n Values:}
+\begin{itemize}
+    \item \textbf{High Variance}: Longer update horizons increase variance in estimates
+    \item \textbf{Computational Cost}: More memory and computation required
+    \item \textbf{Delayed Learning}: Updates occur less frequently, slowing initial learning
+    \item \textbf{Overestimation Risk}: May lead to overoptimistic value estimates
+    \item \textbf{Environment Sensitivity}: Performance can degrade in certain environments
+\end{itemize}
+
+\textbf{Optimal n Selection Guidelines:}
+\begin{itemize}
+    \item \textbf{Environment Complexity}: Use higher n for complex environments with delayed rewards
+    \item \textbf{Algorithm Type}: SARSA benefits more from moderate n values, Q-Learning often works best with n=1
+    \item \textbf{Exploration Strategy}: Higher n helps when exploration is risky (like CliffWalking)
+    \item \textbf{Computational Resources}: Balance between performance and computational cost
+    \item \textbf{Empirical Testing}: Always validate n choice through experimentation
+\end{itemize}
+
+\textbf{Conclusion:}
+The optimal n value is environment and algorithm-specific. For CliffWalking, n=2 appears optimal for SARSA, while n=1-2 works best for Q-Learning. The key is finding the right balance between bias reduction (higher n) and variance control (lower n).
 
 }}
 

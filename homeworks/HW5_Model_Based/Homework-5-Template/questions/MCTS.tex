@@ -49,14 +49,100 @@ The notebook contains several placeholders (\texttt{TODO}) for missing implement
 
 \subsubsection{MCTS Fundamentals}
 \begin{itemize}
-    \item What are the four main phases of MCTS (Selection, Expansion, Simulation, Backpropagation), and what is the conceptual purpose of each phase?
-    \item How does MCTS balance exploration and exploitation in its node selection strategy (i.e., how does the UCB formula address this balance)?
+    \item \textbf{What are the four main phases of MCTS (Selection, Expansion, Simulation, Backpropagation), and what is the conceptual purpose of each phase?}
+    
+    \textbf{Answer:} MCTS operates through four distinct phases that work together to build an efficient search tree:
+    
+    \begin{enumerate}
+        \item \textbf{Selection}: Starting from the root, traverse the tree using a tree policy (typically UCB1) until reaching a leaf node. The purpose is to balance exploration of promising paths with exploitation of known good moves. The UCB1 formula guides this selection:
+        \[UCB1(s,a) = Q(s,a) + c\sqrt{\frac{\ln N(s)}{N(s,a)}}\]
+        where the first term promotes exploitation and the second term encourages exploration of less-visited actions.
+        
+        \item \textbf{Expansion}: When reaching a leaf node that is not terminal, add one or more child nodes to expand the tree. This phase grows the search tree incrementally, focusing computational resources on promising regions of the state space.
+        
+        \item \textbf{Simulation (Rollout)}: From the newly expanded node (or leaf if terminal), play out a complete game using a default policy (often random) until reaching a terminal state. This provides an estimate of the value of the position without requiring perfect evaluation functions.
+        
+        \item \textbf{Backpropagation}: Propagate the simulation result back up the path taken during selection, updating visit counts and value estimates for all nodes in the path. This ensures that promising moves accumulate higher values and visit counts over time.
+    \end{enumerate}
+    
+    \item \textbf{How does MCTS balance exploration and exploitation in its node selection strategy (i.e., how does the UCB formula address this balance)?}
+    
+    \textbf{Answer:} MCTS achieves the exploration-exploitation balance through the UCB1 formula:
+    \[UCB1(s,a) = Q(s,a) + c\sqrt{\frac{\ln N(s)}{N(s,a)}}\]
+    
+    \begin{itemize}
+        \item \textbf{Exploitation Term} $Q(s,a)$: Represents the average value of taking action $a$ from state $s$. Higher values indicate better-performing actions that should be exploited more frequently.
+        
+        \item \textbf{Exploration Term} $c\sqrt{\frac{\ln N(s)}{N(s,a)}}$: Encourages exploration of less-visited actions. The term grows as:
+        \begin{itemize}
+            \item $N(s)$ increases (more visits to the parent state)
+            \item $N(s,a)$ decreases (fewer visits to this specific action)
+        \end{itemize}
+        
+        \item \textbf{Exploration Constant} $c$: Controls the balance between exploration and exploitation. Typical values:
+        \begin{itemize}
+            \item $c = \sqrt{2}$: Theoretical optimum for UCB1
+            \item $c < \sqrt{2}$: More exploitative behavior
+            \item $c > \sqrt{2}$: More exploratory behavior
+        \end{itemize}
+    \end{itemize}
+    
+    This balance ensures that MCTS doesn't get stuck in local optima while still focusing computational resources on promising regions of the search space.
 \end{itemize}
 
 \subsubsection{Tree Policy and Rollouts}
 \begin{itemize} 
-   \item Why do we run multiple simulations from each node rather than a single simulation?  
-   \item What role do random rollouts (or simulated playouts) play in estimating the value of a position?
+   \item \textbf{Why do we run multiple simulations from each node rather than a single simulation?}
+   
+   \textbf{Answer:} Running multiple simulations is crucial for several reasons:
+   
+   \begin{enumerate}
+       \item \textbf{Statistical Reliability}: A single simulation provides only one sample from a potentially noisy distribution. Multiple simulations allow us to:
+       \begin{itemize}
+           \item Estimate the true expected value more accurately
+           \item Reduce variance in value estimates
+           \item Build confidence in the quality of different moves
+       \end{itemize}
+       
+       \item \textbf{Law of Large Numbers}: As the number of simulations increases, the sample mean converges to the true expected value. This is particularly important in games with:
+       \begin{itemize}
+           \item Stochastic elements (random events, opponent moves)
+           \item Complex position evaluation
+           \item Multiple possible outcomes
+       \end{itemize}
+       
+       \item \textbf{UCB1 Requirements}: The UCB1 formula assumes that we have multiple samples to compute reliable statistics. The visit count $N(s,a)$ and average value $Q(s,a)$ become more meaningful with more simulations.
+       
+       \item \textbf{Tree Growth}: Multiple simulations allow the tree to grow more systematically, exploring different branches and building a more comprehensive view of the game tree.
+   \end{enumerate}
+   
+   \item \textbf{What role do random rollouts (or simulated playouts) play in estimating the value of a position?}
+   
+   \textbf{Answer:} Random rollouts serve as a crucial evaluation mechanism in MCTS:
+   
+   \begin{enumerate}
+       \item \textbf{Heuristic-Free Evaluation}: Random rollouts provide position evaluation without requiring hand-crafted evaluation functions. This is particularly valuable in:
+       \begin{itemize}
+           \item Complex games where evaluation functions are difficult to design
+           \item New domains where expert knowledge is limited
+           \item Situations where perfect evaluation is computationally infeasible
+       \end{itemize}
+       
+       \item \textbf{Monte Carlo Estimation}: Each rollout represents a random sample from the distribution of possible game outcomes. By averaging many rollouts, we approximate the true expected value:
+       \[V(s) \approx \frac{1}{N} \sum_{i=1}^{N} R_i\]
+       where $R_i$ is the outcome of the $i$-th rollout and $N$ is the number of simulations.
+       
+       \item \textbf{Computational Efficiency}: Random rollouts are:
+       \begin{itemize}
+           \item Fast to execute (no complex evaluation)
+           \item Parallelizable (multiple rollouts can run simultaneously)
+           \item Scalable to different game complexities
+       \end{itemize}
+       
+       \item \textbf{Unbiased Estimation}: Random rollouts provide unbiased estimates of position values, assuming the default policy (random play) is unbiased. This contrasts with heuristic evaluation functions that may introduce systematic biases.
+       
+       \item \textbf{Adaptive Evaluation}: The quality of rollout-based evaluation improves automatically as the tree grows, since more promising positions receive more simulations and thus more accurate estimates.
+   \end{enumerate}
 \end{itemize}
 
 
