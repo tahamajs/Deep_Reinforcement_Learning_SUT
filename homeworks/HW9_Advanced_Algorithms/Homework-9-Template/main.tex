@@ -1627,7 +1627,260 @@ TD3_CONFIG = {
 \subsection{Trust Region Concept[15-points]}
 \subsubsection{a)[8-points]} Explain the trust region concept in policy optimization. Why is it important?
 
+\textbf{Answer:}
+
+\textbf{Core Motivation:}
+
+Traditional policy gradient methods can take overly large steps:
+
+\begin{verbatim}
+# Standard policy gradient
+θ_new = θ_old + α * ∇_θ J(θ)
+
+# Problem: Large α can cause:
+# 1. Policy collapse (π becomes deterministic in wrong way)
+# 2. Performance drops (leave region where gradient was valid)
+# 3. Divergence (never recover from bad update)
+\end{verbatim}
+
+\textbf{Trust Region Idea:}
+
+Only update policy within a region where we "trust" our estimates.
+
+\begin{equation}
+\text{Trust region: } \{\theta : \text{KL}(\pi_{\theta_{\text{old}}} \| \pi_\theta) \leq \delta\}
+\end{equation}
+
+\textbf{Mathematical Formulation:}
+
+\begin{align}
+\maximize_\theta \quad & L(\theta) = \mathbb{E}_{\pi_{\theta_{\text{old}}}} \left[\frac{\pi_\theta(a|s)}{\pi_{\theta_{\text{old}}}(a|s)} \cdot A^{\pi_{\theta_{\text{old}}}}(s,a)\right] \\
+\text{subject to:} \quad & \text{KL}(\pi_{\theta_{\text{old}}} \| \pi_\theta) \leq \delta
+\end{align}
+
+\textbf{Why KL Divergence?}
+
+KL divergence measures how much policies differ:
+
+\begin{equation}
+\text{KL}(\pi_{\text{old}} \| \pi_{\text{new}}) = \sum_a \pi_{\text{old}}(a|s) \log\frac{\pi_{\text{old}}(a|s)}{\pi_{\text{new}}(a|s)}
+\end{equation}
+
+\textbf{Properties:}
+\begin{itemize}
+\item KL ≥ 0, with KL = 0 iff π_old = π_new
+\item Not symmetric: KL(p||q) ≠ KL(q||p)
+\item Measures "information loss" from old to new
+\end{itemize}
+
+\textbf{Theoretical Guarantee:}
+
+Kakade \& Langford (2002) showed:
+
+\begin{equation}
+\eta(\pi_{\text{new}}) \geq \eta(\pi_{\text{old}}) + L(\pi_{\text{new}}) - C \cdot \text{KL}_{\max}(\pi_{\text{old}}, \pi_{\text{new}})
+\end{equation}
+
+where:
+\begin{itemize}
+\item $\eta(\pi)$ is expected return
+\item $C = \frac{4\gamma\varepsilon^2}{(1-\gamma)^2}$, $\varepsilon = \max_s |A^\pi(s,a)|$
+\item $\text{KL}_{\max} = \max_s \text{KL}(\pi_{\text{old}}(\cdot|s) \| \pi_{\text{new}}(\cdot|s))$
+\end{itemize}
+
+This guarantees monotonic improvement!
+
+\textbf{Practical Benefits:}
+
+\textbf{1. Stable Learning:}
+\begin{itemize}
+\item Without trust region: Policy can collapse
+\item With trust region: Smooth, consistent improvement
+\end{itemize}
+
+\textbf{2. Hyperparameter Robustness:}
+\begin{itemize}
+\item Standard PG: Very sensitive to learning rate
+\item TRPO: δ has consistent effect across tasks
+\end{itemize}
+
+\textbf{3. Sample Efficiency:}
+\begin{itemize}
+\item Can take larger steps safely
+\item Fewer iterations needed
+\end{itemize}
+
+\textbf{Visualization:}
+
+\begin{center}
+\begin{tikzpicture}
+\draw[thick] (0,0) circle (2);
+\node at (0,0) {π_old};
+\node at (1,1) {π_1 (good)};
+\node at (-1,-1) {π_2 (boundary)};
+\node at (2.5,2.5) {π_3 (collapsed)};
+\draw[dashed] (0,0) -- (1,1);
+\draw[dashed] (0,0) -- (-1,-1);
+\draw[dashed] (0,0) -- (2.5,2.5);
+\node at (0,-2.5) {Trust region (circle of radius δ in KL)};
+\node at (1.2,1.2) {Safe update};
+\node at (-1.2,-1.2) {Maximal safe update};
+\node at (2.7,2.7) {Potentially catastrophic};
+\end{tikzpicture}
+\end{center}
+
 \subsubsection{b)[7-points]} What is the natural policy gradient? How does it relate to TRPO?
+
+\textbf{Answer:}
+
+\textbf{Standard vs Natural Gradient:}
+
+\textbf{Standard Gradient:}
+\begin{equation}
+\text{Steepest ascent in Euclidean space: } \theta_{\text{new}} = \theta_{\text{old}} + \alpha \cdot \nabla_\theta J(\theta)
+\end{equation}
+
+\textbf{Problem:} Parameter space ≠ policy space. Small change in θ can mean large change in π.
+
+\textbf{Natural Gradient:}
+\begin{equation}
+\text{Steepest ascent in policy space: } \theta_{\text{new}} = \theta_{\text{old}} + \alpha \cdot F(\theta)^{-1} \cdot \nabla_\theta J(\theta)
+\end{equation}
+
+where $F(\theta)$ is Fisher Information Matrix.
+
+\textbf{Fisher Information Matrix:}
+
+\begin{equation}
+F(\theta) = \mathbb{E}_{s \sim \rho^\pi, a \sim \pi} [\nabla_\theta \log \pi(a|s) \cdot \nabla_\theta \log \pi(a|s)^T]
+\end{equation}
+
+\textbf{Interpretation:}
+\begin{itemize}
+\item Measures curvature of KL divergence
+\item Local metric in policy space
+\item Relates parameter changes to distribution changes
+\end{itemize}
+
+\textbf{Key Property:}
+
+For small α:
+\begin{equation}
+\text{KL}(\pi_\theta \| \pi_{\theta+\alpha\Delta\theta}) \approx \frac{1}{2} \cdot \alpha^2 \cdot \Delta\theta^T F(\theta) \Delta\theta
+\end{equation}
+
+So $F(\theta)$ is the "distance metric" in policy space!
+
+\textbf{Natural Gradient Derivation:}
+
+To maximize $J(\theta)$ subject to $\text{KL}(\pi_\theta \| \pi_{\theta+\Delta\theta}) \leq \delta$:
+
+\begin{align}
+\text{Lagrangian: } L &= \nabla_\theta J(\theta)^T \Delta\theta - \frac{\lambda}{2} \cdot \Delta\theta^T F(\theta) \Delta\theta \\
+\text{Optimal: } F(\theta) \Delta\theta &= \frac{1}{\lambda} \nabla_\theta J(\theta) \\
+\text{Therefore: } \Delta\theta &= F(\theta)^{-1} \nabla_\theta J(\theta)
+\end{align}
+
+\textbf{Connection to TRPO:}
+
+TRPO is natural gradient with adaptive step size!
+
+\begin{enumerate}
+\item Compute natural gradient direction: $d = F^{-1} g$
+\item Find largest α such that KL constraint satisfied
+\item Update: $\theta = \theta + \alpha \cdot d$
+\end{enumerate}
+
+This is exactly constrained optimization in trust region.
+
+\textbf{Computing Natural Gradient:}
+
+\textbf{Problem:} $F(\theta)$ is huge matrix (size = #parameters)
+
+\textbf{Solution 1: Conjugate Gradient}
+
+\begin{verbatim}
+def conjugate_gradient(Fvp, g, num_iterations=10):
+    """
+    Solve Fx = g using conjugate gradient
+    
+    Args:
+        Fvp: Function computing Fisher-vector product
+        g: Gradient vector
+    """
+    x = torch.zeros_like(g)
+    r = g.clone()
+    p = g.clone()
+    
+    for i in range(num_iterations):
+        Fp = Fvp(p)
+        alpha = torch.dot(r, r) / torch.dot(p, Fp)
+        x += alpha * p
+        r_new = r - alpha * Fp
+        
+        if r_new.norm() < 1e-10:
+            break
+            
+        beta = torch.dot(r_new, r_new) / torch.dot(r, r)
+        p = r_new + beta * p
+        r = r_new
+    
+    return x
+\end{verbatim}
+
+\textbf{Solution 2: Fisher-Vector Product}
+
+\begin{verbatim}
+def fisher_vector_product(policy, states, vector):
+    """
+    Compute F * v without forming F explicitly
+    
+    Uses: F * v = ∇_θ(∇_θ log π · v)
+    """
+    # First derivative
+    action_probs = policy(states)
+    log_probs = torch.log(action_probs)
+    
+    # Compute gradient of log_prob w.r.t. θ
+    grads = torch.autograd.grad(
+        log_probs.sum(),
+        policy.parameters(),
+        create_graph=True
+    )
+    
+    # Flatten gradients
+    flat_grads = torch.cat([g.view(-1) for g in grads])
+    
+    # Compute gradient-vector product
+    gvp = (flat_grads * vector).sum()
+    
+    # Second derivative (Fisher-vector product)
+    fvp = torch.autograd.grad(gvp, policy.parameters())
+    fvp_flat = torch.cat([g.contiguous().view(-1) for g in fvp])
+    
+    return fvp_flat
+\end{verbatim}
+
+\textbf{Benefits of Natural Gradient:}
+
+\textbf{1. Invariant to Parameterization:}
+\begin{itemize}
+\item Standard gradient: depends on how we parameterize π
+\item Natural gradient: invariant to reparameterization
+\end{itemize}
+
+\textbf{2. Appropriate Step Size:}
+\begin{itemize}
+\item Automatically scales by curvature
+\item Small steps in steep regions
+\item Large steps in flat regions
+\end{itemize}
+
+\textbf{3. Convergence Properties:}
+\begin{itemize}
+\item Guaranteed to converge to local optimum
+\item Often faster than standard gradient
+\end{itemize}
 
 \noindent\rule{\textwidth}{0.2pt}
 

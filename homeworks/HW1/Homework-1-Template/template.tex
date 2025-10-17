@@ -759,6 +759,319 @@ The environment serves as an excellent testbed for comparing different RL algori
 
 \section{Task 3: Pygame for RL environment [20-points]}
 
+This bonus task explores the creation of custom reinforcement learning environments using Pygame. While the solution notebook primarily focused on using existing environments, we can extend this concept to create custom Pygame-based environments that are compatible with the Gymnasium API.
+
+\subsection{Pygame Environment Design}
+
+\subsubsection{Environment Structure}
+
+A Pygame-based RL environment typically consists of:
+
+\begin{itemize}
+    \item \textbf{Game Loop}: Main game loop handling updates and rendering
+    \item \textbf{State Representation}: Converting game state to RL observations
+    \item \textbf{Action Interface}: Mapping RL actions to game actions
+    \item \textbf{Reward Function}: Defining rewards based on game events
+    \item \textbf{Gymnasium Compatibility}: Implementing required methods (reset, step, render)
+\end{itemize}
+
+\subsubsection{Basic Pygame Environment Template}
+
+\begin{verbatim}
+import pygame
+import gymnasium as gym
+from gymnasium import spaces
+import numpy as np
+
+class PygameRLEnv(gym.Env):
+    def __init__(self):
+        super().__init__()
+        
+        # Initialize Pygame
+        pygame.init()
+        self.screen_width = 800
+        self.screen_height = 600
+        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+        
+        # Define action and observation spaces
+        self.action_space = spaces.Discrete(4)  # Example: 4 directions
+        self.observation_space = spaces.Box(
+            low=0, high=255, 
+            shape=(self.screen_height, self.screen_width, 3), 
+            dtype=np.uint8
+        )
+        
+        # Game state
+        self.player_pos = [self.screen_width // 2, self.screen_height // 2]
+        self.target_pos = [100, 100]
+        
+    def step(self, action):
+        # Process action
+        if action == 0:  # Move up
+            self.player_pos[1] -= 5
+        elif action == 1:  # Move down
+            self.player_pos[1] += 5
+        elif action == 2:  # Move left
+            self.player_pos[0] -= 5
+        elif action == 3:  # Move right
+            self.player_pos[0] += 5
+            
+        # Keep player in bounds
+        self.player_pos[0] = max(0, min(self.screen_width, self.player_pos[0]))
+        self.player_pos[1] = max(0, min(self.screen_height, self.player_pos[1]))
+        
+        # Calculate reward
+        distance = np.sqrt((self.player_pos[0] - self.target_pos[0])**2 + 
+                          (self.player_pos[1] - self.target_pos[1])**2)
+        
+        if distance < 20:
+            reward = 100
+            done = True
+        else:
+            reward = -1  # Small penalty for each step
+            
+        # Get observation
+        observation = self._get_observation()
+        
+        return observation, reward, done, False, {}
+        
+    def reset(self):
+        self.player_pos = [self.screen_width // 2, self.screen_height // 2]
+        self.target_pos = [100, 100]
+        return self._get_observation(), {}
+        
+    def render(self):
+        self.screen.fill((0, 0, 0))  # Black background
+        
+        # Draw player
+        pygame.draw.circle(self.screen, (255, 0, 0), 
+                          (int(self.player_pos[0]), int(self.player_pos[1])), 10)
+        
+        # Draw target
+        pygame.draw.circle(self.screen, (0, 255, 0), 
+                          (int(self.target_pos[0]), int(self.target_pos[1])), 15)
+        
+        pygame.display.flip()
+        
+    def _get_observation(self):
+        # Convert screen to numpy array
+        observation = pygame.surfarray.array3d(self.screen)
+        return observation.transpose(1, 0, 2)  # Convert from (width, height, channels) to (height, width, channels)
+        
+    def close(self):
+        pygame.quit()
+\end{verbatim}
+
+\subsection{Advanced Pygame Environment Features}
+
+\subsubsection{Multi-Agent Support}
+
+Pygame environments can support multiple agents:
+
+\begin{verbatim}
+class MultiAgentPygameEnv(gym.Env):
+    def __init__(self, num_agents=2):
+        super().__init__()
+        
+        self.num_agents = num_agents
+        self.action_space = spaces.MultiDiscrete([4] * num_agents)
+        self.observation_space = spaces.Box(
+            low=0, high=255, 
+            shape=(self.screen_height, self.screen_width, 3), 
+            dtype=np.uint8
+        )
+        
+        # Initialize agent positions
+        self.agent_positions = []
+        for i in range(num_agents):
+            x = (i + 1) * self.screen_width // (num_agents + 1)
+            y = self.screen_height // 2
+            self.agent_positions.append([x, y])
+            
+    def step(self, actions):
+        rewards = []
+        dones = []
+        
+        for i, action in enumerate(actions):
+            # Update agent position based on action
+            if action == 0:  # Up
+                self.agent_positions[i][1] -= 5
+            elif action == 1:  # Down
+                self.agent_positions[i][1] += 5
+            elif action == 2:  # Left
+                self.agent_positions[i][0] -= 5
+            elif action == 3:  # Right
+                self.agent_positions[i][0] += 5
+                
+            # Calculate individual rewards
+            distance_to_target = np.sqrt(
+                (self.agent_positions[i][0] - self.target_pos[0])**2 + 
+                (self.agent_positions[i][1] - self.target_pos[1])**2
+            )
+            
+            if distance_to_target < 20:
+                rewards.append(100)
+                dones.append(True)
+            else:
+                rewards.append(-1)
+                dones.append(False)
+                
+        return self._get_observation(), rewards, dones, False, {}
+\end{verbatim}
+
+\subsubsection{Dynamic Environment Elements}
+
+Pygame allows for dynamic environment elements:
+
+\begin{verbatim}
+class DynamicPygameEnv(gym.Env):
+    def __init__(self):
+        super().__init__()
+        
+        # Dynamic obstacles
+        self.obstacles = []
+        self.obstacle_speed = 2
+        
+        # Collectible items
+        self.collectibles = []
+        self.max_collectibles = 5
+        
+    def step(self, action):
+        # Move player
+        self._move_player(action)
+        
+        # Update dynamic elements
+        self._update_obstacles()
+        self._update_collectibles()
+        
+        # Check collisions
+        reward = self._check_collisions()
+        
+        return self._get_observation(), reward, False, False, {}
+        
+    def _update_obstacles(self):
+        for obstacle in self.obstacles:
+            obstacle[1] += self.obstacle_speed
+            
+        # Remove obstacles that are off-screen
+        self.obstacles = [obs for obs in self.obstacles if obs[1] < self.screen_height]
+        
+        # Add new obstacles occasionally
+        if np.random.random() < 0.02:  # 2% chance per step
+            x = np.random.randint(0, self.screen_width)
+            self.obstacles.append([x, 0])
+            
+    def _update_collectibles(self):
+        # Add collectibles if needed
+        while len(self.collectibles) < self.max_collectibles:
+            x = np.random.randint(0, self.screen_width)
+            y = np.random.randint(0, self.screen_height)
+            self.collectibles.append([x, y])
+\end{verbatim}
+
+\subsection{Training RL Agents on Pygame Environments}
+
+\subsubsection{Environment Integration}
+
+Once implemented, Pygame environments can be used with Stable-Baselines3:
+
+\begin{verbatim}
+from stable_baselines3 import PPO, DQN
+
+# Create environment
+env = PygameRLEnv()
+
+# Train PPO agent
+model = PPO("CnnPolicy", env, verbose=1, 
+           tensorboard_log="./pygame_ppo_tensorboard/")
+model.learn(total_timesteps=100_000)
+
+# Train DQN agent
+model = DQN("CnnPolicy", env, verbose=1, 
+           tensorboard_log="./pygame_dqn_tensorboard/")
+model.learn(total_timesteps=100_000)
+\end{verbatim}
+
+\subsubsection{Visualization and Monitoring}
+
+Pygame environments provide excellent visualization capabilities:
+
+\begin{verbatim}
+def visualize_training(env, model, num_episodes=5):
+    for episode in range(num_episodes):
+        obs, _ = env.reset()
+        done = False
+        
+        while not done:
+            action, _ = model.predict(obs)
+            obs, reward, done, truncated, _ = env.step(action)
+            
+            # Render the environment
+            env.render()
+            pygame.time.wait(100)  # Slow down for visualization
+            
+            if done or truncated:
+                break
+                
+        print(f"Episode {episode + 1} completed with reward: {reward}")
+\end{verbatim}
+
+\subsection{Benefits of Pygame RL Environments}
+
+\subsubsection{Advantages}
+
+\begin{itemize}
+    \item \textbf{Visual Feedback}: Real-time visualization of agent behavior
+    \item \textbf{Customization}: Complete control over environment dynamics
+    \item \textbf{Educational Value}: Clear understanding of RL concepts through visual representation
+    \item \textbf{Debugging}: Easy identification of agent behavior patterns
+    \item \textbf{Engagement}: More engaging than text-based environments
+\end{itemize}
+
+\subsubsection{Applications}
+
+Pygame RL environments are particularly useful for:
+
+\begin{itemize}
+    \item \textbf{Game AI}: Training agents for custom games
+    \item \textbf{Robotics Simulation}: Visualizing robot behavior
+    \item \textbf{Educational Projects}: Teaching RL concepts
+    \item \textbf{Research Prototypes}: Rapid prototyping of RL environments
+    \item \textbf{Multi-Agent Systems}: Visualizing agent interactions
+\end{itemize}
+
+\subsection{Implementation Considerations}
+
+\subsubsection{Performance Optimization}
+
+\begin{itemize}
+    \item Use efficient rendering techniques
+    \item Implement frame skipping for faster training
+    \item Optimize observation space size
+    \item Consider using Pygame's built-in optimizations
+\end{itemize}
+
+\subsubsection{Environment Design}
+
+\begin{itemize}
+    \item Design clear reward functions
+    \item Ensure proper action space definition
+    \item Implement robust state representation
+    \item Consider environment complexity vs. learning difficulty
+\end{itemize}
+
+\subsection{Conclusion}
+
+Pygame provides a powerful framework for creating custom RL environments with rich visual feedback. While the solution notebook focused on existing environments, extending to Pygame-based environments offers:
+
+\begin{itemize}
+    \item Complete control over environment design
+    \item Enhanced visualization capabilities
+    \item Educational and research applications
+    \item Seamless integration with existing RL libraries
+\end{itemize}
+
+The combination of Pygame's graphics capabilities with RL algorithms creates engaging and educational environments that can significantly enhance understanding of reinforcement learning concepts.
 
 }}
 
