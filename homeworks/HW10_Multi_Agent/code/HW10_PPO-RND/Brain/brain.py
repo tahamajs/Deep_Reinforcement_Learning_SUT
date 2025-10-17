@@ -56,7 +56,19 @@ class Brain:
         # Use predictor_model and target_model to extract features
         # Compute squared error (MSE) between predicted and target features
         # Take mean over feature dimension (dim=1)
-        int_reward = None  # Replace this with prediction error computation
+        
+        with torch.no_grad():
+            # Get target features (fixed random network)
+            target_features = self.target_model(norm_obs)
+            
+            # Get predicted features (trainable predictor)
+            pred_features = self.predictor_model(norm_obs)
+            
+            # Compute prediction error (squared difference)
+            prediction_error = torch.mean((pred_features - target_features) ** 2, dim=1)
+            
+            # Convert to numpy array
+            int_reward = prediction_error.cpu().numpy()
 
         return int_reward  # → np.array
 
@@ -155,11 +167,24 @@ class Brain:
         # Use predictor_model and target_model on obs to compute prediction error
         # Compute squared error, apply dropout mask using config["predictor_proportion"]
         # Reduce the loss to a scalar value
-        target = None
-        pred = None
-        loss = None
-        mask = None
-        final_loss = None
+        
+        # Get target features (fixed random network)
+        target = self.target_model(obs)
+        
+        # Get predicted features (trainable predictor)
+        pred = self.predictor_model(obs)
+        
+        # Compute squared error between predicted and target features
+        loss = (pred - target) ** 2
+        
+        # Apply dropout mask using predictor_proportion
+        # This randomly selects a fraction of features to train on each batch
+        mask = torch.rand_like(loss) < self.config["predictor_proportion"]
+        masked_loss = loss * mask.float()
+        
+        # Reduce to scalar loss (mean over all dimensions)
+        final_loss = masked_loss.mean()
+        
         return final_loss
 
     def set_from_checkpoint(self, checkpoint):

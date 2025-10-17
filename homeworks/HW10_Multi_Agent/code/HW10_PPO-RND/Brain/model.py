@@ -125,6 +125,19 @@ class PredictorModel(nn.Module, ABC):
         # It should match the target model up to encoded features,
         # and then include 1 or 2 additional linear layers.
         # End with a layer that outputs a 512-dim feature vector (same as TargetModel).
+        c, w, h = state_shape
+        
+        # Convolutional layers (same as TargetModel)
+        self.conv1 = nn.Conv2d(c, 32, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
+        
+        # Calculate flattened size after convolutions
+        flatten_size = 128 * w * h
+        
+        # Additional fully connected layers for prediction
+        self.fc1 = nn.Linear(flatten_size, 512)
+        self.fc2 = nn.Linear(512, 512)
         
         self._init_weights()  # Call this after defining layers
 
@@ -132,9 +145,30 @@ class PredictorModel(nn.Module, ABC):
         # === TODO: Initialize all layers with orthogonal weights ===
         # Use gain=np.sqrt(2) for hidden layers.
         # Use gain=np.sqrt(0.01) if you want to slow learning on final output layer (optional).
-        pass
+        for layer in self.modules():
+            if isinstance(layer, (nn.Conv2d, nn.Linear)):
+                # Use smaller gain for final layer to slow learning
+                if layer == self.fc2:
+                    nn.init.orthogonal_(layer.weight, gain=np.sqrt(0.01))
+                else:
+                    nn.init.orthogonal_(layer.weight, gain=np.sqrt(2))
+                if layer.bias is not None:
+                    layer.bias.data.zero_()
 
     def forward(self, inputs):
         # === TODO: Implement forward pass ===
         # Normalize input, pass through conv layers and extra FC layers, then return final encoded vector.
-        pass
+        # Normalize input to [0, 1] range
+        x = inputs / 255.0
+        
+        # Pass through convolutional layers with ReLU activations
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
+        
+        # Flatten and pass through fully connected layers
+        x = x.view(x.size(0), -1)  # Flatten
+        x = F.relu(self.fc1(x))
+        encoded_features = self.fc2(x)
+        
+        return encoded_features
