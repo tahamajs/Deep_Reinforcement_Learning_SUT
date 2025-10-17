@@ -73,11 +73,19 @@ class TargetModel(nn.Module, ABC):
         # === TODO: Implement Target Model architecture ===
         # Define 3 convolutional layers followed by a fully connected layer.
         # The output should be a 512-dimensional encoded feature vector.
-        # Example:
-        # self.conv1 = nn.Conv2d(...)
-        # self.conv2 = nn.Conv2d(...)
-        # self.conv3 = nn.Conv2d(...)
-        # self.encoded_features = nn.Linear(...)
+        c, w, h = state_shape
+        
+        # Convolutional layers
+        self.conv1 = nn.Conv2d(c, 32, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
+        
+        # Calculate flattened size after convolutions
+        # For MiniGrid 7x7: 128 * 7 * 7 = 6272
+        flatten_size = 128 * w * h
+        
+        # Fully connected layer to 512 features
+        self.encoded_features = nn.Linear(flatten_size, 512)
         
         self._init_weights()  # Call this after defining layers
 
@@ -85,12 +93,28 @@ class TargetModel(nn.Module, ABC):
         # === TODO: Initialize all layers with orthogonal weights ===
         # For most layers use gain=np.sqrt(2).
         # Call orthogonal_ on each conv and linear layer.
-        pass
+        for layer in self.modules():
+            if isinstance(layer, (nn.Conv2d, nn.Linear)):
+                nn.init.orthogonal_(layer.weight, gain=np.sqrt(2))
+                if layer.bias is not None:
+                    layer.bias.data.zero_()
 
     def forward(self, inputs):
         # === TODO: Implement forward pass ===
         # Normalize input, pass through conv layers, flatten, and return encoded features.
-        pass
+        # Normalize input to [0, 1] range
+        x = inputs / 255.0
+        
+        # Pass through convolutional layers with ReLU activations
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
+        
+        # Flatten and pass through fully connected layer
+        x = x.view(x.size(0), -1)  # Flatten
+        encoded_features = self.encoded_features(x)
+        
+        return encoded_features
 
 
 # === Predictor Model ===
