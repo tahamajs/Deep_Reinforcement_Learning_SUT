@@ -456,6 +456,139 @@ The notebook contains several placeholders (\texttt{TODO}) for missing implement
 
 \subsubsection{Comparisons to Other Methods}
 \begin{itemize}
-    \item How does MCTS differ from classical minimax search or alpha-beta pruning in handling deep or complex game trees?  
-    \item What unique advantages does MCTS provide when the state space is extremely large or when an accurate heuristic evaluation function is not readily available?
+    \item \textbf{How does MCTS differ from classical minimax search or alpha-beta pruning in handling deep or complex game trees?}
+    
+    \textbf{Answer:} MCTS and classical minimax/alpha-beta pruning represent fundamentally different approaches to game tree search:
+    
+    \begin{enumerate}
+        \item \textbf{Search Strategy}:
+        \begin{itemize}
+            \item \textbf{MCTS}: Asymmetric, progressive tree growth
+            \begin{itemize}
+                \item Builds tree incrementally from root
+                \item Focuses computational resources on promising branches
+                \item Can handle infinite or extremely large trees
+                \item Anytime algorithm (can stop at any time)
+            \end{itemize}
+            
+            \item \textbf{Minimax/Alpha-Beta}: Symmetric, full-width search
+            \begin{itemize}
+                \item Explores entire tree to fixed depth
+                \item Uniform exploration of all branches
+                \item Requires finite, bounded tree depth
+                \item All-or-nothing approach
+            \end{itemize}
+        \end{itemize}
+        
+        \item \textbf{Evaluation Requirements}:
+        \begin{itemize}
+            \item \textbf{MCTS}: 
+            \begin{itemize}
+                \item No evaluation function needed
+                \item Uses random rollouts for position evaluation
+                \item Self-improving through simulation
+                \item Handles stochastic games naturally
+            \end{itemize}
+            
+            \item \textbf{Minimax/Alpha-Beta}:
+            \begin{itemize}
+                \item Requires accurate evaluation function
+                \item Static evaluation at leaf nodes
+                \item Struggles with stochastic elements
+                \item Quality depends heavily on evaluation function
+            \end{itemize}
+        \end{itemize}
+        
+        \item \textbf{Computational Efficiency}:
+        \begin{itemize}
+            \item \textbf{MCTS}: 
+            \begin{itemize}
+                \item Time complexity: $O(N \cdot H)$ where $N$ is simulations, $H$ is average depth
+                \item Space complexity: $O(N)$ - only stores visited nodes
+                \item Parallelizable simulations
+                \item Memory usage grows with promising branches
+            \end{itemize}
+            
+            \item \textbf{Minimax/Alpha-Beta}:
+            \begin{itemize}
+                \item Time complexity: $O(b^d)$ where $b$ is branching factor, $d$ is depth
+                \item Space complexity: $O(d)$ - only stores current path
+                \item Difficult to parallelize effectively
+                \item Memory usage independent of tree size
+            \end{itemize}
+        \end{itemize}
+        
+        \item \textbf{Handling Complex Trees}:
+        \begin{itemize}
+            \item \textbf{MCTS Advantages}:
+            \begin{itemize}
+                \item Works with continuous action spaces
+                \item Handles partially observable games
+                \item Adapts to game complexity automatically
+                \item No need to specify search depth
+            \end{itemize}
+            
+            \item \textbf{Minimax/Alpha-Beta Limitations}:
+            \begin{itemize}
+                \item Requires discrete action spaces
+                \item Struggles with hidden information
+                \item Performance degrades with high branching factor
+                \item Requires careful depth selection
+            \end{itemize}
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{What unique advantages does MCTS provide when the state space is extremely large or when an accurate heuristic evaluation function is not readily available?}
+    
+    \textbf{Answer:} MCTS excels in scenarios where traditional methods struggle:
+    
+    \begin{enumerate}
+        \item \textbf{Large State Spaces}:
+        \begin{itemize}
+            \item \textbf{Progressive Focus}: MCTS naturally focuses on promising regions without exploring the entire state space
+            \item \textbf{Memory Efficiency}: Only stores visited states, not the entire state space
+            \item \textbf{Scalability}: Performance degrades gracefully with state space size
+            \item \textbf{Adaptive Search}: Search depth adapts to problem complexity
+        \end{itemize}
+        
+        \item \textbf{No Evaluation Function Required}:
+        \begin{itemize}
+            \item \textbf{Random Rollouts}: Provide unbiased position evaluation without domain knowledge
+            \item \textbf{Self-Learning}: Quality improves automatically through more simulations
+            \item \textbf{Domain Independence}: Works across different game types without modification
+            \item \textbf{Reduced Engineering}: No need for hand-crafted evaluation functions
+        \end{itemize}
+        
+        \item \textbf{Handling Uncertainty}:
+        \begin{itemize}
+            \item \textbf{Stochastic Games}: Naturally handles random events and opponent uncertainty
+            \item \textbf{Partial Information}: Can work with incomplete game state information
+            \item \textbf{Opponent Modeling}: Adapts to different opponent strategies through simulation
+            \item \textbf{Robustness}: Performance doesn't degrade significantly with imperfect information
+        \end{itemize}
+        
+        \item \textbf{Practical Advantages}:
+        \begin{itemize}
+            \item \textbf{Anytime Algorithm}: Can provide best available move at any time
+            \item \textbf{Parallelization}: Simulations can run independently
+            \item \textbf{Incremental Improvement}: Performance improves with more computational time
+            \item \textbf{Debugging}: Search tree provides interpretable decision process
+        \end{itemize}
+        
+        \item \textbf{Real-World Applications}:
+        \begin{itemize}
+            \item \textbf{Go}: Handled $10^{170}$ possible positions without evaluation function
+            \item \textbf{Chess}: Competitive with traditional engines using minimal domain knowledge
+            \item \textbf{Robotics}: Motion planning in continuous, high-dimensional spaces
+            \item \textbf{Resource Allocation}: Optimization in complex, uncertain environments
+        \end{itemize}
+        
+        \item \textbf{Theoretical Guarantees}:
+        \begin{itemize}
+            \item \textbf{Convergence}: MCTS converges to optimal policy with sufficient simulations
+            \item \textbf{Regret Bounds}: Logarithmic regret growth with number of simulations
+            \item \textbf{Consistency}: Performance improves monotonically with computational budget
+            \item \textbf{Optimality}: Under certain conditions, achieves optimal play
+        \end{itemize}
+    \end{enumerate}
 \end{itemize}

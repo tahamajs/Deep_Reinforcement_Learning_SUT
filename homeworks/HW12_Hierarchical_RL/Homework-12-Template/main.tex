@@ -403,7 +403,28 @@ Potential improvements to the implementation:
 
 {\fontfamily{lmss}\selectfont {\color{DarkBlue}
 
+\section{Conclusion}
+
+This homework assignment provided a comprehensive exploration of Conservative Q-Learning (CQL) for offline reinforcement learning. Through theoretical analysis and practical implementation, we gained insights into:
+
+\begin{enumerate}
+    \item \textbf{The Overestimation Problem:} Understanding why offline RL suffers from value overestimation due to distribution shift, extrapolation errors, and bootstrapping amplification.
+    
+    \item \textbf{CQL Solution:} Learning how CQL addresses overestimation through conservative regularization that penalizes high Q-values for out-of-distribution actions while preserving accuracy for in-distribution data.
+    
+    \item \textbf{Mathematical Foundations:} Deriving the CQL objective function and understanding how to convert min-max optimization problems to pure minimization problems through analytical solutions.
+    
+    \item \textbf{Practical Implementation:} Implementing CQL-SAC and observing its effectiveness in preventing overestimation while maintaining learning capability.
+    
+    \item \textbf{Model-Based Extensions:} Understanding how CQL can be extended to model-based RL scenarios for more comprehensive conservative estimation.
+\end{enumerate}
+
+The CQL approach represents a significant advancement in offline RL by providing a principled way to learn conservative value functions that prevent dangerous overestimation while still enabling effective policy learning. This makes it particularly valuable for real-world applications where safety and reliability are paramount.
+
 \begin{thebibliography}{9}
+
+\bibitem{Kumar2020}
+Kumar, A., Zhou, A., Tucker, G., \& Levine, S. (2020). Conservative Q-Learning for Offline Reinforcement Learning. \textit{Advances in Neural Information Processing Systems}, 33, 1179-1191.
 
 \bibitem{Freepik}
 \href{https://www.freepik.com/free-vector/cute-artificial-intelligence-robot-isometric-icon_16717130.htm}{Cover image designed by freepik}
