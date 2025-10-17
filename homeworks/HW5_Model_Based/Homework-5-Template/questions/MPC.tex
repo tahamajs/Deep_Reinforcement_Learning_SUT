@@ -16,8 +16,252 @@ You can answer the following questions in the notebook as well, but double-check
 \subsubsection{Analyze the Results} 
 Answer the following questions after running your experiments: 
 \begin{itemize} 
-    \item How does the number of LQR iterations affect the MPC? 
-    \item What if we didn't have access to the model dynamics? Could we still use MPC? 
-    \item Do \texttt{TIMESTEPS} or \texttt{N\_BATCH} matter here? Explain. 
-    \item Why do you think we chose to set the initial state of the environment to the downward position? \item As time progresses (later iterations), what happens to the actions and rewards? Why
+    \item \textbf{How does the number of LQR iterations affect the MPC?}
+    
+    \textbf{Answer:} The number of LQR iterations significantly impacts MPC performance and computational cost:
+    
+    \begin{enumerate}
+        \item \textbf{LQR Convergence}:
+        \begin{itemize}
+            \item \textbf{Few Iterations} (1-3): Fast computation but suboptimal control
+            \item \textbf{Moderate Iterations} (5-10): Good balance of performance and speed
+            \item \textbf{Many Iterations} (15+): Near-optimal control but slower computation
+        \end{itemize}
+        
+        \item \textbf{Performance Impact}:
+        \begin{itemize}
+            \item \textbf{Control Quality}: More iterations lead to better trajectory optimization
+            \item \textbf{Convergence Rate}: LQR typically converges within 5-10 iterations
+            \item \textbf{Diminishing Returns}: Marginal improvement beyond 10-15 iterations
+        \end{itemize}
+        
+        \item \textbf{Computational Trade-offs}:
+        \begin{itemize}
+            \item \textbf{Time per Action}: Linear increase with iteration count
+            \item \textbf{Real-time Constraints}: Must balance quality vs. computation time
+            \item \textbf{Optimal Choice}: Depends on available computational budget
+        \end{itemize}
+        
+        \item \textbf{Practical Guidelines}:
+        \begin{itemize}
+            \item Start with 5-10 iterations for most applications
+            \item Increase if control quality is insufficient
+            \item Decrease if real-time performance is critical
+            \item Monitor convergence to determine optimal number
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{What if we didn't have access to the model dynamics? Could we still use MPC?}
+    
+    \textbf{Answer:} Yes, MPC can still be used without exact model dynamics through several approaches:
+    
+    \begin{enumerate}
+        \item \textbf{Learned Models}:
+        \begin{itemize}
+            \item \textbf{Neural Network Models}: Learn dynamics from data
+            \item \textbf{Model Training}: Collect trajectories, train dynamics model
+            \item \textbf{Model Accuracy}: Performance depends on model quality
+            \item \textbf{Continuous Learning}: Update model with new data
+        \end{itemize}
+        
+        \item \textbf{Model-Free MPC}:
+        \begin{itemize}
+            \item \textbf{Random Shooting}: Sample random action sequences
+            \item \textbf{Cross-Entropy Method}: Iteratively improve action distribution
+            \item \textbf{Evolution Strategies}: Use evolutionary algorithms for optimization
+            \item \textbf{No Model Required}: Direct optimization over action sequences
+        \end{itemize}
+        
+        \item \textbf{Approximate Models}:
+        \begin{itemize}
+            \item \textbf{Linearization}: Approximate nonlinear dynamics locally
+            \item \textbf{Local Models}: Fit simple models around current state
+            \item \textbf{Ensemble Methods}: Use multiple approximate models
+            \item \textbf{Uncertainty Quantification}: Account for model errors
+        \end{itemize}
+        
+        \item \textbf{Challenges and Solutions}:
+        \begin{itemize}
+            \item \textbf{Model Errors}: Use robust optimization techniques
+            \item \textbf{Sample Efficiency}: Collect diverse training data
+            \item \textbf{Online Adaptation}: Continuously update model
+            \item \textbf{Uncertainty Handling}: Use conservative planning
+        \end{itemize}
+        
+        \item \textbf{Practical Implementation}:
+        \begin{itemize}
+            \item Start with simple linear models
+            \item Gradually increase model complexity
+            \item Use model ensembles for robustness
+            \item Implement online model updates
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{Do \texttt{TIMESTEPS} or \texttt{N\_BATCH} matter here? Explain.}
+    
+    \textbf{Answer:} Both \texttt{TIMESTEPS} and \texttt{N\_BATCH} are crucial parameters that significantly affect MPC performance:
+    
+    \begin{enumerate}
+        \item \textbf{TIMESTEPS (Planning Horizon)}:
+        \begin{itemize}
+            \item \textbf{Short Horizon} (5-10 steps):
+            \begin{itemize}
+                \item Fast computation
+                \item Limited long-term planning
+                \item Good for reactive control
+                \item May lead to myopic decisions
+            \end{itemize}
+            
+            \item \textbf{Long Horizon} (20-50 steps):
+            \begin{itemize}
+                \item Better long-term planning
+                \item Slower computation
+                \item More model error accumulation
+                \item Better for complex tasks
+            \end{itemize}
+            
+            \item \textbf{Optimal Choice}: Depends on task complexity and computational budget
+        \end{itemize}
+        
+        \item \textbf{N\_BATCH (Batch Size)}:
+        \begin{itemize}
+            \item \textbf{Small Batch} (1-10):
+            \begin{itemize}
+                \item Fast individual computations
+                \item Less parallelization benefit
+                \item More sequential processing
+            \end{itemize}
+            
+            \item \textbf{Large Batch} (50-200):
+            \begin{itemize}
+                \item Better GPU utilization
+                \item More parallel computations
+                \item Higher memory requirements
+                \item Better for batch optimization
+            \end{itemize}
+            
+            \item \textbf{Memory Trade-off}: Larger batches require more memory but enable better parallelization
+        \end{itemize}
+        
+        \item \textbf{Interaction Effects}:
+        \begin{itemize}
+            \item \textbf{Total Computations}: TIMESTEPS × N\_BATCH determines total workload
+            \item \textbf{Memory Usage}: Scales with both parameters
+            \item \textbf{Parallelization}: Larger N\_BATCH enables better GPU utilization
+            \item \textbf{Optimization Quality}: More samples generally lead to better solutions
+        \end{itemize}
+        
+        \item \textbf{Practical Guidelines}:
+        \begin{itemize}
+            \item Start with moderate values (TIMESTEPS=15, N\_BATCH=50)
+            \item Increase TIMESTEPS for complex planning tasks
+            \item Increase N\_BATCH for better GPU utilization
+            \item Monitor memory usage and computation time
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{Why do you think we chose to set the initial state of the environment to the downward position?}
+    
+    \textbf{Answer:} Setting the initial state to the downward position serves several important purposes:
+    
+    \begin{enumerate}
+        \item \textbf{Task Difficulty}:
+        \begin{itemize}
+            \item \textbf{Challenging Starting Point}: Downward position is far from goal (upright)
+            \item \textbf{Realistic Scenario}: Represents common real-world situations
+            \item \textbf{Non-trivial Control}: Requires sophisticated control strategy
+        \end{itemize}
+        
+        \item \textbf{Learning and Evaluation}:
+        \begin{itemize}
+            \item \textbf{Clear Success Metric}: Easy to measure when pendulum reaches upright
+            \item \textbf{Consistent Evaluation}: Same starting condition for all experiments
+            \item \textbf{Performance Benchmarking}: Allows fair comparison between methods
+        \end{itemize}
+        
+        \item \textbf{Control Strategy Testing}:
+        \begin{itemize}
+            \item \textbf{Swing-up Phase}: Tests ability to generate energy
+            \item \textbf{Balance Phase}: Tests ability to maintain upright position
+            \item \textbf{Two-phase Control}: Requires different strategies for different phases
+        \end{itemize}
+        
+        \item \textbf{MPC Advantages}:
+        \begin{itemize}
+            \item \textbf{Receding Horizon}: Can plan ahead for both swing-up and balance
+            \item \textbf{Adaptive Strategy}: Adjusts control based on current state
+            \item \textbf{Constraint Handling}: Can incorporate physical constraints
+        \end{itemize}
+        
+        \item \textbf{Alternative Starting Positions}:
+        \begin{itemize}
+            \item \textbf{Upright Position}: Would only test balance, not swing-up
+            \item \textbf{Random Positions}: Would make evaluation inconsistent
+            \item \textbf{Downward Position}: Provides comprehensive test of control capabilities
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{As time progresses (later iterations), what happens to the actions and rewards? Why?}
+    
+    \textbf{Answer:} As the MPC controller learns and the pendulum approaches the goal, both actions and rewards exhibit characteristic patterns:
+    
+    \begin{enumerate}
+        \item \textbf{Action Evolution}:
+        \begin{itemize}
+            \item \textbf{Early Phase} (Swing-up):
+            \begin{itemize}
+                \item Large amplitude actions to build energy
+                \item Alternating positive/negative torques
+                \item High action magnitudes to overcome gravity
+            \end{itemize}
+            
+            \item \textbf{Late Phase} (Balance):
+            \begin{itemize}
+                \item Small amplitude corrections
+                \item Fine-tuning actions around upright position
+                \item Reduced action magnitudes
+            \end{itemize}
+        \end{itemize}
+        
+        \item \textbf{Reward Progression}:
+        \begin{itemize}
+            \item \textbf{Early Episodes}:
+            \begin{itemize}
+                \item Large negative rewards (far from goal)
+                \item High energy costs
+                \item Penalty for being far from upright
+            \end{itemize}
+            
+            \item \textbf{Later Episodes}:
+            \begin{itemize}
+                \item Smaller negative rewards (closer to goal)
+                \item Reduced energy costs
+                \item Better balance around upright position
+            \end{itemize}
+        \end{itemize}
+        
+        \item \textbf{Why This Happens}:
+        \begin{itemize}
+            \item \textbf{Learning Process}: MPC learns optimal trajectory through experience
+            \item \textbf{Model Improvement}: Dynamics model becomes more accurate
+            \item \textbf{Policy Refinement}: Control strategy becomes more efficient
+            \item \textbf{Convergence}: Approaches optimal control policy
+        \end{itemize}
+        
+        \item \textbf{Mathematical Explanation}:
+        \begin{itemize}
+            \item \textbf{Reward Function}: $r = -(\theta^2 + 0.1\dot{\theta}^2 + 0.001u^2)$
+            \item \textbf{As $\theta \to 0$}: Angular penalty decreases
+            \item \textbf{As $\dot{\theta} \to 0$}: Velocity penalty decreases
+            \item \textbf{As $u \to 0$}: Action penalty decreases
+        \end{itemize}
+        
+        \item \textbf{Practical Implications}:
+        \begin{itemize}
+            \item \textbf{Performance Monitoring}: Track reward improvement over time
+            \item \textbf{Convergence Detection}: Identify when learning stabilizes
+            \item \textbf{Hyperparameter Tuning}: Adjust based on learning progress
+            \item \textbf{Success Criteria}: Define when task is considered solved
+        \end{itemize}
+    \end{enumerate}
 \end{itemize}

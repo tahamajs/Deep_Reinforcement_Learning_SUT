@@ -806,7 +806,220 @@ This makes the greedy action have advantage 0, but can be less stable.
 \subsection{Integration and Implementation[20-points]}
 \subsubsection{a)[10-points]} Show how to integrate all six Rainbow components in a single architecture.
 
+\textbf{Answer:}
+
+\textbf{Complete Rainbow DQN Architecture:}
+
+\begin{verbatim}
+class RainbowDQN(nn.Module):
+    def __init__(self, state_dim, action_dim, num_atoms=51, n_steps=3):
+        super().__init__()
+        self.num_atoms = num_atoms
+        self.n_steps = n_steps
+        self.action_dim = action_dim
+
+        # Feature extraction with noisy layers
+        self.features = nn.Sequential(
+            NoisyLinear(state_dim, 128),
+            nn.ReLU()
+        )
+
+        # Dueling architecture with distributional RL
+        self.value_stream = nn.Sequential(
+            NoisyLinear(128, 128),
+            nn.ReLU(),
+            NoisyLinear(128, num_atoms)
+        )
+
+        self.advantage_stream = nn.Sequential(
+            NoisyLinear(128, 128),
+            nn.ReLU(),
+            NoisyLinear(128, action_dim * num_atoms)
+        )
+
+        # Support for distributional RL
+        self.register_buffer('support', torch.linspace(-10, 10, num_atoms))
+
+    def forward(self, state):
+        features = self.features(state)
+
+        value = self.value_stream(features).view(-1, 1, self.num_atoms)
+        advantage = self.advantage_stream(features).view(-1, self.action_dim, self.num_atoms)
+
+        # Dueling combination
+        q_atoms = value + (advantage - advantage.mean(dim=1, keepdim=True))
+
+        # Distribution over atoms
+        q_dist = F.softmax(q_atoms, dim=-1)
+
+        return q_dist
+
+    def reset_noise(self):
+        for module in self.modules():
+            if isinstance(module, NoisyLinear):
+                module.reset_noise()
+
+    def get_q_values(self, state):
+        """Get Q-values from distribution"""
+        q_dist = self.forward(state)
+        q_values = (q_dist * self.support).sum(dim=-1)
+        return q_values
+\end{verbatim}
+
+\textbf{Training with All Components:}
+
+\begin{verbatim}
+def train_rainbow(batch, priorities, is_weights):
+    states, actions, rewards, next_states, dones = batch
+    
+    # Multi-step returns (n-step)
+    n_step_rewards = compute_n_step_returns(rewards, gamma, n_steps)
+    
+    # Current distribution
+    current_dist = model(states)[range(batch_size), actions]
+    
+    with torch.no_grad():
+        # Double Q-learning: use online net for action selection
+        next_q_values = model.get_q_values(next_states)
+        next_actions = next_q_values.argmax(dim=1)
+        
+        # Target net for evaluation
+        next_dist = target_model(next_states)[range(batch_size), next_actions]
+        
+        # Project distribution
+        target_dist = project_distribution(next_dist, n_step_rewards, dones)
+    
+    # Cross-entropy loss
+    loss = -(target_dist * torch.log(current_dist + 1e-8)).sum(dim=-1)
+    
+    # Importance sampling weights for prioritized replay
+    loss = (loss * is_weights).mean()
+    
+    # Update priorities
+    priorities = loss.detach()
+    
+    return loss, priorities
+\end{verbatim}
+
+\textbf{Component Integration Details:}
+
+\begin{enumerate}
+\item \textbf{Noisy Networks}: Replace linear layers with NoisyLinear for exploration
+\item \textbf{Dueling Architecture}: Separate value and advantage streams
+\item \textbf{Distributional RL}: Output probability distributions over atoms
+\item \textbf{Double Q-Learning}: Use online net for action selection, target net for evaluation
+\item \textbf{Multi-Step Returns}: Compute n-step targets for faster propagation
+\item \textbf{Prioritized Replay}: Sample based on TD error magnitude
+\end{enumerate}
+
+\textbf{Synergies Between Components:}
+\begin{itemize}
+\item PER + n-step: Important sequences get higher priority
+\item Dueling + Distributional: Better value decomposition with uncertainty
+\item Noisy Nets + PER: Exploration focuses on promising regions
+\item Double Q + Distributional: Reduces bias in distributional targets
+\end{itemize}
+
 \subsubsection{b)[10-points]} What are the main implementation challenges in Rainbow DQN? How can they be addressed?
+
+\textbf{Answer:}
+
+\textbf{Challenge 1: Memory Efficiency}
+
+PER with distributional RL requires storing:
+\begin{itemize}
+\item States, actions, rewards
+\item Priorities
+\item N-step rollouts
+\end{itemize}
+
+\textbf{Solution:}
+\begin{verbatim}
+class EfficientPER:
+    def __init__(self, capacity, n_step):
+        self.n_step_buffer = deque(maxlen=n_step)
+        self.priority_tree = SumTree(capacity)
+    
+    def add(self, transition):
+        self.n_step_buffer.append(transition)
+        if len(self.n_step_buffer) == self.n_step:
+            n_step_transition = self._compute_n_step()
+            self.priority_tree.add(n_step_transition)
+\end{verbatim}
+
+\textbf{Challenge 2: Computational Cost}
+
+Rainbow is ~3-4x slower than DQN per step.
+
+\textbf{Solutions:}
+\begin{itemize}
+\item Parallelize environment interactions
+\item Use mixed precision training
+\item Optimize projection operation with JIT compilation
+\end{itemize}
+
+\begin{verbatim}
+@torch.jit.script
+def fast_projection(next_dist, rewards, dones, gamma, support):
+    """JIT-compiled projection for speed"""
+    # Vectorized projection operation
+    pass
+\end{verbatim}
+
+\textbf{Challenge 3: Hyperparameter Sensitivity}
+
+Many interacting hyperparameters.
+
+\textbf{Robust Configuration:}
+\begin{verbatim}
+RAINBOW_CONFIG = {
+    'n_step': 3,
+    'num_atoms': 51,
+    'v_min': -10,
+    'v_max': 10,
+    'alpha': 0.6,  # PER priority exponent
+    'beta_start': 0.4,  # IS weight
+    'beta_frames': 100000,
+    'sigma_init': 0.5,  # Noisy nets
+    'target_update_freq': 8000,
+}
+\end{verbatim}
+
+\textbf{Challenge 4: Stability}
+
+Multiple components can interact unpredictably.
+
+\textbf{Solutions:}
+\begin{itemize}
+\item Gradual annealing of beta in PER
+\item Careful initialization of noisy layers
+\item Monitor component-specific metrics
+\end{itemize}
+
+\begin{verbatim}
+def train_rainbow(self, batch):
+    # Monitor each component
+    metrics = {
+        'double_q_bias': ...,
+        'per_weights': ...,
+        'noisy_std': ...,
+        'dueling_advantage': ...,
+        'distributional_entropy': ...
+    }
+    return loss, metrics
+\end{verbatim}
+
+\textbf{Challenge 5: Debugging Complexity}
+
+With 6 components, debugging becomes difficult.
+
+\textbf{Solutions:}
+\begin{itemize}
+\item Ablation studies to isolate component effects
+\item Component-specific logging
+\item Gradual integration (add components one by one)
+\item Unit tests for each component
+\end{itemize}
 
 \noindent\rule{\textwidth}{0.2pt}
 }}

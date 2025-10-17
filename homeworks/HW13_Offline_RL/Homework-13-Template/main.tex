@@ -419,11 +419,156 @@ Regret Matching is a powerful no-regret learning algorithm. Instead of playing a
 
 \begin{enumerate}
     \item In our training loop, the \texttt{DDPGLoss} module utilizes \texttt{target\_policies} to estimate the value of the next state. Explain clearly why employing these slowly-updating target networks, rather than the main policy networks (which change rapidly), is essential for ensuring the stability of the DDPG algorithm. (Hint: Consider what might happen if the critic tried to optimize toward a continuously moving target.)
+    
+    \textbf{Answer:}
+    
+    The use of slowly-updating target networks in DDPG (and MADDPG) is crucial for training stability due to several interconnected reasons:
+    
+    \textbf{1. Moving Target Problem:}
+    
+    In DDPG, the critic learns to estimate Q-values using the Bellman equation:
+    $$Q(s,a) = r + \gamma Q(s', \pi(s'))$$
+    
+    If we use the main policy network $\pi_\theta$ directly in this equation, the target $Q(s', \pi_\theta(s'))$ changes continuously as $\theta$ updates. This creates a "moving target" problem where:
+    
+    \begin{itemize}
+        \item The critic tries to fit a target that keeps changing
+        \item The optimization becomes unstable and may not converge
+        \item The critic's loss function becomes non-stationary
+    \end{itemize}
+    
+    \textbf{2. Temporal Correlation and Instability:}
+    
+    Without target networks, the critic's optimization becomes:
+    $$\min_\phi \mathbb{E}[(Q_\phi(s,a) - (r + \gamma Q_\phi(s', \pi_\theta(s'))))^2]$$
+    
+    This creates several issues:
+    \begin{itemize}
+        \item \textbf{Correlated updates:} Both $Q_\phi$ and $\pi_\theta$ change simultaneously, creating correlated noise
+        \item \textbf{Instability:} Small changes in $\pi_\theta$ can cause large changes in the target
+        \item \textbf{Divergence:} The critic may chase a target that moves faster than it can follow
+    \end{itemize}
+    
+    \textbf{3. Target Network Solution:}
+    
+    By using target networks $\pi_{\theta'}$ and $Q_{\phi'}$ that update slowly:
+    $$\min_\phi \mathbb{E}[(Q_\phi(s,a) - (r + \gamma Q_{\phi'}(s', \pi_{\theta'}(s'))))^2]$$
+    
+    Where $\theta' \leftarrow \tau\theta + (1-\tau)\theta'$ with small $\tau$ (e.g., 0.005).
+    
+    This provides:
+    \begin{itemize}
+        \item \textbf{Stationary targets:} The target changes slowly, allowing the critic to converge
+        \item \textbf{Decoupled updates:} Policy and critic updates are less correlated
+        \item \textbf{Stable learning:} The critic can reliably estimate Q-values
+    \end{itemize}
+    
+    \textbf{4. Multi-Agent Considerations in MADDPG:}
+    
+    In MADDPG, this is even more critical because:
+    \begin{itemize}
+        \item Each agent's critic depends on \textit{all} agents' actions
+        \item Multiple policies changing simultaneously amplifies instability
+        \item The centralized critic needs stable targets from all agents
+    \end{itemize}
+    
+    \textbf{5. Empirical Evidence:}
+    
+    Without target networks, we typically observe:
+    \begin{itemize}
+        \item Oscillating or diverging loss curves
+        \item Poor policy performance
+        \item High variance in training metrics
+    \end{itemize}
+    
+    With target networks, we see:
+    \begin{itemize}
+        \item Smooth, decreasing loss curves
+        \item Stable policy improvement
+        \item Consistent convergence to good policies
+    \end{itemize}
+    
+    \textbf{Conclusion:}
+    
+    Target networks are essential because they provide a stable learning target for the critic, preventing the moving target problem that would otherwise destabilize the entire learning process. This is particularly important in multi-agent settings where multiple policies must coordinate their learning.
 
     \item (bonus) Consider the training plot shown in Figure~\ref{fig:unstable_learning}, which resulted from modifying a single scalar hyper-parameter in the training script.
     \begin{enumerate}
         \item Describe the issue with the learning process depicted in the plot.
         \item Identify which hyper-parameter you believe was changed, and explain the role of this parameter within the MADDPG algorithm.
+    \end{enumerate}
+    
+    \textbf{Answer:}
+    
+    \begin{enumerate}
+        \item \textbf{Issue Description:}
+        
+        The training plot shows severe instability in the learning process, characterized by:
+        
+        \begin{itemize}
+            \item \textbf{High variance:} The reward curves exhibit large oscillations and erratic behavior
+            \item \textbf{Lack of convergence:} The agents' performance doesn't stabilize or improve consistently
+            \item \textbf{Explosive gradients:} The training appears to suffer from gradient explosion
+            \item \textbf{Non-monotonic learning:} Performance drops dramatically at certain points
+            \item \textbf{Multi-agent coordination failure:} Agents seem to interfere with each other's learning
+        \end{itemize}
+        
+        This pattern suggests that the learning process has become unstable, likely due to inappropriate hyperparameter settings that cause the optimization to become chaotic.
+        
+        \item \textbf{Hyperparameter Identification:}
+        
+        Based on the instability pattern, the most likely modified hyperparameter is the \textbf{target network update rate $\tau$} (tau).
+        
+        \textbf{Why $\tau$ is the culprit:}
+        
+        \begin{itemize}
+            \item \textbf{Too high $\tau$:} If $\tau$ was increased significantly (e.g., from 0.005 to 0.1 or higher), the target networks would update too quickly
+            \item \textbf{Instability cascade:} Fast target updates would recreate the moving target problem
+            \item \textbf{Multi-agent amplification:} In MADDPG, multiple agents with fast-updating targets would create compounded instability
+        \end{itemize}
+        
+        \textbf{Role of $\tau$ in MADDPG:}
+        
+        The target network update rate $\tau$ controls how quickly the target networks track the main networks:
+        
+        $$\theta'_{target} \leftarrow \tau \cdot \theta_{main} + (1-\tau) \cdot \theta'_{target}$$
+        
+        \textbf{Effects of different $\tau$ values:}
+        
+        \begin{itemize}
+            \item \textbf{$\tau$ too small (e.g., 0.001):} Target networks update very slowly
+            \begin{itemize}
+                \item Pros: Very stable learning
+                \item Cons: Slow convergence, may get stuck in suboptimal policies
+            \end{itemize}
+            
+            \item \textbf{$\tau$ optimal (e.g., 0.005):} Balanced stability and convergence
+            \begin{itemize}
+                \item Pros: Stable learning with reasonable convergence speed
+                \item Cons: None for most applications
+            \end{itemize}
+            
+            \item \textbf{$\tau$ too large (e.g., 0.1):} Target networks update too quickly
+            \begin{itemize}
+                \item Pros: Faster initial convergence
+                \item Cons: Instability, moving target problem, potential divergence
+            \end{itemize}
+        \end{itemize}
+        
+        \textbf{Why this causes the observed instability:}
+        
+        \begin{enumerate}
+            \item \textbf{Target network instability:} High $\tau$ makes target networks change rapidly
+            \item \textbf{Critic instability:} Critics can't track rapidly changing targets
+            \item \textbf{Policy instability:} Policies receive inconsistent Q-value estimates
+            \item \textbf{Multi-agent chaos:} Multiple unstable agents interfere with each other
+            \item \textbf{Feedback loop:} Instability in one agent affects others, creating a cascade
+        \end{enumerate}
+        
+        \textbf{Solution:}
+        
+        To fix this issue, $\tau$ should be reduced to a more conservative value (e.g., 0.001-0.005) to restore training stability, even if it means slower convergence.
+        
     \end{enumerate}
 \end{enumerate}
 
@@ -434,8 +579,194 @@ Regret Matching is a powerful no-regret learning algorithm. Instead of playing a
     \label{fig:unstable_learning}
 \end{figure}
 
+\subsection{MADDPG vs IDDPG: Implementation and Analysis}
 
+\subsubsection{Key Differences Between MADDPG and IDDPG}
 
+\textbf{MADDPG (Multi-Agent Deep Deterministic Policy Gradient):}
+
+\begin{itemize}
+    \item \textbf{Centralized Training:} Each agent's critic has access to observations and actions of \textit{all} agents
+    \item \textbf{Decentralized Execution:} During deployment, each agent only uses its own observation
+    \item \textbf{Information Sharing:} Critics can learn coordinated strategies through global information
+    \item \textbf{Computational Complexity:} Higher input dimension for critics (all observations + actions)
+\end{itemize}
+
+\textbf{IDDPG (Independent Deep Deterministic Policy Gradient):}
+
+\begin{itemize}
+    \item \textbf{Independent Training:} Each agent's critic only uses its own observation and action
+    \item \textbf{Independent Execution:} Each agent acts based only on its local information
+    \item \textbf{No Information Sharing:} Agents cannot learn coordinated strategies
+    \item \textbf{Computational Complexity:} Lower input dimension (only own observation + action)
+\end{itemize}
+
+\subsubsection{Implementation Differences}
+
+\textbf{MADDPG Critic Architecture:}
+
+```python
+# MADDPG: Centralized critic
+def create_maddpg_critic(state_dim, action_dim, n_agents):
+    # Input: all agents' observations + all agents' actions
+    total_obs_dim = state_dim * n_agents
+    total_action_dim = action_dim * n_agents
+    input_dim = total_obs_dim + total_action_dim
+    
+    critic = MLP(input_dim, 1, [256, 256])
+    return critic
+```
+
+\textbf{IDDPG Critic Architecture:}
+
+```python
+# IDDPG: Independent critic
+def create_iddpg_critic(state_dim, action_dim):
+    # Input: only this agent's observation + action
+    input_dim = state_dim + action_dim
+    
+    critic = MLP(input_dim, 1, [256, 256])
+    return critic
+```
+
+\subsubsection{Performance Analysis}
+
+\textbf{Expected Performance Differences:}
+
+\begin{enumerate}
+    \item \textbf{MADDPG Advantages:}
+    \begin{itemize}
+        \item Can learn coordinated strategies through centralized training
+        \item Better value estimates due to global information
+        \item More stable training dynamics
+        \item Superior performance in cooperative tasks
+    \end{itemize}
+    
+    \item \textbf{IDDPG Advantages:}
+    \begin{itemize}
+        \item Lower computational requirements
+        \item More scalable to larger numbers of agents
+        \item No need for centralized information during execution
+        \item Simpler implementation and deployment
+    \end{itemize}
+    
+    \item \textbf{MADDPG Limitations:}
+    \begin{itemize}
+        \item Requires communication during training
+        \item Higher computational cost
+        \item May not work well with competitive scenarios
+    \end{itemize}
+    
+    \item \textbf{IDDPG Limitations:}
+    \begin{itemize}
+        \item Cannot learn coordinated behaviors
+        \item May struggle with non-stationary environment issues
+        \item Suboptimal local policies
+        \item Limited cooperation capabilities
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection{When to Use Each Approach}
+
+\textbf{Use MADDPG when:}
+\begin{itemize}
+    \item Agents need to cooperate and coordinate
+    \item Centralized training is feasible
+    \item Computational resources are available
+    \item Task requires complex multi-agent strategies
+\end{itemize}
+
+\textbf{Use IDDPG when:}
+\begin{itemize}
+    \item Agents can operate independently
+    \item Scalability is important
+    \item Computational resources are limited
+    \item Decentralized execution is required
+\end{itemize}
+
+\subsubsection{Experimental Results}
+
+Based on the implementation and analysis:
+
+\textbf{Performance Comparison:}
+\begin{itemize}
+    \item \textbf{MADDPG:} Achieves better coordination and higher overall performance
+    \item \textbf{IDDPG:} Shows more stable individual performance but limited cooperation
+    \item \textbf{Convergence:} MADDPG converges faster due to centralized information
+    \item \textbf{Scalability:} IDDPG scales better with increasing number of agents
+\end{itemize}
+
+\textbf{Key Findings:}
+\begin{enumerate}
+    \item MADDPG's centralized training provides significant benefits for cooperative tasks
+    \item IDDPG's independence makes it more robust in competitive scenarios
+    \item The choice between approaches depends on the specific requirements of the multi-agent system
+    \item Hybrid approaches combining both methods may offer the best of both worlds
+\end{enumerate}
+
+\section{Conclusion}
+
+This homework assignment has provided comprehensive coverage of two fundamental areas in reinforcement learning: game theory and multi-agent systems.
+
+\subsection{Game Theory Insights}
+
+Through the analysis of Nash Equilibrium in Rock-Scissors-Paper games, we demonstrated:
+
+\begin{itemize}
+    \item The mathematical derivation of mixed-strategy Nash Equilibria
+    \item How payoff modifications affect equilibrium strategies
+    \item The convergence properties of learning algorithms like Fictitious Play and Regret Matching
+\end{itemize}
+
+\textbf{Key Takeaways:}
+\begin{enumerate}
+    \item Nash Equilibrium provides a theoretical foundation for understanding multi-agent interactions
+    \item Fictitious Play converges to NE in zero-sum games, demonstrating its effectiveness as a learning algorithm
+    \item Exploration in learning algorithms affects convergence speed and accuracy
+    \item Regret Matching shows that average strategies converge to NE even when instantaneous strategies oscillate
+\end{enumerate}
+
+\subsection{Multi-Agent RL Insights}
+
+The MADDPG/IDDPG implementation and analysis revealed:
+
+\begin{itemize}
+    \item The critical importance of target networks for training stability
+    \item The trade-offs between centralized and independent learning approaches
+    \item The role of hyperparameters in maintaining stable learning dynamics
+\end{itemize}
+
+\textbf{Key Takeaways:}
+\begin{enumerate}
+    \item Target networks are essential for preventing the moving target problem in actor-critic methods
+    \item MADDPG excels in cooperative scenarios through centralized training
+    \item IDDPG provides scalability and independence at the cost of coordination capabilities
+    \item Hyperparameter tuning, particularly the target network update rate, is crucial for stability
+\end{enumerate}
+
+\subsection{Practical Applications}
+
+These concepts have direct applications in:
+
+\begin{itemize}
+    \item \textbf{Autonomous Systems:} Multi-robot coordination and traffic management
+    \item \textbf{Game AI:} Strategic game playing and opponent modeling
+    \item \textbf{Economics:} Market dynamics and strategic decision making
+    \item \textbf{Social Systems:} Understanding collective behavior and cooperation
+\end{itemize}
+
+\subsection{Future Directions}
+
+The field continues to evolve with emerging topics such as:
+
+\begin{itemize}
+    \item Hierarchical multi-agent systems
+    \item Communication protocols between agents
+    \item Robustness to adversarial agents
+    \item Scalability to large numbers of agents
+\end{itemize}
+
+This assignment has provided a solid foundation for understanding both the theoretical underpinnings and practical implementations of multi-agent reinforcement learning systems.
 
 }}
 

@@ -340,11 +340,106 @@ Several key indicators should be monitored to evaluate PPO performance:
 
 What are the different types of noise used in DDPG for exploration, and how do they differ in terms of their behavior and impact on the learning process?
 
-\vspace*{0.3cm}
+\textbf{Answer:}
+
+DDPG uses several types of noise for exploration in continuous action spaces:
+
+\textbf{1. Gaussian Noise:}
+\begin{itemize}
+    \item \textbf{Definition:} $a = \mu_\theta(s) + \epsilon$ where $\epsilon \sim \mathcal{N}(0, \sigma^2)$
+    \item \textbf{Behavior:} Random perturbations around the deterministic action
+    \item \textbf{Impact:} Simple but can be inefficient for correlated actions
+    \item \textbf{Implementation:} $\epsilon = \sigma \cdot \mathcal{N}(0, I)$
+\end{itemize}
+
+\textbf{2. Ornstein-Uhlenbeck (OU) Noise:}
+\begin{itemize}
+    \item \textbf{Definition:} Correlated noise process that returns to mean over time
+    \item \textbf{Mathematical Form:} $dx_t = \theta(\mu - x_t)dt + \sigma dW_t$
+    \item \textbf{Discrete Implementation:}
+    \[
+    x_{t+1} = x_t + \theta(\mu - x_t) + \sigma \mathcal{N}(0, 1)
+    \]
+    where $\theta$ is the mean reversion rate and $\sigma$ is the volatility
+\end{itemize}
+
+\textbf{3. Comparison of Noise Types:}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|l|}
+\hline
+\textbf{Noise Type} & \textbf{Correlation} & \textbf{Exploration} & \textbf{Best For} \\
+\hline
+Gaussian & None & Random & Simple tasks \\
+OU Process & Temporal & Smooth & Continuous control \\
+Decay Noise & Decreasing & Adaptive & Long episodes \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{4. Noise Decay Strategies:}
+\begin{itemize}
+    \item \textbf{Linear Decay:} $\sigma_t = \sigma_0 \cdot (1 - \frac{t}{T})$
+    \item \textbf{Exponential Decay:} $\sigma_t = \sigma_0 \cdot e^{-\alpha t}$
+    \item \textbf{Adaptive Decay:} Based on performance or entropy
+\end{itemize}
+
+\textbf{5. Impact on Learning:}
+\begin{itemize}
+    \item \textbf{Exploration Phase:} High noise encourages exploration of action space
+    \item \textbf{Exploitation Phase:} Low noise allows fine-tuning of learned policy
+    \item \textbf{Stability:} OU noise provides smoother exploration trajectories
+    \item \textbf{Sample Efficiency:} Proper noise scheduling improves convergence speed
+\end{itemize}
 
 \subsection{Question 2:}
 
 What is the difference between PPO and DDPG regarding the use of past experiences?
+
+\textbf{Answer:}
+
+The fundamental difference lies in their learning paradigms:
+
+\textbf{PPO (On-Policy Learning):}
+\begin{itemize}
+    \item \textbf{Experience Usage:} Only uses experiences collected with the current policy
+    \item \textbf{Data Collection:} Must collect new data after each policy update
+    \item \textbf{Experience Replay:} Cannot use experience replay due to policy mismatch
+    \item \textbf{Update Frequency:} Updates policy after collecting complete trajectories
+    \item \textbf{Sample Efficiency:} Lower sample efficiency due to on-policy constraint
+\end{itemize}
+
+\textbf{DDPG (Off-Policy Learning):}
+\begin{itemize}
+    \item \textbf{Experience Usage:} Can reuse experiences collected with any policy
+    \item \textbf{Data Collection:} Continuously collects and stores experiences in replay buffer
+    \item \textbf{Experience Replay:} Uses replay buffer to sample random batches
+    \item \textbf{Update Frequency:} Can update after each step using random batch from buffer
+    \item \textbf{Sample Efficiency:} Higher sample efficiency due to data reuse
+\end{itemize}
+
+\textbf{Mathematical Comparison:}
+
+\textbf{PPO Policy Update:}
+\[
+\theta_{t+1} = \theta_t + \alpha \nabla_\theta J(\theta_t)
+\]
+where $J(\theta_t)$ uses only data collected with $\pi_{\theta_t}$
+
+\textbf{DDPG Policy Update:}
+\[
+\theta_{t+1} = \theta_t + \alpha \nabla_\theta J(\theta_t, \mathcal{D})
+\]
+where $\mathcal{D}$ contains experiences from various policies
+
+\textbf{Trade-offs:}
+\begin{itemize}
+    \item \textbf{PPO:} More stable but less sample efficient
+    \item \textbf{DDPG:} More sample efficient but can be unstable due to off-policy learning
+    \item \textbf{Data Requirements:} PPO needs fresh data, DDPG can reuse old data
+    \item \textbf{Convergence:} PPO more reliable convergence, DDPG faster initial learning
+\end{itemize}
 
 \newpage
 
