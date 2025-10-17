@@ -124,9 +124,9 @@ Advanced Methods in RL
 {\color{RoyalPurple} { \small By:} } \\
 \vspace{10pt}
 
-{\color{Blue} { \LARGE [Full Name] } } \\
+{\color{Blue} { \LARGE Tahamaj Sadeghi } } \\
 \vspace{5pt}
-{\color{RoyalBlue} { \Large [Student Number] } }
+{\color{RoyalBlue} { \Large 401123456 } }
 
 
 \vspace*{\fill}
@@ -196,9 +196,139 @@ The grading will be based on the following criteria, with a total of 100 points:
 
 \subsection{Question 1:} What is the role of the actor and critic networks in PPO, and how do they contribute to policy optimization? 
 
+\textbf{Answer:}
+
+The Actor-Critic architecture in PPO consists of two neural networks that work together to optimize the policy:
+
+\textbf{Actor Network ($\pi_\theta(a|s)$):}
+\begin{itemize}
+    \item \textbf{Role:} Learns and represents the policy that maps states to action distributions
+    \item \textbf{Output:} For continuous control, outputs mean $\mu_\theta(s)$ and standard deviation $\sigma_\theta(s)$ of a Gaussian distribution
+    \item \textbf{Update:} Uses policy gradient with advantage estimates from the critic
+    \item \textbf{Objective:} Maximizes the clipped surrogate objective:
+    \[
+    L^{CLIP}(\theta) = \mathbb{E}_t\left[\min(r_t(\theta)\hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon)\hat{A}_t)\right]
+    \]
+    where $r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}$ is the importance sampling ratio.
+\end{itemize}
+
+\textbf{Critic Network ($V_\phi(s)$):}
+\begin{itemize}
+    \item \textbf{Role:} Estimates the state-value function to provide baseline and advantage estimates
+    \item \textbf{Output:} Scalar value $V_\phi(s)$ representing expected return from state $s$
+    \item \textbf{Update:} Uses temporal difference learning to minimize value function error
+    \item \textbf{Objective:} Minimizes the mean squared error:
+    \[
+    L^{VF}(\phi) = \mathbb{E}_t\left[(V_\phi(s_t) - V_t^{target})^2\right]
+    \]
+\end{itemize}
+
+\textbf{Collaborative Contribution:}
+\begin{enumerate}
+    \item \textbf{Variance Reduction:} The critic provides a baseline that reduces the variance of policy gradient estimates
+    \item \textbf{Advantage Estimation:} Uses Generalized Advantage Estimation (GAE) to compute advantages:
+    \[
+    \hat{A}_t = \sum_{k=0}^{\infty} (\gamma\lambda)^k \delta_{t+k}
+    \]
+    where $\delta_t = r_t + \gamma V_\phi(s_{t+1}) - V_\phi(s_t)$
+    \item \textbf{Stable Updates:} The clipping mechanism prevents destructive policy updates while allowing multiple epochs of learning
+\end{enumerate}
+
 \subsection{Question 2:} PPO is known for maintaining a balance between exploration and exploitation during training. How does the stochastic nature of the actor network and the entropy term in the objective function contribute to this balance?
 
+\textbf{Answer:}
+
+PPO maintains exploration-exploitation balance through several mechanisms:
+
+\textbf{1. Stochastic Policy Nature:}
+\begin{itemize}
+    \item The actor outputs a probability distribution over actions rather than deterministic actions
+    \item For continuous control, uses Gaussian policy: $a \sim \mathcal{N}(\mu_\theta(s), \sigma_\theta^2(s))$
+    \item This inherent randomness ensures exploration even without explicit exploration bonuses
+\end{itemize}
+
+\textbf{2. Entropy Regularization:}
+The objective function includes an entropy bonus:
+\[
+L^{PPO}(\theta) = L^{CLIP}(\theta) - c_2 \cdot \mathbb{E}_t[\mathcal{H}(\pi_\theta(\cdot|s_t))]
+\]
+where $\mathcal{H}(\pi) = -\mathbb{E}_{a \sim \pi}[\log \pi(a|s)]$ is the policy entropy.
+
+\textbf{3. Exploration Mechanisms:}
+\begin{itemize}
+    \item \textbf{High Entropy Early:} Initially, the policy has high entropy, encouraging exploration
+    \item \textbf{Gradual Exploitation:} As training progresses, entropy naturally decreases as the policy becomes more deterministic
+    \item \textbf{Entropy Coefficient ($c_2$):} Controls the exploration-exploitation tradeoff (typically 0.01)
+\end{itemize}
+
+\textbf{4. Clipping and Exploration:}
+\begin{itemize}
+    \item The clipping mechanism prevents the policy from becoming too deterministic too quickly
+    \item By limiting policy updates, PPO maintains some stochasticity longer than vanilla policy gradients
+    \item This gradual convergence allows for sustained exploration during learning
+\end{itemize}
+
+\textbf{5. Multiple Epochs Effect:}
+\begin{itemize}
+    \item PPO performs multiple epochs on the same batch of data
+    \item This allows the policy to extract more information from each trajectory
+    \item The stochastic nature ensures that even with multiple updates, exploration is maintained
+\end{itemize}
+
 \subsection{Question 3:} When analyzing the training results, what key indicators should be monitored to evaluate the performance of the PPO agent?
+
+\textbf{Answer:}
+
+Several key indicators should be monitored to evaluate PPO performance:
+
+\textbf{1. Episode Return Trends:}
+\begin{itemize}
+    \item \textbf{Average Return:} Monitor the moving average of episode returns over the last 10-100 episodes
+    \item \textbf{Convergence Speed:} Track how quickly the agent reaches target performance
+    \item \textbf{Final Performance:} Evaluate the asymptotic performance after convergence
+\end{itemize}
+
+\textbf{2. Training Stability Metrics:}
+\begin{itemize}
+    \item \textbf{Variance Across Seeds:} Low standard deviation indicates stable training
+    \item \textbf{Return Variance:} High variance in episode returns suggests unstable learning
+    \item \textbf{Learning Curve Smoothness:} Smooth, monotonic improvement indicates stable training
+\end{itemize}
+
+\textbf{3. Policy Quality Indicators:}
+\begin{itemize}
+    \item \textbf{Policy Entropy:} Should decrease gradually from high to low values
+    \item \textbf{Action Distribution:} Monitor if actions become too concentrated (over-exploitation)
+    \item \textbf{KL Divergence:} Track KL divergence between old and new policies (should be small)
+\end{itemize}
+
+\textbf{4. Advantage and Value Function Quality:}
+\begin{itemize}
+    \item \textbf{Advantage Estimates:} Should be normalized and have reasonable magnitude
+    \item \textbf{Value Function Accuracy:} Monitor value function loss and prediction accuracy
+    \item \textbf{GAE Effectiveness:} Ensure GAE provides good bias-variance tradeoff
+\end{itemize}
+
+\textbf{5. Hyperparameter Sensitivity:}
+\begin{itemize}
+    \item \textbf{Clipping Ratio ($\epsilon$):} Monitor if clipping is frequently activated
+    \item \textbf{Learning Rates:} Track if gradients are exploding or vanishing
+    \item \textbf{Batch Size Effects:} Ensure sufficient batch size for stable updates
+\end{itemize}
+
+\textbf{6. Sample Efficiency:}
+\begin{itemize}
+    \item \textbf{Environment Steps:} Count total environment interactions needed for convergence
+    \item \textbf{Update Efficiency:} Monitor how many policy updates are needed per episode
+    \item \textbf{Data Reuse:} Track effectiveness of multiple epochs on same data
+\end{itemize}
+
+\textbf{7. Implementation-Specific Metrics:}
+\begin{itemize}
+    \item \textbf{Gradient Norms:} Should be bounded and not exploding
+    \item \textbf{Policy Ratio Distribution:} Most ratios should be close to 1.0
+    \item \textbf{Critic Loss:} Should decrease and stabilize over time
+\end{itemize}
 
 
 
