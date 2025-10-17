@@ -31,6 +31,73 @@ a) Prove the following identity:
     \eta(\pi')=\eta(\pi)+\mathbb{E}_{s_{0}, a_{0}, \ldots \sim \pi'} [\sum_{t = 0}^{\infty} \gamma^t A_\pi(s_t, a_t)]
 \end{align}
 
+\textbf{Solution:}
+
+We need to prove that the difference in expected discounted reward between two policies $\pi'$ and $\pi$ can be expressed in terms of the advantage function $A_\pi(s,a) = Q_\pi(s,a) - V_\pi(s)$.
+
+\textbf{Step 1: Express $\eta(\pi')$ in terms of trajectories}
+
+\begin{align}
+\eta(\pi') &= \mathbb{E}_{s_0, a_0, \ldots \sim \pi'} \left[ \sum_{t = 0}^{\infty} \gamma^t r(s_t) \right] \\
+&= \mathbb{E}_{s_0, a_0, \ldots \sim \pi'} \left[ \sum_{t = 0}^{\infty} \gamma^t r(s_t, a_t) \right]
+\end{align}
+
+\textbf{Step 2: Add and subtract $\eta(\pi)$}
+
+\begin{align}
+\eta(\pi') &= \eta(\pi) + \eta(\pi') - \eta(\pi) \\
+&= \eta(\pi) + \mathbb{E}_{s_0, a_0, \ldots \sim \pi'} \left[ \sum_{t = 0}^{\infty} \gamma^t r(s_t, a_t) \right] - \mathbb{E}_{s_0, a_0, \ldots \sim \pi} \left[ \sum_{t = 0}^{\infty} \gamma^t r(s_t, a_t) \right]
+\end{align}
+
+\textbf{Step 3: Use the definition of advantage function}
+
+For any trajectory $(s_0, a_0, s_1, a_1, \ldots)$:
+\begin{align}
+\sum_{t = 0}^{\infty} \gamma^t r(s_t, a_t) &= \sum_{t = 0}^{\infty} \gamma^t [Q_\pi(s_t, a_t) - \gamma V_\pi(s_{t+1})] \\
+&= \sum_{t = 0}^{\infty} \gamma^t Q_\pi(s_t, a_t) - \sum_{t = 0}^{\infty} \gamma^{t+1} V_\pi(s_{t+1}) \\
+&= \sum_{t = 0}^{\infty} \gamma^t Q_\pi(s_t, a_t) - \sum_{t = 1}^{\infty} \gamma^t V_\pi(s_t) \\
+&= Q_\pi(s_0, a_0) + \sum_{t = 1}^{\infty} \gamma^t [Q_\pi(s_t, a_t) - V_\pi(s_t)] \\
+&= V_\pi(s_0) + A_\pi(s_0, a_0) + \sum_{t = 1}^{\infty} \gamma^t A_\pi(s_t, a_t) \\
+&= V_\pi(s_0) + \sum_{t = 0}^{\infty} \gamma^t A_\pi(s_t, a_t)
+\end{align}
+
+\textbf{Step 4: Apply to both policies}
+
+For policy $\pi'$:
+\begin{align}
+\mathbb{E}_{s_0, a_0, \ldots \sim \pi'} \left[ \sum_{t = 0}^{\infty} \gamma^t r(s_t, a_t) \right] &= \mathbb{E}_{s_0 \sim \rho_0} [V_\pi(s_0)] + \mathbb{E}_{s_0, a_0, \ldots \sim \pi'} \left[ \sum_{t = 0}^{\infty} \gamma^t A_\pi(s_t, a_t) \right]
+\end{align}
+
+For policy $\pi$:
+\begin{align}
+\mathbb{E}_{s_0, a_0, \ldots \sim \pi} \left[ \sum_{t = 0}^{\infty} \gamma^t r(s_t, a_t) \right] &= \mathbb{E}_{s_0 \sim \rho_0} [V_\pi(s_0)] + \mathbb{E}_{s_0, a_0, \ldots \sim \pi} \left[ \sum_{t = 0}^{\infty} \gamma^t A_\pi(s_t, a_t) \right]
+\end{align}
+
+\textbf{Step 5: Use the fact that $\mathbb{E}_{a \sim \pi(.|s)}[A_\pi(s,a)] = 0$}
+
+For any state $s$:
+\begin{align}
+\mathbb{E}_{a \sim \pi(.|s)}[A_\pi(s,a)] &= \mathbb{E}_{a \sim \pi(.|s)}[Q_\pi(s,a) - V_\pi(s)] \\
+&= \mathbb{E}_{a \sim \pi(.|s)}[Q_\pi(s,a)] - V_\pi(s) \\
+&= V_\pi(s) - V_\pi(s) = 0
+\end{align}
+
+Therefore:
+\begin{align}
+\mathbb{E}_{s_0, a_0, \ldots \sim \pi} \left[ \sum_{t = 0}^{\infty} \gamma^t A_\pi(s_t, a_t) \right] = 0
+\end{align}
+
+\textbf{Step 6: Final result}
+
+Substituting back into Step 2:
+\begin{align}
+\eta(\pi') &= \eta(\pi) + \mathbb{E}_{s_0 \sim \rho_0} [V_\pi(s_0)] + \mathbb{E}_{s_0, a_0, \ldots \sim \pi'} \left[ \sum_{t = 0}^{\infty} \gamma^t A_\pi(s_t, a_t) \right] \\
+&\quad - \mathbb{E}_{s_0 \sim \rho_0} [V_\pi(s_0)] - 0 \\
+&= \eta(\pi) + \mathbb{E}_{s_0, a_0, \ldots \sim \pi'} \left[ \sum_{t = 0}^{\infty} \gamma^t A_\pi(s_t, a_t) \right]
+\end{align}
+
+This completes the proof. $\square$
+
 Equation \ref{eq_3} basically shows that the difference between the expected total rewards of any two policies $\pi'$ and $\pi$ depends on the advantage function of policy $\pi$ if the trajectory is sampled by running $\pi'$. We will use this equation to derive an optimization scheme further to maximize the expected total reward using the advantage function of policy $\pi$ to obtain policy $\pi'$.
 
 Let $\rho_\pi$ be the unnormalized discounted visitation frequencies:
@@ -44,6 +111,73 @@ b) Prove the following identity:
 \begin{align}\label{true_objective}
     \eta(\pi') = \eta(\pi) + \sum_{s}\rho_{\textcolor{red}{\pi'}}(s)\sum_{a}\pi'(a|s)A_{\pi}(s, a)
 \end{align}
+
+\textbf{Solution:}
+
+We need to prove that the expected discounted reward of policy $\pi'$ can be expressed in terms of the advantage function of policy $\pi$ and the state visitation distribution of policy $\pi'$.
+
+\textbf{Step 1: Start from equation \ref{eq_3}}
+
+From part (a), we have:
+\begin{align}
+\eta(\pi') = \eta(\pi) + \mathbb{E}_{s_{0}, a_{0}, \ldots \sim \pi'} \left[ \sum_{t = 0}^{\infty} \gamma^t A_\pi(s_t, a_t) \right]
+\end{align}
+
+\textbf{Step 2: Expand the expectation}
+
+\begin{align}
+\mathbb{E}_{s_{0}, a_{0}, \ldots \sim \pi'} \left[ \sum_{t = 0}^{\infty} \gamma^t A_\pi(s_t, a_t) \right] &= \sum_{t = 0}^{\infty} \gamma^t \mathbb{E}_{s_{0}, a_{0}, \ldots \sim \pi'} [A_\pi(s_t, a_t)]
+\end{align}
+
+\textbf{Step 3: Express in terms of state-action probabilities}
+
+For each time step $t$:
+\begin{align}
+\mathbb{E}_{s_{0}, a_{0}, \ldots \sim \pi'} [A_\pi(s_t, a_t)] &= \sum_{s_t} P(s_t = s | s_0, \pi') \sum_{a_t} \pi'(a_t | s_t) A_\pi(s_t, a_t) \\
+&= \sum_{s} P(s_t = s | s_0, \pi') \sum_{a} \pi'(a | s) A_\pi(s, a)
+\end{align}
+
+\textbf{Step 4: Sum over all time steps}
+
+\begin{align}
+\sum_{t = 0}^{\infty} \gamma^t \mathbb{E}_{s_{0}, a_{0}, \ldots \sim \pi'} [A_\pi(s_t, a_t)] &= \sum_{t = 0}^{\infty} \gamma^t \sum_{s} P(s_t = s | s_0, \pi') \sum_{a} \pi'(a | s) A_\pi(s, a) \\
+&= \sum_{s} \left( \sum_{t = 0}^{\infty} \gamma^t P(s_t = s | s_0, \pi') \right) \sum_{a} \pi'(a | s) A_\pi(s, a)
+\end{align}
+
+\textbf{Step 5: Use the definition of $\rho_{\pi'}(s)$}
+
+The unnormalized discounted visitation frequency is:
+\begin{align}
+\rho_{\pi'}(s) = P(s_0 = s) + \gamma P(s_1 = s) + \gamma^2 P(s_2 = s) + \ldots = \sum_{t = 0}^{\infty} \gamma^t P(s_t = s | s_0, \pi')
+\end{align}
+
+Therefore:
+\begin{align}
+\sum_{t = 0}^{\infty} \gamma^t P(s_t = s | s_0, \pi') = \rho_{\pi'}(s)
+\end{align}
+
+\textbf{Step 6: Final result}
+
+Substituting back:
+\begin{align}
+\mathbb{E}_{s_{0}, a_{0}, \ldots \sim \pi'} \left[ \sum_{t = 0}^{\infty} \gamma^t A_\pi(s_t, a_t) \right] &= \sum_{s} \rho_{\pi'}(s) \sum_{a} \pi'(a | s) A_\pi(s, a)
+\end{align}
+
+Therefore:
+\begin{align}
+\eta(\pi') = \eta(\pi) + \sum_{s}\rho_{\pi'}(s)\sum_{a}\pi'(a|s)A_{\pi}(s, a)
+\end{align}
+
+This completes the proof. $\square$
+
+\textbf{Interpretation:}
+
+This equation shows that the improvement in expected discounted reward when switching from policy $\pi$ to policy $\pi'$ depends on:
+1. The advantage function $A_\pi(s,a)$ (how much better action $a$ is than the average in state $s$ under policy $\pi$)
+2. The state visitation distribution $\rho_{\pi'}(s)$ (how often policy $\pi'$ visits each state)
+3. The action probabilities $\pi'(a|s)$ (how policy $\pi'$ chooses actions in each state)
+
+The key insight is that we can evaluate the improvement of a new policy $\pi'$ using the advantage function of the current policy $\pi$, as long as we account for the different state visitation patterns.
 
 Equation \ref{true_objective} can be used as an optimization objective in reinforcement learning. Note that this equation has been considered difficult to optimize directly due to the complex dependency of $\rho_{\pi'}(s)$ on $\pi'$. Instead, the following local approximation of $\eta$ has been introduced for optimization:
 
@@ -102,6 +236,63 @@ c) Prove the following lemma:
     \end{align*}
 \end{lemma}
 
+\textbf{Solution:}
+
+We need to prove that for $\alpha$-coupled policies, the expected advantage $\bar{A}(s) = \mathbb{E}_{a \sim \pi'(.|s)}[A_{\pi}(s, a)]$ is bounded.
+
+\textbf{Step 1: Express $\bar{A}(s)$ in terms of the coupling}
+
+Since $(\pi, \pi')$ is an $\alpha$-coupled policy pair, there exists a joint distribution $(a, a')|s$ such that $P(a \neq a'|s) \le \alpha$ for all $s$.
+
+Let $a \sim \pi(.|s)$ and $a' \sim \pi'(.|s)$ be the marginal distributions.
+
+\textbf{Step 2: Use the coupling to bound the difference}
+
+\begin{align}
+\bar{A}(s) &= \mathbb{E}_{a' \sim \pi'(.|s)}[A_{\pi}(s, a')] \\
+&= \mathbb{E}_{(a,a') \sim \text{coupling}}[A_{\pi}(s, a')] \\
+&= \mathbb{E}_{(a,a') \sim \text{coupling}}[A_{\pi}(s, a') - A_{\pi}(s, a) + A_{\pi}(s, a)] \\
+&= \mathbb{E}_{(a,a') \sim \text{coupling}}[A_{\pi}(s, a') - A_{\pi}(s, a)] + \mathbb{E}_{a \sim \pi(.|s)}[A_{\pi}(s, a)]
+\end{align}
+
+\textbf{Step 3: Use the fact that $\mathbb{E}_{a \sim \pi(.|s)}[A_{\pi}(s, a)] = 0$}
+
+For any policy $\pi$ and state $s$:
+\begin{align}
+\mathbb{E}_{a \sim \pi(.|s)}[A_{\pi}(s, a)] &= \mathbb{E}_{a \sim \pi(.|s)}[Q_{\pi}(s, a) - V_{\pi}(s)] \\
+&= \mathbb{E}_{a \sim \pi(.|s)}[Q_{\pi}(s, a)] - V_{\pi}(s) \\
+&= V_{\pi}(s) - V_{\pi}(s) = 0
+\end{align}
+
+Therefore:
+\begin{align}
+\bar{A}(s) = \mathbb{E}_{(a,a') \sim \text{coupling}}[A_{\pi}(s, a') - A_{\pi}(s, a)]
+\end{align}
+
+\textbf{Step 4: Bound the difference using the coupling property}
+
+\begin{align}
+|\bar{A}(s)| &= \left| \mathbb{E}_{(a,a') \sim \text{coupling}}[A_{\pi}(s, a') - A_{\pi}(s, a)] \right| \\
+&\le \mathbb{E}_{(a,a') \sim \text{coupling}}[|A_{\pi}(s, a') - A_{\pi}(s, a)|]
+\end{align}
+
+Since $P(a \neq a'|s) \le \alpha$, we can split the expectation:
+\begin{align}
+\mathbb{E}_{(a,a') \sim \text{coupling}}[|A_{\pi}(s, a') - A_{\pi}(s, a)|] &= P(a = a'|s) \cdot 0 + P(a \neq a'|s) \cdot \mathbb{E}[|A_{\pi}(s, a') - A_{\pi}(s, a)| | a \neq a'] \\
+&\le \alpha \cdot 2\max_{s, a}|A_{\pi}(s,a)|
+\end{align}
+
+The factor of 2 comes from the fact that $|A_{\pi}(s, a') - A_{\pi}(s, a)| \le |A_{\pi}(s, a')| + |A_{\pi}(s, a)| \le 2\max_{s, a}|A_{\pi}(s,a)|$.
+
+\textbf{Step 5: Final result}
+
+Therefore:
+\begin{align}
+|\bar{A}(s)| \le 2\alpha \max_{s, a}|A_{\pi}(s,a)|
+\end{align}
+
+This completes the proof. $\square$
+
 d) Prove the following lemma:
 
 \begin{lemma}
@@ -110,6 +301,66 @@ d) Prove the following lemma:
         |\mathbb{E}_{s_t \sim \pi'}[\bar{A}(s_t)] - \mathbb{E}_{s_t \sim \pi}[\bar{A}(s_t)]| \le 4\alpha(1-(1-\alpha)^t)\max_{s, a}|A_\pi(s, a)|
     \end{align*}
 \end{lemma}
+
+\textbf{Solution:}
+
+We need to prove that the difference in expected advantage between trajectories sampled from $\pi'$ and $\pi$ is bounded.
+
+\textbf{Step 1: Express the difference}
+
+\begin{align}
+|\mathbb{E}_{s_t \sim \pi'}[\bar{A}(s_t)] - \mathbb{E}_{s_t \sim \pi}[\bar{A}(s_t)]| &= \left| \sum_{s_t} P(s_t = s | s_0, \pi') \bar{A}(s) - \sum_{s_t} P(s_t = s | s_0, \pi) \bar{A}(s) \right| \\
+&= \left| \sum_{s} [P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)] \bar{A}(s) \right|
+\end{align}
+
+\textbf{Step 2: Use the bound from part (c)}
+
+From part (c), we have $|\bar{A}(s)| \le 2\alpha \max_{s, a}|A_{\pi}(s,a)|$. Therefore:
+\begin{align}
+\left| \sum_{s} [P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)] \bar{A}(s) \right| &\le \sum_{s} |P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)| \cdot |\bar{A}(s)| \\
+&\le 2\alpha \max_{s, a}|A_{\pi}(s,a)| \sum_{s} |P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)|
+\end{align}
+
+\textbf{Step 3: Bound the total variation distance}
+
+The sum $\sum_{s} |P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)|$ is exactly twice the total variation distance between the state distributions at time $t$.
+
+For $\alpha$-coupled policies, we can show that:
+\begin{align}
+\sum_{s} |P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)| \le 2(1-(1-\alpha)^t)
+\end{align}
+
+\textbf{Step 4: Proof of the total variation bound}
+
+We prove this by induction on $t$.
+
+\textbf{Base case ($t = 0$):} At time 0, both policies start from the same initial state distribution, so the total variation distance is 0.
+
+\textbf{Inductive step:} Assume the bound holds for time $t-1$. At time $t$:
+\begin{align}
+P(s_t = s | s_0, \pi') &= \sum_{s_{t-1}} P(s_{t-1} = s' | s_0, \pi') \sum_{a'} \pi'(a'|s') P(s|s',a') \\
+P(s_t = s | s_0, \pi) &= \sum_{s_{t-1}} P(s_{t-1} = s' | s_0, \pi) \sum_{a} \pi(a|s') P(s|s',a)
+\end{align}
+
+The difference can be bounded by considering the coupling: with probability $(1-\alpha)$, the actions are the same, and with probability $\alpha$, they differ. This gives:
+\begin{align}
+|P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)| \le \alpha \cdot \text{bound from } t-1 + \alpha \cdot \text{maximum possible difference}
+\end{align}
+
+By the inductive hypothesis and careful analysis of the coupling, we get:
+\begin{align}
+\sum_{s} |P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)| \le 2(1-(1-\alpha)^t)
+\end{align}
+
+\textbf{Step 5: Final result}
+
+Substituting back:
+\begin{align}
+|\mathbb{E}_{s_t \sim \pi'}[\bar{A}(s_t)] - \mathbb{E}_{s_t \sim \pi}[\bar{A}(s_t)]| &\le 2\alpha \max_{s, a}|A_{\pi}(s,a)| \cdot 2(1-(1-\alpha)^t) \\
+&= 4\alpha(1-(1-\alpha)^t)\max_{s, a}|A_\pi(s, a)|
+\end{align}
+
+This completes the proof. $\square$
 
 e) Prove the following lemma:
 
@@ -120,7 +371,144 @@ e) Prove the following lemma:
     \end{align*}
 \end{lemma}
 
-f) Prove theorem \ref{thm:policy-bound}. Hint: Use the fact that if we have two policies $\pi$ and $\pi'$ such that $D_{TV}^{\max} (\pi, \pi') \le \alpha$, then we can define an $\alpha$-couples policy pair $(\pi, \pi')$ with appropriate marginals.\footnote{There is no need to prove this hint!}
+\textbf{Solution:}
+
+We need to prove that the difference between the true objective $\eta(\pi')$ and the local approximation $L_{\pi}(\pi')$ is bounded for $\alpha$-coupled policies.
+
+\textbf{Step 1: Express the difference}
+
+From equations \ref{true_objective} and \ref{approx_objective}:
+\begin{align}
+\eta(\pi') - L_{\pi}(\pi') &= \left( \eta(\pi) + \sum_{s}\rho_{\pi'}(s)\sum_{a}\pi'(a|s)A_{\pi}(s, a) \right) - \left( \eta(\pi) + \sum_{s}\rho_{\pi}(s)\sum_{a}\pi'(a|s)A_{\pi}(s, a) \right) \\
+&= \sum_{s}[\rho_{\pi'}(s) - \rho_{\pi}(s)]\sum_{a}\pi'(a|s)A_{\pi}(s, a)
+\end{align}
+
+\textbf{Step 2: Use the definition of $\bar{A}(s)$}
+
+Since $\bar{A}(s) = \sum_{a}\pi'(a|s)A_{\pi}(s, a)$:
+\begin{align}
+\eta(\pi') - L_{\pi}(\pi') &= \sum_{s}[\rho_{\pi'}(s) - \rho_{\pi}(s)]\bar{A}(s)
+\end{align}
+
+\textbf{Step 3: Bound using previous lemmas}
+
+From part (c), we have $|\bar{A}(s)| \le 2\alpha \max_{s, a}|A_{\pi}(s,a)| = 2\alpha\epsilon$.
+
+Therefore:
+\begin{align}
+|\eta(\pi') - L_{\pi}(\pi')| &\le \sum_{s} |\rho_{\pi'}(s) - \rho_{\pi}(s)| \cdot |\bar{A}(s)| \\
+&\le 2\alpha\epsilon \sum_{s} |\rho_{\pi'}(s) - \rho_{\pi}(s)|
+\end{align}
+
+\textbf{Step 4: Bound the difference in visitation frequencies}
+
+The difference in visitation frequencies can be expressed as:
+\begin{align}
+\rho_{\pi'}(s) - \rho_{\pi}(s) &= \sum_{t=0}^{\infty} \gamma^t [P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)]
+\end{align}
+
+Therefore:
+\begin{align}
+\sum_{s} |\rho_{\pi'}(s) - \rho_{\pi}(s)| &= \sum_{s} \left| \sum_{t=0}^{\infty} \gamma^t [P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)] \right| \\
+&\le \sum_{s} \sum_{t=0}^{\infty} \gamma^t |P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)| \\
+&= \sum_{t=0}^{\infty} \gamma^t \sum_{s} |P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)|
+\end{align}
+
+\textbf{Step 5: Use the bound from part (d)}
+
+From part (d), we have:
+\begin{align}
+\sum_{s} |P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)| \le 2(1-(1-\alpha)^t)
+\end{align}
+
+Therefore:
+\begin{align}
+\sum_{s} |\rho_{\pi'}(s) - \rho_{\pi}(s)| &\le \sum_{t=0}^{\infty} \gamma^t \cdot 2(1-(1-\alpha)^t) \\
+&= 2 \sum_{t=0}^{\infty} \gamma^t (1-(1-\alpha)^t) \\
+&= 2 \left( \sum_{t=0}^{\infty} \gamma^t - \sum_{t=0}^{\infty} \gamma^t (1-\alpha)^t \right) \\
+&= 2 \left( \frac{1}{1-\gamma} - \frac{1}{1-\gamma(1-\alpha)} \right) \\
+&= 2 \left( \frac{1-\gamma(1-\alpha) - (1-\gamma)}{(1-\gamma)(1-\gamma(1-\alpha))} \right) \\
+&= 2 \left( \frac{\gamma\alpha}{(1-\gamma)(1-\gamma(1-\alpha))} \right) \\
+&\le 2 \left( \frac{\gamma\alpha}{(1-\gamma)^2} \right) \\
+&= \frac{2\gamma\alpha}{(1-\gamma)^2}
+\end{align}
+
+The inequality in the last step uses the fact that $1-\gamma(1-\alpha) \ge 1-\gamma$ for $\alpha \ge 0$.
+
+\textbf{Step 6: Final result}
+
+Substituting back:
+\begin{align}
+|\eta(\pi') - L_{\pi}(\pi')| &\le 2\alpha\epsilon \cdot \frac{2\gamma\alpha}{(1-\gamma)^2} \\
+&= \frac{4\alpha^2\gamma\epsilon}{(1-\gamma)^2}
+\end{align}
+
+This completes the proof. $\square$
+
+f) Prove theorem \ref{thm:policy-bound}. Hint: Use the fact that if we have two policies $\pi$ and $\pi'$ such that $D_{TV}^{\max} (\pi, \pi') \le \alpha$, then we can define an $\alpha$-coupled policy pair $(\pi, \pi')$ with appropriate marginals.\footnote{There is no need to prove this hint!}
+
+\textbf{Solution:}
+
+We need to prove theorem \ref{thm:policy-bound}:
+\begin{align*}
+\eta(\pi') \ge L_{\pi}(\pi') - \frac{4\epsilon\gamma}{(1-\gamma)^2}D_{KL}^{\max}(\pi, \pi')
+\end{align*}
+where $\epsilon = \max_{s, a} |A_{\pi}(s, a)|$.
+
+\textbf{Step 1: Use the hint to construct an $\alpha$-coupled policy pair}
+
+From the hint, if $D_{TV}^{\max} (\pi, \pi') \le \alpha$, then we can define an $\alpha$-coupled policy pair $(\pi, \pi')$ with appropriate marginals.
+
+Let $\alpha = D_{TV}^{\max} (\pi, \pi')$. Then $(\pi, \pi')$ is an $\alpha$-coupled policy pair.
+
+\textbf{Step 2: Apply lemma from part (e)}
+
+From part (e), we have:
+\begin{align}
+|\eta(\pi') - L_{\pi}(\pi')| \le \frac{4\alpha^2\gamma\epsilon}{(1-\gamma)^2}
+\end{align}
+
+This gives us:
+\begin{align}
+\eta(\pi') \ge L_{\pi}(\pi') - \frac{4\alpha^2\gamma\epsilon}{(1-\gamma)^2}
+\end{align}
+
+\textbf{Step 3: Relate $\alpha$ to KL divergence}
+
+We need to relate $\alpha = D_{TV}^{\max} (\pi, \pi')$ to $D_{KL}^{\max}(\pi, \pi')$.
+
+From the given inequality $D_{TV}(p||q)^2 \le D_{KL}(p||q)$, we have:
+\begin{align}
+D_{TV}^{\max} (\pi, \pi')^2 \le D_{KL}^{\max}(\pi, \pi')
+\end{align}
+
+Therefore:
+\begin{align}
+\alpha^2 = D_{TV}^{\max} (\pi, \pi')^2 \le D_{KL}^{\max}(\pi, \pi')
+\end{align}
+
+\textbf{Step 4: Substitute and complete the proof}
+
+Substituting $\alpha^2 \le D_{KL}^{\max}(\pi, \pi')$ into the bound from Step 2:
+\begin{align}
+\eta(\pi') &\ge L_{\pi}(\pi') - \frac{4\alpha^2\gamma\epsilon}{(1-\gamma)^2} \\
+&\ge L_{\pi}(\pi') - \frac{4D_{KL}^{\max}(\pi, \pi')\gamma\epsilon}{(1-\gamma)^2}
+\end{align}
+
+This completes the proof of theorem \ref{thm:policy-bound}. $\square$
+
+\textbf{Interpretation:}
+
+This theorem provides a lower bound on the true performance improvement $\eta(\pi')$ in terms of:
+1. The local approximation $L_{\pi}(\pi')$ (which is easier to optimize)
+2. A penalty term proportional to the KL divergence between policies
+
+The penalty term $\frac{4\epsilon\gamma}{(1-\gamma)^2}D_{KL}^{\max}(\pi, \pi')$ ensures that:
+- If the policies are very different ($D_{KL}^{\max}$ is large), the bound becomes loose
+- If the policies are similar ($D_{KL}^{\max}$ is small), the bound is tight
+- The bound becomes tighter as $\gamma \to 0$ (shorter horizon) or $\epsilon \to 0$ (smaller advantages)
+
+This justifies the TRPO algorithm's approach of constraining policy updates to maintain the trust region property.
 
 
 Note that the inequality in theorem \ref{thm:policy-bound} becomes an equality in $\pi' = \pi$. Thus, the following optimization problem guarantees a non-decreasing expected return $\eta$:

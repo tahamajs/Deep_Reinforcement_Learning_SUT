@@ -28,6 +28,83 @@ a) Prove the following identity, which is known as the Policy Gradient Theorem:
     \nabla_\theta J(\theta) = \frac{1}{1-\gamma}\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\theta \log \pi_\theta (a|s) Q^{\pi_\theta} (s, a)]
 \end{align}
 
+\textbf{Solution:}
+
+We will prove the Policy Gradient Theorem by directly differentiating the objective function $J(\theta) = V^{\pi_\theta}(s_0)$.
+
+\textbf{Step 1: Express the objective in terms of trajectories}
+
+The value function can be written as:
+\begin{align}
+J(\theta) = V^{\pi_\theta}(s_0) = \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \right]
+\end{align}
+
+where $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots)$ is a trajectory sampled from policy $\pi_\theta$.
+
+\textbf{Step 2: Differentiate with respect to policy parameters}
+
+Taking the gradient:
+\begin{align}
+\nabla_\theta J(\theta) &= \nabla_\theta \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \right] \\
+&= \sum_{\tau} P(\tau|\theta) \nabla_\theta \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \right] + \sum_{\tau} \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \right] \nabla_\theta P(\tau|\theta)
+\end{align}
+
+The first term is zero since rewards don't depend on $\theta$. For the second term:
+\begin{align}
+\nabla_\theta P(\tau|\theta) &= \nabla_\theta \left[ \prod_{t=0}^{\infty} \pi_\theta(a_t|s_t) P(s_{t+1}|s_t, a_t) \right] \\
+&= P(\tau|\theta) \nabla_\theta \left[ \sum_{t=0}^{\infty} \log \pi_\theta(a_t|s_t) \right] \\
+&= P(\tau|\theta) \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t)
+\end{align}
+
+\textbf{Step 3: Combine and rearrange}
+
+Substituting back:
+\begin{align}
+\nabla_\theta J(\theta) &= \sum_{\tau} P(\tau|\theta) \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \right] \left[ \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t) \right] \\
+&= \mathbb{E}_{\tau \sim \pi_\theta} \left[ \left( \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \right) \left( \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t) \right) \right]
+\end{align}
+
+\textbf{Step 4: Use the log-derivative trick}
+
+We can rewrite this as:
+\begin{align}
+\nabla_\theta J(\theta) &= \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t) \left( \sum_{k=t}^{\infty} \gamma^k r(s_k, a_k) \right) \right] \\
+&= \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t) \gamma^t \left( \sum_{k=0}^{\infty} \gamma^k r(s_{t+k}, a_{t+k}) \right) \right] \\
+&= \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t) \gamma^t Q^{\pi_\theta}(s_t, a_t) \right]
+\end{align}
+
+\textbf{Step 5: Convert to state-action expectation}
+
+\begin{align}
+\nabla_\theta J(\theta) &= \sum_{t=0}^{\infty} \gamma^t \mathbb{E}_{s_t \sim d^{\pi_\theta}_{s_0,t}} \mathbb{E}_{a_t \sim \pi_\theta(.|s_t)} \left[ \nabla_\theta \log \pi_\theta(a_t|s_t) Q^{\pi_\theta}(s_t, a_t) \right]
+\end{align}
+
+where $d^{\pi_\theta}_{s_0,t}(s) = P(s_t = s | s_0, \pi_\theta)$ is the state visitation probability at time $t$.
+
+\textbf{Step 6: Use discounted state visitation distribution}
+
+The discounted state visitation distribution is:
+\begin{align}
+d^{\pi_\theta}_{s_0}(s) = (1-\gamma) \sum_{t=0}^{\infty} \gamma^t d^{\pi_\theta}_{s_0,t}(s)
+\end{align}
+
+Therefore:
+\begin{align}
+\sum_{t=0}^{\infty} \gamma^t d^{\pi_\theta}_{s_0,t}(s) = \frac{d^{\pi_\theta}_{s_0}(s)}{1-\gamma}
+\end{align}
+
+\textbf{Step 7: Final result}
+
+Substituting:
+\begin{align}
+\nabla_\theta J(\theta) &= \sum_{t=0}^{\infty} \gamma^t \sum_s d^{\pi_\theta}_{s_0,t}(s) \sum_a \pi_\theta(a|s) \nabla_\theta \log \pi_\theta(a|s) Q^{\pi_\theta}(s, a) \\
+&= \sum_s \left( \sum_{t=0}^{\infty} \gamma^t d^{\pi_\theta}_{s_0,t}(s) \right) \sum_a \pi_\theta(a|s) \nabla_\theta \log \pi_\theta(a|s) Q^{\pi_\theta}(s, a) \\
+&= \sum_s \frac{d^{\pi_\theta}_{s_0}(s)}{1-\gamma} \sum_a \pi_\theta(a|s) \nabla_\theta \log \pi_\theta(a|s) Q^{\pi_\theta}(s, a) \\
+&= \frac{1}{1-\gamma} \mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}} \mathbb{E}_{a \sim \pi_\theta(.|s)} \left[ \nabla_\theta \log \pi_\theta(a|s) Q^{\pi_\theta}(s, a) \right]
+\end{align}
+
+This completes the proof of the Policy Gradient Theorem. $\square$
+
 
 \subsection{Compatible Function Approximation Theorem}
 
@@ -52,3 +129,78 @@ Now, consider the case in which $Q^{\pi_\theta}$ is approximated by a learned fu
 \end{theorem}
 
 b) Prove theorem \ref{thm:compatible_approximator}.
+
+\textbf{Solution:}
+
+We need to prove that under the two conditions stated in the theorem, the policy gradient using the function approximator $Q_\phi(s,a)$ is exact.
+
+\textbf{Given conditions:}
+\begin{enumerate}
+    \item $\nabla_{\phi} Q_\phi(s, a) = \nabla_\theta \log \pi_\theta (a|s)$ (compatibility condition)
+    \item $\phi$ minimizes $\epsilon = \mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [(Q^{\pi_\theta} (s, a) - Q_\phi(s, a))^2]$
+\end{enumerate}
+
+\textbf{Goal:} Show that
+\begin{align}
+\nabla_\theta J(\theta) = \frac{1}{1-\gamma}\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\theta \log \pi_\theta (a|s) Q_\phi (s, a)]
+\end{align}
+
+\textbf{Proof:}
+
+From the Policy Gradient Theorem (part a), we have:
+\begin{align}
+\nabla_\theta J(\theta) = \frac{1}{1-\gamma}\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\theta \log \pi_\theta (a|s) Q^{\pi_\theta} (s, a)]
+\end{align}
+
+We want to show that we can replace $Q^{\pi_\theta}(s,a)$ with $Q_\phi(s,a)$ without changing the gradient.
+
+\textbf{Step 1: Express the difference}
+
+Let $\Delta(s,a) = Q^{\pi_\theta}(s,a) - Q_\phi(s,a)$ be the approximation error. Then:
+\begin{align}
+\nabla_\theta J(\theta) &= \frac{1}{1-\gamma}\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\theta \log \pi_\theta (a|s) (Q_\phi(s,a) + \Delta(s,a))] \\
+&= \frac{1}{1-\gamma}\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\theta \log \pi_\theta (a|s) Q_\phi(s,a)] \\
+&\quad + \frac{1}{1-\gamma}\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\theta \log \pi_\theta (a|s) \Delta(s,a)]
+\end{align}
+
+\textbf{Step 2: Show the error term is zero}
+
+We need to show that:
+\begin{align}
+\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\theta \log \pi_\theta (a|s) \Delta(s,a)] = 0
+\end{align}
+
+\textbf{Step 3: Use the compatibility condition}
+
+From condition 1, we have $\nabla_{\phi} Q_\phi(s, a) = \nabla_\theta \log \pi_\theta (a|s)$.
+
+Since $\phi$ minimizes the MSE (condition 2), we have:
+\begin{align}
+\nabla_\phi \epsilon = 0
+\end{align}
+
+Computing the gradient:
+\begin{align}
+\nabla_\phi \epsilon &= \nabla_\phi \mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [(Q^{\pi_\theta} (s, a) - Q_\phi(s, a))^2] \\
+&= \mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\phi (Q^{\pi_\theta} (s, a) - Q_\phi(s, a))^2] \\
+&= \mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [2(Q^{\pi_\theta} (s, a) - Q_\phi(s, a)) \nabla_\phi Q_\phi(s, a)] \\
+&= 2\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\Delta(s,a) \nabla_\phi Q_\phi(s, a)]
+\end{align}
+
+Since $\nabla_\phi \epsilon = 0$ and $\nabla_\phi Q_\phi(s, a) = \nabla_\theta \log \pi_\theta (a|s)$ (compatibility condition), we have:
+\begin{align}
+\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\Delta(s,a) \nabla_\theta \log \pi_\theta (a|s)] = 0
+\end{align}
+
+\textbf{Step 4: Conclusion}
+
+Therefore, the error term in Step 1 is zero, and we have:
+\begin{align}
+\nabla_\theta J(\theta) = \frac{1}{1-\gamma}\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\theta \log \pi_\theta (a|s) Q_\phi (s, a)]
+\end{align}
+
+This proves that the policy gradient using the function approximator $Q_\phi(s,a)$ is exact under the stated conditions. $\square$
+
+\textbf{Interpretation:}
+
+The compatibility condition ensures that the critic's gradient direction matches the actor's score function direction. The MSE minimization condition ensures that the critic provides unbiased estimates. Together, these conditions guarantee that the approximate policy gradient equals the true policy gradient.
