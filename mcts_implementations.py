@@ -1,5 +1,6 @@
 # Complete implementations for MCTS notebook
 
+
 # BufferReplay.add_trajectories method
 def add_trajectories_implementation():
     return """
@@ -10,6 +11,7 @@ def add_trajectories_implementation():
                 self.memory[self.position] = trajectory
             self.position = (self.position + 1) % self.capacity
     """
+
 
 # RepresentationNet implementation
 def representation_net_implementation():
@@ -24,6 +26,7 @@ def representation_net_implementation():
         x = self.relu(self.fc2(x))
         return x
     """
+
 
 # DynamicsNet implementation
 def dynamics_net_implementation():
@@ -40,6 +43,7 @@ def dynamics_net_implementation():
         reward = self.reward_head(next_state)
         return next_state, reward.squeeze(-1)
     """
+
 
 # PredictionNet implementation
 def prediction_net_implementation():
@@ -60,12 +64,14 @@ def prediction_net_implementation():
         return policy, value.squeeze(-1)
     """
 
+
 # MCTS implementations
 def mcts_init_implementation():
     return """
         self.c1 = 1.25
         self.c2 = 19652
     """
+
 
 def mcts_run_implementation():
     return """
@@ -103,6 +109,7 @@ def mcts_run_implementation():
         return visit_counts, self.root_node.avg_value()
     """
 
+
 def mcts_expand_node_implementation():
     return """
         next_s, new_pi, new_v, new_reward = self.agent.rollout_step(
@@ -127,6 +134,7 @@ def mcts_expand_node_implementation():
         return new_v
     """
 
+
 def mcts_backpropagate_implementation():
     return """
         for node in reversed(self.search_path):
@@ -138,6 +146,7 @@ def mcts_backpropagate_implementation():
             
             leaf_value = node.reward_est + self.gamma * leaf_value
     """
+
 
 def mcts_calc_ucb_implementation():
     return """
@@ -161,6 +170,7 @@ def mcts_calc_ucb_implementation():
         return prior_val + normalized_val.item()
     """
 
+
 def mcts_compute_pi_implementation():
     return """
         visits = []
@@ -168,6 +178,7 @@ def mcts_compute_pi_implementation():
             visits.append(self.root_node.edges[i].visit_count)
         return np.array(visits)
     """
+
 
 # Naive depth search implementation
 def naive_depth_search_implementation():
@@ -212,6 +223,7 @@ def naive_depth_search_implementation():
     return best_action_idx, root_value
     """
 
+
 # Agent implementations
 def agent_inference_implementation():
     return """
@@ -247,12 +259,14 @@ def agent_inference_implementation():
             return chosen_act, pol_np, val
     """
 
+
 def agent_initial_step_implementation():
     return """
         s = self.rep_net(obs)
         pol, v = self.pred_net(s)
         return s, pol, v
     """
+
 
 def agent_rollout_step_implementation():
     return """
@@ -270,6 +284,7 @@ def agent_rollout_step_implementation():
 
         return next_hidden, p, v, predicted_reward
     """
+
 
 # Training function implementation
 def training_function_implementation():
