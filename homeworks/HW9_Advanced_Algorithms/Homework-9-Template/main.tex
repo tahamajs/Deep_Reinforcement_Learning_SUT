@@ -1,0 +1,245 @@
+\documentclass[12pt]{article}
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=1.5cm, right=1.5cm]{geometry}
+\usepackage{amsmath, amsfonts, amssymb, mathtools}
+\usepackage{fancyhdr, setspace, parskip}
+\usepackage{graphicx, caption, subfig, array, multirow}
+\usepackage{hyperref, enumitem, cancel}
+\usepackage[T1]{fontenc}
+\usepackage{tgtermes}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tocloft}
+\usepackage{titlesec}
+\usepackage{lipsum}  
+
+\definecolor{DarkBlue}{RGB}{10, 0, 80}
+
+% Hyperlink setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=DarkBlue,
+    filecolor=BrickRed,      
+    urlcolor=RoyalBlue,
+}
+
+
+% Header and footer customization
+\fancyhead{}
+\fancyhead[L]{
+{\fontfamily{lmss}{\color{DarkBlue}
+\textbf{\leftmark}
+}}
+}
+\fancyhead[R]{
+{\fontfamily{ppl}\selectfont {\color{DarkBlue}
+{Deep RL Course [Spring 2025]}
+}}
+}
+
+\fancyfoot{}
+\fancyfoot[C]{
+{\fontfamily{lmss}{\color{BrickRed}
+\textbf{\thepage}
+}}
+}
+
+\renewcommand{\sectionmark}[1]{ \markboth{\thesection\quad #1}{} }
+
+\renewcommand{\headrule}{{\color{BrickRed}\hrule width\headwidth height 0.5pt}}
+\renewcommand{\footrulewidth}{0pt}
+
+
+% Table of Contents customizations
+\renewcommand{\cftsecafterpnum}{\vskip6pt}
+\renewcommand{\cftsubsecafterpnum}{\vskip3pt}
+\renewcommand{\cftsubsubsecafterpnum}{\vskip3pt}
+\renewcommand{\cftsecfont}{\sffamily\large}
+\renewcommand{\cftsubsecfont}{\sffamily}
+\renewcommand{\cftsubsubsecfont}{\sffamily}
+% \renewcommand{\cftsecdotsep}{1}
+\renewcommand{\cftsubsecdotsep}{1}
+\renewcommand{\cftsubsubsecdotsep}{1}
+
+
+% Section title styles
+\titleformat*{\section}{\LARGE\bfseries\color{DarkBlue}}
+\titleformat*{\subsection}{\Large\bfseries\color{DarkBlue}}
+\titleformat*{\subsubsection}{\large\bfseries\color{DarkBlue}}
+
+\definecolor{light-gray}{gray}{0.95}
+\newcommand{\code}[1]{\colorbox{light-gray}{\texttt{#1}}}
+
+% Start of the document
+\pagestyle{fancy}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\pagenumbering{gobble}
+\thispagestyle{plain}
+
+\begin{center}
+
+\vspace*{-1.5cm}
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.7\linewidth]{figs/cover-std.png}
+\end{figure}
+
+{
+\fontfamily{ppl}
+
+{\color{DarkBlue} {\fontsize{30}{50} \textbf{
+Deep Reinforcement Learning
+}}}
+
+{\color{DarkBlue} {\Large
+Professor Mohammad Hossein Rohban
+}}
+}
+
+
+\vspace{20pt}
+
+{
+\fontfamily{lmss}
+
+
+{\color{RedOrange}
+{\Large
+Solution forHomework [9]
+}\\
+}
+{\color{BrickRed}
+\rule{12cm}{0.5pt}
+
+{\Huge
+[Exploration Methods]
+}
+\rule{12cm}{0.5pt}
+}
+
+\vspace{10pt}
+
+{\color{RoyalPurple} { \small By:} } \\
+\vspace{10pt}
+
+{\color{Blue} { \LARGE [Full Name] } } \\
+\vspace{5pt}
+{\color{RoyalBlue} { \Large [Student Number] } }
+
+
+\vspace*{\fill}
+\begin{center}
+\begin{tabular}{ccc}
+    \includegraphics[width=0.14\linewidth]{figs/sharif-logo.png} & \includegraphics[width=0.14\linewidth]{figs/riml-logo.png} & \includegraphics[width=0.14\linewidth]{figs/dlr-logo.png} \\
+\end{tabular}
+\end{center}
+
+
+\vspace*{-.25cm}
+
+{\color{YellowOrange} {
+\rule{10cm}{0.5pt} \\
+\vspace{2pt}
+\large Spring 2025}
+}}
+\vspace*{-1cm}
+
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+\pagenumbering{gobble}
+\thispagestyle{plain}
+{\fontfamily{lmss}\selectfont {\color{BrickRed} \textbf{\tableofcontents} }}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+\pagenumbering{arabic}
+
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+\noindent\rule{\textwidth}{1.5pt}
+
+
+\section{Light-tailed Distributions[25-points]}
+\noindent\rule{\textwidth}{1.5pt}
+\noindent\rule{\textwidth}{0.2pt}
+\subsection{Hoeffding's Inequality[10-points]}
+\subsubsection{a)[6-points]}
+\subsubsection{b)[4-points]}
+\noindent\rule{\textwidth}{0.2pt}
+\noindent\rule{\textwidth}{0.2pt}
+\subsection{Sub-Gaussian[15-points]}
+\subsubsection{a-1)[2-points]}
+\subsubsection{a-2)[2-points]}
+\subsubsection{a-3)[2-points]}
+
+\subsubsection{b)[3-points]}
+\subsubsection{c)[4-points]}
+
+\noindent\rule{\textwidth}{0.2pt}
+}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+\noindent\rule{\textwidth}{1.5pt}
+\section{UCB[75-points]}
+\noindent\rule{\textwidth}{1.5pt}
+\noindent\rule{\textwidth}{0.2pt}
+\subsection{The Upper Confidence Bound Algorithm[40-points]}
+
+\subsubsection{a)[2-points]}
+\subsubsection{b)[4-points]}
+\subsubsection{c)[4-points]}
+\subsubsection{d)[4-points]}
+\subsubsection{e)[6-points]}
+\subsubsection{f)[4-points]}
+\subsubsection{g)[6-points]}
+\subsubsection{h)[5-points]}
+\subsubsection{i)[5-points]}
+
+\noindent\rule{\textwidth}{0.2pt}
+\noindent\rule{\textwidth}{0.2pt}
+
+\subsection{Power of 2 version of UCB Algorithm^*(Bonus)[35-points]}
+
+
+
+}}
+
+\newpage
+\noindent\rule{\textwidth}{1.5pt}
+\section{Online Learning[50-points]}
+\noindent\rule{\textwidth}{1.5pt}
+\noindent\rule{\textwidth}{0.2pt}
+\subsection{Randomized Weighted Majority Algorithm[35-points]}
+\subsubsection{a)[5-points]}
+
+\subsubsection{b)[8-points]}
+\subsubsection{c)[15-points]}
+\subsubsection{d)[7-points]}
+\noindent\rule{\textwidth}{0.2pt}
+\noindent\rule{\textwidth}{0.2pt}
+\subsection{Hedge Algorithm^*(Bonus)[15-points]}
+\subsubsection{a)[6-points]}
+\subsubsection{b)[7-points]}
+\subsubsection{c)[2-points]}
+
+\noindent\rule{\textwidth}{0.4pt}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

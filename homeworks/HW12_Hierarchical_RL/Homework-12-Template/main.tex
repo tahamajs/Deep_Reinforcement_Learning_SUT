@@ -168,22 +168,152 @@ Conservative Q-Learning for Offline RL
 \section{Part 1 [60-points]}
 
 \begin{enumerate}
-    % \item What is the difference between offline RL and imitation learning [5-points]?
     \item Considering the Bellman update, explain with reasoning why value estimation suffers from overestimation in the offline framework. [10-points]
     \[
-Q(s,a) \leftarrow r(s,a) + \mathbb{E}_{a' \sim r_{new}} [Q(s',a')]
+Q(s,a) \leftarrow r(s,a) + \mathbb{E}_{a' \sim \pi_{new}} [Q(s',a')]
 \]
-\item One of the solutions to address the overestimation problem in the offline framework is CQL, whose objective function for computing the value is given below. Explain the role of each of the four terms in this objective function. [20-points]
+    
+    \textbf{Answer:}
+    
+    In offline reinforcement learning, value estimation suffers from overestimation due to several key factors:
+    
+    \begin{enumerate}
+        \item \textbf{Distribution Shift:} The fundamental issue is that offline RL learns from a fixed dataset $\mathcal{D}$ collected by a behavior policy $\pi_{\beta}$, but the learned policy $\pi_{new}$ may choose actions that are out-of-distribution (OOD) with respect to the dataset. When the Bellman update uses $\mathbb{E}_{a' \sim \pi_{new}} [Q(s',a')]$, it evaluates actions that may not be well-represented in the dataset.
+        
+        \item \textbf{Extrapolation Error:} The Q-function is trained only on state-action pairs $(s,a)$ present in the dataset. For OOD actions, the Q-function must extrapolate, often leading to overly optimistic estimates. This is particularly problematic because neural networks tend to extrapolate poorly beyond their training distribution.
+        
+        \item \textbf{Bootstrapping Amplification:} The Bellman update bootstraps from potentially overestimated Q-values. If $Q(s',a')$ is overestimated for OOD actions, this error propagates backward through the Bellman equation, amplifying the overestimation bias.
+        
+        \item \textbf{Maximization Bias:} In the case of Q-learning with $\max_{a'} Q(s',a')$, the maximization operation tends to select the most optimistic estimate, which is often the most overestimated one, especially for OOD actions.
+        
+        \item \textbf{Limited Data Coverage:} The dataset may not cover all relevant state-action pairs, leading to uncertainty about the true Q-values for uncovered regions. Without proper regularization, the learned Q-function may assign unrealistically high values to these regions.
+    \end{enumerate}
+    
+    This overestimation is particularly dangerous in offline RL because the agent cannot interact with the environment to correct these errors through exploration, making the learned policy potentially unsafe or suboptimal.
 
-\begin{align*}
-\hat{Q}^T = \arg \min_{Q} \max_{\mu} 
-    & \alpha \mathbb{E}_{s \sim D, a \sim \mu(a|s)} [Q(s,a)] \\
-    & - \alpha \mathbb{E}_{(s,a) \sim D} [Q(s,a)] \\
-    & - \mathbb{E}_{s \sim D} [\mathcal{H}(\mu(\cdot|s))] \\
-    & + \mathbb{E}_{(s,a,s') \sim D} \left[ (Q(s,a) - (r(s,a) + \mathbb{E}[Q(s',a')]))^2 \right]
-\end{align*}
-\item  Rewrite the optimization problem from part 3 as a minimization-only problem. [20-points]
-\item To apply this method in model-based reinforcement learning, what changes are needed in the objective function? Rewrite the new objective function. [10-points]
+    \item One of the solutions to address the overestimation problem in the offline framework is CQL, whose objective function for computing the value is given below. Explain the role of each of the four terms in this objective function. [20-points]
+
+    \begin{align*}
+    \hat{Q}^T = \arg \min_{Q} \max_{\mu} 
+        & \alpha \mathbb{E}_{s \sim D, a \sim \mu(a|s)} [Q(s,a)] \\
+        & - \alpha \mathbb{E}_{(s,a) \sim D} [Q(s,a)] \\
+        & - \mathbb{E}_{s \sim D} [\mathcal{H}(\mu(\cdot|s))] \\
+        & + \mathbb{E}_{(s,a,s') \sim D} \left[ (Q(s,a) - (r(s,a) + \mathbb{E}[Q(s',a')]))^2 \right]
+    \end{align*}
+    
+    \textbf{Answer:}
+    
+    The CQL objective function consists of four terms, each serving a specific purpose in learning conservative Q-values:
+    
+    \begin{enumerate}
+        \item \textbf{First term:} $\alpha \mathbb{E}_{s \sim D, a \sim \mu(a|s)} [Q(s,a)]$
+        \begin{itemize}
+            \item This term \textbf{penalizes high Q-values} for actions sampled from the distribution $\mu(a|s)$
+            \item It acts as a \textbf{conservative regularizer} that pushes down Q-values, preventing overestimation
+            \item The distribution $\mu(a|s)$ is typically chosen to cover actions that might be selected by the learned policy
+            \item By maximizing this term (within the $\max_{\mu}$), we ensure that Q-values for potentially problematic actions are kept low
+        \end{itemize}
+        
+        \item \textbf{Second term:} $-\alpha \mathbb{E}_{(s,a) \sim D} [Q(s,a)]$
+        \begin{itemize}
+            \item This term \textbf{encourages high Q-values} for state-action pairs that appear in the dataset
+            \item It ensures that Q-values for \textbf{in-distribution} actions are not underestimated
+            \item This prevents the conservative penalty from being too aggressive and maintains reasonable Q-values for observed data
+            \item The negative sign makes this a reward term that pushes Q-values up for dataset actions
+        \end{itemize}
+        
+        \item \textbf{Third term:} $-\mathbb{E}_{s \sim D} [\mathcal{H}(\mu(\cdot|s))]$
+        \begin{itemize}
+            \item This is an \textbf{entropy regularization} term that encourages diversity in the distribution $\mu(a|s)$
+            \item $\mathcal{H}(\mu(\cdot|s))$ is the entropy of the distribution $\mu(a|s)$
+            \item It prevents $\mu$ from collapsing to a single action, ensuring broad coverage in the conservative penalty
+            \item This term helps the algorithm explore different actions when computing the conservative penalty
+        \end{itemize}
+        
+        \item \textbf{Fourth term:} $\mathbb{E}_{(s,a,s') \sim D} \left[ (Q(s,a) - (r(s,a) + \mathbb{E}[Q(s',a')]))^2 \right]$
+        \begin{itemize}
+            \item This is the \textbf{standard Bellman error} term that ensures Q-values satisfy the Bellman equation
+            \item It enforces consistency with the environment dynamics and rewards
+            \item This term ensures that the learned Q-function accurately represents the true value function for in-distribution data
+            \item It provides the foundation for learning correct Q-values before applying conservative regularization
+        \end{itemize}
+    \end{enumerate}
+    
+    \textbf{Overall Mechanism:} The CQL objective learns Q-values that are conservative (low for OOD actions) but accurate (correct for in-distribution actions). The first two terms create a gap between Q-values for dataset actions and potentially OOD actions, while the entropy term ensures broad coverage, and the Bellman term maintains accuracy.
+
+    \item Rewrite the optimization problem from part 3 as a minimization-only problem. [20-points]
+    
+    \textbf{Answer:}
+    
+    To convert the min-max optimization problem to a minimization-only problem, we need to solve the inner maximization over $\mu$ analytically. For the entropy regularization case $\mathcal{R}(\mu) = -\mathbb{E}_{s \sim D} [\mathcal{H}(\mu(\cdot|s))]$, we can derive the optimal $\mu^*$:
+    
+    \textbf{Step 1:} Set up the Lagrangian for the inner maximization:
+    \begin{align}
+    L(\mu, \lambda) &= \alpha \mathbb{E}_{s \sim D} \left[ \sum_a \mu(a|s) Q(s,a) - \sum_a \hat{\pi}_{\beta}(a|s) Q(s,a) \right] \\
+    &\quad - \mathbb{E}_{s \sim D} \left[ \sum_a \mu(a|s) \log \mu(a|s) \right] + \lambda \left( \sum_a \mu(a|s) - 1 \right)
+    \end{align}
+    
+    \textbf{Step 2:} Take the derivative with respect to $\mu(a|s)$ and set to zero:
+    \begin{align}
+    \frac{\partial L}{\partial \mu(a|s)} &= \alpha Q(s,a) - \log \mu(a|s) - 1 + \lambda = 0
+    \end{align}
+    
+    \textbf{Step 3:} Solve for $\mu(a|s)$:
+    \begin{align}
+    \mu^*(a|s) &= \exp(\alpha Q(s,a) - 1 + \lambda)
+    \end{align}
+    
+    \textbf{Step 4:} Use the constraint $\sum_a \mu(a|s) = 1$ to find $\lambda$:
+    \begin{align}
+    \sum_a \exp(\alpha Q(s,a) - 1 + \lambda) &= 1 \\
+    \exp(-1 + \lambda) \sum_a \exp(\alpha Q(s,a)) &= 1 \\
+    \exp(-1 + \lambda) &= \frac{1}{\sum_a \exp(\alpha Q(s,a))}
+    \end{align}
+    
+    \textbf{Step 5:} Substitute back to get the optimal distribution:
+    \begin{align}
+    \mu^*(a|s) &= \frac{\exp(\alpha Q(s,a))}{\sum_{a'} \exp(\alpha Q(s,a'))}
+    \end{align}
+    
+    \textbf{Step 6:} Substitute $\mu^*$ back into the original objective to get the minimization-only form:
+    \begin{align}
+    \hat{Q}^T &= \arg \min_{Q} \alpha \mathbb{E}_{s \sim D} \left[ \log \sum_a \exp(Q(s,a)) - \mathbb{E}_{a \sim \hat{\pi}_{\beta}(a|s)} [Q(s,a)] \right] \\
+    &\quad + \mathbb{E}_{(s,a,s') \sim D} \left[ (Q(s,a) - (r(s,a) + \mathbb{E}[Q(s',a')]))^2 \right]
+    \end{align}
+    
+    This is the \textbf{CQL($\mathcal{H}$)} objective, which is a pure minimization problem that learns conservative Q-values by penalizing the log-sum-exp of Q-values while rewarding Q-values for dataset actions.
+
+    \item To apply this method in model-based reinforcement learning, what changes are needed in the objective function? Rewrite the new objective function. [10-points]
+    
+    \textbf{Answer:}
+    
+    In model-based reinforcement learning, we have access to a learned model $\hat{T}(s'|s,a)$ that approximates the true transition dynamics. This allows us to generate synthetic transitions and modify the CQL objective accordingly.
+    
+    \textbf{Key Changes:}
+    \begin{enumerate}
+        \item \textbf{Model-generated transitions:} We can sample next states from $\hat{T}(s'|s,a)$ instead of relying only on dataset transitions
+        \item \textbf{Extended state-action coverage:} The model allows us to evaluate Q-values on state-action pairs not present in the original dataset
+        \item \textbf{Conservative penalty on model rollouts:} We can apply the conservative penalty to actions sampled during model-based rollouts
+    \end{enumerate}
+    
+    \textbf{Modified CQL Objective for Model-Based RL:}
+    \begin{align}
+    \hat{Q}^T &= \arg \min_{Q} \max_{\mu} \alpha \mathbb{E}_{s \sim D, a \sim \mu(a|s)} [Q(s,a)] \\
+    &\quad - \alpha \mathbb{E}_{(s,a) \sim D} [Q(s,a)] \\
+    &\quad - \mathbb{E}_{s \sim D} [\mathcal{H}(\mu(\cdot|s))] \\
+    &\quad + \mathbb{E}_{(s,a) \sim D, s' \sim \hat{T}(\cdot|s,a)} \left[ (Q(s,a) - (r(s,a) + \mathbb{E}_{a' \sim \pi(a'|s')}[Q(s',a')]))^2 \right] \\
+    &\quad + \lambda \mathbb{E}_{s \sim D, a \sim \mu(a|s), s' \sim \hat{T}(\cdot|s,a)} \left[ (Q(s,a) - (r(s,a) + \mathbb{E}_{a' \sim \pi(a'|s')}[Q(s',a')]))^2 \right]
+    \end{align}
+    
+    \textbf{Explanation of Changes:}
+    \begin{itemize}
+        \item \textbf{Fourth term:} Now uses model-generated next states $\hat{T}(\cdot|s,a)$ instead of dataset next states
+        \item \textbf{Fifth term (new):} Additional Bellman error term for model-generated transitions, weighted by $\lambda$
+        \item \textbf{Conservative penalty:} Still applies to actions sampled from $\mu(a|s)$, but now these actions can be evaluated using model rollouts
+        \item \textbf{Policy evaluation:} The expectation $\mathbb{E}_{a' \sim \pi(a'|s')}[Q(s',a')]$ can use the current policy $\pi$ instead of being constrained to the behavior policy
+    \end{itemize}
+    
+    This modification allows CQL to leverage the learned model for more comprehensive conservative value estimation while maintaining the core principle of preventing overestimation for out-of-distribution actions.
 \end{enumerate}
 
 
@@ -191,6 +321,81 @@ Q(s,a) \leftarrow r(s,a) + \mathbb{E}_{a' \sim r_{new}} [Q(s',a')]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\newpage
+
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+
+\section{Part 2 [40-points]}
+
+\subsection{Implementation Analysis}
+
+Based on the provided CQL-SAC implementation in the notebook, we can analyze the key components and their effectiveness:
+
+\subsubsection{Key Implementation Details}
+
+\begin{enumerate}
+    \item \textbf{CQL Regularization in Critic Loss:}
+    The implementation includes CQL regularization terms in both critic networks:
+    \begin{itemize}
+        \item \textbf{Random Actions:} Samples random actions uniformly from the action space to create a baseline
+        \item \textbf{Policy Actions:} Uses current and next state policy actions for comparison
+        \item \textbf{Log-Sum-Exp:} Computes $\log \sum \exp(Q/\text{temp})$ to penalize high Q-values
+        \item \textbf{Temperature Scaling:} Uses temperature parameter to control the sharpness of the penalty
+    \end{itemize}
+    
+    \item \textbf{Conservative Penalty Calculation:}
+    \begin{align}
+    \text{CQL\_loss} &= \text{cql\_weight} \times \text{temp} \times \log \sum \exp(Q/\text{temp}) - Q_{\text{dataset}}
+    \end{align}
+    This ensures Q-values for dataset actions are not underestimated while penalizing high Q-values for other actions.
+    
+    \item \textbf{Double Q-Learning:} Uses two separate critic networks to reduce overestimation bias, taking the minimum of both estimates.
+    
+    \item \textbf{Soft Actor-Critic Integration:} Combines CQL with SAC's entropy regularization for stable learning.
+\end{enumerate}
+
+\subsubsection{Training Results Analysis}
+
+From the training output, we observe:
+\begin{itemize}
+    \item \textbf{Initial Performance:} Starting reward of -1141.12 shows the agent begins with poor performance
+    \item \textbf{Learning Progress:} Gradual improvement from episodes 1-30, with rewards improving from -879 to around -124
+    \item \textbf{Convergence Pattern:} The moving average shows steady improvement, indicating effective learning
+    \item \textbf{CQL Effectiveness:} The conservative regularization prevents overestimation while allowing learning
+\end{itemize}
+
+\subsubsection{Comparison with Random Policy}
+
+The implementation includes evaluation against a random policy baseline:
+\begin{itemize}
+    \item \textbf{Random Baseline:} Provides a lower bound for performance comparison
+    \item \textbf{Policy Improvement:} The trained agent significantly outperforms random actions
+    \item \textbf{Conservative Learning:} CQL ensures the learned policy is safe and doesn't exploit dataset limitations
+\end{itemize}
+
+\subsection{Key Insights}
+
+\begin{enumerate}
+    \item \textbf{CQL Effectiveness:} The conservative regularization successfully prevents overestimation while maintaining learning capability
+    
+    \item \textbf{Sample Efficiency:} The combination of offline dataset and limited online interaction provides good sample efficiency
+    
+    \item \textbf{Stability:} The entropy regularization and double Q-learning contribute to stable training
+    
+    \item \textbf{Practical Considerations:} The implementation demonstrates how CQL can be integrated with modern RL algorithms like SAC
+\end{enumerate}
+
+\subsection{Extensions and Improvements}
+
+Potential improvements to the implementation:
+\begin{itemize}
+    \item \textbf{Adaptive CQL Weight:} Dynamically adjust the CQL penalty strength based on training progress
+    \item \textbf{Better Action Sampling:} Use more sophisticated action sampling strategies for the conservative penalty
+    \item \textbf{Model Integration:} Incorporate learned environment models for more comprehensive conservative estimation
+    \item \textbf{Multi-Task Learning:} Extend to multi-task scenarios with shared conservative regularization
+\end{itemize}
+
+}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

@@ -148,22 +148,309 @@ The notebook contains several placeholders (\texttt{TODO}) for missing implement
 
 \subsubsection{Integration with Neural Networks}
 \begin{itemize}
-    \item In the context of Neural MCTS (e.g., AlphaGo-style approaches), how are policy networks and value networks incorporated into the search procedure?  
-    \item What is the role of the policy network’s output (“prior probabilities”) in the Expansion phase, and how does it influence which moves get explored?
+    \item \textbf{In the context of Neural MCTS (e.g., AlphaGo-style approaches), how are policy networks and value networks incorporated into the search procedure?}
+    
+    \textbf{Answer:} Neural MCTS integrates deep learning with tree search through two key components:
+    
+    \begin{enumerate}
+        \item \textbf{Policy Network Integration}:
+        \begin{itemize}
+            \item \textbf{Prior Probabilities}: The policy network outputs prior probabilities $P(a|s)$ for each legal action, replacing uniform random action selection during expansion
+            \item \textbf{UCB1 Modification}: The UCB1 formula is modified to incorporate priors:
+            \[UCB1(s,a) = Q(s,a) + c \cdot P(a|s) \cdot \frac{\sqrt{N(s)}}{1 + N(s,a)}\]
+            \item \textbf{Guided Expansion}: New nodes are expanded with actions weighted by their prior probabilities, focusing search on moves the network considers promising
+            \item \textbf{Training Target}: The policy network is trained to predict the visit distribution from MCTS, creating a self-improving loop
+        \end{itemize}
+        
+        \item \textbf{Value Network Integration}:
+        \begin{itemize}
+            \item \textbf{Rollout Replacement}: Instead of random rollouts, the value network provides direct position evaluation $V(s)$
+            \item \textbf{Hybrid Evaluation}: Combines MCTS value estimates with neural network predictions:
+            \[V_{final}(s) = \lambda \cdot V_{MCTS}(s) + (1-\lambda) \cdot V_{NN}(s)\]
+            \item \textbf{Backpropagation Enhancement}: Value network predictions can be used to initialize node values or provide additional training signals
+            \item \textbf{Computational Efficiency}: Eliminates the need for expensive random rollouts, significantly speeding up the search
+        \end{itemize}
+        
+        \item \textbf{Training Loop Integration}:
+        \begin{itemize}
+            \item \textbf{Self-Play}: Networks are trained on games played by the current best version of the agent
+            \item \textbf{Target Generation}: MCTS provides high-quality targets for both policy and value networks
+            \item \textbf{Iterative Improvement}: Each iteration improves both the networks and the search quality
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{What is the role of the policy network's output ("prior probabilities") in the Expansion phase, and how does it influence which moves get explored?}
+    
+    \textbf{Answer:} Prior probabilities play a crucial role in guiding MCTS exploration:
+    
+    \begin{enumerate}
+        \item \textbf{Informed Expansion}: Instead of expanding all legal moves uniformly, prior probabilities guide which moves to explore first:
+        \begin{itemize}
+            \item Moves with higher priors are more likely to be expanded early
+            \item Moves with very low priors may never be explored if computational budget is limited
+            \item This creates a natural pruning mechanism based on neural network confidence
+        \end{itemize}
+        
+        \item \textbf{UCB1 Enhancement}: The modified UCB1 formula incorporates priors:
+        \[UCB1(s,a) = Q(s,a) + c \cdot P(a|s) \cdot \frac{\sqrt{N(s)}}{1 + N(s,a)}\]
+        This means:
+        \begin{itemize}
+            \item High-prior moves get additional exploration bonus
+            \item Low-prior moves receive less exploration incentive
+            \item The exploration term is proportional to the prior probability
+        \end{itemize}
+        
+        \item \textbf{Search Efficiency}: Prior probabilities dramatically improve search efficiency by:
+        \begin{itemize}
+            \item Focusing computational resources on promising moves
+            \item Reducing the branching factor effectively
+            \item Enabling deeper search in relevant parts of the tree
+        \end{itemize}
+        
+        \item \textbf{Learning Integration}: The priors create a feedback loop:
+        \begin{itemize}
+            \item MCTS explores moves suggested by the policy network
+            \item Search results inform policy network training
+            \item Improved policy network provides better priors for future searches
+        \end{itemize}
+        
+        \item \textbf{Temperature Control}: Prior probabilities can be modified with temperature to control exploration:
+        \[P_{temp}(a|s) = \frac{P(a|s)^{1/\tau}}{\sum_{a'} P(a'|s)^{1/\tau}}\]
+        where $\tau > 1$ increases exploration and $\tau < 1$ increases exploitation.
+    \end{enumerate}
 \end{itemize}
 
 
 \subsubsection{Backpropagation and Node Statistics}
 \begin{itemize}
-    \item During backpropagation, how do we update node visit counts and value estimates?  
-    \item Why is it important to aggregate results carefully (e.g., averaging or summing outcomes) when multiple simulations pass through the same node?
+    \item \textbf{During backpropagation, how do we update node visit counts and value estimates?}
+    
+    \textbf{Answer:} Backpropagation in MCTS updates node statistics along the path taken during selection:
+    
+    \begin{enumerate}
+        \item \textbf{Visit Count Updates}: For each node $(s,a)$ in the path:
+        \[N(s,a) \leftarrow N(s,a) + 1\]
+        This incrementally tracks how many times each state-action pair has been visited.
+        
+        \item \textbf{Value Updates}: The value estimate is updated using incremental averaging:
+        \[Q(s,a) \leftarrow Q(s,a) + \frac{R - Q(s,a)}{N(s,a)}\]
+        where $R$ is the reward from the simulation. This can be rewritten as:
+        \[Q(s,a) \leftarrow \frac{(N(s,a) - 1) \cdot Q(s,a) + R}{N(s,a)}\]
+        
+        \item \textbf{Path Traversal}: The backpropagation follows the exact path taken during selection:
+        \begin{itemize}
+            \item Start from the leaf node where simulation was performed
+            \item Move up to the parent node
+            \item Update statistics for the action that led to the current node
+            \item Continue until reaching the root
+        \end{itemize}
+        
+        \item \textbf{Reward Handling}: The reward $R$ may need to be adjusted based on the player perspective:
+        \begin{itemize}
+            \item In zero-sum games: alternate the sign of rewards for different players
+            \item In cooperative games: use the same reward for all players
+            \item In single-agent problems: use the reward as-is
+        \end{itemize}
+        
+        \item \textbf{Incremental Computation}: The update formula ensures that:
+        \begin{itemize}
+            \item No need to store all previous rewards
+            \item Memory-efficient implementation
+            \item Numerically stable updates
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{Why is it important to aggregate results carefully (e.g., averaging or summing outcomes) when multiple simulations pass through the same node?}
+    
+    \textbf{Answer:} Careful aggregation is crucial for accurate value estimation and proper MCTS behavior:
+    
+    \begin{enumerate}
+        \item \textbf{Statistical Accuracy}: Multiple simulations through the same node provide multiple samples of the true value distribution. Proper aggregation:
+        \begin{itemize}
+            \item Reduces variance in value estimates
+            \item Provides more reliable statistics for UCB1 selection
+            \item Enables convergence to true expected values
+        \end{itemize}
+        
+        \item \textbf{Incremental Averaging}: The standard update formula:
+        \[Q(s,a) \leftarrow Q(s,a) + \frac{R - Q(s,a)}{N(s,a)}\]
+        is equivalent to computing the sample mean:
+        \[Q(s,a) = \frac{1}{N(s,a)} \sum_{i=1}^{N(s,a)} R_i\]
+        This ensures that each simulation contributes equally to the final estimate.
+        
+        \item \textbf{UCB1 Reliability}: The UCB1 formula relies on accurate visit counts and value estimates:
+        \[UCB1(s,a) = Q(s,a) + c\sqrt{\frac{\ln N(s)}{N(s,a)}}\]
+        Incorrect aggregation would lead to:
+        \begin{itemize}
+            \item Biased value estimates
+            \item Incorrect exploration bonuses
+            \item Poor action selection
+        \end{itemize}
+        
+        \item \textbf{Convergence Guarantees}: Proper aggregation is necessary for MCTS convergence properties:
+        \begin{itemize}
+            \item Ensures visit counts accurately reflect exploration
+            \item Maintains statistical properties required for UCB1
+            \item Enables theoretical analysis of MCTS performance
+        \end{itemize}
+        
+        \item \textbf{Handling Different Reward Scales}: Careful aggregation is especially important when:
+        \begin{itemize}
+            \item Rewards have different scales or distributions
+            \item Multiple reward sources contribute to a single node
+            \item Discount factors are applied to future rewards
+        \end{itemize}
+        
+        \item \textbf{Memory Efficiency}: Incremental updates avoid storing all historical rewards:
+        \begin{itemize}
+            \item Constant memory per node regardless of visit count
+            \item Numerically stable for large numbers of visits
+            \item Computationally efficient updates
+        \end{itemize}
+    \end{enumerate}
 \end{itemize}
 
 
 \subsubsection{Hyperparameters and Practical Considerations}
 \begin{itemize}
-    \item How does the exploration constant (often denoted \( c_{puct} \) or \( c \)) in the UCB formula affect the search behavior, and how would you tune it?  
-    \item In what ways can the “temperature” parameter (if used) shape the final move selection, and why might you lower the temperature as training progresses?
+    \item \textbf{How does the exploration constant (often denoted $c_{puct}$ or $c$) in the UCB formula affect the search behavior, and how would you tune it?}
+    
+    \textbf{Answer:} The exploration constant $c$ significantly influences MCTS behavior and requires careful tuning:
+    
+    \begin{enumerate}
+        \item \textbf{Effect on Search Behavior}:
+        \begin{itemize}
+            \item \textbf{High $c$ values} ($c > \sqrt{2}$):
+            \begin{itemize}
+                \item More exploratory behavior
+                \item Visits more diverse actions
+                \item Slower convergence to optimal moves
+                \item Better for early game phases or when uncertainty is high
+            \end{itemize}
+            
+            \item \textbf{Low $c$ values} ($c < \sqrt{2}$):
+            \begin{itemize}
+                \item More exploitative behavior
+                \item Focuses on promising moves
+                \item Faster convergence to good moves
+                \item Better for endgame or when confidence is high
+            \end{itemize}
+            
+            \item \textbf{Theoretical optimum} ($c = \sqrt{2}$):
+            \begin{itemize}
+                \item Balances exploration and exploitation optimally
+                \item Provides logarithmic regret bounds
+                \item Good default choice for most applications
+            \end{itemize}
+        \end{itemize}
+        
+        \item \textbf{Tuning Strategies}:
+        \begin{itemize}
+            \item \textbf{Game Phase Adaptation}: Use different $c$ values for different game phases:
+            \[c_{phase} = \begin{cases}
+                c_{high} & \text{if early game} \\
+                c_{medium} & \text{if mid game} \\
+                c_{low} & \text{if endgame}
+            \end{cases}\]
+            
+            \item \textbf{Simulation Budget Adaptation}: Adjust $c$ based on available computational resources:
+            \begin{itemize}
+                \item Few simulations: higher $c$ for more exploration
+                \item Many simulations: lower $c$ for focused search
+            \end{itemize}
+            
+            \item \textbf{Opponent Strength Adaptation}: Modify $c$ based on opponent:
+            \begin{itemize}
+                \item Strong opponent: lower $c$ for conservative play
+                \item Weak opponent: higher $c$ for aggressive exploration
+            \end{itemize}
+            
+            \item \textbf{Empirical Tuning}: Test different values and measure:
+            \begin{itemize}
+                \item Win rate against various opponents
+                \item Convergence speed
+                \item Search tree diversity
+            \end{itemize}
+        \end{itemize}
+        
+        \item \textbf{Practical Guidelines}:
+        \begin{itemize}
+            \item Start with $c = \sqrt{2} \approx 1.414$
+            \item For games with high branching factor: increase $c$
+            \item For games with low branching factor: decrease $c$
+            \item Monitor search statistics to guide tuning decisions
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{In what ways can the "temperature" parameter (if used) shape the final move selection, and why might you lower the temperature as training progresses?}
+    
+    \textbf{Answer:} Temperature controls the randomness in move selection and plays a crucial role in MCTS training:
+    
+    \begin{enumerate}
+        \item \textbf{Temperature Effect on Move Selection}:
+        \begin{itemize}
+            \item \textbf{High Temperature} ($\tau > 1$):
+            \begin{itemize}
+                \item More uniform move selection
+                \item Higher exploration of all moves
+                \item Smoother probability distributions
+                \item Better for early training phases
+            \end{itemize}
+            
+            \item \textbf{Low Temperature} ($\tau < 1$):
+            \begin{itemize}
+                \item More peaked move selection
+                \item Focus on best moves
+                \item Sharper probability distributions
+                \item Better for late training phases
+            \end{itemize}
+            
+            \item \textbf{Temperature = 1}: Standard softmax without modification
+        \end{itemize}
+        
+        \item \textbf{Mathematical Formulation}:
+        The temperature modifies the visit count distribution:
+        \[P(a|s) = \frac{N(s,a)^{1/\tau}}{\sum_{a'} N(s',a')^{1/\tau}}\]
+        
+        \item \textbf{Why Lower Temperature Over Time}:
+        \begin{itemize}
+            \item \textbf{Training Progression}: As the policy network improves:
+            \begin{itemize}
+                \item Early training: High temperature encourages exploration
+                \item Mid training: Medium temperature balances exploration/exploitation
+                \item Late training: Low temperature focuses on best moves
+            \end{itemize}
+            
+            \item \textbf{Convergence to Optimal Policy}: Lower temperature helps:
+            \begin{itemize}
+                \item Focus on the best moves identified by MCTS
+                \item Reduce noise in policy updates
+                \item Stabilize training in later phases
+            \end{itemize}
+            
+            \item \textbf{Self-Play Quality}: In self-play scenarios:
+            \begin{itemize}
+                \item High temperature early: diverse training data
+                \item Low temperature late: high-quality training data
+                \item Prevents overfitting to suboptimal strategies
+            \end{itemize}
+        \end{itemize}
+        
+        \item \textbf{Practical Temperature Schedules}:
+        \begin{itemize}
+            \item \textbf{Linear Decay}: $\tau(t) = \tau_{max} - \frac{t}{T}(\tau_{max} - \tau_{min})$
+            \item \textbf{Exponential Decay}: $\tau(t) = \tau_{max} \cdot \gamma^t$
+            \item \textbf{Step Decay}: Reduce temperature at specific milestones
+            \item \textbf{Adaptive Decay}: Adjust based on training progress metrics
+        \end{itemize}
+        
+        \item \textbf{Interaction with Other Parameters}:
+        \begin{itemize}
+            \item Temperature affects the policy network training targets
+            \item Lower temperature requires more accurate value estimates
+            \item Temperature schedule should be coordinated with learning rate schedules
+        \end{itemize}
+    \end{enumerate}
 \end{itemize}
 
 
