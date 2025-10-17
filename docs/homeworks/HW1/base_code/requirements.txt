@@ -1,0 +1,7 @@
+gymnasium[all]
+stable-baselines3 
+pygame
+matplotlib
+seaborn
+notebook
+tensorboard
