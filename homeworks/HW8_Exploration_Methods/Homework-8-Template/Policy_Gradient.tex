@@ -1,22 +1,36 @@
 \section{Policy Gradient Theorem}
 
-In this question, we will prove the policy gradient theorem and provide a set of sufficient conditions that allow us to use function approximations as a critic for the $Q$-value function so that the policy gradient using our function approximation remains exact.
+In this section, we present a comprehensive analysis of the Policy Gradient Theorem, which forms the theoretical foundation for policy-based reinforcement learning algorithms. The Policy Gradient Theorem provides a direct method for computing gradients of the expected return with respect to policy parameters, enabling gradient-based optimization of stochastic policies in continuous action spaces.
 
-\subsection{Notations}
+\subsection{Mathematical Framework and Notations}
 
-Consider a normal finite MDP with bounded rewards. $P(s'|s, a)$ represents the transition model, which corresponds to the probability of transitioning from state $s$ to $s'$ due to action $a$. Also, the reward model is represented by $r: \mathcal{S}\times\mathcal{A}\xrightarrow{}[0, 1]$ where $r(s, a)$ is the immediate reward associated with taking action $a$ in state $s$. Parameter $\gamma \in [0, 1)$ corresponds to the discount factor, and $s_0$ indicates the starting state of our MDP. 
+Consider a finite Markov Decision Process (MDP) defined by the tuple $(\mathcal{S}, \mathcal{A}, P, r, \gamma)$, where:
+\begin{itemize}
+    \item $\mathcal{S}$ is the finite state space
+    \item $\mathcal{A}$ is the finite action space  
+    \item $P(s'|s, a)$ is the transition probability function representing the probability of transitioning from state $s$ to state $s'$ when taking action $a$
+    \item $r: \mathcal{S} \times \mathcal{A} \rightarrow [0, 1]$ is the bounded reward function, where $r(s, a)$ denotes the immediate reward for taking action $a$ in state $s$
+    \item $\gamma \in [0, 1)$ is the discount factor that determines the importance of future rewards
+    \item $s_0 \in \mathcal{S}$ is the initial state distribution
+\end{itemize}
 
-A parametrized policy $\pi_{\theta}$ induces a distribution over trajectories $\tau = (s_t, a_t, r_t)|_{t = 0}^\infty$ where $s_0$ is the starting state, and for all subsequent timesteps $t$, $a_t \sim \pi(.|s_t)$, $s_{t + 1}\sim P(.|s_t, a_t)$. The state value function and the state-action value ($Q$-value) functions are defined as follows by the Bellman operator:
-\begin{align*}
-    &V^{\pi_\theta}(s) = \mathbb{E}_{a\sim \pi_\theta(.|s)} [Q^{\pi_\theta}(s,a)]\\
-    &Q^{\pi_\theta}(s,a) = r(s, a) + \gamma\mathbb{E}_{s'\sim P(.|s, a)} [V^{\pi_\theta}(s')] 
-\end{align*}
+A parametrized stochastic policy $\pi_{\theta}: \mathcal{S} \times \mathcal{A} \rightarrow [0, 1]$ maps states to probability distributions over actions, where $\theta \in \mathbb{R}^d$ represents the policy parameters. This policy induces a distribution over trajectories $\tau = (s_t, a_t, r_t)_{t=0}^{\infty}$, where:
+\begin{itemize}
+    \item $s_0$ is sampled from the initial state distribution
+    \item For each timestep $t \geq 0$: $a_t \sim \pi_{\theta}(\cdot|s_t)$ and $s_{t+1} \sim P(\cdot|s_t, a_t)$
+\end{itemize}
 
-We also define the discounted state visitation distribution $d^{\pi}_{s_0}$ of a policy $\pi$ as:
+The state value function $V^{\pi_\theta}: \mathcal{S} \rightarrow \mathbb{R}$ and state-action value function $Q^{\pi_\theta}: \mathcal{S} \times \mathcal{A} \rightarrow \mathbb{R}$ are defined through the Bellman equations:
 \begin{align}
-    d^{\pi}_{s_0}(s) = (1-\gamma)\sum_{t = 0}^{\infty}\gamma^t Pr^{\pi}(s_t = s|s_0),
+    V^{\pi_\theta}(s) &= \mathbb{E}_{a\sim \pi_\theta(\cdot|s)} [Q^{\pi_\theta}(s,a)] \label{eq:value_function}\\
+    Q^{\pi_\theta}(s,a) &= r(s, a) + \gamma\mathbb{E}_{s'\sim P(\cdot|s, a)} [V^{\pi_\theta}(s')] \label{eq:q_function}
 \end{align}
-where $Pr^{\pi}(s_t = s|s_0)$ is the state visitation probability that $s_t = s$, after we execute $\pi$ starting at state $s_0$.
+
+The discounted state visitation distribution $d^{\pi}_{s_0}: \mathcal{S} \rightarrow [0, 1]$ represents the normalized probability of visiting each state when following policy $\pi$ starting from state $s_0$:
+\begin{align}
+    d^{\pi}_{s_0}(s) = (1-\gamma)\sum_{t = 0}^{\infty}\gamma^t \Pr^{\pi}(s_t = s|s_0) \label{eq:state_visitation}
+\end{align}
+where $\Pr^{\pi}(s_t = s|s_0)$ denotes the probability of being in state $s$ at time $t$ when following policy $\pi$ starting from state $s_0$. The factor $(1-\gamma)$ ensures that $d^{\pi}_{s_0}$ is a proper probability distribution, i.e., $\sum_{s \in \mathcal{S}} d^{\pi}_{s_0}(s) = 1$.
 
 \subsection{Proving the Policy Gradient Theorem}
 
