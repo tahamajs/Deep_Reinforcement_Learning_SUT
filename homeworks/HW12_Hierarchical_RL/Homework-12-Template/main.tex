@@ -115,7 +115,7 @@ Solution for Homework 12:
 
 {\Huge
 
-Conservative Q-Learning for Offline RL
+Conservative Q-Learning for Offline Reinforcement Learning
 
 }
 \rule{12cm}{0.5pt}
@@ -175,21 +175,23 @@ Q(s,a) \leftarrow r(s,a) + \mathbb{E}_{a' \sim \pi_{new}} [Q(s',a')]
     
     \textbf{Answer:}
     
-    In offline reinforcement learning, value estimation suffers from overestimation due to several key factors:
+    In offline reinforcement learning, value estimation suffers from overestimation due to several key factors that create a fundamental challenge in learning from static datasets:
     
     \begin{enumerate}
-        \item \textbf{Distribution Shift:} The fundamental issue is that offline RL learns from a fixed dataset $\mathcal{D}$ collected by a behavior policy $\pi_{\beta}$, but the learned policy $\pi_{new}$ may choose actions that are out-of-distribution (OOD) with respect to the dataset. When the Bellman update uses $\mathbb{E}_{a' \sim \pi_{new}} [Q(s',a')]$, it evaluates actions that may not be well-represented in the dataset.
+        \item \textbf{Distribution Shift:} The fundamental issue is that offline RL learns from a fixed dataset $\mathcal{D}$ collected by a behavior policy $\pi_{\beta}$, but the learned policy $\pi_{new}$ may choose actions that are out-of-distribution (OOD) with respect to the dataset. When the Bellman update uses $\mathbb{E}_{a' \sim \pi_{new}} [Q(s',a')]$, it evaluates actions that may not be well-represented in the dataset. This creates a mismatch between the training distribution and the evaluation distribution, leading to unreliable Q-value estimates.
         
-        \item \textbf{Extrapolation Error:} The Q-function is trained only on state-action pairs $(s,a)$ present in the dataset. For OOD actions, the Q-function must extrapolate, often leading to overly optimistic estimates. This is particularly problematic because neural networks tend to extrapolate poorly beyond their training distribution.
+        \item \textbf{Extrapolation Error:} The Q-function is trained only on state-action pairs $(s,a)$ present in the dataset. For OOD actions, the Q-function must extrapolate beyond its training distribution, often leading to overly optimistic estimates. This is particularly problematic because neural networks tend to extrapolate poorly beyond their training distribution, and the extrapolation is often biased toward higher values due to the nature of function approximation.
         
-        \item \textbf{Bootstrapping Amplification:} The Bellman update bootstraps from potentially overestimated Q-values. If $Q(s',a')$ is overestimated for OOD actions, this error propagates backward through the Bellman equation, amplifying the overestimation bias.
+        \item \textbf{Bootstrapping Amplification:} The Bellman update bootstraps from potentially overestimated Q-values. If $Q(s',a')$ is overestimated for OOD actions, this error propagates backward through the Bellman equation, amplifying the overestimation bias. This creates a positive feedback loop where overestimation begets more overestimation, leading to increasingly unreliable value estimates.
         
-        \item \textbf{Maximization Bias:} In the case of Q-learning with $\max_{a'} Q(s',a')$, the maximization operation tends to select the most optimistic estimate, which is often the most overestimated one, especially for OOD actions.
+        \item \textbf{Maximization Bias:} In the case of Q-learning with $\max_{a'} Q(s',a')$, the maximization operation tends to select the most optimistic estimate, which is often the most overestimated one, especially for OOD actions. This bias is particularly pronounced when the Q-function has high variance or when there are insufficient samples for certain state-action pairs.
         
-        \item \textbf{Limited Data Coverage:} The dataset may not cover all relevant state-action pairs, leading to uncertainty about the true Q-values for uncovered regions. Without proper regularization, the learned Q-function may assign unrealistically high values to these regions.
+        \item \textbf{Limited Data Coverage:} The dataset may not cover all relevant state-action pairs, leading to uncertainty about the true Q-values for uncovered regions. Without proper regularization, the learned Q-function may assign unrealistically high values to these regions, as the function approximator tends to be overly confident in regions with limited data.
+        
+        \item \textbf{Function Approximation Bias:} Neural networks used for Q-function approximation can introduce systematic biases, particularly when trained on limited data. The approximation error can be asymmetric, leading to systematic overestimation rather than unbiased errors.
     \end{enumerate}
     
-    This overestimation is particularly dangerous in offline RL because the agent cannot interact with the environment to correct these errors through exploration, making the learned policy potentially unsafe or suboptimal.
+    This overestimation is particularly dangerous in offline RL because the agent cannot interact with the environment to correct these errors through exploration, making the learned policy potentially unsafe or suboptimal. The lack of online feedback means that overestimation errors persist and can lead to catastrophic failures in real-world applications where safety is paramount.
 
     \item One of the solutions to address the overestimation problem in the offline framework is CQL, whose objective function for computing the value is given below. Explain the role of each of the four terms in this objective function. [20-points]
 
