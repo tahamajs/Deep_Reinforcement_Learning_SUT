@@ -9,9 +9,21 @@
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tocloft}
 \usepackage{titlesec}
-\usepackage{lipsum}  
+\usepackage{lipsum}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{float}
+
+% IEEE style formatting
+\usepackage[sort&compress]{natbib}
+\usepackage{url}
 
 \definecolor{DarkBlue}{RGB}{10, 0, 80}
+\definecolor{IEEEDarkBlue}{RGB}{0, 0, 139}
+\definecolor{IEEERed}{RGB}{139, 0, 0}
+\definecolor{IEEEGreen}{RGB}{0, 100, 0}
 
 % Hyperlink setup
 \hypersetup{
@@ -60,13 +72,27 @@
 \renewcommand{\cftsubsubsecdotsep}{1}
 
 
-% Section title styles
-\titleformat*{\section}{\LARGE\bfseries\color{DarkBlue}}
-\titleformat*{\subsection}{\Large\bfseries\color{DarkBlue}}
-\titleformat*{\subsubsection}{\large\bfseries\color{DarkBlue}}
+% Section title styles (IEEE format)
+\titleformat*{\section}{\LARGE\bfseries\color{IEEEDarkBlue}}
+\titleformat*{\subsection}{\Large\bfseries\color{IEEEDarkBlue}}
+\titleformat*{\subsubsection}{\large\bfseries\color{IEEEDarkBlue}}
 
+% IEEE style definitions
 \definecolor{light-gray}{gray}{0.95}
+\definecolor{IEEEBlue}{RGB}{0, 102, 204}
+\definecolor{IEEEGray}{RGB}{128, 128, 128}
+
 \newcommand{\code}[1]{\colorbox{light-gray}{\texttt{#1}}}
+\newcommand{\ieee}[1]{\textcolor{IEEEBlue}{\textbf{#1}}}
+\newcommand{\highlight}[1]{\textcolor{IEEERed}{\textbf{#1}}}
+\newcommand{\note}[1]{\textcolor{IEEEGray}{\textit{#1}}}
+
+% IEEE style theorem environments
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+\newtheorem{example}{Example}
 
 % Start of the document
 \pagestyle{fancy}
@@ -161,9 +187,11 @@
 	\newpage
 	\pagenumbering{arabic}
 	
-	{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+	{\fontfamily{lmss}\selectfont {\color{IEEEDarkBlue}
 			
 			\section{Theoretical Foundations of Meta-Learning}
+			
+			Meta-learning in reinforcement learning represents a paradigm shift from traditional single-task learning to learning how to learn efficiently across multiple related tasks. This section establishes the theoretical foundations necessary for understanding meta-RL algorithms and their applications.
 			
 			\subsection{Question 1: Meta-Learning Problem Formulation}
 			
@@ -171,64 +199,127 @@
 			
 			\textbf{Solution:}
 			
-			Meta-learning in RL, also known as "learning to learn," is a paradigm where an agent learns across a distribution of tasks $p(\mathcal{T})$ to enable fast adaptation to new tasks from the same distribution.
+			\begin{definition}[Meta-Learning in RL]
+			Meta-learning in RL, also known as "learning to learn," is a paradigm where an agent learns across a distribution of tasks $p(\mathcal{T})$ to enable fast adaptation to new tasks from the same distribution. The goal is to find an initialization or learning procedure that facilitates rapid learning on novel tasks with minimal data.
+			\end{definition}
 			
-			\textbf{Key Components:}
+			\ieee{Key Components:}
 			
-			\begin{itemize}
+			\begin{enumerate}
 				\item \textbf{Task Distribution:} $p(\mathcal{T})$, where each task $\mathcal{T}_i$ consists of:
 				\begin{itemize}
-					\item State space $\mathcal{S}_i$
-					\item Action space $\mathcal{A}_i$ 
-					\item Reward function $R_i$
-					\item Transition dynamics $P_i$
+					\item State space $\mathcal{S}_i$: The set of possible observations
+					\item Action space $\mathcal{A}_i$: The set of possible actions
+					\item Reward function $R_i: \mathcal{S} \times \mathcal{A} \rightarrow \mathbb{R}$: Task-specific reward structure
+					\item Transition dynamics $P_i: \mathcal{S} \times \mathcal{A} \rightarrow \mathcal{S}$: Task-specific environment dynamics
 				\end{itemize}
-				\item \textbf{Meta-Training:} Sample tasks from $p(\mathcal{T})$, learn meta-parameters $\theta$
-				\item \textbf{Meta-Testing:} Quickly adapt to new task $\mathcal{T}_{new} \sim p(\mathcal{T})$ using few samples
-			\end{itemize}
+				\item \textbf{Meta-Training Phase:} Sample tasks from $p(\mathcal{T})$, learn meta-parameters $\theta$ that enable fast adaptation
+				\item \textbf{Meta-Testing Phase:} Quickly adapt to new task $\mathcal{T}_{new} \sim p(\mathcal{T})$ using few samples (typically 1-50 episodes)
+			\end{enumerate}
 			
-			\textbf{Differences from Standard RL:}
+			\begin{remark}
+			The key insight is that meta-learning explicitly optimizes for the ability to learn quickly, rather than optimizing for performance on individual tasks during training.
+			\end{remark}
 			
-			\begin{center}
-			\begin{tabular}{|l|l|l|}
-			\hline
+			\ieee{Differences from Standard RL:}
+			
+			\begin{table}[H]
+			\centering
+			\caption{Comparison between Standard RL and Meta-RL}
+			\begin{tabular}{@{}lcc@{}}
+			\toprule
 			\textbf{Aspect} & \textbf{Standard RL} & \textbf{Meta-RL} \\
-			\hline
-			Training & Single task & Multiple related tasks \\
-			Objective & Maximize return on one task & Enable fast adaptation across tasks \\
-			Evaluation & Performance on training task & Few-shot adaptation to new tasks \\
-			Knowledge Transfer & Limited & Explicit transfer mechanism \\
-			\hline
+			\midrule
+			Training Objective & Maximize return on one task & Enable fast adaptation across tasks \\
+			Data Requirements & Large amounts for single task & Multiple tasks, few samples per task \\
+			Evaluation Metric & Final performance on training task & Few-shot adaptation to new tasks \\
+			Knowledge Transfer & Implicit, limited & Explicit transfer mechanism \\
+			Generalization & Within-task generalization & Cross-task generalization \\
+			Sample Efficiency & Task-specific & Distribution-level efficiency \\
+			\bottomrule
 			\end{tabular}
-			\end{center}
+			\label{tab:standard_vs_meta_rl}
+			\end{table}
 			
 			\textbf{Q1.2:} Describe the two-level optimization structure in meta-learning. What is the role of inner and outer loops?
 			
 			\textbf{Solution:}
 			
-			Meta-learning employs a nested optimization structure:
+			\begin{definition}[Two-Level Optimization]
+			Meta-learning employs a nested optimization structure consisting of two levels: an inner loop for task-specific adaptation and an outer loop for meta-parameter optimization.
+			\end{definition}
 			
-			\textbf{Inner Loop (Task-Level Adaptation):}
-			$$\phi_i = \theta - \alpha \nabla_\theta \mathcal{L}_{\mathcal{T}_i}(\theta)$$
+			\ieee{Inner Loop (Task-Level Adaptation):}
 			
+			The inner loop adapts the meta-parameters $\theta$ to a specific task $\mathcal{T}_i$:
+			
+			\begin{equation}
+			\phi_i = \theta - \alpha \nabla_\theta \mathcal{L}_{\mathcal{T}_i}(\theta)
+			\end{equation}
+			
+			where:
 			\begin{itemize}
-				\item \textbf{Purpose:} Adapt meta-parameters $\theta$ to specific task $\mathcal{T}_i$
-				\item \textbf{Learning Rate:} $\alpha$ (inner learning rate, typically larger)
-				\item \textbf{Objective:} Task-specific loss $\mathcal{L}_{\mathcal{T}_i}$
-				\item \textbf{Steps:} $K$ gradient steps (usually 1-5)
+				\item $\phi_i$: Task-adapted parameters
+				\item $\alpha$: Inner learning rate (typically 0.01-0.1)
+				\item $\mathcal{L}_{\mathcal{T}_i}(\theta)$: Task-specific loss function
+				\item $K$: Number of inner gradient steps (usually 1-5)
 			\end{itemize}
 			
-			\textbf{Outer Loop (Meta-Level Optimization):}
-			$$\theta \leftarrow \theta - \beta \nabla_\theta \sum_{i=1}^{n} \mathcal{L}_{\mathcal{T}_i}(\phi_i)$$
+			\begin{algorithm}[H]
+			\caption{Inner Loop Adaptation}
+			\begin{algorithmic}[1]
+			\STATE \textbf{Input:} Meta-parameters $\theta$, task $\mathcal{T}_i$, inner learning rate $\alpha$
+			\STATE Initialize $\phi_i^{(0)} = \theta$
+			\FOR{$k = 1$ to $K$}
+			\STATE Sample batch $D_i^{(k)}$ from task $\mathcal{T}_i$
+			\STATE Compute loss: $\mathcal{L}_k = \mathcal{L}_{\mathcal{T}_i}(\phi_i^{(k-1)}, D_i^{(k)})$
+			\STATE Update: $\phi_i^{(k)} = \phi_i^{(k-1)} - \alpha \nabla_{\phi_i^{(k-1)}} \mathcal{L}_k$
+			\ENDFOR
+			\STATE \textbf{Output:} Adapted parameters $\phi_i = \phi_i^{(K)}$
+			\end{algorithmic}
+			\end{algorithm}
 			
+			\ieee{Outer Loop (Meta-Level Optimization):}
+			
+			The outer loop optimizes the meta-parameters $\theta$ to enable fast adaptation across tasks:
+			
+			\begin{equation}
+			\theta \leftarrow \theta - \beta \nabla_\theta \sum_{i=1}^{n} \mathcal{L}_{\mathcal{T}_i}(\phi_i)
+			\end{equation}
+			
+			where:
 			\begin{itemize}
-				\item \textbf{Purpose:} Optimize initialization for fast adaptation
-				\item \textbf{Learning Rate:} $\beta$ (meta learning rate, typically smaller)
-				\item \textbf{Objective:} Meta-loss across tasks
-				\item \textbf{Gradient:} Through adapted parameters $\phi_i$
+				\item $\beta$: Meta learning rate (typically 0.001-0.01)
+				\item $n$: Number of tasks in meta-batch
+				\item $\phi_i$: Parameters adapted by inner loop
 			\end{itemize}
 			
-			\textbf{Key Insight:} The outer loop optimizes $\theta$ such that one or few gradient steps in the inner loop lead to good performance on new tasks.
+			\begin{algorithm}[H]
+			\caption{Outer Loop Meta-Optimization}
+			\begin{algorithmic}[1]
+			\STATE \textbf{Input:} Meta-parameters $\theta$, task distribution $p(\mathcal{T})$, meta learning rate $\beta$
+			\STATE Sample batch of tasks $\{\mathcal{T}_1, \ldots, \mathcal{T}_n\} \sim p(\mathcal{T})$
+			\FOR{each task $\mathcal{T}_i$}
+			\STATE $\phi_i \leftarrow$ \textsc{Inner-Loop-Adaptation}$(\theta, \mathcal{T}_i)$
+			\STATE Sample test data $D_i^{test}$ from $\mathcal{T}_i$
+			\STATE Compute meta-loss: $\mathcal{L}_i = \mathcal{L}_{\mathcal{T}_i}(\phi_i, D_i^{test})$
+			\ENDFOR
+			\STATE Compute meta-gradient: $\nabla_\theta \mathcal{L}_{meta} = \nabla_\theta \sum_{i=1}^{n} \mathcal{L}_i$
+			\STATE Update meta-parameters: $\theta \leftarrow \theta - \beta \nabla_\theta \mathcal{L}_{meta}$
+			\end{algorithmic}
+			\end{algorithm}
+			
+			\begin{theorem}[Meta-Learning Objective]
+			The outer loop optimizes $\theta$ such that the expected loss after $K$ inner loop steps is minimized:
+			\begin{equation}
+			\theta^* = \arg\min_\theta \mathbb{E}_{\mathcal{T} \sim p(\mathcal{T})} \left[ \mathcal{L}_{\mathcal{T}}(\phi_K) \right]
+			\end{equation}
+			where $\phi_K$ is obtained by applying $K$ gradient steps starting from $\theta$.
+			\end{theorem}
+			
+			\begin{remark}
+			The key insight is that the outer loop optimizes $\theta$ such that one or few gradient steps in the inner loop lead to good performance on new tasks. This requires computing gradients through the optimization process itself.
+			\end{remark}
 			
 			\subsection{Question 2: Model-Agnostic Meta-Learning (MAML)}
 			
@@ -236,87 +327,234 @@
 			
 			\textbf{Solution:}
 			
-			MAML (Finn et al., 2017) is a gradient-based meta-learning algorithm that learns an initialization for model parameters that can be quickly fine-tuned to new tasks.
+			\begin{definition}[Model-Agnostic Meta-Learning]
+			MAML (Finn et al., 2017) is a gradient-based meta-learning algorithm that learns an initialization for model parameters that can be quickly fine-tuned to new tasks. The algorithm is "model-agnostic" because it can be applied to any differentiable model.
+			\end{definition}
 			
-			\textbf{Algorithm:}
+			\ieee{Algorithm Overview:}
 			
-			\begin{enumerate}
-				\item Initialize $\theta$ randomly
-				\item For meta-iteration = 1 to N:
-				\begin{enumerate}
-					\item Sample batch of tasks $\{\mathcal{T}_i\} \sim p(\mathcal{T})$
-					\item For each task $\mathcal{T}_i$:
-					\begin{enumerate}
-						\item Sample K data points $D_i^{train}$ from $\mathcal{T}_i$
-						\item Compute adapted parameters: $\phi_i = \theta - \alpha\nabla_\theta \mathcal{L}_{\mathcal{T}_i}(\theta, D_i^{train})$
-						\item Sample data $D_i^{test}$ from $\mathcal{T}_i$
-						\item Compute meta-loss: $\mathcal{L}_{\mathcal{T}_i}(\phi_i, D_i^{test})$
-					\end{enumerate}
-					\item Meta-update: $\theta \leftarrow \theta - \beta\nabla_\theta \sum_i \mathcal{L}_{\mathcal{T}_i}(\phi_i, D_i^{test})$
-				\end{enumerate}
-			\end{enumerate}
+			MAML follows the two-level optimization structure described earlier, with the key innovation being the computation of gradients through the optimization process itself.
 			
-			\textbf{Key Innovation:}
+			\begin{algorithm}[H]
+			\caption{MAML Algorithm}
+			\begin{algorithmic}[1]
+			\STATE \textbf{Input:} Task distribution $p(\mathcal{T})$, learning rates $\alpha, \beta$
+			\STATE Initialize meta-parameters $\theta$ randomly
+			\WHILE{not converged}
+			\STATE Sample batch of tasks $\{\mathcal{T}_i\}_{i=1}^n \sim p(\mathcal{T})$
+			\FOR{each task $\mathcal{T}_i$}
+			\STATE Sample support set $D_i^{train}$ from $\mathcal{T}_i$
+			\STATE Compute adapted parameters: $\phi_i = \theta - \alpha\nabla_\theta \mathcal{L}_{\mathcal{T}_i}(\theta, D_i^{train})$
+			\STATE Sample query set $D_i^{test}$ from $\mathcal{T}_i$
+			\STATE Compute meta-loss: $\mathcal{L}_i = \mathcal{L}_{\mathcal{T}_i}(\phi_i, D_i^{test})$
+			\ENDFOR
+			\STATE Meta-update: $\theta \leftarrow \theta - \beta\nabla_\theta \sum_{i=1}^n \mathcal{L}_i$
+			\ENDWHILE
+			\end{algorithmic}
+			\end{algorithm}
 			
-			The crucial innovation is \textbf{backpropagation through the optimization process}. MAML computes gradients with respect to the pre-update parameters $\theta$ by differentiating through the inner loop update:
+			\ieee{Key Innovation - Backpropagation Through Optimization:}
 			
-			$$\nabla_\theta \mathcal{L}_{\mathcal{T}_i}(\phi_i) = \nabla_\theta \mathcal{L}_{\mathcal{T}_i}(\theta - \alpha \nabla_\theta \mathcal{L}_{\mathcal{T}_i}(\theta))$$
+			The crucial innovation is \highlight{backpropagation through the optimization process}. MAML computes gradients with respect to the pre-update parameters $\theta$ by differentiating through the inner loop update:
 			
-			This requires computing \textbf{second-order derivatives}, which is computationally expensive but enables finding an initialization that is in a region of parameter space where small gradient steps lead to large improvements.
+			\begin{equation}
+			\nabla_\theta \mathcal{L}_{\mathcal{T}_i}(\phi_i) = \nabla_\theta \mathcal{L}_{\mathcal{T}_i}(\theta - \alpha \nabla_\theta \mathcal{L}_{\mathcal{T}_i}(\theta))
+			\end{equation}
+			
+			This requires computing \textbf{second-order derivatives}, specifically Hessian-vector products:
+			
+			\begin{equation}
+			\nabla_\theta \mathcal{L}(\phi_i) = \nabla_\theta \mathcal{L}(\theta) - \alpha \nabla^2_\theta \mathcal{L}(\theta) \nabla_\theta \mathcal{L}(\theta)
+			\end{equation}
+			
+			where $\nabla^2_\theta \mathcal{L}(\theta)$ is the Hessian matrix.
+			
+			\begin{theorem}[MAML Convergence]
+			Under certain regularity conditions, MAML converges to a point $\theta^*$ such that:
+			\begin{equation}
+			\mathbb{E}_{\mathcal{T} \sim p(\mathcal{T})} \left[ \nabla_\theta \mathcal{L}_{\mathcal{T}}(\theta^* - \alpha \nabla_\theta \mathcal{L}_{\mathcal{T}}(\theta^*)) \right] = 0
+			\end{equation}
+			This ensures that the meta-parameters are optimized for fast adaptation.
+			\end{theorem}
+			
+			\ieee{Computational Complexity Analysis:}
+			
+			The computational cost of MAML is significantly higher than standard training:
+			
+			\begin{itemize}
+				\item \textbf{Forward Passes:} $2n$ per meta-iteration (support + query sets)
+				\item \textbf{Backward Passes:} $2n$ per meta-iteration
+				\item \textbf{Second-Order Derivatives:} Additional computation for Hessian-vector products
+				\item \textbf{Memory Requirements:} Need to store computational graph for second-order derivatives
+			\end{itemize}
+			
+			\begin{example}[MAML for Policy Gradient RL]
+			For policy gradient methods, the MAML update becomes:
+			\begin{align}
+			\phi_i &= \theta - \alpha \nabla_\theta \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t) A_t \right] \\
+			\theta &\leftarrow \theta - \beta \nabla_\theta \sum_{i=1}^n \mathbb{E}_{\tau \sim \pi_{\phi_i}} \left[ \sum_{t=0}^T \nabla_\theta \log \pi_{\phi_i}(a_t|s_t) A_t \right]
+			\end{align}
+			where $A_t$ are the advantage estimates.
+			\end{example}
 			
 			\textbf{Q2.2:} Describe the computational challenges of MAML in RL settings and propose solutions.
 			
 			\textbf{Solution:}
 			
-			\textbf{Challenges:}
+			\ieee{Major Computational Challenges:}
 			
 			\begin{enumerate}
-				\item \textbf{High Variance:}
+				\item \textbf{High Variance in RL Gradients:}
 				\begin{itemize}
-					\item RL gradients have high variance due to policy gradient estimation
-					\item Compounded across inner and outer loops
-					\item Makes meta-optimization unstable
+					\item RL gradients have inherently high variance due to policy gradient estimation
+					\item Variance is compounded across inner and outer loops
+					\item Makes meta-optimization unstable and slow to converge
+					\item Particularly problematic with sparse rewards and long horizons
 				\end{itemize}
 				
-				\item \textbf{Second-Order Derivatives:}
+				\item \textbf{Second-Order Derivative Computation:}
 				\begin{itemize}
-					\item Computing Hessian-vector products is expensive
-					\item Memory intensive for large neural networks
-					\item Slows down training significantly
+					\item Computing Hessian-vector products is computationally expensive
+					\item Memory intensive for large neural networks (quadratic in parameter count)
+					\item Slows down training significantly (2-5x slower than first-order methods)
+					\item Requires careful implementation to avoid memory overflow
 				\end{itemize}
 				
 				\item \textbf{Sample Inefficiency:}
 				\begin{itemize}
 					\item Need multiple rollouts per task for both inner and outer loops
-					\item Each task requires fresh trajectories
-					\item Total sample requirement is $O(\text{tasks} \times \text{episodes per task})$
+					\item Each task requires fresh trajectories (cannot reuse data easily)
+					\item Total sample requirement: $O(\text{tasks} \times \text{episodes per task} \times \text{steps per episode})$
+					\item Can easily reach millions of samples for complex environments
+				\end{itemize}
+				
+				\item \textbf{Credit Assignment Problem:}
+				\begin{itemize}
+					\item Difficult to attribute success/failure to meta-parameters vs. adaptation
+					\item Long horizon RL makes credit assignment worse
+					\item Meta-gradients have very high variance
+					\item Difficult to diagnose failures and tune hyperparameters
 				\end{itemize}
 			\end{enumerate}
 			
-			\textbf{Solutions:}
+			\ieee{Proposed Solutions:}
 			
 			\begin{enumerate}
 				\item \textbf{First-Order MAML (FOMAML):}
-				\begin{itemize}
-					\item Ignore second-order derivatives
-					\item Approximate: $\nabla_\theta \mathcal{L}(\phi_i) \approx \nabla_{\phi_i} \mathcal{L}(\phi_i)$
-					\item Much faster, often comparable performance
-				\end{itemize}
 				
-				\item \textbf{Use PPO Instead of Vanilla Policy Gradient:}
+				\begin{definition}[First-Order Approximation]
+				FOMAML approximates the meta-gradient by ignoring second-order derivatives:
+				\begin{equation}
+				\nabla_\theta \mathcal{L}(\phi_i) \approx \nabla_{\phi_i} \mathcal{L}(\phi_i)
+				\end{equation}
+				\end{definition}
+				
+				\begin{algorithm}[H]
+				\caption{First-Order MAML}
+				\begin{algorithmic}[1]
+				\STATE \textbf{Input:} Meta-parameters $\theta$, task $\mathcal{T}_i$, learning rates $\alpha, \beta$
+				\STATE Sample support set $D_i^{train}$ from $\mathcal{T}_i$
+				\STATE Compute adapted parameters: $\phi_i = \theta - \alpha\nabla_\theta \mathcal{L}_{\mathcal{T}_i}(\theta, D_i^{train})$
+				\STATE Sample query set $D_i^{test}$ from $\mathcal{T}_i$
+				\STATE Compute meta-gradient: $\nabla_{\phi_i} \mathcal{L}_{\mathcal{T}_i}(\phi_i, D_i^{test})$
+				\STATE Meta-update: $\theta \leftarrow \theta - \beta \nabla_{\phi_i} \mathcal{L}_{\mathcal{T}_i}(\phi_i, D_i^{test})$
+				\end{algorithmic}
+				\end{algorithm}
+				
+				\textbf{Benefits:}
 				\begin{itemize}
-					\item Clipped objective reduces variance
+					\item Much faster computation (2-3x speedup)
+					\item Lower memory requirements
+					\item Often achieves 80-90\% of full MAML performance
 					\item More stable optimization
-					\item Better for both inner and outer loops
 				\end{itemize}
 				
-				\item \textbf{Increase Inner Learning Rate:}
+				\item \textbf{Reptile Algorithm:}
+				
+				\begin{definition}[Reptile Update]
+				Reptile is an even simpler first-order method that updates meta-parameters as:
+				\begin{equation}
+				\theta \leftarrow \theta + \epsilon(\phi_i - \theta)
+				\end{equation}
+				where $\epsilon$ is the meta learning rate.
+				\end{definition}
+				
+				\textbf{Advantages:}
 				\begin{itemize}
-					\item Larger $\alpha$ means faster adaptation
-					\item Compensates for fewer inner steps
-					\item Reduces computational cost
+					\item No meta-gradient computation needed
+					\item Extremely simple implementation
+					\item Often comparable performance to MAML
+					\item Very fast execution
+				\end{itemize}
+				
+				\item \textbf{Variance Reduction Techniques:}
+				
+				\begin{itemize}
+					\item \textbf{Use PPO Instead of Vanilla Policy Gradient:}
+					\begin{equation}
+					\mathcal{L}^{PPO}(\theta) = \mathbb{E}_t \left[ \min(r_t(\theta) A_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) A_t) \right]
+					\end{equation}
+					where $r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}$ is the importance ratio.
+					
+					\item \textbf{Baseline Subtraction:}
+					\begin{equation}
+					A_t = R_t - V(s_t)
+					\end{equation}
+					where $V(s_t)$ is a learned value function baseline.
+					
+					\item \textbf{Gradient Clipping:}
+					\begin{equation}
+					\nabla_\theta \mathcal{L} \leftarrow \text{clip}(\nabla_\theta \mathcal{L}, -\text{max\_norm}, \text{max\_norm})
+					\end{equation}
+				\end{itemize}
+				
+				\item \textbf{Sample Efficiency Improvements:}
+				
+				\begin{itemize}
+					\item \textbf{Increase Inner Learning Rate:}
+					\begin{itemize}
+						\item Larger $\alpha$ means faster adaptation
+						\item Compensates for fewer inner steps
+						\item Reduces total computational cost
+						\item Typical range: 0.1-0.5 for RL
+					\end{itemize}
+					
+					\item \textbf{Task Batching:}
+					\begin{itemize}
+						\item Process multiple tasks in parallel
+						\item Amortize computation cost across tasks
+						\item Better GPU utilization
+						\item Reduces wall-clock time
+					\end{itemize}
+					
+					\item \textbf{Experience Replay:}
+					\begin{itemize}
+						\item Store transitions in replay buffer
+						\item Sample batches randomly to break correlation
+						\item Reuse data across meta-iterations
+						\item Particularly effective for off-policy methods
+					\end{itemize}
 				\end{itemize}
 			\end{enumerate}
+			
+			\begin{table}[H]
+			\centering
+			\caption{Comparison of MAML Variants}
+			\begin{tabular}{@{}lccc@{}}
+			\toprule
+			\textbf{Method} & \textbf{Computation Time} & \textbf{Memory Usage} & \textbf{Performance} \\
+			\midrule
+			MAML & High (2nd order) & High & Best \\
+			FOMAML & Medium (1st order) & Medium & 85-95\% of MAML \\
+			Reptile & Low (no meta-grad) & Low & 80-90\% of MAML \\
+			\bottomrule
+			\end{tabular}
+			\label{tab:maml_variants}
+			\end{table}
+			
+			\begin{remark}
+			The choice between MAML variants depends on the trade-off between computational resources and performance requirements. For most practical applications, FOMAML provides the best balance.
+			\end{remark}
 			
 	}}
 	
@@ -324,9 +562,11 @@
 	
 	\newpage
 	
-	{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+	{\fontfamily{lmss}\selectfont {\color{IEEEDarkBlue}
 			
 			\section{Recurrent Meta-Reinforcement Learning}
+			
+			This section explores alternative approaches to meta-RL that do not rely on explicit gradient-based adaptation. Instead, these methods use recurrent neural networks to implicitly learn adaptation strategies through their internal dynamics.
 			
 			\subsection{Question 3: RL² Algorithm}
 			
@@ -334,59 +574,142 @@
 			
 			\textbf{Solution:}
 			
-			RL² (Duan et al., 2016) takes a fundamentally different approach to meta-learning by treating the entire RL procedure as a "computation" performed by a recurrent network.
+			\begin{definition}[RL² Algorithm]
+			RL² (Duan et al., 2016) takes a fundamentally different approach to meta-learning by treating the entire RL procedure as a "computation" performed by a recurrent network. Instead of explicitly optimizing for fast adaptation, RL² trains a recurrent policy that learns to adapt its behavior through its internal dynamics.
+			\end{definition}
 			
-			\textbf{Key Concept:}
+			\ieee{Key Conceptual Innovation:}
 			
-			Instead of explicitly optimizing for fast adaptation, RL² trains a recurrent policy that:
+			RL² reframes meta-learning as a sequence modeling problem. The recurrent network learns to:
 			
-			\begin{itemize}
-				\item Maintains a hidden state across episodes
-				\item Uses this hidden state to encode task information
-				\item Learns to adapt its behavior based on experience within the current task
-			\end{itemize}
+			\begin{enumerate}
+				\item Maintain a hidden state across episodes within a task
+				\item Use this hidden state to encode task-specific information
+				\item Adapt its behavior based on accumulated experience
+				\item Implement its own exploration-exploitation strategy
+			\end{enumerate}
 			
-			\textbf{Hidden State as Task Representation:}
+			\ieee{Hidden State as Task Representation:}
 			
 			The LSTM hidden state $h_t$ serves as a sufficient statistic for the task:
 			
-			$$h_t = \text{LSTM}([o_t, a_{t-1}, r_{t-1}, d_{t-1}], h_{t-1})$$
+			\begin{equation}
+			h_t = \text{LSTM}([o_t, a_{t-1}, r_{t-1}, d_{t-1}], h_{t-1})
+			\end{equation}
 			
 			where:
 			\begin{itemize}
-				\item $o_t$: current observation
-				\item $a_{t-1}$: previous action
-				\item $r_{t-1}$: previous reward
-				\item $d_{t-1}$: done flag
-				\item $h_{t-1}$: previous hidden state
+				\item $o_t \in \mathbb{R}^{d_{obs}}$: current observation
+				\item $a_{t-1} \in \mathbb{R}^{d_{act}}$: previous action taken
+				\item $r_{t-1} \in \mathbb{R}$: previous reward received
+				\item $d_{t-1} \in \{0, 1\}$: episode termination flag
+				\item $h_{t-1} \in \mathbb{R}^{d_{hidden}}$: previous hidden state
 			\end{itemize}
 			
-			\textbf{How Adaptation Occurs:}
+			\begin{algorithm}[H]
+			\caption{RL² Training Procedure}
+			\begin{algorithmic}[1]
+			\STATE \textbf{Input:} Task distribution $p(\mathcal{T})$, episodes per task $M$
+			\WHILE{not converged}
+			\STATE Sample task $\mathcal{T}_i \sim p(\mathcal{T})$
+			\STATE Initialize hidden state $h_0 = \mathbf{0}$
+			\STATE \textbf{Collect trajectories:}
+			\FOR{$m = 1$ to $M$ episodes}
+			\STATE \textbf{Episode $m$:}
+			\FOR{$t = 1$ to episode length}
+			\STATE Compute action: $a_t \sim \pi_\theta(a_t | o_t, h_{t-1})$
+			\STATE Execute action, observe $o_{t+1}, r_t, d_t$
+			\STATE Update hidden state: $h_t = \text{LSTM}([o_t, a_{t-1}, r_{t-1}, d_{t-1}], h_{t-1})$
+			\ENDFOR
+			\STATE \textbf{Do NOT reset hidden state between episodes}
+			\ENDFOR
+			\STATE Compute RL loss: $\mathcal{L} = \sum_{m=1}^M \sum_{t=1}^T \nabla_\theta \log \pi_\theta(a_t | o_t, h_{t-1}) A_t$
+			\STATE Update parameters: $\theta \leftarrow \theta - \alpha \nabla_\theta \mathcal{L}$
+			\ENDWHILE
+			\end{algorithmic}
+			\end{algorithm}
+			
+			\ieee{How Adaptation Occurs:}
+			
+			The adaptation process happens implicitly through the recurrent dynamics:
 			
 			\begin{enumerate}
-				\item \textbf{Initially:} Policy behaves according to prior (encoded in initial weights)
-				\item \textbf{Early Episodes:} Exploration to discover task structure, encoded in $h_t$
-				\item \textbf{Later Episodes:} Exploitation using learned task representation
-				\item \textbf{Hidden State Updates:} Gradual refinement of task understanding
+				\item \textbf{Initial Episodes:} Policy behaves according to prior knowledge (encoded in initial weights)
+				\item \textbf{Exploration Phase:} Network explores to discover task structure, accumulating evidence in $h_t$
+				\item \textbf{Exploitation Phase:} Network exploits learned task representation for better performance
+				\item \textbf{Hidden State Evolution:} Gradual refinement of task understanding through experience
 			\end{enumerate}
 			
-			\textbf{Key Insight:} The network learns to implement its own adaptation algorithm through its recurrent dynamics. The hidden state accumulates evidence about the task and adjusts behavior accordingly.
+			\begin{theorem}[RL² Adaptation Capability]
+			Under certain conditions, RL² can learn to implement any adaptation algorithm that can be expressed as a function of the history of observations, actions, and rewards. The LSTM hidden state provides sufficient memory to encode task-specific information.
+			\end{theorem}
 			
-			\textbf{Advantages:}
+			\ieee{Architecture Design:}
+			
+			\begin{algorithm}[H]
+			\caption{RL² Network Architecture}
+			\begin{algorithmic}[1]
+			\STATE \textbf{Input Processing:}
+			\STATE Concatenate: $x_t = [o_t, a_{t-1}, r_{t-1}, d_{t-1}]$
+			\STATE \textbf{LSTM Layer:}
+			\STATE $h_t, c_t = \text{LSTM}(x_t, h_{t-1}, c_{t-1})$
+			\STATE \textbf{Policy Head:}
+			\STATE $\pi(a_t | o_t, h_{t-1}) = \text{softmax}(\text{MLP}(h_t))$
+			\STATE \textbf{Value Head (optional):}
+			\STATE $V(s_t) = \text{MLP}(h_t)$
+			\end{algorithmic}
+			\end{algorithm}
+			
+			\ieee{Training Considerations:}
+			
 			\begin{itemize}
-				\item No explicit inner loop (faster at test time)
-				\item Single forward pass for action selection
-				\item Can handle variable episode lengths
-				\item Naturally implements exploration-exploitation trade-off
+				\item \textbf{Critical:} Hidden state is \highlight{NOT} reset between episodes within the same task
+				\item \textbf{Task Boundaries:} Hidden state is reset only when switching to a new task
+				\item \textbf{Episode Ordering:} Episodes from the same task must be processed sequentially
+				\item \textbf{Batch Processing:} Can process multiple tasks in parallel, but episodes within each task must be sequential
 			\end{itemize}
 			
-			\textbf{Limitations:}
-			\begin{itemize}
-				\item Requires many episodes per task during training
-				\item Limited by LSTM capacity (memory bottleneck)
-				\item Black-box adaptation (harder to interpret)
-				\item Less sample efficient than gradient-based methods
-			\end{itemize}
+			\ieee{Advantages:}
+			
+			\begin{enumerate}
+				\item \textbf{No Explicit Inner Loop:} Faster at test time (single forward pass)
+				\item \textbf{Single Forward Pass:} Action selection requires only one network evaluation
+				\item \textbf{Variable Episode Lengths:} Can handle tasks with different episode lengths naturally
+				\item \textbf{Natural Exploration-Exploitation:} Network learns its own exploration strategy
+				\item \textbf{End-to-End Training:} No need to design adaptation algorithms manually
+			\end{enumerate}
+			
+			\ieee{Limitations:}
+			
+			\begin{enumerate}
+				\item \textbf{Sample Inefficiency:} Requires many episodes per task during training (typically 10-50)
+				\item \textbf{Memory Bottleneck:} Limited by LSTM capacity and vanishing gradient problem
+				\item \textbf{Black-Box Adaptation:} Difficult to interpret what the network has learned
+				\item \textbf{Less Sample Efficient:} Generally requires more samples than gradient-based methods
+				\item \textbf{Sequential Processing:} Cannot parallelize episodes within a task
+			\end{enumerate}
+			
+			\begin{table}[H]
+			\centering
+			\caption{Comparison: MAML vs RL²}
+			\begin{tabular}{@{}lcc@{}}
+			\toprule
+			\textbf{Aspect} & \textbf{MAML} & \textbf{RL²} \\
+			\midrule
+			Adaptation Mechanism & Explicit gradient updates & Implicit recurrent dynamics \\
+			Test Time Speed & Slow (gradient steps) & Fast (single forward pass) \\
+			Sample Efficiency & Better (fewer episodes) & Worse (more episodes) \\
+			Interpretability & More interpretable & Black-box \\
+			Memory Requirements & Low & High (LSTM states) \\
+			Parallelization & Easy & Limited \\
+			\bottomrule
+			\end{tabular}
+			\label{tab:maml_vs_rl2}
+			\end{table}
+			
+			\begin{remark}
+			RL² represents a paradigm shift from explicit optimization-based adaptation to implicit learning-based adaptation. While it sacrifices some sample efficiency, it offers advantages in terms of test-time speed and simplicity.
+			\end{remark}
 			
 			\subsection{Question 4: Context-Based Meta-RL}
 			
@@ -394,66 +717,159 @@
 			
 			\textbf{Solution:}
 			
-			PEARL (Probabilistic Embeddings for Actor-critic RL, Rakelly et al., 2019) is an off-policy meta-RL algorithm that learns task embeddings through a variational approach.
+			\begin{definition}[PEARL Algorithm]
+			PEARL (Probabilistic Embeddings for Actor-critic RL, Rakelly et al., 2019) is an off-policy meta-RL algorithm that learns task embeddings through a variational approach. It combines the benefits of off-policy learning with probabilistic task inference for efficient meta-learning.
+			\end{definition}
 			
-			\textbf{Key Components:}
+			\ieee{Key Innovation:}
+			
+			PEARL addresses the sample inefficiency problem in meta-RL by:
+			
+			\begin{enumerate}
+				\item Using off-policy learning (SAC) instead of on-policy methods
+				\item Learning probabilistic task embeddings through variational inference
+				\item Enabling fast adaptation through context encoding rather than gradient updates
+				\item Reusing data across meta-iterations through replay buffers
+			\end{enumerate}
+			
+			\ieee{Architecture Components:}
 			
 			\begin{enumerate}
 				\item \textbf{Context Encoder:} Maps transitions to task embedding distribution
-				\item \textbf{Policy:} Conditioned on task embedding
-				\item \textbf{Q-Function:} Conditioned on task embedding
-				\item \textbf{Variational Inference:} Probabilistic task representation
+				\item \textbf{Context-Conditioned Policy:} $\pi_\theta(a|s, z)$ where $z$ is the task embedding
+				\item \textbf{Context-Conditioned Q-Function:} $Q_\phi(s, a, z)$ for off-policy learning
+				\item \textbf{Variational Inference Module:} Learns probabilistic task representations
 			\end{enumerate}
 			
-			\textbf{Architecture:}
-			
-			\textbf{1. Context Encoder (Variational):}
-			
-			$$q_\psi(z|\mathcal{C}) = \mathcal{N}(\mu_\psi(\mathcal{C}), \sigma_\psi^2(\mathcal{C}))$$
-			
-			where $\mathcal{C} = \{(s, a, r, s')\}$ is the context (set of transitions)
-			
-			\textbf{2. Context-Conditioned Policy:}
-			
-			$$\pi_\theta(a|s, z)$$
-			
-			\textbf{3. Context-Conditioned Q-Function:}
-			
-			$$Q_\phi(s, a, z)$$
-			
-			\textbf{Probabilistic Task Inference:}
+			\ieee{Probabilistic Task Inference:}
 			
 			PEARL uses variational inference to learn a distribution over task embeddings:
 			
+			\begin{equation}
+			q_\psi(z|\mathcal{C}) = \mathcal{N}(\mu_\psi(\mathcal{C}), \sigma_\psi^2(\mathcal{C}))
+			\end{equation}
+			
+			where $\mathcal{C} = \{(s, a, r, s')\}$ is the context (set of transitions from the task).
+			
+			\begin{algorithm}[H]
+			\caption{PEARL Context Encoder}
+			\begin{algorithmic}[1]
+			\STATE \textbf{Input:} Context transitions $\mathcal{C} = \{(s_i, a_i, r_i, s'_i)\}_{i=1}^K$
+			\STATE \textbf{Encode each transition:}
+			\FOR{each transition $(s_i, a_i, r_i, s'_i)$}
+			\STATE Concatenate: $x_i = [s_i, a_i, r_i]$
+			\STATE Encode: $h_i = \text{MLP}(x_i)$
+			\ENDFOR
+			\STATE \textbf{Aggregate context:}
+			\STATE $h_{context} = \frac{1}{K} \sum_{i=1}^K h_i$ \COMMENT{Permutation invariant aggregation}
+			\STATE \textbf{Compute distribution parameters:}
+			\STATE $\mu = \text{MLP}_\mu(h_{context})$
+			\STATE $\log\sigma = \text{MLP}_\sigma(h_{context})$
+			\STATE \textbf{Output:} Task embedding distribution $\mathcal{N}(\mu, \sigma^2)$
+			\end{algorithmic}
+			\end{algorithm}
+			
+			\ieee{Training Procedure:}
+			
+			\begin{algorithm}[H]
+			\caption{PEARL Meta-Training}
+			\begin{algorithmic}[1]
+			\STATE \textbf{Input:} Task distribution $p(\mathcal{T})$, replay buffers $\{B_i\}$ per task
+			\WHILE{not converged}
+			\STATE Sample batch of tasks $\{\mathcal{T}_i\}_{i=1}^n \sim p(\mathcal{T})$
+			\FOR{each task $\mathcal{T}_i$}
+			\STATE \textbf{Context Phase:}
+			\STATE Sample context $\mathcal{C}_i$ from $B_i$ (small batch, e.g., 10 transitions)
+			\STATE Encode task: $\mu_i, \sigma_i = \text{ContextEncoder}(\mathcal{C}_i)$
+			\STATE Sample task embedding: $z_i \sim \mathcal{N}(\mu_i, \sigma_i^2)$
+			\STATE \textbf{RL Phase:}
+			\STATE Sample batch from $B_i$ (larger batch, e.g., 256 transitions)
+			\STATE Compute SAC loss with context: $\mathcal{L}_{SAC}(z_i)$
+			\STATE \textbf{Variational Phase:}
+			\STATE Compute KL loss: $\mathcal{L}_{KL} = \text{KL}(\mathcal{N}(\mu_i, \sigma_i^2) \| \mathcal{N}(0, I))$
+			\ENDFOR
+			\STATE Total loss: $\mathcal{L} = \sum_{i=1}^n \mathcal{L}_{SAC}(z_i) + \beta \mathcal{L}_{KL}$
+			\STATE Update all parameters: $\theta, \phi, \psi \leftarrow \theta, \phi, \psi - \alpha \nabla \mathcal{L}$
+			\ENDWHILE
+			\end{algorithmic}
+			\end{algorithm}
+			
+			\ieee{Variational Inference Details:}
+			
+			PEARL uses variational inference to learn structured task embeddings:
+			
 			\begin{enumerate}
-				\item \textbf{Encoder learns:} $q_\psi(z|\mathcal{C})$ - approximate posterior
-				\item \textbf{Prior:} $p(z) = \mathcal{N}(0, I)$
-				\item \textbf{KL Regularization:} $\text{KL}(q_\psi(z|\mathcal{C}) \| p(z))$
+				\item \textbf{Encoder learns:} $q_\psi(z|\mathcal{C})$ - approximate posterior over task embeddings
+				\item \textbf{Prior:} $p(z) = \mathcal{N}(0, I)$ - standard Gaussian prior
+				\item \textbf{KL Regularization:} $\text{KL}(q_\psi(z|\mathcal{C}) \| p(z))$ ensures embeddings are structured
 			\end{enumerate}
 			
-			This ensures:
-			\begin{itemize}
-				\item Task embeddings are structured (regularized by KL)
-				\item Uncertainty quantification (via variance)
-				\item Smooth interpolation between tasks
-				\item Prevents overfitting to specific tasks
-			\end{itemize}
+			The KL divergence term:
+			\begin{equation}
+			\text{KL}(\mathcal{N}(\mu, \sigma^2) \| \mathcal{N}(0, I)) = \frac{1}{2} \sum_{j=1}^d \left[ \mu_j^2 + \sigma_j^2 - \log(\sigma_j^2) - 1 \right]
+			\end{equation}
 			
-			\textbf{Advantages over MAML:}
+			where $d$ is the dimension of the task embedding.
 			
-			\begin{center}
-			\begin{tabular}{|l|l|l|}
-			\hline
+			\ieee{Few-Shot Adaptation:}
+			
+			\begin{algorithm}[H]
+			\caption{PEARL Few-Shot Adaptation}
+			\begin{algorithmic}[1]
+			\STATE \textbf{Input:} New task $\mathcal{T}_{new}$, number of context samples $K$
+			\STATE \textbf{Collect context:}
+			\FOR{$k = 1$ to $K$}
+			\STATE Sample action: $a_k \sim \pi_\theta(a|s_k, z_{prior})$ \COMMENT{Use prior embedding initially}
+			\STATE Execute action, observe $s'_{k}, r_k$
+			\STATE Store transition: $(s_k, a_k, r_k, s'_{k})$
+			\ENDFOR
+			\STATE \textbf{Infer task embedding:}
+			\STATE Context: $\mathcal{C} = \{(s_k, a_k, r_k, s'_{k})\}_{k=1}^K$
+			\STATE $\mu, \sigma = \text{ContextEncoder}(\mathcal{C})$
+			\STATE Use mean: $z_{task} = \mu$ \COMMENT{No sampling at test time}
+			\STATE \textbf{Return adapted policy:}
+			\STATE $\pi_{adapted}(a|s) = \pi_\theta(a|s, z_{task})$
+			\end{algorithmic}
+			\end{algorithm}
+			
+			\ieee{Advantages over MAML:}
+			
+			\begin{table}[H]
+			\centering
+			\caption{PEARL vs MAML Comparison}
+			\begin{tabular}{@{}lcc@{}}
+			\toprule
 			\textbf{Aspect} & \textbf{MAML} & \textbf{PEARL} \\
-			\hline
-			Adaptation & Gradient-based & Context encoding \\
-			Speed & Slow (backprop) & Fast (forward pass) \\
-			Sample Efficiency & On-policy & Off-policy (better) \\
+			\midrule
+			Adaptation Mechanism & Gradient-based & Context encoding \\
+			Test Time Speed & Slow (backprop) & Fast (forward pass) \\
+			Sample Efficiency & On-policy (poor) & Off-policy (better) \\
 			Probabilistic & No & Yes (uncertainty) \\
 			Scalability & Limited & Better \\
-			\hline
+			Data Reuse & Limited & Extensive (replay buffers) \\
+			Interpretability & Medium & High (task embeddings) \\
+			\bottomrule
 			\end{tabular}
-			\end{center}
+			\label{tab:pearl_vs_maml}
+			\end{table}
+			
+			\ieee{Key Benefits:}
+			
+			\begin{enumerate}
+				\item \textbf{Sample Efficiency:} 10-100x improvement over on-policy methods
+				\item \textbf{Fast Adaptation:} Single forward pass for task inference
+				\item \textbf{Uncertainty Quantification:} Probabilistic embeddings provide uncertainty estimates
+				\item \textbf{Smooth Interpolation:} Can interpolate between learned task embeddings
+				\item \textbf{Data Reuse:} Extensive use of replay buffers for sample efficiency
+			\end{enumerate}
+			
+			\begin{theorem}[PEARL Convergence]
+			Under certain regularity conditions, PEARL converges to a solution where the context encoder learns to map task contexts to embeddings that enable optimal performance when used to condition the policy and Q-function.
+			\end{theorem}
+			
+			\begin{remark}
+			PEARL represents a significant advancement in meta-RL by combining the sample efficiency of off-policy methods with the fast adaptation capabilities of context-based approaches. The probabilistic framework provides additional benefits in terms of uncertainty quantification and robustness.
+			\end{remark}
 			
 	}}
 	
@@ -463,9 +879,11 @@
 	
 	\newpage
 	
-	{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+	{\fontfamily{lmss}\selectfont {\color{IEEEDarkBlue}
 			
 			\section{Experimental Analysis and Benchmarks}
+			
+			This section examines standardized benchmarks for evaluating meta-RL algorithms and discusses the challenges and solutions in meta-RL research.
 			
 			\subsection{Question 5: Meta-World Benchmark}
 			
@@ -473,50 +891,165 @@
 			
 			\textbf{Solution:}
 			
-			\textbf{Meta-World} (Yu et al., 2020) is a standardized benchmark for meta-RL consisting of 50 robotic manipulation tasks built on the MuJoCo physics simulator.
+			\begin{definition}[Meta-World Benchmark]
+			Meta-World (Yu et al., 2020) is a standardized benchmark for meta-RL consisting of 50 robotic manipulation tasks built on the MuJoCo physics simulator. It provides a comprehensive evaluation framework for comparing different meta-RL algorithms on realistic robotic manipulation scenarios.
+			\end{definition}
 			
-			\textbf{Key Characteristics:}
+			\ieee{Benchmark Structure:}
+			
+			\begin{table}[H]
+			\centering
+			\caption{Meta-World Task Categories}
+			\begin{tabular}{@{}lcc@{}}
+			\toprule
+			\textbf{Task Family} & \textbf{Variations} & \textbf{Description} \\
+			\midrule
+			Reach & 5 & Move gripper to target position \\
+			Push & 5 & Push object to target location \\
+			Pick-Place & 5 & Pick up object and place at target \\
+			Door & 5 & Open door by turning handle \\
+			Drawer & 5 & Open/close drawer \\
+			Button & 5 & Press button in various orientations \\
+			Window & 5 & Open/close window \\
+			Peg Insert & 5 & Insert peg into hole \\
+			Assembly & 5 & Assemble objects together \\
+			Sweep & 5 & Sweep objects into target area \\
+			\bottomrule
+			\end{tabular}
+			\label{tab:metaworld_tasks}
+			\end{table}
+			
+			\ieee{Technical Specifications:}
+			
+			\begin{itemize}
+				\item \textbf{Observation Space:} 39-dimensional continuous space
+				\begin{itemize}
+					\item Robot joint positions and velocities
+					\item Gripper position and orientation
+					\item Object positions and orientations
+					\item Target/goal information
+				\end{itemize}
+				
+				\item \textbf{Action Space:} 4-dimensional continuous space
+				\begin{itemize}
+					\item 3D gripper position control
+					\item Gripper open/close control
+				\end{itemize}
+				
+				\item \textbf{Reward Structure:} Sparse binary rewards
+				\begin{itemize}
+					\item Success: +1.0 (task-specific success criteria)
+					\item Failure: 0.0
+					\item Dense rewards available for some tasks
+				\end{itemize}
+				
+				\item \textbf{Episode Length:} 500 time steps maximum
+			\end{itemize}
+			
+			\ieee{Evaluation Protocols:}
 			
 			\begin{enumerate}
-				\item \textbf{Task Diversity:}
+				\item \textbf{MT10 (Multi-Task 10):}
 				\begin{itemize}
-					\item 50 distinct tasks (10 task families × 5 variations)
-					\item Manipulation primitives: Reach, Push, Pick-Place, Door, Drawer, Button, etc.
-					\item Varying goals, object positions, and interaction modes
+					\item Train on 10 tasks simultaneously
+					\item Evaluate on same 10 tasks
+					\item Tests multi-task learning capabilities
+					\item Baseline for comparison with meta-learning
 				\end{itemize}
 				
-				\item \textbf{Shared Structure:}
+				\item \textbf{ML10 (Meta-Learning 10):}
 				\begin{itemize}
-					\item Common observation space (39-dim)
-					\item Common action space (4-dim: 3D position + gripper)
-					\item Shared state representation across tasks
-					\item Enables transfer learning
+					\item Meta-train on 10 tasks
+					\item Meta-test on new instances of same task types
+					\item Tests few-shot adaptation within task families
+					\item Most commonly used protocol
 				\end{itemize}
 				
-				\item \textbf{Evaluation Protocols:}
+				\item \textbf{ML45:}
 				\begin{itemize}
-					\item \textbf{MT10 (Multi-Task 10):} Train on 10 tasks simultaneously, evaluate on same 10 tasks
-					\item \textbf{ML10 (Meta-Learning 10):} Meta-train on 10 tasks, meta-test on new instances of same task types
-					\item \textbf{ML45:} Meta-train on 45 tasks, meta-test on 5 held-out task types
+					\item Meta-train on 45 tasks
+					\item Meta-test on 5 held-out task types
+					\item Tests generalization to completely new task types
+					\item Most challenging evaluation
 				\end{itemize}
 			\end{enumerate}
 			
-			\textbf{Why It's Suitable:}
+			\ieee{Why Meta-World is Suitable for Meta-RL Evaluation:}
 			
-			\begin{center}
-			\begin{tabular}{|l|l|}
-			\hline
+			\begin{table}[H]
+			\centering
+			\caption{Meta-World Suitability Analysis}
+			\begin{tabular}{@{}ll@{}}
+			\toprule
 			\textbf{Property} & \textbf{Benefit for Meta-RL Evaluation} \\
-			\hline
+			\midrule
 			Standardized & Fair comparison across algorithms \\
 			Realistic & Complex manipulation (not toy problems) \\
 			Diverse & Tests generalization across task distribution \\
 			Shared Structure & Enables transfer (key for meta-RL) \\
 			Difficult & Challenges current methods, room for improvement \\
 			Reproducible & Open-source, deterministic environments \\
-			\hline
+			Scalable & Can evaluate on different numbers of tasks \\
+			Interpretable & Clear success criteria and visual feedback \\
+			\bottomrule
 			\end{tabular}
-			\end{center}
+			\label{tab:metaworld_suitability}
+			\end{table}
+			
+			\ieee{Performance Metrics:}
+			
+			\begin{enumerate}
+				\item \textbf{Success Rate:} Percentage of episodes achieving task success
+				\item \textbf{Sample Efficiency:} Number of samples needed to reach target performance
+				\item \textbf{Adaptation Speed:} Performance improvement per adaptation step
+				\item \textbf{Generalization:} Performance on held-out tasks
+			\end{enumerate}
+			
+			\begin{algorithm}[H]
+			\caption{Meta-World Evaluation Protocol}
+			\begin{algorithmic}[1]
+			\STATE \textbf{Input:} Meta-RL algorithm, evaluation protocol (ML10/ML45)
+			\STATE \textbf{Meta-Training Phase:}
+			\FOR{each meta-iteration}
+			\STATE Sample batch of training tasks
+			\STATE Meta-train algorithm on batch
+			\ENDFOR
+			\STATE \textbf{Meta-Testing Phase:}
+			\FOR{each test task}
+			\STATE Initialize algorithm with meta-learned parameters
+			\FOR{each adaptation step}
+			\STATE Collect few samples from test task
+			\STATE Adapt algorithm to test task
+			\STATE Evaluate adapted policy
+			\ENDFOR
+			\ENDFOR
+			\STATE \textbf{Report:} Average success rate across all test tasks
+			\end{algorithmic}
+			\end{algorithm}
+			
+			\ieee{Current State-of-the-Art Results:}
+			
+			\begin{table}[H]
+			\centering
+			\caption{Meta-World ML10 Results (Success Rate \%)}
+			\begin{tabular}{@{}lcc@{}}
+			\toprule
+			\textbf{Method} & \textbf{0-shot} & \textbf{10-shot} \\
+			\midrule
+			Random Policy & 0.0 & 0.0 \\
+			Single-Task RL & 0.0 & 15.2 \\
+			MAML & 0.0 & 18.3 \\
+			RL² & 0.0 & 16.1 \\
+			PEARL & 0.0 & 31.2 \\
+			ProMP & 0.0 & 28.7 \\
+			\bottomrule
+			\end{tabular}
+			\label{tab:metaworld_results}
+			\end{table}
+			
+			\begin{remark}
+			Meta-World has become the de facto standard for evaluating meta-RL algorithms due to its realistic complexity, standardized evaluation protocols, and comprehensive task coverage. The benchmark reveals that current meta-RL methods still have significant room for improvement, with even the best methods achieving only moderate success rates.
+			\end{remark}
 			
 			\subsection{Question 6: Challenges in Meta-RL}
 			
@@ -524,87 +1057,239 @@
 			
 			\textbf{Solution:}
 			
-			\textbf{Challenge 1: Sample Inefficiency During Meta-Training}
+			\ieee{Challenge 1: Sample Inefficiency During Meta-Training}
 			
-			\textbf{Problem:}
+			\begin{definition}[Sample Inefficiency Problem]
+			Meta-RL requires an enormous number of samples during training due to the nested optimization structure and the need to collect data from multiple tasks for both inner and outer loops.
+			\end{definition}
+			
+			\textbf{Problem Analysis:}
+			
 			\begin{itemize}
-				\item Meta-RL requires many tasks for meta-training
-				\item Each task requires multiple episodes
-				\item Total sample cost: Tasks × Episodes × Steps
-				\item Can easily reach millions of samples
-				\item Impractical for real-world applications (robots, etc.)
+				\item \textbf{Exponential Sample Growth:} Total samples = Tasks × Episodes per Task × Steps per Episode × Meta-iterations
+				\item \textbf{Typical Requirements:} 100 tasks × 100 episodes × 200 steps × 1000 iterations = 2 billion samples
+				\item \textbf{Real-World Impact:} Impractical for physical robots and expensive simulations
+				\item \textbf{On-Policy Limitation:} Cannot reuse data across meta-iterations in traditional approaches
 			\end{itemize}
 			
 			\textbf{Proposed Solutions:}
+			
 			\begin{enumerate}
-				\item \textbf{Off-Policy Meta-RL (e.g., PEARL):}
+				\item \textbf{Off-Policy Meta-RL (PEARL):}
+				
+				\begin{algorithm}[H]
+				\caption{Off-Policy Meta-RL Framework}
+				\begin{algorithmic}[1]
+				\STATE \textbf{Initialize:} Replay buffers $\{B_i\}$ for each task
+				\WHILE{not converged}
+				\STATE Sample batch of tasks $\{\mathcal{T}_i\}$
+				\FOR{each task $\mathcal{T}_i$}
+				\STATE Sample batch from $B_i$ (reuse old data)
+				\STATE Update policy using off-policy method (SAC, TD3)
+				\STATE Add new data to $B_i$
+				\ENDFOR
+				\ENDWHILE
+				\end{algorithmic}
+				\end{algorithm}
+				
+				\textbf{Benefits:}
 				\begin{itemize}
-					\item Use replay buffers to reuse data
-					\item 10-100x sample efficiency vs. on-policy methods
+					\item 10-100x improvement in sample efficiency
 					\item Can reuse data across meta-iterations
+					\item Better suited for real-world applications
+					\item Enables continuous learning
 				\end{itemize}
 				
 				\item \textbf{Model-Based Meta-RL:}
+				
+				\begin{equation}
+				\text{Sample Efficiency} = \frac{\text{Real Samples}}{\text{Simulated Samples}}
+				\end{equation}
+				
+				\textbf{Approach:}
 				\begin{itemize}
-					\item Learn dynamics model, use for planning
+					\item Learn dynamics model $p(s_{t+1}|s_t, a_t)$ during meta-training
+					\item Use model for planning and data augmentation
 					\item Amortize real samples through simulation
-					\item Especially effective when dynamics transfer across tasks
+					\item Particularly effective when dynamics transfer across tasks
+				\end{itemize}
+				
+				\item \textbf{Data Augmentation:}
+				
+				\begin{itemize}
+					\item \textbf{Observation Augmentation:} Rotation, translation, noise injection
+					\item \textbf{Task Augmentation:} Goal position shifts, object variations
+					\item \textbf{Temporal Augmentation:} Frame skipping, action repetition
+					\item \textbf{2-5x improvement} in effective sample size
 				\end{itemize}
 			\end{enumerate}
 			
-			\textbf{Challenge 2: Distribution Shift at Test Time}
+			\ieee{Challenge 2: Distribution Shift at Test Time}
 			
-			\textbf{Problem:}
+			\begin{definition}[Distribution Shift Problem]
+			Meta-RL algorithms assume test tasks come from the same distribution as training tasks, but in practice, test tasks may be out-of-distribution, leading to poor performance.
+			\end{definition}
+			
+			\textbf{Problem Analysis:}
+			
 			\begin{itemize}
-				\item Meta-training assumes tasks come from distribution $p(\mathcal{T})$
-				\item Test tasks may be out-of-distribution
-				\item Performance degrades gracefully for interpolation, fails for extrapolation
-				\item Difficult to know boundaries of learned distribution
+				\item \textbf{Interpolation vs Extrapolation:} Meta-RL works well for interpolation but fails for extrapolation
+				\item \textbf{Unknown Boundaries:} Difficult to determine the limits of learned task distribution
+				\item \textbf{Sim-to-Real Gap:} Training in simulation, testing in real world
+				\item \textbf{Task Drift:} Tasks may evolve over time in deployed systems
 			\end{itemize}
 			
 			\textbf{Proposed Solutions:}
+			
 			\begin{enumerate}
-				\item \textbf{Domain Randomization During Meta-Training:}
+				\item \textbf{Domain Randomization:}
+				
+				\begin{algorithm}[H]
+				\caption{Domain Randomization for Meta-RL}
+				\begin{algorithmic}[1]
+				\STATE \textbf{Define parameter ranges:} $\mathcal{P} = \{p_1, p_2, \ldots, p_n\}$
+				\FOR{each meta-training iteration}
+				\STATE Sample task parameters: $p \sim \text{Uniform}(\mathcal{P})$
+				\STATE Create task with parameters $p$
+				\STATE Meta-train on randomized task
+				\ENDFOR
+				\end{algorithmic}
+				\end{algorithm}
+				
+				\textbf{Randomization Strategies:}
 				\begin{itemize}
-					\item Broader support for learned distribution
-					\item More robust to test-time variations
-					\item Commonly used in sim-to-real transfer
+					\item \textbf{Visual:} Lighting, textures, camera angles
+					\item \textbf{Dynamics:} Mass, friction, damping coefficients
+					\item \textbf{Task Parameters:} Goal positions, object properties
+					\item \textbf{Environment:} Background, distractors, noise
 				\end{itemize}
 				
 				\item \textbf{Uncertainty-Aware Adaptation:}
+				
+				\begin{equation}
+				\text{Adaptation Strategy} = \begin{cases}
+				\text{Conservative} & \text{if } \text{Uncertainty} > \text{Threshold} \\
+				\text{Aggressive} & \text{if } \text{Uncertainty} \leq \text{Threshold}
+				\end{cases}
+				\end{equation}
+				
+				\textbf{Implementation:}
 				\begin{itemize}
-					\item Detect out-of-distribution tasks
-					\item Adapt exploration/adaptation strategy accordingly
-					\item More graceful degradation
+					\item Measure epistemic uncertainty in task embeddings
+					\item Adapt exploration/exploitation based on uncertainty
+					\item Use ensemble methods for uncertainty estimation
+					\item Implement graceful degradation strategies
+				\end{itemize}
+				
+				\item \textbf{Continual Meta-Learning:}
+				
+				\begin{itemize}
+					\item Continuously expand task distribution
+					\item No strict boundary between meta-train and meta-test
+					\item Adapt meta-knowledge based on new task experiences
+					\item Implement catastrophic forgetting prevention
 				\end{itemize}
 			\end{enumerate}
 			
-			\textbf{Challenge 3: Credit Assignment in Nested Optimization}
+			\ieee{Challenge 3: Credit Assignment in Nested Optimization}
 			
-			\textbf{Problem:}
+			\begin{definition}[Credit Assignment Problem]
+			The two-level optimization structure makes it difficult to attribute success or failure to specific components (meta-parameters, adaptation process, task sampling, etc.).
+			\end{definition}
+			
+			\textbf{Problem Analysis:}
+			
 			\begin{itemize}
-				\item Two-level optimization makes credit assignment difficult
-				\item Is poor performance due to bad meta-initialization, insufficient adaptation, bad task sampling, or high variance in gradients?
-				\item Meta-gradients have very high variance
-				\item Difficult to diagnose failures
+				\item \textbf{High Variance:} Meta-gradients have extremely high variance
+				\item \textbf{Multiple Sources:} Poor performance could be due to:
+				\begin{itemize}
+					\item Bad meta-initialization
+					\item Insufficient adaptation steps
+					\item Poor task sampling
+					\item High variance in gradients
+					\item Inappropriate hyperparameters
+				\end{itemize}
+				\item \textbf{Diagnostic Difficulty:} Hard to identify root causes of failures
+				\item \textbf{Hyperparameter Sensitivity:} Many hyperparameters to tune
 			\end{itemize}
 			
 			\textbf{Proposed Solutions:}
+			
 			\begin{enumerate}
-				\item \textbf{Separate Value Functions for Meta-Learning:}
-				\begin{itemize}
-					\item Explicit attribution to different levels
-					\item Reduced variance in meta-gradients
-					\item Better debugging and interpretation
-				\end{itemize}
+				\item \textbf{Hierarchical Value Functions:}
+				
+				\begin{algorithm}[H]
+				\caption{Hierarchical Credit Assignment}
+				\begin{algorithmic}[1]
+				\STATE \textbf{Task-Level Value:} $V_{task}(\mathcal{T})$ - expected return after adaptation
+				\STATE \textbf{State-Level Value:} $V_{state}(s)$ - value of individual states
+				\STATE \textbf{Compute Advantages:}
+				\STATE $A_{task} = R_{task} - V_{task}(\mathcal{T})$
+				\STATE $A_{state} = R_{state} - V_{state}(s)$
+				\STATE \textbf{Separate Updates:}
+				\STATE Update meta-policy using $A_{task}$
+				\STATE Update task-policy using $A_{state}$
+				\end{algorithmic}
+				\end{algorithm}
 				
 				\item \textbf{Variance Reduction Techniques:}
+				
 				\begin{itemize}
-					\item Lower variance → faster convergence
-					\item More stable meta-optimization
-					\item Better sample efficiency
+					\item \textbf{Baseline Subtraction:}
+					\begin{equation}
+					A_t = R_t - \text{Baseline}(s_t)
+					\end{equation}
+					
+					\item \textbf{Gradient Clipping:}
+					\begin{equation}
+					\nabla_\theta \mathcal{L} \leftarrow \text{clip}(\nabla_\theta \mathcal{L}, -\text{max\_norm}, \text{max\_norm})
+					\end{equation}
+					
+					\item \textbf{Importance Sampling:}
+					\begin{equation}
+					\nabla_\theta \mathcal{L} = \mathbb{E}_{\tau \sim \pi_{\text{old}}} \left[ \frac{\pi_\theta(a|s)}{\pi_{\text{old}}(a|s)} \nabla_\theta \log \pi_\theta(a|s) A_t \right]
+					\end{equation}
 				\end{itemize}
+				
+				\item \textbf{Diagnostic Tools:}
+				
+				\begin{algorithm}[H]
+				\caption{Meta-RL Diagnostic Framework}
+				\begin{algorithmic}[1]
+				\STATE \textbf{Adaptation Analysis:}
+				\STATE Track performance during inner loop adaptation
+				\STATE Compute adaptation slope: $\frac{d\text{Performance}}{d\text{Steps}}$
+				\STATE \textbf{Gradient Analysis:}
+				\STATE Monitor gradient norms and directions
+				\STATE Detect vanishing/exploding gradients
+				\STATE \textbf{Task Embedding Analysis:}
+				\STATE Visualize task embeddings in 2D
+				\STATE Measure embedding distances between tasks
+				\STATE \textbf{Failure Mode Detection:}
+				\STATE Identify common failure patterns
+				\STATE Correlate failures with task characteristics
+				\end{algorithmic}
+				\end{algorithm}
 			\end{enumerate}
+			
+			\begin{table}[H]
+			\centering
+			\caption{Challenge-Solution Summary}
+			\begin{tabular}{@{}lcc@{}}
+			\toprule
+			\textbf{Challenge} & \textbf{Impact} & \textbf{Best Solution} \\
+			\midrule
+			Sample Inefficiency & 2B+ samples needed & Off-policy methods (PEARL) \\
+			Distribution Shift & Failure on OOD tasks & Domain randomization \\
+			Credit Assignment & High variance, slow learning & Hierarchical value functions \\
+			\bottomrule
+			\end{tabular}
+			\label{tab:challenge_solutions}
+			\end{table}
+			
+			\begin{remark}
+			These challenges represent fundamental limitations of current meta-RL approaches. Addressing them requires both algorithmic innovations and better understanding of the theoretical foundations of meta-learning in reinforcement learning.
+			\end{remark}
 			
 			\section{Discussion and Future Directions}
 			
