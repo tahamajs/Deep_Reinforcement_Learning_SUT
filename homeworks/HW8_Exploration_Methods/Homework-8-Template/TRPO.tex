@@ -1,6 +1,26 @@
 \section{Trust Region Policy Optimization}
 
-In this question, we will dive deep into the mathematical theories behind the TRPO algorithm. As a roadmap, we first prove that minimizing a certain surrogate objective function guarantees policy improvement with non-trivial step sizes. Then, we make a series of approximations to the theoretically justified algorithm, yielding a practical algorithm, which has been called trust region policy optimization (TRPO). 
+\subsection{Introduction and Motivation}
+
+Trust Region Policy Optimization (TRPO) represents a significant advancement in policy gradient methods by addressing the fundamental challenge of ensuring monotonic policy improvement. Traditional policy gradient methods often suffer from instability and can lead to performance degradation during training, especially when taking large policy updates.
+
+TRPO, introduced by Schulman et al. \cite{schulman2015trust}, provides a theoretically grounded approach to policy optimization that guarantees non-decreasing performance under certain conditions. The algorithm is based on the principle of maintaining a "trust region" around the current policy, ensuring that updates remain within a safe range where theoretical guarantees hold.
+
+\textbf{Key Challenges Addressed by TRPO:}
+\begin{itemize}
+    \item \textbf{Policy Instability}: Large policy updates can lead to performance collapse
+    \item \textbf{Sample Inefficiency}: Traditional policy gradients often require many samples
+    \item \textbf{Step Size Selection}: Choosing appropriate learning rates is difficult
+    \item \textbf{Monotonic Improvement}: Ensuring each update improves performance
+\end{itemize}
+
+\textbf{TRPO's Solution:}
+\begin{itemize}
+    \item \textbf{Trust Region Constraint}: Limits policy updates to maintain theoretical guarantees
+    \item \textbf{Natural Policy Gradient}: Uses second-order information for more stable updates
+    \item \textbf{Monotonic Improvement}: Provides theoretical guarantees of non-decreasing performance
+    \item \textbf{Large Step Sizes}: Enables larger updates than traditional policy gradients
+\end{itemize} 
 
 \subsection{Notations and Preliminaries}
 

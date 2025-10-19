@@ -1,101 +1,236 @@
 \section{Policy Gradient Theorem}
 
-In this section, we present a comprehensive analysis of the Policy Gradient Theorem, which forms the theoretical foundation for policy-based reinforcement learning algorithms. The Policy Gradient Theorem provides a direct method for computing gradients of the expected return with respect to policy parameters, enabling gradient-based optimization of stochastic policies in continuous action spaces.
+\subsection{Introduction and Motivation}
+
+Policy gradient methods represent a fundamental paradigm in reinforcement learning that directly optimizes the policy parameters $\theta$ to maximize the expected cumulative reward. Unlike value-based methods that first estimate value functions and then derive policies, policy gradient methods parameterize the policy directly and optimize it using gradient ascent.
+
+The Policy Gradient Theorem, first introduced by Sutton et al. \cite{sutton2000policy}, provides the theoretical foundation for computing gradients of the expected return with respect to policy parameters. This theorem is particularly important because it enables gradient-based optimization of stochastic policies in continuous action spaces, where traditional value-based methods face significant challenges.
+
+\textbf{Key Advantages of Policy Gradient Methods:}
+\begin{itemize}
+    \item \textbf{Continuous Action Spaces}: Naturally handle continuous actions without discretization
+    \item \textbf{Stochastic Policies}: Can learn stochastic policies, which are often necessary for exploration
+    \item \textbf{Policy Structure}: Can incorporate domain knowledge through policy parameterization
+    \item \textbf{Convergence Guarantees}: Under certain conditions, converge to at least local optima
+\end{itemize}
+
+\textbf{Challenges:}
+\begin{itemize}
+    \item \textbf{High Variance}: Gradient estimates can have high variance, leading to slow convergence
+    \item \textbf{Sample Inefficiency}: Often require more samples than value-based methods
+    \item \textbf{Local Optima}: May get stuck in local optima of the policy space
+\end{itemize}
 
 \subsection{Mathematical Framework and Notations}
 
-Consider a finite Markov Decision Process (MDP) defined by the tuple $(\mathcal{S}, \mathcal{A}, P, r, \gamma)$, where:
+\subsubsection{Markov Decision Process Definition}
+
+Consider a finite Markov Decision Process (MDP) defined by the tuple $(\mathcal{S}, \mathcal{A}, P, r, \gamma, \rho_0)$, where:
 \begin{itemize}
-    \item $\mathcal{S}$ is the finite state space
-    \item $\mathcal{A}$ is the finite action space  
-    \item $P(s'|s, a)$ is the transition probability function representing the probability of transitioning from state $s$ to state $s'$ when taking action $a$
+    \item $\mathcal{S}$ is the finite state space with cardinality $|\mathcal{S}| = S$
+    \item $\mathcal{A}$ is the finite action space with cardinality $|\mathcal{A}| = A$  
+    \item $P: \mathcal{S} \times \mathcal{A} \times \mathcal{S} \rightarrow [0,1]$ is the transition probability function, where $P(s'|s, a)$ represents the probability of transitioning from state $s$ to state $s'$ when taking action $a$
     \item $r: \mathcal{S} \times \mathcal{A} \rightarrow [0, 1]$ is the bounded reward function, where $r(s, a)$ denotes the immediate reward for taking action $a$ in state $s$
-    \item $\gamma \in [0, 1)$ is the discount factor that determines the importance of future rewards
-    \item $s_0 \in \mathcal{S}$ is the initial state distribution
+    \item $\gamma \in [0, 1)$ is the discount factor that determines the importance of future rewards relative to immediate rewards
+    \item $\rho_0: \mathcal{S} \rightarrow [0,1]$ is the initial state distribution, where $\rho_0(s)$ is the probability of starting in state $s$
 \end{itemize}
 
-A parametrized stochastic policy $\pi_{\theta}: \mathcal{S} \times \mathcal{A} \rightarrow [0, 1]$ maps states to probability distributions over actions, where $\theta \in \mathbb{R}^d$ represents the policy parameters. This policy induces a distribution over trajectories $\tau = (s_t, a_t, r_t)_{t=0}^{\infty}$, where:
+\textbf{Assumptions:}
 \begin{itemize}
-    \item $s_0$ is sampled from the initial state distribution
-    \item For each timestep $t \geq 0$: $a_t \sim \pi_{\theta}(\cdot|s_t)$ and $s_{t+1} \sim P(\cdot|s_t, a_t)$
+    \item The MDP is \textbf{ergodic}, meaning every state is reachable from every other state under some policy
+    \item The reward function is \textbf{bounded}, ensuring finite expected returns
+    \item The discount factor $\gamma < 1$ ensures convergence of infinite sums
 \end{itemize}
 
-The state value function $V^{\pi_\theta}: \mathcal{S} \rightarrow \mathbb{R}$ and state-action value function $Q^{\pi_\theta}: \mathcal{S} \times \mathcal{A} \rightarrow \mathbb{R}$ are defined through the Bellman equations:
+\subsubsection{Policy Parameterization}
+
+A parametrized stochastic policy $\pi_{\theta}: \mathcal{S} \times \mathcal{A} \rightarrow [0, 1]$ maps states to probability distributions over actions, where $\theta \in \mathbb{R}^d$ represents the policy parameters. The policy must satisfy the probability constraints:
+
+\begin{align}
+    \sum_{a \in \mathcal{A}} \pi_{\theta}(a|s) = 1 \quad \text{and} \quad \pi_{\theta}(a|s) \geq 0 \quad \forall s \in \mathcal{S}, a \in \mathcal{A}
+\end{align}
+
+\textbf{Common Policy Parameterizations:}
+\begin{itemize}
+    \item \textbf{Softmax Policy}: $\pi_{\theta}(a|s) = \frac{\exp(f_{\theta}(s,a))}{\sum_{a'} \exp(f_{\theta}(s,a'))}$ where $f_{\theta}$ is a neural network
+    \item \textbf{Gaussian Policy}: For continuous actions, $\pi_{\theta}(a|s) = \mathcal{N}(\mu_{\theta}(s), \sigma_{\theta}^2(s))$
+    \item \textbf{Categorical Policy}: For discrete actions, $\pi_{\theta}(a|s) = \text{Categorical}(\text{softmax}(f_{\theta}(s)))$
+\end{itemize}
+
+\subsubsection{Trajectory Distribution}
+
+The policy $\pi_{\theta}$ induces a distribution over trajectories $\tau = (s_t, a_t, r_t)_{t=0}^{\infty}$, where:
+\begin{itemize}
+    \item $s_0 \sim \rho_0(\cdot)$ is sampled from the initial state distribution
+    \item For each timestep $t \geq 0$: $a_t \sim \pi_{\theta}(\cdot|s_t)$ and $s_{t+1} \sim P(\cdot|s_t, a_t)$
+    \item The reward $r_t = r(s_t, a_t)$ is deterministic given the state-action pair
+\end{itemize}
+
+The probability of a trajectory $\tau$ under policy $\pi_{\theta}$ is:
+\begin{align}
+    P(\tau|\theta) = \rho_0(s_0) \prod_{t=0}^{\infty} \pi_{\theta}(a_t|s_t) P(s_{t+1}|s_t, a_t)
+\end{align}
+
+\subsubsection{Value Functions}
+
+The state value function $V^{\pi_\theta}: \mathcal{S} \rightarrow \mathbb{R}$ and state-action value function $Q^{\pi_\theta}: \mathcal{S} \times \mathcal{A} \rightarrow \mathbb{R}$ are fundamental quantities that measure the expected cumulative reward:
+
+\begin{align}
+    V^{\pi_\theta}(s) &= \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \Big| s_0 = s \right] \label{eq:value_function_def}\\
+    Q^{\pi_\theta}(s,a) &= \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \Big| s_0 = s, a_0 = a \right] \label{eq:q_function_def}
+\end{align}
+
+These functions satisfy the Bellman equations:
 \begin{align}
     V^{\pi_\theta}(s) &= \mathbb{E}_{a\sim \pi_\theta(\cdot|s)} [Q^{\pi_\theta}(s,a)] \label{eq:value_function}\\
     Q^{\pi_\theta}(s,a) &= r(s, a) + \gamma\mathbb{E}_{s'\sim P(\cdot|s, a)} [V^{\pi_\theta}(s')] \label{eq:q_function}
 \end{align}
 
+\textbf{Key Properties:}
+\begin{itemize}
+    \item \textbf{Boundedness}: Since $r(s,a) \in [0,1]$ and $\gamma < 1$, we have $V^{\pi_\theta}(s) \leq \frac{1}{1-\gamma}$
+    \item \textbf{Continuity}: Under mild conditions, $V^{\pi_\theta}$ and $Q^{\pi_\theta}$ are continuous in $\theta$
+    \item \textbf{Uniqueness}: The Bellman equations have unique solutions for each policy $\pi_\theta$
+\end{itemize}
+
+\subsubsection{State Visitation Distribution}
+
 The discounted state visitation distribution $d^{\pi}_{s_0}: \mathcal{S} \rightarrow [0, 1]$ represents the normalized probability of visiting each state when following policy $\pi$ starting from state $s_0$:
+
 \begin{align}
     d^{\pi}_{s_0}(s) = (1-\gamma)\sum_{t = 0}^{\infty}\gamma^t \Pr^{\pi}(s_t = s|s_0) \label{eq:state_visitation}
 \end{align}
-where $\Pr^{\pi}(s_t = s|s_0)$ denotes the probability of being in state $s$ at time $t$ when following policy $\pi$ starting from state $s_0$. The factor $(1-\gamma)$ ensures that $d^{\pi}_{s_0}$ is a proper probability distribution, i.e., $\sum_{s \in \mathcal{S}} d^{\pi}_{s_0}(s) = 1$.
+
+where $\Pr^{\pi}(s_t = s|s_0)$ denotes the probability of being in state $s$ at time $t$ when following policy $\pi$ starting from state $s_0$.
+
+\textbf{Key Properties:}
+\begin{itemize}
+    \item \textbf{Normalization}: The factor $(1-\gamma)$ ensures that $d^{\pi}_{s_0}$ is a proper probability distribution, i.e., $\sum_{s \in \mathcal{S}} d^{\pi}_{s_0}(s) = 1$
+    \item \textbf{Stationarity}: Under the ergodicity assumption, $d^{\pi}_{s_0}$ converges to a stationary distribution as $t \rightarrow \infty$
+    \item \textbf{Policy Dependence}: The distribution depends on the policy $\pi$, making it crucial for policy gradient computations
+\end{itemize}
+
+\textbf{Interpretation:}
+The state visitation distribution captures how often each state is visited under a given policy, weighted by the discount factor. States that are visited more frequently or earlier in trajectories receive higher probability mass.
 
 \subsection{Proving the Policy Gradient Theorem}
 
-The objective function of our RL problem is defined as $J(\theta) = V^{\pi_\theta}(s_0)$. The policy gradient method uses the gradient ascent algorithm to optimize $\theta$. This can be done by the direct differentiation of the objective function.
+\subsubsection{Objective Function and Optimization Goal}
 
-a) Prove the following identity, which is known as the Policy Gradient Theorem:
+The objective function of our reinforcement learning problem is defined as the expected cumulative reward starting from the initial state distribution:
+
+\begin{align}
+    J(\theta) = \mathbb{E}_{s_0 \sim \rho_0} [V^{\pi_\theta}(s_0)] = \mathbb{E}_{s_0 \sim \rho_0} \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \Big| s_0 \right]
+\end{align}
+
+\textbf{Optimization Problem:}
+\begin{align}
+    \theta^* = \argmax_{\theta} J(\theta)
+\end{align}
+
+The policy gradient method uses gradient ascent to optimize $\theta$:
+\begin{align}
+    \theta_{k+1} = \theta_k + \alpha \nabla_\theta J(\theta_k)
+\end{align}
+
+where $\alpha > 0$ is the learning rate.
+
+\textbf{Key Challenge:} Computing $\nabla_\theta J(\theta)$ is non-trivial because:
+\begin{itemize}
+    \item The expectation involves trajectories sampled from the policy
+    \item The policy parameters affect both the action selection and the resulting state distribution
+    \item Direct differentiation leads to high-variance estimates
+\end{itemize}
+
+The Policy Gradient Theorem provides an elegant solution to this challenge by expressing the gradient in terms of the policy's score function and the Q-function.
+
+\subsubsection{Statement of the Policy Gradient Theorem}
+
+\begin{theorem}[Policy Gradient Theorem]
+For any differentiable policy $\pi_\theta$ and objective function $J(\theta) = \mathbb{E}_{s_0 \sim \rho_0} [V^{\pi_\theta}(s_0)]$, the policy gradient is given by:
 
 \begin{align}\label{policy_grad}
     \nabla_\theta J(\theta) = \frac{1}{1-\gamma}\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\theta \log \pi_\theta (a|s) Q^{\pi_\theta} (s, a)]
 \end{align}
 
-\textbf{Solution:}
+where $d^{\pi_\theta}_{s_0}$ is the discounted state visitation distribution and $Q^{\pi_\theta}$ is the state-action value function.
+\end{theorem}
 
-We will prove the Policy Gradient Theorem by directly differentiating the objective function $J(\theta) = V^{\pi_\theta}(s_0)$.
+\textbf{Intuition:}
+The theorem states that the gradient of the expected return with respect to policy parameters can be computed as:
+\begin{itemize}
+    \item \textbf{Score Function}: $\nabla_\theta \log \pi_\theta(a|s)$ - how much the log-probability of action $a$ changes with $\theta$
+    \item \textbf{Q-Function}: $Q^{\pi_\theta}(s,a)$ - the expected return from state $s$ taking action $a$
+    \item \textbf{State Distribution}: $d^{\pi_\theta}_{s_0}(s)$ - how often state $s$ is visited under the current policy
+\end{itemize}
+
+The product $\nabla_\theta \log \pi_\theta(a|s) \cdot Q^{\pi_\theta}(s,a)$ represents the contribution of action $a$ in state $s$ to the overall gradient, weighted by how good that action is.
+
+\subsubsection{Proof of the Policy Gradient Theorem}
+
+\textbf{Proof Strategy:}
+We will prove the Policy Gradient Theorem by directly differentiating the objective function $J(\theta) = \mathbb{E}_{s_0 \sim \rho_0} [V^{\pi_\theta}(s_0)]$. The key insight is to use the log-derivative trick to express the gradient in terms of the policy's score function.
 
 \textbf{Step 1: Express the objective in terms of trajectories}
 
 The value function can be written as:
 \begin{align}
-J(\theta) = V^{\pi_\theta}(s_0) = \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \right]
+J(\theta) = \mathbb{E}_{s_0 \sim \rho_0} [V^{\pi_\theta}(s_0)] = \mathbb{E}_{s_0 \sim \rho_0} \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \Big| s_0 \right]
 \end{align}
 
 where $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots)$ is a trajectory sampled from policy $\pi_\theta$.
 
-\textbf{Step 2: Differentiate with respect to policy parameters}
+\textbf{Step 2: Apply the log-derivative trick}
 
-Taking the gradient:
+Taking the gradient with respect to $\theta$:
 \begin{align}
-\nabla_\theta J(\theta) &= \nabla_\theta \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \right] \\
-&= \sum_{\tau} P(\tau|\theta) \nabla_\theta \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \right] + \sum_{\tau} \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \right] \nabla_\theta P(\tau|\theta)
+\nabla_\theta J(\theta) &= \nabla_\theta \mathbb{E}_{s_0 \sim \rho_0} \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \Big| s_0 \right] \\
+&= \mathbb{E}_{s_0 \sim \rho_0} \mathbb{E}_{\tau \sim \pi_\theta} \left[ \left( \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \right) \nabla_\theta \log P(\tau|\theta) \Big| s_0 \right]
 \end{align}
 
-The first term is zero since rewards don't depend on $\theta$. For the second term:
+where we used the identity $\nabla_\theta \mathbb{E}[f(\tau)] = \mathbb{E}[f(\tau) \nabla_\theta \log P(\tau|\theta)]$.
+
+\textbf{Step 3: Compute the trajectory probability gradient}
+
+The probability of a trajectory under policy $\pi_\theta$ is:
 \begin{align}
-\nabla_\theta P(\tau|\theta) &= \nabla_\theta \left[ \prod_{t=0}^{\infty} \pi_\theta(a_t|s_t) P(s_{t+1}|s_t, a_t) \right] \\
-&= P(\tau|\theta) \nabla_\theta \left[ \sum_{t=0}^{\infty} \log \pi_\theta(a_t|s_t) \right] \\
-&= P(\tau|\theta) \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t)
+P(\tau|\theta) = \rho_0(s_0) \prod_{t=0}^{\infty} \pi_\theta(a_t|s_t) P(s_{t+1}|s_t, a_t)
 \end{align}
 
-\textbf{Step 3: Combine and rearrange}
+Taking the logarithm:
+\begin{align}
+\log P(\tau|\theta) = \log \rho_0(s_0) + \sum_{t=0}^{\infty} \log \pi_\theta(a_t|s_t) + \sum_{t=0}^{\infty} \log P(s_{t+1}|s_t, a_t)
+\end{align}
+
+Taking the gradient (only the policy terms depend on $\theta$):
+\begin{align}
+\nabla_\theta \log P(\tau|\theta) = \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t)
+\end{align}
+
+\textbf{Step 4: Substitute and rearrange}
 
 Substituting back:
 \begin{align}
-\nabla_\theta J(\theta) &= \sum_{\tau} P(\tau|\theta) \left[ \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \right] \left[ \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t) \right] \\
-&= \mathbb{E}_{\tau \sim \pi_\theta} \left[ \left( \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \right) \left( \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t) \right) \right]
+\nabla_\theta J(\theta) &= \mathbb{E}_{s_0 \sim \rho_0} \mathbb{E}_{\tau \sim \pi_\theta} \left[ \left( \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \right) \left( \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t) \right) \Big| s_0 \right] \\
+&= \mathbb{E}_{s_0 \sim \rho_0} \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t) \left( \sum_{k=t}^{\infty} \gamma^k r(s_k, a_k) \right) \Big| s_0 \right]
 \end{align}
 
-\textbf{Step 4: Use the log-derivative trick}
+\textbf{Step 5: Recognize the Q-function}
 
-We can rewrite this as:
+The inner sum $\sum_{k=t}^{\infty} \gamma^k r(s_k, a_k)$ is exactly $\gamma^t Q^{\pi_\theta}(s_t, a_t)$:
 \begin{align}
-\nabla_\theta J(\theta) &= \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t) \left( \sum_{k=t}^{\infty} \gamma^k r(s_k, a_k) \right) \right] \\
-&= \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t) \gamma^t \left( \sum_{k=0}^{\infty} \gamma^k r(s_{t+k}, a_{t+k}) \right) \right] \\
-&= \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t) \gamma^t Q^{\pi_\theta}(s_t, a_t) \right]
+\nabla_\theta J(\theta) &= \mathbb{E}_{s_0 \sim \rho_0} \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t) \gamma^t Q^{\pi_\theta}(s_t, a_t) \Big| s_0 \right]
 \end{align}
 
-\textbf{Step 5: Convert to state-action expectation}
+\textbf{Step 6: Convert to state-action expectation}
 
 \begin{align}
-\nabla_\theta J(\theta) &= \sum_{t=0}^{\infty} \gamma^t \mathbb{E}_{s_t \sim d^{\pi_\theta}_{s_0,t}} \mathbb{E}_{a_t \sim \pi_\theta(.|s_t)} \left[ \nabla_\theta \log \pi_\theta(a_t|s_t) Q^{\pi_\theta}(s_t, a_t) \right]
+\nabla_\theta J(\theta) &= \mathbb{E}_{s_0 \sim \rho_0} \sum_{t=0}^{\infty} \gamma^t \mathbb{E}_{s_t \sim d^{\pi_\theta}_{s_0,t}} \mathbb{E}_{a_t \sim \pi_\theta(.|s_t)} \left[ \nabla_\theta \log \pi_\theta(a_t|s_t) Q^{\pi_\theta}(s_t, a_t) \right]
 \end{align}
 
 where $d^{\pi_\theta}_{s_0,t}(s) = P(s_t = s | s_0, \pi_\theta)$ is the state visitation probability at time $t$.
 
-\textbf{Step 6: Use discounted state visitation distribution}
+\textbf{Step 7: Use discounted state visitation distribution}
 
 The discounted state visitation distribution is:
 \begin{align}
@@ -107,22 +242,43 @@ Therefore:
 \sum_{t=0}^{\infty} \gamma^t d^{\pi_\theta}_{s_0,t}(s) = \frac{d^{\pi_\theta}_{s_0}(s)}{1-\gamma}
 \end{align}
 
-\textbf{Step 7: Final result}
+\textbf{Step 8: Final result}
 
 Substituting:
 \begin{align}
-\nabla_\theta J(\theta) &= \sum_{t=0}^{\infty} \gamma^t \sum_s d^{\pi_\theta}_{s_0,t}(s) \sum_a \pi_\theta(a|s) \nabla_\theta \log \pi_\theta(a|s) Q^{\pi_\theta}(s, a) \\
-&= \sum_s \left( \sum_{t=0}^{\infty} \gamma^t d^{\pi_\theta}_{s_0,t}(s) \right) \sum_a \pi_\theta(a|s) \nabla_\theta \log \pi_\theta(a|s) Q^{\pi_\theta}(s, a) \\
-&= \sum_s \frac{d^{\pi_\theta}_{s_0}(s)}{1-\gamma} \sum_a \pi_\theta(a|s) \nabla_\theta \log \pi_\theta(a|s) Q^{\pi_\theta}(s, a) \\
-&= \frac{1}{1-\gamma} \mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}} \mathbb{E}_{a \sim \pi_\theta(.|s)} \left[ \nabla_\theta \log \pi_\theta(a|s) Q^{\pi_\theta}(s, a) \right]
+\nabla_\theta J(\theta) &= \mathbb{E}_{s_0 \sim \rho_0} \sum_{t=0}^{\infty} \gamma^t \sum_s d^{\pi_\theta}_{s_0,t}(s) \sum_a \pi_\theta(a|s) \nabla_\theta \log \pi_\theta(a|s) Q^{\pi_\theta}(s, a) \\
+&= \mathbb{E}_{s_0 \sim \rho_0} \sum_s \left( \sum_{t=0}^{\infty} \gamma^t d^{\pi_\theta}_{s_0,t}(s) \right) \sum_a \pi_\theta(a|s) \nabla_\theta \log \pi_\theta(a|s) Q^{\pi_\theta}(s, a) \\
+&= \mathbb{E}_{s_0 \sim \rho_0} \sum_s \frac{d^{\pi_\theta}_{s_0}(s)}{1-\gamma} \sum_a \pi_\theta(a|s) \nabla_\theta \log \pi_\theta(a|s) Q^{\pi_\theta}(s, a) \\
+&= \frac{1}{1-\gamma} \mathbb{E}_{s_0 \sim \rho_0} \mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}} \mathbb{E}_{a \sim \pi_\theta(.|s)} \left[ \nabla_\theta \log \pi_\theta(a|s) Q^{\pi_\theta}(s, a) \right]
 \end{align}
 
 This completes the proof of the Policy Gradient Theorem. $\square$
 
+\textbf{Key Insights from the Proof:}
+\begin{itemize}
+    \item The log-derivative trick allows us to express gradients of expectations in terms of the score function
+    \item The Q-function naturally appears when we consider the future rewards from each state-action pair
+    \item The state visitation distribution captures how often each state is visited under the current policy
+    \item The factor $\frac{1}{1-\gamma}$ accounts for the infinite horizon and discounting
+\end{itemize}
+
 
 \subsection{Compatible Function Approximation Theorem}
 
-Now, consider the case in which $Q^{\pi_\theta}$ is approximated by a learned function approximator. If the approximation is sufficiently good, we might hope to use it in place of $Q^{\pi_\theta}$ in equation \ref{policy_grad}. If we use the function approximator $Q_{\phi}(s, a)$, the convergence of our method is not necessarily maintained due to the fact that our gradient will not be exact anymore. The following theorem provides sufficient conditions for our function approximator so that our gradient using the approximator remains exact.
+\subsubsection{Motivation and Problem Statement}
+
+In practice, we rarely have access to the exact Q-function $Q^{\pi_\theta}(s,a)$. Instead, we typically use function approximators (e.g., neural networks) to estimate the Q-function. Let $Q_{\phi}(s, a)$ denote such an approximator with parameters $\phi$.
+
+\textbf{Key Question:} When can we safely replace $Q^{\pi_\theta}(s,a)$ with $Q_{\phi}(s,a)$ in the Policy Gradient Theorem without affecting convergence?
+
+\textbf{Naive Approach Problems:}
+\begin{itemize}
+    \item \textbf{Bias}: If $Q_{\phi}(s,a) \neq Q^{\pi_\theta}(s,a)$, the gradient estimate becomes biased
+    \item \textbf{Instability}: Biased gradients can lead to unstable learning or convergence to suboptimal policies
+    \item \textbf{Non-convergence}: The policy may not converge to a local optimum of the true objective
+\end{itemize}
+
+\textbf{Solution:} The Compatible Function Approximation Theorem provides sufficient conditions under which using $Q_{\phi}(s,a)$ instead of $Q^{\pi_\theta}(s,a)$ preserves the exact gradient.
 
 \begin{theorem}\label{thm:compatible_approximator}
     (Compatible Function Approximation). If the following two conditions are satisfied for any function approximator with parameter $\phi$:
@@ -142,16 +298,15 @@ Now, consider the case in which $Q^{\pi_\theta}$ is approximated by a learned fu
     \end{align*}
 \end{theorem}
 
-b) Prove theorem \ref{thm:compatible_approximator}.
+\subsubsection{Proof of the Compatible Function Approximation Theorem}
 
-\textbf{Solution:}
-
-We need to prove that under the two conditions stated in the theorem, the policy gradient using the function approximator $Q_\phi(s,a)$ is exact.
+\textbf{Proof Strategy:}
+We need to prove that under the two conditions stated in the theorem, the policy gradient using the function approximator $Q_\phi(s,a)$ is exact. The key insight is that the compatibility condition ensures the approximation error is orthogonal to the gradient direction.
 
 \textbf{Given conditions:}
 \begin{enumerate}
-    \item $\nabla_{\phi} Q_\phi(s, a) = \nabla_\theta \log \pi_\theta (a|s)$ (compatibility condition)
-    \item $\phi$ minimizes $\epsilon = \mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [(Q^{\pi_\theta} (s, a) - Q_\phi(s, a))^2]$
+    \item \textbf{Compatibility}: $\nabla_{\phi} Q_\phi(s, a) = \nabla_\theta \log \pi_\theta (a|s)$ 
+    \item \textbf{MSE Minimization}: $\phi$ minimizes $\epsilon = \mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [(Q^{\pi_\theta} (s, a) - Q_\phi(s, a))^2]$
 \end{enumerate}
 
 \textbf{Goal:} Show that
@@ -161,14 +316,14 @@ We need to prove that under the two conditions stated in the theorem, the policy
 
 \textbf{Proof:}
 
-From the Policy Gradient Theorem (part a), we have:
+From the Policy Gradient Theorem, we have:
 \begin{align}
 \nabla_\theta J(\theta) = \frac{1}{1-\gamma}\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\theta \log \pi_\theta (a|s) Q^{\pi_\theta} (s, a)]
 \end{align}
 
 We want to show that we can replace $Q^{\pi_\theta}(s,a)$ with $Q_\phi(s,a)$ without changing the gradient.
 
-\textbf{Step 1: Express the difference}
+\textbf{Step 1: Express the approximation error}
 
 Let $\Delta(s,a) = Q^{\pi_\theta}(s,a) - Q_\phi(s,a)$ be the approximation error. Then:
 \begin{align}
@@ -184,16 +339,14 @@ We need to show that:
 \mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\theta \log \pi_\theta (a|s) \Delta(s,a)] = 0
 \end{align}
 
-\textbf{Step 3: Use the compatibility condition}
-
-From condition 1, we have $\nabla_{\phi} Q_\phi(s, a) = \nabla_\theta \log \pi_\theta (a|s)$.
+\textbf{Step 3: Use the MSE minimization condition}
 
 Since $\phi$ minimizes the MSE (condition 2), we have:
 \begin{align}
 \nabla_\phi \epsilon = 0
 \end{align}
 
-Computing the gradient:
+Computing the gradient of the MSE:
 \begin{align}
 \nabla_\phi \epsilon &= \nabla_\phi \mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [(Q^{\pi_\theta} (s, a) - Q_\phi(s, a))^2] \\
 &= \mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\nabla_\phi (Q^{\pi_\theta} (s, a) - Q_\phi(s, a))^2] \\
@@ -201,12 +354,16 @@ Computing the gradient:
 &= 2\mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\Delta(s,a) \nabla_\phi Q_\phi(s, a)]
 \end{align}
 
-Since $\nabla_\phi \epsilon = 0$ and $\nabla_\phi Q_\phi(s, a) = \nabla_\theta \log \pi_\theta (a|s)$ (compatibility condition), we have:
+\textbf{Step 4: Apply the compatibility condition}
+
+From condition 1, we have $\nabla_{\phi} Q_\phi(s, a) = \nabla_\theta \log \pi_\theta (a|s)$.
+
+Since $\nabla_\phi \epsilon = 0$, we have:
 \begin{align}
 \mathbb{E}_{s \sim d^{\pi_\theta}_{s_0}}\mathbb{E}_{a \sim \pi_\theta(.|s)} [\Delta(s,a) \nabla_\theta \log \pi_\theta (a|s)] = 0
 \end{align}
 
-\textbf{Step 4: Conclusion}
+\textbf{Step 5: Conclusion}
 
 Therefore, the error term in Step 1 is zero, and we have:
 \begin{align}
@@ -215,6 +372,26 @@ Therefore, the error term in Step 1 is zero, and we have:
 
 This proves that the policy gradient using the function approximator $Q_\phi(s,a)$ is exact under the stated conditions. $\square$
 
-\textbf{Interpretation:}
+\subsubsection{Interpretation and Practical Implications}
 
-The compatibility condition ensures that the critic's gradient direction matches the actor's score function direction. The MSE minimization condition ensures that the critic provides unbiased estimates. Together, these conditions guarantee that the approximate policy gradient equals the true policy gradient.
+\textbf{Key Insights:}
+\begin{itemize}
+    \item \textbf{Compatibility Condition}: The critic's gradient direction must match the actor's score function direction. This ensures that the approximation error is orthogonal to the gradient direction.
+    \item \textbf{MSE Minimization}: The critic must provide the best possible approximation to the true Q-function under the current policy.
+    \item \textbf{Exact Gradient}: Together, these conditions guarantee that the approximate policy gradient equals the true policy gradient.
+\end{itemize}
+
+\textbf{Practical Considerations:}
+\begin{itemize}
+    \item \textbf{Linear Function Approximation}: The compatibility condition is naturally satisfied when using linear function approximation with features $\nabla_\theta \log \pi_\theta(a|s)$.
+    \item \textbf{Neural Networks}: For neural networks, the compatibility condition is rarely satisfied exactly, but the theorem provides theoretical justification for actor-critic methods.
+    \item \textbf{Variance Reduction}: Even when not exactly compatible, using a good Q-function approximation can significantly reduce the variance of gradient estimates.
+\end{itemize}
+
+\textbf{Connection to Actor-Critic Methods:}
+This theorem provides the theoretical foundation for actor-critic methods, where:
+\begin{itemize}
+    \item The \textbf{actor} (policy) is updated using the policy gradient
+    \item The \textbf{critic} (Q-function approximator) is updated to minimize the MSE
+    \item The compatibility condition guides the choice of critic architecture
+\end{itemize}

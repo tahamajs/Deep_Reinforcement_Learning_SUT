@@ -188,14 +188,36 @@ Z(s,a) \text{ represents the full distribution of returns}
 Q(s,a) = \mathbb{E}[Z(s,a)]
 \end{equation}
 
+\textbf{Theoretical Foundation:}
+
+The distributional Bellman equation extends the standard Bellman equation to operate on distributions:
+
+\begin{equation}
+\mathcal{T}^\pi Z(s,a) = R(s,a) + \gamma Z(s', \pi(s'))
+\end{equation}
+
+where $\mathcal{T}^\pi$ is the distributional Bellman operator that maps return distributions to return distributions.
+
 \textbf{Key Benefits:}
+
 \begin{enumerate}
-\item \textbf{Richer Representation}: Captures uncertainty and risk in returns
-\item \textbf{Multi-Modal Returns}: Can represent multiple outcome scenarios
-\item \textbf{Improved Learning}: Provides more informative learning signal
-\item \textbf{Better Stability}: Reduces variance in value estimation
-\item \textbf{Risk-Sensitive Policies}: Enables risk-aware decision making
+\item \textbf{Richer Representation}: Captures uncertainty and risk in returns, providing more information than just the mean
+\item \textbf{Multi-Modal Returns}: Can represent multiple outcome scenarios, essential for complex environments
+\item \textbf{Improved Learning}: Provides more informative learning signal through distributional targets
+\item \textbf{Better Stability}: Reduces variance in value estimation by modeling full distribution
+\item \textbf{Risk-Sensitive Policies}: Enables risk-aware decision making through distributional metrics
+\item \textbf{Theoretical Guarantees}: Provides convergence guarantees under certain conditions
 \end{enumerate}
+
+\textbf{Mathematical Advantages:}
+
+The Wasserstein distance between distributions provides a natural metric for convergence:
+
+\begin{equation}
+W_p(Z_1, Z_2) = \left(\inf_{\gamma \in \Gamma(Z_1, Z_2)} \int |x-y|^p d\gamma(x,y)\right)^{1/p}
+\end{equation}
+
+This enables more robust learning compared to mean-squared error on expectations.
 
 \subsubsection{b)[7-points]} Consider two actions with the same expected value but different distributions:
 \begin{itemize}
@@ -206,12 +228,14 @@ Both have E[R] = 10, but how does distributional RL distinguish their risk profi
 
 \textbf{Answer:}
 
-Both actions have the same expected value $\mathbb{E}[R] = 10$, but distributional RL can distinguish their risk profiles:
+Both actions have the same expected value $\mathbb{E}[R] = 10$, but distributional RL can distinguish their risk profiles through higher-order moments and distributional properties:
 
 \textbf{Action A (Deterministic):}
 \begin{itemize}
 \item Distribution: $\delta_{10}$ (point mass at 10)
 \item Variance: $\text{Var}[R] = 0$
+\item Skewness: $\text{Skew}[R] = 0$ (symmetric)
+\item Kurtosis: $\text{Kurt}[R] = 0$ (no tail risk)
 \item Risk: No uncertainty, guaranteed outcome
 \end{itemize}
 
@@ -219,18 +243,51 @@ Both actions have the same expected value $\mathbb{E}[R] = 10$, but distribution
 \begin{itemize}
 \item Distribution: $0.5 \cdot \delta_0 + 0.5 \cdot \delta_{20}$
 \item Variance: $\text{Var}[R] = 100$
+\item Skewness: $\text{Skew}[R] = 0$ (symmetric but bimodal)
+\item Kurtosis: $\text{Kurt}[R] = -2$ (platykurtic, no tail risk)
 \item Risk: High uncertainty, potential for both loss and gain
 \end{itemize}
 
+\textbf{Distributional Risk Metrics:}
+
+Distributional RL enables computation of sophisticated risk measures:
+
+\begin{equation}
+\text{CVaR}_\alpha(R) = \mathbb{E}[R | R \leq F_R^{-1}(\alpha)]
+\end{equation}
+
+\begin{equation}
+\text{VaR}_\alpha(R) = F_R^{-1}(\alpha)
+\end{equation}
+
+where $F_R^{-1}$ is the quantile function.
+
 \textbf{How Distributional RL Distinguishes:}
 \begin{enumerate}
-\item \textbf{Risk Assessment}: Action B has higher variance, indicating higher risk
-\item \textbf{Tail Behavior}: Action B can produce extreme outcomes (0 or 20)
-\item \textbf{Policy Selection}: Risk-averse agents might prefer Action A, risk-seeking agents might prefer Action B
-\item \textbf{Conditional Value at Risk (CVaR)}: Can compute risk measures like CVaR$_{0.1}$ to assess worst-case scenarios
+\item \textbf{Risk Assessment}: Action B has higher variance ($\sigma^2 = 100$ vs $\sigma^2 = 0$), indicating higher risk
+\item \textbf{Tail Behavior}: Action B can produce extreme outcomes (0 or 20) with equal probability
+\item \textbf{Policy Selection}: 
+   \begin{itemize}
+   \item Risk-averse agents: $\text{CVaR}_{0.1}(A) = 10 > \text{CVaR}_{0.1}(B) = 0$ → prefer Action A
+   \item Risk-seeking agents: $\text{CVaR}_{0.9}(A) = 10 < \text{CVaR}_{0.9}(B) = 20$ → prefer Action B
+   \end{itemize}
+\item \textbf{Distributional Distance}: Wasserstein distance $W_1(A, B) = 10$ quantifies distributional difference
+\item \textbf{Entropy}: $H(A) = 0 < H(B) = \log(2)$ measures uncertainty
 \end{enumerate}
 
-This distinction is impossible with traditional value-based methods that only consider expected values.
+\textbf{Theoretical Justification:}
+
+The distributional Bellman operator preserves distributional properties:
+
+\begin{equation}
+\mathcal{T}^\pi Z_A(s,a) = \delta_{10} \quad \text{(deterministic)}
+\end{equation}
+
+\begin{equation}
+\mathcal{T}^\pi Z_B(s,a) = 0.5 \cdot \delta_0 + 0.5 \cdot \delta_{20} \quad \text{(stochastic)}
+\end{equation}
+
+This distinction is impossible with traditional value-based methods that only consider expected values, as both actions have identical Q-values.
 
 \noindent\rule{\textwidth}{0.2pt}
 
@@ -239,30 +296,46 @@ This distinction is impossible with traditional value-based methods that only co
 
 \textbf{Answer:}
 
-C51 (Categorical 51) discretizes the return distribution into a fixed number of atoms (typically 51).
+C51 (Categorical 51) discretizes the return distribution into a fixed number of atoms (typically 51) and represents distributions as categorical distributions over these atoms.
 
-\textbf{Architecture:}
+\textbf{Theoretical Foundation:}
+
+C51 approximates the return distribution $Z(s,a)$ as a categorical distribution:
+
+\begin{equation}
+Z(s,a) \approx \sum_{i=1}^{N} p_i(s,a) \delta_{z_i}
+\end{equation}
+
+where $z_i = V_{\text{MIN}} + i \cdot \Delta z$ are the support atoms, $\Delta z = \frac{V_{\text{MAX}} - V_{\text{MIN}}}{N-1}$, and $p_i(s,a)$ are the learned probabilities.
+
+\textbf{Architecture Design:}
 \begin{itemize}
-\item Network outputs probabilities for each atom per action
+\item Network outputs logits for each atom per action
 \item Output shape: [batch\_size, num\_actions, num\_atoms]
-\item Support: V\_MIN to V\_MAX discretized into num\_atoms bins
+\item Support: $[V_{\text{MIN}}, V_{\text{MAX}}]$ discretized into $N$ bins
+\item Activation: Softmax over atoms to ensure probability distribution
 \end{itemize}
 
-\textbf{Distribution Representation:}
-\begin{equation}
-Z(s,a) \approx \sum_i p_i(s,a) \delta_{z_i} \text{ where } z_i \in [V_{\text{MIN}}, V_{\text{MAX}}]
-\end{equation}
-
 \textbf{Distributional Bellman Operator:}
+
+The distributional Bellman operator $\mathcal{T}^\pi$ maps distributions to distributions:
+
 \begin{equation}
-T^\pi Z(s,a) = R(s,a) + \gamma Z(s', \pi(s'))
+\mathcal{T}^\pi Z(s,a) = R(s,a) + \gamma Z(s', \pi(s'))
 \end{equation}
 
-\textbf{Projection Algorithm:}
-The key innovation is projecting the Bellman-updated distribution back onto the fixed support:
+For categorical distributions, this becomes:
+
+\begin{equation}
+\mathcal{T}^\pi \sum_i p_i \delta_{z_i} = \sum_i p_i \delta_{r + \gamma z_i}
+\end{equation}
+
+\textbf{Projection Algorithm (Key Innovation):}
+
+The critical challenge is that $r + \gamma z_i$ may not align with support atoms. C51 projects these onto the fixed support:
 
 \begin{enumerate}
-\item \textbf{Compute Target Distribution:}
+\item \textbf{Compute Target Locations:}
 \begin{equation}
 T_{z_j} = r + \gamma \cdot z_j
 \end{equation}
@@ -271,47 +344,118 @@ T_{z_j} = r + \gamma \cdot z_j
 For each atom $z_j$:
 \begin{itemize}
 \item Compute projected location: $b_j = \frac{T_{z_j} - V_{\text{MIN}}}{\Delta z}$
-\item Distribute probability to neighboring atoms
+\item Lower index: $l_j = \lfloor b_j \rfloor$
+\item Upper index: $u_j = \lceil b_j \rceil$
+\item Distribute probability using linear interpolation:
 \end{itemize}
+
+\begin{equation}
+p_{\text{proj}}[l_j] \leftarrow p_{\text{proj}}[l_j] + p_j \cdot (u_j - b_j)
+\end{equation}
+
+\begin{equation}
+p_{\text{proj}}[u_j] \leftarrow p_{\text{proj}}[u_j] + p_j \cdot (b_j - l_j)
+\end{equation}
 
 \item \textbf{Loss Function:}
 \begin{equation}
-L = -\sum_i (p_{\text{target}})_i \log((p_{\text{current}})_i)
+L = -\sum_i (p_{\text{target}})_i \log((p_{\text{current}})_i + \epsilon)
 \end{equation}
-Cross-entropy between target and current distributions
+Cross-entropy between target and current distributions with numerical stability term $\epsilon$.
 \end{enumerate}
 
-\textbf{Implementation Details:}
+\textbf{Complete Implementation:}
 \begin{verbatim}
 class C51Network(nn.Module):
-    def __init__(self, state_dim, action_dim, num_atoms=51):
+    def __init__(self, state_dim, action_dim, num_atoms=51, v_min=-10, v_max=10):
         super().__init__()
         self.num_atoms = num_atoms
-        self.v_min = -10
-        self.v_max = 10
-        self.delta_z = (self.v_max - self.v_min) / (num_atoms - 1)
-        self.support = torch.linspace(self.v_min, self.v_max, num_atoms)
+        self.v_min = v_min
+        self.v_max = v_max
+        self.delta_z = (v_max - v_min) / (num_atoms - 1)
+        self.register_buffer('support', torch.linspace(v_min, v_max, num_atoms))
 
-        self.network = nn.Sequential(
+        # Feature extraction layers
+        self.features = nn.Sequential(
             nn.Linear(state_dim, 128),
             nn.ReLU(),
             nn.Linear(128, 256),
-            nn.ReLU(),
-            nn.Linear(256, action_dim * num_atoms)
+            nn.ReLU()
         )
+        
+        # Distributional head
+        self.dist_head = nn.Linear(256, action_dim * num_atoms)
 
     def forward(self, state):
-        logits = self.network(state)
+        features = self.features(state)
+        logits = self.dist_head(features)
         logits = logits.view(-1, self.action_dim, self.num_atoms)
         probs = F.softmax(logits, dim=-1)
         return probs
+
+    def get_q_values(self, state):
+        """Extract Q-values from distribution"""
+        probs = self.forward(state)
+        q_values = (probs * self.support).sum(dim=-1)
+        return q_values
+
+def project_distribution(next_dist, rewards, dones, gamma, support):
+    """
+    Project Bellman-updated distribution onto fixed support
+    """
+    batch_size = rewards.shape[0]
+    num_atoms = support.shape[0]
+    v_min, v_max = support[0], support[-1]
+    delta_z = (v_max - v_min) / (num_atoms - 1)
+    
+    # Compute projected values: r + γ * support
+    proj_support = rewards.unsqueeze(-1) + \
+                   gamma * (1 - dones.unsqueeze(-1)) * support
+    
+    # Clamp to valid range
+    proj_support = proj_support.clamp(v_min, v_max)
+    
+    # Map to categorical distribution
+    b = (proj_support - v_min) / delta_z
+    l = b.floor().long()
+    u = b.ceil().long()
+    
+    # Ensure indices are within bounds
+    l = l.clamp(0, num_atoms - 1)
+    u = u.clamp(0, num_atoms - 1)
+    
+    # Distribute probability using linear interpolation
+    projected_dist = torch.zeros_like(next_dist)
+    
+    for i in range(num_atoms):
+        # Handle exact matches
+        mask_lu = (l[:, i] == u[:, i])
+        projected_dist[mask_lu, l[mask_lu, i]] += next_dist[mask_lu, i]
+        
+        # Handle interpolation
+        mask_diff = (l[:, i] != u[:, i])
+        projected_dist[mask_diff, l[mask_diff, i]] += \
+            next_dist[mask_diff, i] * (u[mask_diff, i] - b[mask_diff, i])
+        projected_dist[mask_diff, u[mask_diff, i]] += \
+            next_dist[mask_diff, i] * (b[mask_diff, i] - l[mask_diff, i])
+    
+    return projected_dist
 \end{verbatim}
 
-\textbf{Advantages:}
+\textbf{Theoretical Advantages:}
 \begin{itemize}
-\item More stable learning than DQN
-\item Better performance on Atari games
-\item Provides uncertainty estimates
+\item \textbf{Convergence Guarantees}: Under certain conditions, C51 converges to the true distributional Bellman operator
+\item \textbf{Stability}: Fixed support prevents distribution collapse
+\item \textbf{Computational Efficiency}: Discrete distributions enable efficient updates
+\item \textbf{Risk Sensitivity}: Enables computation of risk measures like CVaR
+\end{itemize}
+
+\textbf{Empirical Results:}
+\begin{itemize}
+\item 25\% improvement over DQN on Atari games
+\item More stable learning curves
+\item Better handling of multi-modal returns
+\item Provides uncertainty estimates for exploration
 \end{itemize}
 
 \subsubsection{b)[7-points]} Implement the projection algorithm for C51. Show how to project the Bellman-updated distribution back onto the fixed support.
@@ -519,23 +663,82 @@ L(\theta) = \mathbb{E}_{(s,a,r,s')} \left[ \sum_{i=1}^N \rho_{\tau_i}(r + \gamma
 
 \textbf{Answer:}
 
-Rainbow DQN integrates six orthogonal improvements to DQN:
+Rainbow DQN represents a systematic integration of six orthogonal improvements to DQN, each addressing specific limitations of the base algorithm. The integration follows a principled approach where components complement rather than interfere with each other.
+
+\textbf{Component Analysis:}
 
 \begin{enumerate}
-\item \textbf{Double Q-Learning}: Reduces overestimation bias by decoupling action selection from evaluation
-\item \textbf{Prioritized Experience Replay}: Samples important transitions more frequently based on TD error
-\item \textbf{Dueling Networks}: Separates value and advantage streams for better generalization
-\item \textbf{Multi-Step Returns}: Uses n-step bootstrapping for faster reward propagation
-\item \textbf{Distributional RL}: Models full return distributions instead of just expectations
-\item \textbf{Noisy Networks}: Adds parametric noise to network weights for state-dependent exploration
+\item \textbf{Double Q-Learning}: 
+\begin{itemize}
+\item \textbf{Problem}: DQN suffers from overestimation bias due to the max operator
+\item \textbf{Solution}: Decouple action selection from evaluation using two networks
+\item \textbf{Mathematical Foundation}: $\mathbb{E}[\max(Q_1, Q_2)] \geq \max(\mathbb{E}[Q_1], \mathbb{E}[Q_2])$
+\item \textbf{Benefit}: Reduces overestimation bias by 25-30\%
+\end{itemize}
+
+\item \textbf{Prioritized Experience Replay (PER)}:
+\begin{itemize}
+\item \textbf{Problem}: Uniform sampling treats all transitions equally
+\item \textbf{Solution}: Sample based on TD error magnitude: $p_i = |\delta_i| + \epsilon$
+\item \textbf{Sampling Probability}: $P(i) = \frac{p_i^\alpha}{\sum_k p_k^\alpha}$
+\item \textbf{Benefit}: 2-3x sample efficiency improvement
+\end{itemize}
+
+\item \textbf{Dueling Networks}:
+\begin{itemize}
+\item \textbf{Problem}: Q-values conflate state value and action advantage
+\item \textbf{Solution}: Separate streams: $Q(s,a) = V(s) + A(s,a) - \bar{A}(s)$
+\item \textbf{Architecture}: Shared features → Value stream + Advantage stream
+\item \textbf{Benefit}: Better generalization, especially with redundant actions
+\end{itemize}
+
+\item \textbf{Multi-Step Returns}:
+\begin{itemize}
+\item \textbf{Problem}: Single-step TD learning is slow
+\item \textbf{Solution}: N-step bootstrapping: $R_t^{(n)} = \sum_{k=0}^{n-1} \gamma^k r_{t+k} + \gamma^n Q(s_{t+n}, a_{t+n})$
+\item \textbf{Trade-off}: Bias-variance trade-off controlled by $n$
+\item \textbf{Benefit}: Faster reward propagation, typically $n=3$
+\end{itemize}
+
+\item \textbf{Distributional RL (C51)}:
+\begin{itemize}
+\item \textbf{Problem}: Modeling only expectations loses distributional information
+\item \textbf{Solution}: Model full return distributions using categorical distributions
+\item \textbf{Architecture}: Network outputs probability distributions over atoms
+\item \textbf{Benefit}: Richer representation, better stability, risk-sensitive policies
+\end{itemize}
+
+\item \textbf{Noisy Networks}:
+\begin{itemize}
+\item \textbf{Problem}: $\epsilon$-greedy exploration is state-independent
+\item \textbf{Solution}: Add parametric noise to network weights: $y = (W + \sigma W \odot \epsilon)x + b$
+\item \textbf{Noise Generation}: Factorized Gaussian noise for efficiency
+\item \textbf{Benefit}: State-dependent exploration, no hyperparameter tuning
+\end{itemize}
 \end{enumerate}
 
-\textbf{Synergies:}
+\textbf{Integration Synergies:}
+
+The components interact synergistically rather than additively:
+
 \begin{itemize}
-\item PER + n-step: Faster learning from important sequences
-\item Dueling + Distributional: Better value decomposition
-\item Noisy Nets + PER: Exploration prioritizes promising regions
-\item Double Q + Distributional: Reduces bias in distributional targets
+\item \textbf{PER + Multi-Step}: Important sequences get higher priority, accelerating learning
+\item \textbf{Dueling + Distributional}: Better value decomposition with uncertainty quantification
+\item \textbf{Noisy Nets + PER}: Exploration focuses on promising regions identified by PER
+\item \textbf{Double Q + Distributional}: Reduces bias in distributional targets
+\item \textbf{All Components}: Creates a robust, sample-efficient algorithm
+\end{itemize}
+
+\textbf{Theoretical Justification:}
+
+Each component addresses a specific theoretical limitation:
+\begin{itemize}
+\item Double Q-Learning: Addresses overestimation bias in function approximation
+\item PER: Optimizes sample efficiency through importance sampling
+\item Dueling: Improves generalization through architectural inductive bias
+\item Multi-Step: Reduces bias in temporal difference learning
+\item Distributional: Captures full return distribution information
+\item Noisy Nets: Enables principled exploration in parameter space
 \end{itemize}
 
 \subsubsection{b)[8-points]} Explain how Double Q-Learning reduces overestimation bias in DQN.
@@ -1629,53 +1832,57 @@ TD3_CONFIG = {
 
 \textbf{Answer:}
 
+\textbf{Theoretical Foundation:}
+
+Traditional policy gradient methods suffer from fundamental instability issues due to the non-convex nature of policy optimization. The trust region concept provides a principled solution through constrained optimization.
+
 \textbf{Core Motivation:}
 
-Traditional policy gradient methods can take overly large steps:
-
-\begin{verbatim}
-# Standard policy gradient
-θ_new = θ_old + α * ∇_θ J(θ)
-
-# Problem: Large α can cause:
-# 1. Policy collapse (π becomes deterministic in wrong way)
-# 2. Performance drops (leave region where gradient was valid)
-# 3. Divergence (never recover from bad update)
-\end{verbatim}
-
-\textbf{Trust Region Idea:}
-
-Only update policy within a region where we "trust" our estimates.
+Standard policy gradient updates can be catastrophic:
 
 \begin{equation}
-\text{Trust region: } \{\theta : \text{KL}(\pi_{\theta_{\text{old}}} \| \pi_\theta) \leq \delta\}
+\theta_{\text{new}} = \theta_{\text{old}} + \alpha \nabla_\theta J(\theta)
 \end{equation}
 
-\textbf{Mathematical Formulation:}
+\textbf{Catastrophic Failure Modes:}
+\begin{enumerate}
+\item \textbf{Policy Collapse}: $\pi_\theta$ becomes deterministic in wrong direction
+\item \textbf{Performance Collapse}: Leave region where gradient approximation is valid
+\item \textbf{Non-recoverable Divergence}: Policy never recovers from bad update
+\end{enumerate}
+
+\textbf{Trust Region Formulation:}
+
+The trust region constrains policy updates to a region where we trust our gradient estimates:
+
+\begin{equation}
+\mathcal{T}_\delta = \{\theta : \text{KL}(\pi_{\theta_{\text{old}}} \| \pi_\theta) \leq \delta\}
+\end{equation}
+
+\textbf{Constrained Optimization Problem:}
 
 \begin{align}
-\maximize_\theta \quad & L(\theta) = \mathbb{E}_{\pi_{\theta_{\text{old}}}} \left[\frac{\pi_\theta(a|s)}{\pi_{\theta_{\text{old}}}(a|s)} \cdot A^{\pi_{\theta_{\text{old}}}}(s,a)\right] \\
+\maximize_\theta \quad & L(\theta) = \mathbb{E}_{s \sim \rho_{\theta_{\text{old}}}, a \sim \pi_{\theta_{\text{old}}}} \left[\frac{\pi_\theta(a|s)}{\pi_{\theta_{\text{old}}}(a|s)} \cdot A^{\pi_{\theta_{\text{old}}}}(s,a)\right] \\
 \text{subject to:} \quad & \text{KL}(\pi_{\theta_{\text{old}}} \| \pi_\theta) \leq \delta
 \end{align}
 
 \textbf{Why KL Divergence?}
 
-KL divergence measures how much policies differ:
+KL divergence provides a natural distance metric in policy space:
 
 \begin{equation}
-\text{KL}(\pi_{\text{old}} \| \pi_{\text{new}}) = \sum_a \pi_{\text{old}}(a|s) \log\frac{\pi_{\text{old}}(a|s)}{\pi_{\text{new}}(a|s)}
+\text{KL}(\pi_{\text{old}} \| \pi_{\text{new}}) = \mathbb{E}_{a \sim \pi_{\text{old}}} \left[\log\frac{\pi_{\text{old}}(a|s)}{\pi_{\text{new}}(a|s)}\right]
 \end{equation}
 
-\textbf{Properties:}
+\textbf{Key Properties:}
 \begin{itemize}
-\item KL ≥ 0, with KL = 0 iff π_old = π_new
-\item Not symmetric: KL(p||q) ≠ KL(q||p)
-\item Measures "information loss" from old to new
+\item \textbf{Non-negative}: $\text{KL}(\pi_{\text{old}} \| \pi_{\text{new}}) \geq 0$ with equality iff $\pi_{\text{old}} = \pi_{\text{new}}$
+\item \textbf{Asymmetric}: $\text{KL}(\pi_{\text{old}} \| \pi_{\text{new}}) \neq \text{KL}(\pi_{\text{new}} \| \pi_{\text{old}})$
+\item \textbf{Information-theoretic}: Measures "information loss" when approximating $\pi_{\text{old}}$ with $\pi_{\text{new}}$
+\item \textbf{Policy-space metric}: Relates parameter changes to distribution changes
 \end{itemize}
 
-\textbf{Theoretical Guarantee:}
-
-Kakade \& Langford (2002) showed:
+\textbf{Theoretical Guarantee (Kakade \& Langford, 2002):}
 
 \begin{equation}
 \eta(\pi_{\text{new}}) \geq \eta(\pi_{\text{old}}) + L(\pi_{\text{new}}) - C \cdot \text{KL}_{\max}(\pi_{\text{old}}, \pi_{\text{new}})
@@ -1683,49 +1890,71 @@ Kakade \& Langford (2002) showed:
 
 where:
 \begin{itemize}
-\item $\eta(\pi)$ is expected return
-\item $C = \frac{4\gamma\varepsilon^2}{(1-\gamma)^2}$, $\varepsilon = \max_s |A^\pi(s,a)|$
+\item $\eta(\pi) = \mathbb{E}_{\tau \sim \pi}[\sum_{t=0}^\infty \gamma^t r_t]$ is the expected return
+\item $C = \frac{4\gamma\varepsilon^2}{(1-\gamma)^2}$ with $\varepsilon = \max_{s,a} |A^\pi(s,a)|$
 \item $\text{KL}_{\max} = \max_s \text{KL}(\pi_{\text{old}}(\cdot|s) \| \pi_{\text{new}}(\cdot|s))$
 \end{itemize}
 
-This guarantees monotonic improvement!
+\textbf{Monotonic Improvement Guarantee:}
+
+If $\text{KL}_{\max}(\pi_{\text{old}}, \pi_{\text{new}}) \leq \delta$, then:
+
+\begin{equation}
+\eta(\pi_{\text{new}}) \geq \eta(\pi_{\text{old}}) + L(\pi_{\text{new}}) - C\delta
+\end{equation}
+
+This guarantees monotonic improvement when the surrogate objective $L(\pi_{\text{new}})$ is positive and the KL constraint is satisfied.
 
 \textbf{Practical Benefits:}
 
-\textbf{1. Stable Learning:}
+\textbf{1. Stability Guarantees:}
 \begin{itemize}
-\item Without trust region: Policy can collapse
-\item With trust region: Smooth, consistent improvement
+\item \textbf{No Policy Collapse}: KL constraint prevents extreme policy changes
+\item \textbf{Consistent Improvement}: Monotonic improvement under proper conditions
+\item \textbf{Robust Learning}: Works across diverse environments and architectures
 \end{itemize}
 
 \textbf{2. Hyperparameter Robustness:}
 \begin{itemize}
-\item Standard PG: Very sensitive to learning rate
-\item TRPO: δ has consistent effect across tasks
+\item \textbf{Consistent Effect}: $\delta$ has predictable effect across tasks
+\item \textbf{Reduced Sensitivity}: Less sensitive to learning rate choices
+\item \textbf{Default Values}: $\delta = 0.01$ works well across many domains
 \end{itemize}
 
 \textbf{3. Sample Efficiency:}
 \begin{itemize}
-\item Can take larger steps safely
-\item Fewer iterations needed
+\item \textbf{Larger Steps}: Can take larger steps safely within trust region
+\item \textbf{Fewer Iterations}: Reduces number of policy updates needed
+\item \textbf{Better Convergence}: Faster convergence to local optima
 \end{itemize}
 
-\textbf{Visualization:}
+\textbf{Geometric Interpretation:}
+
+The trust region creates a "safe zone" in policy space:
 
 \begin{center}
-\begin{tikzpicture}
-\draw[thick] (0,0) circle (2);
-\node at (0,0) {π_old};
-\node at (1,1) {π_1 (good)};
-\node at (-1,-1) {π_2 (boundary)};
-\node at (2.5,2.5) {π_3 (collapsed)};
-\draw[dashed] (0,0) -- (1,1);
-\draw[dashed] (0,0) -- (-1,-1);
-\draw[dashed] (0,0) -- (2.5,2.5);
-\node at (0,-2.5) {Trust region (circle of radius δ in KL)};
-\node at (1.2,1.2) {Safe update};
-\node at (-1.2,-1.2) {Maximal safe update};
-\node at (2.7,2.7) {Potentially catastrophic};
+\begin{tikzpicture}[scale=1.2]
+% Trust region circle
+\draw[thick, blue] (0,0) circle (2);
+\node[blue] at (0,0) {$\pi_{\text{old}}$};
+
+% Policy points
+\node[green] at (1,1) {$\pi_1$ (safe)};
+\node[orange] at (-1.5,-1.5) {$\pi_2$ (boundary)};
+\node[red] at (2.5,2.5) {$\pi_3$ (unsafe)};
+
+% Arrows
+\draw[dashed, green] (0,0) -- (1,1);
+\draw[dashed, orange] (0,0) -- (-1.5,-1.5);
+\draw[dashed, red] (0,0) -- (2.5,2.5);
+
+% Labels
+\node[green] at (1.2,1.2) {\small Safe update};
+\node[orange] at (-1.7,-1.7) {\small Maximal safe};
+\node[red] at (2.7,2.7) {\small Catastrophic};
+
+% Trust region label
+\node[blue] at (0,-2.8) {Trust region $\mathcal{T}_\delta$};
 \end{tikzpicture}
 \end{center}
 
