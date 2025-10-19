@@ -373,11 +373,25 @@ During this section, we use the following definitions and inequality for the tot
     \item The inequality $D_{TV}(p||q)^2 \le D_{KL}(p||q)$ allows us to relate these measures
 \end{itemize}
 
-We will prove theorem \ref{thm:policy-bound} step by step, and you are required to complete the proof as indicated below. To begin the proof, we denote trajectories by $\tau$ and define $\bar{A}(s)$ as follows:
+\subsubsection{Proof Setup and Key Definitions}
+
+We will prove theorem \ref{thm:policy-bound} step by step. To begin the proof, we denote trajectories by $\tau$ and define $\bar{A}(s)$ as follows:
 
 \begin{align*}
     \bar{A}(s) = \mathbb{E}_{a \sim \pi'(.|s)}[A_{\pi}(s, a)]
 \end{align*}
+
+\textbf{Interpretation:}
+$\bar{A}(s)$ represents the expected advantage of policy $\pi'$ in state $s$ under the advantage function of policy $\pi$. This is a key quantity that measures how much better (or worse) the new policy is expected to be in each state.
+
+\textbf{Key Properties:}
+\begin{itemize}
+    \item \textbf{Zero Expectation}: $\mathbb{E}_{a \sim \pi(.|s)}[\bar{A}(s)] = 0$ (since $\mathbb{E}_{a \sim \pi(.|s)}[A_{\pi}(s,a)] = 0$)
+    \item \textbf{Policy Comparison}: $\bar{A}(s) > 0$ means $\pi'$ is better than $\pi$ in state $s$
+    \item \textbf{Boundedness}: $|\bar{A}(s)| \leq \max_{a} |A_{\pi}(s,a)| \leq \epsilon$
+\end{itemize}
+
+\subsubsection{Rewriting the Objectives}
 
 Then we can rewrite equations \ref{true_objective} and \ref{approx_objective} as follows:
 
@@ -386,7 +400,11 @@ Then we can rewrite equations \ref{true_objective} and \ref{approx_objective} as
     L_{\pi}(\pi') = \eta(\pi) + \mathbb{E}_{\tau \sim \pi}[\sum_{t = 0}^{\infty}\gamma^t \bar{A}(s_t)] 
 \end{align}
 
-The only difference in these two equations is whether the states are sampled using $\pi$ or $\pi'$. To bound the difference between $\eta(\pi')$ and $L_{\pi}(\pi')$, we first need to introduce a measure of how much $\pi$ and $\pi'$ agree. Specifically, we'll couple the policies so that they define a joint distribution over pairs of actions. We use the following definition of $\alpha$-coupled policy pairs:
+\textbf{Key Insight:}
+The only difference in these two equations is whether the states are sampled using $\pi$ or $\pi'$. This difference captures the change in state visitation patterns due to the policy change.
+
+\textbf{Goal:}
+To bound the difference between $\eta(\pi')$ and $L_{\pi}(\pi')$, we need to understand how much the state visitation patterns change when we switch from $\pi$ to $\pi'$.
 
 \begin{definition}
     $(\pi, \pi')$ is an $\alpha$-coupled policy pair if it defines a joint distribution $(a, a')|s$ such that $P(a \neq a'|s) \le \alpha$ for all $s$. $\pi$ and $\pi'$ will denote the marginal distributions of $a$ and $a'$, respectively.
