@@ -446,7 +446,7 @@ This lemma bounds how much the expected advantage can differ from zero when usin
 \textbf{Proof Strategy:}
 We will use the coupling property to bound the difference between the expected advantages under the two policies.
 
-\textbf{Solution:}
+\textbf{Proof:}
 
 We need to prove that for $\alpha$-coupled policies, the expected advantage $\bar{A}(s) = \mathbb{E}_{a \sim \pi'(.|s)}[A_{\pi}(s, a)]$ is bounded.
 
@@ -503,16 +503,29 @@ Therefore:
 
 This completes the proof. $\square$
 
-d) Prove the following lemma:
+\textbf{Key Insights:}
+\begin{itemize}
+    \item The coupling property allows us to bound the difference between policies
+    \item The zero-expectation property of the advantage function is crucial
+    \item The bound is proportional to both the coupling parameter $\alpha$ and the maximum advantage magnitude
+\end{itemize}
 
-\begin{lemma}
+\subsubsection{Lemma 2: Bounding State Distribution Difference}
+
+\begin{lemma}[State Distribution Difference Bound]
     Let $(\pi, \pi')$ be an $\alpha$-coupled policy pair. Then:
     \begin{align*}
         |\mathbb{E}_{s_t \sim \pi'}[\bar{A}(s_t)] - \mathbb{E}_{s_t \sim \pi}[\bar{A}(s_t)]| \le 4\alpha(1-(1-\alpha)^t)\max_{s, a}|A_\pi(s, a)|
     \end{align*}
 \end{lemma}
 
-\textbf{Solution:}
+\textbf{Intuition:}
+This lemma bounds how much the expected advantage differs when we sample states from different policies. The bound depends on the coupling parameter $\alpha$ and the time step $t$.
+
+\textbf{Proof Strategy:}
+We will use the coupling property to bound the difference in state visitation probabilities and combine this with the bound from Lemma 1.
+
+\textbf{Proof:}
 
 We need to prove that the difference in expected advantage between trajectories sampled from $\pi'$ and $\pi$ is bounded.
 
@@ -523,9 +536,9 @@ We need to prove that the difference in expected advantage between trajectories 
 &= \left| \sum_{s} [P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)] \bar{A}(s) \right|
 \end{align}
 
-\textbf{Step 2: Use the bound from part (c)}
+\textbf{Step 2: Use the bound from Lemma 1}
 
-From part (c), we have $|\bar{A}(s)| \le 2\alpha \max_{s, a}|A_{\pi}(s,a)|$. Therefore:
+From Lemma 1, we have $|\bar{A}(s)| \le 2\alpha \max_{s, a}|A_{\pi}(s,a)|$. Therefore:
 \begin{align}
 \left| \sum_{s} [P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)] \bar{A}(s) \right| &\le \sum_{s} |P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)| \cdot |\bar{A}(s)| \\
 &\le 2\alpha \max_{s, a}|A_{\pi}(s,a)| \sum_{s} |P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)|
@@ -572,16 +585,29 @@ Substituting back:
 
 This completes the proof. $\square$
 
-e) Prove the following lemma:
+\textbf{Key Insights:}
+\begin{itemize}
+    \item The bound depends on both the coupling parameter $\alpha$ and the time step $t$
+    \item The factor $(1-(1-\alpha)^t)$ captures how the difference accumulates over time
+    \item For small $\alpha$, the bound is approximately $4\alpha t \max_{s, a}|A_\pi(s, a)|$
+\end{itemize}
 
-\begin{lemma}
+\subsubsection{Lemma 3: Bounding Objective Difference}
+
+\begin{lemma}[Objective Difference Bound]
     Let $(\pi, \pi')$ be an $\alpha$-coupled policy pair. Then:
     \begin{align*}
         |\eta(\pi')-L_{\pi}(\pi')| \le \frac{4\alpha^2\gamma\epsilon}{(1-\gamma)^2}
     \end{align*}
 \end{lemma}
 
-\textbf{Solution:}
+\textbf{Intuition:}
+This lemma bounds the difference between the true objective $\eta(\pi')$ and the local approximation $L_{\pi}(\pi')$. The bound is proportional to $\alpha^2$, which means the approximation becomes more accurate as the policies become more similar.
+
+\textbf{Proof Strategy:}
+We will use the bounds from the previous lemmas to bound the difference in state visitation distributions and combine this with the advantage bounds.
+
+\textbf{Proof:}
 
 We need to prove that the difference between the true objective $\eta(\pi')$ and the local approximation $L_{\pi}(\pi')$ is bounded for $\alpha$-coupled policies.
 
@@ -602,7 +628,7 @@ Since $\bar{A}(s) = \sum_{a}\pi'(a|s)A_{\pi}(s, a)$:
 
 \textbf{Step 3: Bound using previous lemmas}
 
-From part (c), we have $|\bar{A}(s)| \le 2\alpha \max_{s, a}|A_{\pi}(s,a)| = 2\alpha\epsilon$.
+From Lemma 1, we have $|\bar{A}(s)| \le 2\alpha \max_{s, a}|A_{\pi}(s,a)| = 2\alpha\epsilon$.
 
 Therefore:
 \begin{align}
@@ -624,9 +650,9 @@ Therefore:
 &= \sum_{t=0}^{\infty} \gamma^t \sum_{s} |P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)|
 \end{align}
 
-\textbf{Step 5: Use the bound from part (d)}
+\textbf{Step 5: Use the bound from Lemma 2}
 
-From part (d), we have:
+From Lemma 2, we have:
 \begin{align}
 \sum_{s} |P(s_t = s | s_0, \pi') - P(s_t = s | s_0, \pi)| \le 2(1-(1-\alpha)^t)
 \end{align}
@@ -655,9 +681,29 @@ Substituting back:
 
 This completes the proof. $\square$
 
-f) Prove theorem \ref{thm:policy-bound}. Hint: Use the fact that if we have two policies $\pi$ and $\pi'$ such that $D_{TV}^{\max} (\pi, \pi') \le \alpha$, then we can define an $\alpha$-coupled policy pair $(\pi, \pi')$ with appropriate marginals.\footnote{There is no need to prove this hint!}
+\textbf{Key Insights:}
+\begin{itemize}
+    \item The bound is proportional to $\alpha^2$, making it very tight for similar policies
+    \item The factor $\frac{\gamma}{(1-\gamma)^2}$ accounts for the infinite horizon and discounting
+    \item This bound justifies the use of the surrogate objective for policy optimization
+\end{itemize}
 
-\textbf{Solution:}
+\subsubsection{Proof of the Main Theorem}
+
+Now we can prove the main theorem \ref{thm:policy-bound}:
+
+\begin{theorem}[Policy Improvement Bound]\label{thm:policy-bound}
+    Let $\pi, \pi'$ be two stochastic policies. Then, the following bound holds:
+    \begin{align*}
+    &\eta(\pi') \ge L_{\pi}(\pi') - \frac{4\epsilon\gamma}{(1-\gamma)^2}D_{KL}^{\max}(\pi, \pi') \\
+    &\text{where } \epsilon = \max_{s, a} |A_{\pi}(s, a)|
+    \end{align*}
+\end{theorem}
+
+\textbf{Proof Strategy:}
+We will use the hint to construct an $\alpha$-coupled policy pair and then apply Lemma 3 to get the desired bound.
+
+\textbf{Proof:}
 
 We need to prove theorem \ref{thm:policy-bound}:
 \begin{align*}
@@ -671,9 +717,9 @@ From the hint, if $D_{TV}^{\max} (\pi, \pi') \le \alpha$, then we can define an 
 
 Let $\alpha = D_{TV}^{\max} (\pi, \pi')$. Then $(\pi, \pi')$ is an $\alpha$-coupled policy pair.
 
-\textbf{Step 2: Apply lemma from part (e)}
+\textbf{Step 2: Apply Lemma 3}
 
-From part (e), we have:
+From Lemma 3, we have:
 \begin{align}
 |\eta(\pi') - L_{\pi}(\pi')| \le \frac{4\alpha^2\gamma\epsilon}{(1-\gamma)^2}
 \end{align}
@@ -707,35 +753,76 @@ Substituting $\alpha^2 \le D_{KL}^{\max}(\pi, \pi')$ into the bound from Step 2:
 
 This completes the proof of theorem \ref{thm:policy-bound}. $\square$
 
-\textbf{Interpretation:}
-
-This theorem provides a lower bound on the true performance improvement $\eta(\pi')$ in terms of:
-1. The local approximation $L_{\pi}(\pi')$ (which is easier to optimize)
-2. A penalty term proportional to the KL divergence between policies
-
-The penalty term $\frac{4\epsilon\gamma}{(1-\gamma)^2}D_{KL}^{\max}(\pi, \pi')$ ensures that:
-- If the policies are very different ($D_{KL}^{\max}$ is large), the bound becomes loose
-- If the policies are similar ($D_{KL}^{\max}$ is small), the bound is tight
-- The bound becomes tighter as $\gamma \to 0$ (shorter horizon) or $\epsilon \to 0$ (smaller advantages)
-
-This justifies the TRPO algorithm's approach of constraining policy updates to maintain the trust region property.
+\textbf{Key Insights:}
+\begin{itemize}
+    \item The bound provides a lower bound on the true performance improvement
+    \item The penalty term ensures that large policy changes are penalized
+    \item This bound justifies the TRPO algorithm's approach of constraining policy updates
+\end{itemize}
 
 
-Note that the inequality in theorem \ref{thm:policy-bound} becomes an equality in $\pi' = \pi$. Thus, the following optimization problem guarantees a non-decreasing expected return $\eta$:
+\subsubsection{From Theory to Practice: The TRPO Algorithm}
+
+Note that the inequality in theorem \ref{thm:policy-bound} becomes an equality when $\pi' = \pi$. Thus, the following optimization problem guarantees a non-decreasing expected return $\eta$:
+
 \begin{align*}
     &\pi_{i + 1} = \argmax_{\pi} L_{\pi_i}(\pi) - CD_{KL}^{\max}(\pi_i, \pi)\\
     &\text{where } C = \frac{4\epsilon\gamma}{(1-\gamma)^2}\\
     &\text{and } L_{\pi_i}(\pi) = \eta(\pi_i) + \sum_{s}\rho_{\pi_i}(s)\sum_{a}\pi(a|s)A_{\pi_i}(s, a)
 \end{align*}
 
+\textbf{Key Properties:}
+\begin{itemize}
+    \item \textbf{Monotonic Improvement}: Each update guarantees $\eta(\pi_{i+1}) \geq \eta(\pi_i)$
+    \item \textbf{Penalty Coefficient}: $C = \frac{4\epsilon\gamma}{(1-\gamma)^2}$ provides the theoretical guarantee
+    \item \textbf{Surrogate Objective}: $L_{\pi_i}(\pi)$ is easier to optimize than the true objective
+\end{itemize}
+
+\subsubsection{Practical Considerations and Trust Region Approach}
+
 In practice, if we use the penalty coefficient $C$ as recommended by the theory above, the step sizes would be very small. One way to take larger steps in a robust way is to use a constraint on the KL divergence between the two policies as a trust region:
+
 \begin{align*}
     &\pi_{i + 1} = \argmax_{\pi} L_{\pi_i}(\pi)\\
     &\text{subject to } D_{KL}^{\max}(\pi_i, \pi) \le \delta
 \end{align*}
 
+\textbf{Advantages of the Trust Region Approach:}
+\begin{itemize}
+    \item \textbf{Larger Step Sizes}: Allows for more aggressive policy updates
+    \item \textbf{Theoretical Guarantees}: Maintains the monotonic improvement property
+    \item \textbf{Practical Implementation}: Easier to implement than penalty methods
+\end{itemize}
+
+\textbf{Challenges:}
+\begin{itemize}
+    \item \textbf{Constraint Complexity}: The constraint $D_{KL}^{\max}(\pi_i, \pi) \le \delta$ is difficult to enforce
+    \item \textbf{Computational Cost**: Requires solving a constrained optimization problem
+    \item \textbf{Parameter Tuning**: The trust region size $\delta$ needs to be carefully chosen
+\end{itemize}
+
+\subsubsection{The Practical TRPO Algorithm}
+
 This problem imposes a constraint that the KL divergence is bounded at every point in the state space. While it is motivated by the theory, this problem is impractical to solve due to the large number of constraints. Instead, we can use a heuristic approximation by considering the average KL divergence. The following optimization problem has been proposed as the TRPO algorithm:
+
 \begin{align*}
     &\pi_{i + 1} = \argmax_{\pi} L_{\pi_i}(\pi)\\
     &\text{subject to } \mathbb{E}_{s \sim \rho}[D_{KL}(\pi_i (.|s) || \pi(.|s))] \le \delta
 \end{align*}
+
+\textbf{Key Differences from the Theoretical Version:}
+\begin{itemize}
+    \item \textbf{Average KL Divergence}: Uses $\mathbb{E}_{s \sim \rho}[D_{KL}(\pi_i (.|s) || \pi(.|s))]$ instead of $D_{KL}^{\max}(\pi_i, \pi)$
+    \item \textbf{Practical Constraint**: Easier to enforce in practice
+    \item \textbf{Heuristic Approximation**: No longer has the same theoretical guarantees
+\end{itemize}
+
+\textbf{Implementation Details:}
+\begin{itemize}
+    \item \textbf{Conjugate Gradient**: Used to solve the constrained optimization problem
+    \item \textbf{Line Search**: Ensures the constraint is satisfied
+    \item \textbf{Natural Policy Gradient**: Uses second-order information for more stable updates
+\end{itemize}
+
+\textbf{Summary:}
+The TRPO algorithm represents a significant advancement in policy gradient methods by providing theoretical guarantees of monotonic improvement while enabling larger step sizes than traditional policy gradients. The algorithm balances theoretical rigor with practical implementation considerations, making it a powerful tool for policy optimization in reinforcement learning.

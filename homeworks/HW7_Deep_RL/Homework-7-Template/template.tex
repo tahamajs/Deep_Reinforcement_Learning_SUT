@@ -192,6 +192,41 @@ The grading will be based on the following criteria, with a total of 100 points:
 
 {\fontfamily{lmss}\selectfont {\color{DarkBlue}
 
+\section*{Introduction}
+
+This homework assignment explores the theoretical foundations of value-based reinforcement learning algorithms, focusing on two fundamental approaches: Value Iteration and Policy Iteration. These algorithms form the cornerstone of dynamic programming methods for solving Markov Decision Processes (MDPs) and provide the theoretical basis for many modern reinforcement learning techniques.
+
+\textbf{Learning Objectives:}
+\begin{itemize}
+    \item Understand the mathematical foundations of Value Iteration and Policy Iteration
+    \item Analyze convergence properties and computational complexity of these algorithms
+    \item Explore the relationship between approximation errors and policy performance
+    \item Develop intuition for when and why these algorithms work or fail
+    \item Connect theoretical results to practical deep reinforcement learning applications
+\end{itemize}
+
+\textbf{Prerequisites:} This assignment assumes familiarity with:
+\begin{itemize}
+    \item Basic probability theory and Markov processes
+    \item Linear algebra (vectors, matrices, norms)
+    \item Real analysis (limits, convergence, contraction mappings)
+    \item Fundamental concepts in reinforcement learning (MDPs, value functions, policies)
+\end{itemize}
+
+\textbf{Notation:} Throughout this assignment, we use standard reinforcement learning notation:
+\begin{itemize}
+    \item \( M = (S, A, R, P, \gamma) \) denotes a Markov Decision Process
+    \item \( V^*(s) \) represents the optimal value function
+    \item \( V^{\pi}(s) \) represents the value function for policy \( \pi \)
+    \item \( \|v\| = \max_s |v(s)| \) denotes the infinity norm
+    \item \( BV \) and \( B^{\pi}V \) represent Bellman operators
+\end{itemize}
+
+The problems are designed to build understanding progressively, starting with basic convergence proofs and advancing to sophisticated error analysis that connects to modern deep reinforcement learning challenges.
+
+}}
+}
+
 \section{Iteration Family}
 \label{sec:iteration_family}
 
@@ -221,7 +256,7 @@ where the expectation is taken over the trajectory induced by policy \( \pi \).
     \item \textbf{Upper Bound Derivation:}
     
     Derive an upper bound for the optimal \( k \)-step value function \( V_k^* \).
-    
+
     \textbf{Hint:} Consider the maximum possible reward at each step and the geometric series formed by the discount factor.
     
     \textbf{Expected Solution Structure:}
@@ -263,8 +298,8 @@ where the expectation is taken over the trajectory induced by policy \( \pi \).
         \item Prove that \( V^*(s) \geq V^\pi(s) \) for any policy \( \pi \) and state \( s \)
         \item Demonstrate that there exists a policy \( \pi^* \) such that \( V^{\pi^*} = V^* \)
     \end{itemize}
-\end{enumerate}
-\subsection{General Rewards}
+ \end{enumerate}
+   \subsection{General Rewards}
 \label{subsec:general_rewards}
 
 \textbf{Relaxation of Assumptions:} We now remove the non-negativity constraint on rewards, allowing \( R(s, a) \) to be negative. However, we maintain the assumption that no terminating states exist, ensuring an infinite horizon problem.
@@ -275,8 +310,8 @@ where the expectation is taken over the trajectory induced by policy \( \pi \).
 \end{equation}
 
 This transformation preserves the relative ordering of actions while shifting all rewards by a constant amount.
-
-\begin{enumerate}[resume*]
+    
+    \begin{enumerate}[resume*]
     \item \textbf{Convergence with Negative Rewards:}
     
     By deriving the optimal action and \( \hat{V}^*_k \) in terms of the original MDP's values and \( r_0 \), show that Value Iteration still converges to the optimal value function \( V^* \) (and optimal policy) of the original MDP even when rewards are negative.
@@ -309,27 +344,93 @@ This transformation preserves the relative ordering of actions while shifting al
 
 % \lipsum[1-2]
 
-\subsection{Policy Turn}
-In this part we want to dive into the mathematical proof of policy iteration.
-\begin{enumerate}[resume*]
-\item Let \( \pi_k \) be the policy at iteration \( k \). Prove the following:
-    \[
-    V^{\pi_{k+1}}(s) \geq V^{\pi_k}(s) \quad \forall s \in S,
-    \]
-    with strict inequality for at least one state unless \( \pi_k \) is already optimal. Use the definition of the greedy policy and explain why policy improvement leads to a better or equal value function.
+\subsection{Policy Iteration}
+\label{subsec:policy_iteration}
 
-    \item Prove that Policy Iteration always converges to the optimal policy in a finite MDP. Specifically, show that after a finite number of policy evaluations and improvements, the algorithm reaches a policy \( \pi^* \) that satisfies the Bellman optimality equation.  
+\textbf{Overview:} Policy Iteration is an alternative approach to solving MDPs that alternates between policy evaluation and policy improvement. Unlike Value Iteration, which directly updates value functions, Policy Iteration maintains an explicit policy and iteratively improves it.
+
+\textbf{Algorithm Structure:}
+\begin{enumerate}
+    \item \textbf{Policy Evaluation:} Given a policy \( \pi_k \), compute its value function \( V^{\pi_k} \) by solving the system of linear equations:
+    \begin{equation}
+    V^{\pi_k}(s) = R(s, \pi_k(s)) + \gamma \sum_{s'} P(s'|s, \pi_k(s)) V^{\pi_k}(s')
+    \end{equation}
+    
+    \item \textbf{Policy Improvement:} Extract a new policy \( \pi_{k+1} \) that is greedy with respect to \( V^{\pi_k} \):
+    \begin{equation}
+    \pi_{k+1}(s) = \arg\max_a \left[ R(s,a) + \gamma \sum_{s'} P(s'|s,a) V^{\pi_k}(s') \right]
+    \end{equation}
+    
+    \item \textbf{Termination:} Stop when \( \pi_{k+1} = \pi_k \) (policy convergence).
+\end{enumerate}
+\begin{enumerate}[resume*]
+\item \textbf{Policy Improvement Monotonicity:}
+    
+    Let \( \pi_k \) be the policy at iteration \( k \). Prove the following fundamental property of Policy Iteration:
+    \[
+    V^{\pi_{k+1}}(s) \geq V^{\pi_k}(s) \quad \forall s \in S
+    \]
+    with strict inequality for at least one state unless \( \pi_k \) is already optimal.
+    
+    Use the definition of the greedy policy and explain why policy improvement leads to a better or equal value function.
+    
+    \textbf{Proof Strategy:}
+    \begin{itemize}
+        \item Use the definition of greedy policy improvement
+        \item Apply the Bellman equation for both policies
+        \item Show that the improvement is non-negative
+        \item Establish conditions for strict improvement
+    \end{itemize}
+
+    \item \textbf{Convergence to Optimality:}
+    
+    Prove that Policy Iteration always converges to the optimal policy in a finite MDP. Specifically, show that after a finite number of policy evaluations and improvements, the algorithm reaches a policy \( \pi^* \) that satisfies the Bellman optimality equation.
+    
     You may use theorems discussed in class, but if a result was not proven, please provide a full justification.
     
-\item Prove that Value Iteration and Policy Iteration both converge to the same optimal value function \( V^* \), even if the policies may differ. How the policies are still optimal despite possible differences?
+    \textbf{Key Elements:}
+    \begin{itemize}
+        \item Finite policy space argument
+        \item Monotonicity from previous part
+        \item No cycling property
+        \item Optimality at convergence
+    \end{itemize}
+    
+    \item \textbf{Equivalence with Value Iteration:}
+    
+    Prove that Value Iteration and Policy Iteration both converge to the same optimal value function \( V^* \), even if the policies may differ. Explain how the policies can still be optimal despite possible differences.
+    
+    \textbf{Analysis Points:}
+    \begin{itemize}
+        \item Uniqueness of optimal value function
+        \item Fixed point characterization
+        \item Multiple optimal policies scenario
+        \item Equivalence classes of optimal policies
+    \end{itemize}
 
-    \item Compare and contrast the computational cost of one step of Policy Iteration (i.e., full Policy Evaluation + Policy Improvement) versus one iteration of Value Iteration.  
-    % Discuss in which scenarios each algorithm may be preferable in practice.
+    \item \textbf{Computational Complexity Comparison:}
+    
+    Compare and contrast the computational cost of one step of Policy Iteration (i.e., full Policy Evaluation + Policy Improvement) versus one iteration of Value Iteration.
+    
+    \textbf{Considerations:}
+    \begin{itemize}
+        \item Policy Evaluation: Solving linear system vs. matrix-vector multiplication
+        \item Policy Improvement: Action selection vs. value updates
+        \item Overall complexity: Per-iteration vs. total convergence
+        \item Practical trade-offs and when to use each method
+    \end{itemize}
 
-    \item In the context of a (MDP) with an infinite horizon, when the discount factor \( \gamma = 1 \), analyze how both Value Iteration and Policy Iteration behave.
-    %     \item The MDP has a finite horizon
-    % \end{itemize}
-    % What challenges arise in this setting, and how does it differ from the discounted case?
+    \item \textbf{Undiscounted Case Analysis:}
+    
+    In the context of an MDP with an infinite horizon, analyze how both Value Iteration and Policy Iteration behave when the discount factor \( \gamma = 1 \).
+    
+    \textbf{Investigation Areas:}
+    \begin{itemize}
+        \item Convergence properties with \( \gamma = 1 \)
+        \item Boundedness of value functions
+        \item Existence of optimal policies
+        \item Special cases (episodic tasks, average reward)
+    \end{itemize}
 
 % \item Let \( \pi_k \) be the policy at iteration \( k \). Prove that:  
 % \[
@@ -394,113 +495,193 @@ In this part we want to dive into the mathematical proof of policy iteration.
 \newpage
 {\fontfamily{lmss}\selectfont {\color{DarkBlue}
 
-\section{Bellman or Bellwoman}
-\cite{CS234} Recall that a value function is a $|S|$-dimensional vector where $|S|$ is the number of states of the MDP. When we use the term $V$ in these expressions as an “arbitrary value function”, we mean that $V$ is an arbitrary $|S|$-dimensional vector which need not be aligned with the definition of the MDP at all. On the other hand, $V^{\pi}$ is a value function that is achieved by some policy $\pi$ in the MDP. For example, say the MDP has 2 states and only negative immediate rewards. $V = [1, 1]$ would be a valid choice for $V$ even though this value function can never be achieved by any policy $\pi$, but we can never have a $V^{\pi} = [1, 1]$. This distinction between $V$ and $V^{\pi}$ is important for this question and more broadly in reinforcement learning.
+\section{Bellman Operators and Residuals}
+\label{sec:bellman_operators}
+
+\textbf{Important Distinction:} Throughout this section, we distinguish between two types of value functions:
+\begin{itemize}
+    \item \textbf{Arbitrary value function} \( V \): A \( |S| \)-dimensional vector that need not correspond to any actual policy in the MDP
+    \item \textbf{Policy value function} \( V^{\pi} \): A value function that is achieved by following a specific policy \( \pi \) in the MDP
+\end{itemize}
+
+\textbf{Example:} Consider an MDP with 2 states and only negative immediate rewards. The vector \( V = [1, 1] \) is a valid arbitrary value function, even though no policy can achieve these values. However, we cannot have \( V^{\pi} = [1, 1] \) for any policy \( \pi \).
+
+This distinction is crucial for understanding approximation errors and convergence guarantees in reinforcement learning.
+
 \subsection{Bellman Operators}
-In the first part of this problem, we will explore some general and useful properties of the Bellman backup operator. We know that the Bellman backup operator $B$, defined below, is a contraction with the fixed point as $V^{\ast}$, the optimal value function of the MDP. The symbols have their usual meanings. $\gamma$ is the discount factor and $0 \leq \gamma < 1$. In all parts, $\|v\| = \max_s |v(s)|$ is the infinity norm of the vector.
+\label{subsec:bellman_operators}
 
-\[
+\textbf{Definitions:} We study two fundamental Bellman operators:
+
+\textbf{Optimal Bellman Operator:}
+\begin{equation}
 (BV)(s) = \max_a \left[ r(s, a) + \gamma \sum_{s' \in S} p(s'|s, a)V(s') \right]
-\]
+\end{equation}
 
-We also saw the contraction operator $B^{\pi}$ with the fixed point $V^{\pi}$, which is the Bellman backup operator for a particular policy given below:
-
-\[
+\textbf{Policy-Specific Bellman Operator:}
+\begin{equation}
 (B^{\pi}V)(s) = r(s, \pi(s)) + \gamma \sum_{s' \in S} p(s'|s, \pi(s))V(s')
-\]
+\end{equation}
 
-In this case, we’ll assume $\pi$ is deterministic, but it doesn’t have to be in general. You have seen that $\|BV - BV'\| \leq \gamma \|V - V'\|$ for two arbitrary value functions $V$ and $V'$.
+\textbf{Norm:} Throughout this section, we use the infinity norm: \( \|v\| = \max_s |v(s)| \).
 
-\begin{enumerate}[]
-    \item Show that the analogous inequality, $\|B^{\pi}V - B^{\pi}V'\| \leq \gamma \|V - V'\|$, holds. 
-    % \hfill [3 pts]
+\textbf{Known Result:} The optimal Bellman operator \( B \) is a contraction mapping with contraction factor \( \gamma \), i.e., \( \|BV - BV'\| \leq \gamma\|V - V'\| \).
+
+\begin{enumerate}
+    \item \textbf{Contraction Property of Policy-Specific Operator:}
     
-    \item Prove that the fixed point for $B^{\pi}$ is unique. Recall that the fixed point is defined as $V$ satisfying $V = B^{\pi}V$. You may assume that a fixed point exists. 
-    % \textit{Hint: Consider proof by contradiction.} \hfill [3 pts]
+    Show that the policy-specific Bellman operator \( B^{\pi} \) satisfies the same contraction property as the optimal Bellman operator:
+    \[
+    \|B^{\pi}V - B^{\pi}V'\| \leq \gamma \|V - V'\| \quad \forall V, V'
+    \]
     
-    \item Suppose that $V$ and $V'$ are vectors satisfying $V(s) \leq V'(s)$ for all $s$. Show that $B^{\pi}V(s) \leq B^{\pi}V'(s)$ for all $s$. 
-    \textit{Note: all of these inequalities are elementwise.} 
+    \textbf{Proof Strategy:}
+    \begin{itemize}
+        \item Use the definition of \( B^{\pi} \)
+        \item Apply the triangle inequality
+        \item Utilize the fact that probabilities sum to 1
+        \item Take the maximum over all states
+    \end{itemize}
     
-    % \hfill [3 pts]
+    \item \textbf{Uniqueness of Fixed Point:}
+    
+    Prove that the fixed point of \( B^{\pi} \) is unique. Recall that a fixed point satisfies \( V = B^{\pi}V \). You may assume that a fixed point exists.
+    
+    \textbf{Hint:} Consider proof by contradiction. What happens if there were two distinct fixed points?
+    
+    \textbf{Alternative Approach:} Use the Banach Fixed Point Theorem since \( B^{\pi} \) is a contraction mapping.
+
+    \item \textbf{Monotonicity Property:}
+    
+    Suppose that \( V \) and \( V' \) are vectors satisfying \( V(s) \leq V'(s) \) for all \( s \). Show that \( B^{\pi}V(s) \leq B^{\pi}V'(s) \) for all \( s \).
+    
+    \textbf{Note:} All inequalities are elementwise (pointwise).
+    
+    \textbf{Interpretation:} This property shows that the Bellman operator preserves the partial order on value functions, which is crucial for proving convergence of iterative algorithms.
 \end{enumerate}
 
 \subsection{Bellman Residuals} 
-We can extract a greedy policy $\pi$ from an arbitrary value function $V$ using the equation below:
+\label{subsec:bellman_residuals}
 
-\[
+\textbf{Motivation:} In practice, we often work with approximate value functions that don't satisfy the Bellman equation exactly. Understanding how approximation errors affect policy performance is crucial for algorithm design and analysis.
+
+\textbf{Greedy Policy Extraction:} Given an arbitrary value function \( V \), we can extract a greedy policy \( \pi \) using:
+\begin{equation}
 \pi(s) = \arg\max_a \left[ r(s, a) + \gamma \sum_{s' \in S} p(s'|s, a)V(s') \right]
-\]
+\end{equation}
 
-It is often helpful to know what the performance will be if we extract a greedy policy from an arbitrary value function. To see this, we introduce the notion of a Bellman residual.
+\textbf{Key Definitions:}
+\begin{itemize}
+    \item \textbf{Bellman residual:} \( (BV - V) \) - the difference between the Bellman update and the current value function
+    \item \textbf{Bellman error magnitude:} \( \varepsilon = \|BV - V\| \) - the maximum absolute error across all states
+\end{itemize}
 
-Define the Bellman residual to be $(BV - V)$ and the Bellman error magnitude to be $\|BV - V\|$.
-
-\begin{enumerate}[resume*]
-    \item For what value function $V$ does the Bellman error magnitude $\|BV - V\|$ equal 0? Why?    
-    % \hfill [2 pts]
-    \item Prove the following statements for an arbitrary value function $V$ and any policy $\pi$. 
-    % \textit{Hint: Try leveraging the triangle inequality by inserting a zero term.} 
-    
-    % \hfill [5 pts]
-    \[
-    \|V - V^{\pi}\| \leq \frac{\|V - B^{\pi}V\|}{1 - \gamma}\] \[
-    \|V - V^{\ast}\| \leq \frac{\|V - BV\|}{1 - \gamma}
-    \]
-    \end{enumerate}
-    % The result you proved in 5 will be useful in proving a bound on the policy performance in the next few parts. Given the Bellman residual, we will now try to derive a bound on the policy performance, $V^{\pi}$.
+\textbf{Goal:} We want to understand how the Bellman error magnitude relates to the performance of the greedy policy extracted from \( V \).
 
 \begin{enumerate}[resume*]
-    \item Let $V$ be an arbitrary value function and $\pi$ be the greedy policy extracted from $V$. Let $\varepsilon = \|BV - V\|$ be the Bellman error magnitude for $V$. Prove the following for any state $s$. 
+    \item \textbf{Zero Bellman Error:}
     
-    % \textit{Hint: Use the results from part (e).} \hfill [5 pts]
+    For what value function \( V \) does the Bellman error magnitude \( \|BV - V\| \) equal 0? Provide both the answer and a clear explanation.
+    
+    \textbf{Hint:} Think about what it means for a value function to satisfy the Bellman equation exactly.
+    
+    \item \textbf{Fundamental Performance Bounds:}
+    
+    Prove the following fundamental bounds for an arbitrary value function \( V \) and any policy \( \pi \):
     \[
-    V^{\pi}(s) \geq V^{\ast}(s) - \frac{2\varepsilon}{1 - \gamma}
+    \|V - V^{\pi}\| \leq \frac{\|V - B^{\pi}V\|}{1 - \gamma}
+    \]
+    \[
+    \|V - V^{*}\| \leq \frac{\|V - BV\|}{1 - \gamma}
     \]
     
-    \item Give an example real-world application or domain where having a lower bound on $V^{\pi}(s)$ would be useful. 
-    % \hfill [2 pts]
+    \textbf{Proof Strategy:}
+    \begin{itemize}
+        \item Use the contraction properties established in the previous subsection
+        \item Consider iterative application of the Bellman operators
+        \item Apply the triangle inequality and geometric series
+        \item Use the fact that \( V^{\pi} \) and \( V^{*} \) are fixed points
+    \end{itemize}
     
-    \item Suppose we have another value function $V'$ and extract its greedy policy $\pi'$. $\|BV' - V'\| = \varepsilon = \|BV - V\|$. Does the above lower bound imply that $V^{\pi}(s) = V^{\pi'}(s)$ at any $s$? 
+    \textbf{Interpretation:} These bounds show that the distance from an arbitrary value function to the true value function is controlled by the Bellman error, scaled by \( \frac{1}{1-\gamma} \).
+
+    \item \textbf{Lower Bound on Greedy Policy Performance:}
+    
+    Let \( V \) be an arbitrary value function and \( \pi \) be the greedy policy extracted from \( V \). Let \( \varepsilon = \|BV - V\| \) be the Bellman error magnitude for \( V \). Prove the following for any state \( s \):
+    \[
+    V^{\pi}(s) \geq V^{*}(s) - \frac{2\varepsilon}{1 - \gamma}
+    \]
+    
+    \textbf{Key Insight:} This result shows that reducing Bellman error directly improves policy quality, providing theoretical justification for algorithms that minimize Bellman residuals.
+
+    \item \textbf{Practical Applications:}
+    
+    Give an example of a real-world application or domain where having a lower bound on \( V^{\pi}(s) \) would be useful. Explain why this bound is important in your chosen application.
+    
+    \textbf{Suggestions:} Consider safety-critical applications, resource allocation, or any scenario where performance guarantees are essential.
+
+    \item \textbf{Uniqueness of Policy Performance:}
+    
+    Suppose we have another value function \( V' \) and extract its greedy policy \( \pi' \). If \( \|BV' - V'\| = \varepsilon = \|BV - V\| \), does the above lower bound imply that \( V^{\pi}(s) = V^{\pi'}(s) \) at any \( s \)?
+    
+    \textbf{Analysis:} Consider whether equal Bellman error magnitudes necessarily lead to equal policy performances.
  \end{enumerate}
-    Say $V \leq V'$ if $\forall s$, $V(s) \leq V'(s)$.
-    % \hfill [2 pts]
-\\
-What if our algorithm returns a $V$ that satisfies $V^* \leq V$? I.e., it returns a value function that is better than the optimal value function of the MDP. Once again, remember that $V$ can be any vector, not necessarily achievable in the MDP, but we would still like to bound the performance of $V^{\pi}$ where $\pi$ is extracted from said $V$. We will show that if this condition is met, then we can achieve an even tighter bound on policy performance.
+\textbf{Special Case: Optimistic Value Functions}
+
+Now we consider a special but important case where our approximate value function \( V \) satisfies \( V^{*} \leq V \) (i.e., \( V^{*}(s) \leq V(s) \) for all \( s \)). This occurs when our algorithm returns an "optimistic" value function that overestimates the true optimal values.
+
+\textbf{Key Insight:} When \( V^{*} \leq V \), we can derive tighter bounds on policy performance, which is particularly useful for algorithms that maintain upper bounds on value functions.
+
 \begin{enumerate}[resume*]
-    \item Using the same notation and setup as part 5, if $V^{\ast} \leq V$, show the following holds for any state $s$. \textit{Recall that for all $\pi$, $V^{\pi} \leq V^{\ast}$ (why?)} 
-    % \hfill [5 pts]
-    \[
-    V^{\pi}(s) \geq V^{\ast}(s) - \frac{\varepsilon}{1 - \gamma}
-    \]
-\end{enumerate}
-
-\paragraph{Intuition:} A useful way to interpret the results from parts (8) and (9) is based on the observation that a constant immediate reward of $r$ at every time-step leads to an overall discounted reward of 
-\[
-r + \gamma r + \gamma^2 r + \dots = \frac{r}{1 - \gamma}
-\]
-Thus, the above results say that a state value function $V$ with Bellman error magnitude $\varepsilon$ yields a greedy policy whose reward per step (on average), differs from optimal by at most $2\varepsilon$. So, if we develop an algorithm that reduces the Bellman residual, we’re also able to bound the performance of the policy extracted from the value function outputted by that algorithm, which is very useful!
-
-% \paragraph{(Optional)} Try to prove the following if you’re interested. These parts will not be graded.
-
-% \begin{enumerate}[label=(\alph*), start=10]
-\begin{enumerate}[resume*]
-    \item It’s not easy to show that the condition $V^{\ast} \leq V$ holds because we often don’t know $V^{\ast}$ of the MDP. Show that if $BV \leq V$ then $V^{\ast} \leq V$. Note that this sufficient condition is much easier
-to check and does not require knowledge of $V^{\ast}$.
-
-Hint: Try to apply induction. What is $\lim_{n \to \infty} B^nV$?
+    \item \textbf{Tighter Bound with Optimistic Value Functions:}
     
-    \item (Bonus) It is possible to make the bounds from parts (9) and (10) tighter. Let $V$ be an arbitrary value function and $\pi$ be the greedy policy extracted from $V$. Let $\varepsilon = \|BV - V\|$ be the Bellman error magnitude for $V$. Prove the following for any state $s$:
+    Using the same notation and setup as the previous parts, if \( V^{*} \leq V \), show that the following tighter bound holds for any state \( s \):
     \[
-    V^{\pi}(s) \geq V^{\ast}(s) - \frac{2\gamma \varepsilon}{1 - \gamma}
+    V^{\pi}(s) \geq V^{*}(s) - \frac{\varepsilon}{1 - \gamma}
     \]
-    Further, if $V^{\ast} \leq V$, prove for any state $s$
-    \[
-    V^{\pi}(s) \geq V^{\ast}(s) - \frac{\gamma \varepsilon}{1 - \gamma}
-    \]
-\end{enumerate}
+    
+    \textbf{Recall:} For any policy \( \pi \), we have \( V^{\pi} \leq V^{*} \) (why?).
+    
+    \textbf{Comparison:} This bound is twice as tight as the general bound \( V^{\pi}(s) \geq V^{*}(s) - \frac{2\varepsilon}{1 - \gamma} \).
 
-\\
-% \lipsum[1-2]
+    \item \textbf{Sufficient Condition for Optimism:}
+    
+    It's not easy to verify that \( V^{*} \leq V \) holds because we often don't know \( V^{*} \) of the MDP. Show that if \( BV \leq V \) (pointwise), then \( V^{*} \leq V \).
+    
+    Note that this sufficient condition is much easier to check and does not require knowledge of \( V^{*} \).
+    
+    \textbf{Hint:} Try to apply induction. What is \( \lim_{n \to \infty} B^nV \)?
+    
+    \textbf{Practical Significance:} This result provides a practical way to verify that our value function is optimistic, which enables the use of tighter performance bounds.
+
+    \item \textbf{Bonus: Even Tighter Bounds:}
+    
+    It is possible to make the bounds from the previous parts even tighter. Let \( V \) be an arbitrary value function and \( \pi \) be the greedy policy extracted from \( V \). Let \( \varepsilon = \|BV - V\| \) be the Bellman error magnitude for \( V \). Prove the following for any state \( s \):
+    \[
+    V^{\pi}(s) \geq V^{*}(s) - \frac{2\gamma \varepsilon}{1 - \gamma}
+    \]
+    
+    Further, if \( V^{*} \leq V \), prove for any state \( s \):
+    \[
+    V^{\pi}(s) \geq V^{*}(s) - \frac{\gamma \varepsilon}{1 - \gamma}
+    \]
+    
+    \textbf{Note:} These bounds incorporate an additional factor of \( \gamma \), providing even tighter guarantees for moderate discount factors.
+\textbf{Interpretation and Practical Significance:}
+
+The results from this section provide fundamental insights into the relationship between approximation errors and policy performance in reinforcement learning:
+
+\begin{itemize}
+    \item \textbf{Error Propagation:} Bellman errors propagate through the value function with a scaling factor of \( \frac{1}{1-\gamma} \), showing that approximation errors can be amplified significantly when \( \gamma \) is close to 1.
+    
+    \item \textbf{Policy Quality Guarantees:} The bounds show that reducing Bellman residuals directly improves policy quality, providing theoretical justification for algorithms that minimize Bellman errors.
+    
+    \item \textbf{Optimistic Algorithms:} When value functions are optimistic (overestimate true values), tighter performance bounds can be achieved, motivating algorithms that maintain upper bounds.
+    
+    \item \textbf{Practical Applications:} These bounds are crucial for safety-critical applications where performance guarantees are essential, such as autonomous systems, medical treatment planning, and financial portfolio management.
+\end{itemize}
+
+\textbf{Connection to Deep RL:} These theoretical results form the foundation for understanding why certain deep RL algorithms work well (e.g., DQN with target networks) and why others may fail (e.g., naive Q-learning with function approximation). The bounds help explain the importance of techniques like experience replay, target networks, and careful initialization in deep RL algorithms.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

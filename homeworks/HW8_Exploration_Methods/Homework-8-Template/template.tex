@@ -10,6 +10,10 @@
 \usepackage{tocloft}
 \usepackage{titlesec}
 \usepackage{lipsum}  
+\usepackage{cite}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{float}
 
 \definecolor{DarkBlue}{RGB}{10, 0, 80}
 
@@ -31,6 +35,9 @@
 \newtheorem{definition}[theorem]{Definition}
 \newtheorem{claim}[theorem]{Claim}
 \newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{example}[theorem]{Example}
 
 
 % Header and footer customization
@@ -191,6 +198,19 @@ The grading will be based on the following criteria, with a total of 100 points:
 \hline
 \end{array}
 \]
+
+\subsection*{Abstract}
+
+This homework explores the theoretical foundations of policy-based reinforcement learning methods, focusing on the Policy Gradient Theorem and Trust Region Policy Optimization (TRPO). We provide comprehensive mathematical proofs and detailed explanations of these fundamental concepts, demonstrating their importance in modern reinforcement learning.
+
+\subsection*{Key Contributions}
+
+\begin{itemize}
+    \item \textbf{Policy Gradient Theorem}: Complete proof with detailed explanations and intuitive interpretations
+    \item \textbf{Compatible Function Approximation}: Theoretical analysis of when function approximators preserve exact gradients
+    \item \textbf{TRPO Theory}: Step-by-step proof of the monotonic improvement guarantee
+    \item \textbf{Practical Implementation}: Discussion of how theoretical results translate to practical algorithms
+\end{itemize}
 
 }}
 
