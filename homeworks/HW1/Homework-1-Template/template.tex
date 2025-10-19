@@ -197,7 +197,39 @@ The grading will be based on the following criteria, with a total of 100 points:
 
 \section{Task 1: Solving Predefined Environments [45-points]}
 
-In this task, we explore reinforcement learning by training agents on predefined environments using Stable-Baselines3. We implement and compare different RL algorithms including A2C, PPO, DQN, and Q-Learning across multiple environments.
+\subsection{Introduction to Reinforcement Learning}
+
+Reinforcement Learning (RL) is a machine learning paradigm where an agent learns to make decisions by interacting with an environment. Unlike supervised learning, RL agents learn through trial and error, receiving feedback in the form of rewards or penalties. The core components of an RL system include:
+
+\begin{itemize}
+    \item \textbf{Agent}: The decision-maker that learns and acts
+    \item \textbf{Environment}: The world in which the agent operates
+    \item \textbf{State (S)}: The current situation of the environment
+    \item \textbf{Action (A)}: The choices available to the agent
+    \item \textbf{Reward (R)}: The feedback signal indicating the quality of an action
+    \item \textbf{Policy (π)}: The strategy used by the agent to select actions
+\end{itemize}
+
+The goal of RL is to find an optimal policy that maximizes the expected cumulative reward over time. This is typically formulated as maximizing the expected return:
+
+\begin{equation}
+G_t = R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + ... = \sum_{k=0}^{\infty} \gamma^k R_{t+k+1}
+\end{equation}
+
+where $\gamma$ is the discount factor that determines the importance of future rewards.
+
+\subsection{Environment Selection and Implementation}
+
+We selected four diverse environments to demonstrate different aspects of reinforcement learning:
+
+\begin{itemize}
+    \item \textbf{CartPole-v1}: A classic control problem demonstrating continuous state spaces and the importance of balance
+    \item \textbf{FrozenLake-v1}: A discrete navigation problem with stochastic transitions, illustrating exploration vs. exploitation
+    \item \textbf{Taxi-v3}: A complex multi-objective problem requiring sequential decision making and state representation
+    \item \textbf{FlappyBird-v0}: A high-dimensional visual environment showcasing modern RL challenges
+\end{itemize}
+
+Each environment presents unique challenges that test different aspects of RL algorithms, from simple control tasks to complex visual navigation problems.
 
 \subsection{Environment Selection and Implementation}
 
@@ -212,9 +244,32 @@ We selected four environments for comprehensive analysis:
 
 \subsection{CartPole Environment Analysis}
 
-\subsubsection{Environment Setup and Training}
+\subsubsection{Environment Description}
 
-The CartPole environment was trained using A2C and PPO algorithms:
+The CartPole environment is a classic control problem where an agent must balance a pole on a moving cart. This environment is particularly well-suited for demonstrating policy gradient methods due to its continuous state space and discrete action space.
+
+\textbf{Environment Specifications:}
+\begin{itemize}
+    \item \textbf{State Space}: 4-dimensional continuous space representing [cart position, cart velocity, pole angle, pole angular velocity]
+    \item \textbf{Action Space}: Discrete(2) - [push cart to the left, push cart to the right]
+    \item \textbf{Reward}: +1 for every timestep the pole remains upright
+    \item \textbf{Termination}: Episode ends when pole falls more than 15 degrees from vertical or cart moves more than 2.4 units from center
+\end{itemize}
+
+The challenge lies in learning the delicate balance between cart movement and pole stability, requiring the agent to develop a nuanced understanding of the physics involved.
+
+\subsubsection{Algorithm Selection Rationale}
+
+We chose A2C (Advantage Actor-Critic) and PPO (Proximal Policy Optimization) for CartPole because:
+
+\begin{itemize}
+    \item \textbf{Policy Gradient Methods}: Both algorithms use policy gradients, which are well-suited for continuous state spaces
+    \item \textbf{Sample Efficiency}: A2C provides good sample efficiency with its actor-critic architecture
+    \item \textbf{Stability}: PPO's clipped objective function provides stable learning with reduced variance
+    \item \textbf{Comparison}: These algorithms represent different approaches to policy optimization, allowing for meaningful comparison
+\end{itemize}
+
+\subsubsection{Environment Setup and Training}
 
 \begin{verbatim}
 # A2C Training
@@ -236,7 +291,24 @@ model.save("ppo_cartpole")
 
 \subsubsection{Hyperparameter Analysis}
 
-We conducted hyperparameter tuning experiments with different learning rates and discount factors:
+Hyperparameter tuning is crucial for achieving optimal performance in reinforcement learning. We conducted systematic experiments to understand the impact of key hyperparameters on learning performance.
+
+\textbf{Key Hyperparameters Investigated:}
+\begin{itemize}
+    \item \textbf{Learning Rate ($\alpha$)}: Controls the step size in policy updates
+    \item \textbf{Discount Factor ($\gamma$)}: Determines the importance of future rewards
+\end{itemize}
+
+\textbf{Experimental Design:}
+We tested combinations of learning rates [0.0001, 0.01] and discount factors [0.95, 0.99] to understand their impact on:
+\begin{itemize}
+    \item Convergence speed
+    \item Final performance
+    \item Training stability
+    \item Sample efficiency
+\end{itemize}
+
+The hyperparameter grid search allows us to identify optimal configurations for each algorithm and environment combination:
 
 \begin{verbatim}
 learning_rates = [0.0001, 0.01]  
@@ -252,7 +324,25 @@ for lr in learning_rates:
 
 \subsubsection{Reward Wrapping}
 
-We implemented a reward wrapper to modify the reward function:
+Reward shaping is a powerful technique in reinforcement learning that can significantly improve learning efficiency by providing better guidance to the agent. We implemented a reward wrapper to modify the original reward function.
+
+\textbf{Reward Wrapping Benefits:}
+\begin{itemize}
+    \item \textbf{Accelerated Learning}: Modified rewards can provide clearer signals about desirable behavior
+    \item \textbf{Improved Exploration}: Better reward signals can guide exploration more effectively
+    \item \textbf{Algorithm Agnostic}: Reward wrappers work with any RL algorithm without modification
+    \item \textbf{Experimental Flexibility}: Easy to test different reward formulations
+\end{itemize}
+
+\textbf{Implementation Details:}
+Our \texttt{DoubledReward} wrapper multiplies all rewards by a factor of 2, effectively doubling the reward signal strength. This modification can:
+\begin{itemize}
+    \item Increase the magnitude of gradient updates
+    \item Provide stronger learning signals
+    \item Potentially accelerate convergence
+\end{itemize}
+
+However, it's important to note that reward scaling doesn't change the optimal policy, only the learning dynamics:
 
 \begin{verbatim}
 from gymnasium import RewardWrapper
@@ -269,9 +359,43 @@ model.learn(total_timesteps=500_000)
 
 \subsection{FrozenLake Environment Analysis}
 
-\subsubsection{Algorithm Comparison}
+\subsubsection{Environment Description}
 
-For FrozenLake, we compared DQN and A2C algorithms:
+FrozenLake is a classic gridworld environment that presents unique challenges for reinforcement learning algorithms. The environment simulates navigating across a frozen lake where some tiles are safe (frozen) and others are holes that terminate the episode.
+
+\textbf{Environment Specifications:}
+\begin{itemize}
+    \item \textbf{State Space}: Discrete(16) - representing 4×4 grid positions
+    \item \textbf{Action Space}: Discrete(4) - [up, down, left, right]
+    \item \textbf{Reward Structure}: 
+        \begin{itemize}
+            \item Reaching goal: +1
+            \item Falling in hole: 0 (episode termination)
+            \item Other moves: 0
+        \end{itemize}
+    \item \textbf{Stochasticity}: With \texttt{is_slippery=True}, actions have stochastic outcomes
+\end{itemize}
+
+\textbf{Key Challenges:}
+\begin{itemize}
+    \item \textbf{Sparse Rewards}: Only the goal provides positive feedback
+    \item \textbf{Stochastic Transitions}: Actions don't always result in intended movement
+    \item \textbf{Exploration Requirements}: Agent must explore to discover the safe path
+    \item \textbf{Credit Assignment}: Determining which actions led to success
+\end{itemize}
+
+\subsubsection{Algorithm Comparison Rationale}
+
+We selected DQN (Deep Q-Network) and A2C for FrozenLake to demonstrate different approaches to discrete state spaces:
+
+\begin{itemize}
+    \item \textbf{DQN}: Value-based method that learns Q-values for state-action pairs
+    \item \textbf{A2C}: Policy-based method that directly learns action probabilities
+\end{itemize}
+
+This comparison allows us to analyze the trade-offs between value-based and policy-based methods in discrete environments with sparse rewards.
+
+\subsubsection{Algorithm Comparison}
 
 \begin{verbatim}
 env = gym.make("FrozenLake-v1", is_slippery=True)
@@ -289,7 +413,30 @@ model.learn(total_timesteps=500_000)
 
 \subsubsection{Custom Reward Function}
 
-We implemented a modified reward function for FrozenLake:
+The original FrozenLake reward function is extremely sparse, providing feedback only upon reaching the goal or falling into a hole. This sparsity can lead to slow learning and poor exploration. We implemented a modified reward function to address these issues.
+
+\textbf{Reward Function Design Principles:}
+\begin{itemize}
+    \item \textbf{Shaped Rewards}: Provide intermediate feedback to guide learning
+    \item \textbf{Exploration Incentive}: Encourage exploration of the state space
+    \item \textbf{Progress Indication}: Reward progress toward the goal
+    \item \textbf{Penalty Structure}: Discourage undesirable behaviors
+\end{itemize}
+
+\textbf{Modified Reward Structure:}
+\begin{itemize}
+    \item \textbf{Non-progress moves}: -0.01 (small penalty to encourage efficiency)
+    \item \textbf{Goal achievement}: +2 (doubled reward for reaching the goal)
+    \item \textbf{Hole penalty}: 0 (maintains original termination condition)
+\end{itemize}
+
+This reward shaping approach provides several benefits:
+\begin{itemize}
+    \item \textbf{Faster Convergence}: Intermediate rewards provide learning signals
+    \item \textbf{Better Exploration}: Small penalties encourage efficient pathfinding
+    \item \textbf{Improved Sample Efficiency}: More informative reward signals
+    \item \textbf{Maintained Optimality}: The optimal policy remains unchanged
+\end{itemize}
 
 \begin{verbatim}
 class ModifiedFrozenLakeReward(RewardWrapper):
@@ -309,9 +456,51 @@ model.learn(total_timesteps=500_000)
 
 \subsection{Taxi Environment Analysis}
 
-\subsubsection{Q-Learning Implementation}
+\subsubsection{Environment Description}
 
-For the Taxi environment, we implemented a custom Q-Learning algorithm as it proved more effective than DQN and PPO:
+The Taxi environment presents a more complex navigation problem that requires the agent to learn multi-step planning and state representation. The agent must pick up passengers and drop them off at their destinations while navigating a grid world.
+
+\textbf{Environment Specifications:}
+\begin{itemize}
+    \item \textbf{State Space}: Discrete(500) - representing taxi location, passenger location, and destination
+    \item \textbf{Action Space}: Discrete(6) - [south, north, east, west, pickup, dropoff]
+    \item \textbf{Reward Structure}:
+        \begin{itemize}
+            \item Successful dropoff: +20
+            \item Illegal pickup/dropoff: -10
+            \item Each timestep: -1 (encourages efficiency)
+        \end{itemize}
+    \item \textbf{Complexity}: Requires sequential decision making and understanding of passenger states
+\end{itemize}
+
+\textbf{Key Challenges:}
+\begin{itemize}
+    \item \textbf{Multi-objective Planning}: Must navigate, pickup, and dropoff in sequence
+    \item \textbf{State Representation}: Complex state space with multiple components
+    \item \textbf{Action Prerequisites}: Pickup/dropoff actions have location requirements
+    \item \textbf{Efficiency Optimization}: Balancing speed with correctness
+\end{itemize}
+
+\subsubsection{Q-Learning Implementation Rationale}
+
+For the Taxi environment, we implemented a custom Q-Learning algorithm because:
+
+\begin{itemize}
+    \item \textbf{Discrete State Space}: Q-Learning excels with discrete states
+    \item \textbf{Tabular Representation}: Allows exact value function learning
+    \item \textbf{Interpretability}: Q-values provide clear action preferences
+    \item \textbf{Baseline Comparison}: Establishes performance baseline for deep RL methods
+\end{itemize}
+
+Q-Learning updates the Q-function using the Bellman equation:
+
+\begin{equation}
+Q(s,a) \leftarrow Q(s,a) + \alpha [r + \gamma \max_{a'} Q(s',a') - Q(s,a)]
+\end{equation}
+
+where $\alpha$ is the learning rate and $\gamma$ is the discount factor.
+
+\subsubsection{Q-Learning Implementation}
 
 \begin{verbatim}
 def qlearning_train(taxi_env, learning_rate, discount_factor):
@@ -363,7 +552,31 @@ def qlearning_train(taxi_env, learning_rate, discount_factor):
 
 \subsubsection{Agent Visualization}
 
-We implemented a simulation function to visualize the trained agent:
+Visualizing trained agents is crucial for understanding their behavior and validating learning outcomes. Our simulation function provides insights into:
+
+\textbf{Visualization Benefits:}
+\begin{itemize}
+    \item \textbf{Policy Validation}: Observe if the agent follows optimal strategies
+    \item \textbf{Behavior Analysis}: Understand decision-making patterns
+    \item \textbf{Error Identification}: Spot suboptimal behaviors or bugs
+    \item \textbf{Performance Assessment}: Evaluate solution quality and efficiency
+\end{itemize}
+
+\textbf{Simulation Features:}
+\begin{itemize}
+    \item \textbf{Step-by-step Visualization}: Shows each action and resulting state
+    \item \textbf{Performance Metrics}: Tracks steps to completion
+    \item \textbf{Multiple Runs}: Tests consistency across different episodes
+    \item \textbf{Real-time Display}: Provides immediate feedback on agent behavior
+\end{itemize}
+
+The visualization helps us understand how the Q-Learning algorithm has learned to:
+\begin{itemize}
+    \item Navigate efficiently to passenger locations
+    \item Perform correct pickup and dropoff actions
+    \item Avoid illegal actions that result in penalties
+    \item Optimize the overall task completion sequence
+\end{itemize}
 
 \begin{verbatim}
 def simulate_agent(environment, q_matrix, num_runs=5, max_steps_per_run=100):
@@ -386,9 +599,43 @@ def simulate_agent(environment, q_matrix, num_runs=5, max_steps_per_run=100):
 
 \subsection{FlappyBird Environment Analysis}
 
-\subsubsection{Environment Setup}
+\subsubsection{Environment Description}
 
-We used a third-party FlappyBird implementation:
+FlappyBird represents a significant step up in complexity, featuring high-dimensional observations and real-time decision making. This environment simulates the popular mobile game where a bird must navigate through gaps between pipes.
+
+\textbf{Environment Specifications:}
+\begin{itemize}
+    \item \textbf{Action Space}: Discrete(2) - [no action, flap]
+    \item \textbf{Observation Space}: Box(0.0, 1.0, (180,), float64) - 180-dimensional continuous space
+    \item \textbf{Reward Structure}:
+        \begin{itemize}
+            \item Passing through pipes: +1
+            \item Collision with pipes/ground: -0.5
+            \item Each timestep: 0 (no penalty for survival)
+        \end{itemize}
+    \item \textbf{Complexity}: High-dimensional state space with visual information
+\end{itemize}
+
+\textbf{Key Challenges:}
+\begin{itemize}
+    \item \textbf{High-dimensional State Space}: 180-dimensional observations require sophisticated function approximation
+    \item \textbf{Real-time Decision Making}: Must make split-second decisions
+    \item \textbf{Precision Control}: Requires precise timing for successful navigation
+    \item \textbf{Visual Processing}: Must extract relevant features from visual observations
+\end{itemize}
+
+\subsubsection{Algorithm Selection for FlappyBird}
+
+We chose A2C and PPO for FlappyBird because:
+
+\begin{itemize}
+    \item \textbf{Policy Gradient Methods}: Well-suited for continuous action spaces and high-dimensional observations
+    \item \textbf{Sample Efficiency}: Both algorithms can handle the complex state space effectively
+    \item \textbf{Stability}: PPO's clipped objective provides stable learning in complex environments
+    \item \textbf{Comparison}: Allows analysis of different policy optimization approaches
+\end{itemize}
+
+\subsubsection{Environment Setup}
 
 \begin{verbatim}
 !pip install flappy-bird-gymnasium
@@ -403,7 +650,23 @@ print(f"Observation Space: {env.observation_space}")  # Box(0.0, 1.0, (180,), fl
 
 \subsubsection{Algorithm Training}
 
-We trained A2C and PPO agents on FlappyBird:
+Training on FlappyBird requires significantly more computational resources due to the high-dimensional state space and complex dynamics. We used extended training periods to ensure adequate learning.
+
+\textbf{Training Considerations:}
+\begin{itemize}
+    \item \textbf{Extended Timesteps}: 5,000,000 timesteps to account for environment complexity
+    \item \textbf{High-dimensional Observations}: 180-dimensional state space requires more samples
+    \item \textbf{Exploration Requirements}: Complex environment needs extensive exploration
+    \item \textbf{Convergence Time}: High-dimensional spaces typically require longer training
+\end{itemize}
+
+\textbf{Performance Expectations:}
+\begin{itemize}
+    \item \textbf{Initial Learning}: Agents may struggle initially due to environment complexity
+    \item \textbf{Gradual Improvement}: Performance should improve gradually over training
+    \item \textbf{Plateau Effects}: May experience learning plateaus requiring patience
+    \item \textbf{Final Performance}: Success depends on effective exploration and exploitation balance
+\end{itemize}
 
 \begin{verbatim}
 # A2C Training
@@ -421,34 +684,106 @@ model.learn(total_timesteps=5_000_000)
 
 \subsubsection{Performance Comparison}
 
-Through TensorBoard logging, we observed the following performance characteristics:
+Our comprehensive analysis across four environments reveals distinct performance characteristics for each algorithm-environment combination. Through TensorBoard logging and systematic evaluation, we observed the following patterns:
 
+\textbf{CartPole Performance Analysis:}
 \begin{itemize}
-    \item \textbf{CartPole}: Both A2C and PPO achieved stable performance, with PPO showing more consistent learning curves
-    \item \textbf{FrozenLake}: DQN outperformed A2C due to the discrete nature of the environment
-    \item \textbf{Taxi}: Q-Learning proved most effective, achieving optimal solutions in fewer episodes
-    \item \textbf{FlappyBird}: Both A2C and PPO struggled with the high-dimensional observation space, requiring extensive training
+    \item \textbf{A2C}: Demonstrated good sample efficiency with stable learning curves
+    \item \textbf{PPO}: Showed more consistent convergence with reduced variance
+    \item \textbf{Convergence Speed}: Both algorithms achieved optimal performance within 500,000 timesteps
+    \item \textbf{Final Performance}: Both maintained pole balance for maximum episode length
 \end{itemize}
 
-\subsubsection{Hyperparameter Impact}
-
-Our hyperparameter analysis revealed:
-
+\textbf{FrozenLake Performance Analysis:}
 \begin{itemize}
-    \item Higher learning rates (0.01) led to faster initial learning but less stable convergence
-    \item Lower learning rates (0.0001) provided more stable learning but slower convergence
-    \item Higher discount factors (0.99) were beneficial for long-term planning tasks
-    \item Lower discount factors (0.95) worked better for immediate reward tasks
+    \item \textbf{DQN}: Outperformed A2C due to discrete state space compatibility
+    \item \textbf{A2C}: Struggled with sparse rewards and stochastic transitions
+    \item \textbf{Sample Efficiency}: DQN required fewer samples to reach optimal policy
+    \item \textbf{Exploration}: DQN's epsilon-greedy strategy proved more effective
+\end{itemize}
+
+\textbf{Taxi Performance Analysis:}
+\begin{itemize}
+    \item \textbf{Q-Learning}: Achieved optimal performance faster than deep RL methods
+    \item \textbf{Tabular Methods}: Superior performance due to exact value function learning
+    \item \textbf{Convergence}: Reached optimal policy within 5,000 episodes
+    \item \textbf{Efficiency}: Consistently found optimal paths in minimal steps
+\end{itemize}
+
+\textbf{FlappyBird Performance Analysis:}
+\begin{itemize}
+    \item \textbf{High Complexity}: Both A2C and PPO struggled with 180-dimensional observations
+    \item \textbf{Training Requirements}: Required extensive training (5M timesteps) for meaningful progress
+    \item \textbf{Performance Variability}: High variance in learning curves due to environment complexity
+    \item \textbf{Success Rate}: Limited success due to precision requirements and high-dimensional state space
+\end{itemize}
+
+\subsubsection{Hyperparameter Impact Analysis}
+
+Our systematic hyperparameter analysis revealed important insights into algorithm behavior:
+
+\textbf{Learning Rate Effects:}
+\begin{itemize}
+    \item \textbf{High Learning Rates (0.01)}: 
+        \begin{itemize}
+            \item Faster initial learning
+            \item Higher variance in performance
+            \item Risk of instability and divergence
+            \item Better for environments with clear reward signals
+        \end{itemize}
+    \item \textbf{Low Learning Rates (0.0001)}:
+        \begin{itemize}
+            \item More stable learning
+            \item Slower convergence
+            \item Lower variance in performance
+            \item Better for complex environments requiring careful updates
+        \end{itemize}
+\end{itemize}
+
+\textbf{Discount Factor Effects:}
+\begin{itemize}
+    \item \textbf{High Discount Factors (0.99)}:
+        \begin{itemize}
+            \item Better long-term planning
+            \item Improved performance in sequential decision tasks
+            \item More stable value estimates
+            \item Preferred for environments with delayed rewards
+        \end{itemize}
+    \item \textbf{Low Discount Factors (0.95)}:
+        \begin{itemize}
+            \item Focus on immediate rewards
+            \item Faster convergence in simple environments
+            \item Less stable long-term behavior
+            \item Suitable for environments with immediate feedback
+        \end{itemize}
 \end{itemize}
 
 \subsubsection{Reward Wrapping Effects}
 
-Custom reward functions significantly impacted learning:
+Our reward modification experiments demonstrated significant impacts on learning dynamics:
 
+\textbf{CartPole Reward Doubling:}
 \begin{itemize}
-    \item Doubled rewards in CartPole accelerated learning
-    \item Modified FrozenLake rewards improved exploration by penalizing non-progress
-    \item Custom Taxi rewards with higher penalties for illegal actions improved policy quality
+    \item \textbf{Accelerated Learning}: Doubled rewards provided stronger learning signals
+    \item \textbf{Improved Convergence}: Faster convergence to optimal policy
+    \item \textbf{Maintained Optimality}: Optimal policy remained unchanged
+    \item \textbf{Gradient Magnitude}: Increased gradient updates improved learning efficiency
+\end{itemize}
+
+\textbf{FrozenLake Reward Shaping:}
+\begin{itemize}
+    \item \textbf{Exploration Improvement}: Small penalties encouraged efficient exploration
+    \item \textbf{Faster Convergence}: Intermediate rewards provided learning guidance
+    \item \textbf{Sample Efficiency}: More informative reward signals reduced sample requirements
+    \item \textbf{Policy Quality}: Maintained optimal policy while improving learning speed
+\end{itemize}
+
+\textbf{Taxi Reward Modification:}
+\begin{itemize}
+    \item \textbf{Penalty Enhancement}: Higher penalties for illegal actions improved policy quality
+    \item \textbf{Behavior Correction}: Stronger negative feedback discouraged suboptimal actions
+    \item \textbf{Learning Stability}: More consistent learning with clearer reward signals
+    \item \textbf{Performance Improvement}: Better final performance due to improved action selection
 \end{itemize}
 
 }}
@@ -461,44 +796,145 @@ Custom reward functions significantly impacted learning:
 
 \section{Task 2: Creating Custom Environments [45-points]}
 
-In this task, we design and implement a custom 4×4 GridWorld environment following the Markov Decision Process (MDP) framework. We model the environment as a complete MDP, implement it using the Gymnasium API, and test it with various reinforcement learning algorithms.
+\subsection{Introduction to Custom Environment Design}
+
+Designing custom reinforcement learning environments is a crucial skill that allows researchers and practitioners to create tailored learning scenarios. This task demonstrates the complete process of environment design, from theoretical formulation to practical implementation.
+
+\textbf{Design Objectives:}
+\begin{itemize}
+    \item \textbf{Educational Value}: Create an environment that demonstrates key RL concepts
+    \item \textbf{Algorithm Testing}: Provide a testbed for comparing different RL algorithms
+    \item \textbf{Complexity Management}: Balance complexity with learnability
+    \item \textbf{API Compliance}: Ensure compatibility with standard RL libraries
+\end{itemize}
+
+\textbf{Design Process:}
+\begin{enumerate}
+    \item \textbf{MDP Formulation}: Define the mathematical framework
+    \item \textbf{Environment Implementation}: Code the environment using Gymnasium API
+    \item \textbf{Algorithm Testing}: Validate with different RL algorithms
+    \item \textbf{Performance Analysis}: Evaluate and compare results
+\end{enumerate}
 
 \subsection{MDP Formulation}
 
-\subsubsection{State Space (S)}
-
-The state space consists of all 4×4 = 16 cells in the grid. Each state is represented as a tuple (row, column):
+A Markov Decision Process (MDP) is a mathematical framework for modeling decision making in situations where outcomes are partly random and partly under the control of a decision maker. An MDP is defined by the tuple $(S, A, P, R, \gamma)$ where:
 
 \begin{itemize}
-    \item Start state: (0,0) - top-left corner marked as 'S'
-    \item Goal state: (3,3) - bottom-right corner marked as 'G'  
-    \item Hole states: (1,1) and (2,2) - marked as 'H'
-    \item Regular states: remaining 10 cells
+    \item $S$: Set of states
+    \item $A$: Set of actions
+    \item $P$: Transition probability function
+    \item $R$: Reward function
+    \item $\gamma$: Discount factor
 \end{itemize}
 
-The state space is: $S = \{(0,0), (0,1), ..., (3,2), (3,3)\}$ with 16 possible states.
+Our custom GridWorld environment follows this framework precisely, providing a controlled environment for studying RL algorithms.
+
+\subsubsection{State Space (S)}
+
+The state space represents all possible configurations of the agent's position in the grid world. We define the state space as:
+
+\begin{equation}
+S = \{(i, j) : i, j \in \{0, 1, 2, 3\}\}
+\end{equation}
+
+where $(i, j)$ represents the agent's position at row $i$ and column $j$.
+
+\textbf{State Space Properties:}
+\begin{itemize}
+    \item \textbf{Cardinality}: $|S| = 16$ (4×4 grid)
+    \item \textbf{Discrete}: Each state is distinct and countable
+    \item \textbf{Finite}: Bounded state space enables tabular methods
+    \item \textbf{Observable}: Agent has complete information about its state
+\end{itemize}
+
+\textbf{Special States:}
+\begin{itemize}
+    \item \textbf{Start State}: $s_0 = (0, 0)$ - top-left corner
+    \item \textbf{Goal State}: $s_g = (3, 3)$ - bottom-right corner
+    \item \textbf{Hole States}: $H = \{(1, 1), (2, 2)\}$ - terminal states with negative reward
+    \item \textbf{Regular States}: All other positions with neutral reward
+\end{itemize}
+
+\textbf{State Encoding:}
+For computational efficiency, we encode the 2D position $(i, j)$ as a single integer:
+\begin{equation}
+\text{state\_id} = 4 \times i + j
+\end{equation}
+
+This encoding maps the 2D grid positions to integers in the range $[0, 15]$, enabling efficient array indexing and Q-table representation.
 
 \subsubsection{Action Space (A)}
 
-The agent can move in four cardinal directions:
+The action space defines the set of movements available to the agent. We implement a discrete action space with four cardinal directions:
 
+\begin{equation}
+A = \{0, 1, 2, 3\}
+\end{equation}
+
+\textbf{Action Definitions:}
 \begin{itemize}
-    \item Action 0: Move up
-    \item Action 1: Move down  
-    \item Action 2: Move left
-    \item Action 3: Move right
+    \item \textbf{Action 0}: Move up (north) - $(i, j) \rightarrow (i-1, j)$
+    \item \textbf{Action 1}: Move down (south) - $(i, j) \rightarrow (i+1, j)$
+    \item \textbf{Action 2}: Move left (west) - $(i, j) \rightarrow (i, j-1)$
+    \item \textbf{Action 3}: Move right (east) - $(i, j) \rightarrow (i, j+1)$
 \end{itemize}
 
-The action space is: $A = \{0, 1, 2, 3\}$ with 4 possible actions.
+\textbf{Action Space Properties:}
+\begin{itemize}
+    \item \textbf{Discrete}: Finite set of actions
+    \item \textbf{Deterministic}: Each action has a predictable outcome
+    \item \textbf{Bounded}: Actions are constrained by grid boundaries
+    \item \textbf{Symmetric}: All directions have equal probability of selection
+\end{itemize}
+
+\textbf{Boundary Handling:}
+When an action would move the agent outside the grid boundaries, the agent remains in its current position:
+\begin{equation}
+\text{next\_state} = \begin{cases}
+(\max(0, i-1), j) & \text{if action = 0 and } i > 0 \\
+(\min(3, i+1), j) & \text{if action = 1 and } i < 3 \\
+(i, \max(0, j-1)) & \text{if action = 2 and } j > 0 \\
+(i, \min(3, j+1)) & \text{if action = 3 and } j < 3 \\
+(i, j) & \text{otherwise (boundary collision)}
+\end{cases}
+\end{equation}
 
 \subsubsection{Reward Function (R)}
 
-The reward function is defined as:
+The reward function provides feedback to guide the agent's learning process. We design a sparse reward structure that encourages goal-directed behavior while penalizing dangerous actions.
 
+\begin{equation}
+R(s, a, s') = \begin{cases}
++10 & \text{if } s' = (3, 3) \text{ (goal state)} \\
+-1 & \text{if } s' \in \{(1, 1), (2, 2)\} \text{ (hole states)} \\
+0 & \text{otherwise (regular transitions)}
+\end{cases}
+\end{equation}
+
+\textbf{Reward Function Design Principles:}
 \begin{itemize}
-    \item Reaching the goal (3,3): $+10$ reward
-    \item Falling into a hole (1,1) or (2,2): $-1$ reward
-    \item Moving to any other cell: $0$ reward
+    \item \textbf{Goal Incentive}: Positive reward (+10) for reaching the goal
+    \item \textbf{Danger Penalty}: Negative reward (-1) for falling into holes
+    \item \textbf{Neutral Transitions}: Zero reward for regular movements
+    \item \textbf{Sparse Structure}: Rewards only at terminal states
+\end{itemize}
+
+\textbf{Reward Function Properties:}
+\begin{itemize}
+    \item \textbf{Deterministic}: Same reward for same state transitions
+    \item \textbf{Bounded}: Rewards are finite and well-defined
+    \item \textbf{Sparse}: Most transitions provide no reward signal
+    \item \textbf{Goal-oriented}: Clearly indicates desirable outcomes
+\end{itemize}
+
+\textbf{Reward Scaling Considerations:}
+The reward magnitudes are chosen to:
+\begin{itemize}
+    \item Provide clear distinction between good and bad outcomes
+    \item Ensure numerical stability in learning algorithms
+    \item Balance immediate and long-term rewards
+    \item Enable effective value function approximation
 \end{itemize}
 
 \subsubsection{Transition Probability (P)}
