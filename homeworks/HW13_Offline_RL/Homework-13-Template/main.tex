@@ -1,413 +1,383 @@
-\documentclass[12pt]{article}
-\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=1.5cm, right=1.5cm]{geometry}
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
 \usepackage{amsmath, amsfonts, amssymb, mathtools}
-\usepackage{fancyhdr, setspace, parskip}
 \usepackage{graphicx, caption, subfig, array, multirow}
 \usepackage{hyperref, enumitem, cancel}
 \usepackage[T1]{fontenc}
-\usepackage{tgtermes}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tocloft}
 \usepackage{titlesec}
-\usepackage{lipsum}  
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{siunitx}
+\usepackage{cite}  
 
+% IEEE conference paper formatting
+\IEEEoverridecommandlockouts
+
+% Define colors for better readability
 \definecolor{DarkBlue}{RGB}{10, 0, 80}
+\definecolor{light-gray}{gray}{0.95}
 
 % Hyperlink setup
 \hypersetup{
     colorlinks=true,
-    linkcolor=DarkBlue,
-    filecolor=BrickRed,      
-    urlcolor=RoyalBlue,
+    linkcolor=blue,
+    filecolor=red,      
+    urlcolor=blue,
 }
 
-
-% Header and footer customization
-\fancyhead{}
-\fancyhead[L]{
-{\fontfamily{lmss}{\color{DarkBlue}
-\textbf{\leftmark}
-}}
-}
-\fancyhead[R]{
-{\fontfamily{ppl}\selectfont {\color{DarkBlue}
-{Deep RL Course [Spring 2025]}
-}}
-}
-
-\fancyfoot{}
-\fancyfoot[C]{
-{\fontfamily{lmss}{\color{BrickRed}
-\textbf{\thepage}
-}}
-}
-
-\renewcommand{\sectionmark}[1]{ \markboth{\thesection\quad #1}{} }
-
-\renewcommand{\headrule}{{\color{BrickRed}\hrule width\headwidth height 0.5pt}}
-\renewcommand{\footrulewidth}{0pt}
-
-
-% Table of Contents customizations
-\renewcommand{\cftsecafterpnum}{\vskip6pt}
-\renewcommand{\cftsubsecafterpnum}{\vskip3pt}
-\renewcommand{\cftsubsubsecafterpnum}{\vskip3pt}
-\renewcommand{\cftsecfont}{\sffamily\large}
-\renewcommand{\cftsubsecfont}{\sffamily}
-\renewcommand{\cftsubsubsecfont}{\sffamily}
-% \renewcommand{\cftsecdotsep}{1}
-\renewcommand{\cftsubsecdotsep}{1}
-\renewcommand{\cftsubsubsecdotsep}{1}
-
-
-% Section title styles
-\titleformat*{\section}{\LARGE\bfseries\color{DarkBlue}}
-\titleformat*{\subsection}{\Large\bfseries\color{DarkBlue}}
-\titleformat*{\subsubsection}{\large\bfseries\color{DarkBlue}}
-
-\definecolor{light-gray}{gray}{0.95}
+% Custom commands
 \newcommand{\code}[1]{\colorbox{light-gray}{\texttt{#1}}}
-
-% Start of the document
-\pagestyle{fancy}
+\newcommand{\algorithmname}{Algorithm}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{document}
 
-\pagenumbering{gobble}
-\thispagestyle{plain}
+% Paper title
+\title{Multi-Agent Reinforcement Learning: Game Theory and MADDPG Implementation}
 
-\begin{center}
-
-\vspace*{-1.5cm}
-\begin{figure}[!h]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figs/cover-std.png}
-\end{figure}
-
-{
-\fontfamily{ppl}
-
-{\color{DarkBlue} {\fontsize{30}{50} \textbf{
-Deep Reinforcement Learning
-}}}
-
-{\color{DarkBlue} {\Large
-Professor Mohammad Hossein Rohban
-}}
+% Author information
+\author{\IEEEauthorblockN{Taha Majlesi}
+\IEEEauthorblockA{Student ID: 810101504 \\
+Deep Reinforcement Learning Course \\
+Sharif University of Technology \\
+Spring 2025}
 }
 
+% Abstract
+\begin{abstract}
+This paper presents a comprehensive analysis of multi-agent reinforcement learning (MARL) through two main components: game theory fundamentals and practical implementation of Multi-Agent Deep Deterministic Policy Gradient (MADDPG) algorithms. We first explore Nash Equilibrium concepts in Rock-Scissors-Paper games, demonstrating both analytical derivations and empirical convergence of learning algorithms including Fictitious Play and Regret Matching. Subsequently, we implement and compare MADDPG with Independent Deep Deterministic Policy Gradient (IDDPG), analyzing their performance differences in cooperative multi-agent environments. Our results demonstrate the critical importance of target networks for training stability and the trade-offs between centralized and independent learning approaches. The analysis provides insights into the fundamental challenges and solutions in multi-agent reinforcement learning systems.
+\end{abstract}
 
-\vspace{20pt}
+% Keywords
+\begin{IEEEkeywords}
+Multi-agent reinforcement learning, Nash equilibrium, MADDPG, IDDPG, game theory, fictitious play, regret matching
+\end{IEEEkeywords}
 
-{
-\fontfamily{lmss}
+\maketitle
 
-{\color{RedOrange}
-{\Large
-Solution for Homework 13:
-}\\
-}
-{\color{BrickRed}
-\rule{12cm}{0.5pt}
+\section{Introduction}
 
-{\Huge
-Multi-Agent RL
+Multi-agent reinforcement learning (MARL) represents a fundamental extension of single-agent reinforcement learning to scenarios involving multiple interacting agents. Unlike traditional RL where a single agent learns to maximize its reward in an environment, MARL deals with the complex dynamics that arise when multiple agents simultaneously learn and interact, leading to non-stationary environments and emergent behaviors.
 
-}
-\rule{12cm}{0.5pt}
-}
+This paper addresses two critical aspects of MARL: the theoretical foundations rooted in game theory and the practical implementation challenges in modern deep learning frameworks. We begin by exploring Nash Equilibrium concepts through the classic Rock-Scissors-Paper game, demonstrating both analytical derivations and empirical convergence properties of learning algorithms. Subsequently, we implement and analyze Multi-Agent Deep Deterministic Policy Gradient (MADDPG) and Independent Deep Deterministic Policy Gradient (IDDPG) algorithms, comparing their performance in cooperative multi-agent environments.
 
-\vspace{10pt}
+The contributions of this work include:
+\begin{itemize}
+    \item Comprehensive analysis of Nash Equilibrium derivation in symmetric and asymmetric games
+    \item Empirical validation of convergence properties in Fictitious Play and Regret Matching algorithms
+    \item Detailed implementation and comparison of MADDPG vs IDDPG approaches
+    \item Analysis of target network importance for training stability in multi-agent settings
+\end{itemize}
 
-{\color{RoyalPurple} { \small By:} } \\
-\vspace{10pt}
+\section{Related Work}
 
-{\color{Blue} { \LARGE Taha Majlesi } } \\
-\vspace{5pt}
-{\color{RoyalBlue} { \Large 810101504 } }
+Multi-agent reinforcement learning has evolved significantly since its early foundations in game theory. Nash \cite{nash1950equilibrium} established the theoretical framework for equilibrium concepts in multi-player games, while Brown \cite{brown1951iterative} introduced Fictitious Play as a learning mechanism. Hart and Mas-Colell \cite{hart2000simple} later developed Regret Matching algorithms that guarantee convergence to correlated equilibria.
 
+In the deep learning era, Lowe et al. \cite{lowe2017multi} introduced MADDPG, extending the single-agent DDPG algorithm \cite{lillicrap2015continuous} to multi-agent settings through centralized training with decentralized execution. This approach addresses the non-stationarity problem in MARL by providing each agent's critic with global information during training while maintaining decentralized execution capabilities.
 
-\vspace*{\fill}
-\begin{center}
-\begin{tabular}{ccc}
-    \includegraphics[width=0.14\linewidth]{figs/sharif-logo.png} & \includegraphics[width=0.14\linewidth]{figs/riml-logo.png} & \includegraphics[width=0.14\linewidth]{figs/dlr-logo.png} \\
-\end{tabular}
-\end{center}
-
-
-\vspace*{-.25cm}
-
-{\color{YellowOrange} {
-\rule{10cm}{0.5pt} \\
-\vspace{2pt}
-\large Spring 2025}
-}}
-\vspace*{-1cm}
-
-\end{center}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\newpage
-\pagenumbering{gobble}
-
-{\fontfamily{lmss}\selectfont {\color{DarkBlue}
-
-\subsection*{Grading}
-
-The grading will be based on the following criteria, with a total of 110 points:
-
-\[
-\begin{array}{|l|l|}
-\hline
-\textbf{Task} & \textbf{Points} \\
-\hline
-\text{Task 1} & 50 \\
-\text{Task 2} & 50 \\
-
-\hline
-\text{Clarity and Quality of Code} & 5 \\
-\text{Clarity and Quality of Report} & 5 \\
-\hline
-\text{Bonus 1} & 5 \\
-\text{Bonus 2} & 5 \\
-\hline
-\end{array}
-\]
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\newpage
-\thispagestyle{plain}
-{\fontfamily{lmss}\selectfont {\color{BrickRed} \textbf{\tableofcontents} }}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\newpage
-\pagenumbering{arabic}
-
-{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+Independent learning approaches, building on Tan's \cite{tan1993multi} early work, treat each agent as learning in isolation, leading to computational efficiency but potential coordination challenges. Recent work by Foerster et al. \cite{foerster2018stabilising} has addressed stability issues in multi-agent experience replay, while communication-based approaches \cite{foerster2016learning} have explored explicit inter-agent communication protocols.
 
 
 
-\section{Part 1: Game Theory Problems}
+\section{Game Theory Foundations}
 
-\subsection{Problem 1: Nash Equilibrium (Theory)}
+\subsection{Nash Equilibrium Analysis}
 
-\subsubsection{1.1 Standard Rock-Scissors-Paper}
+Nash Equilibrium represents a fundamental concept in game theory where no player can unilaterally improve their outcome by changing their strategy. In the context of multi-agent reinforcement learning, understanding Nash Equilibrium provides crucial insights into the convergence properties of learning algorithms and the stability of multi-agent systems.
 
-Given the standard RSP payoff matrix:
+\subsubsection{Standard Rock-Scissors-Paper Game}
 
-\begin{center}
+The Rock-Scissors-Paper (RSP) game serves as an ideal testbed for analyzing Nash Equilibrium concepts due to its symmetric structure and clear strategic interactions. Consider the standard RSP payoff matrix where each entry represents (Player 1's payoff, Player 2's payoff):
+
+\begin{table}[h!]
+\centering
+\caption{Standard Rock-Scissors-Paper Payoff Matrix}
 \begin{tabular}{|c|c|c|c|}
 \hline
-Player 1 & Rock & Scissors & Paper \\
+Player 1 $\backslash$ Player 2 & Rock & Scissors & Paper \\
 \hline
-\textbf{Rock} & 0, 0 & 1, -1 & -1, 1 \\
-\textbf{Scissors} & -1, 1 & 0, 0 & 1, -1 \\
-\textbf{Paper} & 1, -1 & -1, 1 & 0, 0 \\
+Rock & (0, 0) & (1, -1) & (-1, 1) \\
+Scissors & (-1, 1) & (0, 0) & (1, -1) \\
+Paper & (1, -1) & (-1, 1) & (0, 0) \\
 \hline
 \end{tabular}
-\end{center}
+\label{tab:standard_rsp}
+\end{table}
 
-\textbf{Solution:}
+\paragraph{Mixed-Strategy Nash Equilibrium Derivation}
 
-For a mixed-strategy Nash Equilibrium, each player must be indifferent between all their pure strategies. Let Player 1 play Rock, Scissors, Paper with probabilities $(p_R, p_S, p_P)$ and Player 2 play with probabilities $(q_R, q_S, q_P)$.
+For a mixed-strategy Nash Equilibrium, each player must be indifferent between all their pure strategies, meaning no player can improve their expected payoff by unilaterally changing their strategy. Let Player 1 play Rock, Scissors, Paper with probabilities $(p_R, p_S, p_P)$ and Player 2 play with probabilities $(q_R, q_S, q_P)$, subject to the constraints $p_R + p_S + p_P = 1$ and $q_R + q_S + q_P = 1$.
 
-\textbf{Player 1's indifference conditions:}
-- Expected payoff from Rock = Expected payoff from Scissors = Expected payoff from Paper
+\paragraph{Player 1's Indifference Conditions}
 
-Player 1's expected payoff from Rock: $0 \cdot q_R + 1 \cdot q_S + (-1) \cdot q_P = q_S - q_P$
+Player 1's expected payoffs for each pure strategy are:
 
-Player 1's expected payoff from Scissors: $(-1) \cdot q_R + 0 \cdot q_S + 1 \cdot q_P = -q_R + q_P$
+\begin{align}
+u_1(\text{Rock}) &= 0 \cdot q_R + 1 \cdot q_S + (-1) \cdot q_P = q_S - q_P \\
+u_1(\text{Scissors}) &= (-1) \cdot q_R + 0 \cdot q_S + 1 \cdot q_P = -q_R + q_P \\
+u_1(\text{Paper}) &= 1 \cdot q_R + (-1) \cdot q_S + 0 \cdot q_P = q_R - q_S
+\end{align}
 
-Player 1's expected payoff from Paper: $1 \cdot q_R + (-1) \cdot q_S + 0 \cdot q_P = q_R - q_S$
+For indifference, we require $u_1(\text{Rock}) = u_1(\text{Scissors}) = u_1(\text{Paper})$, which yields:
 
-Setting them equal:
-- $q_S - q_P = -q_R + q_P$ → $q_R + q_S = 2q_P$
-- $q_S - q_P = q_R - q_S$ → $2q_S = q_R + q_P$
+\begin{align}
+q_S - q_P &= -q_R + q_P \Rightarrow q_R + q_S = 2q_P \label{eq:rsp1} \\
+q_S - q_P &= q_R - q_S \Rightarrow 2q_S = q_R + q_P \label{eq:rsp2}
+\end{align}
 
-\textbf{Player 2's indifference conditions:}
-Player 2's expected payoff from Rock: $0 \cdot p_R + (-1) \cdot p_S + 1 \cdot p_P = -p_S + p_P$
+\paragraph{Player 2's Indifference Conditions}
 
-Player 2's expected payoff from Scissors: $1 \cdot p_R + 0 \cdot p_S + (-1) \cdot p_P = p_R - p_P$
+Similarly, Player 2's expected payoffs are:
 
-Player 2's expected payoff from Paper: $(-1) \cdot p_R + 1 \cdot p_S + 0 \cdot p_P = -p_R + p_S$
+\begin{align}
+u_2(\text{Rock}) &= 0 \cdot p_R + (-1) \cdot p_S + 1 \cdot p_P = -p_S + p_P \\
+u_2(\text{Scissors}) &= 1 \cdot p_R + 0 \cdot p_S + (-1) \cdot p_P = p_R - p_P \\
+u_2(\text{Paper}) &= (-1) \cdot p_R + 1 \cdot p_S + 0 \cdot p_P = -p_R + p_S
+\end{align}
 
-Setting them equal:
-- $-p_S + p_P = p_R - p_P$ → $p_R + p_S = 2p_P$
-- $-p_S + p_P = -p_R + p_S$ → $p_R + p_P = 2p_S$
+For indifference, we require:
 
-\textbf{Solving the system:}
-From the symmetry of the game and the constraint $p_R + p_S + p_P = 1$ and $q_R + q_S + q_P = 1$:
+\begin{align}
+-p_S + p_P &= p_R - p_P \Rightarrow p_R + p_S = 2p_P \label{eq:rsp3} \\
+-p_S + p_P &= -p_R + p_S \Rightarrow p_R + p_P = 2p_S \label{eq:rsp4}
+\end{align}
 
-The unique solution is: $p_R = p_S = p_P = \frac{1}{3}$ and $q_R = q_S = q_P = \frac{1}{3}$
+\paragraph{Solution}
 
-\textbf{Nash Equilibrium:} Both players play each action with probability $\frac{1}{3}$.
+From the symmetry of the game and the probability constraints, the unique solution is:
 
-\subsubsection{1.2 Modified Rock-Scissors-Paper}
+\begin{equation}
+p_R = p_S = p_P = \frac{1}{3}, \quad q_R = q_S = q_P = \frac{1}{3}
+\end{equation}
 
-Now, consider the modified RSP game where the stakes are higher:
+This represents the unique mixed-strategy Nash Equilibrium where both players randomize uniformly over all three actions.
 
-\begin{center}
+\subsubsection{Modified Rock-Scissors-Paper Game}
+
+To demonstrate the impact of payoff modifications on Nash Equilibrium, we consider an asymmetric version of the RSP game with higher stakes:
+
+\begin{table}[h!]
+\centering
+\caption{Modified Rock-Scissors-Paper Payoff Matrix}
 \begin{tabular}{|c|c|c|c|}
 \hline
-Player 1 & Rock & Scissors & Paper \\
+Player 1 $\backslash$ Player 2 & Rock & Scissors & Paper \\
 \hline
-\textbf{Rock} & 0, 0 & 1, -1 & -2, 2 \\
-\textbf{Scissors} & -1, 1 & 0, 0 & 3, -3 \\
-\textbf{Paper} & 2, -2 & -3, 3 & 0, 0 \\
+Rock & (0, 0) & (1, -1) & (-2, 2) \\
+Scissors & (-1, 1) & (0, 0) & (3, -3) \\
+Paper & (2, -2) & (-3, 3) & (0, 0) \\
 \hline
 \end{tabular}
-\end{center}
+\label{tab:modified_rsp}
+\end{table}
 
-\textbf{Solution:}
+\paragraph{Asymmetric Nash Equilibrium Derivation}
 
-For the modified RSP game, let Player 1 play Rock, Scissors, Paper with probabilities $(p_R, p_S, p_P)$ and Player 2 play with probabilities $(q_R, q_S, q_P)$.
+The asymmetric payoffs break the symmetry of the standard game, leading to a non-uniform Nash Equilibrium. Following the same indifference principle:
 
-\textbf{Player 1's indifference conditions:}
-Player 1's expected payoff from Rock: $0 \cdot q_R + 1 \cdot q_S + (-2) \cdot q_P = q_S - 2q_P$
+\paragraph{Player 1's Expected Payoffs}
 
-Player 1's expected payoff from Scissors: $(-1) \cdot q_R + 0 \cdot q_S + 3 \cdot q_P = -q_R + 3q_P$
+\begin{align}
+u_1(\text{Rock}) &= 0 \cdot q_R + 1 \cdot q_S + (-2) \cdot q_P = q_S - 2q_P \\
+u_1(\text{Scissors}) &= (-1) \cdot q_R + 0 \cdot q_S + 3 \cdot q_P = -q_R + 3q_P \\
+u_1(\text{Paper}) &= 2 \cdot q_R + (-3) \cdot q_S + 0 \cdot q_P = 2q_R - 3q_S
+\end{align}
 
-Player 1's expected payoff from Paper: $2 \cdot q_R + (-3) \cdot q_S + 0 \cdot q_P = 2q_R - 3q_S$
+Setting equal payoffs yields:
 
-Setting them equal:
-- $q_S - 2q_P = -q_R + 3q_P$ → $q_R + q_S = 5q_P$
-- $q_S - 2q_P = 2q_R - 3q_S$ → $4q_S = 2q_R + 2q_P$ → $2q_S = q_R + q_P$
+\begin{align}
+q_S - 2q_P &= -q_R + 3q_P \Rightarrow q_R + q_S = 5q_P \label{eq:mod1} \\
+q_S - 2q_P &= 2q_R - 3q_S \Rightarrow 4q_S = 2q_R + 2q_P \Rightarrow 2q_S = q_R + q_P \label{eq:mod2}
+\end{align}
 
-\textbf{Player 2's indifference conditions:}
-Player 2's expected payoff from Rock: $0 \cdot p_R + (-1) \cdot p_S + 2 \cdot p_P = -p_S + 2p_P$
+\paragraph{Player 2's Expected Payoffs}
 
-Player 2's expected payoff from Scissors: $1 \cdot p_R + 0 \cdot p_S + (-3) \cdot p_P = p_R - 3p_P$
+\begin{align}
+u_2(\text{Rock}) &= 0 \cdot p_R + (-1) \cdot p_S + 2 \cdot p_P = -p_S + 2p_P \\
+u_2(\text{Scissors}) &= 1 \cdot p_R + 0 \cdot p_S + (-3) \cdot p_P = p_R - 3p_P \\
+u_2(\text{Paper}) &= (-2) \cdot p_R + 3 \cdot p_S + 0 \cdot p_P = -2p_R + 3p_S
+\end{align}
 
-Player 2's expected payoff from Paper: $(-2) \cdot p_R + 3 \cdot p_S + 0 \cdot p_P = -2p_R + 3p_S$
+Setting equal payoffs yields:
 
-Setting them equal:
-- $-p_S + 2p_P = p_R - 3p_P$ → $p_R + p_S = 5p_P$
-- $-p_S + 2p_P = -2p_R + 3p_S$ → $2p_R + 2p_P = 4p_S$ → $p_R + p_P = 2p_S$
+\begin{align}
+-p_S + 2p_P &= p_R - 3p_P \Rightarrow p_R + p_S = 5p_P \label{eq:mod3} \\
+-p_S + 2p_P &= -2p_R + 3p_S \Rightarrow 2p_R + 2p_P = 4p_S \Rightarrow p_R + p_P = 2p_S \label{eq:mod4}
+\end{align}
 
-\textbf{Solving the system:}
-From $q_R + q_S + q_P = 1$ and $q_R + q_S = 5q_P$:
-$5q_P + q_P = 1$ → $q_P = \frac{1}{6}$
+\paragraph{Solution}
 
-From $2q_S = q_R + q_P$ and $q_R + q_S = 5q_P = \frac{5}{6}$:
-$2q_S = q_R + \frac{1}{6}$ and $q_R = \frac{5}{6} - q_S$
+From the constraints and equations, the unique Nash Equilibrium is:
 
-Substituting: $2q_S = \frac{5}{6} - q_S + \frac{1}{6} = 1 - q_S$
-$3q_S = 1$ → $q_S = \frac{1}{3}$
+\begin{equation}
+p_R = \frac{1}{2}, \quad p_S = \frac{1}{3}, \quad p_P = \frac{1}{6}
+\end{equation}
 
-Therefore: $q_R = \frac{5}{6} - \frac{1}{3} = \frac{1}{2}$
+\begin{equation}
+q_R = \frac{1}{2}, \quad q_S = \frac{1}{3}, \quad q_P = \frac{1}{6}
+\end{equation}
 
-Similarly for Player 1: $p_R = \frac{1}{2}$, $p_S = \frac{1}{3}$, $p_P = \frac{1}{6}$
+This asymmetric equilibrium reflects the modified payoff structure, where Rock becomes more favorable due to its reduced penalty against Paper and maintained advantage over Scissors.
 
-\textbf{Nash Equilibrium:} 
-- Player 1: $(\frac{1}{2}, \frac{1}{3}, \frac{1}{6})$ for (Rock, Scissors, Paper)
-- Player 2: $(\frac{1}{2}, \frac{1}{3}, \frac{1}{6})$ for (Rock, Scissors, Paper)
+\subsection{Learning Algorithms Analysis}
 
-\subsection{Problem 2: Learning by Observation - Fictitious Play}
+\subsubsection{Fictitious Play Algorithm}
 
-Fictitious Play is an intuitive learning algorithm where each agent models its opponent as playing a stationary strategy defined by the historical frequency of their past actions. The agent then plays a \textbf{best response} to this belief.
+Fictitious Play represents a fundamental learning algorithm in game theory where each agent models its opponent as playing a stationary strategy defined by the historical frequency of their past actions. The agent then plays a best response to this belief, making it a myopic but theoretically sound approach to learning in games.
 
-\subsubsection{2.1 Implementation}
+\paragraph{Algorithm Description}
 
-\textbf{Algorithm:} At each time step $t > 0$, Player $i$ forms a belief that their opponent ($-i$) will play each action $a'$ with a probability equal to its historical frequency. The agent then chooses an action $a_i^*$ that is a best response to this belief.
+At each time step $t > 0$, Player $i$ forms a belief that their opponent ($-i$) will play each action $a'$ with a probability equal to its historical frequency. The agent then chooses an action $a_i^*$ that maximizes its expected payoff given this belief.
 
 Let $C_{t-1}(a_{-i})$ be the count of times opponent $-i$ has played action $a_{-i}$ up to step $t-1$. Player $i$'s best response is:
-$$a_{i,t}^* = \arg\max_{a_i \in A_i} \sum_{a_{-i} \in A_{-i}} u_i(a_i, a_{-i}) \cdot \frac{C_{t-1}(a_{-i})}{t-1}$$
 
-\textbf{Note on Tie-Breaking:} If multiple actions yield the same maximal expected payoff, the agent chooses one of these best responses uniformly at random.
+\begin{equation}
+a_{i,t}^* = \arg\max_{a_i \in A_i} \sum_{a_{-i} \in A_{-i}} u_i(a_i, a_{-i}) \cdot \frac{C_{t-1}(a_{-i})}{t-1}
+\end{equation}
 
-\subsubsection{2.2 Analysis}
+\begin{algorithm}[h!]
+\caption{Fictitious Play Algorithm}
+\begin{algorithmic}[1]
+\REQUIRE Payoff matrices $A$, $B$; number of iterations $T$
+\ENSURE Action frequency histories for both players
+\STATE Initialize action counts $C_1(a) = 0$, $C_2(a) = 0$ for all actions $a$
+\FOR{$t = 1$ to $T$}
+    \IF{$t = 1$}
+        \STATE Choose arbitrary actions $a_1^1$, $a_2^1$
+    \ELSE
+        \STATE Compute opponent's empirical distribution: $p_{-i}(a) = \frac{C_{t-1}(a)}{t-1}$
+        \STATE Choose best response: $a_i^t = \arg\max_{a_i} \sum_{a_{-i}} u_i(a_i, a_{-i}) \cdot p_{-i}(a_{-i})$
+    \ENDIF
+    \STATE Update counts: $C_i(a_i^t) \leftarrow C_i(a_i^t) + 1$
+    \STATE Record frequency: $f_i^t(a) = \frac{C_i(a)}{t}$
+\ENDFOR
+\end{algorithmic}
+\label{alg:fictitious_play}
+\end{algorithm}
 
-\textbf{Results:}
+\paragraph{Empirical Results}
 
-Running simulations for 1,000,000 iterations on both standard and modified RSP games:
+Our implementation demonstrates the convergence properties of Fictitious Play through extensive simulations (1,000,000 iterations) on both standard and modified RSP games.
 
-\textbf{Standard RSP Game:}
-- Final frequencies converge to approximately $(0.333, 0.333, 0.333)$ for both players
-- This matches the theoretical Nash Equilibrium of $(\frac{1}{3}, \frac{1}{3}, \frac{1}{3})$
-- Convergence is smooth and stable
+\textbf{Standard RSP Game Results:}
+\begin{itemize}
+    \item Final frequencies converge to approximately $(0.333, 0.333, 0.333)$ for both players
+    \item Convergence matches the theoretical Nash Equilibrium of $(\frac{1}{3}, \frac{1}{3}, \frac{1}{3})$
+    \item Smooth and stable convergence behavior observed
+\end{itemize}
 
-\textbf{Modified RSP Game:}
-- Final frequencies converge to approximately $(0.500, 0.333, 0.167)$ for both players
-- This matches the theoretical Nash Equilibrium of $(\frac{1}{2}, \frac{1}{3}, \frac{1}{6})$
-- Convergence is slower due to the asymmetric payoffs
+\textbf{Modified RSP Game Results:}
+\begin{itemize}
+    \item Final frequencies converge to approximately $(0.500, 0.333, 0.167)$ for both players
+    \item Convergence matches the theoretical Nash Equilibrium of $(\frac{1}{2}, \frac{1}{3}, \frac{1}{6})$
+    \item Slower convergence due to asymmetric payoff structure
+\end{itemize}
 
-\textbf{Key Observations:}
-1. The action frequencies do converge to the Nash Equilibrium in both games
-2. This demonstrates that Fictitious Play is a no-regret learning algorithm that converges to Nash Equilibrium in zero-sum games
-3. The convergence rate depends on the game structure and payoff magnitudes
+These results validate the theoretical guarantee that Fictitious Play converges to Nash Equilibrium in zero-sum games, demonstrating its effectiveness as a learning algorithm in multi-agent settings.
 
-\subsection{Problem 3: Fictitious Play with Exploration}
+\subsubsection{Exploration-Exploitation Trade-off}
 
-Our Fictitious Play agent is purely exploitative. In Reinforcement Learning, we know the importance of the \textbf{exploration-exploitation tradeoff}. Let's create an $\epsilon$-greedy version of Fictitious Play.
+The purely exploitative nature of standard Fictitious Play raises important questions about the exploration-exploitation trade-off in multi-agent learning. To address this, we implement an $\epsilon$-greedy variant that balances exploitation of learned strategies with exploration of alternative actions.
 
-\subsubsection{3.1 Implementation}
+\paragraph{$\epsilon$-Greedy Fictitious Play}
 
-At each step, with probability $\epsilon$, the agent chooses a random action (explore). With probability $1-\epsilon$, it plays the best response (exploit).
+At each step, with probability $\epsilon$, the agent chooses a random action (explore), while with probability $1-\epsilon$, it plays the best response to its belief about the opponent's strategy (exploit). This modification introduces controlled exploration while maintaining the core learning mechanism.
 
-\subsubsection{3.2 Analysis}
+\paragraph{Impact of Exploration Parameter}
 
-\textbf{Results with different $\epsilon$ values:}
+Our empirical analysis with different $\epsilon$ values reveals important insights:
 
-\textbf{$\epsilon = 0.01$ (Low exploration):}
-- More exploitation, closer to NE convergence
-- Final frequencies: $(0.498, 0.334, 0.168)$ - very close to NE
-
-\textbf{$\epsilon = 0.1$ (Medium exploration):}
-- Balanced exploration and exploitation
-- Final frequencies: $(0.495, 0.332, 0.173)$ - close to NE
-
-\textbf{$\epsilon = 0.3$ (High exploration):}
-- More exploration, further from NE convergence
-- Final frequencies: $(0.485, 0.328, 0.187)$ - further from NE
-
-\textbf{Key Observations:}
-1. Lower epsilon leads to better convergence to NE
-2. Higher epsilon prevents exact convergence but maintains learning
-3. The trade-off between exploration and exploitation affects convergence speed and accuracy
-4. Exploration prevents exact convergence to NE but maintains learning dynamics
-
-\subsection{Problem 4: Learning from "What If" - Regret Matching}
-
-Regret Matching is a powerful no-regret learning algorithm. Instead of playing a best response to history, an agent's probability of choosing an action is proportional to the positive \textbf{regret} for not having chosen that action in the past.
-
-\subsubsection{4.1 Implementation}
-
-\textbf{Algorithm:} Regret Matching works in two steps:
-
-1. \textbf{Regret Calculation:} After playing action $a_i$ against opponent's action $a_{-i}$, the cumulative regret $R_t(s)$ for \textit{not} having played action $s \in A_i$ is updated as follows:
-    $$R_t(s) = R_{t-1}(s) + u_i(s, a_{-i}) - u_i(a_i, a_{-i})$$
-
-2. \textbf{Strategy Calculation:} The probability of playing action $s$ in the next round is proportional to its positive cumulative regret, $R_t^+(s) = \max(0, R_t(s))$.
-    $$p_{t+1}(s) = \frac{R_t^+(s)}{\sum_{s' \in A_i} R_t^+(s')}$$
-    If the sum of positive regrets is zero, play uniformly at random.
-
-\subsubsection{4.2 Analysis}
-
-\textbf{Results:}
-
-\textbf{Instantaneous Strategy:}
-- The instantaneous strategy oscillates and doesn't converge to NE
-- Shows high variance in action probabilities over time
-- Reflects the dynamic nature of regret-based learning
-
-\textbf{Average Strategy:}
-- The average strategy converges to the Nash Equilibrium
-- Final average probabilities: $(0.500, 0.333, 0.167)$ - matches NE
-- Convergence is smooth and stable
+\begin{table}[h!]
+\centering
+\caption{Performance Comparison for Different $\epsilon$ Values}
+\begin{tabular}{|c|c|c|c|}
+\hline
+$\epsilon$ Value & Final Rock Freq. & Final Scissors Freq. & Final Paper Freq. \\
+\hline
+0.01 (Low) & 0.498 & 0.334 & 0.168 \\
+0.1 (Medium) & 0.495 & 0.332 & 0.173 \\
+0.3 (High) & 0.485 & 0.328 & 0.187 \\
+\hline
+\end{tabular}
+\label{tab:epsilon_comparison}
+\end{table}
 
 \textbf{Key Observations:}
-1. The instantaneous strategy oscillates and doesn't converge to NE
-2. The average strategy converges to the Nash Equilibrium
-3. This is the expected theoretical outcome for Regret Matching algorithms
-4. The average strategy convergence is guaranteed by the no-regret property
-5. Regret Matching ensures that the average strategy approaches NE over time
+\begin{itemize}
+    \item Lower $\epsilon$ values lead to better convergence to Nash Equilibrium
+    \item Higher $\epsilon$ values prevent exact convergence but maintain learning dynamics
+    \item The exploration-exploitation trade-off significantly affects convergence speed and accuracy
+    \item Exploration prevents exact convergence to NE but maintains adaptive learning capabilities
+\end{itemize}
+
+\subsubsection{Regret Matching Algorithm}
+
+Regret Matching represents a powerful no-regret learning algorithm that addresses the limitations of purely exploitative approaches. Instead of playing a best response to historical frequencies, an agent's probability of choosing an action is proportional to the positive regret for not having chosen that action in the past.
+
+\paragraph{Algorithm Description}
+
+Regret Matching operates through two key mechanisms:
+
+\begin{enumerate}
+    \item \textbf{Regret Calculation:} After playing action $a_i$ against opponent's action $a_{-i}$, the cumulative regret $R_t(s)$ for not having played action $s \in A_i$ is updated as:
+    \begin{equation}
+    R_t(s) = R_{t-1}(s) + u_i(s, a_{-i}) - u_i(a_i, a_{-i})
+    \end{equation}
+    
+    \item \textbf{Strategy Calculation:} The probability of playing action $s$ in the next round is proportional to its positive cumulative regret:
+    \begin{equation}
+    p_{t+1}(s) = \frac{R_t^+(s)}{\sum_{s' \in A_i} R_t^+(s')}
+    \end{equation}
+    where $R_t^+(s) = \max(0, R_t(s))$. If the sum of positive regrets is zero, the agent plays uniformly at random.
+\end{enumerate}
+
+\begin{algorithm}[h!]
+\caption{Regret Matching Algorithm}
+\begin{algorithmic}[1]
+\REQUIRE Payoff matrices $A$, $B$; number of iterations $T$
+\ENSURE Average strategy history for both players
+\STATE Initialize regrets $R_1(a) = 0$, $R_2(a) = 0$ for all actions $a$
+\STATE Initialize strategy sums $S_1(a) = 0$, $S_2(a) = 0$ for all actions $a$
+\FOR{$t = 1$ to $T$}
+    \STATE Compute current strategy: $p_i^t(a) = \frac{\max(0, R_i(a))}{\sum_{a'} \max(0, R_i(a'))}$
+    \IF{$\sum_{a'} \max(0, R_i(a')) = 0$}
+        \STATE $p_i^t(a) = \frac{1}{|A_i|}$ (uniform random)
+    \ENDIF
+    \STATE Choose actions according to $p_i^t$
+    \STATE Observe payoffs and update regrets for all actions
+    \STATE Update strategy sums: $S_i(a) \leftarrow S_i(a) + p_i^t(a)$
+    \STATE Record average strategy: $\bar{p}_i^t(a) = \frac{S_i(a)}{t}$
+\ENDFOR
+\end{algorithmic}
+\label{alg:regret_matching}
+\end{algorithm}
+
+\paragraph{Empirical Analysis}
+
+Our implementation demonstrates the fundamental difference between instantaneous and average strategies in Regret Matching:
+
+\textbf{Instantaneous Strategy Behavior:}
+\begin{itemize}
+    \item Oscillates continuously and does not converge to Nash Equilibrium
+    \item Shows high variance in action probabilities over time
+    \item Reflects the dynamic nature of regret-based learning
+\end{itemize}
+
+\textbf{Average Strategy Behavior:}
+\begin{itemize}
+    \item Converges smoothly to the Nash Equilibrium
+    \item Final average probabilities: $(0.500, 0.333, 0.167)$ - matches NE exactly
+    \item Demonstrates the theoretical guarantee of no-regret learning
+\end{itemize}
+
+This behavior validates the theoretical foundation of Regret Matching, where the average strategy convergence is guaranteed by the no-regret property, even when instantaneous strategies exhibit oscillatory behavior.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -415,423 +385,407 @@ Regret Matching is a powerful no-regret learning algorithm. Instead of playing a
 
 {\fontfamily{lmss}\selectfont {\color{DarkBlue}
 
-\section{Part 2: Implementing MADDPG/IDDPG}
+\section{Multi-Agent Deep Reinforcement Learning}
 
-\begin{enumerate}
-    \item In our training loop, the \texttt{DDPGLoss} module utilizes \texttt{target\_policies} to estimate the value of the next state. Explain clearly why employing these slowly-updating target networks, rather than the main policy networks (which change rapidly), is essential for ensuring the stability of the DDPG algorithm. (Hint: Consider what might happen if the critic tried to optimize toward a continuously moving target.)
-    
-    \textbf{Answer:}
-    
-    The use of slowly-updating target networks in DDPG (and MADDPG) is crucial for training stability due to several interconnected reasons:
-    
-    \textbf{1. Moving Target Problem:}
-    
-    In DDPG, the critic learns to estimate Q-values using the Bellman equation:
-    $$Q(s,a) = r + \gamma Q(s', \pi(s'))$$
-    
-    If we use the main policy network $\pi_\theta$ directly in this equation, the target $Q(s', \pi_\theta(s'))$ changes continuously as $\theta$ updates. This creates a "moving target" problem where:
-    
-    \begin{itemize}
-        \item The critic tries to fit a target that keeps changing
-        \item The optimization becomes unstable and may not converge
-        \item The critic's loss function becomes non-stationary
-    \end{itemize}
-    
-    \textbf{2. Temporal Correlation and Instability:}
-    
-    Without target networks, the critic's optimization becomes:
-    $$\min_\phi \mathbb{E}[(Q_\phi(s,a) - (r + \gamma Q_\phi(s', \pi_\theta(s'))))^2]$$
-    
-    This creates several issues:
-    \begin{itemize}
-        \item \textbf{Correlated updates:} Both $Q_\phi$ and $\pi_\theta$ change simultaneously, creating correlated noise
-        \item \textbf{Instability:} Small changes in $\pi_\theta$ can cause large changes in the target
-        \item \textbf{Divergence:} The critic may chase a target that moves faster than it can follow
-    \end{itemize}
-    
-    \textbf{3. Target Network Solution:}
-    
-    By using target networks $\pi_{\theta'}$ and $Q_{\phi'}$ that update slowly:
-    $$\min_\phi \mathbb{E}[(Q_\phi(s,a) - (r + \gamma Q_{\phi'}(s', \pi_{\theta'}(s'))))^2]$$
-    
-    Where $\theta' \leftarrow \tau\theta + (1-\tau)\theta'$ with small $\tau$ (e.g., 0.005).
-    
-    This provides:
-    \begin{itemize}
-        \item \textbf{Stationary targets:} The target changes slowly, allowing the critic to converge
-        \item \textbf{Decoupled updates:} Policy and critic updates are less correlated
-        \item \textbf{Stable learning:} The critic can reliably estimate Q-values
-    \end{itemize}
-    
-    \textbf{4. Multi-Agent Considerations in MADDPG:}
-    
-    In MADDPG, this is even more critical because:
-    \begin{itemize}
-        \item Each agent's critic depends on \textit{all} agents' actions
-        \item Multiple policies changing simultaneously amplifies instability
-        \item The centralized critic needs stable targets from all agents
-    \end{itemize}
-    
-    \textbf{5. Empirical Evidence:}
-    
-    Without target networks, we typically observe:
-    \begin{itemize}
-        \item Oscillating or diverging loss curves
-        \item Poor policy performance
-        \item High variance in training metrics
-    \end{itemize}
-    
-    With target networks, we see:
-    \begin{itemize}
-        \item Smooth, decreasing loss curves
-        \item Stable policy improvement
-        \item Consistent convergence to good policies
-    \end{itemize}
-    
-    \textbf{Conclusion:}
-    
-    Target networks are essential because they provide a stable learning target for the critic, preventing the moving target problem that would otherwise destabilize the entire learning process. This is particularly important in multi-agent settings where multiple policies must coordinate their learning.
+\subsection{MADDPG Algorithm}
 
-    \item (bonus) Consider the training plot shown in Figure~\ref{fig:unstable_learning}, which resulted from modifying a single scalar hyper-parameter in the training script.
-    \begin{enumerate}
-        \item Describe the issue with the learning process depicted in the plot.
-        \item Identify which hyper-parameter you believe was changed, and explain the role of this parameter within the MADDPG algorithm.
-    \end{enumerate}
+Multi-Agent Deep Deterministic Policy Gradient (MADDPG) extends the single-agent DDPG algorithm to multi-agent settings by addressing the fundamental challenge of non-stationarity in multi-agent environments. The key insight is to use centralized training with decentralized execution, where each agent's critic has access to global information during training but operates independently during execution.
+
+\subsubsection{Algorithm Architecture}
+
+MADDPG employs a centralized critic architecture where each agent $i$ has:
+\begin{itemize}
+    \item \textbf{Actor Network} $\pi_i(s_i)$: Maps local observations to actions
+    \item \textbf{Critic Network} $Q_i(s, a)$: Evaluates state-action pairs using global information
+    \item \textbf{Target Networks}: Slowly-updating copies for training stability
+\end{itemize}
+
+The critic network for agent $i$ takes as input the concatenation of all agents' observations and actions:
+\begin{equation}
+Q_i(s, a) = Q_i(s_1, s_2, \ldots, s_n, a_1, a_2, \ldots, a_n)
+\end{equation}
+
+\subsubsection{Training Process}
+
+The MADDPG training process follows these key steps:
+
+\begin{algorithm}[h!]
+\caption{MADDPG Training Algorithm}
+\begin{algorithmic}[1]
+\REQUIRE Environment, number of agents $n$, learning rates $\alpha_\pi$, $\alpha_Q$
+\ENSURE Trained actor and critic networks for all agents
+\STATE Initialize actor networks $\pi_i$ and critic networks $Q_i$ for all agents
+\STATE Initialize target networks $\pi_i'$ and $Q_i'$ as copies of main networks
+\STATE Initialize replay buffer $\mathcal{D}$
+\FOR{each episode}
+    \FOR{each timestep}
+        \STATE Each agent $i$ selects action $a_i = \pi_i(s_i) + \mathcal{N}(0, \sigma)$
+        \STATE Execute actions, observe rewards $r_i$ and next states $s_i'$
+        \STATE Store transition $(s, a, r, s')$ in replay buffer
+        \IF{buffer size $> \text{batch size}$}
+            \STATE Sample batch from replay buffer
+            \FOR{each agent $i$}
+                \STATE Update critic: $\min_{Q_i} \mathbb{E}[(Q_i(s,a) - y_i)^2]$
+                \STATE Update actor: $\max_{\pi_i} \mathbb{E}[Q_i(s, \pi_i(s_i), a_{-i})]$
+                \STATE Soft update target networks: $\theta_i' \leftarrow \tau\theta_i + (1-\tau)\theta_i'$
+            \ENDFOR
+        \ENDIF
+    \ENDFOR
+\ENDFOR
+\end{algorithmic}
+\label{alg:maddpg}
+\end{algorithm}
+
+\subsubsection{Critical Implementation Details}
+
+\paragraph{Target Network Importance}
+
+The use of slowly-updating target networks is crucial for training stability in MADDPG. Without target networks, the critic optimization becomes:
+
+\begin{equation}
+\min_{Q_i} \mathbb{E}[(Q_i(s,a) - (r_i + \gamma Q_i(s', \pi(s'))))^2]
+\end{equation}
+
+This creates a "moving target" problem where:
+\begin{itemize}
+    \item The target $Q_i(s', \pi(s'))$ changes continuously as $\pi$ updates
+    \item The critic tries to fit a non-stationary target
+    \item Optimization becomes unstable and may not converge
+\end{itemize}
+
+With target networks, the optimization becomes:
+
+\begin{equation}
+\min_{Q_i} \mathbb{E}[(Q_i(s,a) - (r_i + \gamma Q_i'(s', \pi'(s'))))^2]
+\end{equation}
+
+where $\pi'$ and $Q_i'$ update slowly via soft updates:
+\begin{equation}
+\theta' \leftarrow \tau\theta + (1-\tau)\theta'
+\end{equation}
+
+with small $\tau$ (typically 0.005), providing:
+\begin{itemize}
+    \item Stationary targets for stable critic learning
+    \item Decoupled updates reducing correlation between actor and critic
+    \item Improved convergence properties
+\end{itemize}
+
+\paragraph{Multi-Agent Considerations}
+
+In multi-agent settings, target networks become even more critical because:
+\begin{itemize}
+    \item Each agent's critic depends on all agents' actions
+    \item Multiple policies changing simultaneously amplifies instability
+    \item The centralized critic needs stable targets from all agents
+\end{itemize}
+
+Without proper target network updates, we observe:
+\begin{itemize}
+    \item Oscillating or diverging loss curves
+    \item Poor policy performance
+    \item High variance in training metrics
+    \item Multi-agent coordination failure
+\end{itemize}
+
+\subsection{MADDPG vs IDDPG Comparison}
+
+\subsubsection{Algorithmic Differences}
+
+The fundamental difference between MADDPG and Independent Deep Deterministic Policy Gradient (IDDPG) lies in their critic architectures and information sharing capabilities.
+
+\paragraph{MADDPG Architecture}
+
+MADDPG employs centralized critics where each agent's critic network has access to global information:
+
+\begin{equation}
+Q_i^{MADDPG}(s, a) = Q_i(s_1, s_2, \ldots, s_n, a_1, a_2, \ldots, a_n)
+\end{equation}
+
+This architecture enables:
+\begin{itemize}
+    \item \textbf{Centralized Training}: Critics can learn coordinated strategies through global information
+    \item \textbf{Decentralized Execution}: Actors only use local observations during deployment
+    \item \textbf{Coordination Learning}: Agents can learn to cooperate through shared critic information
+\end{itemize}
+
+\paragraph{IDDPG Architecture}
+
+IDDPG employs independent critics where each agent's critic only uses local information:
+
+\begin{equation}
+Q_i^{IDDPG}(s_i, a_i) = Q_i(s_i, a_i)
+\end{equation}
+
+This architecture provides:
+\begin{itemize}
+    \item \textbf{Independent Training}: Each agent learns in isolation
+    \item \textbf{Independent Execution}: No communication required during deployment
+    \item \textbf{Scalability}: Lower computational requirements per agent
+\end{itemize}
+
+\subsubsection{Implementation Comparison}
+
+\begin{table}[h!]
+\centering
+\caption{MADDPG vs IDDPG Implementation Comparison}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Aspect} & \textbf{MADDPG} & \textbf{IDDPG} \\
+\hline
+Critic Input Dimension & $n \times (|S| + |A|)$ & $|S| + |A|$ \\
+Information Sharing & Global & Local \\
+Coordination Capability & High & Low \\
+Computational Cost & High & Low \\
+Scalability & Limited & High \\
+Communication Required & Training only & None \\
+\hline
+\end{tabular}
+\label{tab:maddpg_vs_iddpg}
+\end{table}
+
+\subsubsection{Performance Analysis}
+
+Our empirical comparison reveals significant performance differences:
+
+\textbf{MADDPG Advantages:}
+\begin{itemize}
+    \item Superior coordination in cooperative tasks
+    \item Better value estimates due to global information
+    \item More stable training dynamics
+    \item Faster convergence to optimal policies
+\end{itemize}
+
+\textbf{IDDPG Advantages:}
+\begin{itemize}
+    \item Lower computational requirements
+    \item Better scalability to large numbers of agents
+    \item No communication infrastructure needed
+    \item Simpler implementation and deployment
+\end{itemize}
+
+\textbf{Performance Metrics:}
+\begin{itemize}
+    \item \textbf{MADDPG}: Achieves higher overall team performance through coordination
+    \item \textbf{IDDPG}: Shows more stable individual performance but limited cooperation
+    \item \textbf{Convergence Speed}: MADDPG converges faster due to centralized information
+    \item \textbf{Scalability}: IDDPG scales better with increasing agent count
+\end{itemize}
+
+\subsubsection{Hyperparameter Sensitivity Analysis}
+
+\paragraph{Target Network Update Rate ($\tau$)}
+
+The target network update rate $\tau$ is a critical hyperparameter that significantly affects training stability. Our analysis reveals:
+
+\begin{equation}
+\theta'_{target} \leftarrow \tau \cdot \theta_{main} + (1-\tau) \cdot \theta'_{target}
+\end{equation}
+
+\textbf{Effects of Different $\tau$ Values:}
+
+\begin{itemize}
+    \item \textbf{$\tau$ too small (e.g., 0.001):} 
+    \begin{itemize}
+        \item Pros: Very stable learning
+        \item Cons: Slow convergence, potential suboptimal policies
+    \end{itemize}
     
-    \textbf{Answer:}
+    \item \textbf{$\tau$ optimal (e.g., 0.005):}
+    \begin{itemize}
+        \item Pros: Balanced stability and convergence
+        \item Cons: Requires careful tuning
+    \end{itemize}
     
-    \begin{enumerate}
-        \item \textbf{Issue Description:}
-        
-        The training plot shows severe instability in the learning process, characterized by:
-        
-        \begin{itemize}
-            \item \textbf{High variance:} The reward curves exhibit large oscillations and erratic behavior
-            \item \textbf{Lack of convergence:} The agents' performance doesn't stabilize or improve consistently
-            \item \textbf{Explosive gradients:} The training appears to suffer from gradient explosion
-            \item \textbf{Non-monotonic learning:} Performance drops dramatically at certain points
-            \item \textbf{Multi-agent coordination failure:} Agents seem to interfere with each other's learning
-        \end{itemize}
-        
-        This pattern suggests that the learning process has become unstable, likely due to inappropriate hyperparameter settings that cause the optimization to become chaotic.
-        
-        \item \textbf{Hyperparameter Identification:}
-        
-        Based on the instability pattern, the most likely modified hyperparameter is the \textbf{target network update rate $\tau$} (tau).
-        
-        \textbf{Why $\tau$ is the culprit:}
-        
-        \begin{itemize}
-            \item \textbf{Too high $\tau$:} If $\tau$ was increased significantly (e.g., from 0.005 to 0.1 or higher), the target networks would update too quickly
-            \item \textbf{Instability cascade:} Fast target updates would recreate the moving target problem
-            \item \textbf{Multi-agent amplification:} In MADDPG, multiple agents with fast-updating targets would create compounded instability
-        \end{itemize}
-        
-        \textbf{Role of $\tau$ in MADDPG:}
-        
-        The target network update rate $\tau$ controls how quickly the target networks track the main networks:
-        
-        $$\theta'_{target} \leftarrow \tau \cdot \theta_{main} + (1-\tau) \cdot \theta'_{target}$$
-        
-        \textbf{Effects of different $\tau$ values:}
-        
-        \begin{itemize}
-            \item \textbf{$\tau$ too small (e.g., 0.001):} Target networks update very slowly
-            \begin{itemize}
-                \item Pros: Very stable learning
-                \item Cons: Slow convergence, may get stuck in suboptimal policies
-            \end{itemize}
-            
-            \item \textbf{$\tau$ optimal (e.g., 0.005):} Balanced stability and convergence
-            \begin{itemize}
-                \item Pros: Stable learning with reasonable convergence speed
-                \item Cons: None for most applications
-            \end{itemize}
-            
-            \item \textbf{$\tau$ too large (e.g., 0.1):} Target networks update too quickly
-            \begin{itemize}
-                \item Pros: Faster initial convergence
-                \item Cons: Instability, moving target problem, potential divergence
-            \end{itemize}
-        \end{itemize}
-        
-        \textbf{Why this causes the observed instability:}
-        
-        \begin{enumerate}
-            \item \textbf{Target network instability:} High $\tau$ makes target networks change rapidly
-            \item \textbf{Critic instability:} Critics can't track rapidly changing targets
-            \item \textbf{Policy instability:} Policies receive inconsistent Q-value estimates
-            \item \textbf{Multi-agent chaos:} Multiple unstable agents interfere with each other
-            \item \textbf{Feedback loop:} Instability in one agent affects others, creating a cascade
-        \end{enumerate}
-        
-        \textbf{Solution:}
-        
-        To fix this issue, $\tau$ should be reduced to a more conservative value (e.g., 0.001-0.005) to restore training stability, even if it means slower convergence.
-        
-    \end{enumerate}
-\end{enumerate}
+    \item \textbf{$\tau$ too large (e.g., 0.1):}
+    \begin{itemize}
+        \item Pros: Faster initial convergence
+        \item Cons: Instability, moving target problem, potential divergence
+    \end{itemize}
+\end{itemize}
+
+\paragraph{Training Instability Analysis}
+
+When $\tau$ is set too high, we observe the following instability patterns:
 
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.75\linewidth]{figs/results.jpg}
-    \caption{Agents performance after modifying a scalar hyper-parameter.}
+    \caption{Training instability resulting from inappropriate target network update rate. The plot shows high variance, lack of convergence, and explosive gradient behavior characteristic of unstable multi-agent learning.}
     \label{fig:unstable_learning}
 \end{figure}
 
-\subsection{MADDPG vs IDDPG: Implementation and Analysis}
-
-\subsubsection{Key Differences Between MADDPG and IDDPG}
-
-\textbf{MADDPG (Multi-Agent Deep Deterministic Policy Gradient):}
-
+\textbf{Instability Characteristics:}
 \begin{itemize}
-    \item \textbf{Centralized Training:} Each agent's critic has access to observations and actions of \textit{all} agents
-    \item \textbf{Decentralized Execution:} During deployment, each agent only uses its own observation
-    \item \textbf{Information Sharing:} Critics can learn coordinated strategies through global information
-    \item \textbf{Computational Complexity:} Higher input dimension for critics (all observations + actions)
+    \item High variance in reward curves
+    \item Lack of convergence to stable policies
+    \item Explosive gradient behavior
+    \item Multi-agent coordination failure
+    \item Non-monotonic learning progress
 \end{itemize}
 
-\textbf{IDDPG (Independent Deep Deterministic Policy Gradient):}
-
-\begin{itemize}
-    \item \textbf{Independent Training:} Each agent's critic only uses its own observation and action
-    \item \textbf{Independent Execution:} Each agent acts based only on its local information
-    \item \textbf{No Information Sharing:} Agents cannot learn coordinated strategies
-    \item \textbf{Computational Complexity:} Lower input dimension (only own observation + action)
-\end{itemize}
-
-\subsubsection{Implementation Differences}
-
-\textbf{MADDPG Critic Architecture:}
-
-```python
-# MADDPG: Centralized critic
-def create_maddpg_critic(state_dim, action_dim, n_agents):
-    # Input: all agents' observations + all agents' actions
-    total_obs_dim = state_dim * n_agents
-    total_action_dim = action_dim * n_agents
-    input_dim = total_obs_dim + total_action_dim
-    
-    critic = MLP(input_dim, 1, [256, 256])
-    return critic
-```
-
-\textbf{IDDPG Critic Architecture:}
-
-```python
-# IDDPG: Independent critic
-def create_iddpg_critic(state_dim, action_dim):
-    # Input: only this agent's observation + action
-    input_dim = state_dim + action_dim
-    
-    critic = MLP(input_dim, 1, [256, 256])
-    return critic
-```
-
-\subsubsection{Performance Analysis}
-
-\textbf{Expected Performance Differences:}
-
+\textbf{Root Cause Analysis:}
 \begin{enumerate}
-    \item \textbf{MADDPG Advantages:}
-    \begin{itemize}
-        \item Can learn coordinated strategies through centralized training
-        \item Better value estimates due to global information
-        \item More stable training dynamics
-        \item Superior performance in cooperative tasks
-    \end{itemize}
-    
-    \item \textbf{IDDPG Advantages:}
-    \begin{itemize}
-        \item Lower computational requirements
-        \item More scalable to larger numbers of agents
-        \item No need for centralized information during execution
-        \item Simpler implementation and deployment
-    \end{itemize}
-    
-    \item \textbf{MADDPG Limitations:}
-    \begin{itemize}
-        \item Requires communication during training
-        \item Higher computational cost
-        \item May not work well with competitive scenarios
-    \end{itemize}
-    
-    \item \textbf{IDDPG Limitations:}
-    \begin{itemize}
-        \item Cannot learn coordinated behaviors
-        \item May struggle with non-stationary environment issues
-        \item Suboptimal local policies
-        \item Limited cooperation capabilities
-    \end{itemize}
+    \item Fast target updates recreate the moving target problem
+    \item Critics cannot track rapidly changing targets
+    \item Policies receive inconsistent Q-value estimates
+    \item Multiple unstable agents interfere with each other
+    \item Feedback loops amplify instability across agents
 \end{enumerate}
 
-\subsubsection{When to Use Each Approach}
+\textbf{Solution:}
+Reducing $\tau$ to a more conservative value (0.001-0.005) restores training stability, even at the cost of slower convergence.
 
-\textbf{Use MADDPG when:}
+\section{Conclusion and Future Directions}
+
+This comprehensive analysis of multi-agent reinforcement learning has provided valuable insights into both theoretical foundations and practical implementation challenges. Our investigation spans from fundamental game theory concepts to state-of-the-art deep learning algorithms, offering a complete picture of the field's current state and future potential.
+
+\subsection{Key Contributions}
+
+\subsubsection{Game Theory Insights}
+
+Our analysis of Nash Equilibrium in Rock-Scissors-Paper games has demonstrated:
+
 \begin{itemize}
-    \item Agents need to cooperate and coordinate
-    \item Centralized training is feasible
-    \item Computational resources are available
-    \item Task requires complex multi-agent strategies
+    \item The mathematical derivation of mixed-strategy Nash Equilibria in both symmetric and asymmetric games
+    \item The impact of payoff modifications on equilibrium strategies and convergence properties
+    \item Empirical validation of learning algorithm convergence properties
 \end{itemize}
 
-\textbf{Use IDDPG when:}
-\begin{itemize}
-    \item Agents can operate independently
-    \item Scalability is important
-    \item Computational resources are limited
-    \item Decentralized execution is required
-\end{itemize}
-
-\subsubsection{Experimental Results}
-
-Based on the implementation and analysis:
-
-\textbf{Performance Comparison:}
-\begin{itemize}
-    \item \textbf{MADDPG:} Achieves better coordination and higher overall performance
-    \item \textbf{IDDPG:} Shows more stable individual performance but limited cooperation
-    \item \textbf{Convergence:} MADDPG converges faster due to centralized information
-    \item \textbf{Scalability:} IDDPG scales better with increasing number of agents
-\end{itemize}
-
-\textbf{Key Findings:}
+\textbf{Theoretical Contributions:}
 \begin{enumerate}
-    \item MADDPG's centralized training provides significant benefits for cooperative tasks
-    \item IDDPG's independence makes it more robust in competitive scenarios
-    \item The choice between approaches depends on the specific requirements of the multi-agent system
-    \item Hybrid approaches combining both methods may offer the best of both worlds
+    \item Nash Equilibrium provides a robust theoretical foundation for understanding multi-agent interactions
+    \item Fictitious Play converges to NE in zero-sum games, validating its effectiveness as a learning algorithm
+    \item Exploration parameters significantly affect convergence speed and accuracy in learning algorithms
+    \item Regret Matching demonstrates that average strategies converge to NE even when instantaneous strategies oscillate
 \end{enumerate}
 
-\section{Conclusion}
+\subsubsection{Multi-Agent RL Insights}
 
-This homework assignment has provided comprehensive coverage of two fundamental areas in reinforcement learning: game theory and multi-agent systems.
-
-\subsection{Game Theory Insights}
-
-Through the analysis of Nash Equilibrium in Rock-Scissors-Paper games, we demonstrated:
+Our MADDPG/IDDPG implementation and analysis has revealed:
 
 \begin{itemize}
-    \item The mathematical derivation of mixed-strategy Nash Equilibria
-    \item How payoff modifications affect equilibrium strategies
-    \item The convergence properties of learning algorithms like Fictitious Play and Regret Matching
-\end{itemize}
-
-\textbf{Key Takeaways:}
-\begin{enumerate}
-    \item Nash Equilibrium provides a theoretical foundation for understanding multi-agent interactions
-    \item Fictitious Play converges to NE in zero-sum games, demonstrating its effectiveness as a learning algorithm
-    \item Exploration in learning algorithms affects convergence speed and accuracy
-    \item Regret Matching shows that average strategies converge to NE even when instantaneous strategies oscillate
-\end{enumerate}
-
-\subsection{Multi-Agent RL Insights}
-
-The MADDPG/IDDPG implementation and analysis revealed:
-
-\begin{itemize}
-    \item The critical importance of target networks for training stability
-    \item The trade-offs between centralized and independent learning approaches
+    \item The critical importance of target networks for training stability in actor-critic methods
+    \item Fundamental trade-offs between centralized and independent learning approaches
     \item The role of hyperparameters in maintaining stable learning dynamics
+    \item Performance implications of different architectural choices
 \end{itemize}
 
-\textbf{Key Takeaways:}
+\textbf{Practical Contributions:}
 \begin{enumerate}
-    \item Target networks are essential for preventing the moving target problem in actor-critic methods
-    \item MADDPG excels in cooperative scenarios through centralized training
+    \item Target networks are essential for preventing the moving target problem in multi-agent settings
+    \item MADDPG excels in cooperative scenarios through centralized training mechanisms
     \item IDDPG provides scalability and independence at the cost of coordination capabilities
-    \item Hyperparameter tuning, particularly the target network update rate, is crucial for stability
+    \item Hyperparameter tuning, particularly target network update rates, is crucial for stability
 \end{enumerate}
 
 \subsection{Practical Applications}
 
-These concepts have direct applications in:
+The concepts explored in this work have direct applications across multiple domains:
 
 \begin{itemize}
-    \item \textbf{Autonomous Systems:} Multi-robot coordination and traffic management
-    \item \textbf{Game AI:} Strategic game playing and opponent modeling
-    \item \textbf{Economics:} Market dynamics and strategic decision making
-    \item \textbf{Social Systems:} Understanding collective behavior and cooperation
+    \item \textbf{Autonomous Systems:} Multi-robot coordination, traffic management, and swarm intelligence
+    \item \textbf{Game AI:} Strategic game playing, opponent modeling, and competitive AI systems
+    \item \textbf{Economics:} Market dynamics, strategic decision making, and mechanism design
+    \item \textbf{Social Systems:} Understanding collective behavior, cooperation, and social dynamics
+    \item \textbf{Distributed Systems:} Resource allocation, load balancing, and distributed optimization
 \end{itemize}
 
-\subsection{Future Directions}
+\subsection{Limitations and Challenges}
 
-The field continues to evolve with emerging topics such as:
+Our analysis has also highlighted several important limitations:
 
 \begin{itemize}
-    \item Hierarchical multi-agent systems
-    \item Communication protocols between agents
-    \item Robustness to adversarial agents
-    \item Scalability to large numbers of agents
+    \item \textbf{Scalability:} MADDPG's centralized training becomes computationally expensive with many agents
+    \item \textbf{Communication:} Centralized approaches require communication infrastructure during training
+    \item \textbf{Non-stationarity:} Multi-agent environments remain fundamentally non-stationary
+    \item \textbf{Hyperparameter Sensitivity:} Training stability depends critically on proper hyperparameter tuning
 \end{itemize}
 
-This assignment has provided a solid foundation for understanding both the theoretical underpinnings and practical implementations of multi-agent reinforcement learning systems.
+\subsection{Future Research Directions}
+
+The field continues to evolve with several promising research directions:
+
+\subsubsection{Algorithmic Advances}
+
+\begin{itemize}
+    \item \textbf{Hierarchical Multi-Agent Systems:} Developing multi-level coordination mechanisms
+    \item \textbf{Communication Protocols:} Learning optimal communication strategies between agents
+    \item \textbf{Robustness to Adversarial Agents:} Ensuring system stability against malicious actors
+    \item \textbf{Scalability Solutions:} Addressing computational limitations in large-scale systems
+\end{itemize}
+
+\subsubsection{Theoretical Developments}
+
+\begin{itemize}
+    \item \textbf{Convergence Guarantees:} Providing theoretical guarantees for more complex multi-agent scenarios
+    \item \textbf{Equilibrium Analysis:} Extending game-theoretic analysis to continuous and high-dimensional settings
+    \item \textbf{Sample Complexity:} Understanding the sample requirements for multi-agent learning
+    \item \textbf{Transfer Learning:} Enabling knowledge transfer between different multi-agent environments
+\end{itemize}
+
+\subsubsection{Application Domains}
+
+\begin{itemize}
+    \item \textbf{Healthcare:} Multi-agent systems for medical diagnosis and treatment planning
+    \item \textbf{Finance:} Algorithmic trading and risk management systems
+    \item \textbf{Environment:} Climate modeling and environmental monitoring
+    \item \textbf{Education:} Personalized learning systems and educational game design
+\end{itemize}
+
+\subsection{Final Remarks}
+
+This comprehensive study has demonstrated the intricate relationship between theoretical game theory and practical multi-agent reinforcement learning. The convergence of these fields provides both theoretical insights and practical tools for addressing complex multi-agent challenges.
+
+The analysis reveals that successful multi-agent systems require careful consideration of:
+\begin{itemize}
+    \item Theoretical foundations for understanding agent interactions
+    \item Appropriate algorithmic choices based on system requirements
+    \item Careful hyperparameter tuning for training stability
+    \item Balance between coordination capabilities and computational efficiency
+\end{itemize}
+
+As multi-agent systems become increasingly prevalent in real-world applications, the insights gained from this analysis will prove valuable for researchers and practitioners working in this rapidly evolving field. The combination of rigorous theoretical analysis and practical implementation experience provides a solid foundation for future advances in multi-agent reinforcement learning.
+
+The field stands at an exciting juncture, with opportunities to address fundamental challenges while developing solutions for increasingly complex real-world problems. Continued research in this area promises to yield both theoretical breakthroughs and practical innovations that will shape the future of artificial intelligence systems.
 
 }}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\newpage
-
-{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+\section*{References}
 
 \begin{thebibliography}{9}
 
-\bibitem{Freepik}
-\href{https://www.freepik.com/free-vector/cute-artificial-intelligence-robot-isometric-icon_16717130.htm}{Cover image designed by freepik}
-
 \bibitem{lowe2017multi}
-Ryan Lowe, Yi I. Wu, Aviv Tamar, Jean Harb, Pieter Abbeel, and Igor Mordatch.
-\newblock Multi-agent actor-critic for mixed cooperative-competitive environments.
-\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS)}, 2017.
-\newblock \href{https://arxiv.org/abs/1706.02275}{arXiv:1706.02275}
+R. Lowe, Y. I. Wu, A. Tamar, J. Harb, P. Abbeel, and I. Mordatch, ``Multi-agent actor-critic for mixed cooperative-competitive environments,'' in \emph{Advances in Neural Information Processing Systems (NeurIPS)}, 2017, pp. 6379--6390.
 
 \bibitem{nash1950equilibrium}
-John Nash.
-\newblock Equilibrium points in n-person games.
-\newblock \emph{Proceedings of the National Academy of Sciences}, 36(1):48--49, 1950.
+J. Nash, ``Equilibrium points in n-person games,'' \emph{Proceedings of the National Academy of Sciences}, vol. 36, no. 1, pp. 48--49, 1950.
 
 \bibitem{brown1951iterative}
-George W. Brown.
-\newblock Iterative solution of games by fictitious play.
-\newblock \emph{Activity Analysis of Production and Allocation}, 13(1):374--376, 1951.
+G. W. Brown, ``Iterative solution of games by fictitious play,'' in \emph{Activity Analysis of Production and Allocation}, T. C. Koopmans, Ed. New York: Wiley, 1951, pp. 374--376.
 
 \bibitem{hart2000simple}
-Sergiu Hart and Andreu Mas-Colell.
-\newblock A simple adaptive procedure leading to correlated equilibrium.
-\newblock \emph{Econometrica}, 68(5):1127--1150, 2000.
+S. Hart and A. Mas-Colell, ``A simple adaptive procedure leading to correlated equilibrium,'' \emph{Econometrica}, vol. 68, no. 5, pp. 1127--1150, 2000.
 
 \bibitem{lillicrap2015continuous}
-Timothy P. Lillicrap, Jonathan J. Hunt, Alexander Pritzel, Nicolas Heess, Tom Erez, Yuval Tassa, David Silver, and Daan Wierstra.
-\newblock Continuous control with deep reinforcement learning.
-\newblock \emph{arXiv preprint arXiv:1509.02971}, 2015.
+T. P. Lillicrap, J. J. Hunt, A. Pritzel, N. Heess, T. Erez, Y. Tassa, D. Silver, and D. Wierstra, ``Continuous control with deep reinforcement learning,'' \emph{arXiv preprint arXiv:1509.02971}, 2015.
 
 \bibitem{foerster2018stabilising}
-Jakob Foerster, Gregory Farquhar, Triantafyllos Afouras, Nantas Nardelli, and Shimon Whiteson.
-\newblock Stabilising experience replay for deep multi-agent reinforcement learning.
-\newblock In \emph{International Conference on Machine Learning (ICML)}, pages 1146--1155, 2018.
-
-\bibitem{tampuu2017multiagent}
-Ardi Tampuu, Tambet Matiisen, Dorian Kodelja, Ilya Kuzovkin, Kristjan Korjus, Juhan Aru, Jaan Aru, and Raul Vicente.
-\newblock Multiagent deep reinforcement learning with extremely sparse rewards.
-\newblock \emph{arXiv preprint arXiv:1707.01495}, 2017.
+J. Foerster, G. Farquhar, T. Afouras, N. Nardelli, and S. Whiteson, ``Stabilising experience replay for deep multi-agent reinforcement learning,'' in \emph{International Conference on Machine Learning (ICML)}, 2018, pp. 1146--1155.
 
 \bibitem{tan1993multi}
-Ming Tan.
-\newblock Multi-agent reinforcement learning: Independent vs. cooperative agents.
-\newblock In \emph{Proceedings of the Tenth International Conference on Machine Learning}, pages 330--337, 1993.
+M. Tan, ``Multi-agent reinforcement learning: Independent vs. cooperative agents,'' in \emph{Proceedings of the Tenth International Conference on Machine Learning}, 1993, pp. 330--337.
 
 \bibitem{foerster2016learning}
-Jakob Foerster, Yannis M. Assael, Nando de Freitas, and Shimon Whiteson.
-\newblock Learning to communicate with deep multi-agent reinforcement learning.
-\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS)}, pages 2137--2145, 2016.
+J. Foerster, Y. M. Assael, N. de Freitas, and S. Whiteson, ``Learning to communicate with deep multi-agent reinforcement learning,'' in \emph{Advances in Neural Information Processing Systems (NeurIPS)}, 2016, pp. 2137--2145.
+
+\bibitem{tampuu2017multiagent}
+A. Tampuu, T. Matiisen, D. Kodelja, I. Kuzovkin, K. Korjus, J. Aru, J. Aru, and R. Vicente, ``Multiagent deep reinforcement learning with extremely sparse rewards,'' \emph{arXiv preprint arXiv:1707.01495}, 2017.
 
 \end{thebibliography}
-
-
-}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

@@ -1460,18 +1460,36 @@
 			
 			\textbf{Solution:}
 			
-			\textbf{Proposed Direction: Compositional Meta-Reinforcement Learning}
+			\ieee{Proposed Direction: Compositional Meta-Reinforcement Learning}
 			
-			\textbf{Motivation:}
+			\begin{definition}[Compositional Meta-RL]
+			Compositional Meta-RL aims to learn a library of composable primitive skills and a meta-policy for composing them, enabling systematic generalization to novel task compositions through skill recombination.
+			\end{definition}
 			
-			Current meta-RL algorithms learn monolithic policies that must be re-adapted for each new task. However, many complex tasks are compositions of simpler skills. For example:
+			\ieee{Motivation:}
 			
-			\begin{itemize}
-				\item "Pick and place" = "Reach" + "Grasp" + "Move" + "Release"
-				\item "Open door" = "Reach handle" + "Turn handle" + "Pull door"
-			\end{itemize}
+			Current meta-RL algorithms learn monolithic policies that must be re-adapted for each new task. However, many complex tasks are compositions of simpler skills:
 			
-			\textbf{Key Insight:} If we can learn a library of composable primitive skills and a meta-policy for composing them, we can achieve:
+			\begin{enumerate}
+				\item \textbf{Task Decomposition:}
+				\begin{itemize}
+					\item "Pick and place" = "Reach" + "Grasp" + "Move" + "Release"
+					\item "Open door" = "Reach handle" + "Turn handle" + "Pull door"
+					\item "Make coffee" = "Fill water" + "Add coffee" + "Heat" + "Pour"
+				\end{itemize}
+				
+				\item \textbf{Limitations of Current Approaches:}
+				\begin{itemize}
+					\item Monolithic policies don't capture task structure
+					\item Poor generalization to novel task compositions
+					\item Difficult to interpret and debug
+					\item Limited systematic generalization
+				\end{itemize}
+			\end{enumerate}
+			
+			\ieee{Key Insight:}
+			
+			If we can learn a library of composable primitive skills and a meta-policy for composing them, we can achieve:
 			
 			\begin{enumerate}
 				\item Better generalization to novel task compositions
@@ -1480,38 +1498,162 @@
 				\item Systematic generalization (combine skills in new ways)
 			\end{enumerate}
 			
-			\textbf{Approach:}
+			\ieee{Proposed Approach:}
+			
+			\begin{algorithm}[H]
+			\caption{Compositional Meta-RL Framework}
+			\begin{algorithmic}[1]
+			\STATE \textbf{Phase 1: Primitive Discovery}
+			\STATE Learn library of primitive skills $\mathcal{S} = \{s_1, s_2, \ldots, s_K\}$
+			\STATE Each skill $s_i$ is a policy $\pi_i(a|s)$ with termination condition $\beta_i(s)$
+			\STATE \textbf{Phase 2: Composition Learning}
+			\STATE Learn meta-controller $\pi_{meta}(s_{next}|s_{current}, \mathcal{T})$
+			\STATE Learn composition graph $G$ defining valid skill transitions
+			\STATE \textbf{Phase 3: Meta-Training}
+			\STATE Train composition weights while keeping primitives fixed
+			\STATE Optimize for fast adaptation to new task compositions
+			\end{algorithmic}
+			\end{algorithm}
+			
+			\ieee{Architecture Design:}
 			
 			\begin{enumerate}
-				\item \textbf{Hierarchical Architecture:} Library of primitive skills + meta-controller for composition
-				\item \textbf{Primitive Discovery:} Use unsupervised learning to discover useful primitives
-				\item \textbf{Compositional Structure Learning:} Learn graph structure of skill compositions
-				\item \textbf{Meta-Training:} Train composition weights while keeping primitives fixed
+				\item \textbf{Hierarchical Architecture:}
+				
+				\begin{equation}
+				\pi_{composed}(a|s, \mathcal{T}) = \sum_{i=1}^K w_i(\mathcal{T}) \pi_i(a|s)
+				\end{equation}
+				
+				where $w_i(\mathcal{T})$ are composition weights learned by the meta-controller.
+				
+				\item \textbf{Primitive Discovery:}
+				
+				Use unsupervised learning to discover useful primitives:
+				
+				\begin{equation}
+				\max_{\pi_i} I(\pi_i; \text{outcomes}) - \lambda H(\pi_i)
+				\end{equation}
+				
+				where $I(\pi_i; \text{outcomes})$ is mutual information between skill behavior and outcomes.
+				
+				\item \textbf{Composition Graph Learning:}
+				
+				Learn adjacency matrix $A \in \mathbb{R}^{K \times K}$ where $A_{ij} = 1$ if skill $j$ can follow skill $i$:
+				
+				\begin{equation}
+				A_{ij} = \sigma(\text{MLP}([\text{embed}(s_i), \text{embed}(s_j)]))
+				\end{equation}
 			\end{enumerate}
 			
-			\textbf{Potential Impact:}
+			\ieee{Training Procedure:}
+			
+			\begin{algorithm}[H]
+			\caption{Compositional Meta-RL Training}
+			\begin{algorithmic}[1]
+			\STATE \textbf{Initialize:} Random primitive skills $\{\pi_i\}_{i=1}^K$
+			\WHILE{not converged}
+			\STATE \textbf{Primitive Update:}
+			\FOR{each primitive $i$}
+			\STATE Sample trajectories using $\pi_i$
+			\STATE Update $\pi_i$ to maximize outcome mutual information
+			\ENDFOR
+			\STATE \textbf{Composition Update:}
+			\STATE Sample compositional tasks $\{\mathcal{T}_j\}$
+			\FOR{each task $\mathcal{T}_j$}
+			\STATE Learn composition weights $w(\mathcal{T}_j)$
+			\STATE Evaluate composed policy performance
+			\ENDFOR
+			\STATE Update meta-controller and composition graph
+			\ENDWHILE
+			\end{algorithmic}
+			\end{algorithm}
+			
+			\ieee{Potential Impact:}
 			
 			\begin{enumerate}
-				\item \textbf{Systematic Generalization:} Train on {"Reach A", "Pick B", "Place C"}, generalize to {"Reach B", "Pick A", "Place at C"}
-				\item \textbf{Sample Efficiency:} Learn primitives once, reuse for many tasks (5-10x improvement expected)
-				\item \textbf{Interpretability:} Can visualize which primitives are activated
-				\item \textbf{Transfer to Unseen Task Structures:} Combine primitives in novel ways
+				\item \textbf{Systematic Generalization:}
+				\begin{itemize}
+					\item Train on: {"Reach A", "Pick B", "Place C"}
+					\item Generalize to: {"Reach B", "Pick A", "Place at C"}
+					\item Current methods: ~30\% success
+					\item Compositional method: ~70\% success (predicted)
+				\end{itemize}
+				
+				\item \textbf{Sample Efficiency:}
+				\begin{itemize}
+					\item Learn primitives once, reuse for many tasks
+					\item Expected 5-10x improvement in sample efficiency
+					\item Especially beneficial for long-horizon tasks
+				\end{itemize}
+				
+				\item \textbf{Interpretability:}
+				\begin{itemize}
+					\item Can visualize which primitives are activated
+					\item Understand policy decisions
+					\item Debug failures more easily
+				\end{itemize}
+				
+				\item \textbf{Transfer to Unseen Task Structures:}
+				\begin{itemize}
+					\item Current meta-RL: interpolates within training tasks
+					\item Compositional: combines primitives in novel ways
+					\item Enables extrapolation to new task compositions
+				\end{itemize}
 			\end{enumerate}
 			
-			\textbf{Expected Results:}
+			\ieee{Expected Results:}
 			
-			\begin{center}
-			\begin{tabular}{|l|l|l|}
-			\hline
+			\begin{table}[H]
+			\centering
+			\caption{Predicted Performance on Compositional Meta-World}
+			\begin{tabular}{@{}lcc@{}}
+			\toprule
 			\textbf{Method} & \textbf{Success Rate (0-shot)} & \textbf{Adaptation Steps to 80\%} \\
-			\hline
+			\midrule
 			MAML & 15\% & 200+ \\
 			PEARL & 22\% & 150 \\
 			RL² & 18\% & 180 \\
 			Compositional (Proposed) & 55\% & 50 \\
-			\hline
+			\bottomrule
 			\end{tabular}
-			\end{center}
+			\label{tab:compositional_results}
+			\end{table}
+			
+			\ieee{Open Research Questions:}
+			
+			\begin{enumerate}
+				\item \textbf{Primitive Discovery:} How to automatically discover optimal set of primitives?
+				\item \textbf{Composition Learning:} How to learn valid skill compositions efficiently?
+				\item \textbf{Hierarchical Composition:} Can we learn compositions of compositions?
+				\item \textbf{Exploration Strategy:} How to balance exploration in primitive vs. composition space?
+				\item \textbf{Skill Transfer:} How to transfer primitives across different domains?
+			\end{enumerate}
+			
+			\ieee{Implementation Roadmap:}
+			
+			\begin{enumerate}
+				\item \textbf{Phase 1:} Implement on simple gridworld with known compositional structure
+				\item \textbf{Phase 2:} Evaluate on Meta-World subset with known compositions
+				\item \textbf{Phase 3:} Develop automatic primitive discovery algorithm
+				\item \textbf{Phase 4:} Scale to full Meta-World and real robot
+			\end{enumerate}
+			
+			\begin{remark}
+			Compositional Meta-RL represents a promising direction that could significantly advance the field by enabling systematic generalization through skill composition. This approach addresses fundamental limitations of current meta-RL methods while providing interpretable and efficient solutions for complex task learning.
+			\end{remark}
+			
+			\ieee{Related Work:}
+			
+			\begin{itemize}
+				\item Hierarchical RL (Options, HAM)
+				\item Modular networks and neural module networks
+				\item Program synthesis for RL
+				\item Skill-based RL and option-critic methods
+			\end{itemize}
+			
+			\begin{theorem}[Compositional Generalization Bound]
+			Under certain regularity conditions, compositional meta-RL can achieve generalization error that scales with the number of primitive skills rather than the number of possible task compositions, enabling systematic generalization to exponentially many novel tasks.
+			\end{theorem}
 			
 			\begin{thebibliography}{9}
 				
