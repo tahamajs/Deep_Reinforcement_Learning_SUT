@@ -1,10 +1,23 @@
 \section{Task 2: Dyna-Q}
 
 \subsection{Task Overview} 
-In this notebook, we focus on \textbf{Model-Based Reinforcement Learning (MBRL)} methods, including \textbf{Dyna-Q} and \textbf{Prioritized Sweeping}. 
-We use the \href{https://gymnasium.farama.org/environments/toy_text/frozen_lake/}{Frozen Lake} environment from \href{https://gymnasium.farama.org}{Gymnasium}. 
-The primary setting for our experiments is the \texttt{$8 \times 8$} map, which is non-slippery as we set \texttt{is\_slippery=False}. 
-However, you are welcome to experiment with the \texttt{$4 \times 4$} map to better understand the hyperparameters.
+This comprehensive exploration focuses on \textbf{Model-Based Reinforcement Learning (MBRL)} through the \textbf{Dyna-Q} architecture, which represents a fundamental paradigm shift from traditional model-free approaches. Dyna-Q integrates learning and planning by leveraging both real environment interactions and simulated experiences generated from learned models.
+
+\textbf{Environment Selection:} We utilize the \href{https://gymnasium.farama.org/environments/toy_text/frozen_lake/}{Frozen Lake} environment from \href{https://gymnasium.farama.org}{Gymnasium}, specifically the \texttt{$8 \times 8$} deterministic map (\texttt{is\_slippery=False}). This environment provides an ideal testbed for understanding model-based learning due to its:
+\begin{itemize}
+    \item \textbf{Sparse Reward Structure}: Only +1 for reaching the goal, 0 otherwise
+    \item \textbf{Clear State Transitions}: Deterministic dynamics enable accurate model learning
+    \item \textbf{Exploration Challenges}: Large state space requires efficient exploration strategies
+    \item \textbf{Planning Benefits}: Model-based planning can significantly improve sample efficiency
+\end{itemize}
+
+\textbf{Learning Objectives:}
+\begin{enumerate}
+    \item \textbf{Algorithm Implementation}: Complete Dyna-Q with deterministic model learning
+    \item \textbf{Hyperparameter Analysis}: Systematic exploration of planning step effects
+    \item \textbf{Improvement Strategies}: Reward shaping, prioritized sweeping, and adaptive exploration
+    \item \textbf{Performance Evaluation}: Comparative analysis with model-free baselines
+\end{enumerate}
 
 \textbf{Sections to be Implemented and Completed}
 

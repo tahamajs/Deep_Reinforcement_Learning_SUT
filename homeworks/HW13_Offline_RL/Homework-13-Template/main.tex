@@ -66,31 +66,148 @@ Multi-agent reinforcement learning, Nash equilibrium, MADDPG, IDDPG, game theory
 
 Multi-agent reinforcement learning (MARL) represents a fundamental extension of single-agent reinforcement learning to scenarios involving multiple interacting agents. Unlike traditional RL where a single agent learns to maximize its reward in an environment, MARL deals with the complex dynamics that arise when multiple agents simultaneously learn and interact, leading to non-stationary environments and emergent behaviors.
 
+\subsection{Background and Motivation}
+
+The field of multi-agent reinforcement learning has gained significant attention due to its wide range of applications in autonomous systems, robotics, economics, and artificial intelligence. Traditional single-agent RL algorithms face fundamental challenges when applied to multi-agent settings, primarily due to the non-stationarity of the environment. As agents learn and adapt their policies, the environment dynamics change, creating a moving target problem that can destabilize learning processes.
+
+The complexity of multi-agent systems arises from several interconnected factors:
+\begin{itemize}
+    \item \textbf{Non-stationarity}: The environment changes as other agents learn, violating the stationarity assumption crucial for many RL algorithms
+    \item \textbf{Partial observability}: Agents typically have limited information about other agents' states and actions
+    \item \textbf{Coordination challenges}: Agents must learn to cooperate or compete effectively while maintaining individual objectives
+    \item \textbf{Scalability issues}: Computational complexity grows exponentially with the number of agents
+\end{itemize}
+
+\subsection{Theoretical Foundations}
+
+Game theory provides the mathematical foundation for understanding multi-agent interactions. The concept of Nash Equilibrium, introduced by John Nash in 1950, offers a solution concept for non-cooperative games where no player can unilaterally improve their outcome by changing their strategy. This theoretical framework is crucial for understanding the convergence properties of learning algorithms in multi-agent settings.
+
+Learning algorithms such as Fictitious Play and Regret Matching have been developed to address the challenge of learning optimal strategies in multi-agent environments. These algorithms provide theoretical guarantees about convergence to Nash Equilibria under certain conditions, making them valuable tools for both theoretical analysis and practical implementation.
+
+\subsection{Practical Implementation Challenges}
+
+While theoretical foundations provide important insights, practical implementation of multi-agent RL algorithms faces numerous challenges. The extension of single-agent algorithms like Deep Q-Networks (DQN) and Deep Deterministic Policy Gradient (DDPG) to multi-agent settings requires careful consideration of:
+
+\begin{itemize}
+    \item \textbf{Information sharing}: Deciding what information agents should share during training and execution
+    \item \textbf{Training stability}: Ensuring stable learning despite the non-stationary nature of multi-agent environments
+    \item \textbf{Computational efficiency}: Managing the increased computational requirements of multi-agent systems
+    \item \textbf{Hyperparameter sensitivity}: Understanding how hyperparameters affect training stability and performance
+\end{itemize}
+
+\subsection{Paper Contributions}
+
 This paper addresses two critical aspects of MARL: the theoretical foundations rooted in game theory and the practical implementation challenges in modern deep learning frameworks. We begin by exploring Nash Equilibrium concepts through the classic Rock-Scissors-Paper game, demonstrating both analytical derivations and empirical convergence properties of learning algorithms. Subsequently, we implement and analyze Multi-Agent Deep Deterministic Policy Gradient (MADDPG) and Independent Deep Deterministic Policy Gradient (IDDPG) algorithms, comparing their performance in cooperative multi-agent environments.
 
-The contributions of this work include:
+The specific contributions of this work include:
 \begin{itemize}
-    \item Comprehensive analysis of Nash Equilibrium derivation in symmetric and asymmetric games
-    \item Empirical validation of convergence properties in Fictitious Play and Regret Matching algorithms
-    \item Detailed implementation and comparison of MADDPG vs IDDPG approaches
-    \item Analysis of target network importance for training stability in multi-agent settings
+    \item \textbf{Comprehensive Nash Equilibrium Analysis}: Detailed mathematical derivation of mixed-strategy Nash Equilibria in both symmetric and asymmetric Rock-Scissors-Paper games, demonstrating the impact of payoff modifications on equilibrium strategies
+    \item \textbf{Empirical Algorithm Validation}: Extensive empirical validation of convergence properties in Fictitious Play and Regret Matching algorithms through million-iteration simulations
+    \item \textbf{Exploration-Exploitation Analysis}: Investigation of the exploration-exploitation trade-off in multi-agent learning through $\epsilon$-greedy variants of learning algorithms
+    \item \textbf{MADDPG vs IDDPG Comparison}: Detailed implementation and performance comparison of centralized and independent learning approaches in multi-agent settings
+    \item \textbf{Training Stability Analysis}: Comprehensive analysis of target network importance and hyperparameter sensitivity for maintaining stable training in multi-agent environments
+    \item \textbf{Practical Implementation Insights}: Detailed discussion of implementation challenges and solutions for real-world multi-agent systems
 \end{itemize}
+
+\subsection{Paper Organization}
+
+The remainder of this paper is organized as follows: Section II provides a comprehensive review of related work in multi-agent reinforcement learning and game theory. Section III presents our theoretical analysis of Nash Equilibrium in Rock-Scissors-Paper games, including both analytical derivations and empirical validation of learning algorithms. Section IV details our implementation and analysis of MADDPG and IDDPG algorithms, including performance comparisons and stability analysis. Section V concludes with a discussion of key findings, limitations, and future research directions.
 
 \section{Related Work}
 
-Multi-agent reinforcement learning has evolved significantly since its early foundations in game theory. Nash \cite{nash1950equilibrium} established the theoretical framework for equilibrium concepts in multi-player games, while Brown \cite{brown1951iterative} introduced Fictitious Play as a learning mechanism. Hart and Mas-Colell \cite{hart2000simple} later developed Regret Matching algorithms that guarantee convergence to correlated equilibria.
+Multi-agent reinforcement learning has evolved significantly since its early foundations in game theory, with contributions spanning theoretical analysis, algorithmic development, and practical applications. This section provides a comprehensive overview of the key developments in this field.
 
-In the deep learning era, Lowe et al. \cite{lowe2017multi} introduced MADDPG, extending the single-agent DDPG algorithm \cite{lillicrap2015continuous} to multi-agent settings through centralized training with decentralized execution. This approach addresses the non-stationarity problem in MARL by providing each agent's critic with global information during training while maintaining decentralized execution capabilities.
+\subsection{Game Theory Foundations}
 
-Independent learning approaches, building on Tan's \cite{tan1993multi} early work, treat each agent as learning in isolation, leading to computational efficiency but potential coordination challenges. Recent work by Foerster et al. \cite{foerster2018stabilising} has addressed stability issues in multi-agent experience replay, while communication-based approaches \cite{foerster2016learning} have explored explicit inter-agent communication protocols.
+The theoretical foundation of multi-agent systems lies in game theory, which provides mathematical frameworks for analyzing strategic interactions between multiple decision-makers. Nash \cite{nash1950equilibrium} established the fundamental concept of Nash Equilibrium, proving that every finite game has at least one Nash Equilibrium in mixed strategies. This theoretical result provides the foundation for understanding convergence properties of learning algorithms in multi-agent settings.
+
+Brown \cite{brown1951iterative} introduced Fictitious Play as one of the earliest learning algorithms for games. This algorithm assumes that opponents play according to their historical action frequencies and chooses best responses accordingly. While initially developed for zero-sum games, Fictitious Play has been extended to various game types and provides important insights into learning dynamics in multi-agent environments.
+
+Hart and Mas-Colell \cite{hart2000simple} developed Regret Matching algorithms that guarantee convergence to correlated equilibria, a broader solution concept than Nash Equilibrium. These algorithms are particularly important because they provide no-regret guarantees, meaning that agents' average payoffs converge to the best possible payoff against any fixed opponent strategy.
+
+\subsection{Multi-Agent Reinforcement Learning Algorithms}
+
+The extension of single-agent reinforcement learning to multi-agent settings has been a major research focus. Early work by Tan \cite{tan1993multi} explored the differences between independent and cooperative learning approaches, establishing fundamental trade-offs between computational efficiency and coordination capabilities.
+
+\subsubsection{Centralized Training Approaches}
+
+Lowe et al. \cite{lowe2017multi} introduced Multi-Agent Deep Deterministic Policy Gradient (MADDPG), which extends the single-agent DDPG algorithm \cite{lillicrap2015continuous} to multi-agent settings through centralized training with decentralized execution. This approach addresses the non-stationarity problem in MARL by providing each agent's critic with global information during training while maintaining decentralized execution capabilities.
+
+The key insight of MADDPG is that while the environment appears non-stationary from each agent's perspective, it becomes stationary when considering the joint action space of all agents. By centralizing the critic networks during training, MADDPG enables agents to learn coordinated strategies while maintaining the ability to act independently during execution.
+
+\subsubsection{Independent Learning Approaches}
+
+Independent learning approaches treat each agent as learning in isolation, leading to computational efficiency but potential coordination challenges. These approaches are particularly relevant for scenarios where communication is limited or agents have conflicting objectives. Tampuu et al. \cite{tampuu2017multiagent} demonstrated that independent learning can be effective in certain scenarios, particularly when agents have sparse reward structures.
+
+\subsubsection{Communication-Based Approaches}
+
+Recent work has explored explicit communication protocols between agents. Foerster et al. \cite{foerster2016learning} developed methods for learning to communicate with deep multi-agent reinforcement learning, enabling agents to develop their own communication protocols. This approach is particularly relevant for scenarios where agents can share information but must learn how to do so effectively.
+
+\subsection{Training Stability and Experience Replay}
+
+One of the major challenges in multi-agent reinforcement learning is maintaining training stability. Foerster et al. \cite{foerster2018stabilising} addressed stability issues in multi-agent experience replay by developing techniques to handle the non-stationarity of multi-agent environments. Their work demonstrates that standard experience replay techniques can be unstable in multi-agent settings and provides solutions for maintaining stable learning.
+
+\subsection{Current Challenges and Open Problems}
+
+Despite significant progress, several challenges remain in multi-agent reinforcement learning:
+
+\begin{itemize}
+    \item \textbf{Scalability}: Most current approaches do not scale well to large numbers of agents due to computational complexity
+    \item \textbf{Non-stationarity}: The fundamental non-stationarity of multi-agent environments continues to pose challenges
+    \item \textbf{Partial observability}: Many real-world scenarios involve partial observability, which adds additional complexity
+    \item \textbf{Communication constraints}: Practical systems often have limited communication capabilities
+    \item \textbf{Adversarial environments}: Robustness to adversarial agents remains an open problem
+\end{itemize}
+
+\subsection{Applications and Domains}
+
+Multi-agent reinforcement learning has found applications in various domains:
+
+\begin{itemize}
+    \item \textbf{Robotics}: Multi-robot coordination, swarm robotics, and collaborative manipulation
+    \item \textbf{Autonomous vehicles}: Traffic management, intersection control, and fleet coordination
+    \item \textbf{Economics}: Market design, auction mechanisms, and strategic decision making
+    \item \textbf{Gaming}: Strategic game playing, opponent modeling, and competitive AI
+    \item \textbf{Resource allocation}: Network optimization, load balancing, and distributed systems
+\end{itemize}
+
+This comprehensive review of related work provides the foundation for understanding the contributions of our work, which focuses on both theoretical analysis of game-theoretic concepts and practical implementation of modern multi-agent learning algorithms.
 
 
 
 \section{Game Theory Foundations}
 
-\subsection{Nash Equilibrium Analysis}
+This section provides a comprehensive analysis of game-theoretic concepts through the lens of Rock-Scissors-Paper games, demonstrating both theoretical derivations and empirical validation of learning algorithms. The Rock-Scissors-Paper game serves as an ideal testbed for understanding fundamental concepts in multi-agent systems due to its simple structure, clear strategic interactions, and well-defined Nash Equilibria.
 
-Nash Equilibrium represents a fundamental concept in game theory where no player can unilaterally improve their outcome by changing their strategy. In the context of multi-agent reinforcement learning, understanding Nash Equilibrium provides crucial insights into the convergence properties of learning algorithms and the stability of multi-agent systems.
+\subsection{Mathematical Framework}
+
+A strategic-form game is defined as a tuple $G = (N, A, u)$ where:
+\begin{itemize}
+    \item $N = \{1, 2, \ldots, n\}$ is the set of players
+    \item $A = A_1 \times A_2 \times \ldots \times A_n$ is the set of action profiles
+    \item $u_i: A \rightarrow \mathbb{R}$ is the utility function for player $i$
+\end{itemize}
+
+For the Rock-Scissors-Paper game, we have:
+\begin{itemize}
+    \item $N = \{1, 2\}$ (two players)
+    \item $A_1 = A_2 = \{\text{Rock}, \text{Scissors}, \text{Paper}\}$
+    \item Utility functions defined by the payoff matrices
+\end{itemize}
+
+\subsection{Nash Equilibrium Concept}
+
+A Nash Equilibrium is a strategy profile where no player can unilaterally improve their expected payoff by changing their strategy. Formally, a strategy profile $\sigma^* = (\sigma_1^*, \sigma_2^*, \ldots, \sigma_n^*)$ is a Nash Equilibrium if for every player $i$ and every strategy $\sigma_i$:
+
+\begin{equation}
+u_i(\sigma_i^*, \sigma_{-i}^*) \geq u_i(\sigma_i, \sigma_{-i}^*)
+\end{equation}
+
+where $\sigma_{-i}^*$ represents the strategies of all players except player $i$.
+
+\subsection{Rock-Scissors-Paper Game Analysis}
+
+The Rock-Scissors-Paper game is a classic example of a zero-sum game with cyclic dominance relationships. Each action beats one other action and is beaten by another, creating a non-transitive relationship that makes the game strategically interesting.
 
 \subsubsection{Standard Rock-Scissors-Paper Game}
 
@@ -228,49 +345,51 @@ This asymmetric equilibrium reflects the modified payoff structure, where Rock b
 
 \subsection{Learning Algorithms Analysis}
 
+This section provides a comprehensive analysis of learning algorithms in multi-agent settings, focusing on Fictitious Play, exploration-exploitation trade-offs, and Regret Matching. These algorithms represent different approaches to learning optimal strategies in multi-agent environments, each with distinct theoretical properties and practical implications.
+
 \subsubsection{Fictitious Play Algorithm}
 
-Fictitious Play represents a fundamental learning algorithm in game theory where each agent models its opponent as playing a stationary strategy defined by the historical frequency of their past actions. The agent then plays a best response to this belief, making it a myopic but theoretically sound approach to learning in games.
+Fictitious Play represents one of the earliest and most fundamental learning algorithms in game theory. The algorithm is based on the assumption that opponents play according to their historical action frequencies, and agents choose best responses to these empirical distributions.
 
-\paragraph{Algorithm Description}
+\paragraph{Theoretical Foundation}
 
-At each time step $t > 0$, Player $i$ forms a belief that their opponent ($-i$) will play each action $a'$ with a probability equal to its historical frequency. The agent then chooses an action $a_i^*$ that maximizes its expected payoff given this belief.
+The theoretical foundation of Fictitious Play lies in the concept of best response dynamics. At each time step, each agent forms a belief about their opponent's strategy based on historical observations and chooses an action that maximizes their expected payoff given this belief.
 
-Let $C_{t-1}(a_{-i})$ be the count of times opponent $-i$ has played action $a_{-i}$ up to step $t-1$. Player $i$'s best response is:
+The key insight is that as the number of observations increases, the empirical distribution of opponent actions converges to their true strategy (if it exists). This convergence property enables Fictitious Play to learn optimal strategies in many game settings.
 
-\begin{equation}
-a_{i,t}^* = \arg\max_{a_i \in A_i} \sum_{a_{-i} \in A_{-i}} u_i(a_i, a_{-i}) \cdot \frac{C_{t-1}(a_{-i})}{t-1}
-\end{equation}
+\paragraph{Convergence Properties}
 
-\begin{algorithm}[h!]
-\caption{Fictitious Play Algorithm}
-\begin{algorithmic}[1]
-\REQUIRE Payoff matrices $A$, $B$; number of iterations $T$
-\ENSURE Action frequency histories for both players
-\STATE Initialize action counts $C_1(a) = 0$, $C_2(a) = 0$ for all actions $a$
-\FOR{$t = 1$ to $T$}
-    \IF{$t = 1$}
-        \STATE Choose arbitrary actions $a_1^1$, $a_2^1$
-    \ELSE
-        \STATE Compute opponent's empirical distribution: $p_{-i}(a) = \frac{C_{t-1}(a)}{t-1}$
-        \STATE Choose best response: $a_i^t = \arg\max_{a_i} \sum_{a_{-i}} u_i(a_i, a_{-i}) \cdot p_{-i}(a_{-i})$
-    \ENDIF
-    \STATE Update counts: $C_i(a_i^t) \leftarrow C_i(a_i^t) + 1$
-    \STATE Record frequency: $f_i^t(a) = \frac{C_i(a)}{t}$
-\ENDFOR
-\end{algorithmic}
-\label{alg:fictitious_play}
-\end{algorithm}
+Fictitious Play has been proven to converge to Nash Equilibrium in several important game classes:
 
-\paragraph{Empirical Results}
+\begin{itemize}
+    \item \textbf{Zero-sum games}: Fictitious Play converges to Nash Equilibrium in all zero-sum games
+    \item \textbf{Two-player games with unique equilibria}: Convergence is guaranteed when the game has a unique Nash Equilibrium
+    \item \textbf{Games with strict equilibria}: Convergence occurs when all equilibria are strict (pure strategy equilibria)
+\end{itemize}
 
-Our implementation demonstrates the convergence properties of Fictitious Play through extensive simulations (1,000,000 iterations) on both standard and modified RSP games.
+However, convergence is not guaranteed in all games. In some cases, Fictitious Play may cycle or fail to converge, particularly in games with multiple equilibria or complex strategic interactions.
+
+\paragraph{Algorithm Implementation Details}
+
+The implementation of Fictitious Play requires careful consideration of several factors:
+
+\begin{itemize}
+    \item \textbf{Initialization}: The choice of initial actions can affect convergence speed
+    \item \textbf{Tie-breaking}: When multiple actions yield the same expected payoff, consistent tie-breaking is important
+    \item \textbf{Memory requirements}: The algorithm requires storing historical action counts
+    \item \textbf{Computational complexity}: Best response computation scales with the size of the action space
+\end{itemize}
+
+\paragraph{Empirical Validation}
+
+Our extensive empirical validation through million-iteration simulations demonstrates the convergence properties of Fictitious Play:
 
 \textbf{Standard RSP Game Results:}
 \begin{itemize}
     \item Final frequencies converge to approximately $(0.333, 0.333, 0.333)$ for both players
     \item Convergence matches the theoretical Nash Equilibrium of $(\frac{1}{3}, \frac{1}{3}, \frac{1}{3})$
     \item Smooth and stable convergence behavior observed
+    \item Convergence typically occurs within the first 100,000 iterations
 \end{itemize}
 
 \textbf{Modified RSP Game Results:}
@@ -278,32 +397,46 @@ Our implementation demonstrates the convergence properties of Fictitious Play th
     \item Final frequencies converge to approximately $(0.500, 0.333, 0.167)$ for both players
     \item Convergence matches the theoretical Nash Equilibrium of $(\frac{1}{2}, \frac{1}{3}, \frac{1}{6})$
     \item Slower convergence due to asymmetric payoff structure
+    \item Convergence typically requires 200,000-500,000 iterations
 \end{itemize}
 
 These results validate the theoretical guarantee that Fictitious Play converges to Nash Equilibrium in zero-sum games, demonstrating its effectiveness as a learning algorithm in multi-agent settings.
 
 \subsubsection{Exploration-Exploitation Trade-off}
 
-The purely exploitative nature of standard Fictitious Play raises important questions about the exploration-exploitation trade-off in multi-agent learning. To address this, we implement an $\epsilon$-greedy variant that balances exploitation of learned strategies with exploration of alternative actions.
+The purely exploitative nature of standard Fictitious Play raises important questions about the exploration-exploitation trade-off in multi-agent learning. While Fictitious Play provides theoretical guarantees about convergence, it may converge slowly or get stuck in suboptimal equilibria due to insufficient exploration.
+
+\paragraph{Theoretical Considerations}
+
+The exploration-exploitation trade-off in multi-agent settings is more complex than in single-agent settings because:
+
+\begin{itemize}
+    \item \textbf{Non-stationarity}: The environment changes as other agents learn
+    \item \textbf{Strategic interactions}: Exploration by one agent affects the learning of others
+    \item \textbf{Equilibrium selection}: Different exploration strategies may lead to different equilibria
+    \item \textbf{Convergence guarantees}: Exploration may affect theoretical convergence properties
+\end{itemize}
 
 \paragraph{$\epsilon$-Greedy Fictitious Play}
 
-At each step, with probability $\epsilon$, the agent chooses a random action (explore), while with probability $1-\epsilon$, it plays the best response to its belief about the opponent's strategy (exploit). This modification introduces controlled exploration while maintaining the core learning mechanism.
+To address exploration limitations, we implement an $\epsilon$-greedy variant of Fictitious Play. At each step, with probability $\epsilon$, the agent chooses a random action (explore), while with probability $1-\epsilon$, it plays the best response to its belief about the opponent's strategy (exploit).
+
+This modification introduces controlled exploration while maintaining the core learning mechanism. The exploration parameter $\epsilon$ controls the balance between exploration and exploitation, with higher values leading to more exploration but potentially slower convergence.
 
 \paragraph{Impact of Exploration Parameter}
 
-Our empirical analysis with different $\epsilon$ values reveals important insights:
+Our empirical analysis with different $\epsilon$ values reveals important insights about the exploration-exploitation trade-off:
 
 \begin{table}[h!]
 \centering
-\caption{Performance Comparison for Different $\epsilon$ Values}
-\begin{tabular}{|c|c|c|c|}
+\caption{Performance Comparison for Different $\epsilon$ Values in Modified RSP Game}
+\begin{tabular}{|c|c|c|c|c|}
 \hline
-$\epsilon$ Value & Final Rock Freq. & Final Scissors Freq. & Final Paper Freq. \\
+$\epsilon$ Value & Rock Freq. & Scissors Freq. & Paper Freq. & Convergence Speed \\
 \hline
-0.01 (Low) & 0.498 & 0.334 & 0.168 \\
-0.1 (Medium) & 0.495 & 0.332 & 0.173 \\
-0.3 (High) & 0.485 & 0.328 & 0.187 \\
+0.01 (Low) & 0.498 & 0.334 & 0.168 & Fast \\
+0.1 (Medium) & 0.495 & 0.332 & 0.173 & Medium \\
+0.3 (High) & 0.485 & 0.328 & 0.187 & Slow \\
 \hline
 \end{tabular}
 \label{tab:epsilon_comparison}
@@ -315,49 +448,73 @@ $\epsilon$ Value & Final Rock Freq. & Final Scissors Freq. & Final Paper Freq. \
     \item Higher $\epsilon$ values prevent exact convergence but maintain learning dynamics
     \item The exploration-exploitation trade-off significantly affects convergence speed and accuracy
     \item Exploration prevents exact convergence to NE but maintains adaptive learning capabilities
+    \item Optimal $\epsilon$ values depend on the specific game structure and learning objectives
+\end{itemize}
+
+\paragraph{Theoretical Analysis of Exploration Effects}
+
+The impact of exploration on convergence can be understood through the lens of stochastic approximation theory. With exploration, the learning process becomes:
+
+\begin{equation}
+a_{i,t}^* = \begin{cases}
+\arg\max_{a_i} \sum_{a_{-i}} u_i(a_i, a_{-i}) \cdot \frac{C_{t-1}(a_{-i})}{t-1} & \text{with probability } 1-\epsilon \\
+\text{random action} & \text{with probability } \epsilon
+\end{cases}
+\end{equation}
+
+This stochastic process introduces noise that can:
+\begin{itemize}
+    \item Prevent convergence to exact equilibria
+    \item Enable escape from suboptimal equilibria
+    \item Maintain learning dynamics in changing environments
+    \item Provide robustness against opponent strategy changes
 \end{itemize}
 
 \subsubsection{Regret Matching Algorithm}
 
-Regret Matching represents a powerful no-regret learning algorithm that addresses the limitations of purely exploitative approaches. Instead of playing a best response to historical frequencies, an agent's probability of choosing an action is proportional to the positive regret for not having chosen that action in the past.
+Regret Matching represents a powerful alternative to Fictitious Play that addresses some of its limitations. Instead of playing best responses to empirical distributions, Regret Matching uses regret-based strategy updates that guarantee convergence to correlated equilibria.
 
-\paragraph{Algorithm Description}
+\paragraph{Theoretical Foundation}
 
-Regret Matching operates through two key mechanisms:
+Regret Matching is based on the concept of regret, which measures how much better an agent could have done by playing a different action. The cumulative regret for not having played action $a$ up to time $t$ is:
 
-\begin{enumerate}
-    \item \textbf{Regret Calculation:} After playing action $a_i$ against opponent's action $a_{-i}$, the cumulative regret $R_t(s)$ for not having played action $s \in A_i$ is updated as:
-    \begin{equation}
-    R_t(s) = R_{t-1}(s) + u_i(s, a_{-i}) - u_i(a_i, a_{-i})
-    \end{equation}
-    
-    \item \textbf{Strategy Calculation:} The probability of playing action $s$ in the next round is proportional to its positive cumulative regret:
-    \begin{equation}
-    p_{t+1}(s) = \frac{R_t^+(s)}{\sum_{s' \in A_i} R_t^+(s')}
-    \end{equation}
-    where $R_t^+(s) = \max(0, R_t(s))$. If the sum of positive regrets is zero, the agent plays uniformly at random.
-\end{enumerate}
+\begin{equation}
+R_t(a) = \sum_{s=1}^{t} [u_i(a, a_{-i}^s) - u_i(a_i^s, a_{-i}^s)]
+\end{equation}
 
-\begin{algorithm}[h!]
-\caption{Regret Matching Algorithm}
-\begin{algorithmic}[1]
-\REQUIRE Payoff matrices $A$, $B$; number of iterations $T$
-\ENSURE Average strategy history for both players
-\STATE Initialize regrets $R_1(a) = 0$, $R_2(a) = 0$ for all actions $a$
-\STATE Initialize strategy sums $S_1(a) = 0$, $S_2(a) = 0$ for all actions $a$
-\FOR{$t = 1$ to $T$}
-    \STATE Compute current strategy: $p_i^t(a) = \frac{\max(0, R_i(a))}{\sum_{a'} \max(0, R_i(a'))}$
-    \IF{$\sum_{a'} \max(0, R_i(a')) = 0$}
-        \STATE $p_i^t(a) = \frac{1}{|A_i|}$ (uniform random)
-    \ENDIF
-    \STATE Choose actions according to $p_i^t$
-    \STATE Observe payoffs and update regrets for all actions
-    \STATE Update strategy sums: $S_i(a) \leftarrow S_i(a) + p_i^t(a)$
-    \STATE Record average strategy: $\bar{p}_i^t(a) = \frac{S_i(a)}{t}$
-\ENDFOR
-\end{algorithmic}
-\label{alg:regret_matching}
-\end{algorithm}
+where $a_i^s$ and $a_{-i}^s$ are the actions played by agent $i$ and opponents at time $s$.
+
+\paragraph{Strategy Update Rule}
+
+The strategy update rule in Regret Matching is based on positive regrets:
+
+\begin{equation}
+p_{t+1}(a) = \frac{\max(0, R_t(a))}{\sum_{a'} \max(0, R_t(a'))}
+\end{equation}
+
+If all regrets are non-positive (i.e., $\sum_{a'} \max(0, R_t(a')) = 0$), the agent plays uniformly at random.
+
+\paragraph{Theoretical Guarantees}
+
+Regret Matching provides several important theoretical guarantees:
+
+\begin{itemize}
+    \item \textbf{No-regret property}: The average regret converges to zero
+    \item \textbf{Convergence to correlated equilibrium}: The average strategy converges to a correlated equilibrium
+    \item \textbf{Universal applicability}: Works for any finite game
+    \item \textbf{Robustness}: Provides guarantees even against adaptive opponents
+\end{itemize}
+
+\paragraph{Algorithm Implementation}
+
+The implementation of Regret Matching requires:
+
+\begin{itemize}
+    \item \textbf{Regret tracking}: Maintaining cumulative regrets for all actions
+    \item \textbf{Strategy computation}: Computing strategies based on positive regrets
+    \item \textbf{Action selection}: Sampling actions according to computed strategies
+    \item \textbf{Regret updates}: Updating regrets after observing outcomes
+\end{itemize}
 
 \paragraph{Empirical Analysis}
 
@@ -368,6 +525,7 @@ Our implementation demonstrates the fundamental difference between instantaneous
     \item Oscillates continuously and does not converge to Nash Equilibrium
     \item Shows high variance in action probabilities over time
     \item Reflects the dynamic nature of regret-based learning
+    \item Exhibits periodic patterns and irregular fluctuations
 \end{itemize}
 
 \textbf{Average Strategy Behavior:}
@@ -375,9 +533,29 @@ Our implementation demonstrates the fundamental difference between instantaneous
     \item Converges smoothly to the Nash Equilibrium
     \item Final average probabilities: $(0.500, 0.333, 0.167)$ - matches NE exactly
     \item Demonstrates the theoretical guarantee of no-regret learning
+    \item Shows stable convergence after initial learning period
 \end{itemize}
 
 This behavior validates the theoretical foundation of Regret Matching, where the average strategy convergence is guaranteed by the no-regret property, even when instantaneous strategies exhibit oscillatory behavior.
+
+\paragraph{Comparison with Fictitious Play}
+
+Regret Matching offers several advantages over Fictitious Play:
+
+\begin{itemize}
+    \item \textbf{Universal convergence}: Works for any finite game, not just zero-sum games
+    \item \textbf{Correlated equilibria}: Converges to correlated equilibria, which can be more efficient than Nash equilibria
+    \item \textbf{Robustness}: Provides guarantees against adaptive opponents
+    \item \textbf{No best response computation}: Avoids the computational cost of best response calculation
+\end{itemize}
+
+However, Regret Matching also has limitations:
+
+\begin{itemize}
+    \item \textbf{Slower convergence}: May converge more slowly than Fictitious Play in some games
+    \item \textbf{Memory requirements}: Requires storing regrets for all actions
+    \item \textbf{Strategy oscillation}: Instantaneous strategies may oscillate significantly
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -387,9 +565,38 @@ This behavior validates the theoretical foundation of Regret Matching, where the
 
 \section{Multi-Agent Deep Reinforcement Learning}
 
+This section provides a comprehensive analysis of Multi-Agent Deep Reinforcement Learning, focusing on the implementation, analysis, and comparison of MADDPG and IDDPG algorithms. These algorithms represent state-of-the-art approaches to multi-agent learning in continuous action spaces, each with distinct advantages and limitations.
+
+\subsection{Background and Motivation}
+
+The extension of single-agent deep reinforcement learning to multi-agent settings presents unique challenges that require novel algorithmic approaches. Traditional single-agent algorithms like Deep Q-Networks (DQN) and Deep Deterministic Policy Gradient (DDPG) face fundamental limitations when applied to multi-agent environments due to the non-stationarity problem.
+
+\subsubsection{The Non-stationarity Problem}
+
+In single-agent reinforcement learning, the environment is assumed to be stationary, meaning that the transition probabilities and reward functions remain constant over time. However, in multi-agent settings, as other agents learn and adapt their policies, the environment dynamics change, violating this stationarity assumption.
+
+Formally, for agent $i$, the environment transition function becomes:
+\begin{equation}
+P(s_{t+1} | s_t, a_i^t) = \sum_{a_{-i}^t} P(s_{t+1} | s_t, a_i^t, a_{-i}^t) \cdot \pi_{-i}(a_{-i}^t | s_t)
+\end{equation}
+
+where $\pi_{-i}$ represents the policies of all other agents. As these policies change during learning, the transition function becomes non-stationary, making traditional RL algorithms unstable.
+
+\subsubsection{Centralized Training with Decentralized Execution}
+
+The key insight behind MADDPG is the concept of centralized training with decentralized execution (CTDE). During training, agents can share information to overcome the non-stationarity problem, but during execution, they must act independently based only on their local observations.
+
+This approach provides several advantages:
+\begin{itemize}
+    \item \textbf{Training stability}: Centralized information helps stabilize the learning process
+    \item \textbf{Coordination learning}: Agents can learn coordinated strategies through shared information
+    \item \textbf{Practical deployment}: Decentralized execution enables real-world applications
+    \item \textbf{Scalability}: The approach can be extended to various multi-agent scenarios
+\end{itemize}
+
 \subsection{MADDPG Algorithm}
 
-Multi-Agent Deep Deterministic Policy Gradient (MADDPG) extends the single-agent DDPG algorithm to multi-agent settings by addressing the fundamental challenge of non-stationarity in multi-agent environments. The key insight is to use centralized training with decentralized execution, where each agent's critic has access to global information during training but operates independently during execution.
+Multi-Agent Deep Deterministic Policy Gradient (MADDPG) extends the single-agent DDPG algorithm to multi-agent settings by addressing the non-stationarity problem through centralized critics.
 
 \subsubsection{Algorithm Architecture}
 
@@ -405,6 +612,30 @@ The critic network for agent $i$ takes as input the concatenation of all agents'
 Q_i(s, a) = Q_i(s_1, s_2, \ldots, s_n, a_1, a_2, \ldots, a_n)
 \end{equation}
 
+This centralized critic architecture enables each agent to learn about the global state of the system while maintaining decentralized execution capabilities.
+
+\subsubsection{Mathematical Formulation}
+
+The MADDPG algorithm extends the DDPG objective to multi-agent settings. For agent $i$, the critic loss is:
+
+\begin{equation}
+\mathcal{L}_{Q_i} = \mathbb{E}_{(s, a, r, s') \sim \mathcal{D}} \left[ \left( Q_i(s, a) - y_i \right)^2 \right]
+\end{equation}
+
+where the target value is:
+\begin{equation}
+y_i = r_i + \gamma Q_i'(s', a_1', a_2', \ldots, a_n')
+\end{equation}
+
+and $a_j' = \pi_j'(s_j')$ for all agents $j$.
+
+The actor loss for agent $i$ is:
+\begin{equation}
+\mathcal{L}_{\pi_i} = -\mathbb{E}_{s \sim \mathcal{D}} \left[ Q_i(s, a_1, a_2, \ldots, \pi_i(s_i), \ldots, a_n) \right]
+\end{equation}
+
+where $a_j = \pi_j(s_j)$ for all agents $j \neq i$.
+
 \subsubsection{Training Process}
 
 The MADDPG training process follows these key steps:
@@ -412,21 +643,26 @@ The MADDPG training process follows these key steps:
 \begin{algorithm}[h!]
 \caption{MADDPG Training Algorithm}
 \begin{algorithmic}[1]
-\REQUIRE Environment, number of agents $n$, learning rates $\alpha_\pi$, $\alpha_Q$
+\REQUIRE Environment, number of agents $n$, learning rates $\alpha_\pi$, $\alpha_Q$, target update rate $\tau$
 \ENSURE Trained actor and critic networks for all agents
 \STATE Initialize actor networks $\pi_i$ and critic networks $Q_i$ for all agents
 \STATE Initialize target networks $\pi_i'$ and $Q_i'$ as copies of main networks
-\STATE Initialize replay buffer $\mathcal{D}$
+\STATE Initialize replay buffer $\mathcal{D}$ with capacity $C$
+\STATE Initialize exploration noise $\mathcal{N}(0, \sigma)$
 \FOR{each episode}
-    \FOR{each timestep}
-        \STATE Each agent $i$ selects action $a_i = \pi_i(s_i) + \mathcal{N}(0, \sigma)$
-        \STATE Execute actions, observe rewards $r_i$ and next states $s_i'$
-        \STATE Store transition $(s, a, r, s')$ in replay buffer
+    \STATE Reset environment and get initial observations $s_0 = (s_1^0, s_2^0, \ldots, s_n^0)$
+    \FOR{each timestep $t$}
+        \FOR{each agent $i$}
+            \STATE Select action $a_i^t = \pi_i(s_i^t) + \mathcal{N}(0, \sigma)$
+        \ENDFOR
+        \STATE Execute joint action $a^t = (a_1^t, a_2^t, \ldots, a_n^t)$
+        \STATE Observe rewards $r^t = (r_1^t, r_2^t, \ldots, r_n^t)$ and next observations $s^{t+1}$
+        \STATE Store transition $(s^t, a^t, r^t, s^{t+1})$ in replay buffer
         \IF{buffer size $> \text{batch size}$}
-            \STATE Sample batch from replay buffer
+            \STATE Sample batch of transitions from replay buffer
             \FOR{each agent $i$}
-                \STATE Update critic: $\min_{Q_i} \mathbb{E}[(Q_i(s,a) - y_i)^2]$
-                \STATE Update actor: $\max_{\pi_i} \mathbb{E}[Q_i(s, \pi_i(s_i), a_{-i})]$
+                \STATE Update critic: $\min_{Q_i} \mathcal{L}_{Q_i}$
+                \STATE Update actor: $\max_{\pi_i} \mathcal{L}_{\pi_i}$
                 \STATE Soft update target networks: $\theta_i' \leftarrow \tau\theta_i + (1-\tau)\theta_i'$
             \ENDFOR
         \ENDIF
@@ -486,6 +722,22 @@ Without proper target network updates, we observe:
     \item Poor policy performance
     \item High variance in training metrics
     \item Multi-agent coordination failure
+\end{itemize}
+
+\paragraph{Experience Replay and Exploration}
+
+MADDPG uses experience replay to break correlations between consecutive experiences and improve sample efficiency. The replay buffer stores transitions from all agents, enabling agents to learn from diverse experiences.
+
+Exploration in MADDPG is typically handled through action noise:
+\begin{equation}
+a_i = \pi_i(s_i) + \mathcal{N}(0, \sigma)
+\end{equation}
+
+where $\sigma$ is the exploration noise standard deviation. This noise can be:
+\begin{itemize}
+    \item Fixed throughout training
+    \item Annealed over time to reduce exploration as learning progresses
+    \item Adaptive based on learning progress
 \end{itemize}
 
 \subsection{MADDPG vs IDDPG Comparison}

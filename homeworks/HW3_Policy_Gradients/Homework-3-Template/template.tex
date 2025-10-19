@@ -192,6 +192,24 @@ The grading will be based on the following criteria, with a total of 100 points:
 
 \section{Task 1: Policy Search: REINFORCE vs. GA [20]}
 
+\subsection{Theoretical Background and Motivation}
+
+Policy gradient methods represent a fundamental paradigm in reinforcement learning that directly optimizes the policy function $\pi_\theta(a|s)$ parameterized by $\theta$. Unlike value-based methods that first learn value functions and then derive policies, policy gradient methods directly optimize the policy to maximize expected return.
+
+\textbf{Mathematical Foundation:}
+The policy gradient theorem provides the theoretical foundation for all policy gradient methods. Given a policy $\pi_\theta(a|s)$ parameterized by $\theta$, the objective is to maximize the expected return:
+
+$$J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\left[\sum_{t=0}^{T} \gamma^t r_t\right]$$
+
+where $\tau = (s_0, a_0, r_1, s_1, a_1, r_2, \ldots, s_T)$ represents a trajectory sampled from the policy.
+
+The policy gradient theorem states that:
+$$\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\left[\sum_{t=0}^{T} \nabla_\theta \log \pi_\theta(a_t|s_t) G_t\right]$$
+
+where $G_t = \sum_{k=t}^{T} \gamma^{k-t} r_k$ is the return from time step $t$.
+
+\textbf{Key Insight:} This remarkable result allows us to estimate gradients using sampled trajectories without requiring knowledge of environment dynamics, making it applicable to model-free reinforcement learning.
+
 \subsection{Question 1:}
 How do these two methods differ in terms of their effectiveness for solving reinforcement learning tasks? 
 
@@ -200,21 +218,109 @@ How do these two methods differ in terms of their effectiveness for solving rein
 \textbf{REINFORCE (Policy Gradient Method):}
 \begin{itemize}
     \item \textbf{Gradient-based optimization}: Utilizes the policy gradient theorem to directly optimize policy parameters through gradient ascent, leveraging the mathematical relationship $\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}[\sum_{t=0}^{T} \nabla_\theta \log \pi_\theta(a_t|s_t) G_t]$
-    \item \textbf{Sample efficiency}: Exploits gradient information for more efficient parameter updates, typically requiring 300-500 episodes for convergence in simple environments
-    \item \textbf{On-policy learning}: Must sample trajectories from the current policy, preventing data reuse and limiting sample efficiency
-    \item \textbf{Continuous optimization}: Employs smooth parameter updates via backpropagation, enabling fine-grained policy adjustments
-    \item \textbf{High variance challenge}: Monte Carlo estimates of returns introduce significant variance, leading to unstable gradient estimates and noisy parameter updates
-    \item \textbf{Mathematical foundation}: Based on the policy gradient theorem, providing theoretical guarantees for convergence to local optima
+    
+    \textbf{Algorithm Details:}
+    \begin{enumerate}
+        \item Initialize policy parameters $\theta$ randomly
+        \item For each episode:
+        \begin{itemize}
+            \item Sample trajectory $\tau = (s_0, a_0, r_1, s_1, a_1, r_2, \ldots, s_T)$ using $\pi_\theta$
+            \item Compute returns $G_t = \sum_{k=t}^{T} \gamma^{k-t} r_k$ for each time step $t$
+            \item Compute policy gradient: $\nabla_\theta J(\theta) = \sum_{t=0}^{T} \nabla_\theta \log \pi_\theta(a_t|s_t) G_t$
+            \item Update parameters: $\theta \leftarrow \theta + \alpha \nabla_\theta J(\theta)$
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{Sample efficiency}: Exploits gradient information for more efficient parameter updates, typically requiring 300-500 episodes for convergence in simple environments. The gradient provides directional information about how to improve the policy.
+    
+    \item \textbf{On-policy learning}: Must sample trajectories from the current policy, preventing data reuse and limiting sample efficiency. This constraint ensures that the gradient estimates are unbiased but comes at the cost of sample efficiency.
+    
+    \item \textbf{Continuous optimization}: Employs smooth parameter updates via backpropagation, enabling fine-grained policy adjustments. The continuous nature allows for precise optimization in high-dimensional parameter spaces.
+    
+    \item \textbf{High variance challenge}: Monte Carlo estimates of returns introduce significant variance, leading to unstable gradient estimates and noisy parameter updates. This variance stems from:
+    \begin{itemize}
+        \item Stochastic environment dynamics
+        \item Policy stochasticity
+        \item Episodic randomness
+        \item Long episode lengths
+    \end{itemize}
+    
+    \item \textbf{Mathematical foundation}: Based on the policy gradient theorem, providing theoretical guarantees for convergence to local optima under certain conditions.
+    
+    \item \textbf{Implementation considerations}:
+    \begin{itemize}
+        \item Requires differentiable policy representations (typically neural networks)
+        \item Sensitive to learning rate $\alpha$ - too high causes instability, too low causes slow convergence
+        \item Benefits from baseline functions to reduce variance
+        \item Can handle both discrete and continuous action spaces
+    \end{itemize}
 \end{itemize}
 
 \textbf{Genetic Algorithm (Evolutionary Approach):}
 \begin{itemize}
     \item \textbf{Population-based search}: Maintains a population of candidate policies and evolves them through selection, crossover, and mutation operations
-    \item \textbf{Derivative-free optimization}: Operates without gradient information, making it suitable for non-differentiable policy representations
-    \item \textbf{Parallelizable evaluation}: Can evaluate multiple policies simultaneously, leveraging parallel computing resources effectively
-    \item \textbf{Discrete optimization paradigm}: Uses discrete operations (mutation, crossover) rather than continuous gradient updates
-    \item \textbf{Global search capability}: Random mutations enable escape from local optima, potentially finding globally optimal solutions
-    \item \textbf{Evolutionary dynamics}: Implements natural selection principles where fitter policies have higher probability of reproduction
+    
+    \textbf{Algorithm Details:}
+    \begin{enumerate}
+        \item Initialize population of $N$ policies $\{\theta_1, \theta_2, \ldots, \theta_N\}$
+        \item For each generation:
+        \begin{itemize}
+            \item Evaluate fitness $f(\theta_i)$ for each policy $\theta_i$ in population
+            \item Select parents based on fitness (e.g., tournament selection, roulette wheel)
+            \item Create offspring through crossover: $\theta_{child} = \text{crossover}(\theta_{parent1}, \theta_{parent2})$
+            \item Apply mutation: $\theta_{mutated} = \text{mutation}(\theta_{child})$
+            \item Replace population with new generation
+        \end{itemize}
+    \end{enumerate}
+    
+    \item \textbf{Derivative-free optimization}: Operates without gradient information, making it suitable for non-differentiable policy representations. This includes:
+    \begin{itemize}
+        \item Discrete policies
+        \item Symbolic policies
+        \item Rule-based policies
+        \item Non-differentiable neural network architectures
+    \end{itemize}
+    
+    \item \textbf{Parallelizable evaluation}: Can evaluate multiple policies simultaneously, leveraging parallel computing resources effectively. This makes GA particularly suitable for:
+    \begin{itemize}
+        \item Distributed computing environments
+        \item GPU-accelerated evaluation
+        \item Cloud computing platforms
+        \item Multi-core processors
+    \end{itemize}
+    
+    \item \textbf{Discrete optimization paradigm}: Uses discrete operations (mutation, crossover) rather than continuous gradient updates. Common operations include:
+    \begin{itemize}
+        \item \textbf{Mutation}: Random changes to policy parameters
+        \item \textbf{Crossover}: Combining features from two parent policies
+        \item \textbf{Selection}: Choosing policies based on fitness
+        \item \textbf{Elitism}: Preserving best policies across generations
+    \end{itemize}
+    
+    \item \textbf{Global search capability}: Random mutations enable escape from local optima, potentially finding globally optimal solutions. This is particularly valuable in:
+    \begin{itemize}
+        \item Rugged fitness landscapes
+        \item Multi-modal optimization problems
+        \item Non-convex policy spaces
+        \item Environments with multiple optimal solutions
+    \end{itemize}
+    
+    \item \textbf{Evolutionary dynamics}: Implements natural selection principles where fitter policies have higher probability of reproduction. Key concepts include:
+    \begin{itemize}
+        \item \textbf{Fitness function}: Measures policy performance (e.g., average return)
+        \item \textbf{Selection pressure}: Controls exploration vs exploitation balance
+        \item \textbf{Genetic diversity}: Maintains population diversity to prevent premature convergence
+        \item \textbf{Adaptation}: Population adapts to environment characteristics over time
+    \end{itemize}
+    
+    \item \textbf{Implementation considerations}:
+    \begin{itemize}
+        \item Requires defining appropriate mutation and crossover operators
+        \item Population size affects exploration capability and computational cost
+        \item Selection pressure must be balanced to avoid premature convergence
+        \item Suitable for both discrete and continuous policy representations
+        \item Can handle multi-objective optimization naturally
+    \end{itemize}
 \end{itemize}
 
 \subsection{Question 2:}
@@ -301,6 +407,33 @@ Additionally, explore how each method handles exploration and exploitation, and 
 \newpage
 
 \section{Task 2: REINFORCE: Baseline vs. No Baseline [25]}
+
+\subsection{Theoretical Background: Variance Reduction in Policy Gradients}
+
+The high variance problem in policy gradient methods is one of the most significant challenges in reinforcement learning. Understanding and addressing this variance is crucial for practical applications of policy gradient algorithms.
+
+\textbf{The Variance Problem:}
+The policy gradient estimate $\hat{\nabla}_\theta J(\theta) = \frac{1}{N} \sum_{i=1}^{N} \sum_{t=0}^{T_i} \nabla_\theta \log \pi_\theta(a_{i,t}|s_{i,t}) G_{i,t}$ has high variance due to:
+
+\begin{enumerate}
+    \item \textbf{Monte Carlo estimation}: Returns $G_t$ are estimated from single trajectories
+    \item \textbf{Policy stochasticity}: Random action selection introduces additional variance
+    \item \textbf{Environment stochasticity}: Random transitions and rewards contribute to variance
+    \item \textbf{Episodic variance}: Different episode lengths and outcomes create variance
+\end{enumerate}
+
+\textbf{Mathematical Analysis of Variance:}
+The variance of the gradient estimate can be decomposed as:
+$$\text{Var}[\hat{\nabla}_\theta J(\theta)] = \frac{1}{N} \text{Var}[\nabla_\theta \log \pi_\theta(a|s) G] + \frac{1}{N^2} \sum_{i \neq j} \text{Cov}[\nabla_\theta \log \pi_\theta(a_i|s_i) G_i, \nabla_\theta \log \pi_\theta(a_j|s_j) G_j]$$
+
+The first term dominates and decreases as $1/N$, but the per-sample variance remains high without proper techniques.
+
+\textbf{Baseline Solution:}
+A baseline $b(s)$ can be subtracted from returns without introducing bias:
+$$\nabla_\theta J(\theta) = \mathbb{E}[\nabla_\theta \log \pi_\theta(a|s) (G - b(s))]$$
+
+The unbiasedness follows from:
+$$\mathbb{E}[\nabla_\theta \log \pi_\theta(a|s) b(s)] = \sum_a \pi_\theta(a|s) \nabla_\theta \log \pi_\theta(a|s) b(s) = b(s) \nabla_\theta \sum_a \pi_\theta(a|s) = b(s) \nabla_\theta 1 = 0$$
 
 \subsection{Question 1:}
 
@@ -783,6 +916,42 @@ Variance in policy gradient methods is a critical factor that significantly impa
 
 \section{Task 3: REINFORCE in a continuous action space [20]}
 
+\subsection{Theoretical Background: Continuous Action Spaces in Policy Gradients}
+
+Continuous action spaces present unique challenges and opportunities for policy gradient methods. Unlike discrete actions that can be represented with categorical distributions, continuous actions require probability distributions that can be sampled from and differentiated.
+
+\textbf{Policy Representation for Continuous Actions:}
+The most common approach is to use Gaussian policies:
+$$\pi_\theta(a|s) = \mathcal{N}(\mu_\theta(s), \sigma_\theta^2(s))$$
+
+where $\mu_\theta(s)$ and $\sigma_\theta(s)$ are neural networks that output the mean and standard deviation of the action distribution.
+
+\textbf{Log Probability Computation:}
+For a Gaussian policy, the log probability is:
+$$\log \pi_\theta(a|s) = -\frac{1}{2} \log(2\pi\sigma^2) - \frac{(a - \mu)^2}{2\sigma^2}$$
+
+\textbf{Gradient Computation:}
+The policy gradient becomes:
+$$\nabla_\theta \log \pi_\theta(a|s) = \nabla_\theta \log \pi_\theta(a|s) \cdot G$$
+
+where the gradient can be computed using automatic differentiation.
+
+\textbf{Action Bounds and Scaling:}
+Continuous actions often need to be bounded to valid ranges. Common approaches include:
+\begin{itemize}
+    \item \textbf{Tanh activation}: $a = \tanh(\mu_\theta(s) + \sigma_\theta(s) \cdot \epsilon)$
+    \item \textbf{Sigmoid scaling}: $a = a_{min} + (a_{max} - a_{min}) \cdot \sigma(\mu_\theta(s))$
+    \item \textbf{Action clipping}: Clipping actions to valid ranges after sampling
+\end{itemize}
+
+\textbf{Exploration in Continuous Spaces:}
+Exploration is controlled by the standard deviation $\sigma_\theta(s)$:
+\begin{itemize}
+    \item \textbf{High $\sigma$}: More exploration, higher variance
+    \item \textbf{Low $\sigma$}: Less exploration, lower variance
+    \item \textbf{Adaptive $\sigma$}: Can be learned or scheduled
+\end{itemize}
+
 \subsection{Question 1:}
 
 How are the observation and action spaces defined in the MountainCarContinuous environment?
@@ -1111,6 +1280,60 @@ The combination of experience replay, target networks, and regularization techni
 
 \section{Task 4: Policy Gradient Drawbacks [25]}
 
+\subsection{Theoretical Background: Limitations of Policy Gradient Methods}
+
+While policy gradient methods have theoretical elegance and practical applications, they suffer from several fundamental limitations that affect their performance and applicability. Understanding these limitations is crucial for choosing appropriate algorithms and developing improvements.
+
+\textbf{Fundamental Limitations:}
+
+\textbf{1. High Variance Problem:}
+Policy gradient methods suffer from high variance in gradient estimates due to:
+\begin{itemize}
+    \item Monte Carlo estimation of returns
+    \item Policy stochasticity
+    \item Environment stochasticity
+    \item Long episode lengths
+\end{itemize}
+
+The variance scales as $O(T^2)$ where $T$ is episode length, making it particularly problematic for long episodes.
+
+\textbf{2. Sample Inefficiency:}
+On-policy learning requires fresh samples from the current policy, preventing data reuse and leading to poor sample efficiency compared to off-policy methods.
+
+\textbf{3. Local Optima:}
+Gradient ascent may converge to local optima, missing globally optimal policies. This is particularly problematic in:
+\begin{itemize}
+    \item Non-convex policy spaces
+    \item Multi-modal reward landscapes
+    \item Environments with multiple optimal solutions
+\end{itemize}
+
+\textbf{4. Credit Assignment Problem:}
+Attributing delayed rewards to specific actions becomes increasingly difficult with:
+\begin{itemize}
+    \item Longer episode lengths
+    \item Sparse reward structures
+    \item Complex temporal dependencies
+\end{itemize}
+
+\textbf{5. Hyperparameter Sensitivity:}
+Policy gradient methods are sensitive to:
+\begin{itemize}
+    \item Learning rate
+    \item Baseline choice
+    \item Policy architecture
+    \item Exploration parameters
+\end{itemize}
+
+\textbf{Comparison with Value-Based Methods:}
+Value-based methods (like DQN) often outperform policy gradient methods in:
+\begin{itemize}
+    \item Discrete action spaces
+    \item Environments with sparse rewards
+    \item Sample efficiency requirements
+    \item Training stability
+\end{itemize}
+
 \subsection{Question 1:}
 \textbf{Which algorithm performs better in the Frozen Lake environment? Why?}
 \newline
@@ -1425,6 +1648,161 @@ In scenarios where the agent can sample an unlimited number of interactions with
 
 \textbf{Conclusion:}
 While unlimited sampling reduces the importance of sample efficiency, DQN remains the preferred choice for most scenarios due to its superior stability, reliability, and performance. The choice between DQN and REINFORCE should be based on environment characteristics (discrete vs continuous actions) and specific requirements (stochastic policies, non-differentiable environments) rather than sampling constraints. For optimal results, consider hybrid actor-critic approaches that combine the benefits of both paradigms.
+
+\section{Practical Implementation Guidelines}
+
+\subsection{REINFORCE Implementation Best Practices}
+
+\textbf{Policy Network Architecture:}
+\begin{itemize}
+    \item \textbf{Discrete actions}: Use softmax output layer with appropriate hidden layers
+    \item \textbf{Continuous actions}: Use Gaussian policy with separate networks for mean and variance
+    \item \textbf{Network depth}: 2-4 hidden layers typically sufficient for most environments
+    \item \textbf{Activation functions}: ReLU or Tanh for hidden layers, appropriate output activations
+    \item \textbf{Weight initialization}: Xavier or He initialization for stable training
+\end{itemize}
+
+\textbf{Hyperparameter Selection:}
+\begin{itemize}
+    \item \textbf{Learning rate}: Start with 0.001-0.01, adjust based on convergence
+    \item \textbf{Discount factor}: 0.95-0.99 for most episodic tasks
+    \item \textbf{Batch size}: 32-128 episodes per update
+    \item \textbf{Baseline learning rate}: Often 10x higher than policy learning rate
+    \item \textbf{Exploration}: Start with high entropy, gradually reduce
+\end{itemize}
+
+\textbf{Training Procedure:}
+\begin{enumerate}
+    \item Collect episodes using current policy
+    \item Compute returns $G_t$ for each timestep
+    \item Compute policy gradients
+    \item Update policy parameters
+    \item Update baseline (if used)
+    \item Repeat until convergence
+\end{enumerate}
+
+\textbf{Common Pitfalls and Solutions:}
+\begin{itemize}
+    \item \textbf{Gradient explosion}: Use gradient clipping with max norm 0.5
+    \item \textbf{Policy collapse}: Add entropy regularization term
+    \item \textbf{Poor convergence}: Implement proper baseline or advantage estimation
+    \item \textbf{High variance}: Use multiple runs and average results
+    \item \textbf{Slow learning}: Increase learning rate or improve baseline
+\end{itemize}
+
+\subsection{Code Implementation Example}
+
+\textbf{Pseudocode for REINFORCE with Baseline:}
+\begin{verbatim}
+def reinforce_with_baseline(env, policy_net, baseline_net, 
+                           num_episodes=1000, learning_rate=0.01):
+    policy_optimizer = Adam(policy_net.parameters(), lr=learning_rate)
+    baseline_optimizer = Adam(baseline_net.parameters(), lr=learning_rate*10)
+    
+    for episode in range(num_episodes):
+        # Collect episode
+        states, actions, rewards = collect_episode(env, policy_net)
+        
+        # Compute returns
+        returns = compute_returns(rewards, gamma=0.99)
+        
+        # Compute baseline values
+        baseline_values = baseline_net(states)
+        
+        # Compute advantages
+        advantages = returns - baseline_values
+        
+        # Policy loss
+        log_probs = policy_net.log_prob(states, actions)
+        policy_loss = -(log_probs * advantages).mean()
+        
+        # Baseline loss
+        baseline_loss = F.mse_loss(baseline_values, returns)
+        
+        # Update networks
+        policy_optimizer.zero_grad()
+        policy_loss.backward()
+        policy_optimizer.step()
+        
+        baseline_optimizer.zero_grad()
+        baseline_loss.backward()
+        baseline_optimizer.step()
+\end{verbatim}
+
+\subsection{Experimental Design and Evaluation}
+
+\textbf{Evaluation Metrics:}
+\begin{itemize}
+    \item \textbf{Average return}: Mean cumulative reward over multiple episodes
+    \item \textbf{Success rate}: Percentage of episodes reaching goal
+    \item \textbf{Sample efficiency}: Episodes required to reach target performance
+    \item \textbf{Training stability}: Variance in learning curves
+    \item \textbf{Final performance}: Best performance achieved
+\end{itemize}
+
+\textbf{Statistical Analysis:}
+\begin{itemize}
+    \item \textbf{Multiple runs}: Perform 5-10 runs with different random seeds
+    \item \textbf{Confidence intervals}: Report mean ± standard deviation
+    \item \textbf{Significance testing}: Use t-tests for comparing algorithms
+    \item \textbf{Learning curves}: Plot smoothed curves with error bars
+\end{itemize}
+
+\textbf{Hyperparameter Sensitivity Analysis:}
+\begin{itemize}
+    \item \textbf{Grid search}: Test different learning rates and network sizes
+    \item \textbf{Learning rate schedules}: Test constant vs decaying learning rates
+    \item \textbf{Baseline comparison}: Compare different baseline functions
+    \item \textbf{Architecture search}: Test different network architectures
+\end{itemize}
+
+\subsection{Advanced Techniques and Extensions}
+
+\textbf{Variance Reduction Techniques:}
+\begin{itemize}
+    \item \textbf{Generalized Advantage Estimation (GAE)}: Reduces variance through temporal difference learning
+    \item \textbf{Return normalization}: Standardize returns to have zero mean and unit variance
+    \item \textbf{Baseline subtraction}: Use state-value function as baseline
+    \item \textbf{Importance sampling}: Enable off-policy learning with correction
+\end{itemize}
+
+\textbf{Modern Policy Gradient Algorithms:}
+\begin{itemize}
+    \item \textbf{Proximal Policy Optimization (PPO)}: Stable policy gradient with clipping
+    \item \textbf{Trust Region Policy Optimization (TRPO)}: Constrained policy updates
+    \item \textbf{Actor-Critic methods}: Combine policy gradients with value functions
+    \item \textbf{Natural Policy Gradients}: Use natural gradient for better updates
+\end{itemize}
+
+\textbf{Continuous Control Extensions:}
+\begin{itemize}
+    \item \textbf{Deep Deterministic Policy Gradient (DDPG)}: Actor-critic for continuous actions
+    \item \textbf{Soft Actor-Critic (SAC)}: Maximum entropy actor-critic
+    \item \textbf{Twin Delayed DDPG (TD3)}: Improved DDPG with target policy smoothing
+    \item \textbf{Distributed training}: Parallel training across multiple environments
+\end{itemize}
+
+\subsection{Conclusion and Future Directions}
+
+Policy gradient methods represent a powerful paradigm in reinforcement learning with both theoretical elegance and practical applications. While they face challenges such as high variance and sample inefficiency, recent advances in variance reduction techniques and hybrid approaches have significantly improved their performance.
+
+\textbf{Key Takeaways:}
+\begin{itemize}
+    \item Policy gradients excel in continuous action spaces and stochastic policy requirements
+    \item Baselines are crucial for reducing variance and improving stability
+    \item Value-based methods often outperform policy gradients in discrete environments
+    \item Hybrid actor-critic approaches combine the best of both paradigms
+    \item Proper implementation and hyperparameter tuning are essential for success
+\end{itemize}
+
+\textbf{Future Research Directions:}
+\begin{itemize}
+    \item \textbf{Meta-learning}: Learning to learn better policy gradient algorithms
+    \item \textbf{Multi-agent systems}: Extending policy gradients to multi-agent settings
+    \item \textbf{Hierarchical RL}: Combining policy gradients with hierarchical structures
+    \item \textbf{Safe RL}: Incorporating safety constraints into policy optimization
+    \item \textbf{Real-world applications}: Deploying policy gradient methods in practical systems
+\end{itemize}
 
 }}
 

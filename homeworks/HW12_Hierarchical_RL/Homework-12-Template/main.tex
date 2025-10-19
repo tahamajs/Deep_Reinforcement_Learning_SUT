@@ -172,32 +172,54 @@ Temporal Abstraction and Skill Discovery
 
 Hierarchical Reinforcement Learning (HRL) addresses fundamental limitations of traditional flat reinforcement learning approaches by introducing temporal abstraction and multi-level decision making. Traditional RL algorithms face significant challenges when dealing with long-horizon tasks, sparse rewards, and complex environments that require structured exploration and skill reuse.
 
+\textbf{The Curse of Dimensionality in RL:}
+Traditional reinforcement learning suffers from the curse of dimensionality in multiple ways:
+\begin{itemize}
+    \item \textbf{State Space Explosion:} As the number of state variables increases, the state space grows exponentially, making it impossible to visit all states during learning.
+    \item \textbf{Action Space Complexity:} Complex tasks require sophisticated action sequences that are difficult to learn through random exploration.
+    \item \textbf{Temporal Horizon:} Long-horizon tasks require planning over hundreds or thousands of timesteps, making credit assignment extremely challenging.
+\end{itemize}
+
 \textbf{Key Challenges in Flat RL:}
 \begin{enumerate}
-    \item \textbf{Credit Assignment Problem:} In long-horizon tasks spanning hundreds or thousands of timesteps, attributing rewards to specific actions becomes increasingly difficult due to temporal distance between actions and outcomes.
+    \item \textbf{Credit Assignment Problem:} In long-horizon tasks spanning hundreds or thousands of timesteps, attributing rewards to specific actions becomes increasingly difficult due to temporal distance between actions and outcomes. This is particularly problematic in sparse reward environments where feedback is delayed.
     
-    \item \textbf{Sparse Reward Environments:} Many real-world tasks provide rewards only upon task completion, making random exploration ineffective and learning extremely sample-inefficient.
+    \item \textbf{Sparse Reward Environments:} Many real-world tasks provide rewards only upon task completion, making random exploration ineffective and learning extremely sample-inefficient. For example, in robotic manipulation, the agent only receives a reward when successfully grasping an object, not for intermediate actions.
     
-    \item \textbf{Curse of Dimensionality:} As task complexity increases, the action space grows exponentially, making exploration and learning computationally intractable.
+    \item \textbf{Curse of Dimensionality:} As task complexity increases, the action space grows exponentially, making exploration and learning computationally intractable. This is especially problematic in continuous control tasks where the action space is infinite.
     
-    \item \textbf{Lack of Transfer Learning:} Traditional RL agents must relearn similar behaviors from scratch for each new task, lacking the ability to reuse learned skills.
+    \item \textbf{Lack of Transfer Learning:} Traditional RL agents must relearn similar behaviors from scratch for each new task, lacking the ability to reuse learned skills. This leads to inefficient learning and poor generalization across related tasks.
+    
+    \item \textbf{Exploration-Exploitation Dilemma:} In complex environments, the exploration-exploitation trade-off becomes increasingly difficult to balance, often leading to suboptimal policies that get stuck in local optima.
 \end{enumerate}
 
 \textbf{Human-Inspired Hierarchical Planning:}
 Consider the task of preparing dinner, which humans naturally decompose into hierarchical subtasks:
 \begin{itemize}
-    \item \textbf{High Level:} Plan meal preparation
-    \item \textbf{Mid Level:} Shop for ingredients, prepare food, serve meal
-    \item \textbf{Low Level:} Navigate to store, select items, chop vegetables, etc.
+    \item \textbf{High Level (Strategic):} Plan meal preparation, decide on menu, estimate time requirements
+    \item \textbf{Mid Level (Tactical):} Shop for ingredients, prepare food, serve meal
+    \item \textbf{Low Level (Operational):} Navigate to store, select items, chop vegetables, operate kitchen equipment
 \end{itemize}
 
 This hierarchical decomposition enables humans to:
 \begin{itemize}
-    \item Plan at multiple temporal scales simultaneously
-    \item Reuse learned skills across different contexts
-    \item Focus attention on relevant subtasks
-    \item Transfer knowledge between similar tasks
+    \item Plan at multiple temporal scales simultaneously (minutes, hours, days)
+    \item Reuse learned skills across different contexts (cooking skills apply to different recipes)
+    \item Focus attention on relevant subtasks (concentrate on chopping while planning next steps)
+    \item Transfer knowledge between similar tasks (cooking skills transfer to baking)
+    \item Handle interruptions gracefully (can pause mid-task and resume later)
 \end{itemize}
+
+\textbf{Biological Evidence for Hierarchy:}
+Neuroscientific research has shown that the human brain operates hierarchically:
+\begin{itemize}
+    \item \textbf{Prefrontal Cortex:} Handles high-level planning and goal setting
+    \item \textbf{Motor Cortex:} Executes low-level motor commands
+    \item \textbf{Basal Ganglia:} Manages action selection and habit formation
+    \item \textbf{Cerebellum:} Coordinates fine motor control and timing
+\end{itemize}
+
+This biological evidence supports the hypothesis that hierarchical organization is fundamental to intelligent behavior.
 
 \subsection{Theoretical Foundations}
 
@@ -245,17 +267,43 @@ The options framework transforms the original MDP into an SMDP where:
 \end{itemize}
 
 \textbf{Option Value Functions:}
-The value of an option $\omega$ in state $s$ is defined as:
+The value of an option $\omega$ in state $s$ represents the expected cumulative reward when executing option $\omega$ from state $s$ and then following the optimal policy over options. Mathematically, this is defined as:
+
 \[
 Q_\Omega(s,\omega) = R(s,\omega) + \sum_{s'} P(s'|s,\omega) \max_{\omega'} Q_\Omega(s',\omega')
 \]
 
+where:
+\begin{itemize}
+    \item $R(s,\omega) = \mathbb{E}[\sum_{t=0}^{T-1} \gamma^t r_t | s_0 = s, \omega]$ is the expected discounted reward of executing option $\omega$ from state $s$
+    \item $P(s'|s,\omega)$ is the probability of transitioning to state $s'$ when executing option $\omega$ from state $s$
+    \item $T$ is the random duration of option $\omega$
+    \item The second term represents the value of the best option available in the next state
+\end{itemize}
+
 \textbf{Intra-Option Learning:}
-Unlike traditional Q-learning, intra-option learning allows updating Q-values while an option is being executed:
+Unlike traditional Q-learning, intra-option learning allows updating Q-values while an option is being executed. This is crucial for learning long-duration options efficiently. The update rule is:
+
 \[
 Q_\Omega(s,\omega) \leftarrow Q_\Omega(s,\omega) + \alpha[r + \gamma^k Q_\Omega(s',\omega') - Q_\Omega(s,\omega)]
 \]
-where $k$ is the number of steps the option was executed.
+
+where:
+\begin{itemize}
+    \item $k$ is the number of steps the option was executed (can be greater than 1)
+    \item $r$ is the cumulative reward received during option execution
+    \item $\omega'$ is the next option selected after termination
+    \item This update can occur multiple times during a single episode, enabling faster learning
+\end{itemize}
+
+\textbf{Option Termination Learning:}
+The termination function $\beta_\omega(s)$ is learned to optimize the trade-off between option duration and task completion. The termination gradient is:
+
+\[
+\nabla_\beta \mathbb{E}[R] = \mathbb{E}[A_\Omega(s,\omega) \nabla_\beta \log \beta_\omega(s)]
+\]
+
+where $A_\Omega(s,\omega)$ is the advantage of terminating option $\omega$ in state $s$.
 
 \subsection{Feudal Hierarchies}
 
@@ -275,16 +323,45 @@ The FeudalNet implements this hierarchy using:
 \end{itemize}
 
 \textbf{Training Objectives:}
+The feudal architecture uses different reward signals for manager and worker to encourage appropriate behavior at each level:
+
 \begin{itemize}
     \item \textbf{Manager Reward:} Cosine similarity between goal and state transition:
     \[
-    r_{manager}(t) = \cos(g_t, z_{t+c} - z_t)
+    r_{manager}(t) = \cos(g_t, z_{t+c} - z_t) = \frac{g_t \cdot (z_{t+c} - z_t)}{||g_t|| \cdot ||z_{t+c} - z_t||}
     \]
+    This reward encourages the manager to set goals that align with actual state changes, promoting meaningful high-level planning.
+    
     \item \textbf{Worker Reward:} Combination of extrinsic and intrinsic rewards:
     \[
     r_{worker}(t) = r_{extrinsic}(t) + \alpha \cos(g_t, z_{t+1} - z_t)
     \]
+    where:
+    \begin{itemize}
+        \item $r_{extrinsic}(t)$ is the environment reward
+        \item $\alpha$ controls the balance between extrinsic and intrinsic motivation
+        \item The intrinsic term encourages the worker to make progress toward the manager's goal
+    \end{itemize}
 \end{itemize}
+
+\textbf{Goal Communication Mechanism:}
+The communication between manager and worker is crucial for effective hierarchical control:
+
+\begin{itemize}
+    \item \textbf{Goal Normalization:} Goals are normalized to unit length to ensure consistent magnitude
+    \item \textbf{Temporal Alignment:} Manager goals are communicated every $c$ timesteps, providing temporal structure
+    \item \textbf{Representation Consistency:} Both manager and worker operate on the same state representation $z_t$
+    \item \textbf{Goal Persistence:} Goals remain active until the next manager update, providing temporal continuity
+\end{itemize}
+
+\textbf{Advantages of Feudal Architecture:}
+\begin{enumerate}
+    \item \textbf{Temporal Abstraction:} Manager operates at longer time scales, reducing planning complexity
+    \item \textbf{Modularity:} Manager and worker can be trained independently or jointly
+    \item \textbf{Scalability:} Architecture can be extended to multiple levels of hierarchy
+    \item \textbf{Interpretability:} Goals provide interpretable high-level behavior
+    \item \textbf{Transfer Learning:} Learned goals can be reused across different tasks
+\end{enumerate}
 
 \subsection{Goal-Conditioned Reinforcement Learning}
 
@@ -302,43 +379,114 @@ Q(s,a,g) = \mathbb{E}[\sum_{t=0}^{\infty} \gamma^t r_t | s_0 = s, a_0 = a, g]
 \]
 
 \textbf{Hindsight Experience Replay (HER):}
-HER addresses sparse rewards by relabeling failed trajectories with achieved goals:
+HER addresses sparse rewards by relabeling failed trajectories with achieved goals. This technique is based on the insight that even failed episodes contain valuable information about how to reach the states that were actually achieved.
+
+\textbf{HER Strategies:}
 \begin{itemize}
     \item \textbf{Future Strategy:} Sample future states as goals
+    \begin{itemize}
+        \item For each state $s_t$ in the trajectory, sample a future state $s_{t+k}$ where $k \geq 1$
+        \item Relabel the trajectory with $s_{t+k}$ as the goal
+        \item Recompute rewards based on the new goal
+        \item This strategy provides dense learning signals for goal-reaching behavior
+    \end{itemize}
+    
     \item \textbf{Final Strategy:} Use terminal state as goal
+    \begin{itemize}
+        \item Use the final state $s_T$ of the episode as the goal for all transitions
+        \item Particularly useful when the agent reaches a meaningful final state
+        \item Provides consistent goal throughout the episode
+    \end{itemize}
+    
     \item \textbf{Random Strategy:} Sample random goals from goal space
+    \begin{itemize}
+        \item Sample goals from a predefined goal distribution
+        \item Useful for exploring diverse goal-reaching behaviors
+        \item Can be combined with other strategies for better coverage
+    \end{itemize}
+\end{itemize}
+
+\textbf{Mathematical Formulation of HER:}
+Given a trajectory $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, ..., s_T)$ with original goal $g$, HER generates additional experiences by:
+
+\begin{enumerate}
+    \item Sampling a new goal $g'$ using one of the strategies above
+    \item Computing new rewards: $r_t' = r(s_t, a_t, g')$
+    \item Storing the modified experience: $(s_t, a_t, r_t', s_{t+1}, g')$
+\end{enumerate}
+
+The modified experiences are added to the replay buffer, effectively increasing the learning signal density.
+
+\textbf{Why HER Works:}
+\begin{itemize}
+    \item \textbf{Data Augmentation:} Each failed episode generates multiple successful sub-episodes
+    \item \textbf{Sparse Reward Mitigation:} Provides dense rewards for goal-reaching behavior
+    \item \textbf{Exploration Enhancement:} Encourages exploration of diverse goal-reaching strategies
+    \item \textbf{Sample Efficiency:} Dramatically improves sample efficiency in sparse reward settings
 \end{itemize}
 
 \subsection{Skill Discovery}
 
 \textbf{Diversity is All You Need (DIAYN):}
-DIAYN learns diverse skills without external rewards using information-theoretic objectives:
+DIAYN learns diverse skills without external rewards using information-theoretic objectives. The key insight is that skills should be distinguishable from each other based on the states they visit, creating a natural diversity incentive.
 
-\textbf{Objective Function:}
+\textbf{Information-Theoretic Objective:}
+The DIAYN objective maximizes the mutual information between skills and states while maintaining skill diversity:
+
 \[
 \mathcal{L} = \mathbb{E}_{s,a,z}[\log q_\phi(z|s)] - \mathbb{E}_{s,z}[\log p(z)]
 \]
+
 where:
 \begin{itemize}
-    \item $q_\phi(z|s)$: Discriminator that predicts skill from state
-    \item $p(z)$: Prior distribution over skills
-    \item $z$: Skill identifier
+    \item $q_\phi(z|s)$: Discriminator that predicts skill from state (learned neural network)
+    \item $p(z)$: Prior distribution over skills (typically uniform)
+    \item $z$: Skill identifier (discrete or continuous)
+    \item The first term encourages states to be predictive of skills
+    \item The second term prevents skill collapse by maintaining diversity
 \end{itemize}
 
-\textbf{Intrinsic Reward:}
-The intrinsic reward encourages state-skill predictability:
+\textbf{Intrinsic Reward Derivation:}
+The intrinsic reward is derived from the discriminator's prediction accuracy:
+
 \[
-r_{intrinsic}(s,z) = \log q_\phi(z|s) - \log p(z)
+r_{intrinsic}(s,z) = \log q_\phi(z|s) - \log p(z) = \log \frac{q_\phi(z|s)}{p(z)}
 \]
+
+This reward:
+\begin{itemize}
+    \item Rewards the agent for visiting states that are characteristic of its skill
+    \item Penalizes visiting states that are common across all skills
+    \item Creates a natural exploration incentive based on skill differentiation
+\end{itemize}
+
+\textbf{Training Algorithm:}
+DIAYN training involves alternating between policy and discriminator updates:
+
+\begin{enumerate}
+    \item \textbf{Policy Update:} Train skill-conditioned policy $\pi(a|s,z)$ using intrinsic rewards
+    \item \textbf{Discriminator Update:} Train discriminator $q_\phi(z|s)$ to predict skill from state
+    \item \textbf{Skill Sampling:} Sample skills uniformly from the skill space
+    \item \textbf{Experience Collection:} Collect trajectories for each skill
+\end{enumerate}
 
 \textbf{Emergent Behaviors:}
 DIAYN discovers diverse skills such as:
 \begin{itemize}
-    \item Locomotion patterns
-    \item Object manipulation behaviors
-    \item Navigation strategies
-    \item Exploration patterns
+    \item \textbf{Locomotion Patterns:} Different walking, running, or jumping styles
+    \item \textbf{Object Manipulation Behaviors:} Grasping, pushing, or throwing objects
+    \item \textbf{Navigation Strategies:} Different paths or exploration patterns
+    \item \textbf{Exploration Patterns:} Systematic vs. random exploration behaviors
 \end{itemize}
+
+\textbf{Advantages of DIAYN:}
+    \begin{enumerate}
+    \item \textbf{No Reward Engineering:} Discovers skills without manual reward design
+    \item \textbf{Diverse Skill Set:} Learns a wide variety of distinct behaviors
+    \item \textbf{Transfer Learning:} Skills can be reused for downstream tasks
+    \item \textbf{Exploration Enhancement:} Provides structured exploration through skill diversity
+    \item \textbf{Scalability:} Can learn many skills simultaneously
+\end{enumerate}
 
 \section{Implementation and Experimental Analysis}
 
@@ -352,6 +500,27 @@ The implementation focuses on demonstrating key concepts of Hierarchical Reinfor
     \item \textbf{Goal-Conditioned Policies:} Universal value function approximators
     \item \textbf{Skill Discovery:} Unsupervised learning of diverse behaviors
 \end{itemize}
+
+\textbf{Environment Selection:}
+The implementations are tested on carefully selected environments that highlight the advantages of hierarchical approaches:
+
+\begin{itemize}
+    \item \textbf{GridWorld Navigation:} Demonstrates temporal abstraction through multi-step navigation
+    \item \textbf{MountainCar:} Shows how hierarchical methods can solve sparse reward problems
+    \item \textbf{Ant Locomotion:} Illustrates skill discovery in continuous control
+    \item \textbf{Robotic Manipulation:} Demonstrates real-world applicability
+\end{itemize}
+
+\textbf{Architecture Design Principles:}
+The implementations follow several key design principles:
+
+\begin{enumerate}
+    \item \textbf{Modularity:} Each component (manager, worker, options) can be trained independently
+    \item \textbf{Scalability:} Architectures can be extended to multiple hierarchy levels
+    \item \textbf{Interpretability:} High-level decisions are interpretable through goals and options
+    \item \textbf{Efficiency:} Shared representations reduce computational overhead
+    \item \textbf{Robustness:} Multiple levels provide redundancy and fault tolerance
+\end{enumerate}
 
 \subsection{Key Implementation Details}
 
@@ -370,7 +539,7 @@ The training process involves three main updates:
     \item \textbf{Intra-Option Policy Update:} Improve option policies using policy gradient
     \item \textbf{Termination Function Update:} Learn when to terminate options
     \item \textbf{Q-Value Update:} Learn values over options using temporal difference learning
-\end{enumerate}
+    \end{enumerate}
 
 \textbf{FeudalNet Implementation:}
 The FeudalNet architecture consists of:
@@ -416,37 +585,212 @@ The experiments evaluate hierarchical RL methods using:
 \subsection{Computational Complexity Analysis}
 
 \textbf{Time Complexity:}
+The computational complexity of hierarchical RL methods varies significantly based on the architecture and number of levels:
+
 \begin{itemize}
     \item \textbf{Options Framework:} $O(|S| \times |\Omega| \times |A|)$ where $|\Omega|$ is the number of options
+    \begin{itemize}
+        \item Each option requires separate policy and termination function learning
+        \item Intra-option learning can occur multiple times per episode
+        \item Option selection adds $O(|\Omega|)$ overhead per decision
+    \end{itemize}
+    
     \item \textbf{Feudal Networks:} $O(|S| \times |G|)$ where $|G|$ is the goal dimension
+    \begin{itemize}
+        \item Manager operates every $c$ timesteps, reducing computational load
+        \item Worker processes state-goal pairs efficiently
+        \item Shared representation reduces redundant computation
+    \end{itemize}
+    
     \item \textbf{Goal-Conditioned RL:} $O(|S| \times |G| \times |A|)$ for goal-conditioned policies
+    \begin{itemize}
+        \item Policy network processes concatenated state-goal inputs
+        \item HER increases effective data size by factor of $k$ (number of goals per episode)
+        \item Goal sampling adds minimal computational overhead
+    \end{itemize}
+    
+    \item \textbf{Skill Discovery (DIAYN):} $O(|S| \times |Z| \times |A|)$ where $|Z|$ is the skill dimension
+    \begin{itemize}
+        \item Discriminator training adds $O(|S| \times |Z|)$ per update
+        \item Multiple skills trained simultaneously
+        \item Intrinsic reward computation is efficient
+    \end{itemize}
 \end{itemize}
 
 \textbf{Space Complexity:}
+Memory requirements scale with the complexity of the hierarchical structure:
+
 \begin{itemize}
     \item \textbf{Option Storage:} $O(|S| \times |\Omega| \times |A|)$ for option policies and termination functions
+    \begin{itemize}
+        \item Each option requires separate neural network parameters
+        \item Termination functions add $O(|S| \times |\Omega|)$ storage
+        \item Option value functions require $O(|S| \times |\Omega|)$ storage
+    \end{itemize}
+    
     \item \textbf{Goal Representation:} $O(|G|)$ for goal vectors
+    \begin{itemize}
+        \item Goals are typically low-dimensional (10-50 dimensions)
+        \item Goal history may require additional storage
+        \item Normalization parameters are negligible
+    \end{itemize}
+    
     \item \textbf{Skill Embeddings:} $O(|Z|)$ where $|Z|$ is the skill dimension
+        \begin{itemize}
+        \item Skill identifiers are typically discrete (10-100 skills)
+        \item Discriminator network adds $O(|S| \times |Z|)$ parameters
+        \item Skill-conditioned policies require $O(|S| \times |Z| \times |A|)$ parameters
+    \end{itemize}
+        \end{itemize}
+        
+\textbf{Sample Complexity:}
+Hierarchical methods often require more samples initially but achieve better asymptotic performance:
+
+        \begin{itemize}
+    \item \textbf{Options Learning:} Requires $O(|\Omega| \times N)$ samples where $N$ is samples per option
+    \item \textbf{Feudal Training:} Requires $O(N_{manager} + N_{worker})$ samples for both levels
+    \item \textbf{HER Augmentation:} Reduces effective sample requirements by factor of $k$
+    \item \textbf{Skill Discovery:} Requires $O(|Z| \times N)$ samples for diverse skill learning
+        \end{itemize}
+        
+\subsection{Comparative Analysis of Hierarchical RL Methods}
+
+\textbf{Method Comparison Matrix:}
+Table \ref{tab:comparison} provides a comprehensive comparison of different hierarchical RL approaches across key dimensions:
+
+\begin{table}[h]
+\centering
+\caption{Comparison of Hierarchical RL Methods}
+\label{tab:comparison}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Method} & \textbf{Learning Complexity} & \textbf{Sample Efficiency} & \textbf{Interpretability} & \textbf{Scalability} \\
+\hline
+Options Framework & High & Medium & High & Medium \\
+Feudal Networks & Medium & High & High & High \\
+Goal-Conditioned RL & Low & High & Medium & High \\
+Skill Discovery (DIAYN) & Medium & Medium & Low & High \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Detailed Method Analysis:}
+
+\textbf{Options Framework:}
+\begin{itemize}
+    \item \textbf{Strengths:} Formal theoretical foundation, interpretable high-level decisions, flexible option design
+    \item \textbf{Weaknesses:} High computational complexity, requires careful option design, limited scalability
+    \item \textbf{Best Use Cases:} Discrete environments with clear subgoals, interpretable decision-making required
+    \item \textbf{Sample Efficiency:} Medium - requires learning multiple policies simultaneously
 \end{itemize}
 
-\subsection{Hyperparameter Sensitivity}
+\textbf{Feudal Networks:}
+\begin{itemize}
+    \item \textbf{Strengths:} Natural temporal abstraction, efficient goal communication, good scalability
+    \item \textbf{Weaknesses:} Requires careful hyperparameter tuning, limited to spatial goals
+    \item \textbf{Best Use Cases:} Navigation tasks, continuous control with spatial objectives
+    \item \textbf{Sample Efficiency:} High - manager operates at longer time scales
+\end{itemize}
+
+\textbf{Goal-Conditioned RL:}
+\begin{itemize}
+    \item \textbf{Strengths:} Simple implementation, excellent transfer learning, HER provides dense rewards
+    \item \textbf{Weaknesses:} Limited to goal-reaching tasks, requires goal space design
+    \item \textbf{Best Use Cases:} Manipulation tasks, navigation with diverse goals
+    \item \textbf{Sample Efficiency:} High - HER dramatically improves sample efficiency
+\end{itemize}
+
+\textbf{Skill Discovery (DIAYN):}
+\begin{itemize}
+    \item \textbf{Strengths:} No reward engineering required, discovers diverse behaviors, good for exploration
+    \item \textbf{Weaknesses:} Learned skills may not align with task objectives, requires downstream fine-tuning
+    \item \textbf{Best Use Cases:} Pre-training for downstream tasks, exploration in unknown environments
+    \item \textbf{Sample Efficiency:} Medium - requires learning multiple skills simultaneously
+\end{itemize}
+
+\textbf{Trade-offs and Design Decisions:}
+\begin{enumerate}
+    \item \textbf{Interpretability vs. Performance:} More interpretable methods (Options, Feudal) often require more manual design but provide better understanding of agent behavior.
+    
+    \item \textbf{Sample Efficiency vs. Complexity:} Simpler methods (Goal-Conditioned RL) often achieve better sample efficiency but may be limited in scope.
+    
+    \item \textbf{Generalization vs. Specialization:} General methods (DIAYN) discover diverse behaviors but may not be optimal for specific tasks.
+    
+    \item \textbf{Scalability vs. Control:} Highly scalable methods may sacrifice fine-grained control over agent behavior.
+\end{enumerate}
+
+\subsection{Hyperparameter Sensitivity and Tuning Guidelines}
 
 \textbf{Critical Hyperparameters:}
+The performance of hierarchical RL methods is highly sensitive to hyperparameter selection. Understanding these sensitivities is crucial for successful implementation:
+
 \begin{itemize}
     \item \textbf{Option Learning Rate:} Affects convergence speed and stability
+    \begin{itemize}
+        \item Too high: Training instability, oscillating performance
+        \item Too low: Slow convergence, suboptimal policies
+        \item Recommended range: $10^{-4}$ to $10^{-3}$
+    \end{itemize}
+    
     \item \textbf{Termination Threshold:} Controls option duration and granularity
+    \begin{itemize}
+        \item Too high: Options terminate too early, losing temporal abstraction
+        \item Too low: Options run too long, reducing flexibility
+        \item Recommended range: $0.1$ to $0.5$ (probability-based)
+    \end{itemize}
+    
     \item \textbf{Manager Frequency:} Determines temporal abstraction level
+    \begin{itemize}
+        \item Too frequent: Reduces temporal abstraction benefits
+        \item Too infrequent: Worker may lose direction
+        \item Recommended: $10-20\%$ of episode length
+    \end{itemize}
+    
     \item \textbf{Goal Dimension:} Balances expressiveness and computational cost
+    \begin{itemize}
+        \item Too low: Insufficient expressiveness for complex tasks
+        \item Too high: Increased computational cost, potential overfitting
+        \item Recommended range: $10-50$ dimensions
+    \end{itemize}
+    
     \item \textbf{Skill Diversity Weight:} Controls exploration-exploitation trade-off
+    \begin{itemize}
+        \item Too high: Excessive exploration, poor task performance
+        \item Too low: Limited skill diversity, poor generalization
+        \item Recommended range: $0.1$ to $1.0$
+    \end{itemize}
 \end{itemize}
 
-\textbf{Parameter Tuning Guidelines:}
+\textbf{Parameter Tuning Strategies:}
+\begin{enumerate}
+    \item \textbf{Grid Search:} Systematic exploration of hyperparameter space
+    \begin{itemize}
+        \item Start with coarse grid, refine around promising regions
+        \item Use cross-validation to avoid overfitting
+        \item Consider computational constraints
+    \end{itemize}
+    
+    \item \textbf{Bayesian Optimization:} Efficient hyperparameter search
+    \begin{itemize}
+        \item Use Gaussian processes to model performance landscape
+        \item Acquisition functions guide search toward promising regions
+        \item Particularly effective for expensive evaluations
+    \end{itemize}
+    
+    \item \textbf{Adaptive Methods:} Dynamic hyperparameter adjustment
+    \begin{itemize}
+        \item Adjust learning rates based on performance metrics
+        \item Adapt termination thresholds based on option success rates
+        \item Monitor training dynamics and adjust accordingly
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Validation and Monitoring:}
 \begin{itemize}
-    \item Start with conservative learning rates (1e-4 to 1e-3)
-    \item Use adaptive termination thresholds based on task complexity
-    \item Set manager frequency to 10-20\% of episode length
-    \item Choose goal dimension based on state space complexity
-    \item Balance skill diversity with task performance
+    \item \textbf{Performance Metrics:} Track reward, sample efficiency, and convergence speed
+    \item \textbf{Behavioral Analysis:} Monitor option usage patterns and goal achievement
+    \item \item \textbf{Stability Checks:} Ensure training stability across multiple runs
+    \item \textbf{Transfer Evaluation:} Test performance on related tasks
 \end{itemize}
 
 \section{Discussion and Future Directions}
@@ -515,7 +859,7 @@ This comprehensive exploration of Hierarchical Reinforcement Learning has reveal
 \end{enumerate}
 
 \textbf{Long-Term Vision:}
-\begin{enumerate}
+    \begin{enumerate}
     \item \textbf{Universal Skill Libraries:} Develop comprehensive libraries of reusable skills that can be composed for any task.
     
     \item \textbf{Human-AI Collaboration:} Enable seamless collaboration between humans and hierarchical AI systems.

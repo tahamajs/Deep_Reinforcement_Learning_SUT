@@ -1,11 +1,32 @@
 \section{Task 3: Model Predictive Control (MPC)}
 
-\subsection{Task Overview} In this notebook, we use \href{https://locuslab.github.io/mpc.pytorch/}{MPC PyTorch}, which is a fast and differentiable model predictive control solver for PyTorch. 
-Our goal is to solve the \href{https://gymnasium.farama.org/environments/classic_control/pendulum/}{Pendulum} environment from \href{https://gymnasium.farama.org}{Gymnasium}, where we want to swing a pendulum to an upright position and keep it balanced there.
+\subsection{Task Overview} 
+This comprehensive implementation explores \textbf{Model Predictive Control (MPC)}, a powerful control methodology that has revolutionized continuous control systems in robotics, autonomous vehicles, and industrial automation. MPC represents the intersection of optimal control theory, optimization, and model-based reinforcement learning.
 
-There are many helper functions and classes that provide the necessary tools for solving this environment using \textbf{MPC}. Some of these tools might be a little overwhelming, and that's fine, just try to understand the general ideas. Our primary objective is to learn more about \textbf{MPC}, not focusing on the physics of the pendulum environment.
+\textbf{Technical Framework:} We utilize \href{https://locuslab.github.io/mpc.pytorch/}{MPC PyTorch}, a state-of-the-art differentiable MPC solver that enables:
+\begin{itemize}
+    \item \textbf{Fast Optimization}: Efficient solution of constrained optimization problems
+    \item \textbf{Gradient-Based Learning}: Differentiable models for end-to-end learning
+    \item \textbf{Real-Time Control}: Practical deployment in dynamic environments
+    \item \textbf{Constraint Handling}: Natural incorporation of safety and operational constraints
+\end{itemize}
 
-On a final note, you might benefit from exploring the \href{https://github.com/locuslab/mpc.pytorch/}{source code} for \href{https://locuslab.github.io/mpc.pytorch/}{MPC PyTorch}, as this allows you to see how PyTorch is used in other contexts. To learn more about \textbf{MPC} and \textbf{mpc.pytorch}, you can check out \href{https://arxiv.org/abs/1703.00443}{OptNet} and \href{https://arxiv.org/abs/1810.13400}{Differentiable MPC}.
+\textbf{Environment Selection:} The \href{https://gymnasium.farama.org/environments/classic_control/pendulum/}{Pendulum} environment provides an ideal testbed for MPC due to its:
+\begin{itemize}
+    \item \textbf{Continuous State Space}: Real-valued states requiring sophisticated control
+    \item \textbf{Continuous Action Space}: Smooth control inputs enabling optimization
+    \item \textbf{Nonlinear Dynamics}: Complex system behavior requiring model-based approaches
+    \item \textbf{Clear Objective}: Swing-up and balance task with measurable success criteria
+\end{itemize}
+
+\textbf{Learning Objectives:}
+\begin{enumerate}
+    \item \textbf{MPC Fundamentals}: Understanding receding horizon control principles
+    \item \textbf{Model Learning}: Neural network dynamics model training and evaluation
+    \item \textbf{Optimization Methods}: Random shooting vs. Cross-Entropy Method comparison
+    \item \textbf{Parameter Analysis}: Horizon length, sample budget, and iteration effects
+    \item \textbf{Performance Evaluation}: Success rate, computational efficiency, and robustness
+\end{enumerate}
 
 \textbf{Sections to be Implemented and Completed}
 

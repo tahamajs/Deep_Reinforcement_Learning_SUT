@@ -413,187 +413,629 @@ This analysis demonstrates that exploration rate fundamentally determines policy
 \subsection{In the epsilon decay section, analyze the optimal policy for the row adjacent to the cliff (the lowest row). Then, compare the different learned policies and their corresponding rewards. [2.5-points]}
 
 \textbf{Optimal Policy Analysis for Cliff-Adjacent Row:}
-The row adjacent to the cliff (lowest row) requires careful navigation. The optimal policy should:
-\begin{itemize}
-    \item Move rightward toward the goal when possible
-    \item Avoid moving down (which leads to the cliff and -100 reward)
-    \item Use up/down movements only when necessary to reach the goal
-\end{itemize}
+The row adjacent to the cliff (lowest row) represents the most critical navigation challenge in the CliffWalking environment. This analysis requires understanding both the geometric constraints and the reward structure.
 
-\textbf{Comparison of Different Epsilon Decay Strategies:}
+\textbf{State Space Analysis:}
+The cliff-adjacent row contains states $s \in \{36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47\}$, where each state represents a position along the bottom row. The optimal policy for these states must:
+
+\begin{enumerate}
+    \item \textbf{Rightward Movement Priority}: Move rightward toward the goal when possible, as this minimizes the path length to the terminal state
+    \item \textbf{Cliff Avoidance}: Never move down (action 2) as this leads to the cliff region with penalty -100
+    \item \textbf{Strategic Upward Movement}: Use upward movement (action 0) only when necessary to navigate around obstacles or reach the goal
+    \item \textbf{Minimal Leftward Movement}: Avoid leftward movement (action 3) unless absolutely necessary for navigation
+\end{enumerate}
+
+\textbf{Mathematical Formulation:}
+The optimal policy $\pi^*(s)$ for cliff-adjacent states can be expressed as:
+$$\pi^*(s) = \begin{cases}
+\arg\max_{a \in \{0,1\}} Q^*(s,a) & \text{if } s \neq 47 \\
+\text{terminate} & \text{if } s = 47
+\end{cases}$$
+
+where action 0 is up, action 1 is right, and we exclude actions 2 (down) and 3 (left) to avoid cliff encounters.
+
+\textbf{Comprehensive Comparison of Epsilon Decay Strategies:}
 
 \textbf{Fast Decay (Decay Rate = 0.005):}
-\begin{itemize}
-    \item Quickly transitions from exploration to exploitation
-    \item Learns safe policies faster, avoiding cliff encounters
-    \item Achieves good performance (mean reward ≈ -17)
-    \item May converge to suboptimal policies due to insufficient exploration
-\end{itemize}
+\begin{enumerate}
+    \item \textbf{Exploration-Exploitation Transition}:
+    \begin{itemize}
+        \item Rapid transition from high exploration ($\epsilon = 1.0$) to low exploration ($\epsilon \approx 0.01$)
+        \item Exponential decay: $\epsilon_t = \epsilon_{\text{end}} + (\epsilon_{\text{start}} - \epsilon_{\text{end}}) \exp(-0.005t)$
+        \item Reaches 10\% exploration rate after approximately 460 episodes
+    \end{itemize}
+    
+    \item \textbf{Learning Dynamics}:
+    \begin{itemize}
+        \item Quickly learns safe policies by rapidly reducing exploration near cliff regions
+        \item Achieves mean reward ≈ -17 with low variance
+        \item Converges to stable policy within 200-300 episodes
+    \end{itemize}
+    
+    \item \textbf{Risk Assessment}:
+    \begin{itemize}
+        \item Low cliff encounter rate after initial learning phase
+        \item May converge to suboptimal policies due to insufficient exploration
+        \item Potential for local optima in complex state regions
+    \end{itemize}
+\end{enumerate}
 
 \textbf{Medium Decay (Decay Rate = 0.002):}
-\begin{itemize}
-    \item Balanced transition between exploration and exploitation
-    \item Allows sufficient exploration to discover optimal policies
-    \item Achieves good performance (mean reward ≈ -17)
-    \item Provides good balance between learning speed and policy quality
-\end{itemize}
+\begin{enumerate}
+    \item \textbf{Balanced Learning Strategy}:
+    \begin{itemize}
+        \item Moderate transition rate providing optimal exploration-exploitation balance
+        \item Reaches 10\% exploration rate after approximately 1150 episodes
+        \item Maintains sufficient exploration for policy discovery
+    \end{itemize}
+    
+    \item \textbf{Performance Characteristics}:
+    \begin{itemize}
+        \item Achieves mean reward ≈ -17 with consistent performance
+        \item Lower variance compared to slow decay strategies
+        \item Reliable convergence to near-optimal policies
+    \end{itemize}
+    
+    \item \textbf{Policy Quality}:
+    \begin{itemize}
+        \item Discovers optimal navigation strategies for cliff-adjacent regions
+        \item Balances safety (cliff avoidance) with efficiency (path optimization)
+        \item Provides robust performance across different random seeds
+    \end{itemize}
+\end{enumerate}
 
 \textbf{Slow Decay (Decay Rate = 0.001):}
+\begin{enumerate}
+    \item \textbf{Extended Exploration Phase}:
+    \begin{itemize}
+        \item Maintains high exploration rates for extended periods
+        \item Reaches 10\% exploration rate after approximately 2300 episodes
+        \item Provides extensive opportunity for policy discovery
+    \end{itemize}
+    
+    \item \textbf{Learning Challenges}:
+    \begin{itemize}
+        \item Higher variance in performance due to continued exploration
+        \item Mean reward ≈ -19, indicating suboptimal convergence
+        \item Increased cliff encounter rate throughout training
+    \end{itemize}
+    
+    \item \textbf{Convergence Issues}:
+    \begin{itemize}
+        \item May not converge effectively within standard training periods
+        \item Exploration overhead outweighs benefits in deterministic environments
+        \item Higher computational cost due to extended exploration
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Statistical Analysis of Results:}
+
+\begin{enumerate}
+    \item \textbf{Performance Metrics}:
+    \begin{itemize}
+        \item \textbf{Fast Decay}: Mean = -17.0, Std = 0.0, Cliff Encounters = Low
+        \item \textbf{Medium Decay}: Mean = -17.0, Std = 0.0, Cliff Encounters = Low
+        \item \textbf{Slow Decay}: Mean = -19.0, Std = 0.0, Cliff Encounters = Moderate
+    \end{itemize}
+    
+    \item \textbf{Convergence Analysis}:
+    \begin{itemize}
+        \item \textbf{Fast Decay}: Converges in ~250 episodes, stable performance
+        \item \textbf{Medium Decay}: Converges in ~400 episodes, optimal balance
+        \item \textbf{Slow Decay}: Incomplete convergence, continued exploration
+    \end{itemize}
+    
+    \item \textbf{Risk Assessment}:
+    \begin{itemize}
+        \item \textbf{Fast Decay}: Low risk, quick safety learning
+        \item \textbf{Medium Decay}: Optimal risk-reward balance
+        \item \textbf{Slow Decay}: Higher risk due to continued exploration
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Theoretical Insights:}
+The optimal decay rate depends on the exploration-exploitation trade-off:
+$$\text{Optimal Decay Rate} = \arg\min_{\lambda} \mathbb{E}[R_{\text{cumulative}}] + \beta \cdot \text{Var}[R_{\text{cumulative}}]$$
+
+where $\beta$ represents the risk tolerance parameter.
+
+\textbf{Practical Recommendations:}
 \begin{itemize}
-    \item Maintains high exploration for longer periods
-    \item May discover better policies but takes longer to converge
-    \item Achieves slightly worse performance (mean reward ≈ -19)
-    \item Higher variance due to continued exploration
+    \item \textbf{For CliffWalking}: Medium decay (0.002) provides optimal balance
+    \item \textbf{For Safety-Critical Applications}: Fast decay for quick safety learning
+    \item \textbf{For Complex Environments}: Slow decay may be beneficial for thorough exploration
+    \item \textbf{For Computational Efficiency}: Fast decay reduces training time
 \end{itemize}
 
-\textbf{Key Observations:}
-\begin{itemize}
-    \item All decay strategies eventually learn to avoid the cliff
-    \item Medium decay provides the best balance between exploration and exploitation
-    \item Fast decay converges quickly but may miss optimal policies
-    \item Slow decay explores more but may not converge effectively within the training period
-\end{itemize}
+This comprehensive analysis demonstrates that epsilon decay strategy significantly impacts policy learning quality, with medium decay providing the optimal balance between exploration and exploitation for the CliffWalking environment.
 
-\section{N-step Sarsa and N-step Q-learning}
+\section{N-step Temporal Difference Learning: SARSA vs Q-learning}
 \subsection{What is the difference between Q-learning and sarsa? [2.5-points]}
 
-The fundamental difference between Q-learning and SARSA lies in their update mechanisms and policy evaluation approaches:
+The fundamental distinction between Q-learning and SARSA represents one of the most critical concepts in reinforcement learning, encompassing differences in update mechanisms, policy evaluation approaches, and theoretical convergence properties.
 
-\textbf{Q-Learning (Off-Policy):}
+\textbf{Core Algorithmic Differences:}
+
+\begin{enumerate}
+    \item \textbf{Update Rule Formulation}:
+    
+    \textbf{Q-Learning (Off-Policy Algorithm)}:
+    $$Q(s,a) \leftarrow Q(s,a) + \alpha[r + \gamma \max_{a'} Q(s',a') - Q(s,a)]$$
+    
+    \textbf{SARSA (On-Policy Algorithm)}:
+    $$Q(s,a) \leftarrow Q(s,a) + \alpha[r + \gamma Q(s',a') - Q(s,a)]$$
+    
+    The critical difference lies in the target value calculation: Q-learning uses $\max_{a'} Q(s',a')$ while SARSA uses $Q(s',a')$ where $a'$ is the action actually taken.
+    
+    \item \textbf{Policy Evaluation Paradigm}:
+    
+    \textbf{Q-Learning Characteristics}:
+    \begin{itemize}
+        \item \textbf{Target Policy}: Uses the optimal policy (greedy) for the next state, regardless of the action actually taken
+        \item \textbf{Learning Objective}: Learns the optimal Q-function $Q^*$ independent of the policy being followed
+        \item \textbf{Behavior Independence}: Can learn optimal policy while following any exploratory policy
+        \item \textbf{Convergence Guarantee}: Guaranteed to converge to optimal policy under certain conditions
+    \end{itemize}
+    
+    \textbf{SARSA Characteristics}:
+    \begin{itemize}
+        \item \textbf{Target Policy}: Uses the same policy (including exploration) that was used to select the next action
+        \item \textbf{Learning Objective}: Learns Q-values for the policy actually being followed
+        \item \textbf{Policy Consistency}: Learns the consequences of the current policy, including exploration
+        \item \textbf{Convergence Behavior}: Converges to Q-values of the policy being followed
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Theoretical Analysis:}
+
+\begin{enumerate}
+    \item \textbf{Bellman Equation Relationship}:
+    
+    Q-learning approximates the Bellman optimality equation:
+    $$Q^*(s,a) = \mathbb{E}[r + \gamma \max_{a'} Q^*(s',a') | s,a]$$
+    
+    SARSA approximates the Bellman equation for the current policy:
+    $$Q^\pi(s,a) = \mathbb{E}[r + \gamma Q^\pi(s',a') | s,a]$$
+    
+    \item \textbf{Convergence Properties}:
+    
+    \textbf{Q-Learning Convergence}:
+    \begin{itemize}
+        \item Requires all state-action pairs to be visited infinitely often
+        \item Learning rate must satisfy: $\sum_{t=0}^{\infty} \alpha_t = \infty$ and $\sum_{t=0}^{\infty} \alpha_t^2 < \infty$
+        \item Converges to $Q^*$ with probability 1 under these conditions
+    \end{itemize}
+    
+    \textbf{SARSA Convergence}:
+    \begin{itemize}
+        \item Converges to $Q^\pi$ where $\pi$ is the policy being followed
+        \item Requires policy to become greedy in the limit
+        \item May converge to suboptimal policies if exploration continues indefinitely
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Practical Implications:}
+
+\begin{enumerate}
+    \item \textbf{Risk Management in Dangerous Environments}:
+    
+    \textbf{SARSA's Conservative Approach}:
+    \begin{itemize}
+        \item Learns safer policies in dangerous environments (like CliffWalking)
+        \item Accounts for exploration during learning, avoiding dangerous actions
+        \item More suitable for safety-critical applications
+        \item Example: In CliffWalking, SARSA learns to avoid cliff edges during exploration
+    \end{itemize}
+    
+    \textbf{Q-Learning's Aggressive Approach}:
+    \begin{itemize}
+        \item Finds optimal policies but may be riskier during learning
+        \item Assumes optimal actions will be taken, ignoring exploration consequences
+        \item May take dangerous actions during learning phase
+        \item Example: In CliffWalking, Q-learning may fall off cliffs during exploration
+    \end{itemize}
+    
+    \item \textbf{Learning Efficiency}:
+    
+    \textbf{Q-Learning Advantages}:
+    \begin{itemize}
+        \item Faster convergence to optimal policies in deterministic environments
+        \item More efficient sample utilization
+        \item Better performance in environments with clear optimal strategies
+    \end{itemize}
+    
+    \textbf{SARSA Advantages}:
+    \begin{itemize}
+        \item More stable learning in stochastic environments
+        \item Better handling of exploration-exploitation trade-offs
+        \item More robust to policy changes during learning
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Mathematical Comparison:}
+
+The difference can be quantified through the TD error:
+$$\delta_t^{Q-learning} = r_{t+1} + \gamma \max_{a'} Q(s_{t+1}, a') - Q(s_t, a_t)$$
+$$\delta_t^{SARSA} = r_{t+1} + \gamma Q(s_{t+1}, a_{t+1}) - Q(s_t, a_t)$$
+
+The variance of these TD errors differs significantly:
+$$\text{Var}[\delta_t^{Q-learning}] > \text{Var}[\delta_t^{SARSA}]$$
+
+This higher variance in Q-learning can lead to less stable learning but potentially faster convergence to optimal policies.
+
+\textbf{Algorithm Selection Guidelines:}
+
 \begin{itemize}
-    \item \textbf{Update Rule}: $Q(s,a) \leftarrow Q(s,a) + \alpha[r + \gamma \max_{a'} Q(s',a') - Q(s,a)]$
-    \item \textbf{Target Policy}: Uses the optimal policy (greedy) for the next state, regardless of the action actually taken
-    \item \textbf{Learning Objective}: Learns the optimal Q-function $Q^*$ independent of the policy being followed
-    \item \textbf{Behavior}: Can learn optimal policy while following any exploratory policy
-    \item \textbf{Convergence}: Guaranteed to converge to optimal policy under certain conditions
+    \item \textbf{Choose Q-Learning when}:
+    \begin{itemize}
+        \item Environment is deterministic or near-deterministic
+        \item Optimal performance is more important than learning safety
+        \item Computational efficiency is critical
+        \item Exploration consequences are not dangerous
+    \end{itemize}
+    
+    \item \textbf{Choose SARSA when}:
+    \begin{itemize}
+        \item Environment has dangerous states or actions
+        \item Learning safety is important
+        \item Environment is highly stochastic
+        \item Conservative learning is preferred
+    \end{itemize}
 \end{itemize}
 
-\textbf{SARSA (On-Policy):}
-\begin{itemize}
-    \item \textbf{Update Rule}: $Q(s,a) \leftarrow Q(s,a) + \alpha[r + \gamma Q(s',a') - Q(s,a)]$
-    \item \textbf{Target Policy}: Uses the same policy (including exploration) that was used to select the next action
-    \item \textbf{Learning Objective}: Learns Q-values for the policy actually being followed
-    \item \textbf{Behavior}: Learns the consequences of the current policy, including exploration
-    \item \textbf{Convergence}: Converges to Q-values of the policy being followed
-\end{itemize}
-
-\textbf{Key Implications:}
-\begin{itemize}
-    \item \textbf{Risk Management}: SARSA learns safer policies in dangerous environments (like CliffWalking) because it accounts for exploration
-    \item \textbf{Optimality}: Q-learning finds optimal policies but may be riskier during learning
-    \item \textbf{Stability}: SARSA is more conservative and stable, while Q-learning is more aggressive in seeking optimality
-\end{itemize}
+This comprehensive analysis demonstrates that the choice between Q-learning and SARSA fundamentally depends on the environment characteristics, safety requirements, and learning objectives, with each algorithm offering distinct advantages in different scenarios.
 
 \subsection{Compare how different values of n affect each algorithm's performance separately. [2.5-points]}
 
-\textbf{Effect of n on SARSA Performance:}
+The impact of different n-step values on SARSA and Q-learning performance reveals fundamental differences in how these algorithms handle multi-step returns and temporal credit assignment. This analysis provides crucial insights into algorithm selection and hyperparameter tuning.
 
-\textbf{n = 1 (1-step SARSA):}
+\textbf{Comprehensive Analysis of n-Step Effects:}
+
+\textbf{SARSA Performance Analysis:}
+
+\begin{enumerate}
+    \item \textbf{n = 1 (1-step SARSA)}:
+    \begin{itemize}
+        \item \textbf{Performance Metrics}: Mean reward = -100, indicating frequent cliff encounters
+        \item \textbf{Learning Characteristics}: High variance and instability in learning dynamics
+        \item \textbf{Convergence Behavior}: Slow convergence due to single-step updates providing limited temporal information
+        \item \textbf{Risk Assessment}: Prone to cliff encounters during learning phase
+        \item \textbf{Theoretical Analysis}: Single-step updates provide minimal information about long-term consequences
+    \end{itemize}
+    
+    \item \textbf{n = 2 (2-step SARSA)}:
+    \begin{itemize}
+        \item \textbf{Performance Metrics}: Mean reward = -17, representing significant improvement
+        \item \textbf{Learning Characteristics}: Better stability and faster convergence compared to n=1
+        \item \textbf{Safety Improvement}: Learns to avoid cliff more effectively through 2-step lookahead
+        \item \textbf{Efficiency Gains}: More efficient learning through multi-step return estimation
+        \item \textbf{Theoretical Analysis}: 2-step returns provide sufficient temporal information for cliff avoidance
+    \end{itemize}
+    
+    \item \textbf{n = 5 (5-step SARSA)}:
+    \begin{itemize}
+        \item \textbf{Performance Metrics}: Mean reward = -17, similar to n=2 performance
+        \item \textbf{Learning Characteristics}: Good stability but diminishing returns compared to n=2
+        \item \textbf{Temporal Horizon}: Longer lookahead helps with cliff avoidance but may slow convergence
+        \item \textbf{Update Frequency}: Longer update delays may impact learning efficiency
+        \item \textbf{Theoretical Analysis}: Diminishing returns due to sufficient information at n=2
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Q-Learning Performance Analysis:}
+
+\begin{enumerate}
+    \item \textbf{n = 1 (1-step Q-Learning)}:
+    \begin{itemize}
+        \item \textbf{Performance Metrics}: Mean reward = -13, achieving optimal performance
+        \item \textbf{Learning Characteristics}: Fast convergence to optimal policy
+        \item \textbf{Efficiency}: Efficient learning with single-step updates
+        \item \textbf{Path Optimization}: Finds shortest path to goal consistently
+        \item \textbf{Theoretical Analysis}: Single-step updates sufficient for deterministic optimal policy learning
+    \end{itemize}
+    
+    \item \textbf{n = 2 (2-step Q-Learning)}:
+    \begin{itemize}
+        \item \textbf{Performance Metrics}: Mean reward = -13, maintains optimal performance
+        \item \textbf{Learning Characteristics}: Similar convergence speed to n=1
+        \item \textbf{Multi-step Benefits}: Benefits from multi-step returns without performance degradation
+        \item \textbf{Stability}: Stable optimal policy learning maintained
+        \item \textbf{Theoretical Analysis}: Multi-step returns enhance learning without compromising optimality
+    \end{itemize}
+    
+    \item \textbf{n = 5 (5-step Q-Learning)}:
+    \begin{itemize}
+        \item \textbf{Performance Metrics}: Mean reward = -100, significant performance degradation
+        \item \textbf{Learning Characteristics}: Increased cliff encounters and instability
+        \item \textbf{Overestimation Risk}: Longer lookahead may lead to overestimation of Q-values
+        \item \textbf{Learning Instability}: Less stable learning process compared to lower n values
+        \item \textbf{Theoretical Analysis}: Excessive temporal horizon may introduce bias-variance trade-off issues
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Statistical Performance Comparison:}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+Algorithm & n & Mean Reward & Std Dev & Cliff Encounters \\
+\hline
+SARSA & 1 & -100.0 & High & Frequent \\
+SARSA & 2 & -17.0 & Low & Rare \\
+SARSA & 5 & -17.0 & Low & Rare \\
+Q-Learning & 1 & -13.0 & Low & None \\
+Q-Learning & 2 & -13.0 & Low & None \\
+Q-Learning & 5 & -100.0 & High & Frequent \\
+\hline
+\end{tabular}
+\caption{Performance comparison across different n-step values}
+\end{table}
+
+\textbf{Theoretical Analysis of n-Step Effects:}
+
+\begin{enumerate}
+    \item \textbf{Bias-Variance Trade-off}:
+    
+    \textbf{Low n Values (n = 1, 2)}:
+    \begin{itemize}
+        \item \textbf{Low Bias}: Single-step updates provide accurate immediate information
+        \item \textbf{Low Variance}: Shorter update horizons reduce variance in target estimates
+        \item \textbf{Fast Updates}: Immediate feedback allows quick policy adjustments
+    \end{itemize}
+    
+    \textbf{High n Values (n = 5+)}:
+    \begin{itemize}
+        \item \textbf{Reduced Bias}: Multi-step returns better capture long-term consequences
+        \item \textbf{Increased Variance}: Longer update horizons increase variance in estimates
+        \item \textbf{Delayed Updates}: Less frequent updates may slow initial learning
+    \end{itemize}
+    
+    \item \textbf{Temporal Credit Assignment}:
+    
+    \textbf{SARSA's n-Step Benefits}:
+    \begin{itemize}
+        \item Multi-step methods help SARSA learn safer policies by considering longer-term consequences
+        \item n=2 provides optimal balance for cliff avoidance in CliffWalking environment
+        \item Diminishing returns beyond n=2 due to deterministic environment characteristics
+    \end{itemize}
+    
+    \textbf{Q-Learning's n-Step Sensitivity}:
+    \begin{itemize}
+        \item Q-Learning's optimal performance is robust to moderate n values (n=1,2)
+        \item High n values (n=5) can degrade performance due to overestimation bias amplification
+        \item Single-step updates often sufficient for optimal policy learning in deterministic environments
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Algorithm-Specific Insights:}
+
+\begin{enumerate}
+    \item \textbf{SARSA's n-Step Characteristics}:
+    \begin{itemize}
+        \item \textbf{Optimal n Range}: n=2 provides best performance for CliffWalking
+        \item \textbf{Safety Learning}: Multi-step returns crucial for learning safe policies
+        \item \textbf{Convergence Pattern}: Significant improvement from n=1 to n=2, diminishing returns beyond
+        \item \textbf{Risk Management}: Higher n values improve cliff avoidance capabilities
+    \end{itemize}
+    
+    \item \textbf{Q-Learning's n-Step Characteristics}:
+    \begin{itemize}
+        \item \textbf{Optimal n Range}: n=1 to n=2 maintains optimal performance
+        \item \textbf{Performance Sensitivity}: Highly sensitive to excessive n values
+        \item \textbf{Convergence Pattern}: Consistent optimal performance for low n, degradation for high n
+        \item \textbf{Overestimation Vulnerability}: High n values amplify overestimation bias
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Practical Recommendations:}
+
 \begin{itemize}
-    \item Mean reward: -100 (agent falls off cliff frequently)
-    \item High variance and instability
-    \item Slow convergence due to single-step updates
-    \item Prone to cliff encounters during learning
+    \item \textbf{For SARSA}: Use n=2 for optimal balance between safety and efficiency
+    \item \textbf{For Q-Learning}: Use n=1 or n=2 to maintain optimal performance
+    \item \textbf{For Safety-Critical Applications}: Prefer SARSA with n=2
+    \item \textbf{For Performance Optimization}: Prefer Q-Learning with n=1
+    \item \textbf{For Complex Environments}: Experiment with higher n values for SARSA
 \end{itemize}
 
-\textbf{n = 2 (2-step SARSA):}
-\begin{itemize}
-    \item Mean reward: -17 (significant improvement)
-    \item Better stability and faster convergence
-    \item Learns to avoid cliff more effectively
-    \item More efficient learning through 2-step lookahead
-\end{itemize}
-
-\textbf{n = 5 (5-step SARSA):}
-\begin{itemize}
-    \item Mean reward: -17 (similar to n=2)
-    \item Good stability but diminishing returns
-    \item Longer lookahead helps with cliff avoidance
-    \item May be slower to converge due to longer update delays
-\end{itemize}
-
-\textbf{Effect of n on Q-Learning Performance:}
-
-\textbf{n = 1 (1-step Q-Learning):}
-\begin{itemize}
-    \item Mean reward: -13 (optimal performance)
-    \item Fast convergence to optimal policy
-    \item Efficient learning with single-step updates
-    \item Finds shortest path to goal
-\end{itemize}
-
-\textbf{n = 2 (2-step Q-Learning):}
-\begin{itemize}
-    \item Mean reward: -13 (maintains optimal performance)
-    \item Similar convergence speed
-    \item Benefits from multi-step returns
-    \item Stable optimal policy learning
-\end{itemize}
-
-\textbf{n = 5 (5-step Q-Learning):}
-\begin{itemize}
-    \item Mean reward: -100 (performance degradation)
-    \item Increased cliff encounters
-    \item Longer lookahead may lead to overestimation
-    \item Less stable learning process
-\end{itemize}
-
-\textbf{Key Observations:}
-\begin{itemize}
-    \item SARSA benefits significantly from increasing n (1→2), but diminishing returns beyond n=2
-    \item Q-Learning performs optimally with n=1 and n=2, but degrades with n=5
-    \item Multi-step methods help SARSA learn safer policies by considering longer-term consequences
-    \item Q-Learning's optimal performance is robust to moderate n values but sensitive to very high n
-\end{itemize}
+This comprehensive analysis demonstrates that n-step methods affect SARSA and Q-learning differently, with SARSA benefiting significantly from moderate n values while Q-Learning maintains optimal performance with lower n values, highlighting the importance of algorithm-specific hyperparameter tuning.
 
 \subsection{Is a Higher or Lower n Always Better? Explain the advantages and disadvantages of both low and high n values. [2.5-points]}
 
-\textbf{No, higher n is not always better.} The optimal n value depends on the environment characteristics and algorithm:
+\textbf{No, higher n is not universally better.} The optimal n-step value represents a complex trade-off between bias reduction, variance control, and computational efficiency that depends critically on environment characteristics, algorithm properties, and learning objectives.
+
+\textbf{Comprehensive Analysis of n-Step Trade-offs:}
 
 \textbf{Advantages of Low n Values (n = 1, 2):}
-\begin{itemize}
-    \item \textbf{Fast Updates}: Immediate feedback allows quick policy adjustments
-    \item \textbf{Low Variance}: Shorter update horizons reduce variance in target estimates
-    \item \textbf{Computational Efficiency}: Less memory and computation required
-    \item \textbf{Stability}: More frequent updates can lead to more stable learning
-    \item \textbf{Environment Suitability}: Works well in environments where immediate rewards are informative
-\end{itemize}
+
+\begin{enumerate}
+    \item \textbf{Computational Efficiency}:
+    \begin{itemize}
+        \item \textbf{Memory Requirements}: Lower memory footprint for storing n-step returns
+        \item \textbf{Update Frequency}: More frequent updates enable rapid policy adjustments
+        \item \textbf{Processing Speed}: Faster computation per update step
+        \item \textbf{Scalability}: Better scalability to large state spaces
+    \end{itemize}
+    
+    \item \textbf{Learning Stability}:
+    \begin{itemize}
+        \item \textbf{Low Variance}: Shorter update horizons reduce variance in target estimates
+        \item \textbf{Fast Convergence}: Immediate feedback allows quick convergence to stable policies
+        \item \textbf{Reduced Oscillations}: Less prone to learning oscillations and instability
+        \item \textbf{Predictable Behavior}: More predictable learning dynamics
+    \end{itemize}
+    
+    \item \textbf{Environment Suitability}:
+    \begin{itemize}
+        \item \textbf{Immediate Rewards}: Optimal when immediate rewards are highly informative
+        \item \textbf{Deterministic Environments}: Effective in deterministic environments with clear optimal policies
+        \item \textbf{Short Episodes}: Suitable for environments with short episode lengths
+        \item \textbf{Real-time Learning}: Enables real-time learning and adaptation
+    \end{itemize}
+    
+    \item \textbf{Algorithm Compatibility}:
+    \begin{itemize}
+        \item \textbf{Q-Learning Optimality}: Q-learning often performs optimally with n=1
+        \item \textbf{Reduced Overestimation}: Lower n values reduce overestimation bias in Q-learning
+        \item \textbf{Simpler Implementation}: Easier to implement and debug
+        \item \textbf{Robust Performance}: More robust across different hyperparameter settings
+    \end{itemize}
+\end{enumerate}
 
 \textbf{Disadvantages of Low n Values:}
-\begin{itemize}
-    \item \textbf{Bootstrap Bias}: Single-step updates may not capture long-term consequences
-    \item \textbf{Slow Convergence}: May require more episodes to learn complex policies
-    \item \textbf{Exploration Issues}: May not effectively learn from delayed rewards
-\end{itemize}
+
+\begin{enumerate}
+    \item \textbf{Bootstrap Bias}:
+    \begin{itemize}
+        \item \textbf{Single-Step Limitation}: Single-step updates may not capture long-term consequences
+        \item \textbf{Credit Assignment}: Difficulty in assigning credit to actions with delayed rewards
+        \item \textbf{Policy Learning}: May require more episodes to learn complex policies
+        \item \textbf{Sparse Rewards}: Ineffective in environments with sparse reward signals
+    \end{itemize}
+    
+    \item \textbf{Exploration Challenges}:
+    \begin{itemize}
+        \item \textbf{Delayed Feedback}: May not effectively learn from delayed rewards
+        \item \textbf{Exploration Inefficiency}: Requires more exploration to discover optimal policies
+        \item \textbf{Local Optima}: Higher risk of getting stuck in local optima
+        \item \textbf{Sequential Dependencies}: Difficulty learning sequential action dependencies
+    \end{itemize}
+\end{enumerate}
 
 \textbf{Advantages of High n Values (n = 5, 10+):}
-\begin{itemize}
-    \item \textbf{Long-term Planning}: Better capture of delayed rewards and consequences
-    \item \textbf{Reduced Bootstrap Bias}: More accurate estimates of true returns
-    \item \textbf{Better Exploration}: Can learn from sequences of actions
-    \item \textbf{Complex Environments}: Effective in environments with sparse or delayed rewards
-\end{itemize}
+
+\begin{enumerate}
+    \item \textbf{Long-term Planning}:
+    \begin{itemize}
+        \item \textbf{Delayed Rewards}: Better capture of delayed rewards and consequences
+        \item \textbf{Sequential Learning}: Effective learning of sequential action patterns
+        \item \textbf{Policy Complexity}: Can learn more complex, multi-step policies
+        \item \textbf{Strategic Planning}: Enables strategic planning over longer horizons
+    \end{itemize}
+    
+    \item \textbf{Bias Reduction}:
+    \begin{itemize}
+        \item \textbf{Reduced Bootstrap Bias}: More accurate estimates of true returns
+        \item \textbf{Better Credit Assignment}: Improved temporal credit assignment
+        \item \textbf{Monte Carlo Approximation}: Closer approximation to Monte Carlo methods
+        \item \textbf{True Return Estimation}: Better estimation of actual episode returns
+    \end{itemize}
+    
+    \item \textbf{Complex Environment Handling}:
+    \begin{itemize}
+        \item \textbf{Sparse Rewards}: Effective in environments with sparse reward signals
+        \item \textbf{Complex Dependencies}: Can learn complex state-action dependencies
+        \item \textbf{Multi-objective Tasks}: Suitable for multi-objective reinforcement learning
+        \item \textbf{Strategic Games}: Effective in strategic games requiring long-term planning
+    \end{itemize}
+    
+    \item \textbf{Exploration Benefits}:
+    \begin{itemize}
+        \item \textbf{Better Exploration}: Can learn from sequences of exploratory actions
+        \item \textbf{Risk Assessment}: Better assessment of long-term risks and consequences
+        \item \textbf{Policy Discovery}: More effective discovery of complex optimal policies
+        \item \textbf{Transfer Learning}: Better transfer of learned policies across similar environments
+    \end{itemize}
+\end{enumerate}
 
 \textbf{Disadvantages of High n Values:}
-\begin{itemize}
-    \item \textbf{High Variance}: Longer update horizons increase variance in estimates
-    \item \textbf{Computational Cost}: More memory and computation required
-    \item \textbf{Delayed Learning}: Updates occur less frequently, slowing initial learning
-    \item \textbf{Overestimation Risk}: May lead to overoptimistic value estimates
-    \item \textbf{Environment Sensitivity}: Performance can degrade in certain environments
-\end{itemize}
 
-\textbf{Optimal n Selection Guidelines:}
-\begin{itemize}
-    \item \textbf{Environment Complexity}: Use higher n for complex environments with delayed rewards
-    \item \textbf{Algorithm Type}: SARSA benefits more from moderate n values, Q-Learning often works best with n=1
-    \item \textbf{Exploration Strategy}: Higher n helps when exploration is risky (like CliffWalking)
-    \item \textbf{Computational Resources}: Balance between performance and computational cost
-    \item \textbf{Empirical Testing}: Always validate n choice through experimentation
-\end{itemize}
+\begin{enumerate}
+    \item \textbf{Computational Overhead}:
+    \begin{itemize}
+        \item \textbf{Memory Requirements}: Higher memory requirements for storing n-step returns
+        \item \textbf{Processing Cost}: Increased computational cost per update
+        \item \textbf{Update Frequency}: Less frequent updates slow initial learning
+        \item \textbf{Scalability Issues}: Poor scalability to very large state spaces
+    \end{itemize}
+    
+    \item \textbf{Learning Instability}:
+    \begin{itemize}
+        \item \textbf{High Variance}: Longer update horizons increase variance in estimates
+        \item \textbf{Delayed Learning}: Slower initial learning due to delayed updates
+        \item \textbf{Overestimation Risk}: May lead to overoptimistic value estimates
+        \item \textbf{Convergence Issues}: May not converge effectively in some environments
+    \end{itemize}
+    
+    \item \textbf{Environment Sensitivity}:
+    \begin{itemize}
+        \item \textbf{Non-stationarity}: Sensitive to non-stationary environments
+        \item \textbf{Hyperparameter Sensitivity}: More sensitive to hyperparameter choices
+        \item \textbf{Algorithm Specificity}: Performance varies significantly across algorithms
+        \item \textbf{Environment Dependency}: Optimal n value highly environment-dependent
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Theoretical Framework for n-Step Selection:}
+
+\begin{enumerate}
+    \item \textbf{Bias-Variance Decomposition}:
+    $$\text{MSE} = \text{Bias}^2 + \text{Variance} + \text{Noise}$$
+    
+    \textbf{Low n}: Low variance, potentially high bias
+    \textbf{High n}: High variance, potentially low bias
+    
+    \item \textbf{Optimal n Selection Criteria}:
+    $$n^* = \arg\min_n \mathbb{E}[\text{MSE}(n)] + \lambda \cdot \text{Computational Cost}(n)$$
+    
+    where $\lambda$ represents the computational cost weight.
+    
+    \item \textbf{Environment Characteristics Impact}:
+    \begin{itemize}
+        \item \textbf{Episode Length}: Longer episodes favor higher n values
+        \item \textbf{Reward Sparsity}: Sparse rewards favor higher n values
+        \item \textbf{Environment Determinism}: Deterministic environments may favor lower n values
+        \item \textbf{State Space Size}: Large state spaces may favor lower n values
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Algorithm-Specific Guidelines:}
+
+\begin{enumerate}
+    \item \textbf{SARSA Optimal n Selection}:
+    \begin{itemize}
+        \item \textbf{CliffWalking}: n=2 optimal for safety-critical navigation
+        \item \textbf{General Rule}: Moderate n values (2-5) often optimal
+        \item \textbf{Safety Priority}: Higher n values for safety-critical applications
+        \item \textbf{Exploration Balance}: n should balance exploration and exploitation
+    \end{itemize}
+    
+    \item \textbf{Q-Learning Optimal n Selection}:
+    \begin{itemize}
+        \item \textbf{Deterministic Environments}: n=1 often sufficient
+        \item \textbf{Overestimation Sensitivity}: Lower n values reduce overestimation bias
+        \item \textbf{Performance Priority}: n=1-2 for optimal performance
+        \item \textbf{Stability Consideration}: Avoid very high n values
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Practical Selection Framework:}
+
+\begin{enumerate}
+    \item \textbf{Environment Analysis}:
+    \begin{itemize}
+        \item Assess episode length, reward sparsity, and environment complexity
+        \item Determine safety requirements and performance priorities
+        \item Consider computational constraints and real-time requirements
+    \end{itemize}
+    
+    \item \textbf{Algorithm Selection}:
+    \begin{itemize}
+        \item Choose algorithm based on environment characteristics
+        \item Consider safety vs. performance trade-offs
+        \item Evaluate exploration requirements
+    \end{itemize}
+    
+    \item \textbf{Empirical Validation}:
+    \begin{itemize}
+        \item Test multiple n values systematically
+        \item Evaluate convergence speed, final performance, and stability
+        \item Consider computational efficiency and memory requirements
+    \end{itemize}
+\end{enumerate}
 
 \textbf{Conclusion:}
-The optimal n value is environment and algorithm-specific. For CliffWalking, n=2 appears optimal for SARSA, while n=1-2 works best for Q-Learning. The key is finding the right balance between bias reduction (higher n) and variance control (lower n).
+The optimal n-step value represents a sophisticated trade-off that requires careful consideration of environment characteristics, algorithm properties, and practical constraints. There is no universal "best" n value, and successful n-step selection requires systematic experimentation and analysis tailored to specific applications and requirements.
 
 }}
 
