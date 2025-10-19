@@ -10,8 +10,20 @@
 \usepackage{tocloft}
 \usepackage{titlesec}
 \usepackage{lipsum}  
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{siunitx}
+
+% IEEE-style formatting
+\usepackage{cite}
+\usepackage{url}
+\usepackage{float}
 
 \definecolor{DarkBlue}{RGB}{10, 0, 80}
+\definecolor{IEEEDarkBlue}{RGB}{0, 51, 102}
+\definecolor{IEEELightBlue}{RGB}{204, 221, 255}
 
 % Hyperlink setup
 \hypersetup{
@@ -252,83 +264,176 @@ where $\lambda \geq 0$ is the Lagrange multiplier.
 
 \subsection{Constrained Policy Optimization (CPO)}
 
-\subsubsection{Motivation}
+\subsubsection{Motivation and Background}
 
-Constrained Policy Optimization (CPO) extends Trust Region Policy Optimization (TRPO) to handle constraints directly, ensuring:
-\begin{itemize}
-\item Monotonic improvement in rewards
-\item Constraint satisfaction
-\item Sample efficiency
-\end{itemize}
+Constrained Policy Optimization (CPO) \cite{Achiam2017} represents a significant advancement in safe reinforcement learning by extending Trust Region Policy Optimization (TRPO) to handle constraints directly. Unlike traditional RL methods that focus solely on reward maximization, CPO ensures:
+
+\begin{enumerate}
+\item \textbf{Monotonic Improvement}: Guarantees that each policy update improves or maintains performance
+\item \textbf{Constraint Satisfaction}: Ensures safety constraints are respected during both training and deployment
+\item \textbf{Sample Efficiency}: Achieves convergence with fewer environment interactions compared to penalty-based methods
+\item \textbf{Theoretical Guarantees}: Provides formal convergence and safety guarantees under certain conditions
+\end{enumerate}
+
+\textbf{Problem Formulation:} Traditional policy gradient methods optimize:
+\begin{equation}
+J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\left[\sum_{t=0}^{T} \gamma^t r(s_t, a_t)\right]
+\end{equation}
+
+CPO extends this to constrained optimization:
+\begin{align}
+\max_\theta \quad & J(\theta) \\
+\text{s.t.} \quad & C_i(\theta) \leq d_i, \quad i = 1, \ldots, m
+\end{align}
+
+where $C_i(\theta)$ represents constraint functions and $d_i$ are safety thresholds.
 
 \subsubsection{Trust Region Formulation}
 
-\textbf{Objective Function:}
+The CPO algorithm employs a trust region approach to ensure stable policy updates while respecting safety constraints. The core idea is to limit policy updates to a "trust region" where the policy improvement approximation remains valid.
+
+\textbf{Mathematical Formulation:}
 \begin{align}
 \pi_{k+1} = \arg\max_{\pi} \quad & \mathbb{E}_{s \sim d^{\pi_k}, a \sim \pi}\left[\frac{\pi(a|s)}{\pi_k(a|s)} A^r_{\pi_k}(s,a)\right] \\
 \text{s.t.} \quad & \mathbb{E}_{s \sim d^{\pi_k}}\left[D_{KL}(\pi(\cdot|s) \| \pi_k(\cdot|s))\right] \leq \delta \\
 & \mathbb{E}_{s \sim d^{\pi_k}, a \sim \pi}\left[\frac{\pi(a|s)}{\pi_k(a|s)} A^c_{\pi_k}(s,a)\right] \leq \epsilon
 \end{align}
 
-where:
+\textbf{Key Components:}
 \begin{itemize}
-\item $A^r_{\pi_k}(s,a)$: Reward advantage function
-\item $A^c_{\pi_k}(s,a)$: Cost advantage function
-\item $\delta$: KL divergence constraint
-\item $\epsilon$: Cost constraint slack
+\item \textbf{Reward Advantage Function}: $A^r_{\pi_k}(s,a) = Q^r_{\pi_k}(s,a) - V^r_{\pi_k}(s)$ measures how much better action $a$ is compared to the average action in state $s$
+\item \textbf{Cost Advantage Function}: $A^c_{\pi_k}(s,a) = Q^c_{\pi_k}(s,a) - V^c_{\pi_k}(s)$ measures the cost impact of action $a$ in state $s$
+\item \textbf{KL Divergence Constraint}: $\delta$ limits the maximum change in policy distribution to maintain approximation validity
+\item \textbf{Cost Constraint Slack}: $\epsilon$ allows for small constraint violations during learning while maintaining overall safety
 \end{itemize}
+
+\textbf{Trust Region Benefits:}
+\begin{enumerate}
+\item \textbf{Stability}: Prevents catastrophic policy updates that could violate constraints
+\item \textbf{Convergence}: Ensures monotonic improvement under certain conditions
+\item \textbf{Safety}: Maintains constraint satisfaction throughout training
+\end{enumerate}
 
 \subsubsection{Linearization and Approximation}
 
-\textbf{First-Order Approximation:}
+To solve the constrained optimization problem efficiently, CPO employs first-order Taylor approximations around the current policy parameters $\theta_k$. This linearization enables analytical solutions while maintaining approximation accuracy within the trust region.
+
+\textbf{First-Order Taylor Expansions:}
 \begin{align}
 J_r(\theta) &\approx J_r(\theta_k) + g^T(\theta - \theta_k) \\
 D_{KL}(\pi_{\theta_k}, \pi_\theta) &\approx \frac{1}{2}(\theta - \theta_k)^T F (\theta - \theta_k) \\
 J_c(\theta) &\approx J_c(\theta_k) + b^T(\theta - \theta_k)
 \end{align}
 
-where $F$ is the Fisher Information Matrix:
+\textbf{Gradient Components:}
+\begin{itemize}
+\item \textbf{Reward Gradient}: $g = \nabla_\theta J_r(\theta_k) = \mathbb{E}_{s,a \sim \pi_k}[\nabla_\theta \log \pi_\theta(a|s) A^r(s,a)]$
+\item \textbf{Cost Gradient}: $b = \nabla_\theta J_c(\theta_k) = \mathbb{E}_{s,a \sim \pi_k}[\nabla_\theta \log \pi_\theta(a|s) A^c(s,a)]$
+\item \textbf{Fisher Information Matrix}: $F = \mathbb{E}_{s \sim d^{\pi_k}}[\nabla_{\theta} \log \pi_{\theta}(a|s) \nabla_{\theta}^T \log \pi_{\theta}(a|s)]$
+\end{itemize}
+
+\textbf{Fisher Information Matrix Properties:}
+\begin{enumerate}
+\item \textbf{Positive Definite}: Ensures the KL divergence approximation is convex
+\item \textbf{Covariance Structure}: Captures the curvature of the policy distribution
+\item \textbf{Natural Gradient}: Provides direction of steepest ascent in policy space
+\end{enumerate}
+
+\textbf{Approximation Validity:} The linearization remains accurate when:
 \begin{equation}
-F = \mathbb{E}_{s \sim d^{\pi_k}}\left[\nabla_{\theta} \log \pi_{\theta}(a|s) \nabla_{\theta}^T \log \pi_{\theta}(a|s)\right]
+\|\theta - \theta_k\|_F \leq \sqrt{2\delta}
 \end{equation}
+
+where $\|\cdot\|_F$ denotes the norm induced by the Fisher Information Matrix.
 
 \subsubsection{Analytical Solution}
 
-\textbf{Case 1: Unconstrained (feasible region)}
-If $J_c(\theta_k) + b^T \Delta\theta \leq d$:
+The CPO algorithm provides closed-form solutions for the policy update direction by solving the constrained optimization problem analytically. The solution depends on whether the current policy lies in the feasible or infeasible region.
+
+\textbf{Case 1: Feasible Region (Unconstrained Optimization)}
+When the current policy satisfies all constraints ($J_c(\theta_k) \leq d$), the algorithm maximizes reward improvement within the trust region:
+
 \begin{equation}
 \Delta\theta^* = \sqrt{\frac{2\delta}{g^T F^{-1} g}} F^{-1} g
 \end{equation}
 
-\textbf{Case 2: Constrained (infeasible region)}
-If constraint is violated:
+\textbf{Derivation:} This solution maximizes $g^T \Delta\theta$ subject to the KL constraint $\frac{1}{2}\Delta\theta^T F \Delta\theta \leq \delta$.
+
+\textbf{Case 2: Infeasible Region (Constrained Optimization)}
+When constraints are violated ($J_c(\theta_k) > d$), the algorithm prioritizes constraint satisfaction:
+
 \begin{equation}
 \Delta\theta^* = \frac{1}{\lambda^*}F^{-1}(g - \nu^* b)
 \end{equation}
+
+where $\lambda^*$ and $\nu^*$ are Lagrange multipliers obtained by solving:
+\begin{align}
+\lambda^* &= \sqrt{\frac{2\delta}{(g - \nu^* b)^T F^{-1} (g - \nu^* b)}} \\
+\nu^* &= \arg\min_{\nu \geq 0} \frac{1}{2}(g - \nu b)^T F^{-1} (g - \nu b)
+\end{align}
+
+\textbf{Algorithmic Implementation:}
+\begin{algorithm}[H]
+\caption{CPO Policy Update}
+\begin{algorithmic}[1]
+\STATE Compute gradients $g$ and $b$ from current policy $\pi_k$
+\STATE Compute Fisher Information Matrix $F$
+\IF{$J_c(\theta_k) \leq d$}
+    \STATE $\Delta\theta \leftarrow \sqrt{\frac{2\delta}{g^T F^{-1} g}} F^{-1} g$
+\ELSE
+    \STATE Solve for $\nu^*$ using line search
+    \STATE $\lambda^* \leftarrow \sqrt{\frac{2\delta}{(g - \nu^* b)^T F^{-1} (g - \nu^* b)}}$
+    \STATE $\Delta\theta \leftarrow \frac{1}{\lambda^*}F^{-1}(g - \nu^* b)$
+\ENDIF
+\STATE Update policy: $\theta_{k+1} \leftarrow \theta_k + \Delta\theta$
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Computational Complexity:} The main computational bottleneck is inverting the Fisher Information Matrix $F$, which has complexity $O(d^3)$ where $d$ is the number of policy parameters.
 
 \subsection{Safety Layers and Shielding}
 
 \subsubsection{Concept and Motivation}
 
-Safety layers act as protective filters between the RL agent's policy and environment, intervening only when proposed actions would violate safety constraints.
+Safety layers, also known as safety shields or runtime monitors, represent a critical paradigm in safe reinforcement learning \cite{Alshiekh2018}. These systems act as protective filters between the RL agent's policy and the environment, providing a last line of defense against constraint violations.
+
+\textbf{Fundamental Principle:} Instead of modifying the learning algorithm itself, safety layers monitor the agent's proposed actions and intervene only when necessary to prevent safety violations.
 
 \textbf{Key Advantages:}
-\begin{itemize}
-\item Modular: Can be added to any existing policy
-\item Transparent: Does not modify the learning algorithm
-\item Guaranteed: Provides formal safety guarantees when correctly designed
-\end{itemize}
+\begin{enumerate}
+\item \textbf{Modularity}: Can be integrated with any existing RL algorithm without modification
+\item \textbf{Transparency}: The learning process remains unchanged; only the action execution is monitored
+\item \textbf{Formal Guarantees}: When correctly designed, provides provable safety guarantees
+\item \textbf{Minimal Performance Impact}: Intervenes only when necessary, preserving agent autonomy
+\item \textbf{Backward Compatibility}: Can be added to pre-trained policies
+\end{enumerate}
+
+\textbf{Architecture Overview:}
+\begin{equation}
+\tilde{a}_t = \text{SafetyLayer}(s_t, a_t^{proposed})
+\end{equation}
+
+where $\tilde{a}_t$ is the final action executed in the environment, $s_t$ is the current state, and $a_t^{proposed}$ is the action proposed by the RL agent.
 
 \subsubsection{Control Barrier Functions (CBFs)}
 
-A continuously differentiable function $h: \mathcal{S} \rightarrow \mathbb{R}$ is a Control Barrier Function if:
+Control Barrier Functions \cite{Ames2019} provide a mathematical framework for ensuring system safety through forward invariance of safe sets. They offer a powerful tool for designing safety layers with formal guarantees.
+
+\textbf{Definition:} A continuously differentiable function $h: \mathcal{S} \rightarrow \mathbb{R}$ is a Control Barrier Function if there exists $\alpha > 0$ such that:
 \begin{equation}
 \dot{h}(s) = \nabla_s h(s) \cdot f(s,a) \geq -\alpha h(s)
 \end{equation}
 
-for some $\alpha > 0$, where $f(s,a)$ is the system dynamics.
+for all $s \in \mathcal{S}$ and $a \in \mathcal{A}$, where $f(s,a)$ represents the system dynamics.
 
-\textbf{Safe Set:}
+\textbf{Key Properties:}
+\begin{enumerate}
+\item \textbf{Forward Invariance}: If $h(s_0) \geq 0$, then $h(s_t) \geq 0$ for all $t \geq 0$
+\item \textbf{Safety Guarantee}: The system cannot enter the unsafe region $\{s : h(s) < 0\}$
+\item \textbf{Minimal Intervention}: Only constrains actions when necessary to maintain safety
+\end{enumerate}
+
+\textbf{Safe Set Definition:}
 \begin{equation}
 \mathcal{C} = \{s \in \mathcal{S} : h(s) \geq 0\}
 \end{equation}
@@ -338,232 +443,869 @@ for some $\alpha > 0$, where $f(s,a)$ is the system dynamics.
 \mathcal{A}_{safe}(s) = \{a \in \mathcal{A} : \nabla_s h(s) \cdot f(s,a) \geq -\alpha h(s)\}
 \end{equation}
 
+\textbf{CBF Design Principles:}
+\begin{itemize}
+\item \textbf{Conservative Design}: Choose $\alpha$ to provide sufficient safety margin
+\item \textbf{Computational Efficiency}: Ensure $h(s)$ can be evaluated quickly
+\item \textbf{Smoothness}: Maintain differentiability for gradient-based optimization
+\item \textbf{Completeness}: Cover all relevant safety constraints
+\end{itemize}
+
+\textbf{Example: Collision Avoidance}
+For a robot with position $p$ and velocity $v$, avoiding obstacles at positions $p_i$:
+\begin{equation}
+h(p) = \min_i \|p - p_i\| - r_{safe}
+\end{equation}
+
+where $r_{safe}$ is the minimum safe distance. The CBF condition becomes:
+\begin{equation}
+\frac{(p - p_i) \cdot v}{\|p - p_i\|} \geq -\alpha (\|p - p_i\| - r_{safe})
+\end{equation}
+
 \subsubsection{Safety Layer Mapping}
 
+The safety layer implements a mapping from proposed actions to safe actions through projection onto the safe action set. This ensures constraint satisfaction while minimizing deviation from the agent's intended behavior.
+
+\textbf{Mathematical Formulation:}
 \begin{equation}
 \tilde{a} = \text{SafetyLayer}(s, a) =
 \begin{cases}
 a & \text{if } a \in \mathcal{A}_{safe}(s) \\
-\arg\min_{a' \in \mathcal{A}_{safe}(s)} \|a' - a\| & \text{otherwise}
+\arg\min_{a' \in \mathcal{A}_{safe}(s)} \|a' - a\|_2 & \text{otherwise}
 \end{cases}
 \end{equation}
+
+\textbf{Optimization Problem:}
+When the proposed action violates safety constraints, the safety layer solves:
+\begin{align}
+\min_{a'} \quad & \|a' - a\|_2^2 \\
+\text{s.t.} \quad & \nabla_s h(s) \cdot f(s,a') \geq -\alpha h(s) \\
+& a' \in \mathcal{A}
+\end{align}
+
+\textbf{Solution Methods:}
+\begin{enumerate}
+\item \textbf{Analytical Solution}: For simple constraints and dynamics
+\item \textbf{Quadratic Programming}: For linear constraints
+\item \textbf{Convex Optimization}: For convex safe sets
+\item \textbf{Neural Approximation}: For complex, learned safety functions
+\end{enumerate}
+
+\textbf{Computational Considerations:}
+\begin{itemize}
+\item \textbf{Real-time Requirements}: Must compute safe actions within control loop timing
+\item \textbf{Approximation Quality}: Balance between computational speed and safety margin
+\item \textbf{Feasibility Checking}: Ensure safe action set is non-empty
+\end{itemize}
+
+\textbf{Implementation Algorithm:}
+\begin{algorithm}[H]
+\caption{Safety Layer Action Projection}
+\begin{algorithmic}[1]
+\STATE Input: State $s$, proposed action $a$, CBF $h$, dynamics $f$
+\STATE Compute safe action set $\mathcal{A}_{safe}(s)$
+\IF{$a \in \mathcal{A}_{safe}(s)$}
+    \STATE Return $a$ (no intervention needed)
+\ELSE
+    \STATE Solve: $\tilde{a} = \arg\min_{a' \in \mathcal{A}_{safe}(s)} \|a' - a\|_2$
+    \STATE Return $\tilde{a}$ (projected safe action)
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
 
 \subsection{Risk-Sensitive Reinforcement Learning}
 
 \subsubsection{Limitations of Expected Return}
 
-Traditional RL optimizes expected return:
+Traditional reinforcement learning optimizes the expected cumulative reward:
 \begin{equation}
 J(\pi) = \mathbb{E}_\pi\left[\sum_{t=0}^{\infty} \gamma^t r_t\right]
 \end{equation}
 
-\textbf{Problem:} This ignores the distribution of returns, particularly tail risks.
+\textbf{Critical Limitations:}
+\begin{enumerate}
+\item \textbf{Ignorance of Tail Risks}: Expected value masks extreme outcomes that could be catastrophic
+\item \textbf{Risk Neutrality}: Treats all outcomes equally regardless of their severity
+\item \textbf{Variance Blindness}: Does not account for uncertainty in outcomes
+\item \textbf{Distribution Insensitivity}: Policies with identical expected returns but different risk profiles are treated as equivalent
+\end{enumerate}
+
+\textbf{Motivating Example:} Consider two policies for autonomous driving:
+\begin{itemize}
+\item Policy A: 90\% chance of normal driving, 10\% chance of minor accident
+\item Policy B: 95\% chance of normal driving, 5\% chance of major accident
+\end{itemize}
+
+Both policies may have similar expected rewards, but Policy A is clearly safer. Traditional RL cannot distinguish between these policies.
+
+\textbf{Real-World Implications:}
+\begin{itemize}
+\item \textbf{Financial Trading}: Expected profit may hide catastrophic losses
+\item \textbf{Medical Treatment}: Average outcome may mask severe side effects
+\item \textbf{Autonomous Systems}: Mean performance may ignore rare but dangerous failures
+\end{itemize}
 
 \subsubsection{Risk Measures}
+
+Risk-sensitive RL employs various risk measures to quantify and optimize for different aspects of risk. These measures provide alternatives to expected value that better capture tail risks and uncertainty.
 
 \textbf{Value at Risk (VaR):}
 \begin{equation}
 \text{VaR}_\alpha(R) = \inf\{r \in \mathbb{R} : \mathbb{P}(R \leq r) \geq \alpha\}
 \end{equation}
 
+\textbf{Interpretation:} VaR$_\alpha$ represents the worst-case outcome that occurs with probability $(1-\alpha)$. For example, VaR$_{0.05}$ is the 5th percentile of returns.
+
+\textbf{Limitations:}
+\begin{itemize}
+\item Does not provide information about the severity of losses beyond the VaR threshold
+\item Not coherent (does not satisfy subadditivity)
+\item Difficult to optimize due to non-convexity
+\end{itemize}
+
 \textbf{Conditional Value at Risk (CVaR):}
 \begin{equation}
 \text{CVaR}_\alpha(R) = \mathbb{E}[R | R \leq \text{VaR}_\alpha(R)]
 \end{equation}
+
+\textbf{Interpretation:} CVaR$_\alpha$ represents the expected value of the worst $\alpha$ fraction of outcomes. It provides information about the tail of the distribution.
+
+\textbf{Advantages:}
+\begin{itemize}
+\item Coherent risk measure (satisfies subadditivity, monotonicity, positive homogeneity, translation invariance)
+\item Convex and thus easier to optimize
+\item Provides information about tail severity
+\end{itemize}
 
 \textbf{Entropic Risk Measure:}
 \begin{equation}
 \rho_\beta(R) = \frac{1}{\beta} \log \mathbb{E}[e^{\beta R}]
 \end{equation}
 
-where:
+\textbf{Risk Sensitivity Parameter $\beta$:}
 \begin{itemize}
-\item $\beta \to 0$: Expected value (risk-neutral)
-\item $\beta > 0$: Risk-averse (penalizes variance)
-\item $\beta < 0$: Risk-seeking
+\item $\beta \to 0$: Risk-neutral (converges to expected value)
+\item $\beta > 0$: Risk-averse (penalizes variance and tail risks)
+\item $\beta < 0$: Risk-seeking (favors high-variance outcomes)
 \end{itemize}
+
+\textbf{Properties:}
+\begin{itemize}
+\item Smooth and differentiable
+\item Monotonic in $\beta$ (more positive $\beta$ implies more risk aversion)
+\item Can be optimized using standard gradient methods
+\end{itemize}
+
+\textbf{Comparison of Risk Measures:}
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Risk Measure} & \textbf{Coherent} & \textbf{Convex} & \textbf{Tail Focus} & \textbf{Optimization} \\
+\hline
+Expected Value & Yes & Yes & No & Easy \\
+VaR & No & No & Yes & Hard \\
+CVaR & Yes & Yes & Yes & Medium \\
+Entropic & Yes & Yes & Partial & Easy \\
+\hline
+\end{tabular}
+\caption{Comparison of risk measures in RL}
+\end{table}
 
 \subsection{Safe Exploration Techniques}
 
 \subsubsection{The Exploration-Safety Dilemma}
 
-Safe exploration addresses the tension between:
-\begin{itemize}
-\item Exploration: Visiting new states to gather information
-\item Safety: Avoiding constraint violations
-\end{itemize}
+Safe exploration represents one of the most challenging aspects of safe reinforcement learning, as it requires balancing the fundamental tension between learning and safety.
 
-\textbf{Formal Problem:}
-\begin{equation}
-\max_{\pi} \quad J_r(\pi) \quad \text{s.t.} \quad c(s_t, a_t) \leq d, \quad \forall t
-\end{equation}
+\textbf{Core Challenge:} Traditional RL requires exploration to discover optimal policies, but exploration inherently involves uncertainty and potential constraint violations.
+
+\textbf{Fundamental Tension:}
+\begin{enumerate}
+\item \textbf{Exploration Necessity}: Must visit unknown states to gather information about rewards and dynamics
+\item \textbf{Safety Requirement}: Must avoid constraint violations that could be catastrophic
+\item \textbf{Information Gathering}: Need sufficient data to learn accurate models and policies
+\item \textbf{Risk Management}: Cannot afford failures during the learning process
+\end{enumerate}
+
+\textbf{Formal Problem Statement:}
+\begin{align}
+\max_{\pi} \quad & J_r(\pi) = \mathbb{E}_\pi\left[\sum_{t=0}^{T} \gamma^t r(s_t, a_t)\right] \\
+\text{s.t.} \quad & c(s_t, a_t) \leq d, \quad \forall t \in [0, T] \\
+& \mathbb{P}(\exists t : c(s_t, a_t) > d) \leq \delta
+\end{align}
+
+where $\delta$ is the maximum acceptable probability of constraint violation.
+
+\textbf{Key Challenges:}
+\begin{itemize}
+\item \textbf{Unknown Dynamics}: Cannot predict consequences of actions in unexplored regions
+\item \textbf{Model Uncertainty}: Learned models may be inaccurate, especially in novel situations
+\item \textbf{Constraint Specification}: Defining appropriate safety constraints for complex systems
+\item \textbf{Computational Complexity}: Real-time safety verification during exploration
+\end{itemize}
 
 \subsubsection{Safe Exploration via Prior Knowledge}
 
-\textbf{Demonstrations:} Learn from expert demonstrations $\mathcal{D} = \{(s_i, a_i)\}_{i=1}^N$:
+Safe exploration can be significantly improved by leveraging prior knowledge about safe behaviors, expert demonstrations, and domain-specific constraints.
+
+\textbf{Expert Demonstrations:}
+Learning from expert demonstrations provides a safe starting point for exploration:
 \begin{equation}
 \mathcal{L}_{BC}(\theta) = \sum_{i=1}^{N} -\log \pi_\theta(a_i|s_i)
 \end{equation}
 
-\textbf{Inverse Reinforcement Learning (IRL):} Learn cost function from demonstrations:
+\textbf{Benefits of Demonstration Learning:}
+\begin{enumerate}
+\item \textbf{Safe Initialization}: Provides a policy that is known to be safe
+\item \textbf{Exploration Guidance}: Shows which regions of state-action space are safe to explore
+\item \textbf{Constraint Learning}: Implicitly encodes safety constraints through examples
+\item \textbf{Faster Convergence}: Reduces the need for extensive random exploration
+\end{enumerate}
+
+\textbf{Inverse Reinforcement Learning (IRL):}
+IRL learns the underlying reward/cost function from expert demonstrations:
 \begin{equation}
 c^* = \arg\min_c \quad \|\mathbb{E}_{\tau \sim \pi_{expert}}[c(s,a)] - \mathbb{E}_{\tau \sim \pi_{current}}[c(s,a)]\|
 \end{equation}
 
+\textbf{IRL Advantages:}
+\begin{itemize}
+\item \textbf{Constraint Discovery}: Automatically identifies safety constraints from demonstrations
+\item \textbf{Generalization}: Learned constraints can be applied to novel situations
+\item \textbf{Interpretability}: Provides explicit safety functions that can be analyzed
+\end{itemize}
+
+\textbf{Curriculum Learning:}
+Gradually increasing the difficulty of exploration tasks:
+\begin{enumerate}
+\item Start with simple, low-risk scenarios
+\item Gradually introduce more complex situations
+\item Use success in simpler tasks to guide exploration in harder ones
+\end{enumerate}
+
+\textbf{Model-Based Safe Exploration:}
+Using learned models to predict safety before taking actions:
+\begin{equation}
+\hat{c}(s,a) = \mathbb{E}_{s' \sim \hat{P}(\cdot|s,a)}[c(s', \pi(s'))]
+\end{equation}
+
+where $\hat{P}$ is a learned transition model and $\hat{c}$ predicts future costs.
+
 \subsubsection{Lyapunov-Based Safe Exploration}
 
-\textbf{Lyapunov Function:} $V(s)$ measures "distance" to safety.
+Lyapunov-based methods provide a powerful framework for safe exploration by ensuring that the system remains within a safe invariant set throughout the learning process.
+
+\textbf{Lyapunov Function Definition:}
+A Lyapunov function $V: \mathcal{S} \rightarrow \mathbb{R}_{\geq 0}$ measures the "distance" to unsafe states, with $V(s) = 0$ representing the boundary of the safe set.
 
 \textbf{Safety Condition:}
+For exponential stability of the safe set:
 \begin{equation}
 V(s_0) < \infty \quad \Rightarrow \quad V(s_t) \leq V(s_0) e^{-\lambda t}
 \end{equation}
 
-\textbf{Safe Action Selection:}
+where $\lambda > 0$ is the convergence rate parameter.
+
+\textbf{Lyapunov Stability Criterion:}
 \begin{equation}
-\mathcal{A}_{safe}(s) = \{a : \dot{V}(s) + \lambda V(s) \leq 0\}
+\dot{V}(s) = \nabla_s V(s) \cdot f(s,a) \leq -\lambda V(s)
 \end{equation}
+
+\textbf{Safe Action Set:}
+\begin{equation}
+\mathcal{A}_{safe}(s) = \{a \in \mathcal{A} : \nabla_s V(s) \cdot f(s,a) \leq -\lambda V(s)\}
+\end{equation}
+
+\textbf{Key Properties:}
+\begin{enumerate}
+\item \textbf{Forward Invariance}: If $V(s_0) \geq 0$, then $V(s_t) \geq 0$ for all $t \geq 0$
+\item \textbf{Convergence}: System approaches the safe set exponentially
+\item \textbf{Robustness}: Provides safety guarantees even with model uncertainty
+\end{enumerate}
+
+\textbf{Implementation Algorithm:}
+\begin{algorithm}[H]
+\caption{Lyapunov-Based Safe Exploration}
+\begin{algorithmic}[1]
+\STATE Initialize Lyapunov function $V(s)$ and convergence rate $\lambda$
+\FOR{each episode}
+    \STATE Observe current state $s_t$
+    \STATE Compute safe action set $\mathcal{A}_{safe}(s_t)$
+    \IF{$\mathcal{A}_{safe}(s_t)$ is non-empty}
+        \STATE Select action $a_t$ from $\mathcal{A}_{safe}(s_t)$ using exploration strategy
+    \ELSE
+        \STATE Execute emergency action or terminate episode
+    \ENDIF
+    \STATE Execute action and observe next state $s_{t+1}$
+    \STATE Update policy and Lyapunov function estimates
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Advantages:}
+\begin{itemize}
+\item \textbf{Formal Guarantees}: Provides mathematical proof of safety
+\item \textbf{Adaptive}: Can be updated as more information becomes available
+\item \textbf{Efficient}: Computationally tractable for many systems
+\end{itemize}
+
+\textbf{Limitations:}
+\begin{itemize}
+\item \textbf{Design Difficulty}: Finding appropriate Lyapunov functions can be challenging
+\item \textbf{Conservatism}: May be overly restrictive, limiting exploration
+\item \textbf{Model Dependency}: Requires accurate system dynamics
+\end{itemize}
 
 \subsection{Robust Reinforcement Learning}
 
-\subsubsection{Motivation}
+\subsubsection{Motivation and Background}
 
-Robust RL addresses the reality gap between simulation and deployment:
-\begin{itemize}
-\item Model uncertainty: Dynamics may differ from training
-\item Adversarial perturbations: Malicious attacks on sensors/actuators
-\item Distribution shift: Test conditions differ from training
-\end{itemize}
+Robust reinforcement learning addresses the critical challenge of deploying RL agents in environments that differ from their training conditions. This "reality gap" is a fundamental obstacle to real-world RL deployment.
 
-\textbf{Robust Objective:}
+\textbf{Key Sources of Uncertainty:}
+\begin{enumerate}
+\item \textbf{Model Uncertainty}: System dynamics may differ from the learned model
+\item \textbf{Parameter Variations}: Physical parameters (mass, friction, etc.) may vary
+\item \textbf{Adversarial Perturbations}: Malicious attacks on sensors or actuators
+\item \textbf{Distribution Shift}: Test conditions may differ significantly from training
+\item \textbf{Sensor Noise}: Imperfect observations due to measurement errors
+\item \textbf{Actuator Limitations}: Hardware constraints not modeled in simulation
+\end{enumerate}
+
+\textbf{Robust Optimization Formulation:}
 \begin{equation}
 \max_\pi \min_{\mathcal{M} \in \mathcal{U}} J(\pi, \mathcal{M})
 \end{equation}
 
-where $\mathcal{U}$ is an uncertainty set over environments.
+where $\mathcal{U}$ is an uncertainty set over possible environments $\mathcal{M}$.
+
+\textbf{Types of Uncertainty Sets:}
+\begin{itemize}
+\item \textbf{Ellipsoidal}: $\mathcal{U} = \{\mathcal{M} : \|\theta - \theta_0\|_2 \leq \epsilon\}$
+\item \textbf{Box}: $\mathcal{U} = \{\mathcal{M} : \theta_{min} \leq \theta \leq \theta_{max}\}$
+\item \textbf{Distributional}: $\mathcal{U} = \{\mathcal{M} : \mathcal{M} \sim \mathcal{P}\}$
+\end{itemize}
+
+\textbf{Minimax vs. Distributional Robustness:}
+\begin{itemize}
+\item \textbf{Minimax}: Optimizes for worst-case performance
+\item \textbf{Distributional}: Optimizes for average performance over uncertainty distribution
+\end{itemize}
 
 \subsubsection{Domain Randomization}
 
-\textbf{Concept:} Train on a distribution of environments to learn robust policies.
+Domain randomization is a powerful technique for learning robust policies by training on a diverse distribution of environments rather than a single deterministic environment.
 
-\textbf{Randomization Parameters:}
-\begin{itemize}
-\item Physical: mass, friction, actuator strength
-\item Visual: lighting, textures, camera angles
-\item Dynamics: time delays, noise levels
-\end{itemize}
+\textbf{Fundamental Principle:}
+By exposing the agent to a wide variety of environment configurations during training, the learned policy becomes robust to variations encountered during deployment.
 
-\textbf{Implementation:}
+\textbf{Mathematical Formulation:}
 \begin{equation}
 \mathcal{M} \sim \mathcal{P}(\mathcal{M})
 \end{equation}
 
+where $\mathcal{P}(\mathcal{M})$ is a distribution over environment parameters.
+
+\textbf{Randomization Categories:}
+\begin{enumerate}
+\item \textbf{Physical Parameters}:
+\begin{itemize}
+\item Mass and inertia properties
+\item Friction coefficients
+\item Actuator strength and response time
+\item Joint limits and damping
+\end{itemize}
+
+\item \textbf{Visual Parameters}:
+\begin{itemize}
+\item Lighting conditions and shadows
+\item Texture patterns and colors
+\item Camera angles and positions
+\item Background objects and clutter
+\end{itemize}
+
+\item \textbf{Dynamics Parameters}:
+\begin{itemize}
+\item Time delays in control loops
+\item Sensor noise levels
+\item Communication delays
+\item Model uncertainties
+\end{itemize}
+\end{enumerate}
+
+\textbf{Implementation Strategy:}
+\begin{algorithm}[H]
+\caption{Domain Randomization Training}
+\begin{algorithmic}[1]
+\STATE Define parameter distributions $\mathcal{P}(\theta)$ for each randomizable parameter
+\FOR{each training episode}
+    \STATE Sample environment parameters: $\theta \sim \mathcal{P}(\theta)$
+    \STATE Create environment instance: $\mathcal{M}_\theta$
+    \STATE Collect trajectory: $\tau \sim \pi(\mathcal{M}_\theta)$
+    \STATE Update policy using collected data
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Key Design Considerations:}
+\begin{itemize}
+\item \textbf{Distribution Width}: Balance between robustness and training efficiency
+\item \textbf{Parameter Correlation}: Account for dependencies between parameters
+\item \textbf{Curriculum Learning}: Gradually increase randomization during training
+\item \textbf{Validation}: Test on held-out parameter ranges
+\end{itemize}
+
+\textbf{Advantages:}
+\begin{enumerate}
+\item \textbf{Simplicity}: Easy to implement and understand
+\item \textbf{Effectiveness}: Proven successful in many applications
+\item \textbf{Flexibility}: Can be applied to any environment with parameterizable components
+\item \textbf{No Additional Complexity}: Does not require modifications to the learning algorithm
+\end{enumerate}
+
+\textbf{Limitations:}
+\begin{itemize}
+\item \textbf{Conservative Policies}: May learn overly cautious behaviors
+\item \textbf{Sample Inefficiency}: Requires more training data
+\item \textbf{Distribution Mismatch}: May not cover all possible test conditions
+\item \textbf{Computational Cost}: Training on multiple environments is expensive
+\end{itemize}
+
 \subsubsection{Adversarial Training}
 
-\textbf{Two-Player Game:}
+Adversarial training enhances robustness by explicitly training against worst-case perturbations, treating robustness as a two-player zero-sum game between the agent and an adversary.
+
+\textbf{Game-Theoretic Formulation:}
 \begin{equation}
 \max_\pi \min_{\text{adversary}} \mathbb{E}_{\pi, \text{adversary}}[R]
 \end{equation}
 
-\textbf{State Adversary:} Perturbs observations: $\tilde{s} = s + \delta$ where $\|\delta\| \leq \epsilon$
+where the adversary aims to minimize the agent's performance while the agent aims to maximize it.
 
-\textbf{Action Adversary:} Perturbs actions: $\tilde{a} = a + \delta_a$ where $\|\delta_a\| \leq \epsilon_a$
+\textbf{Types of Adversarial Perturbations:}
+
+\textbf{1. State Adversary:}
+Perturbs observations to confuse the agent:
+\begin{equation}
+\tilde{s} = s + \delta_s \quad \text{where} \quad \|\delta_s\|_p \leq \epsilon_s
+\end{equation}
+
+\textbf{2. Action Adversary:}
+Perturbs actions before execution:
+\begin{equation}
+\tilde{a} = a + \delta_a \quad \text{where} \quad \|\delta_a\|_p \leq \epsilon_a
+\end{equation}
+
+\textbf{3. Dynamics Adversary:}
+Modifies environment dynamics:
+\begin{equation}
+\tilde{P}(s'|s,a) = P(s'|s,a) + \delta_P
+\end{equation}
+
+\textbf{Adversarial Training Algorithm:}
+\begin{algorithm}[H]
+\caption{Adversarial Training for Robust RL}
+\begin{algorithmic}[1]
+\STATE Initialize policy $\pi$ and adversary $\mathcal{A}$
+\FOR{each training iteration}
+    \STATE Collect trajectories with current policy $\pi$
+    \FOR{each state-action pair $(s,a)$}
+        \STATE Compute adversarial perturbation: $\delta^* = \arg\min_{\|\delta\| \leq \epsilon} R(s+\delta, a)$
+        \STATE Apply perturbation: $\tilde{s} = s + \delta^*$
+        \STATE Store perturbed experience $(\tilde{s}, a, r, s')$
+    \ENDFOR
+    \STATE Update policy $\pi$ using perturbed experiences
+    \STATE Update adversary $\mathcal{A}$ to find stronger perturbations
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Implementation Considerations:}
+\begin{itemize}
+\item \textbf{Perturbation Budget}: Choose $\epsilon$ to balance robustness and performance
+\item \textbf{Norm Selection}: $L_2$, $L_\infty$, or other norms depending on application
+\item \textbf{Adversary Strength}: Gradually increase adversary capability during training
+\item \textbf{Computational Cost}: Adversarial training is significantly more expensive
+\end{itemize}
+
+\textbf{Advantages:}
+\begin{enumerate}
+\item \textbf{Strong Robustness}: Provides guarantees against worst-case perturbations
+\item \textbf{Explicit Defense}: Directly optimizes for adversarial scenarios
+\item \textbf{Generalizable}: Robustness often transfers to other types of perturbations
+\end{enumerate}
+
+\textbf{Challenges:}
+\begin{itemize}
+\item \textbf{Computational Overhead}: Requires solving optimization problems at each step
+\item \textbf{Training Instability}: Adversarial dynamics can destabilize learning
+\item \textbf{Overfitting to Adversary}: May not generalize to other types of attacks
+\item \textbf{Performance Trade-off}: Robustness often comes at cost of nominal performance
+\end{itemize}
 
 \subsection{Verification and Interpretability}
 
 \subsubsection{Formal Verification}
 
-\textbf{Goal:} Prove mathematically that policy $\pi$ satisfies safety property $\phi$.
+Formal verification provides mathematical guarantees that a learned policy satisfies specified safety properties, addressing the critical need for trust in autonomous systems.
 
-\textbf{Specification:} Safety property in temporal logic:
+\textbf{Verification Goal:}
+Prove mathematically that policy $\pi$ satisfies safety property $\phi$:
+\begin{equation}
+\pi \models \phi
+\end{equation}
+
+\textbf{Safety Property Specification:}
+Safety properties are typically expressed in temporal logic:
 \begin{equation}
 \phi = \Box(s \in \mathcal{S}_{safe})
 \end{equation}
 
 meaning "always remain in safe state set."
 
+\textbf{Common Safety Properties:}
+\begin{enumerate}
+\item \textbf{Invariance}: $\Box(s \in \mathcal{S}_{safe})$ - Always stay in safe region
+\item \textbf{Reachability}: $\Diamond(s \in \mathcal{S}_{goal})$ - Eventually reach goal
+\item \textbf{Avoidance}: $\Box \neg(s \in \mathcal{S}_{unsafe})$ - Never enter unsafe region
+\item \textbf{Response}: $\Box(p \rightarrow \Diamond q)$ - If $p$ occurs, then $q$ will eventually occur
+\end{enumerate}
+
+\textbf{Verification Methods:}
+\begin{itemize}
+\item \textbf{Model Checking}: Exhaustive search over all possible executions
+\item \textbf{Theorem Proving}: Formal mathematical proofs
+\item \textbf{Abstract Interpretation}: Over-approximation of system behavior
+\item \textbf{Satisfiability Modulo Theories (SMT)}: Automated theorem proving
+\end{itemize}
+
+\textbf{Challenges in Neural Network Verification:}
+\begin{itemize}
+\item \textbf{High Dimensionality}: Neural networks have millions of parameters
+\item \textbf{Non-linearity}: Activation functions create non-convex optimization problems
+\item \textbf{Continuous State Spaces}: Infinite state spaces make exhaustive search impossible
+\item \textbf{Computational Complexity}: Verification scales exponentially with problem size
+\end{itemize}
+
 \subsubsection{Reachability Analysis}
 
-\textbf{Forward Reachability:} Compute all states reachable from initial set $\mathcal{S}_0$:
+Reachability analysis is a fundamental verification technique that determines which states a system can reach from a given initial set, providing crucial insights into safety properties.
+
+\textbf{Forward Reachability:}
+Compute all states reachable from initial set $\mathcal{S}_0$:
 \begin{equation}
 \mathcal{R}_t = \{s : \exists a_0, ..., a_{t-1}, s_0 \in \mathcal{S}_0 \text{ s.t. } s_t = s\}
 \end{equation}
 
-\textbf{Safety Verification:} Policy is safe if:
+\textbf{Backward Reachability:}
+Compute all states that can reach target set $\mathcal{S}_{target}$:
+\begin{equation}
+\mathcal{R}^{-1}_t = \{s : \exists a_t, ..., a_{T-1} \text{ s.t. } s_T \in \mathcal{S}_{target}\}
+\end{equation}
+
+\textbf{Safety Verification:}
+A policy is safe if the reachable set never intersects with unsafe states:
 \begin{equation}
 \mathcal{R}_\infty \cap \mathcal{S}_{unsafe} = \emptyset
 \end{equation}
 
+\textbf{Reachability Computation Methods:}
+\begin{enumerate}
+\item \textbf{Exact Methods}: 
+\begin{itemize}
+\item Symbolic model checking
+\item Satisfiability solving
+\item Exact set operations
+\end{itemize}
+
+\item \textbf{Approximate Methods}:
+\begin{itemize}
+\item Over-approximation using convex sets
+\item Level set methods
+\item Sampling-based approaches
+\end{itemize}
+\end{enumerate}
+
+\textbf{Level Set Methods:}
+Represent reachable sets as level sets of functions:
+\begin{equation}
+\mathcal{R}_t = \{s : V(s,t) \leq 0\}
+\end{equation}
+
+where $V(s,t)$ satisfies the Hamilton-Jacobi-Bellman equation:
+\begin{equation}
+\frac{\partial V}{\partial t} + \min_{a} \nabla V \cdot f(s,a) = 0
+\end{equation}
+
+\textbf{Computational Challenges:}
+\begin{itemize}
+\item \textbf{Curse of Dimensionality}: Exponential growth with state dimension
+\item \textbf{Non-convexity}: Reachable sets may have complex shapes
+\item \textbf{Continuous Dynamics}: Requires numerical integration
+\item \textbf{Uncertainty}: Robust reachability under model uncertainty
+\end{itemize}
+
 \subsubsection{Abstract Interpretation}
 
-\textbf{Idea:} Over-approximate neural network outputs using intervals.
+Abstract interpretation provides a systematic approach to over-approximate neural network behavior, enabling sound verification of safety properties through interval arithmetic and other abstract domains.
 
-\textbf{Interval Arithmetic:} For $x \in [x_{min}, x_{max}]$:
+\textbf{Fundamental Principle:}
+Instead of analyzing the exact behavior of neural networks (which is computationally intractable), abstract interpretation analyzes an over-approximation that is guaranteed to contain all possible behaviors.
+
+\textbf{Interval Arithmetic:}
+For input $x \in [x_{min}, x_{max}]$, compute output bounds:
 \begin{equation}
 \text{NN}(x) \in [\underline{y}, \overline{y}]
 \end{equation}
 
-where $\underline{y}$ and $\overline{y}$ are computed via interval propagation.
+where $\underline{y}$ and $\overline{y}$ are computed via interval propagation through the network.
 
-\textbf{Soundness:} If $[\underline{y}, \overline{y}] \subseteq \mathcal{Y}_{safe}$, then $\text{NN}(x) \in \mathcal{Y}_{safe}$ for all $x \in [x_{min}, x_{max}]$.
+\textbf{Interval Propagation Rules:}
+\begin{itemize}
+\item \textbf{Linear Layer}: $[a,b] \cdot w + b = [\min(aw, bw), \max(aw, bw)] + b$
+\item \textbf{ReLU Activation}: $\text{ReLU}([a,b]) = [\max(0,a), \max(0,b)]$
+\item \textbf{Tanh Activation}: $\tanh([a,b]) = [\tanh(a), \tanh(b)]$ (if monotonic)
+\end{itemize}
+
+\textbf{Soundness Guarantee:}
+If $[\underline{y}, \overline{y}] \subseteq \mathcal{Y}_{safe}$, then $\text{NN}(x) \in \mathcal{Y}_{safe}$ for all $x \in [x_{min}, x_{max}]$.
+
+\textbf{Abstract Domains:}
+\begin{enumerate}
+\item \textbf{Intervals}: $[a,b]$ - Simple but can be loose
+\item \textbf{Zonotopes}: $\{x : x = c + \sum_i \alpha_i g_i, \alpha_i \in [-1,1]\}$ - More precise
+\item \textbf{Polyhedra}: $\{x : Ax \leq b\}$ - Most precise but expensive
+\item \textbf{DeepPoly}: Neural network-specific abstractions
+\end{enumerate}
+
+\textbf{Verification Algorithm:}
+\begin{algorithm}[H]
+\caption{Abstract Interpretation Verification}
+\begin{algorithmic}[1]
+\STATE Input: Neural network $\text{NN}$, input region $\mathcal{X}$, safety property $\phi$
+\STATE Initialize abstract domain $\mathcal{A}$ with input region
+\FOR{each layer $l$ in NN}
+    \STATE Propagate abstract domain through layer: $\mathcal{A} \leftarrow \text{layer}_l(\mathcal{A})$
+    \STATE Refine abstraction if necessary
+\ENDFOR
+\STATE Check if final abstraction satisfies $\phi$
+\IF{abstraction satisfies $\phi$}
+    \STATE Return "Safe"
+\ELSE
+    \STATE Return "Unknown" or refine abstraction
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Advantages:}
+\begin{itemize}
+\item \textbf{Soundness}: Provides formal guarantees
+\item \textbf{Automation}: Can be fully automated
+\item \textbf{Scalability}: Works for large networks
+\end{itemize}
+
+\textbf{Limitations:}
+\begin{itemize}
+\item \textbf{Over-approximation}: May be too conservative
+\item \textbf{Precision Trade-off}: More precise abstractions are more expensive
+\item \textbf{Unknown Results}: May not be able to prove safety
+\end{itemize}
 
 \subsection{Real-World Applications}
 
 \subsubsection{Autonomous Driving}
 
-\textbf{Safety Requirements:}
+Autonomous driving represents one of the most challenging and safety-critical applications of reinforcement learning, where failures can result in catastrophic consequences.
+
+\textbf{Safety Requirements Hierarchy:}
 \begin{enumerate}
-\item No collisions with vehicles, pedestrians, objects
-\item Stay within lane boundaries
-\item Obey traffic laws (speed limits, signals)
-\item Handle edge cases (sensor failures, adverse weather)
+\item \textbf{Level 1 - Collision Avoidance}: No collisions with vehicles, pedestrians, or objects
+\item \textbf{Level 2 - Traffic Compliance}: Stay within lane boundaries and obey traffic laws
+\item \textbf{Level 3 - Legal Compliance}: Obey speed limits, traffic signals, and road signs
+\item \textbf{Level 4 - Edge Case Handling}: Robust operation under sensor failures, adverse weather, and unexpected scenarios
+\item \textbf{Level 5 - Ethical Decision Making}: Handle moral dilemmas in unavoidable accident scenarios
 \end{enumerate}
 
 \textbf{CMDP Formulation:}
 \begin{itemize}
-\item States: Position, velocity, sensor readings, map
-\item Actions: Steering angle, acceleration
-\item Rewards: Progress toward goal, smooth driving
-\item Costs: Proximity to obstacles, lane violations, speed violations
-\item Constraints: $c(s,a) \leq 0$ (hard safety constraints)
+\item \textbf{State Space}: $\mathcal{S} = \mathbb{R}^{n_s}$ where $n_s$ includes:
+\begin{itemize}
+\item Vehicle state: position $(x,y)$, velocity $(v_x, v_y)$, orientation $\theta$
+\item Sensor readings: LiDAR, cameras, radar data
+\item Map information: road geometry, traffic signs, lane markings
+\item Other vehicles: positions, velocities, intentions
+\end{itemize}
+
+\item \textbf{Action Space}: $\mathcal{A} = \mathbb{R}^{n_a}$ where $n_a$ includes:
+\begin{itemize}
+\item Steering angle: $\delta \in [-\delta_{max}, \delta_{max}]$
+\item Acceleration: $a \in [a_{min}, a_{max}]$
+\item Braking: $b \in [0, b_{max}]$
+\end{itemize}
+
+\item \textbf{Reward Function}: $r(s,a) = r_{progress}(s) + r_{smooth}(a) + r_{efficiency}(s,a)$
+\begin{itemize}
+\item Progress reward: Distance traveled toward destination
+\item Smoothness reward: Penalty for jerky maneuvers
+\item Efficiency reward: Fuel consumption optimization
+\end{itemize}
+
+\item \textbf{Cost Function}: $c(s,a) = c_{collision}(s) + c_{violation}(s) + c_{comfort}(a)$
+\begin{itemize}
+\item Collision cost: Distance to nearest obstacle
+\item Violation cost: Lane departures, speed violations
+\item Comfort cost: Excessive acceleration/deceleration
+\end{itemize}
+
+\item \textbf{Constraints}: $c(s,a) \leq d$ where $d$ represents acceptable risk thresholds
+\end{itemize}
+
+\textbf{Safety Layer Implementation:}
+\begin{equation}
+\tilde{a} = \text{SafetyLayer}(s, a_{proposed}) = \arg\min_{a' \in \mathcal{A}_{safe}(s)} \|a' - a_{proposed}\|_2
+\end{equation}
+
+where $\mathcal{A}_{safe}(s)$ is computed using Control Barrier Functions for collision avoidance.
+
+\textbf{Challenges:}
+\begin{itemize}
+\item \textbf{High Dimensionality}: Complex state spaces with multiple sensors
+\item \textbf{Real-time Requirements}: Must make decisions within milliseconds
+\item \textbf{Uncertainty}: Sensor noise, prediction errors, other drivers' intentions
+\item \textbf{Regulatory Compliance}: Must meet automotive safety standards (ISO 26262)
 \end{itemize}
 
 \subsubsection{Healthcare and Medical Treatment}
 
-\textbf{Safety Requirements:}
+Healthcare applications of safe RL present unique challenges where patient safety is paramount and the consequences of errors can be life-threatening.
+
+\textbf{Safety Requirements Hierarchy:}
 \begin{enumerate}
-\item Do no harm (Hippocratic principle)
-\item Conservative recommendations for high-risk patients
-\item Explainable decisions for clinician oversight
-\item Robust to measurement errors
+\item \textbf{Level 1 - Do No Harm}: Never recommend treatments that could cause immediate harm
+\item \textbf{Level 2 - Conservative Approach}: Prefer conservative treatments for high-risk patients
+\item \textbf{Level 3 - Explainable Decisions}: Provide clear explanations for clinician oversight
+\item \textbf{Level 4 - Robust Operation}: Handle measurement errors and incomplete information
+\item \textbf{Level 5 - Ethical Considerations}: Respect patient autonomy and cultural values
 \end{enumerate}
 
 \textbf{CMDP Formulation:}
 \begin{itemize}
-\item States: Patient vitals, medical history, current symptoms
-\item Actions: Treatment options (drugs, dosages, procedures)
-\item Rewards: Patient health improvement
-\item Costs: Adverse events, complications, mortality risk
-\item Constraints: Expected cost below acceptable threshold
+\item \textbf{State Space}: $\mathcal{S} = \mathbb{R}^{n_s}$ where $n_s$ includes:
+\begin{itemize}
+\item Patient vitals: heart rate, blood pressure, temperature, oxygen saturation
+\item Medical history: previous diagnoses, medications, allergies
+\item Current symptoms: pain levels, functional status, quality of life
+\item Laboratory results: blood tests, imaging studies, biomarkers
+\end{itemize}
+
+\item \textbf{Action Space}: $\mathcal{A} = \mathbb{R}^{n_a}$ where $n_a$ includes:
+\begin{itemize}
+\item Medication choices: drug selection, dosages, administration routes
+\item Treatment procedures: surgeries, therapies, interventions
+\item Monitoring decisions: frequency of observations, additional tests
+\item Lifestyle recommendations: diet, exercise, behavioral modifications
+\end{itemize}
+
+\item \textbf{Reward Function}: $r(s,a) = r_{health}(s) + r_{recovery}(s,a) + r_{quality}(s)$
+\begin{itemize}
+\item Health improvement: Reduction in disease severity
+\item Recovery speed: Time to symptom resolution
+\item Quality of life: Patient-reported outcomes
+\end{itemize}
+
+\item \textbf{Cost Function}: $c(s,a) = c_{adverse}(s,a) + c_{mortality}(s,a) + c_{complications}(s,a)$
+\begin{itemize}
+\item Adverse events: Drug reactions, side effects
+\item Mortality risk: Probability of death
+\item Complications: Secondary conditions, infections
+\end{itemize}
+
+\item \textbf{Constraints}: $\mathbb{E}[c(s,a)] \leq d_{max}$ where $d_{max}$ is the maximum acceptable risk threshold
+\end{itemize}
+
+\textbf{Safety Considerations:}
+\begin{itemize}
+\item \textbf{Regulatory Compliance}: Must meet FDA and medical device standards
+\item \textbf{Clinical Validation}: Requires extensive testing and validation
+\item \textbf{Ethical Review}: Must pass institutional review board approval
+\item \textbf{Liability Issues}: Legal responsibility for AI-assisted decisions
+\end{itemize}
+
+\textbf{Implementation Challenges:}
+\begin{itemize}
+\item \textbf{Data Privacy}: HIPAA compliance and patient confidentiality
+\item \textbf{Heterogeneity}: Individual patient differences and comorbidities
+\item \textbf{Rare Events}: Insufficient data for uncommon conditions
+\item \textbf{Long-term Effects}: Delayed consequences of treatments
 \end{itemize}
 
 \subsubsection{Robotics}
 
-\textbf{Safety Requirements:}
+Robotics applications require safe RL systems that can operate in physical environments alongside humans while maintaining both human safety and robot integrity.
+
+\textbf{Safety Requirements Hierarchy:}
 \begin{enumerate}
-\item Physical safety around humans (ISO 15066 compliance)
-\item Prevent self-damage (joint limits, collision avoidance)
-\item Graceful degradation (continue operation under failures)
-\item Sim-to-real transfer
+\item \textbf{Level 1 - Human Safety}: Physical safety around humans (ISO 15066 compliance)
+\item \textbf{Level 2 - Self-Protection}: Prevent self-damage (joint limits, collision avoidance)
+\item \textbf{Level 3 - Graceful Degradation}: Continue operation under component failures
+\item \textbf{Level 4 - Sim-to-Real Transfer}: Robust performance across simulation and reality
+\item \textbf{Level 5 - Environmental Safety}: Protect workspace and equipment
 \end{enumerate}
 
 \textbf{CMDP Formulation:}
 \begin{itemize}
-\item States: Joint positions, velocities, force/torque sensors, vision
-\item Actions: Joint torques or position commands
-\item Rewards: Task completion (grasping, manipulation, navigation)
-\item Costs: Joint limits, collisions, excessive forces
-\item Constraints: Safety certificates from CBFs
+\item \textbf{State Space}: $\mathcal{S} = \mathbb{R}^{n_s}$ where $n_s$ includes:
+\begin{itemize}
+\item Joint states: positions $q$, velocities $\dot{q}$, accelerations $\ddot{q}$
+\item Sensor data: force/torque sensors, tactile sensors, vision
+\item Environment: object positions, human positions, workspace boundaries
+\item Task state: current manipulation target, progress indicators
+\end{itemize}
+
+\item \textbf{Action Space}: $\mathcal{A} = \mathbb{R}^{n_a}$ where $n_a$ includes:
+\begin{itemize}
+\item Joint torques: $\tau \in [\tau_{min}, \tau_{max}]$
+\item Position commands: $q_{cmd} \in [q_{min}, q_{max}]$
+\item Velocity commands: $\dot{q}_{cmd} \in [\dot{q}_{min}, \dot{q}_{max}]$
+\item Gripper commands: opening/closing, force control
+\end{itemize}
+
+\item \textbf{Reward Function}: $r(s,a) = r_{task}(s,a) + r_{efficiency}(a) + r_{smooth}(a)$
+\begin{itemize}
+\item Task completion: Success in manipulation, navigation, or assembly
+\item Efficiency: Energy consumption, time to completion
+\item Smoothness: Penalty for jerky motions
+\end{itemize}
+
+\item \textbf{Cost Function}: $c(s,a) = c_{collision}(s) + c_{limits}(a) + c_{forces}(s,a)$
+\begin{itemize}
+\item Collision cost: Distance to obstacles and humans
+\item Joint limit violations: Exceeding position/velocity bounds
+\item Excessive forces: Torques beyond safe limits
+\end{itemize}
+
+\item \textbf{Constraints}: Safety certificates from Control Barrier Functions
+\end{itemize}
+
+\textbf{Safety Layer Implementation:}
+\begin{equation}
+\tilde{a} = \text{SafetyLayer}(s, a_{proposed}) = \arg\min_{a' \in \mathcal{A}_{safe}(s)} \|a' - a_{proposed}\|_2
+\end{equation}
+
+where $\mathcal{A}_{safe}(s)$ ensures:
+\begin{itemize}
+\item Joint limits: $q_{min} \leq q + \Delta q \leq q_{max}$
+\item Velocity limits: $|\dot{q}| \leq \dot{q}_{max}$
+\item Collision avoidance: $\min_i d_i(s) \geq d_{safe}$
+\end{itemize}
+
+\textbf{Implementation Challenges:}
+\begin{itemize}
+\item \textbf{Real-time Constraints}: Must compute safe actions within control loop timing
+\item \textbf{Model Uncertainty}: Inaccurate dynamics models affect safety guarantees
+\item \textbf{Sensor Limitations}: Imperfect perception affects collision detection
+\item \textbf{Human-Robot Interaction}: Predicting human behavior and intentions
 \end{itemize}
 
 \subsection{Implementation and Experiments}
