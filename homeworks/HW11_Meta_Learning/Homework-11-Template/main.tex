@@ -1293,66 +1293,166 @@
 			
 			\section{Discussion and Future Directions}
 			
+			This section provides a comprehensive comparison between meta-learning and transfer learning, and explores future research directions in meta-RL.
+			
 			\subsection{Question 7: Meta-Learning vs. Transfer Learning}
 			
 			\textbf{Q7.1:} Compare and contrast meta-learning with traditional transfer learning. When is each approach more appropriate?
 			
 			\textbf{Solution:}
 			
-			\textbf{Transfer Learning:}
+			\begin{definition}[Transfer Learning]
+			Transfer learning involves training a model on a source task/domain and adapting it to a target task/domain, typically through fine-tuning. The goal is to leverage knowledge from the source to improve performance on the target.
+			\end{definition}
 			
-			Transfer learning involves training a model on a source task/domain and adapting it to a target task/domain, typically through fine-tuning.
+			\begin{definition}[Meta-Learning]
+			Meta-learning explicitly optimizes for the ability to quickly learn new tasks from a distribution. The goal is to find an initialization or learning procedure that enables fast adaptation to novel tasks.
+			\end{definition}
 			
-			\textbf{Process:}
-			\begin{enumerate}
-				\item Pre-train on source task(s)
-				\item Fine-tune on target task
-				\item Use adapted model
-			\end{enumerate}
+			\ieee{Fundamental Differences:}
 			
-			\textbf{Meta-Learning:}
-			
-			Meta-learning explicitly optimizes for the ability to quickly learn new tasks from a distribution.
-			
-			\textbf{Process:}
-			\begin{enumerate}
-				\item Meta-train across task distribution
-				\item For each new task: adapt with few samples
-				\item Evaluate adapted model
-			\end{enumerate}
-			
-			\textbf{Comparative Analysis:}
-			
-			\begin{center}
-			\begin{tabular}{|l|l|l|}
-			\hline
+			\begin{table}[H]
+			\centering
+			\caption{Transfer Learning vs Meta-Learning Comparison}
+			\begin{tabular}{@{}lcc@{}}
+			\toprule
 			\textbf{Aspect} & \textbf{Transfer Learning} & \textbf{Meta-Learning} \\
-			\hline
+			\midrule
 			Training Objective & Optimize for source task & Optimize for adaptability \\
-			Adaptation & Often slow (many gradient steps) & Fast (few gradient steps) \\
-			Task Distribution & Typically single source → single target & Explicit distribution p(T) \\
-			Evaluation & Final performance on target & Few-shot adaptation ability \\
-			Sample Efficiency & Needs substantial target data & Minimal target data \\
+			Adaptation Mechanism & Fine-tuning (many steps) & Few-shot adaptation \\
+			Task Distribution & Single source → single target & Explicit distribution $p(\mathcal{T})$ \\
+			Evaluation Metric & Final performance on target & Few-shot adaptation ability \\
+			Sample Requirements & Substantial target data & Minimal target data \\
 			Computational Cost & Standard training & Higher (nested optimization) \\
-			\hline
+			Generalization & Task-specific & Distribution-level \\
+			Knowledge Transfer & Implicit & Explicit \\
+			\bottomrule
 			\end{tabular}
-			\end{center}
+			\label{tab:transfer_vs_meta}
+			\end{table}
 			
-			\textbf{When to Use Transfer Learning:}
+			\ieee{When to Use Transfer Learning:}
+			
 			\begin{enumerate}
-				\item Single Target Task: You have one specific target task
-				\item Abundant Target Data: Sufficient data available for fine-tuning
-				\item Large Domain Shift: Source and target tasks are quite different
-				\item Computational Constraints: Limited resources for meta-training
+				\item \textbf{Single Target Task:}
+				\begin{itemize}
+					\item You have one specific target task
+					\item No need to adapt to multiple related tasks
+					\item Example: ImageNet → specific classification task
+				\end{itemize}
+				
+				\item \textbf{Abundant Target Data:}
+				\begin{itemize}
+					\item Sufficient data available for fine-tuning
+					\item Can afford longer adaptation process
+					\item Example: Language model fine-tuning with 10K+ examples
+				\end{itemize}
+				
+				\item \textbf{Large Domain Shift:}
+				\begin{itemize}
+					\item Source and target tasks are quite different
+					\item Shared low-level features but different high-level semantics
+					\item Example: Natural images → Medical images
+				\end{itemize}
+				
+				\item \textbf{Computational Constraints:}
+				\begin{itemize}
+					\item Limited resources for meta-training
+					\item Can only afford single training run
+					\item Pre-trained models readily available
+				\end{itemize}
 			\end{enumerate}
 			
-			\textbf{When to Use Meta-Learning:}
+			\ieee{When to Use Meta-Learning:}
+			
 			\begin{enumerate}
-				\item Few-Shot Scenarios: Very limited data for each new task (1-50 examples)
-				\item Task Distribution: Clear distribution of related tasks
-				\item Lifelong Learning: Agent must continually adapt to new tasks
-				\item Explicit Transfer: Want to explicitly optimize for transfer
+				\item \textbf{Few-Shot Scenarios:}
+				\begin{itemize}
+					\item Very limited data for each new task (1-50 examples)
+					\item Need to adapt quickly
+					\item Example: Personalization with minimal user interaction
+				\end{itemize}
+				
+				\item \textbf{Task Distribution:}
+				\begin{itemize}
+					\item Clear distribution of related tasks
+					\item Expectation of encountering new tasks from same family
+					\item Example: Different MuJoCo environments with similar dynamics
+				\end{itemize}
+				
+				\item \textbf{Lifelong Learning:}
+				\begin{itemize}
+					\item Agent must continually adapt to new tasks
+					\item Sequential task arrival
+					\item Example: Robot learning in changing environments
+				\end{itemize}
+				
+				\item \textbf{Explicit Transfer:}
+				\begin{itemize}
+					\item Want to explicitly optimize for transfer
+					\item Have access to multiple training tasks
+					\item Example: Meta-World, multi-agent scenarios
+				\end{itemize}
 			\end{enumerate}
+			
+			\ieee{Hybrid Approaches:}
+			
+			Modern methods often combine both approaches:
+			
+			\begin{algorithm}[H]
+			\caption{Hybrid Transfer-Meta Learning}
+			\begin{algorithmic}[1]
+			\STATE \textbf{Stage 1: Transfer Learning}
+			\STATE Pre-train model on large source dataset
+			\STATE Learn general-purpose representations
+			\STATE \textbf{Stage 2: Meta-Learning}
+			\STATE Meta-train on task distribution using pre-trained model
+			\STATE Learn adaptation mechanisms
+			\STATE \textbf{Stage 3: Few-Shot Adaptation}
+			\STATE Adapt to new target task with minimal samples
+			\STATE Combine transfer knowledge with meta-adaptation
+			\end{algorithmic}
+			\end{algorithm}
+			
+			\textbf{Example Applications:}
+			
+			\begin{enumerate}
+				\item \textbf{Computer Vision:}
+				\begin{itemize}
+					\item Transfer: Pre-train vision encoder on ImageNet
+					\item Meta: Meta-train policy on Meta-World tasks
+					\item Result: Better sample efficiency for robotic manipulation
+				\end{itemize}
+				
+				\item \textbf{Natural Language Processing:}
+				\begin{itemize}
+					\item Transfer: Pre-train language model on large corpus
+					\item Meta: Meta-learn few-shot adaptation for new domains
+					\item Result: Fast adaptation to new languages/tasks
+				\end{itemize}
+			\end{enumerate}
+			
+			\begin{table}[H]
+			\centering
+			\caption{Decision Matrix: Transfer Learning vs Meta-Learning}
+			\begin{tabular}{@{}lcc@{}}
+			\toprule
+			\textbf{Scenario} & \textbf{Recommended Approach} & \textbf{Reasoning} \\
+			\midrule
+			Single task, lots of data & Transfer Learning & More robust, proven \\
+			Multiple related tasks, little data per task & Meta-Learning & Better sample efficiency \\
+			One target, minimal data & Transfer Learning + Augmentation & More stable \\
+			Distribution of tasks, need fast adaptation & Meta-Learning & Designed for this \\
+			Unclear task distribution & Transfer Learning & More robust \\
+			Well-defined task family & Meta-Learning & Better generalization \\
+			\bottomrule
+			\end{tabular}
+			\label{tab:decision_matrix}
+			\end{table}
+			
+			\begin{remark}
+			The choice between transfer learning and meta-learning depends on the specific requirements of the application. Transfer learning is more mature and robust, while meta-learning offers better sample efficiency for few-shot scenarios. Hybrid approaches often provide the best of both worlds.
+			\end{remark}
 			
 			\subsection{Question 8: Future Directions}
 			
