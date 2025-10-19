@@ -193,47 +193,117 @@ The grading will be based on the following criteria, with a total of 100 points:
 {\fontfamily{lmss}\selectfont {\color{DarkBlue}
 
 \section{Iteration Family}
-Let \( M = (S, A, R, P, \gamma) \) be a finite MDP with \( |S| < \infty \), \( |A| < \infty \), bounded rewards \( |R(s,a)| \leq R_{\text{max}} \ \forall (s,a) \), and discount factor \( \gamma \in [0, 1) \).
-In this section, we will first explore an alternative proof approach for the value iteration algorithm, then we cover policy iteration which is discussed in the class more precisely.
+\label{sec:iteration_family}
+
+Let \( M = (S, A, R, P, \gamma) \) be a finite Markov Decision Process (MDP) with the following components:
+\begin{itemize}
+    \item \textbf{State space:} \( S \) with \( |S| < \infty \) (finite number of states)
+    \item \textbf{Action space:} \( A \) with \( |A| < \infty \) (finite number of actions)
+    \item \textbf{Reward function:} \( R: S \times A \rightarrow \mathbb{R} \) with bounded rewards \( |R(s,a)| \leq R_{\text{max}} \) for all \( (s,a) \)
+    \item \textbf{Transition probability:} \( P: S \times A \times S \rightarrow [0,1] \) where \( P(s'|s,a) \) denotes the probability of transitioning to state \( s' \) given action \( a \) in state \( s \)
+    \item \textbf{Discount factor:} \( \gamma \in [0, 1) \) representing the importance of future rewards
+\end{itemize}
+
+In this section, we explore fundamental algorithms for solving MDPs: Value Iteration and Policy Iteration. These algorithms form the theoretical foundation for many reinforcement learning methods. We will examine their convergence properties, computational complexity, and theoretical guarantees.
 
 \subsection{Positive Rewards}
-Assume \( R(s, a) \geq 0 \) for all \( s, a \).
+\label{subsec:positive_rewards}
+
+\textbf{Assumption:} Throughout this subsection, we assume that all rewards are non-negative, i.e., \( R(s, a) \geq 0 \) for all \( s \in S \) and \( a \in A \). This assumption simplifies the analysis and provides stronger convergence guarantees.
+
+\textbf{Definition:} The optimal \( k \)-step value function \( V_k^*: S \rightarrow \mathbb{R} \) represents the maximum expected cumulative discounted reward achievable in exactly \( k \) steps:
+\begin{equation}
+V_k^*(s) = \max_{\pi} \mathbb{E}\left[\sum_{t=0}^{k-1} \gamma^t R(s_t, a_t) \Big| s_0 = s, \pi\right]
+\end{equation}
+where the expectation is taken over the trajectory induced by policy \( \pi \).
+
 \begin{enumerate}
-    \item  
-    Derive an upper bound for the optimal \( k \)-step value function \( V_k^* \).
-
-    \item
-    Prove \( V_k^* \) is non-decreasing in \( k \). Giving a policy \( \pi \) such that:
-    \[
-    V_{k+1}^\pi \geq V_k^*.
-    \]
-    Use this to show convergence of Value Iteration to a solution satisfying the Bellman equation.
-
-    \item  
-    By taking the limit in the Bellman equation, prove that the \( V^* \) is optimal.
- \end{enumerate}
-   \subsection{General Rewards}
-   
-    Remove the non-negativity constraint on \( R(s, a) \). Assume no terminating states exist.
-    Consider a new MDP defined by adding a constant reward \( r_0 \) to all rewards of the current MDP. That is, for all \( (s, a) \), the new reward is:
-\[
-\hat{R}(s, a) = R(s, a) + r_0
-\]
-    % Define a new MDP \( \hat{M} \) with rewards \( \hat{R}(s, a) = R(s, a) + \epsilon \)
+    \item \textbf{Upper Bound Derivation:}
     
-    \begin{enumerate}[resume*]
-      
-        \item 
-        By deriving the optimal action and \( V^*_k \) in terms of the original MDP’s values and $r_0$, show that Value Iteration still converges to the optimal value function \( V^* \) (and optimal policy) of the original MDP even if rewards are negative. Also compute the new value \( V^* \).  
-  %        Show that Value Iteration still converges to the optimal value function \( V^* \) (and optimal policy) of the original MDP even if rewards are negative, by choosing an appropriate value of \( r_0 \).
-  % Derive the optimal value function \( \hat{V}^* \) in terms of the original \( V^* \) and \( r_0 \).
-  
-        % Show Value Iteration converges to \( \hat{V}^* \) in \( \hat{M} \).
-        % \item Express \( \hat{V}^* \) in terms of \( V^* \) and \( \epsilon \).
-   
+    Derive an upper bound for the optimal \( k \)-step value function \( V_k^* \).
+    
+    \textbf{Hint:} Consider the maximum possible reward at each step and the geometric series formed by the discount factor.
+    
+    \textbf{Expected Solution Structure:}
+    \begin{itemize}
+        \item Use the boundedness of rewards: \( R(s,a) \leq R_{\text{max}} \)
+        \item Apply the geometric series formula for \( \sum_{t=0}^{k-1} \gamma^t \)
+        \item Consider the limit as \( k \rightarrow \infty \)
+    \end{itemize}
 
-    \item  
-    Why is it necessary to assume the absence of a terminating state? Try to explain with a counterexample.  
+    \item \textbf{Monotonicity and Convergence:}
+    
+    Prove that \( V_k^* \) is non-decreasing in \( k \). Specifically, show that:
+    \[
+    V_{k+1}^*(s) \geq V_k^*(s) \quad \forall s \in S, \forall k \geq 0
+    \]
+    
+    Additionally, construct a policy \( \pi \) such that:
+    \[
+    V_{k+1}^\pi(s) \geq V_k^*(s) \quad \forall s \in S
+    \]
+    
+    Use this monotonicity property to establish convergence of Value Iteration to a solution satisfying the Bellman optimality equation.
+    
+    \textbf{Key Steps:}
+    \begin{itemize}
+        \item Show that adding one more step cannot decrease the value
+        \item Construct a policy that achieves the bound
+        \item Apply the Monotone Convergence Theorem
+        \item Verify that the limit satisfies the Bellman equation
+    \end{itemize}
+
+    \item \textbf{Optimality Proof:}
+    
+    By taking the limit \( k \rightarrow \infty \) in the Bellman equation, prove that the limiting value function \( V^* = \lim_{k \rightarrow \infty} V_k^* \) is indeed the optimal value function.
+    
+    \textbf{Requirements:}
+    \begin{itemize}
+        \item Show that \( V^* \) satisfies the Bellman optimality equation
+        \item Prove that \( V^*(s) \geq V^\pi(s) \) for any policy \( \pi \) and state \( s \)
+        \item Demonstrate that there exists a policy \( \pi^* \) such that \( V^{\pi^*} = V^* \)
+    \end{itemize}
+\end{enumerate}
+\subsection{General Rewards}
+\label{subsec:general_rewards}
+
+\textbf{Relaxation of Assumptions:} We now remove the non-negativity constraint on rewards, allowing \( R(s, a) \) to be negative. However, we maintain the assumption that no terminating states exist, ensuring an infinite horizon problem.
+
+\textbf{MDP Transformation:} Consider a new MDP \( \hat{M} = (S, A, \hat{R}, P, \gamma) \) where we add a constant reward \( r_0 \) to all rewards of the original MDP:
+\begin{equation}
+\hat{R}(s, a) = R(s, a) + r_0 \quad \forall (s, a) \in S \times A
+\end{equation}
+
+This transformation preserves the relative ordering of actions while shifting all rewards by a constant amount.
+
+\begin{enumerate}[resume*]
+    \item \textbf{Convergence with Negative Rewards:}
+    
+    By deriving the optimal action and \( \hat{V}^*_k \) in terms of the original MDP's values and \( r_0 \), show that Value Iteration still converges to the optimal value function \( V^* \) (and optimal policy) of the original MDP even when rewards are negative.
+    
+    Additionally, compute the new optimal value function \( \hat{V}^* \) in terms of \( V^* \) and \( r_0 \).
+    
+    \textbf{Approach:}
+    \begin{itemize}
+        \item Show that the optimal policy remains unchanged under reward shifting
+        \item Derive the relationship between \( \hat{V}^*_k \) and \( V^*_k \)
+        \item Use induction to prove the general form
+        \item Take the limit to establish convergence
+    \end{itemize}
+    
+    \textbf{Expected Result:} You should find that \( \hat{V}^*(s) = V^*(s) + \frac{r_0}{1-\gamma} \).
+
+    \item \textbf{Necessity of Non-Terminating Assumption:}
+    
+    Explain why the assumption of no terminating states is necessary for the above result to hold. Provide a concrete counterexample demonstrating how the relationship breaks down when terminating states are present.
+    
+    \textbf{Requirements:}
+    \begin{itemize}
+        \item Construct a simple MDP with terminating states
+        \item Show that the additive relationship fails
+        \item Explain the fundamental reason for the failure
+        \item Discuss the implications for finite-horizon problems
+    \end{itemize}
 \end{enumerate}
 
 
