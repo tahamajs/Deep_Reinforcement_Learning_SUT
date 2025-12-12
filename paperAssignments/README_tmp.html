@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>README.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="strategic-research-roadmap-2025-2026-%E2%80%93-advanced-architectures--algorithmic-frontiers-in-reinforcement-learning">Strategic Research Roadmap 2025-2026 – Advanced Architectures &amp; Algorithmic Frontiers in Reinforcement Learning</h1>
+<p><strong>To:</strong> Principal Investigators, Senior Research Scientists, and Engineering Fellows<br>
+<strong>From:</strong> Director of Advanced Research<br>
+<strong>Date:</strong> October 24, 2025<br>
+<strong>Subject:</strong> Implementation Protocol for Research Cycles Q4 2025 – Q4 2026</p>
+<h2 id="1-executive-preamble">1. Executive Preamble</h2>
+<p>We are pivoting from scalar-return, stationary-MDP RL toward agents with distributional awareness, biological-grade sample efficiency, OOD robustness, and direct language alignment. This roadmap is the master plan for the next fiscal year: 50 synthesis assignments that merge the latest (NeurIPS/ICML/ICLR 2024) advances—Sinkhorn divergences, CrossQ batch normalization, diffusion world models, alignment via DPO variants—into implementable blueprints.</p>
+<h2 id="2-strategic-verticals">2. Strategic Verticals</h2>
+<ul>
+<li><strong>I. Distributional &amp; Risk-Sensitive Control</strong></li>
+<li><strong>II. Next-Generation Sample Efficiency</strong></li>
+<li><strong>III. The Offline-to-Online Continuum</strong></li>
+<li><strong>IV. Plasticity &amp; Continual Learning</strong></li>
+<li><strong>V. Transformers &amp; Sequence Modeling in RL</strong></li>
+<li><strong>VI. Direct Alignment &amp; RLHF</strong></li>
+<li><strong>VII. Model-Based Reasoning &amp; World Models</strong></li>
+</ul>
+<hr>
+<h2 id="assignment-1-sinkhorn-regularized-distributional-control">Assignment 1: Sinkhorn-Regularized Distributional Control</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Extend Slide 18 distributional RL (C51, QR-DQN) with geometrically sound distances.</li>
+<li><strong>Innovation:</strong> Use Sinkhorn divergence to smooth distributional Bellman updates.</li>
+<li><strong>Math:</strong> ( W_{c,\varepsilon}(\mu,\nu)=\inf_{\pi\in\Pi(\mu,\nu)}\int c,d\pi + \varepsilon,\mathrm{KL}(\pi|\mu\otimes\nu) ).</li>
+<li><strong>Implementation Protocol:</strong> Build QR-DQN on Atari Breakout; replace quantile loss with differentiable Sinkhorn loop (10–20 iters); deterministic particles ala IQN; ablate ε and iteration depth vs. MMD-DQN; test on multi-dimensional rewards (Asteroids/UpNDown).</li>
+<li><strong>Resources:</strong> https://github.com/datake/SinkhornDistRL , https://github.com/senya-ashukha/quantile-regression-dqn-pytorch</li>
+</ul>
+<h2 id="assignment-2-risk-sensitive-soft-actor-critic-rs-sac">Assignment 2: Risk-Sensitive Soft Actor-Critic (RS-SAC)</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> SAC is risk-neutral; heavy-tailed domains need CVaR-aware control.</li>
+<li><strong>Innovation:</strong> Entropic Risk Measure in Bellman backup via exponential utility.</li>
+<li><strong>Math:</strong> ( Q_{\text{risk}}(s,a)=\frac{1}{\beta}\log \mathbb{E}_{s'}[\exp(\beta (r+\gamma V(s')))] ); β&lt;0 risk-averse.</li>
+<li><strong>Implementation Protocol:</strong> Discrete SAC with log-sum-exp target; GridWorld with trap states (-100); sweep β∈{-0.5,-0.1,0,0.1}; perturb transitions for OOD robustness.</li>
+<li><strong>Resources:</strong> https://github.com/tumBAIS/RiskSensitiveSACforRobustDRLunderDistShifts , https://github.com/monisha-jega/risk_sensitivity_rl</li>
+</ul>
+<h2 id="assignment-3-implicit-quantile-networks-for-multi-dimensional-rewards">Assignment 3: Implicit Quantile Networks for Multi-Dimensional Rewards</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Real rewards are vector-valued; IQN offers infinite-resolution quantiles.</li>
+<li><strong>Innovation:</strong> Learn joint distribution over reward vectors; couple with Sinkhorn to keep dimensions coherent.</li>
+<li><strong>Math:</strong> ( Z_\tau(s,a)\approx f(\psi(s)\odot \phi(\tau)) ) extended to k-dimensional rewards; Sinkhorn regularizer on joint outputs.</li>
+<li><strong>Implementation Protocol:</strong> Vectorized IQN for multi-signal rewards (e.g., Seaquest: oxygen vs. kills); Pareto frontier visualization by dense τ sampling; Sinkhorn between predicted/target reward vectors.</li>
+<li><strong>Resources:</strong> https://github.com/alirezakazemipour/Distributional-RL , https://github.com/datake/SinkhornDistRL</li>
+</ul>
+<h2 id="assignment-4-conservative-distributional-offline-rl">Assignment 4: Conservative Distributional Offline RL</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Offline RL overestimates OOD actions; distribution width encodes epistemic uncertainty.</li>
+<li><strong>Innovation:</strong> Optimize lower quantiles (e.g., 5th percentile) instead of mean; penalize wide distributions.</li>
+<li><strong>Implementation Protocol:</strong> Base on SCAS; swap ensemble critic for C51/QR-DQN critic; actor updates toward Q_0.05; dataset D4RL halfcheetah-medium-expert; compare to CQL.</li>
+<li><strong>Resources:</strong> https://github.com/thu-rllab/SCAS , https://github.com/hanjuku-kaso/awesome-offline-rl</li>
+</ul>
+<hr>
+<h2 id="assignment-5-crossq-%E2%80%93-batch-norm-without-target-networks">Assignment 5: CrossQ – Batch Norm without Target Networks</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Targets slow learning; CrossQ stabilizes high UTD with BN.</li>
+<li><strong>Innovation:</strong> Concatenate current/next batches; BN stabilizes scale, removing target network.</li>
+<li><strong>Implementation Protocol:</strong> PyTorch CrossQ; BN over 2N concatenated observations; compare to SAC on Humanoid-v4; match &gt;5000 reward &lt;1M steps; plot critic grad norms.</li>
+<li><strong>Resources:</strong> https://github.com/adityab/CrossQ , https://sb3-contrib.readthedocs.io/en/master/modules/crossq.html</li>
+</ul>
+<h2 id="assignment-6-pre-training-goal-based-models-ptgm">Assignment 6: Pre-Training Goal-Based Models (PTGM)</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Hierarchical goal policies improve sample efficiency.</li>
+<li><strong>Innovation:</strong> Clustered goal space; high-level PPO over goal clusters, low-level GCP pre-trained.</li>
+<li><strong>Implementation Protocol:</strong> MiniGrid/MineDojo; pretrain goal-conditioned policy on random-walk data; k-means clusters define high-level actions; PPO trains goal selector; compare to flat PPO.</li>
+<li><strong>Resources:</strong> https://github.com/PKU-RL/PTGM</li>
+</ul>
+<h2 id="assignment-7-model-based-rl-with-td-mpc2">Assignment 7: Model-Based RL with TD-MPC2</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Latent MPC reduces model bias.</li>
+<li><strong>Innovation:</strong> Recurrent world model + MPPI planning in latent space for multi-task control.</li>
+<li><strong>Implementation Protocol:</strong> Train latent dynamics (z,r,v); MPPI action-sequence sampling; joint training over 3 DMC tasks; evaluate zero-shot with altered physics.</li>
+<li><strong>Resources:</strong> https://github.com/qiwang067/awesome-visual-rl , https://github.com/nicklashansen/tdmpc2</li>
+</ul>
+<h2 id="assignment-8-serl-%E2%80%93-sample-efficient-robotic-rl">Assignment 8: SERL – Sample Efficient Robotic RL</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Robotics demands minimal resets and intervention handling.</li>
+<li><strong>Innovation:</strong> Human/scripted interventions injected into replay; gripper-penalty shaping.</li>
+<li><strong>Implementation Protocol:</strong> MuJoCo Franka Panda; DrQ-v2 base; add intervention data pathway; compare convergence with/without interventions.</li>
+<li><strong>Resources:</strong> https://github.com/rail-berkeley/serl</li>
+</ul>
+<hr>
+<h2 id="assignment-9-doubly-mild-generalization-dmg-for-offline%E2%86%92online">Assignment 9: Doubly Mild Generalization (DMG) for Offline→Online</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Avoid performance dips when shifting from offline to online.</li>
+<li><strong>Innovation:</strong> Mild OOD regularization that relaxes as online data grows.</li>
+<li><strong>Implementation Protocol:</strong> Offline train on antmaze-large-diverse-v2 with DMG loss; begin online rollouts; track initial dip vs. CQL/TD3-BC.</li>
+<li><strong>Resources:</strong> https://github.com/thu-rllab/DMG</li>
+</ul>
+<h2 id="assignment-10-federated-offline-rl-fe-dora">Assignment 10: Federated Offline RL (FE-DORA)</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Heterogeneous clients with private data.</li>
+<li><strong>Innovation:</strong> Ensemble-directed aggregation reduces client drift vs. FedAvg.</li>
+<li><strong>Implementation Protocol:</strong> Three clients with D4RL splits (expert/random/mixed); local TD3-BC; server ensemble aggregation; compare FedAvg vs. FE-DORA.</li>
+<li><strong>Resources:</strong> https://proceedings.neurips.cc/paper_files/paper/2024/file/0b99315234cc95e6ef281f9155b68832-Paper-Conference.pdf</li>
+</ul>
+<h2 id="assignment-11-scas-%E2%80%93-ood-state-correction">Assignment 11: SCAS – OOD State Correction</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Model-based rollouts hallucinate OOD states.</li>
+<li><strong>Innovation:</strong> Energy-based correction pulls predictions back to in-distribution manifold.</li>
+<li><strong>Math:</strong> ( \hat{s}<em>{t+1}=f</em>\theta(s_t,a_t) - \eta \nabla_s E(s) ).</li>
+<li><strong>Implementation Protocol:</strong> Ensemble dynamics + energy model (flow/autoencoder); gradient-correct rollouts; feed to policy optimizer; D4RL datasets.</li>
+<li><strong>Resources:</strong> https://github.com/maoyixiu/SCAS</li>
+</ul>
+<h2 id="assignment-12-offline-boosted-actor-critic">Assignment 12: Offline-Boosted Actor-Critic</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Blend optimal historical behaviors without over-constraining actor.</li>
+<li><strong>Innovation:</strong> Advantage-weighted BC toward best-k trajectories with adaptive weights.</li>
+<li><strong>Implementation Protocol:</strong> Maintain best-trajectory buffer; actor loss mixes A-weighted BC + RL; evaluate on Hopper-Medium-v2 vs. pure finetune.</li>
+<li><strong>Resources:</strong> (add offline-to-online RL refs) https://github.com/linhlpv/awesome-offline-to-online-RL-papers</li>
+</ul>
+<hr>
+<h2 id="assignment-13-adaptive-replay-ratio-for-plasticity">Assignment 13: Adaptive Replay Ratio for Plasticity</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> High replay ratio kills plasticity (primacy bias).</li>
+<li><strong>Innovation:</strong> Adjust RR using feature active units / stable rank signals.</li>
+<li><strong>Implementation Protocol:</strong> DrQ-v2 with plasticity monitor (dormant neurons %); schedule RR_low→RR_high; continual setting Task A→Task B; measure adaptation speed.</li>
+<li><strong>Resources:</strong> https://github.com/Guozheng-Ma/Adaptive-Replay-Ratio</li>
+</ul>
+<h2 id="assignment-14-parseval-regularization-for-orthogonality">Assignment 14: Parseval Regularization for Orthogonality</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Orthogonal weights preserve gradients/generalization.</li>
+<li><strong>Innovation:</strong> Parseval tight-frame regularizer on weights.</li>
+<li><strong>Math:</strong> ( \mathcal{L}_{reg}=\lambda \sum_l |W_l^\top W_l - I|_F^2 ).</li>
+<li><strong>Implementation Protocol:</strong> Optimizer wrapper adding Parseval term; apply to PPO on ProcGen CoinRun; compare generalization gap vs. L2.</li>
+<li><strong>Resources:</strong> https://github.com/datake/Papers-Of-Continual-RL</li>
+</ul>
+<h2 id="assignment-15-resetting--re-initialization-of-dormant-units">Assignment 15: Resetting &amp; Re-initialization of Dormant Units</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Dormant neurons waste capacity; periodic reset restores plasticity.</li>
+<li><strong>Innovation:</strong> Scheduled re-init of near-zero-activation units (Fast TRAC-style).</li>
+<li><strong>Implementation Protocol:</strong> Every 100k steps, detect dormant units; Kaiming re-init; test on Montezuma/Pitfall (100M+ frames); compare late-stage returns.</li>
+<li><strong>Resources:</strong> https://psc-g.github.io/</li>
+</ul>
+<hr>
+<h2 id="assignment-16-vitamin-%E2%80%93-rl-gradients-for-decision-transformers">Assignment 16: Vitamin – RL Gradients for Decision Transformers</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> DT struggles with OOD RTG; add critic-guided improvement.</li>
+<li><strong>Innovation:</strong> Hybrid loss = CE (sequence) – λ * Q-maximization.</li>
+<li><strong>Implementation Protocol:</strong> GPT-2 style DT + TD3 critic; Vitamin loss; HalfCheetah-Medium-v2; compare to ODT baseline.</li>
+<li><strong>Resources:</strong> https://github.com/KaiYan289/RL_as_Vitamin_for_Online_Decision_Transformers</li>
+</ul>
+<h2 id="assignment-17-visual-autoregressive-modeling-var-world-model">Assignment 17: Visual Autoregressive Modeling (VAR) World Model</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Next-scale prediction beats next-token for visuals.</li>
+<li><strong>Innovation:</strong> Multi-scale autoregressive features used as Dreamer-style world model.</li>
+<li><strong>Implementation Protocol:</strong> Implement VAR on Doom/Minecraft frames; train controller on hallucinations; compare to pixel rollout world model.</li>
+<li><strong>Resources:</strong> (see VAR NeurIPS 2024 materials)</li>
+</ul>
+<h2 id="assignment-18-in-context-reinforcement-learning">Assignment 18: In-Context Reinforcement Learning</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Transformers can learn algorithms via context (Algorithm Distillation).</li>
+<li><strong>Innovation:</strong> Train causal transformer on concatenated episodes; policy improves within context window without weight updates.</li>
+<li><strong>Implementation Protocol:</strong> Generate DQN histories; train transformer to predict actions; evaluate on new bandit; measure reward improvement over context length.</li>
+<li><strong>Resources:</strong> https://github.com/Innse/awesome-papers-iclr</li>
+</ul>
+<hr>
+<h2 id="assignment-19-beta-dpo-dynamic-%CE%B2">Assignment 19: Beta-DPO (Dynamic β)</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> DPO KL weight β should adapt to preference confidence.</li>
+<li><strong>Innovation:</strong> β(x) based on reward margin; higher β for noisy pairs.</li>
+<li><strong>Math:</strong> ( \mathcal{L}<em>{DPO}=-\log\sigma(\beta \log\frac{\pi</em>{ref}(y_w|x)}{\pi(y_w|x)} - \beta \log\frac{\pi_{ref}(y_l|x)}{\pi(y_l|x)}) ).</li>
+<li><strong>Implementation Protocol:</strong> Modify TRL DPOTrainer; Anthropic-HH dataset; track KL vs. win-rate; schedule β from reward margin.</li>
+<li><strong>Resources:</strong> https://github.com/junkangwu/beta-DPO</li>
+</ul>
+<h2 id="assignment-20-cory-%E2%80%93-co-evolutionary-fine-tuning">Assignment 20: CORY – Co-evolutionary Fine-Tuning</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Two-agent PPO alternative to prevent collapse.</li>
+<li><strong>Innovation:</strong> Pioneer/Observer co-evolve; critique each other.</li>
+<li><strong>Implementation Protocol:</strong> Two Pythia-1.4B copies; alternating weight swaps; GSM8K finetune; monitor curriculum effect.</li>
+<li><strong>Resources:</strong> https://github.com/Harry67Hu/CORY</li>
+</ul>
+<h2 id="assignment-21-dpo-augmented-self-training-dpo-st">Assignment 21: DPO-Augmented Self-Training (DPO-ST)</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Self-training with DPO prefers correct reasoning paths.</li>
+<li><strong>Innovation:</strong> Generate K CoT paths, form preference pairs (win/lose), apply DPO iteratively.</li>
+<li><strong>Implementation Protocol:</strong> Math problems; generate + filter; DPO updates; repeat; compare to RFT.</li>
+<li><strong>Resources:</strong> https://github.com/TianduoWang/DPO-ST</li>
+</ul>
+<h2 id="assignment-22-f-dpo-generalized-divergences">Assignment 22: f-DPO (Generalized Divergences)</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Reverse-KL is mode-seeking; f-DPO supports JS/forward KL.</li>
+<li><strong>Innovation:</strong> Swap divergence to improve diversity.</li>
+<li><strong>Implementation Protocol:</strong> Implement f-DPO loss; train with JS divergence; measure n-gram entropy/diversity vs. DPO.</li>
+<li><strong>Resources:</strong> https://github.com/alecwangcq/f-divergence-dpo</li>
+</ul>
+<hr>
+<h2 id="assignment-23-graph-diffusion-policy-optimization">Assignment 23: Graph Diffusion Policy Optimization</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Structured action spaces (molecules/graphs) need graph-aware policies.</li>
+<li><strong>Innovation:</strong> Diffusion on graphs guided by RL reward (e.g., QED).</li>
+<li><strong>Implementation Protocol:</strong> GNN denoiser; diffusion generation on QM9; RL guidance for drug-likeness; evaluate validity/QED.</li>
+<li><strong>Resources:</strong> https://github.com/opendilab/awesome-diffusion-model-in-rl</li>
+</ul>
+<h2 id="assignment-24-efficient-exploration-via-posterior-sampling">Assignment 24: Efficient Exploration via Posterior Sampling</h2>
+<ul>
+<li><strong>Context &amp; Theory:</strong> Safe exploration with CMDP constraints using Bayesian models.</li>
+<li><strong>Innovation:</strong> Posterior over transitions; sample model→plan→act while enforcing constraints.</li>
+<li><strong>Implementation Protocol:</strong> MarsRover gridworld energy constraint; maintain transition posterior; value iteration per sample; ensure energy &gt;=0; compare to optimistic baselines.</li>
+<li><strong>Resources:</strong> https://github.com/danilprov/cmdp</li>
+</ul>
+<hr>
+<h2 id="assignments-25-50-rapid-fire-advanced-implementations">Assignments 25-50: Rapid-Fire Advanced Implementations</h2>
+<ol start="25">
+<li><strong>Unified Online/Offline RL (Uni-O4):</strong> Multi-step on-policy optimization unifying offline pretrain + online finetune.</li>
+<li><strong>Visual Plasticity Check:</strong> Track feature-matrix rank on Atari; inject latent noise if rank drops.</li>
+<li><strong>Text-Aware Diffusion Policy:</strong> Condition diffusion policy on CLIP text embeddings (Meta-World multitask).</li>
+<li><strong>Discrete SAC (SAC-BBF):</strong> Discrete SAC with tuned target entropy, RR=2, super-human Atari.</li>
+<li><strong>Federated Policy Gradient:</strong> Vitamin gradients in federated clients with differing rewards; gradient projection for conflict.</li>
+<li><strong>Causal RL:</strong> Interpretable reward redistribution via causal graph for delayed rewards.</li>
+<li><strong>SimPO:</strong> Reference-free preference optimization with margin ranking on log-probs.</li>
+<li><strong>Process Reward Models (PRM):</strong> Step-level verifier (Math-Shepherd) for math solver; train PRM.</li>
+<li><strong>LLM-Explorer:</strong> LLM proposes intrinsic goals; low-level RL executes (Minecraft).</li>
+<li><strong>Lagrangian PPO:</strong> Adaptive λ for CMDPs; penalize constraints dynamically.</li>
+<li><strong>Quantile Credit Assignment:</strong> QMIX variant with quantile decomposition of joint rewards.</li>
+<li><strong>Hyperbolic Embeddings for OOD:</strong> Poincaré-ball critic embeddings for hierarchical/OOD states.</li>
+<li><strong>Diffusion World Models:</strong> Video diffusion (e.g., DIAMOND) for Atari 100k rollouts; plan over samples.</li>
+<li><strong>Self-Rewarding LMs:</strong> Loop: generate → judge with LLM reward model → train.</li>
+<li><strong>Generative Verifiers:</strong> Reward model emits critique CoT before scalar score.</li>
+<li><strong>Token-Level RLHF:</strong> PPO with token-level dense rewards for fine-grained guidance.</li>
+<li><strong>RL for Code Gen:</strong> Optimize code-gen with unit-test pass rate; penalize syntax errors immediately.</li>
+<li><strong>Contrastive Curiosity (CCLF):</strong> Contrastive novelty loss to drive exploration.</li>
+<li><strong>Entropy-Regularized OT Distillation:</strong> Sinkhorn loss to align policies during distillation.</li>
+<li><strong>Adaptive Discount Factors:</strong> Learn/regularize γ to adjust planning horizon on the fly.</li>
+<li><strong>Multi-Agent PPO (MAPPO):</strong> CTDE PPO for SMAC; global-state critic, local actors.</li>
+<li><strong>Hybrid RL (Cal-QL):</strong> Calibrated Q for stable offline→online finetune.</li>
+<li><strong>Risk-Averse Exploration:</strong> Bandit optimizing CVaR of regret to avoid catastrophic arms.</li>
+<li><strong>In-Context Symmetries:</strong> World model learns rotational symmetries in-context; generalize without weight updates.</li>
+<li><strong>Robust Preference Optimization (RPO):</strong> Symmetric cross-entropy-style DPO for noisy labels.</li>
+<li><strong>Grandmaster Challenge:</strong> Fuse CrossQ + Sinkhorn + TD-MPC2; evaluate on DMC Dog-Run.</li>
+</ol>
+<hr>
+<h2 id="3-technical-synthesis--expected-outcomes">3. Technical Synthesis &amp; Expected Outcomes</h2>
+<ul>
+<li><strong>Structural biases:</strong> Sinkhorn (geometric), CrossQ (scale invariance), Transformers (sequence bias), DPO (reference bias).</li>
+<li><strong>Goal:</strong> Agents with one-shot adaptation, plasticity, risk-aware stability, and safe deployment.</li>
+</ul>
+<h2 id="table-1-vertical-summary">Table 1: Vertical Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Vertical</th>
+<th>Key Focus</th>
+<th>Primary Technologies</th>
+<th>Target Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>I</td>
+<td>Distributional Control</td>
+<td>Sinkhorn, RS-SAC, IQN</td>
+<td>Risk-sensitive, robust agents</td>
+</tr>
+<tr>
+<td>II</td>
+<td>Sample Efficiency</td>
+<td>CrossQ, PTGM, SERL, TD-MPC2</td>
+<td>Learn in &lt;100k steps</td>
+</tr>
+<tr>
+<td>III</td>
+<td>Offline-to-Online</td>
+<td>DMG, FE-DORA, SCAS</td>
+<td>Zero-shot Sim2Real transfer</td>
+</tr>
+<tr>
+<td>IV</td>
+<td>Plasticity</td>
+<td>Adaptive RR, Parseval, Reset</td>
+<td>Continual learning &gt;1B frames</td>
+</tr>
+<tr>
+<td>V</td>
+<td>Transformers</td>
+<td>Vitamin, VAR, In-Context RL</td>
+<td>Algorithm distillation</td>
+</tr>
+<tr>
+<td>VI</td>
+<td>Alignment</td>
+<td>Beta-DPO, CORY, DPO-ST</td>
+<td>Stable, human-aligned LLMs</td>
+</tr>
+<tr>
+<td>VII</td>
+<td>World Models</td>
+<td>Graph Diffusion, Posterior Sampling</td>
+<td>Causal reasoning &amp; planning</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="appendix-a-legacy-curriculum-%E2%80%93-detailed-assignment-blocks-prior-version-retained-for-full-papercode-references">Appendix A: Legacy Curriculum – Detailed Assignment Blocks (prior version retained for full paper/code references)</h2>
+<h3 id="advanced-research-curriculum-assignments-1-50">Advanced Research Curriculum: Assignments 1-50</h3>
+<h2 id="assignment-1-bellman-bootstrapping-meets-replay-stabilized-dqn">Assignment 1: Bellman Bootstrapping Meets Replay-Stabilized DQN</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>Dopamine Rainbow DQN (Bellemare et al., JMLR 2022) — GitHub: https://github.com/google/dopamine</li>
+<li>TD-MPC2: Scalable Model-Predictive Control (Hansen et al., ICLR 2024) — GitHub: https://github.com/nicklashansen/tdmpc2</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Inject TD-MPC2’s target-network soft updates and consistency regularizer into Dopamine’s Rainbow DQN to stabilize Bellman bootstrapping on pixel control.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Refactor Dopamine’s <code>rainbow_agent.py</code> to expose target update rate; import TD-MPC2 EMA utilities for target network smoothing.</li>
+<li>Add consistency loss from TD-MPC2 to Rainbow’s loss stack; gate via config flag.</li>
+<li>Container: build on <code>pytorch/pytorch:2.2.1-cuda12.1-cudnn8</code> with Poetry/conda env; include headless ALE deps.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Atari 100k (ALE).</li>
+<li>Ablation: disable consistency loss; vary EMA tau.</li>
+</ul>
+<h2 id="assignment-2-policy-evaluation-via-batched-dynamic-programming">Assignment 2: Policy Evaluation via Batched Dynamic Programming</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>rlax / JAX Bellman ops (DeepMind, 2022) — GitHub: https://github.com/deepmind/rlax</li>
+<li>CleanRL PPO-JAX (Huang et al., 2023) — GitHub: https://github.com/vwxyzjn/cleanrl</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Use rlax vectorized Bellman evaluators inside CleanRL’s PPO rollout buffer to compute exact policy evaluation targets for small MDPs, contrasting with GAE.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Add rlax Bellman evaluation module; expose switch in PPO config to choose GAE vs exact DP.</li>
+<li>Ensure JIT-compiled batched policy evaluation over enumerated states.</li>
+<li>Container: <code>nvcr.io/nvidia/jax:23.05-py3</code> with CUDA if available; fallback CPU.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: FrozenLake-v1 (small tabular), Gridworld-8x8.</li>
+<li>Ablation: GAE vs exact DP returns.</li>
+</ul>
+<h2 id="assignment-3-policy-iteration-with-soft-greedy-improvements">Assignment 3: Policy Iteration with Soft Greedy Improvements</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>Soft Actor-Critic (Haarnoja et al., revised JMLR 2022) — GitHub: https://github.com/denisyarats/pytorch_sac</li>
+<li>ReBRAC (Brandfonbrener et al., ICLR 2023) — GitHub: https://github.com/Farama-Foundation/ReBRAC</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Interpret SAC as soft policy iteration; plug ReBRAC’s conservative regularizer into SAC’s policy improvement step for stabler soft-greedy updates.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>In <code>pytorch_sac/agent/sac.py</code>, wrap policy loss with ReBRAC’s log-sum-exp regularizer; add config for behavior-cloning weight.</li>
+<li>Share replay/data loader from ReBRAC when offline; keep SAC alpha auto-tune.</li>
+<li>Container: <code>pytorch/pytorch:2.1.2-cuda12.1</code> with MuJoCo 2.3.7, mujoco-py.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: D4RL HalfCheetah/Walker2d medium-expert.</li>
+<li>Ablation: remove conservative term; compare online vs offline.</li>
+</ul>
+<h2 id="assignment-4-value-iteration-with-quantile-targets">Assignment 4: Value Iteration with Quantile Targets</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>Quantile Regression DQN (Dabney et al., AAAI 2018; maintained 2023 in Dopamine) — GitHub: https://github.com/google/dopamine</li>
+<li>XQL: X-Entropy RL (Ma et al., ICLR 2023) — GitHub: https://github.com/coh250/xql</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Perform value iteration using quantile backups but enforce XQL’s reverse KL objective to regularize policy toward behavior.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Extend Dopamine QR-DQN agent to output action logits; add XQL reverse-KL term against behavior policy inferred from replay.</li>
+<li>Quantile targets unchanged; policy update uses KL-weighted advantage over quantile means.</li>
+<li>Container: <code>python:3.10-slim</code> + JAX/TF for Dopamine; or PyTorch port with torchrl.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Atari 26 games (200M frames).</li>
+<li>Ablation: KL weight sweep; quantile vs mean backups.</li>
+</ul>
+<h2 id="assignment-5-first-visit-mc-with-modern-replay">Assignment 5: First-Visit MC with Modern Replay</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>CleanRL Monte-Carlo PG (Huang et al., 2023) — GitHub: https://github.com/vwxyzjn/cleanrl</li>
+<li>Sample Factory v2 (Petrenko et al., 2023) — GitHub: https://github.com/alex-petrenko/sample-factory</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Add episodic first-visit MC returns as a target head inside Sample Factory’s IMPALA-like learner to reduce variance in sparse-reward VizDoom tasks.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Implement episodic return buffer keyed by (env_id, timestep); expose MC head in model.</li>
+<li>Blend MC loss with V-trace critic loss via coefficient.</li>
+<li>Container: <code>nvidia/cuda:12.2.0-cudnn8-devel-ubuntu22.04</code>; install VizDoom deps.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: VizDoom MyWayHome, DMLab Sparse Reward.</li>
+<li>Ablation: V-trace only vs V-trace+MC head.</li>
+</ul>
+<h2 id="assignment-6-mc-control-with-%CE%B5-scheduled-advantage-clipping">Assignment 6: MC Control with ε-Scheduled Advantage Clipping</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>PPO (Schulman et al., arXiv 2017; maintained in CleanRL 2023) — GitHub: https://github.com/vwxyzjn/cleanrl</li>
+<li>Epsilon Decay Schedules in Atari (Machado et al., JMLR 2022 via Dopamine) — GitHub: https://github.com/google/dopamine</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Drive PPO policy improvement using MC returns and scheduled ε-greedy exploration blended into action sampling to control variance in discrete control.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Add MC return computation in CleanRL PPO for discrete envs; modify action sampler to mix ε-greedy with categorical sampling.</li>
+<li>Clip advantages with PPO ratio; log effect of ε on entropy.</li>
+<li>Container: CleanRL Docker (<code>ghcr.io/vwxyzjn/cleanrl</code>) extended with Atari ROMs.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Atari Breakout/Pong 10M frames.</li>
+<li>Ablation: ε=0 (vanilla PPO) vs cosine-decay ε.</li>
+</ul>
+<h2 id="assignment-7-td0-prediction-with-equivariant-function-approximation">Assignment 7: TD(0) Prediction with Equivariant Function Approximation</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>TD Learning with Neural Approx (rlax TD ops, 2022) — GitHub: https://github.com/deepmind/rlax</li>
+<li>Equivariant Networks for RL (Finzi et al., NeurIPS 2020; maintained 2023) — GitHub: https://github.com/QUVA-Lab/e2cnn</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Apply group-equivariant CNNs to TD(0) value prediction on symmetric gridworlds to improve sample efficiency.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Replace value network with e2cnn equivariant layers; keep rlax td_learning update.</li>
+<li>Add group definition (C4 rotations) configurable per env.</li>
+<li>Container: <code>pytorch/pytorch:2.2.1-cuda12.1</code> + <code>e2cnn</code>.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: MiniGrid (symmetric mazes).</li>
+<li>Ablation: equivariant vs standard CNN.</li>
+</ul>
+<h2 id="assignment-8-n-step-returns-inside-distributional-control">Assignment 8: n-Step Returns inside Distributional Control</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>Rainbow n-step Distributional DQN (Hessel et al.; Dopamine 2022) — GitHub: https://github.com/google/dopamine</li>
+<li>TD-MPC2 short-horizon rollouts (Hansen et al., ICLR 2024) — GitHub: https://github.com/nicklashansen/tdmpc2</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Use learned short-horizon rollouts from TD-MPC2 to generate n-step targets for Rainbow, replacing raw environment n-steps to reduce variance.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Train TD-MPC2 world model alongside Rainbow; for each transition, roll out model for n steps to compute model-based n-step return; mix with real n-step via trust weight.</li>
+<li>Add config flag for model-based targets; reuse Rainbow’s prioritized replay.</li>
+<li>Container: joint image (PyTorch + MuJoCo for TD-MPC2 + ALE for Atari).</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Atari (Seaquest, Q*bert) and DMControl (Cartpole Swingup).</li>
+<li>Ablation: model-based n-step on/off.</li>
+</ul>
+<h2 id="assignment-9-eligibility-traces-with-transformer-critics">Assignment 9: Eligibility Traces with Transformer Critics</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>TD(λ) in rlax (2022) — GitHub: https://github.com/deepmind/rlax</li>
+<li>Decision Transformer (Chen et al., NeurIPS 2021) — GitHub: https://github.com/kzl/decision-transformer</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Implement TD(λ) targets for a transformer critic within Decision Transformer, enabling online fine-tuning with bootstrapped returns.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Add TD(λ) return computation module; feed as supervised targets for critic head predicting value-to-go.</li>
+<li>Keep DT’s causal transformer; switch optimizer to handle online streaming batches.</li>
+<li>Container: <code>pytorch/pytorch:2.1-cuda11.8</code>; enable FlashAttention optional.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Gymnasium HalfCheetah medium-replay (offline-to-online).</li>
+<li>Ablation: λ=0 (TD0) vs λ=0.95 vs MC.</li>
+</ul>
+<h2 id="assignment-10-sarsa-with-self-predictive-representations">Assignment 10: SARSA with Self-Predictive Representations</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>SARSA reference in Dopamine (2022) — GitHub: https://github.com/google/dopamine</li>
+<li>SPR (Schwarzer et al., ICLR 2021; maintained 2023) — GitHub: https://github.com/facebookresearch/spr</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Combine on-policy SARSA updates with SPR representation loss to stabilize learning from pixels under high exploration.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Add SPR encoder and prediction head to Dopamine SARSA agent; train jointly with TD error.</li>
+<li>Use momentum encoder and augmentations from SPR; keep on-policy buffer small and prioritized.</li>
+<li>Container: <code>pytorch/pytorch:2.2-cuda12.1</code> + torchvision.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Atari Freeway/UpNDown with ε=0.1.</li>
+<li>Ablation: SPR loss off vs on.</li>
+</ul>
+<h2 id="assignment-11-double-q-learning-with-behavior-cloning-warm-start">Assignment 11: Double Q-Learning with Behavior Cloning Warm-Start</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>Double DQN (van Hasselt et al.; Dopamine 2022 impl) — GitHub: https://github.com/google/dopamine</li>
+<li>TD3+BC (Fujimoto &amp; Gu, NeurIPS 2021) — GitHub: https://github.com/sfujim/TD3_BC</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Use behavior cloning pretrain (from TD3+BC) to initialize Double DQN on image tasks, reducing overestimation and speeding convergence.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Pretrain policy logits with BC loss from an offline dataset; initialize Double DQN networks with those weights.</li>
+<li>During online phase, keep BC loss as auxiliary with decay schedule.</li>
+<li>Container: <code>pytorch/pytorch:2.0-cuda11.8</code>; include dataset mount.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Atari (MsPacman), D4RL Adroit (image).</li>
+<li>Ablation: BC warm-start vs random init.</li>
+</ul>
+<h2 id="assignment-12-dueling-networks-with-cvar-risk-heads">Assignment 12: Dueling Networks with CVaR Risk Heads</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>Dueling DQN (Wang et al.; Dopamine 2022) — GitHub: https://github.com/google/dopamine</li>
+<li>Iterated CVaR RL (Du et al., ICLR 2023) — GitHub: https://github.com/duyihan/Iterated-CVaR-RL</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Add CVaR head to dueling architecture to optimize tail-risk-sensitive Q-values.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Extend dueling head to output quantiles; compute CVaR over tail quantiles; integrate Iterated CVaR loss.</li>
+<li>Risk level α configurable; add risk-aware policy selection.</li>
+<li>Container: <code>pytorch/pytorch:2.1-cuda12</code>; add CVaR utils.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Financial RL (FinRL stock trading), Atari (Risky Road).</li>
+<li>Ablation: α = 0.1 vs 0.25 vs mean-value.</li>
+</ul>
+<h2 id="assignment-13-prioritized-replay-with-contrastive-state-alignment">Assignment 13: Prioritized Replay with Contrastive State Alignment</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>PER (Schaul et al.; Dopamine 2022) — GitHub: https://github.com/google/dopamine</li>
+<li>CURL (Laskin et al., ICML 2020; maintained 2023) — GitHub: https://github.com/MishaLaskin/curl</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Use contrastive similarity scores as priority signals in PER to focus replay on representation-hard transitions.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Compute CURL loss per sample; set PER priority = |TD error| + β * contrastive loss.</li>
+<li>Add reservoir replay for low-priority items to avoid starvation.</li>
+<li>Container: <code>pytorch/pytorch:2.2-cuda12.1</code>.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: DMControl Cheetah/Walker pixel.</li>
+<li>Ablation: TD-only priority vs TD+contrastive.</li>
+</ul>
+<h2 id="assignment-14-distributional-rl-with-noisy-exploration">Assignment 14: Distributional RL with Noisy Exploration</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>C51 (Bellemare et al.; Dopamine 2022) — GitHub: https://github.com/google/dopamine</li>
+<li>Noisy Networks (Fortunato et al.; baselines maintained 2023) — GitHub: https://github.com/openai/baselines</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Integrate NoisyLinear layers into C51 to unify exploration and distributional targets.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Replace linear layers in C51 head with NoisyLinear; anneal σ parameters.</li>
+<li>Ensure categorical projection stable with noise; tune atom support accordingly.</li>
+<li>Container: Baselines Docker + dopamine deps.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Atari full suite.</li>
+<li>Ablation: noisy layers on/off.</li>
+</ul>
+<h2 id="assignment-15-qr-dqn-with-entropy-regularized-greedy-policies">Assignment 15: QR-DQN with Entropy-Regularized Greedy Policies</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>QR-DQN (Dabney et al.; Dopamine 2022) — GitHub: https://github.com/google/dopamine</li>
+<li>Maximum Entropy RL (SAC; Haarnoja et al., JMLR 2022) — GitHub: https://github.com/denisyarats/pytorch_sac</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Use SAC-style entropy regularization for action selection in QR-DQN to reduce overestimation and encourage exploration.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Compute log-sum-exp over quantile means for policy logits; add entropy bonus to Bellman target.</li>
+<li>Temperature α auto-tuned via dual optimization.</li>
+<li>Container: PyTorch + Dopamine.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Atari 57; ablate α fixed vs learned.</li>
+</ul>
+<h2 id="assignment-16-rainbow-lite-for-low-resource-devices">Assignment 16: Rainbow-lite for Low-Resource Devices</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>Rainbow DQN (Hessel et al.; Dopamine 2022) — GitHub: https://github.com/google/dopamine</li>
+<li>TinyRL (edge RL profiling; Qiu et al., 2023) — GitHub: https://github.com/mit-han-lab/tinyml/tree/main/tinyrl</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Compress Rainbow (prune/quantize) for edge deployment guided by TinyRL profiling.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Apply post-training quantization + structured pruning; retrain with distillation to full Rainbow.</li>
+<li>Replace PER heap with ring-buffer + top-k sampling to cut memory.</li>
+<li>Container: ONNX Runtime + PyTorch quantization toolchain.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Atari Pong/Breakout on Jetson Nano.</li>
+<li>Ablation: quantized vs full precision; pruning ratios.</li>
+</ul>
+<h2 id="assignment-17-multi-step-td-with-advantage-clipping-in-continuous-control">Assignment 17: Multi-Step TD with Advantage Clipping in Continuous Control</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>TD3 (Fujimoto et al.; maintained 2023) — GitHub: https://github.com/sfujim/TD3</li>
+<li>GAE (Schulman et al., arXiv 2016; CleanRL 2023 impl) — GitHub: https://github.com/vwxyzjn/cleanrl</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Add multi-step (k) TD targets with clipped advantages (GAE-style) into TD3 critic updates to stabilize early training.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Modify TD3 replay sampler to return n-step returns; compute GAE on policy rollouts; clip advantages in actor loss.</li>
+<li>Tune k, λ; ensure target policy smoothing still applied.</li>
+<li>Container: PyTorch 2.1 + Mujoco.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: MuJoCo Hopper/Walker2d.</li>
+<li>Ablation: k=1 vs 3 vs 5; advantage clipping on/off.</li>
+</ul>
+<h2 id="assignment-18-td%CE%BB-with-eligibility-traces-in-offline-setting">Assignment 18: TD(λ) with Eligibility Traces in Offline Setting</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>ReBRAC (ICLR 2023) — GitHub: https://github.com/Farama-Foundation/ReBRAC</li>
+<li>Eligibility Traces in JAX (rlax 2022) — GitHub: https://github.com/deepmind/rlax</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Add offline TD(λ) critic targets into ReBRAC to better balance bias/variance with fixed datasets.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Implement λ-return calculator over replay sequences; integrate into ReBRAC critic loss.</li>
+<li>Clip λ to avoid divergence; keep conservative Q penalty.</li>
+<li>Container: JAX/Flax in ReBRAC Docker.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: D4RL kitchen/antmaze.</li>
+<li>Ablation: λ sweep (0, 0.5, 0.95).</li>
+</ul>
+<h2 id="assignment-19-actor-critic-with-dueling-critics">Assignment 19: Actor-Critic with Dueling Critics</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>A2C (Mnih et al.; PyTorch impl 2023) — GitHub: https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail</li>
+<li>Dueling Architecture (Wang et al.; Dopamine 2022) — GitHub: https://github.com/google/dopamine</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Replace single critic in A2C with dueling critic (value + advantage) to reduce variance in policy gradient estimates.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Modify critic network to output V and A; aggregate Q = V + A - mean(A); use log-prob * advantage for actor loss.</li>
+<li>Keep entropy bonus; adjust learning rate for bigger critic.</li>
+<li>Container: PyTorch 2.2 + atari-py.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Atari (Asterix, SpaceInvaders).</li>
+<li>Ablation: dueling critic vs standard critic.</li>
+</ul>
+<h2 id="assignment-20-gae-with-discount-annealing">Assignment 20: GAE with Discount Annealing</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>GAE (Schulman et al.; CleanRL 2023 PPO) — GitHub: https://github.com/vwxyzjn/cleanrl</li>
+<li>Discount Annealing for Long Horizon (Zhang et al., NeurIPS 2023) — GitHub: https://github.com/zhanglonghao1992/discount-annealing-rl</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Anneal γ during training inside GAE to gradually extend effective horizon while keeping early stability.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Add schedule for γ (start low -&gt; target); recompute GAE per rollout with current γ.</li>
+<li>Log impact on advantage variance.</li>
+<li>Container: CleanRL docker.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Procgen (CoinRun, CaveFlyer).</li>
+<li>Ablation: fixed γ vs annealed.</li>
+</ul>
+<h2 id="assignment-21-ppo-with-trust-region-clipping-and-fisher-preconditioning">Assignment 21: PPO with Trust-Region Clipping and Fisher Preconditioning</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>PPO (Schulman et al.; CleanRL 2023) — GitHub: https://github.com/vwxyzjn/cleanrl</li>
+<li>TRPO (Schulman et al.; PyTorch impl 2023) — GitHub: https://github.com/ikostrikov/pytorch-trpo</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Fuse PPO clipping with a lightweight Fisher preconditioner from TRPO to approximate trust-region steps without conjugate gradients.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Compute Fisher-vector product via empirical KL; use as preconditioner on PPO gradient step (one CG iteration).</li>
+<li>Keep clip ratio; add KL penalty fallback.</li>
+<li>Container: PyTorch 2.1 + mpi4py optional.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: MuJoCo Ant/HalfCheetah.</li>
+<li>Ablation: PPO baseline vs PPO+Fisher.</li>
+</ul>
+<h2 id="assignment-22-ppo-with-entropy-normalized-objectives">Assignment 22: PPO with Entropy-Normalized Objectives</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>PPO (CleanRL 2023) — GitHub: https://github.com/vwxyzjn/cleanrl</li>
+<li>Entropy-Regularized PG Theory (Neu et al., 2022) — GitHub: https://github.com/facebookresearch/entropy-rl</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Normalize entropy bonus by state-dependent visitation counts to prevent collapse on sparse rewards.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Track visitation counts per state hash; scale entropy coefficient inversely.</li>
+<li>Add hashing for images (SimHash).</li>
+<li>Container: PyTorch + CleanRL.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: MiniGrid, Sparse MountainCar.</li>
+<li>Ablation: uniform entropy vs normalized.</li>
+</ul>
+<h2 id="assignment-23-deterministic-policy-gradient-with-distributional-critics">Assignment 23: Deterministic Policy Gradient with Distributional Critics</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>DDPG/TD3 (Fujimoto; TD3 repo 2023) — GitHub: https://github.com/sfujim/TD3</li>
+<li>Implicit Quantile Networks (Dabney et al.; PyTorch impl 2023) — GitHub: https://github.com/ku2482/iqn</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Replace scalar critic in TD3 with IQN distributional critic; actor optimized over mean/quantile risk.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Integrate IQN critic; use twin critics with quantiles; target smoothing unchanged.</li>
+<li>Actor loss uses expected Q or CVaR; config risk_level.</li>
+<li>Container: PyTorch + Mujoco.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: MuJoCo Humanoid/Ant.</li>
+<li>Ablation: scalar critic vs IQN; CVaR vs mean.</li>
+</ul>
+<h2 id="assignment-24-td3-with-state-augmentation-for-safety">Assignment 24: TD3 with State Augmentation for Safety</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>TD3 (Fujimoto; repo 2023) — GitHub: https://github.com/sfujim/TD3</li>
+<li>Sauté RL (Sootla et al., ICML 2022) — GitHub: https://github.com/saferl/saute-rl</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Apply Sauté state augmentation to TD3 for constraint satisfaction in continuous control.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Augment state with budget variable; modify reward/termination per Sauté formulation.</li>
+<li>Add Lagrange multiplier for constraint violation to actor-critic losses.</li>
+<li>Container: PyTorch 2.1 + Mujoco.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Safety Gymnasium (PointGoal).</li>
+<li>Ablation: with/without Sauté augmentation.</li>
+</ul>
+<h2 id="assignment-25-td3bc-with-representation-learning">Assignment 25: TD3+BC with Representation Learning</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>TD3+BC (NeurIPS 2021) — GitHub: https://github.com/sfujim/TD3_BC</li>
+<li>DrQ-v2 (Yarats et al., 2021; maintained 2023) — GitHub: https://github.com/facebookresearch/drqv2</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Use DrQ-v2 encoder in TD3+BC to improve pixel-based offline control.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Swap MLP encoder with DrQ augmentations + CNN; freeze after warm-up or train jointly.</li>
+<li>Keep BC regularizer; tune augmentation strength.</li>
+<li>Container: PyTorch + torchvision; D4RL pixel datasets.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: D4RL pixel Adroit/DMControl offline.</li>
+<li>Ablation: with/without DrQ augmentations.</li>
+</ul>
+<h2 id="assignment-26-implicit-q-learning-with-kl-regularized-targets">Assignment 26: Implicit Q-Learning with KL-Regularized Targets</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>IQL (Kostrikov et al., NeurIPS 2021; maintained 2023) — GitHub: https://github.com/ikostrikov/implicit_q_learning</li>
+<li>XQL (Ma et al., ICLR 2023) — GitHub: https://github.com/coh250/xql</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Add XQL reverse-KL constraint to IQL advantage-weighted policy extraction to reduce extrapolation error.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Modify IQL policy loss to include reverse-KL to behavior logits; reuse XQL importance weights.</li>
+<li>Keep expectile regression critic; tune KL weight.</li>
+<li>Container: PyTorch + D4RL.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: D4RL antmaze/hand-manipulation.</li>
+<li>Ablation: KL weight 0 vs tuned.</li>
+</ul>
+<h2 id="assignment-27-rebrac-with-diffuser-rollout-augmentation">Assignment 27: ReBRAC with Diffuser Rollout Augmentation</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>ReBRAC (ICLR 2023) — GitHub: https://github.com/Farama-Foundation/ReBRAC</li>
+<li>Diffuser (Janner et al., ICML 2022) — GitHub: https://github.com/ethanluoyc/diffuser</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Use Diffuser to generate synthetic trajectories; feed to ReBRAC with conservative penalty to expand coverage.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Train Diffuser on offline data; sample trajectories respecting dynamics; add to replay with lower priority weight.</li>
+<li>Ensure reward normalization matches ReBRAC.</li>
+<li>Container: PyTorch 2.1 + diffusion libs.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: D4RL kitchen/maze2d.</li>
+<li>Ablation: real-only vs real+diffusion rollouts.</li>
+</ul>
+<h2 id="assignment-28-conservative-q-learning-with-quantile-critics">Assignment 28: Conservative Q-Learning with Quantile Critics</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>CQL (Kumar et al., NeurIPS 2020; maintained 2023) — GitHub: https://github.com/aviralkumar2907/CQL</li>
+<li>QR-DQN (Dabney et al.; Dopamine 2022) — GitHub: https://github.com/google/dopamine</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Replace scalar Q in CQL with quantile critic to better estimate risk-sensitive penalties.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Extend CQL loss to sum over quantiles; compute conservative penalty on distribution tails.</li>
+<li>Actor trained on expected Q or CVaR.</li>
+<li>Container: PyTorch + D4RL.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: D4RL medium-expert tasks.</li>
+<li>Ablation: scalar vs quantile CQL.</li>
+</ul>
+<h2 id="assignment-29-offline-advantage-weighted-actor-critic-with-language-goals">Assignment 29: Offline Advantage-Weighted Actor-Critic with Language Goals</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>AWAC (Nair et al., NeurIPS 2020; maintained 2023) — GitHub: https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail/tree/master/awac</li>
+<li>SayCan (Brohan et al., 2022) — GitHub: https://github.com/google-research/google-research/tree/master/saycan</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Condition AWAC policies on language goals using SayCan grounding; advantage weights computed per grounded goal.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Add text encoder (T5/DistilBERT) to AWAC actor; concatenate with state.</li>
+<li>Use SayCan grounding scores to mask unsafe actions during policy extraction.</li>
+<li>Container: PyTorch + transformers; use Docker with CUDA.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: RLBench language-conditioned tasks.</li>
+<li>Ablation: grounding on/off.</li>
+</ul>
+<h2 id="assignment-30-decision-transformer-with-behavior-cloning-pretraining">Assignment 30: Decision Transformer with Behavior Cloning Pretraining</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>Decision Transformer (Chen et al., NeurIPS 2021) — GitHub: https://github.com/kzl/decision-transformer</li>
+<li>BC pretraining for offline RL (RLPD, ICLR 2023) — GitHub: https://github.com/soroushmehraban/rlpd</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Pretrain DT on BC loss (RLPD style) before return-conditioning to improve stability on sparse datasets.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Add BC warm-up phase using RLPD dataloader; freeze embeddings or fine-tune during RL phase.</li>
+<li>Implement curriculum of return-to-go targets after BC plateau.</li>
+<li>Container: PyTorch + HuggingFace tokenizers.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: D4RL medium-replay; Atari trajectories.</li>
+<li>Ablation: BC warm-up length; none vs full.</li>
+</ul>
+<h2 id="assignment-31-trajectory-transformer-with-td-online-fine-tuning">Assignment 31: Trajectory Transformer with TD Online Fine-Tuning</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>Trajectory Transformer (Janner et al., NeurIPS 2021) — GitHub: https://github.com/jannerm/trajectory-transformer</li>
+<li>TD-MPC2 online planner (ICLR 2024) — GitHub: https://github.com/nicklashansen/tdmpc2</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Use TD-MPC2 rollouts to generate fresh transitions for online fine-tuning of Trajectory Transformer policy head.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Add online buffer fed by TD-MPC2 planner; fine-tune transformer with KL regularization to offline model.</li>
+<li>Keep autoregressive decoding; adjust reward scaling to match planner.</li>
+<li>Container: JAX/Flax or PyTorch; include MuJoCo.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: DMControl locomotion.</li>
+<li>Ablation: online data on/off; planner depth.</li>
+</ul>
+<h2 id="assignment-32-diffuser-for-multi-step-model-based-policy-improvement">Assignment 32: Diffuser for Multi-Step Model-Based Policy Improvement</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>Diffuser (ICML 2022) — GitHub: https://github.com/ethanluoyc/diffuser</li>
+<li>DreamerV3 (Hafner et al., ICLR 2023) — GitHub: https://github.com/danijar/dreamerv3</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Use DreamerV3 latent rollouts as conditioning context for Diffuser to generate action sequences, enabling sample-efficient policy improvement.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Train Diffuser on imagined trajectories from DreamerV3; feed generated actions back to Dreamer policy optimization as candidates.</li>
+<li>Add likelihood weighting to keep within model trust region.</li>
+<li>Container: PyTorch + TensorFlow (if needed) in unified image.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: DMControl Humanoid/Cheetah.</li>
+<li>Ablation: real-only conditioning vs latent-conditioned.</li>
+</ul>
+<h2 id="assignment-33-model-based-planning-with-efficientzero-style-value-reanalysis">Assignment 33: Model-Based Planning with EfficientZero-style Value Reanalysis</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>EfficientZero (Ye et al., ICML 2021; maintained 2023) — GitHub: https://github.com/YeWR/EfficientZero</li>
+<li>MuZero Reanalyze (Schrittwieser et al., 2021; cleanrl_muzero 2023) — GitHub: https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/atari/muzero_atari.py</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Add reanalysis of stored trajectories with updated value head to EfficientZero, improving target quality without new environment steps.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Implement reanalyze worker that runs updated value/policy over stored roots; replace targets in replay.</li>
+<li>Keep EfficientZero’s consistency loss; tune reanalyze ratio.</li>
+<li>Container: PyTorch 2.1 + C++ MCTS deps.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Atari 200M; board games (Gomoku).</li>
+<li>Ablation: reanalysis ratio 0 vs &gt;0.</li>
+</ul>
+<h2 id="assignment-34-planning-guided-q-learning-with-short-horizon-mpc">Assignment 34: Planning-Guided Q-Learning with Short-Horizon MPC</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>TD-MPC2 (ICLR 2024) — GitHub: https://github.com/nicklashansen/tdmpc2</li>
+<li>CQL (NeurIPS 2020; maintained 2023) — GitHub: https://github.com/aviralkumar2907/CQL</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Use TD-MPC2 to generate target Q-values for CQL updates, anchoring conservative estimates to MPC rollouts.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>For each batch, run TD-MPC2 imagined rollouts to compute return targets; plug into CQL Bellman loss.</li>
+<li>Keep conservative penalty; schedule rollout horizon.</li>
+<li>Container: PyTorch + MuJoCo.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: DMControl &amp; D4RL locomotion.</li>
+<li>Ablation: MPC-guided targets on/off.</li>
+</ul>
+<h2 id="assignment-35-eligibility-traces-in-model-based-actor-critic">Assignment 35: Eligibility Traces in Model-Based Actor-Critic</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>DreamerV3 (ICLR 2023) — GitHub: https://github.com/danijar/dreamerv3</li>
+<li>rlax TD(λ) (2022) — GitHub: https://github.com/deepmind/rlax</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Compute TD(λ) targets over imagined trajectories in Dreamer to reduce bias in value learning.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Add λ-return calculator inside Dreamer’s imagination rollout; adjust actor gradients accordingly.</li>
+<li>Log λ impact on policy entropy.</li>
+<li>Container: DreamerV3 stack.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Atari 100k, DMControl.</li>
+<li>Ablation: λ sweep.</li>
+</ul>
+<h2 id="assignment-36-mappo-with-graph-neural-communication">Assignment 36: MAPPO with Graph Neural Communication</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>MAPPO (Yu et al., NeurIPS 2022) — GitHub: https://github.com/marlbenchmark/on-policy</li>
+<li>Graph Policy Networks (ICLR 2020; maintained 2023) — GitHub: https://github.com/semitable/graph-policy-network</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Replace MAPPO shared encoder with graph neural message passing to model agent interactions.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Build GNN encoder over agent observations; integrate into MAPPO actor/critic; maintain centralized critic.</li>
+<li>Support variable team sizes.</li>
+<li>Container: PyTorch Geometric + on-policy repo.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: SMAC (3s5z, MMM2).</li>
+<li>Ablation: GNN vs MLP encoder.</li>
+</ul>
+<h2 id="assignment-37-marl-with-emergent-communication-and-partial-observability">Assignment 37: MARL with Emergent Communication and Partial Observability</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>JaxMARL (Iqbal et al., ICLR 2023) — GitHub: https://github.com/instadeepai/jaxmarl</li>
+<li>EGG Emergent Communication (Lazaridou et al., 2020; maintained 2023) — GitHub: https://github.com/facebookresearch/EGG</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Add differentiable communication channel from EGG into JaxMARL PPO learners to handle partial observability.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Implement comm head producing messages; aggregate via attention; share gradients across agents.</li>
+<li>Enforce bandwidth constraints; optionally discrete Gumbel-softmax.</li>
+<li>Container: JAX/Flax + EGG.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Multi-Agent Particle Env, Hanabi.</li>
+<li>Ablation: communication on/off; bandwidth limits.</li>
+</ul>
+<h2 id="assignment-38-safe-rl-with-probabilistic-shields-in-omnisafe">Assignment 38: Safe RL with Probabilistic Shields in OmniSafe</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>Probabilistic Shields (Jansen et al., CONCUR 2020) — GitHub: https://github.com/probabilistic-shields/safe-rl</li>
+<li>OmniSafe (Ji et al., NeurIPS 2023) — GitHub: https://github.com/OmniSafeAI/OmniSafe</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Integrate shield synthesis into OmniSafe training loop to filter unsafe actions before execution.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Build shield from environment MDP; wrap OmniSafe policy to project actions through shield.</li>
+<li>Log shield interventions; adapt Lagrange multiplier when shield triggers.</li>
+<li>Container: OmniSafe Docker; add PRISM/Storm deps if needed.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Safety Gymnasium tasks.</li>
+<li>Ablation: shield on/off.</li>
+</ul>
+<h2 id="assignment-39-risk-sensitive-ppo-with-cvar-critics">Assignment 39: Risk-Sensitive PPO with CVaR Critics</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>PPO (CleanRL 2023) — GitHub: https://github.com/vwxyzjn/cleanrl</li>
+<li>Iterated CVaR RL (Du et al., ICLR 2023) — GitHub: https://github.com/duyihan/Iterated-CVaR-RL</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Train PPO critic to predict CVaR values; optimize policy on risk-aware advantages.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Extend value head to quantiles; compute CVaR at α; replace baseline with CVaR.</li>
+<li>Keep PPO clip; adjust entropy bonus.</li>
+<li>Container: CleanRL base.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: MuJoCo with stochastic perturbations; finance RL.</li>
+<li>Ablation: mean-value vs CVaR critic.</li>
+</ul>
+<h2 id="assignment-40-distributional-actor-critic-with-noisy-exploration">Assignment 40: Distributional Actor-Critic with Noisy Exploration</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>Implicit Quantile Networks (PyTorch 2023) — GitHub: https://github.com/ku2482/iqn</li>
+<li>NoisyNets (Fortunato; PyTorch 2023) — GitHub: https://github.com/Kaixhin/NoisyNet-DQN</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Build an IQN-based actor-critic where both actor and critic use noisy layers for exploration in continuous control.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Actor outputs mean action with noisy linear layers; critic IQN returns distribution; policy optimized on expected Q.</li>
+<li>Tune σ decay schedule.</li>
+<li>Container: PyTorch + Mujoco.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: DMControl Quadruped/Acrobot.</li>
+<li>Ablation: noisy on critic only vs both.</li>
+</ul>
+<h2 id="assignment-41-exploration-via-information-gain-in-world-models">Assignment 41: Exploration via Information Gain in World Models</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>Plan2Explore (Sekar et al., ICLR 2020; maintained 2023) — GitHub: https://github.com/Danijar/plan2explore</li>
+<li>DreamerV3 (ICLR 2023) — GitHub: https://github.com/danijar/dreamerv3</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Plug Plan2Explore information-gain intrinsic reward into DreamerV3 to drive exploration in sparse 3D tasks.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Add disagreement-based intrinsic reward head; mix with extrinsic via coefficient.</li>
+<li>Ensure latent rollout uses intrinsic reward for actor gradients.</li>
+<li>Container: DreamerV3 stack.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: DMLab sparse tasks, Crafter.</li>
+<li>Ablation: intrinsic off vs on.</li>
+</ul>
+<h2 id="assignment-42-representation-learning-with-self-predictive-control">Assignment 42: Representation Learning with Self-Predictive Control</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>SPR (ICLR 2021; maintained 2023) — GitHub: https://github.com/facebookresearch/spr</li>
+<li>DrQ-v2 (2021; maintained 2023) — GitHub: https://github.com/facebookresearch/drqv2</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Replace SPR’s RL head with DrQ-v2 SAC head, keeping SPR representation loss to improve pixel control.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Share encoder with augmentations; compute SPR loss + SAC losses; stop-grad into target.</li>
+<li>Tune loss weights; keep EMA targets.</li>
+<li>Container: PyTorch + CUDA.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: DMControl pixels.</li>
+<li>Ablation: SAC-only vs SAC+SPR.</li>
+</ul>
+<h2 id="assignment-43-meta-rl-with-maml-over-multi-task-control">Assignment 43: Meta-RL with MAML over Multi-Task Control</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>MAML (Finn et al.; repo maintained 2023) — GitHub: https://github.com/cbfinn/maml</li>
+<li>Meta-World (Yu et al., CoRL 2019; maintained 2023) — GitHub: https://github.com/Farama-Foundation/Metaworld</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Apply MAML to actor-critic on Meta-World; use RL gradient as inner loop, meta-update outer loop.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Implement RL-specific MAML step (policy gradient) per task; outer update aggregates.</li>
+<li>Add task-specific normalization; shared encoder.</li>
+<li>Container: PyTorch + Mujoco.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Meta-World MT10/MT50.</li>
+<li>Ablation: meta step size; no-meta baseline.</li>
+</ul>
+<h2 id="assignment-44-hierarchical-rl-with-options-in-continuous-control">Assignment 44: Hierarchical RL with Options in Continuous Control</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>HIRO (Nachum et al.; PyTorch impl 2023) — GitHub: https://github.com/tensorflow/agents/tree/master/tf_agents/agents/hiro</li>
+<li>TD3 (Fujimoto; 2023) — GitHub: https://github.com/sfujim/TD3</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Use TD3 as low-level option policy within HIRO high-level manager; options learned via off-policy data.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Replace HIRO low-level SAC with TD3; adjust hindsight relabeling for deterministic actions.</li>
+<li>Sync replay buffers for both levels; shared encoder.</li>
+<li>Container: PyTorch + Mujoco.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Ant Maze, Kitchen tasks.</li>
+<li>Ablation: SAC vs TD3 low-level.</li>
+</ul>
+<h2 id="assignment-45-offline-to-online-fine-tuning-with-kl-safety">Assignment 45: Offline-to-Online Fine-Tuning with KL Safety</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>RLPD (Shao et al., ICLR 2023) — GitHub: https://github.com/soroushmehraban/rlpd</li>
+<li>SAC (Haarnoja; pytorch_sac 2022) — GitHub: https://github.com/denisyarats/pytorch_sac</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Initialize SAC with RLPD offline pretraining; during online, add KL penalty to stay near behavior policy until performance surpasses threshold.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Load RLPD weights; estimate behavior policy via fitted model; include KL(π||β) in actor loss with annealing.</li>
+<li>Monitor return threshold to relax KL.</li>
+<li>Container: PyTorch + D4RL.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: D4RL -&gt; online MuJoCo.</li>
+<li>Ablation: KL penalty on/off.</li>
+</ul>
+<h2 id="assignment-46-policy-gradient-with-generalized-advantage-estimation-in-language-conditioned-envs">Assignment 46: Policy Gradient with Generalized Advantage Estimation in Language-Conditioned Envs</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>GAE PPO (CleanRL 2023) — GitHub: https://github.com/vwxyzjn/cleanrl</li>
+<li>RLBench Language Tasks (James et al., 2020; maintained 2024) — GitHub: https://github.com/stepjam/RLBench</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Extend PPO with text encoder; compute GAE on language-conditioned episodes for robotic manipulation.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Add transformer encoder for text; fuse with visual embeddings; GAE unchanged.</li>
+<li>Curriculum over task descriptions; entropy bonus tuned.</li>
+<li>Container: PyTorch + transformers + RLBench deps.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: RLBench pick-place variants with language.</li>
+<li>Ablation: text conditioning on/off.</li>
+</ul>
+<h2 id="assignment-47-trust-region-policy-optimization-with-kl-probing-schedules">Assignment 47: Trust-Region Policy Optimization with KL-Probing Schedules</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>TRPO (PyTorch 2023) — GitHub: https://github.com/ikostrikov/pytorch-trpo</li>
+<li>KL-Probing (Huang et al., 2024, arXiv) — GitHub: https://github.com/huangleiBuaa/KL-Probing-RL</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Dynamically adjust TRPO KL constraint via probing episodes to detect policy drift.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Run periodic probe rollouts; if KL spike detected, tighten constraint; else relax.</li>
+<li>Implement scheduler around conjugate gradient step.</li>
+<li>Container: PyTorch + mpi4py.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: MuJoCo Humanoid/Ant.</li>
+<li>Ablation: fixed KL vs probing.</li>
+</ul>
+<h2 id="assignment-48-deterministic-actor-critic-with-target-policy-smoothing-noise-schedules">Assignment 48: Deterministic Actor-Critic with Target Policy Smoothing Noise Schedules</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>TD3 (2023 repo) — GitHub: https://github.com/sfujim/TD3</li>
+<li>Scheduled Exploration Noise (Gaussian/OU anneal; OpenAI Baselines 2023) — GitHub: https://github.com/openai/baselines</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Schedule both action noise and target policy smoothing noise separately to balance bias/variance.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Add dual schedulers (cosine/linear) for exploration noise and target smoothing stddev.</li>
+<li>Log Q overestimation vs noise; auto-tune if divergence.</li>
+<li>Container: PyTorch.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: MuJoCo Swimmer/HalfCheetah.</li>
+<li>Ablation: fixed vs scheduled noises.</li>
+</ul>
+<h2 id="assignment-49-td%CE%BB-for-distributional-control-in-stochastic-gridworlds">Assignment 49: TD(λ) for Distributional Control in Stochastic Gridworlds</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>rlax td_lambda (2022) — GitHub: https://github.com/deepmind/rlax</li>
+<li>Categorical Distributional RL (Bellemare; Dopamine 2022) — GitHub: https://github.com/google/dopamine</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Use TD(λ) to train categorical distributional Q in stochastic tabular/grid tasks.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Implement λ-returns per atom; update categorical logits accordingly.</li>
+<li>Ensure projection handles multi-step returns; tune λ.</li>
+<li>Container: Python slim + JAX or PyTorch.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: Stochastic Windy Gridworld, FrozenLake slippery.</li>
+<li>Ablation: λ sweep.</li>
+</ul>
+<h2 id="assignment-50-model-based-planning-with-risk-sensitive-distributional-value-heads">Assignment 50: Model-Based Planning with Risk-Sensitive Distributional Value Heads</h2>
+<p><strong>Selected Papers:</strong></p>
+<ul>
+<li>DreamerV3 (ICLR 2023) — GitHub: https://github.com/danijar/dreamerv3</li>
+<li>QR-DQN (Dabney; Dopamine 2022) — GitHub: https://github.com/google/dopamine</li>
+</ul>
+<p><strong>Novel Synthesis:</strong> Attach quantile value head to Dreamer’s latent critic; plan with CVaR over imagined rollouts for risk-aware control.</p>
+<p><strong>Implementation &amp; Improvement Plan:</strong></p>
+<ul>
+<li>Replace scalar value with quantile head; compute CVaR for actor objective; keep world model unchanged.</li>
+<li>Add risk level hyperparam; log return distribution.</li>
+<li>Container: DreamerV3 setup.</li>
+</ul>
+<p><strong>Evaluation Strategy:</strong></p>
+<ul>
+<li>Benchmark: autonomous driving simulator (CARLA) with stochastic traffic.</li>
+<li>Ablation: mean vs CVaR planning; quantile count.</li>
+</ul>
+
+</body>
+</html>
