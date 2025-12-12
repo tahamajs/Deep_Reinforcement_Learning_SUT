@@ -1,4 +1,238 @@
-# Advanced Research Curriculum: Assignments 1-50
+# Strategic Research Roadmap 2025-2026 – Advanced Architectures & Algorithmic Frontiers in Reinforcement Learning
+
+**To:** Principal Investigators, Senior Research Scientists, and Engineering Fellows  
+**From:** Director of Advanced Research  
+**Date:** October 24, 2025  
+**Subject:** Implementation Protocol for Research Cycles Q4 2025 – Q4 2026
+
+## 1. Executive Preamble
+We are pivoting from scalar-return, stationary-MDP RL toward agents with distributional awareness, biological-grade sample efficiency, OOD robustness, and direct language alignment. This roadmap is the master plan for the next fiscal year: 50 synthesis assignments that merge the latest (NeurIPS/ICML/ICLR 2024) advances—Sinkhorn divergences, CrossQ batch normalization, diffusion world models, alignment via DPO variants—into implementable blueprints.
+
+## 2. Strategic Verticals
+- **I. Distributional & Risk-Sensitive Control**
+- **II. Next-Generation Sample Efficiency**
+- **III. The Offline-to-Online Continuum**
+- **IV. Plasticity & Continual Learning**
+- **V. Transformers & Sequence Modeling in RL**
+- **VI. Direct Alignment & RLHF**
+- **VII. Model-Based Reasoning & World Models**
+
+---
+
+## Assignment 1: Sinkhorn-Regularized Distributional Control
+- **Context & Theory:** Extend Slide 18 distributional RL (C51, QR-DQN) with geometrically sound distances.  
+- **Innovation:** Use Sinkhorn divergence to smooth distributional Bellman updates.  
+- **Math:** \( W_{c,\varepsilon}(\mu,\nu)=\inf_{\pi\in\Pi(\mu,\nu)}\int c\,d\pi + \varepsilon\,\mathrm{KL}(\pi\|\mu\otimes\nu) \).  
+- **Implementation Protocol:** Build QR-DQN on Atari Breakout; replace quantile loss with differentiable Sinkhorn loop (10–20 iters); deterministic particles ala IQN; ablate ε and iteration depth vs. MMD-DQN; test on multi-dimensional rewards (Asteroids/UpNDown).  
+- **Resources:** https://github.com/datake/SinkhornDistRL , https://github.com/senya-ashukha/quantile-regression-dqn-pytorch  
+
+## Assignment 2: Risk-Sensitive Soft Actor-Critic (RS-SAC)
+- **Context & Theory:** SAC is risk-neutral; heavy-tailed domains need CVaR-aware control.  
+- **Innovation:** Entropic Risk Measure in Bellman backup via exponential utility.  
+- **Math:** \( Q_{\text{risk}}(s,a)=\frac{1}{\beta}\log \mathbb{E}_{s'}[\exp(\beta (r+\gamma V(s')))] \); β<0 risk-averse.  
+- **Implementation Protocol:** Discrete SAC with log-sum-exp target; GridWorld with trap states (-100); sweep β∈{-0.5,-0.1,0,0.1}; perturb transitions for OOD robustness.  
+- **Resources:** https://github.com/tumBAIS/RiskSensitiveSACforRobustDRLunderDistShifts , https://github.com/monisha-jega/risk_sensitivity_rl  
+
+## Assignment 3: Implicit Quantile Networks for Multi-Dimensional Rewards
+- **Context & Theory:** Real rewards are vector-valued; IQN offers infinite-resolution quantiles.  
+- **Innovation:** Learn joint distribution over reward vectors; couple with Sinkhorn to keep dimensions coherent.  
+- **Math:** \( Z_\tau(s,a)\approx f(\psi(s)\odot \phi(\tau)) \) extended to k-dimensional rewards; Sinkhorn regularizer on joint outputs.  
+- **Implementation Protocol:** Vectorized IQN for multi-signal rewards (e.g., Seaquest: oxygen vs. kills); Pareto frontier visualization by dense τ sampling; Sinkhorn between predicted/target reward vectors.  
+- **Resources:** https://github.com/alirezakazemipour/Distributional-RL , https://github.com/datake/SinkhornDistRL  
+
+## Assignment 4: Conservative Distributional Offline RL
+- **Context & Theory:** Offline RL overestimates OOD actions; distribution width encodes epistemic uncertainty.  
+- **Innovation:** Optimize lower quantiles (e.g., 5th percentile) instead of mean; penalize wide distributions.  
+- **Implementation Protocol:** Base on SCAS; swap ensemble critic for C51/QR-DQN critic; actor updates toward Q_0.05; dataset D4RL halfcheetah-medium-expert; compare to CQL.  
+- **Resources:** https://github.com/thu-rllab/SCAS , https://github.com/hanjuku-kaso/awesome-offline-rl  
+
+---
+
+## Assignment 5: CrossQ – Batch Norm without Target Networks
+- **Context & Theory:** Targets slow learning; CrossQ stabilizes high UTD with BN.  
+- **Innovation:** Concatenate current/next batches; BN stabilizes scale, removing target network.  
+- **Implementation Protocol:** PyTorch CrossQ; BN over 2N concatenated observations; compare to SAC on Humanoid-v4; match >5000 reward <1M steps; plot critic grad norms.  
+- **Resources:** https://github.com/adityab/CrossQ , https://sb3-contrib.readthedocs.io/en/master/modules/crossq.html  
+
+## Assignment 6: Pre-Training Goal-Based Models (PTGM)
+- **Context & Theory:** Hierarchical goal policies improve sample efficiency.  
+- **Innovation:** Clustered goal space; high-level PPO over goal clusters, low-level GCP pre-trained.  
+- **Implementation Protocol:** MiniGrid/MineDojo; pretrain goal-conditioned policy on random-walk data; k-means clusters define high-level actions; PPO trains goal selector; compare to flat PPO.  
+- **Resources:** https://github.com/PKU-RL/PTGM  
+
+## Assignment 7: Model-Based RL with TD-MPC2
+- **Context & Theory:** Latent MPC reduces model bias.  
+- **Innovation:** Recurrent world model + MPPI planning in latent space for multi-task control.  
+- **Implementation Protocol:** Train latent dynamics (z,r,v); MPPI action-sequence sampling; joint training over 3 DMC tasks; evaluate zero-shot with altered physics.  
+- **Resources:** https://github.com/qiwang067/awesome-visual-rl , https://github.com/nicklashansen/tdmpc2  
+
+## Assignment 8: SERL – Sample Efficient Robotic RL
+- **Context & Theory:** Robotics demands minimal resets and intervention handling.  
+- **Innovation:** Human/scripted interventions injected into replay; gripper-penalty shaping.  
+- **Implementation Protocol:** MuJoCo Franka Panda; DrQ-v2 base; add intervention data pathway; compare convergence with/without interventions.  
+- **Resources:** https://github.com/rail-berkeley/serl  
+
+---
+
+## Assignment 9: Doubly Mild Generalization (DMG) for Offline→Online
+- **Context & Theory:** Avoid performance dips when shifting from offline to online.  
+- **Innovation:** Mild OOD regularization that relaxes as online data grows.  
+- **Implementation Protocol:** Offline train on antmaze-large-diverse-v2 with DMG loss; begin online rollouts; track initial dip vs. CQL/TD3-BC.  
+- **Resources:** https://github.com/thu-rllab/DMG  
+
+## Assignment 10: Federated Offline RL (FE-DORA)
+- **Context & Theory:** Heterogeneous clients with private data.  
+- **Innovation:** Ensemble-directed aggregation reduces client drift vs. FedAvg.  
+- **Implementation Protocol:** Three clients with D4RL splits (expert/random/mixed); local TD3-BC; server ensemble aggregation; compare FedAvg vs. FE-DORA.  
+- **Resources:** https://proceedings.neurips.cc/paper_files/paper/2024/file/0b99315234cc95e6ef281f9155b68832-Paper-Conference.pdf  
+
+## Assignment 11: SCAS – OOD State Correction
+- **Context & Theory:** Model-based rollouts hallucinate OOD states.  
+- **Innovation:** Energy-based correction pulls predictions back to in-distribution manifold.  
+- **Math:** \( \hat{s}_{t+1}=f_\theta(s_t,a_t) - \eta \nabla_s E(s) \).  
+- **Implementation Protocol:** Ensemble dynamics + energy model (flow/autoencoder); gradient-correct rollouts; feed to policy optimizer; D4RL datasets.  
+- **Resources:** https://github.com/maoyixiu/SCAS  
+
+## Assignment 12: Offline-Boosted Actor-Critic
+- **Context & Theory:** Blend optimal historical behaviors without over-constraining actor.  
+- **Innovation:** Advantage-weighted BC toward best-k trajectories with adaptive weights.  
+- **Implementation Protocol:** Maintain best-trajectory buffer; actor loss mixes A-weighted BC + RL; evaluate on Hopper-Medium-v2 vs. pure finetune.  
+- **Resources:** (add offline-to-online RL refs) https://github.com/linhlpv/awesome-offline-to-online-RL-papers  
+
+---
+
+## Assignment 13: Adaptive Replay Ratio for Plasticity
+- **Context & Theory:** High replay ratio kills plasticity (primacy bias).  
+- **Innovation:** Adjust RR using feature active units / stable rank signals.  
+- **Implementation Protocol:** DrQ-v2 with plasticity monitor (dormant neurons %); schedule RR_low→RR_high; continual setting Task A→Task B; measure adaptation speed.  
+- **Resources:** https://github.com/Guozheng-Ma/Adaptive-Replay-Ratio  
+
+## Assignment 14: Parseval Regularization for Orthogonality
+- **Context & Theory:** Orthogonal weights preserve gradients/generalization.  
+- **Innovation:** Parseval tight-frame regularizer on weights.  
+- **Math:** \( \mathcal{L}_{reg}=\lambda \sum_l \|W_l^\top W_l - I\|_F^2 \).  
+- **Implementation Protocol:** Optimizer wrapper adding Parseval term; apply to PPO on ProcGen CoinRun; compare generalization gap vs. L2.  
+- **Resources:** https://github.com/datake/Papers-Of-Continual-RL  
+
+## Assignment 15: Resetting & Re-initialization of Dormant Units
+- **Context & Theory:** Dormant neurons waste capacity; periodic reset restores plasticity.  
+- **Innovation:** Scheduled re-init of near-zero-activation units (Fast TRAC-style).  
+- **Implementation Protocol:** Every 100k steps, detect dormant units; Kaiming re-init; test on Montezuma/Pitfall (100M+ frames); compare late-stage returns.  
+- **Resources:** https://psc-g.github.io/  
+
+---
+
+## Assignment 16: Vitamin – RL Gradients for Decision Transformers
+- **Context & Theory:** DT struggles with OOD RTG; add critic-guided improvement.  
+- **Innovation:** Hybrid loss = CE (sequence) – λ * Q-maximization.  
+- **Implementation Protocol:** GPT-2 style DT + TD3 critic; Vitamin loss; HalfCheetah-Medium-v2; compare to ODT baseline.  
+- **Resources:** https://github.com/KaiYan289/RL_as_Vitamin_for_Online_Decision_Transformers  
+
+## Assignment 17: Visual Autoregressive Modeling (VAR) World Model
+- **Context & Theory:** Next-scale prediction beats next-token for visuals.  
+- **Innovation:** Multi-scale autoregressive features used as Dreamer-style world model.  
+- **Implementation Protocol:** Implement VAR on Doom/Minecraft frames; train controller on hallucinations; compare to pixel rollout world model.  
+- **Resources:** (see VAR NeurIPS 2024 materials)  
+
+## Assignment 18: In-Context Reinforcement Learning
+- **Context & Theory:** Transformers can learn algorithms via context (Algorithm Distillation).  
+- **Innovation:** Train causal transformer on concatenated episodes; policy improves within context window without weight updates.  
+- **Implementation Protocol:** Generate DQN histories; train transformer to predict actions; evaluate on new bandit; measure reward improvement over context length.  
+- **Resources:** https://github.com/Innse/awesome-papers-iclr  
+
+---
+
+## Assignment 19: Beta-DPO (Dynamic β)
+- **Context & Theory:** DPO KL weight β should adapt to preference confidence.  
+- **Innovation:** β(x) based on reward margin; higher β for noisy pairs.  
+- **Math:** \( \mathcal{L}_{DPO}=-\log\sigma(\beta \log\frac{\pi_{ref}(y_w|x)}{\pi(y_w|x)} - \beta \log\frac{\pi_{ref}(y_l|x)}{\pi(y_l|x)}) \).  
+- **Implementation Protocol:** Modify TRL DPOTrainer; Anthropic-HH dataset; track KL vs. win-rate; schedule β from reward margin.  
+- **Resources:** https://github.com/junkangwu/beta-DPO  
+
+## Assignment 20: CORY – Co-evolutionary Fine-Tuning
+- **Context & Theory:** Two-agent PPO alternative to prevent collapse.  
+- **Innovation:** Pioneer/Observer co-evolve; critique each other.  
+- **Implementation Protocol:** Two Pythia-1.4B copies; alternating weight swaps; GSM8K finetune; monitor curriculum effect.  
+- **Resources:** https://github.com/Harry67Hu/CORY  
+
+## Assignment 21: DPO-Augmented Self-Training (DPO-ST)
+- **Context & Theory:** Self-training with DPO prefers correct reasoning paths.  
+- **Innovation:** Generate K CoT paths, form preference pairs (win/lose), apply DPO iteratively.  
+- **Implementation Protocol:** Math problems; generate + filter; DPO updates; repeat; compare to RFT.  
+- **Resources:** https://github.com/TianduoWang/DPO-ST  
+
+## Assignment 22: f-DPO (Generalized Divergences)
+- **Context & Theory:** Reverse-KL is mode-seeking; f-DPO supports JS/forward KL.  
+- **Innovation:** Swap divergence to improve diversity.  
+- **Implementation Protocol:** Implement f-DPO loss; train with JS divergence; measure n-gram entropy/diversity vs. DPO.  
+- **Resources:** https://github.com/alecwangcq/f-divergence-dpo  
+
+---
+
+## Assignment 23: Graph Diffusion Policy Optimization
+- **Context & Theory:** Structured action spaces (molecules/graphs) need graph-aware policies.  
+- **Innovation:** Diffusion on graphs guided by RL reward (e.g., QED).  
+- **Implementation Protocol:** GNN denoiser; diffusion generation on QM9; RL guidance for drug-likeness; evaluate validity/QED.  
+- **Resources:** https://github.com/opendilab/awesome-diffusion-model-in-rl  
+
+## Assignment 24: Efficient Exploration via Posterior Sampling
+- **Context & Theory:** Safe exploration with CMDP constraints using Bayesian models.  
+- **Innovation:** Posterior over transitions; sample model→plan→act while enforcing constraints.  
+- **Implementation Protocol:** MarsRover gridworld energy constraint; maintain transition posterior; value iteration per sample; ensure energy >=0; compare to optimistic baselines.  
+- **Resources:** https://github.com/danilprov/cmdp  
+
+---
+
+## Assignments 25-50: Rapid-Fire Advanced Implementations
+25. **Unified Online/Offline RL (Uni-O4):** Multi-step on-policy optimization unifying offline pretrain + online finetune.  
+26. **Visual Plasticity Check:** Track feature-matrix rank on Atari; inject latent noise if rank drops.  
+27. **Text-Aware Diffusion Policy:** Condition diffusion policy on CLIP text embeddings (Meta-World multitask).  
+28. **Discrete SAC (SAC-BBF):** Discrete SAC with tuned target entropy, RR=2, super-human Atari.  
+29. **Federated Policy Gradient:** Vitamin gradients in federated clients with differing rewards; gradient projection for conflict.  
+30. **Causal RL:** Interpretable reward redistribution via causal graph for delayed rewards.  
+31. **SimPO:** Reference-free preference optimization with margin ranking on log-probs.  
+32. **Process Reward Models (PRM):** Step-level verifier (Math-Shepherd) for math solver; train PRM.  
+33. **LLM-Explorer:** LLM proposes intrinsic goals; low-level RL executes (Minecraft).  
+34. **Lagrangian PPO:** Adaptive λ for CMDPs; penalize constraints dynamically.  
+35. **Quantile Credit Assignment:** QMIX variant with quantile decomposition of joint rewards.  
+36. **Hyperbolic Embeddings for OOD:** Poincaré-ball critic embeddings for hierarchical/OOD states.  
+37. **Diffusion World Models:** Video diffusion (e.g., DIAMOND) for Atari 100k rollouts; plan over samples.  
+38. **Self-Rewarding LMs:** Loop: generate → judge with LLM reward model → train.  
+39. **Generative Verifiers:** Reward model emits critique CoT before scalar score.  
+40. **Token-Level RLHF:** PPO with token-level dense rewards for fine-grained guidance.  
+41. **RL for Code Gen:** Optimize code-gen with unit-test pass rate; penalize syntax errors immediately.  
+42. **Contrastive Curiosity (CCLF):** Contrastive novelty loss to drive exploration.  
+43. **Entropy-Regularized OT Distillation:** Sinkhorn loss to align policies during distillation.  
+44. **Adaptive Discount Factors:** Learn/regularize γ to adjust planning horizon on the fly.  
+45. **Multi-Agent PPO (MAPPO):** CTDE PPO for SMAC; global-state critic, local actors.  
+46. **Hybrid RL (Cal-QL):** Calibrated Q for stable offline→online finetune.  
+47. **Risk-Averse Exploration:** Bandit optimizing CVaR of regret to avoid catastrophic arms.  
+48. **In-Context Symmetries:** World model learns rotational symmetries in-context; generalize without weight updates.  
+49. **Robust Preference Optimization (RPO):** Symmetric cross-entropy-style DPO for noisy labels.  
+50. **Grandmaster Challenge:** Fuse CrossQ + Sinkhorn + TD-MPC2; evaluate on DMC Dog-Run.
+
+---
+
+## 3. Technical Synthesis & Expected Outcomes
+- **Structural biases:** Sinkhorn (geometric), CrossQ (scale invariance), Transformers (sequence bias), DPO (reference bias).  
+- **Goal:** Agents with one-shot adaptation, plasticity, risk-aware stability, and safe deployment.
+
+## Table 1: Vertical Summary
+
+Vertical | Key Focus | Primary Technologies | Target Outcome
+--- | --- | --- | ---
+I | Distributional Control | Sinkhorn, RS-SAC, IQN | Risk-sensitive, robust agents
+II | Sample Efficiency | CrossQ, PTGM, SERL, TD-MPC2 | Learn in <100k steps
+III | Offline-to-Online | DMG, FE-DORA, SCAS | Zero-shot Sim2Real transfer
+IV | Plasticity | Adaptive RR, Parseval, Reset | Continual learning >1B frames
+V | Transformers | Vitamin, VAR, In-Context RL | Algorithm distillation
+VI | Alignment | Beta-DPO, CORY, DPO-ST | Stable, human-aligned LLMs
+VII | World Models | Graph Diffusion, Posterior Sampling | Causal reasoning & planning
+
+---
+
+## Appendix A: Legacy Curriculum – Detailed Assignment Blocks (prior version retained for full paper/code references)
+### Advanced Research Curriculum: Assignments 1-50
 
 ## Assignment 1: Bellman Bootstrapping Meets Replay-Stabilized DQN
 **Selected Papers:**  
