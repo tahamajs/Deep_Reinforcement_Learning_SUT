@@ -1,3 +1,460 @@
+# UniZero vs EfficientZero V2: A Rigorous Comparative Study in a Unified Codebase
+
+## 1. Executive Summary
+
+Monte Carlo Tree Search (MCTS) variants such as UniZero and EfficientZero V2 (EZ-V2) represent the current apex of sample-efficient model-based reinforcement learning on Atari 100k and challenging control domains. However, published comparisons are confounded by divergent codebases, preprocessing, network sizes, and hyperparameter choices. This assignment proposes a controlled, head-to-head evaluation of UniZero and EZ-V2 within the **same** LightZero-based codebase, normalizing architecture, replay, and data pipelines. Goals:
+
+- Implement UniZero and EZ-V2 faithfully in LightZero with shared backbones and identical preprocessing.
+- Provide a reproducible benchmark suite across Atari (10 games) and DMControl (5 tasks).
+- Deliver rigorous statistical analysis (median, IQM, bootstrap CIs) using `rliable`.
+- Diagnose where gains arise: search policy, value prefix, Gumbel corrections, representation, and planning budget.
+
+We supply a 1000+ line blueprint: theory, algorithmic details, unified configs, PyTorch-style pseudocode, hyperparameters, ablations, metrics, logging, and reproducibility steps.
+
+---
+
+## 2. Background
+
+### 2.1 UniZero
+- Unified tree search integrating policy, value, and reward heads.
+- Emphasizes architectural simplicity and shared networks.
+- Typically uses standard PUCT without Gumbel top-k.
+
+### 2.2 EfficientZero V2 (EZ-V2)
+- Builds on MuZero/EfficientZero with Gumbel search corrections, value-prefix loss, and improved dynamics consistency.
+- Demonstrates strong performance on Atari 100k with reduced samples.
+
+### 2.3 Motivation for Unified Comparison
+- Different codebases and defaults make comparisons noisy.
+- Normalizing backbone, replay, augmentation, and training loop isolates algorithmic differences.
+
+---
+
+## 3. Problem Statement
+
+Conduct a controlled empirical study of UniZero vs EZ-V2 under identical settings:
+- Same backbone network size (encoder/dynamics/policy/value heads).
+- Same replay buffer, augmentation (e.g., random shift/crop), optimizer, batch sizes.
+- Same evaluation protocol and logging.
+- Only algorithm-specific pieces differ (search policy, losses, value-prefix, Gumbel).
+
+---
+
+## 4. Unified Architecture (LightZero)
+
+### 4.1 Shared Components
+- **Encoder:** CNN for Atari; small ResNet-style for DMControl pixels; MLP for low-dim.
+- **Dynamics:** latent transition with reward prediction.
+- **Prediction head:** policy logits, value.
+- **Latent dim:** same for both algorithms.
+- **Normalization:** LayerNorm in latent for stability.
+
+### 4.2 Algorithm-Specific Components
+- UniZero: standard PUCT, no value-prefix loss.
+- EZ-V2: Gumbel top-k search, value-prefix head/loss, consistency tweaks.
+
+---
+
+## 5. Search Algorithms
+
+### 5.1 UniZero Search (Baseline)
+- Standard PUCT:
+$$U(s,a)=c_{\text{puct}} P(s,a) \frac{\sqrt{\sum_b N(s,b)}}{1+N(s,a)}.$$
+- Select child maximizing $Q+U$.
+- Dirichlet noise at root for exploration.
+
+### 5.2 EZ-V2 Gumbel Search
+- Sample top-k via Gumbel noise on priors, then apply corrected selection.
+- Reduces bias from exhaustive argmax; improves exploration of promising actions.
+- Keep same sims per move for fairness; report sims and wall-clock.
+
+### 5.3 Normalized Search Budget
+- Fix simulations per move (e.g., 400 for Atari, 800 for DMControl).
+- Same c_puct, noise, temperature schedules unless ablated.
+
+---
+
+## 6. Loss Functions
+
+### 6.1 Shared Loss Terms
+- Policy CE vs visit counts.
+- Value MSE vs n-step/TD targets.
+- Reward MSE.
+- Consistency/representation loss (optional, shared).
+
+### 6.2 EZ-V2 Value Prefix
+- Predict cumulative reward prefix $z_k$ over unroll.
+- Loss: $L_z = \sum_k \|z_k - \hat{z}_k\|^2$.
+
+### 6.3 UniZero Loss
+- No prefix term; otherwise identical losses.
+
+---
+
+## 7. Data and Preprocessing
+
+### 7.1 Atari
+- 84x84 grayscale; frame-stack 4; action repeat 4; clip rewards to [-1,1].
+- Random shift (data aug) if used; must be identical across algorithms.
+
+### 7.2 DMControl
+- 84x84 RGB; frame-stack 3; action repeat per task default.
+- Random crop; same pipeline for both.
+
+### 7.3 Replay
+- Size: 1M for Atari; 500k–1M for DMControl.
+- Uniform sampling (no PER) to avoid confounding; optional PER ablation.
+
+---
+
+## 8. Training Loop (Unified)
+
+1. Collect episodes with MCTS+policy.
+2. Store $(o,a,r)$ in replay; store search stats (visit counts).
+3. Sample batch; build targets (n-step values, visit distributions).
+4. Unroll dynamics K steps; compute losses (policy/value/reward; plus prefix for EZ-V2).
+5. Backprop; update params; soft update target if used.
+6. Periodic eval episodes with fixed seeds and search budget.
+
+---
+
+## 9. PyTorch Skeleton (Shared Training Step)
+
+```python
+def train_step(batch, model, cfg, algo):
+    obs, acts, rewards, discounts, pi_targets, value_targets, prefix_targets = batch
+    latent = model.encode(obs[:,0])
+    loss = 0
+    prefix = 0.0
+    for k in range(cfg.unroll):
+        policy_logits, value_pred, reward_pred = model.predict(latent)
+        loss += cfg.alpha_pi * ce_loss(policy_logits, pi_targets[:,k])
+        loss += cfg.alpha_v * mse_loss(value_pred, value_targets[:,k])
+        loss += cfg.alpha_r * mse_loss(reward_pred, rewards[:,k])
+        if algo == "ezv2":
+            loss += cfg.alpha_z * mse_loss(prefix, prefix_targets[:,k])
+        latent = model.dynamics(latent, acts[:,k])
+        prefix = prefix + (cfg.gamma**k) * rewards[:,k]
+    loss.backward()
+    clip_grad_norm_(model.parameters(), cfg.grad_clip)
+    optimizer.step(); optimizer.zero_grad()
+    return loss.item()
+```
+
+---
+
+## 10. Hyperparameters (Default Shared)
+
+| Component | Atari | DMControl |
+| --------- | ----- | --------- |
+| Unroll K | 5 | 5–10 |
+| n-step | 5 | 5 |
+| Sims/move | 400 | 800 |
+| c_puct | 2.0 | 2.0 |
+| Dirichlet α | 0.3 | 0.3 |
+| Noise frac | 0.25 | 0.25 |
+| Batch | 256 | 256–512 |
+| LR | 1e-3 (Adam) | 1e-3 |
+| Weight decay | 1e-4 | 1e-4 |
+| Grad clip | 10.0 | 10.0 |
+| Target τ | 0.01 | 0.01 |
+| Frames | 100k | 500k–1M steps |
+
+EZ-V2 adds $\alpha_z$ (0.5–1.0) for prefix; UniZero sets $\alpha_z=0$.
+
+---
+
+## 11. Evaluation Protocol
+
+- **Games:** 10 Atari (diverse difficulty: Pong, Breakout, Qbert, Seaquest, Frostbite, Asterix, MsPacman, KungFuMaster, PrivateEye, Gravitar).  
+- **DMControl:** Walker-walk, Cheetah-run, Reacher-easy, Finger-spin, Hopper-stand.
+- **Seeds:** ≥5 per game/task.
+- **Metrics:** Median HNS, IQM, mean ± CI; use `rliable`.
+- **Budgets:** 100k frames (Atari); 500k–1M steps (DMControl).
+- **Search budget:** fixed sims per move for both; also evaluate policy-only (no search) to measure reliance.
+
+---
+
+## 12. Statistical Analysis
+
+- Use `rliable` for stratified bootstrap of median and IQM.
+- Report 95% CIs; show paired comparisons per game.
+- Sign tests on per-seed scores to assess significance.
+- Plot score distributions, not only means.
+
+---
+
+## 13. Ablations
+
+1. Gumbel on/off (EZ-V2).
+2. Prefix loss on/off (EZ-V2).
+3. Shared vs separate encoder for UniZero/EZ-V2 (ensure fairness).
+4. Sims/move: 200/400/800.
+5. c_puct: 1.5/2.0/2.5.
+6. Value target: n-step vs TD($\lambda$) (applied equally).
+7. Augmentation on/off.
+8. PER vs uniform.
+
+---
+
+## 14. Logging Schema
+
+- Scalars: `loss_total`, `loss_pi`, `loss_v`, `loss_r`, `loss_prefix` (EZ-V2), `win_rate` (if applicable), `score`, `hns`.
+- MCTS: `visits_mean`, `depth_mean`, `entropy`, `sims_per_move`, `gumbel_topk` (EZ-V2).
+- Throughput: `train_fps`, `plan_fps`, `time_per_move`.
+- Replay: `buffer_size`, `unique_obs`.
+
+---
+
+## 15. Visualization Plan
+
+- Score curves vs frames for both algorithms.
+- IQM + median bar plots with CI.
+- Per-game paired plots.
+- Search cost vs performance (sims vs HNS).
+- Loss curves (policy/value/prefix).
+
+---
+
+## 16. Reproducibility Checklist
+
+- [ ] Unified config files (atari.yaml, dmcontrol.yaml) with toggles `algo=unizero/ezv2`.
+- [ ] Fixed preprocessing and augmentation.
+- [ ] Shared network widths/depths.
+- [ ] Seeds logged; RNG control for env/torch.
+- [ ] Checkpoints saved with config hash.
+- [ ] Eval scripts produce rliable stats.
+
+---
+
+## 17. Code Structure (LightZero)
+
+- `policy/unizero_policy.py`
+- `policy/efficientzero_v2_policy.py` (from Assignment 10)
+- `mcts/gumbel_search.py` (shared with CA10)
+- `configs/atari_unified.yaml`, `configs/dmc_unified.yaml`
+- `scripts/train_unified.py` (flag selects algo)
+- `analysis/eval_rliable.py`
+
+---
+
+## 18. Fairness Controls
+
+- Same augmentation, optimizer, LR schedule, replay size, batch, unroll, sims.
+- Same evaluation seeds and episode caps.
+- Same action repeat and frame stack.
+- Same Dirichlet noise and temperature schedules.
+- Report any deviations explicitly.
+
+---
+
+## 19. Risk and Mitigations
+
+- **Search explosion:** cap sims; use factored expansions only if both use it.
+- **Prefix instability:** tune $\alpha_z$; warmup without prefix for first N updates.
+- **Overfitting small nets:** consider weight decay; early stopping not allowed—use fixed budget.
+- **Underpowered encoder:** ensure capacity parity; if widening, widen both.
+
+---
+
+## 20. Extended Theory Notes
+
+### 20.1 Gumbel Top-k Rationale
+- Reduces bias of greedy expansion by sampling top-k actions with stochasticity; improves exploration.
+- Theoretically approximates sampling from $\text{softmax}(\log P + G)$.
+
+### 20.2 Value Prefix Rationale
+- Predicts partial returns to stabilize value across unroll; acts as auxiliary target.
+- Can reduce bootstrap error propagation.
+
+### 20.3 UniZero Simplification
+- Fewer auxiliary heads; potentially faster training; tests whether EZ-V2 gains justify added complexity.
+
+---
+
+## 21. Detailed Target Computation
+
+- Value target (shared):
+$$
+G_t^{(n)} = \sum_{k=0}^{n-1} \gamma^k r_{t+k} + \gamma^n v_{t+n}.
+$$
+- Prefix target (EZ-V2):
+$$
+z_t = \sum_{k=0}^{t-1} \gamma^k r_k.
+$$
+- Policy target: visit counts $\pi_t$ from root MCTS (both).
+
+---
+
+## 22. Evaluation Details
+
+- Episodes: cap at 108k frames per seed for Atari; same for both.
+- Use sticky actions to match Atari 100k protocol.
+- DMControl: 100k/500k steps with eval every 100k.
+- Report policy-only performance (no search) to assess amortization.
+
+---
+
+## 23. Ablation Tables (Template)
+
+| Ablation | Score (Median HNS) | IQM | Plan FPS | Notes |
+| -------- | ------------------ | --- | -------- | ----- |
+| UniZero base |  |  |  |  |
+| EZ-V2 base |  |  |  |  |
+| EZ-V2 no Gumbel |  |  |  |  |
+| EZ-V2 no prefix |  |  |  |  |
+| Sims 200 |  |  |  |  |
+| Sims 800 |  |  |  |  |
+
+---
+
+## 24. Wall-Clock Tracking
+
+- Log train FPS, plan FPS, time per move.
+- Compare overhead of EZ-V2 (extra head/loss) vs UniZero.
+- Present efficiency plots: HNS vs wall-clock.
+
+---
+
+## 25. Hyperparameter Sweeps (Small)
+
+- $\alpha_z$: {0.25, 0.5, 1.0}.
+- c_puct: {1.5, 2.0, 2.5}.
+- sims: {200, 400, 800}.
+- top-k (Gumbel): {5, 10, 20}.
+- temperature at root: {1.0, 0.5}.
+
+---
+
+## 26. Failure Modes
+
+- Prefix over-regularizes → slower learning: lower $\alpha_z$.
+- Gumbel instability with low sims: reduce top-k or temperature.
+- UniZero underperformance: check policy/value loss weights; maybe needs consistency loss.
+
+---
+
+## 27. Planning Budget Parity
+
+- Ensure both algorithms use identical sims per move and search depth.
+- If EZ-V2 uses Gumbel top-k, keep top-k budget aligned with sims to avoid unfair expansion count.
+
+---
+
+## 28. Representation Parity
+
+- Same encoder (filters, blocks), same latent dim.
+- Same dynamics depth and reward head structure.
+- Disable any architecture tweaks unique to one unless mirrored.
+
+---
+
+## 29. Replay and Optimization Parity
+
+- Same replay size, sampling, priority (if PER ablation, apply to both).
+- Same optimizer (Adam), LR schedule, warmup.
+- Same gradient clipping and weight decay.
+
+---
+
+## 30. Metrics Beyond Score
+
+- Policy entropy.
+- MCTS visit entropy.
+- Value error (RMSE).
+- Prefix error (EZ-V2).
+- Consistency loss (if used).
+
+---
+
+## 31. Logging Examples (TensorBoard)
+
+- `score/game_name`
+- `hns_median`, `hns_iqm`
+- `loss/pi`, `loss/v`, `loss/r`, `loss/prefix`
+- `mcts/visits`, `mcts/depth`, `mcts/entropy`
+- `time/plan_ms`, `time/train_fps`
+
+---
+
+## 32. Visualization Scripts
+
+- `plot_scores.py` (curves).
+- `plot_iqm.py` (bar with CI).
+- `plot_plan_cost.py`.
+- `plot_ablation.py`.
+
+---
+
+## 33. Reproducibility Artifacts
+
+- Configs (`configs/atari_unified.yaml`, `dmc_unified.yaml`).
+- Seeds list.
+- Checkpoints per algo and game.
+- Logs (TB/W&B).
+- Eval outputs (JSON/CSV) for rliable.
+
+---
+
+## 34. Negative Results to Report
+
+- Cases where EZ-V2 overhead not justified (e.g., some easy games).
+- UniZero outperforming EZ-V2 on specific games/tasks.
+- Sensitivity to prefix weight.
+
+---
+
+## 35. Statistical Reporting Format
+
+- Table of median HNS ± CI and IQM ± CI.
+- Paired plot per game with markers for UniZero vs EZ-V2.
+- p-values (sign test) across games.
+
+---
+
+## 36. Compute Budget
+
+- Training Atari 100k: ~12–24 GPU-hours per algo across 10 games (single A100).
+- DMControl: ~24–48 GPU-hours for 5 tasks.
+- Planning increases cost; log wall-clock.
+
+---
+
+## 37. Checklist Before Running
+
+- [ ] Shared backbone verified.
+- [ ] Sims per move equal.
+- [ ] Augmentations identical.
+- [ ] Logging enabled.
+- [ ] Eval seeds fixed.
+- [ ] rliable script ready.
+
+---
+
+## 38. Optional Extensions
+
+- Add distributional value head (quantile) to both for robustness; keep parity.
+- Try mixed-precision search to speed planning (both).
+- Evaluate policy-only finetune after search training to test amortization.
+
+---
+
+## 39. Potential Reviewer Questions
+
+- Is comparison fair? → show config diff (only algo toggles).
+- Why not include MuZero baseline? → optional appendix.
+- Does Gumbel help uniformly? → ablation results.
+- Is prefix loss just auxiliary shaping? → show prefix error vs value error.
+
+---
+
+## 40. Final Remarks
+
+This study provides a fair, unified comparison of UniZero and EfficientZero V2. By holding all confounders constant within LightZero, we isolate the contributions of Gumbel search and value-prefix learning versus the unified architecture of UniZero. The provided implementation guidance, configs, and analysis plan enable reproducible, statistically sound conclusions about which approach delivers superior sample efficiency and compute-performance trade-offs on Atari 100k and DMControl.
+
+---
+
+_This README is the complete blueprint for Assignment 12: UniZero vs EfficientZero V2 comparative study in a unified LightZero codebase. Keep math, code, and experiments aligned._
 Adaptive Policy Optimization via Offline-Boosted Actor-Critic: A Comprehensive Analysis of Theory, Implementation, and Retrieval-Augmented Extensions
 
 1. Introduction: The Convergence of Online and Offline Paradigms
