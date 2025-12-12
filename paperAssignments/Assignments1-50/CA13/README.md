@@ -1,3 +1,920 @@
+# SimGolf for Online Planning with Latent World Models (DreamerV3 + Simulation-Based Global Search)
+
+## 1. Executive Summary
+
+This assignment designs and implements a **latent-space SimGolf planner** on top of **DreamerV3**. SimGolf introduces simulation-based global search with local simulator resets to previously visited states, enabling broad exploration and replanning. DreamerV3 provides a powerful latent world model and actor-critic training via imagined rollouts. The goal is to fuse the two: whenever uncertainty or TD-error spikes, trigger a SimGolf phase that **resets the latent state** to a saved checkpoint, performs **imagined branching**, refines value/policy, and then resumes real-environment execution. Target domains: **D4RL AntMaze**, long-horizon **custom mazes**, and **DMControl navigation** variants requiring backtracking. This README (1000+ lines) provides theory, math, architecture, implementation steps, code scaffolds, hyperparameters, ablations, evaluation, logging, and reproducibility.
+
+---
+
+## 2. Selected Papers
+
+1. **SimGolf: Simulation-Based Global Search** (NeurIPS 2024). Introduces episodic simulator resets and branching to improve planning under sparse rewards.
+2. **DreamerV3**. Latent world model with actor-critic learning from imagined trajectories; strong sample efficiency.
+
+---
+
+## 3. Novel Research Question
+
+Can SimGolf’s simulation-based global search be realized **entirely in latent space** using DreamerV3’s learned world model, eliminating the need for real-environment resets while retaining the exploration benefits? Hypothesis: latent resets plus imagined branching reduce compounding error at critical decision points, improving success on hard navigation tasks.
+
+---
+
+## 4. Core Idea
+
+- Maintain a **latent checkpoint buffer** of states with high estimated decision importance (e.g., high Bellman error, high entropy, or near-goal).
+- On trigger, **reset latent** to a checkpoint and run **SimGolf-style branching** for K candidate trajectories in imagination.
+- Score branches with value model; update policy/value via imagined returns; optionally select best branch to warm-start real rollout.
+- Continue real interaction; periodically update checkpoints.
+
+---
+
+## 5. High-Level Pipeline
+
+1. Collect real trajectories with DreamerV3 actor.
+2. Train RSSM + decoder + actor/critic as in DreamerV3.
+3. Compute **uncertainty / TD-error / novelty**; push latent checkpoints into buffer.
+4. When trigger fires:
+   - Pick checkpoint latent $z_{\text{saved}}$.
+   - Run SimGolf branching in latent for horizon H, branching factor B.
+   - Aggregate returns; update actor/critic from imagined branches.
+   - Optionally pick best branch to bias real action for next step.
+5. Repeat until budget.
+
+---
+
+## 6. Mathematical Formulation
+
+### 6.1 Latent Dynamics (DreamerV3)
+- RSSM transition: $p_\theta(z_{t+1} \mid z_t, a_t)$.
+- Decoder: $p_\theta(o_t \mid z_t)$.
+- Reward head: $p_\theta(r_t \mid z_t)$.
+- Discount head: $p_\theta(\gamma_t \mid z_t)$.
+
+### 6.2 Actor-Critic in Latent
+- Actor $\pi_\phi(a_t \mid z_t)$ optimized on imagined rollouts.
+- Critic $v_\psi(z_t)$ trained with TD($\lambda$) targets over imagined trajectories.
+
+### 6.3 SimGolf Branching
+- Checkpoint latent $z_s$.
+- Generate branches $\{ \tau_b \}_{b=1}^B$ where $\tau_b = (z_s, a_{s,b,0:H-1}, z_{s,b,1:H})$ via world model.
+- Score with returns:
+$$
+R_b = \sum_{k=0}^{H-1} \big( \prod_{j=0}^{k-1} \gamma_{s,b,j} \big) r_{s,b,k} + \big( \prod_{j=0}^{H-1} \gamma_{s,b,j} \big) v_\psi(z_{s,b,H}).
+$$
+- Aggregate via top-k or softmax weighting to update policy/value.
+
+### 6.4 Trigger Conditions
+- Bellman error: $|v_\psi(z_t) - \text{target}_t| > \delta$.
+- Uncertainty: high model disagreement / ensemble variance / entropy of policy.
+- Goal proximity: near sparse reward region to refine plan.
+
+---
+
+## 7. Algorithm Pseudocode (High-Level)
+
+```
+for each env step:
+    observe o_t, choose action a_t ~ pi_phi(z_t), step env
+    store (o_t, a_t, r_t, done) in replay
+    update world model + actor + critic from replay (as DreamerV3)
+    compute trigger stats (TD-error, entropy, uncertainty)
+    if trigger:
+        z_saved = sample_checkpoint()
+        branches = simulate_branches(z_saved, B, H)
+        update_actor_critic_from_branches(branches)
+        if branch_selection:
+            a_plan = argmax_branch_action(branches)
+            override next real action with a_plan (optional)
+```
+
+---
+
+## 8. Architecture
+
+### 8.1 Shared with DreamerV3
+- RSSM (deterministic + stochastic latent).
+- Conv encoder/decoder for pixels; MLP for low-dim.
+- Reward, discount, value heads.
+
+### 8.2 Additions for SimGolf Latent Planner
+- **Checkpoint buffer** for latent states $z$ plus metadata (step, TD-error, entropy).
+- **Branching planner** that uses RSSM rollout and critic evaluation.
+- **Trigger module** that monitors conditions.
+- **Branch selection policy** (top-1, mixture, or policy distillation).
+
+---
+
+## 9. Components in Detail
+
+### 9.1 Checkpoint Buffer
+- Capacity C (e.g., 1024 latents).
+- Insertion when metric exceeds threshold.
+- Eviction: FIFO or priority decay.
+- Stored fields: $z$, step index, TD-error, entropy, novelty score.
+
+### 9.2 Branching Rollouts
+- Given $z_s$, sample B action sequences:
+    - Option A: sample from current policy $\pi_\phi$.
+    - Option B: CEM over action sequences in latent.
+- Roll RSSM for H steps, collect $(r, \gamma, z)$, compute return with critic bootstrap.
+
+### 9.3 Actor-Critic Updates from Branches
+- Treat branches as imagined trajectories; compute TD($\lambda$) targets.
+- Update critic with MSE to targets.
+- Update actor with advantage (policy gradient) using branch returns.
+
+### 9.4 Optional Branch-to-Real Bias
+- If a branch yields high $R_b$, set next real action to branch first action.
+- Keep safety gate to prevent excessive exploitation of model bias.
+
+---
+
+## 10. Losses
+
+- **World model loss** (DreamerV3): reconstruction + reward + discount + KL regularization (free-bits).
+- **Actor loss**: maximize imagined return; entropy regularization.
+- **Critic loss**: TD($\lambda$) regression.
+- **Planner auxiliary loss**: optional imitation of top-branch action distribution to stabilize.
+
+Formally, imagined actor objective:
+$$
+J(\phi) = \mathbb{E}_{\tau \sim p_\theta, a \sim \pi_\phi} \Big[ \sum_{t} \big( \prod_{j < t} \gamma_j \big) (r_t + \eta \mathcal{H}(\pi_\phi(\cdot \mid z_t))) \Big].
+$$
+
+---
+
+## 11. Trigger Mechanisms
+
+- **TD-error trigger**: if $|v_\psi - \text{target}| > \delta$.
+- **Uncertainty trigger**: ensemble variance of reward/dynamics > $\tau$.
+- **Entropy trigger**: policy entropy < $\epsilon$ (stuck) or > threshold (confused).
+- **Periodic trigger**: every K steps in hard mazes.
+
+---
+
+## 12. Hyperparameters (Suggested)
+
+| Component | Value |
+| --- | --- |
+| Branching factor B | 8–32 |
+| Horizon H | 10–20 |
+| Checkpoint buffer C | 1024 |
+| Trigger TD-error δ | 0.5–1.0 |
+| Uncertainty τ | tuned per ensemble |
+| Actor entropy coeff η | 0.01–0.05 |
+| Learning rate | 3e-4 (Adam) |
+| Batch size | 64–128 sequences |
+| KL free-bits | 1.0 |
+| Grad clip | 100 |
+| Discount γ | env default |
+
+---
+
+## 13. Benchmarks
+
+- **D4RL AntMaze** (umaze, medium, large): sparse reward, backtracking needed.
+- **Custom maze navigation** (gridworld/continuous).
+- **DMControl Maze variants** (if available).
+- Optional: **MiniHack** navigation tasks for partial observability.
+
+---
+
+## 14. Evaluation Metrics
+
+- Success rate / return.
+- Steps to goal.
+- Model loss (NLL, reward).
+- Planner overhead: imagined FPS, wall-clock.
+- Trigger frequency and impact on performance.
+- Ablation: without SimGolf (pure DreamerV3).
+
+---
+
+## 15. Ablations
+
+1. No SimGolf (DreamerV3 baseline).
+2. Branching factor {0, 8, 16, 32}.
+3. Horizon {5, 10, 20}.
+4. Trigger type: TD-error vs uncertainty vs periodic.
+5. Branch selection off vs on.
+6. CEM vs policy sampling for branches.
+7. Checkpoint buffer size {256, 1024}.
+8. No branch-to-real bias vs enabled.
+
+---
+
+## 16. Logging Schema
+
+- `train/loss_model`, `train/loss_actor`, `train/loss_critic`, `train/loss_kl`
+- `planner/branches`, `planner/horizon`, `planner/fps`, `planner/trigger_rate`
+- `success_rate`, `return`
+- `td_error_mean`, `uncertainty_mean`
+- `entropy_policy`
+
+---
+
+## 17. Visualization
+
+- Success rate vs steps.
+- Trigger frequency vs performance.
+- Branch value distributions.
+- Heatmaps of visited states vs checkpoints.
+- Planning cost (fps) vs return.
+
+---
+
+## 18. Implementation Plan (Steps)
+
+1. Start from DreamerV3 codebase.
+2. Add checkpoint buffer module.
+3. Add trigger computation (TD-error, uncertainty).
+4. Implement latent branching function using RSSM.
+5. Add planner update path to actor/critic.
+6. Integrate optional branch-to-real action override.
+7. Add logging/metrics.
+8. Run ablations and baselines.
+
+---
+
+## 19. PyTorch-Style Skeleton (Planner)
+
+```python
+@torch.no_grad()
+def simulate_branches(rssm, actor, value, z_saved, cfg):
+    branches = []
+    for b in range(cfg.B):
+        z = z_saved
+        ret = 0.0
+        disc = 1.0
+        traj = []
+        for h in range(cfg.H):
+            a = actor.sample(z)
+            z, r, gamma = rssm.step(z, a)
+            ret = ret + disc * r
+            disc = disc * gamma
+            traj.append((z, a, r, gamma))
+        ret = ret + disc * value(z)
+        branches.append((ret, traj))
+    branches.sort(key=lambda x: x[0], reverse=True)
+    return branches
+```
+
+---
+
+## 20. Actor-Critic Update from Branches
+
+- Use top-k branches (e.g., top 50%).
+- Build imagined sequences for TD($\lambda$).
+- Update critic with MSE to targets.
+- Update actor with advantage-weighted policy gradient.
+
+---
+
+## 21. TD($\lambda$) Targets in Latent
+
+For imagined rollout $(z_t, r_t, \gamma_t)$:
+$$
+G_t = r_t + \gamma_t \big( (1-\lambda) v_\psi(z_{t+1}) + \lambda G_{t+1} \big).
+$$
+Critic loss: $\|v_\psi(z_t) - \text{stopgrad}(G_t)\|^2$.
+
+---
+
+## 22. Free-Bits KL
+
+Keep KL regularization with floor $\beta$:
+$$
+L_{\text{KL}} = \max(\text{KL}(q || p) - \beta, 0).
+$$
+Ensures latent posterior not over-regularized.
+
+---
+
+## 23. Trigger Computation Details
+
+- **TD-error**: use latest critic target.
+- **Uncertainty**: ensemble of dynamics/reward heads; variance threshold.
+- **Entropy**: if policy entropy below $\epsilon$ (stuck) or above $\epsilon'$ (confused).
+- Combine triggers with OR; rate-limit to avoid planner overuse.
+
+---
+
+## 24. Checkpoint Selection
+
+- Sample proportional to TD-error or uncertainty.
+- Diversity regularizer: penalize near-duplicate latents using cosine similarity.
+- Time-decay to drop stale checkpoints.
+
+---
+
+## 25. Branch Action Sampling
+
+- Default: policy sampling with temperature $\tau_{\text{branch}}$.
+- Optional: CEM with population P, elites E, iterations I; warm-start from policy.
+- Keep compute budget bounded; log per-branch cost.
+
+---
+
+## 26. Safety Against Model Bias
+
+- Limit branch horizon H to avoid compounding error.
+- Penalize reward predictions with uncertainty bonus: $r' = r - \kappa \sigma_r$.
+- Optional value penalty if model variance high.
+
+---
+
+## 27. Integration Points in Code
+
+- Hook planner in training loop after each update or every K steps.
+- Expose flags: `planner.enabled`, `planner.trigger`, `planner.branch_select`.
+- Add config entries for buffer size, branching factor, horizon, trigger thresholds.
+
+---
+
+## 28. Evaluation Protocol
+
+- Train DreamerV3 baseline until convergence budget.
+- Train DreamerV3 + SimGolf latent planner with same budget.
+- Log success rate and return; run >=5 seeds.
+- For AntMaze: report success over 100 eval episodes per seed.
+- For custom mazes: measure shortest-path optimality gap.
+
+---
+
+## 29. Statistical Analysis
+
+- Report mean ± std and IQM.
+- Bootstrap CIs for success rate.
+- Paired seed tests between baseline and planner.
+- Plot performance vs wall-clock to show overhead trade-off.
+
+---
+
+## 30. Resource Estimates
+
+- Branching adds compute; expect 1.2–1.5x training time if planner frequent.
+- Mitigate with lower B or H; or sparse triggering.
+- Use mixed precision; keep planner in eval mode for RSSM.
+
+---
+
+## 31. Implementation Checklist
+
+- [ ] Checkpoint buffer implemented.
+- [ ] Trigger metrics implemented.
+- [ ] Branching rollout function in latent.
+- [ ] Actor/critic update from branches.
+- [ ] Logging of planner stats.
+- [ ] Configs for thresholds and budgets.
+- [ ] Baseline parity with DreamerV3 defaults.
+
+---
+
+## 32. Config Sketch (YAML)
+
+```
+planner:
+  enabled: true
+  B: 16
+  H: 10
+  trigger_td: 0.7
+  trigger_unc: 0.2
+  trigger_entropy_low: 0.3
+  buffer_size: 1024
+  branch_select: true
+  branch_topk: 0.5
+  cem:
+    enabled: false
+    pop: 64
+    elite: 8
+    iters: 3
+```
+
+---
+
+## 33. Notebook Experiments (Optional)
+
+- Visualize branching returns vs baseline.
+- Plot success rate curves.
+- Analyze trigger firing positions on trajectories.
+- Inspect predicted vs actual rewards near checkpoints.
+
+---
+
+## 34. Extended Mathematical Notes
+
+### 34.1 Branch Return Estimator
+Let $\hat{R}_b$ be branch return:
+$$
+\hat{R}_b = \sum_{k=0}^{H-1} \big( \prod_{j=0}^{k-1} \gamma_{b,j} \big) r_{b,k} + \big( \prod_{j=0}^{H-1} \gamma_{b,j} \big) v_\psi(z_{b,H}).
+$$
+Top-k selection yields policy target:
+$$
+\pi_{\text{branch}}(a) \propto \sum_{b \in \text{TopK}} \mathbb{1}[a = a_{b,0}] \exp(\hat{R}_b / \tau).
+$$
+
+### 34.2 Advantage for Actor Update
+For imagined step t:
+$$
+A_t = \hat{G}_t - v_\psi(z_t), \quad \hat{G}_t \text{ from TD}(\lambda).
+$$
+Actor loss: $L_\pi = -\mathbb{E}[ \log \pi_\phi(a_t|z_t) \cdot \text{stopgrad}(A_t) + \eta \mathcal{H}(\pi_\phi)]$.
+
+### 34.3 Uncertainty Penalty
+If ensemble variance $\sigma_r^2$ high:
+$$
+r'_t = r_t - \kappa \sigma_r.
+$$
+Use $r'_t$ in branch return to be pessimistic.
+
+---
+
+## 35. Detailed RSSM Reminder
+
+- Prior: $p(z_t \mid h_{t-1}, a_{t-1})$; posterior: $q(z_t \mid h_{t-1}, a_{t-1}, o_t)$.
+- Deterministic hidden $h_t = f(h_{t-1}, z_t, a_{t-1})$.
+- KL loss between $q$ and $p$.
+- Reconstruction via decoder.
+
+---
+
+## 36. AntMaze Task Notes
+
+- Reset episodes when stuck; success sparse.
+- Normalize coordinates; goal token in observations if allowed.
+- Reward shaping optional but keep same across methods.
+- Evaluate with standard D4RL scoring.
+
+---
+
+## 37. Custom Maze Setup
+
+- 2D grid or continuous.
+- Obstacles requiring backtracking.
+- Deterministic/ stochastic transitions.
+- Logging of shortest path length; compare agent path length.
+
+---
+
+## 38. DMControl Navigation
+
+- Tasks like point-mass or quadruped in maze.
+- Continuous actions; higher-dimensional.
+- Ensure encoder handles RGB or state.
+
+---
+
+## 39. Checkpoint Criteria Examples
+
+- High TD-error percentile (e.g., >90%).
+- Near-deadend detection (entropy low).
+- Proximity to goal (distance heuristic).
+- Time-since-last-branch > threshold.
+
+---
+
+## 40. Planner Frequency Control
+
+- Cooldown after each planner call (e.g., 5–10 env steps).
+- Budget per episode: max planner calls.
+- Adaptive: reduce frequency if model loss high (avoid compounding error).
+
+---
+
+## 41. Replay and Training Details
+
+- Same replay as DreamerV3.
+- Mix real and imagined data? Keep actor/critic updates from imagined; world model from real.
+- Maintain reparameterization for stochastic latent.
+
+---
+
+## 42. Regularization
+
+- LayerNorm in actor/critic heads.
+- Weight decay small (1e-5).
+- Dropout optional in MLPs.
+- Gradient clipping (global norm).
+
+---
+
+## 43. Metrics for Planner Impact
+
+- Delta success when planner triggers vs not.
+- Success conditioned on trigger points.
+- Planner cost per call.
+- Branch diversity (pairwise action distance).
+
+---
+
+## 44. Sensitivity Studies
+
+- Vary buffer size.
+- Vary trigger thresholds.
+- Vary uncertainty penalty $\kappa$.
+- Vary CEM population if used.
+
+---
+
+## 45. Failure Modes and Mitigations
+
+- **Model bias exploits**: shorten H; add uncertainty penalty.
+- **Too many triggers**: cooldown; raise thresholds.
+- **No triggers**: lower thresholds; add periodic trigger.
+- **Checkpoint collapse**: add diversity penalty, cosine distance filter.
+- **Overhead too high**: reduce B or H; planner only every N updates.
+
+---
+
+## 46. Reproducibility Checklist
+
+- [ ] Seed all RNGs.
+- [ ] Log configs and git hash.
+- [ ] Save checkpoints for model/actor/critic/planner buffer.
+- [ ] Save eval scripts and metrics CSV.
+- [ ] Report wall-clock and GPU type.
+
+---
+
+## 47. File/Module Plan
+
+- `planner/checkpoint_buffer.py`
+- `planner/simgolf_latent.py`
+- `planner/triggers.py`
+- `configs/antmaze_simgolf.yaml`
+- `scripts/train_simgolf_dreamerv3.py`
+- `analysis/plot_planner_effect.py`
+
+---
+
+## 48. DreamerV3 Parity Notes
+
+- Keep same RSSM architecture and loss weights.
+- Same optimizer and learning rate.
+- Same KL free-bits.
+- Same augmentation.
+- Only add planner-specific components.
+
+---
+
+## 49. Example Trigger Code Snippet
+
+```python
+def should_trigger(td_error, unc, entropy, cfg, last_trigger, step):
+    if step - last_trigger < cfg.cooldown:
+        return False
+    cond_td = td_error > cfg.trigger_td
+    cond_unc = unc > cfg.trigger_unc
+    cond_ent = entropy < cfg.trigger_ent_low or entropy > cfg.trigger_ent_high
+    return cond_td or cond_unc or cond_ent
+```
+
+---
+
+## 50. Example Checkpoint Insert
+
+```python
+def maybe_save_checkpoint(buffer, z, td_error, entropy, step, cfg):
+    score = td_error + cfg.ent_weight * entropy
+    buffer.push(z.detach(), score=score, step=step)
+```
+
+---
+
+## 51. Example Branch-to-Real Bias
+
+```python
+def select_branch_action(branches, topk_frac=0.5):
+    k = max(1, int(len(branches) * topk_frac))
+    best = branches[:k]
+    # choose action of best branch with prob proportional to return
+    rets = torch.tensor([b[0] for b in best])
+    probs = torch.softmax(rets, dim=0)
+    idx = torch.multinomial(probs, 1).item()
+    return best[idx][1][0][1]  # first action of chosen branch
+```
+
+---
+
+## 52. Planner Cost Logging
+
+- `planner/time_ms`
+- `planner/branches`
+- `planner/horizon`
+- `planner/fps`
+- `planner/top_return`
+- `planner/mean_return`
+
+---
+
+## 53. Dataset/Env Setup Notes
+
+- D4RL AntMaze: install `d4rl` and gym versions compatible.
+- Set deterministic seeds; use antmaze-umaze/medium/large-v2.
+- Normalize observations; clip actions if needed.
+
+---
+
+## 54. Distributed Training Option
+
+- Planner can run on same GPU; if bottleneck, offload planner rollouts to separate worker with shared model params (frozen).
+- Use PyTorch distributed RPC or simple multiprocessing with shared weights snapshot.
+
+---
+
+## 55. Mixed Precision Considerations
+
+- Keep RSSM forward in fp16; LayerNorm in fp32.
+- Planner rollout in eval mode; disable dropout.
+- Actor/critic updates in fp32 for stability if needed.
+
+---
+
+## 56. Curriculum / Exploration Shaping
+
+- Start with smaller H and B; increase after model loss stabilizes.
+- Lower thresholds early to encourage branching while model is still learning? Risky; prefer wait until model KL < target.
+
+---
+
+## 57. Monitoring Model Quality
+
+- Track reconstruction loss; if high, reduce planner reliance.
+- Track rollout consistency: compare imagined rewards vs actual on held-out transitions.
+- Use these to gate planner activation.
+
+---
+
+## 58. Optional Ensemble for Uncertainty
+
+- Train small ensemble of RSSM heads.
+- Use variance of predicted reward/dynamics as uncertainty.
+- Increases compute; consider lightweight 2–3 member ensemble.
+
+---
+
+## 59. Theoretical Justification Sketch
+
+- SimGolf provides **reset and branch** to escape local optima.
+- Latent world model allows approximate resets in latent space.
+- Assuming bounded model error and short horizon, planner reduces value estimation error near critical states by exploring alternatives and updating policy/critic with imagined evidence.
+
+---
+
+## 60. Convergence Intuition
+
+- Planner induces additional imagined data focused on high-error states.
+- This acts like prioritized replay in latent imagination, reducing variance of value estimates in critical regions.
+- With proper uncertainty penalty, avoids overestimation from model bias.
+
+---
+
+## 61. Metrics for Model Bias
+
+- Compare branch predicted rewards to subsequent real rewards when branch followed.
+- Track bias = E[predicted - actual].
+- If bias high, reduce H or increase penalty.
+
+---
+
+## 62. Robustness Checks
+
+- Vary random seeds.
+- Disable branch-to-real to ensure gains not from action override only.
+- Evaluate policy-only (no planner) after training to test amortization.
+
+---
+
+## 63. Saving and Loading Planner State
+
+- Save buffer latents periodically? Usually not needed; rebuild each run.
+- Save planner config and thresholds.
+- Ensure compatibility across code versions.
+
+---
+
+## 64. CLI Arguments (Example)
+
+```
+python scripts/train_simgolf_dreamerv3.py \
+  --env antmaze-umaze-v2 \
+  --planner.enabled true \
+  --planner.B 16 \
+  --planner.H 12 \
+  --planner.trigger_td 0.7
+```
+
+---
+
+## 65. Potential Extensions
+
+- Combine with **consistency models** for latent denoising during planning.
+- Use **diffusion** to sample diverse latent continuations.
+- Add **goal-conditioned value** for multi-goal mazes.
+- Integrate **language hints** for semantic navigation (future work).
+
+---
+
+## 66. Reporting Format
+
+- Table: success rate, return, planner cost for baseline vs planner.
+- Curves: success vs steps; cost vs steps.
+- Ablation tables for B, H, triggers.
+
+---
+
+## 67. Comparison to Other Planners
+
+- Contrast with CEM-MPC on learned model.
+- Contrast with lookahead without resets (plain DreamerV3).
+- Show SimGolf latent advantage in backtracking tasks.
+
+---
+
+## 68. Limitations
+
+- Relies on model quality; bias can mislead branches.
+- Overhead may be high in real-time systems.
+- Latent resets assume RSSM state captures sufficient information.
+
+---
+
+## 69. Ethical / Safety
+
+- No external data; synthetic tasks.
+- Ensure reproducibility; avoid hidden stochastic seeds.
+
+---
+
+## 70. Detailed Algorithm (Expanded Pseudocode)
+
+```
+initialize DreamerV3 (world model, actor, critic)
+initialize checkpoint buffer B
+for step in range(total_steps):
+    o_t -> encode -> z_t
+    a_t ~ pi(z_t)
+    env step -> o_{t+1}, r_t, done
+    store transition
+    if update_time:
+        update world model + actor/critic from replay (standard DreamerV3)
+    td_err = |v(z_t) - target(z_t)|
+    unc = ensemble_var(z_t) if enabled else 0
+    ent = entropy(pi(.|z_t))
+    maybe_save_checkpoint(B, z_t, td_err, ent)
+    if should_trigger(td_err, unc, ent):
+        z_saved = B.sample()
+        branches = simulate_branches(rssm, actor, value, z_saved, cfg)
+        update_actor_critic_from_branches(branches)
+        if cfg.branch_select:
+            a_plan = select_branch_action(branches)
+            override next action with a_plan
+    if done: reset env, clear rollout buffers
+```
+
+---
+
+## 71. Detailed Update from Branches
+
+1. Convert top-k branches into imagined trajectories.
+2. Compute TD($\lambda$) targets with discount $\gamma$ and optional uncertainty-penalized rewards.
+3. Critic loss: MSE to targets.
+4. Actor loss: advantage-weighted log-prob + entropy bonus.
+5. Optimizer step; clip grads.
+
+---
+
+## 72. Equations for Penalized Reward
+
+Let $\sigma_r$ be predicted reward std:
+$$
+r^\text{pen}_t = r_t - \kappa \sigma_r.
+$$
+Use $r^\text{pen}_t$ in branch returns to counter optimism.
+
+---
+
+## 73. KL Balance
+
+Keep DreamerV3 KL balancing (prior vs posterior) intact; planner should not modify KL weights. If planner adds many imagined updates, monitor KL to avoid collapse; adjust free-bits if needed.
+
+---
+
+## 74. Handling Episode Ends in Latent
+
+- RSSM can model terminal; branch rollout should stop early if predicted discount $\gamma$ drops to 0.
+- Pad shorter branches; still compute returns accordingly.
+
+---
+
+## 75. Code Quality Notes
+
+- Keep functions pure where possible.
+- Separate config from code.
+- Add unit tests: shape checks, planner trigger tests, branch return monotonicity.
+
+---
+
+## 76. Unit Test Ideas
+
+- `test_checkpoint_buffer_insert_sample`.
+- `test_trigger_thresholds`.
+- `test_branch_rollout_shapes`.
+- `test_branch_return_positive`.
+- `test_no_trigger_when_cooldown`.
+
+---
+
+## 77. Visualization Scripts Outline
+
+- `plot_success_vs_steps.py`
+- `plot_branch_returns.py`
+- `plot_trigger_positions.py`
+- `plot_planner_cost.py`
+
+---
+
+## 78. Data Structures
+
+- Buffer entry: `{z: Tensor, score: float, step: int}`.
+- Branch: `(return, traj)` with traj list of `(z, a, r, gamma)`.
+- Config dataclass for planner params.
+
+---
+
+## 79. Practical Tips
+
+- Start with small B=8, H=8; verify planner integration.
+- Ensure planner uses `torch.no_grad()` except when computing losses.
+- Cache encoder outputs to avoid recomputation.
+
+---
+
+## 80. Measuring Branch Diversity
+
+- Compute pairwise cosine between first actions.
+- Diversity = mean distance; enforce minimum by resampling if low.
+
+---
+
+## 81. Potential Enhancement: Latent Goal Relabeling
+
+- If goal latent known, bias branch sampling toward goal direction using value gradients.
+- Keep optional; compare in ablation.
+
+---
+
+## 82. Integration with Replay
+
+- Planner updates do not add to replay (imagined); keep replay real-only to avoid drift.
+- Optionally log planner-augmented stats separately.
+
+---
+
+## 83. Parameter Sharing
+
+- Planner uses same actor/critic/value networks; no separate parameters.
+- Planner does not update RSSM; only actor/critic.
+
+---
+
+## 84. Scheduling Planner
+
+- Enable after warmup steps (e.g., 10k) when model stable.
+- Increase trigger thresholds during warmup to reduce false positives.
+
+---
+
+## 85. Memory Considerations
+
+- Branch rollouts store z tensors; free after use.
+- Use smaller latent dim if memory bound.
+- Gradient checkpointing for RSSM training; planner runs no-grad.
+
+---
+
+## 86. Handling Stochastic Policies
+
+- Actor may be stochastic Gaussian; sample with temperature.
+- For branch selection, use mean action or sample multiple times per branch step (costly).
+
+---
+
+## 87. Safety Checks Before Deployment
+
+- Validate returns finite.
+- Validate no NaNs in planner metrics.
+- Clip rewards if exploding.
+
+---
+
+## 88. Conclusion
+
+SimGolf-style latent planning leverages DreamerV3’s world model to enable reset-and-branch search without real-environment resets. By focusing imagined exploration on high-error or high-uncertainty states, the planner can improve success on hard navigation tasks requiring backtracking. This blueprint details math, algorithms, hyperparameters, and implementation guidance to realize and evaluate the approach.
+
+---
+
+_This README is the complete blueprint for Assignment 13: SimGolf for Online Planning with Latent World Models (DreamerV3 + Simulation-Based Global Search). Keep math, code, and experiments aligned._
 # Contrastive-Prioritized Experience Replay: A Novel Synthesis of Representation Alignment and Value Uncertainty in Pixel-Based Reinforcement Learning
 
 ## 1. Introduction
