@@ -375,18 +375,7 @@ This drift term pulls weights softly towards the prior (offline knowledge) while
 
 **Evaluation Strategy:** Benchmark: **Meta-World MT50** . Metric: Success rate on held-out tasks.
 
-### Assignment 22: ADEPT Data Exploitation for Offline RL
-
-**Selected Papers:**
-
-1. **ADEPT: Adaptive Data Exploitation** (arXiv 2025) ^^ \*\* \*\*
-2. **QDQ** ^^ \*\* \*\*
-
-**Novel Research Question:** ADEPT uses Multi-Armed Bandits to schedule data usage. In Offline RL, we often have "Conservative" (in-distribution) data and "Optimistic" (generated or OOD) data. Can ADEPT be applied to dynamically select the ratio of Conservative vs. Optimistic data batches during training to maximize learning speed without divergence?
-
-**Implementation Plan:** Implement the ADEPT bandit controller. The "arms" of the bandit are different data samplers (Real Data, Generated Data from QDQ). The reward for the bandit is the validation TD-error (lower is better).
-
-**Evaluation Strategy:** Benchmarks: **D4RL** . Metric: Convergence stability and final score.
+no
 
 ### Assignment 23: LCPO with Domain Randomization for Sim-to-Real
 

@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>50_with_bothe.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="strategic-research-roadmap-next-generation-reinforcement-learning-architectures-2025-2026">Strategic Research Roadmap: Next-Generation Reinforcement Learning Architectures (2025-2026)</h1>
+<p><strong>To:</strong> Research Staff, Principal Investigators, and PhD Candidates <strong>From:</strong> Director of Advanced Research <strong>Date:</strong> December 12, 2025 <strong>Subject:</strong> Directive on Strategic Research Assignments (Assignments 1–50)</p>
+<h2 id="1-strategic-overview-and-research-imperatives">1. Strategic Overview and Research Imperatives</h2>
+<p>The field of Reinforcement Learning (RL) stands at a critical inflection point. The era of optimizing simple model-free baselines on stationary benchmarks has largely concluded. Our institute’s mandate for the 2025-2026 cycle is to pioneer the convergence of distinct, high-impact methodologies that have emerged from the premier conferences—NeurIPS, ICML, and ICLR—between 2021 and 2025. We are witnessing a phase transition where the disparate subfields of Distributional RL, World Models, Diffusion Processes, and Neuro-Symbolic reasoning are collapsing into a unified paradigm of highly structured, sample-efficient, and generalization-capable decision-making systems.</p>
+<p>The analysis of recent literature suggests three dominant trends that will define our research agenda. First, the <strong>integration of generative modeling into control</strong> , specifically through Diffusion Models and Transformers, is reshaping how agents imagine futures and represent policies. Second, the <strong>optimization landscape of RL is being reconsidered</strong> , moving away from standard Adam-based updates toward second-order methods and spectral regularization to combat the pervasive issues of plasticity loss and non-stationarity. Third, <strong>structure and symbol manipulation</strong> are returning to the forefront, driven by the need for interpretability and the reasoning capabilities of Large Language Models (LLMs) embedded within RL loops.</p>
+<p>This document delineates 50 PhD-level research assignments. These are not merely implementation tasks; they are rigorous scientific inquiries designed to synthesize complementary advancements into novel algorithms. Each assignment requires deep engagement with the mathematical underpinnings of the selected papers, a disciplined approach to software engineering via Dockerized reproducibility, and an evaluation strategy that meets the statistical rigor of the <code>rliable</code> protocols. The focus is strictly on code implementation and mathematical rigor.</p>
+<hr>
+<h2 id="theme-i-distributional-and-value-based-reinforcement-learning">Theme I: Distributional and Value-Based Reinforcement Learning</h2>
+<p>The foundational hypothesis of this theme is that the stability and sample efficiency of RL agents are fundamentally limited by how they estimate the distribution of future returns. We move beyond scalar expectations toward sophisticated distributional metrics and optimization landscapes.</p>
+<h3 id="assignment-1-sinkhorn-divergence-in-latent-world-models">Assignment 1: Sinkhorn Divergence in Latent World Models</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Sinkhorn Distributional Reinforcement Learning</strong> (NeurIPS 2024) ^^ ** **
+<ul>
+<li><em>GitHub:</em> (https://github.com/datake/SinkhornDistRL)</li>
+</ul>
+</li>
+<li><strong>DreamerV3: Mastering Diverse Domains through World Models</strong> (ICLR 2024) ^^ ** **
+<ul>
+<li><em>GitHub:</em> <a href="https://github.com/danijar/dreamerv3">https://github.com/danijar/dreamerv3</a></li>
+</ul>
+</li>
+<li><strong>Distributional Reinforcement Learning</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Current state-of-the-art world models like DreamerV3 rely on minimizing the Kullback-Leibler (KL) divergence between the stochastic posterior and the prior transition dynamics. However, KL divergence is notoriously unstable when distributions have disjoint supports or are highly multi-modal, a common occurrence in complex stochastic environments. The research question posits: Can the Sinkhorn divergence, which provides a geometrically meaningful metric between distributions via optimal transport, replace the KL divergence in the latent space of DreamerV3 to improve robustness and sample efficiency in environments with stochastic, disjoint transition dynamics?</p>
+<p><strong>Implementation Plan:</strong> The implementation necessitates a fork of the <code>danijar/dreamerv3</code> JAX repository. The core refactoring targets the <code>RSSM</code> (Recurrent State Space Model) class within <code>jax/models.py</code>. The standard ELBO (Evidence Lower Bound) objective function must be modified. Specifically, the <code>kl_loss</code> function, which currently computes the analytic KL between Gaussian distributions, will be replaced by a <code>sinkhorn_loss</code> module derived from the <code>SinkhornDistRL</code> codebase.</p>
+<p>The mathematical formulation requires defining the Sinkhorn distance <strong>W</strong>ε(<strong>μ</strong>,<strong>ν</strong>) between the posterior <strong>q</strong>ϕ(<strong>z</strong>t∣<strong>x</strong>t) and the prior <strong>p</strong>θ(<strong>z</strong>t∣<strong>z</strong>t<strong>−</strong>1*<strong>*,<strong>a</strong>t</strong>−<strong>1**</strong>). The cost function <strong>c</strong>(<strong>x</strong>,<strong>y</strong>) will be the Euclidean distance in the latent space. The objective becomes minimizing the Sinkhorn divergence:</p>
+<p><strong>L</strong>d<strong>y</strong>n=<strong>2</strong>W<strong>ε**</strong>(<strong>q</strong>,<strong>p</strong>)<strong>−</strong>W<strong>ε**</strong>(<strong>q</strong>,<strong>q</strong>)<strong>−</strong>W<strong>ε**</strong>(<strong>p</strong>,<strong>p</strong>)**</p>
+<p>where <strong>W</strong>ε is approximated using the Sinkhorn-Knopp algorithm for <strong>L</strong> iterations. The computation of this transport plan is computationally intensive; thus, the implementation must utilize JAX's <code>vmap</code> and <code>jit</code> compilation to execute the iterative scaling on the GPU efficiently. A Docker container based on <code>ghcr.io/nvidia/jax:2024-03</code> is required to ensure consistent CUDA kernel versions for the transport operations.</p>
+<p><strong>Evaluation Strategy:</strong> The evaluation will focus on the <strong>Atari 100k</strong> benchmark, specifically targeting games with high stochasticity and sparse rewards such as <em>Frostbite</em> , <em>Seaquest</em> , and <em>Montezuma’s Revenge</em> . The primary metric is the Interquartile Mean (IQM) of human-normalized scores. Ablation studies must compare the stability of the latent state reconstructions (measured by reconstruction error on hold-out trajectories) between the KL-based DreamerV3 and the Sinkhorn-DreamerV3, verifying the hypothesis that Sinkhorn loss prevents posterior collapse in multi-modal scenarios.</p>
+<h3 id="assignment-2-crossq-with-sophia-optimization-for-continuous-control">Assignment 2: CrossQ with Sophia Optimization for Continuous Control</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>CrossQ: Batch Normalization in Deep Reinforcement Learning</strong> (ICLR 2024) ^^ ** **
+<ul>
+<li><em>GitHub:</em> <a href="https://github.com/adityab/CrossQ">https://github.com/adityab/CrossQ</a></li>
+</ul>
+</li>
+<li><strong>Sophia: A Scalable Stochastic Second-order Optimizer</strong> (ICLR 2024) ^^ ** **
+<ul>
+<li><em>GitHub:</em> (<a href="https://github.com/Liuhong99/Sophia">https://github.com/Liuhong99/Sophia</a>)</li>
+</ul>
+</li>
+</ol>
+<p><strong>Novel Research Question:</strong> CrossQ represents a paradigm shift by removing target networks and utilizing Batch Normalization (BN) to constrain value estimates, thereby enabling an Update-To-Data (UTD) ratio of 1. However, Batch Normalization introduces non-stationarity and dependencies within the batch that can complicate the optimization landscape. The research question investigates whether the Sophia optimizer, which utilizes a diagonal Hessian estimator to adapt to the local curvature of the loss landscape, can stabilize CrossQ updates further. Specifically, we hypothesize that Sophia will allow CrossQ to maintain stability at significantly higher UTD ratios (e.g., UTD=10 or 20) than the standard implementation, unlocking greater sample efficiency.</p>
+<p><strong>Implementation Plan:</strong> This project requires integrating the Sophia optimizer into the CrossQ codebase. The researcher must first implement the <code>SophiaG</code> optimizer class in PyTorch, ensuring it correctly handles the state updates for the diagonal Hessian estimate. The <code>CrossQ</code> agent (found in <code>CrossQ/agent.py</code>) typically uses Adam. This must be replaced with Sophia.</p>
+<p>The mathematical synthesis involves applying Sophia's update rule to the CrossQ objective. The CrossQ loss is:</p>
+<p><strong>L</strong>C<strong>ross</strong>Q(<strong>θ</strong>)<strong>=<strong>E</strong>D**</strong>[(<strong>Q</strong>θ(<strong>s</strong>,<strong>a</strong>)<strong>−</strong>(<strong>r</strong>+<strong>γ</strong>a**′<strong>max****Q</strong>θ(<strong>s</strong>′<strong>,<strong>a</strong>′</strong>))**)<strong>2</strong>]**</p>
+<p>Sophia updates parameters <strong>θ</strong> using an exponential moving average (EMA) of the gradient <strong>m</strong>t and the Hessian diagonal <strong>h</strong>t:</p>
+<p><strong>θ</strong>t**+<strong>1*</strong>*=<strong>θ</strong>t−<strong>η</strong>⋅<strong>clip</strong>(<strong>max</strong>{<strong>γ</strong>h<strong>t*</strong>*,<strong>ϵ</strong>}<strong>m</strong>t**,<strong>δ</strong>)</p>
+<p>Crucially, the Hessian estimate <strong>h</strong>t must be computed on the same mini-batch used for the gradient, or a sampled subset. The implementation must ensure that the Batch Normalization statistics in CrossQ are correctly synchronized or frozen during the curvature estimation steps of Sophia to prevents statistical drift.</p>
+<p><strong>Evaluation Strategy:</strong> The primary benchmarks are the <strong>MuJoCo</strong> continuous control tasks (Humanoid-v4, Ant-v4, Walker2d-v4). The evaluation strategy involves a rigorous ablation study comparing CrossQ+Adam versus CrossQ+Sophia across a sweep of UTD ratios <strong>{<strong>1</strong>,<strong>5</strong>,<strong>10</strong>,<strong>20</strong>}</strong>. Success is defined as CrossQ+Sophia achieving a higher asymptotic return or faster convergence (fewer environment steps) at high UTD ratios where CrossQ+Adam diverges or exhibits performance collapse.</p>
+<h3 id="assignment-3-exclusively-penalized-q-learning-epq-with-rational-activations">Assignment 3: Exclusively Penalized Q-Learning (EPQ) with Rational Activations</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Exclusively Penalized Q-learning (EPQ)</strong> (NeurIPS 2024) ^^ ** **
+<ul>
+<li><em>GitHub:</em> (<a href="https://github.com/DmitryRyumin/ICML-2025-Papers">https://github.com/DmitryRyumin/ICML-2025-Papers</a>) (General reference for context)</li>
+</ul>
+</li>
+<li><strong>Rational Activation Functions in Reinforcement Learning</strong> (arXiv 2024) ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Rational Activation Functions (RAFs) have been shown to significantly improve plasticity and approximation capabilities in RL agents but suffer from &quot;activation explosion&quot; leading to instability. EPQ reduces bias in offline RL by selectively penalizing Q-values only in Out-of-Distribution (OOD) regions. The synthesis question is: Can EPQ's selective penalty mechanism implicitly regularize the unbounded growth of Rational Activations? We hypothesize that the EPQ penalty, when applied to states with exploded Q-values (a symptom of activation explosion), will provide the necessary negative gradient signal to suppress the coefficients of the rational polynomials, enabling stable training of highly expressive offline agents.</p>
+<p><strong>Implementation Plan:</strong> The researcher will build upon a standard Offline RL repository such as <code>CORL</code> or <code>d3rlpy</code>. The first step is implementing a <code>RationalActivation</code> module in PyTorch, defined as <strong>f</strong>(<strong>x</strong>)<strong>=<strong>P</strong>(<strong>x</strong>)</strong>/<strong>Q</strong>(<strong>x</strong>), where <strong>P</strong> and <strong>Q</strong> are learnable polynomials. This module will replace ReLU or Tanh activations in the Critic networks.</p>
+<p>The EPQ loss function must be implemented to replace the standard CQL loss. The mathematical formulation for the combined objective is:</p>
+<p><strong>L</strong>(<strong>θ</strong>)<strong>=<strong>E</strong>(<strong>s</strong>,<strong>a</strong>)<strong>∼</strong>D**</strong>[(<strong>Q</strong>θ(<strong>s</strong>,<strong>a</strong>)<strong>−</strong>y**)<strong>2</strong>]<strong>+<strong>α</strong>E</strong>s<strong>∼</strong>D**,<strong>a</strong>∼<strong>π</strong>(<strong>s</strong>)[<strong>I</strong>(<strong>Q</strong>θ(<strong>s</strong>,<strong>a</strong>)<strong>&gt;<strong>τ</strong>)<strong>⋅</strong>Q</strong>θ(<strong>s</strong>,<strong>a</strong>)]<strong>+<strong>λ</strong>∣∣</strong>c<strong>∣</strong>∣<strong>2</strong>2**</p>
+<p>Here, <strong>I</strong> is the indicator function that activates the penalty only when the Q-value exceeds a threshold <strong>τ</strong> (e.g., the empirical max Q-value in the batch). The term <strong>∣∣</strong>c<strong>∣</strong>∣<strong>2</strong>2 represents a regularization on the coefficients of the rational function. The implementation must carefully tune <strong>α</strong> and <strong>τ</strong> to ensure the penalty engages specifically when activation explosion begins to manifest.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks will include <strong>D4RL</strong> datasets, specifically the challenging <code>antmaze-medium-diverse</code> and <code>hopper-medium-expert</code> tasks. The evaluation will compare the Normalized Average Return of EPQ+Rational against EPQ+ReLU and CQL+Rational. Detailed analysis tables should report the average magnitude of activations in the penultimate layer to quantitatively demonstrate the suppression of activation explosion.</p>
+<h3 id="assignment-4-q-value-regularized-transformer-qt-with-mamba-backbone">Assignment 4: Q-Value Regularized Transformer (QT) with Mamba Backbone</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Q-value Regularized Transformer for Offline Reinforcement Learning</strong> (ICML 2024) ^^ ** **
+<ul>
+<li><em>GitHub:</em> (https://github.com/charleshsc/QT)</li>
+</ul>
+</li>
+<li><strong>Mamba: Linear-Time Sequence Modeling with Selective State Spaces</strong> (2024) ^^ ** **
+<ul>
+<li><em>Code Reference:</em> <a href="https://github.com/state-spaces/mamba">https://github.com/state-spaces/mamba</a></li>
+</ul>
+</li>
+</ol>
+<p><strong>Novel Research Question:</strong> The QT architecture successfully combines Decision Transformers with Q-learning to stitch suboptimal trajectories. However, the quadratic complexity <strong>O</strong>(<strong>N</strong>2**)** of the Transformer attention mechanism severely limits the context length, typically to a few dozen steps. The Mamba architecture, based on Selective State Space Models (SSMs), offers linear time complexity <strong>O</strong>(<strong>N</strong>). The research question is: Can replacing the Transformer backbone in QT with a Mamba block enable the agent to utilize extremely long histories (10,000+ steps) for credit assignment in sparse-reward offline tasks, thereby outperforming attention-based architectures in long-horizon stitching?</p>
+<p><strong>Implementation Plan:</strong> The codebase requires cloning <code>charleshsc/QT</code> and identifying the <code>DecisionTransformer</code> class. The researcher must replace the GPT-2 style attention blocks with <code>MambaBlock</code> modules from the <code>mamba_ssm</code> library. This involves refactoring the input embeddings to match Mamba's expected dimensions and ensuring the causal masking inherent in Mamba aligns with the RL sequence modeling (States, Actions, Rewards).</p>
+<p>The mathematical formulation for the QT loss remains similar, but the underlying representation <strong>h</strong>t is now evolved via the discretized SSM dynamics:</p>
+<p><strong>h</strong>t=<strong>A</strong>ˉ<strong>t**<strong>h</strong>t</strong>−<strong>1**</strong>+<strong>B</strong>ˉ**t****x**t</p>
+<p><strong>y</strong>t=<strong>C</strong>h<strong>t</strong></p>
+<p>Crucially, the Q-value regularization term <strong>L</strong>M<strong>a</strong>x<strong>imi</strong>ze<strong>Q</strong> must be applied to the output embeddings <strong>y</strong>t. The training loop must be adjusted to handle the recurrent state <code>hs</code> of the Mamba model if training on sequences longer than GPU memory allows (via chunking), or simply training on very large <code>seq_len</code> (e.g., 4096) which is feasible with Mamba. The environment requires a Docker container with CUDA 11.8+ and specific NVCC versions to compile the Mamba CUDA kernels.</p>
+<p><strong>Evaluation Strategy:</strong> The primary benchmark is <strong>D4RL AntMaze</strong> (Large and Ultra-diverse datasets), where long-horizon credit assignment is critical and rewards are sparse. Evaluation metrics will include the Success Rate and the Stitching Ability (performance on medium-replay datasets). A comparative table should present Training FLOPs, Inference Latency, and Score for QT-Transformer vs. QT-Mamba across increasing context lengths (<strong>L</strong>=<strong>20</strong>,<strong>100</strong>,<strong>1000</strong>,<strong>4000</strong>).</p>
+<h3 id="assignment-5-value-evolutionary-based-rl-veb-rl-with-elephant-activations">Assignment 5: Value-Evolutionary-Based RL (VEB-RL) with Elephant Activations</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Value-Evolutionary-Based Reinforcement Learning</strong> (ICML 2024) ^^ ** **
+<ul>
+<li><em>GitHub:</em> (<a href="https://github.com/yeshenpy/VEB-RL">https://github.com/yeshenpy/VEB-RL</a>)</li>
+</ul>
+</li>
+<li><strong>Elephant Activation Functions</strong> (arXiv 2025) ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> VEB-RL utilizes genetic algorithms to maintain a population of value functions, effectively mitigating the risk of getting trapped in local optima. However, evolutionary methods are notoriously sample inefficient, and populations often suffer from &quot;feature collapse&quot; where all agents converge to similar representations. The research proposes integrating &quot;Elephant&quot; activation functions, which are designed to induce sparse gradients and representations, into the VEB-RL population. Can the sparsity induced by Elephant activations maintain higher diversity within the population's feature space, thereby accelerating the evolutionary search and improving sample efficiency?</p>
+<p><strong>Implementation Plan:</strong> Using the <code>yeshenpy/VEB-RL</code> repository, the researcher must locate the network definitions in <code>models.py</code>. The standard ReLU activations will be replaced by the Elephant activation function. The mathematical definition of the Elephant activation <strong>ϕ</strong>(<strong>x</strong>) involves a specific saturation and sparsity mechanism ^^, often taking the form: ** **</p>
+<p><strong>ϕ</strong>(<strong>x</strong>)<strong>=</strong>{<strong>x</strong>0if <strong>x</strong>&gt;<strong>0</strong>if <strong>x</strong>≤<strong>0**</strong>+**sparse_perturbation</p>
+<p>The implementation must also introduce a metric for <strong>Population Diversity</strong> , calculated as the mean cosine distance between the weight vectors or feature maps of the elite agents in the population.</p>
+<p><strong>Evaluation Strategy:</strong> Experiments will be conducted on <strong>MinAtar</strong> (Seaquest, Breakout) and <strong>MuJoCo Sparse</strong> environments. The evaluation will track two key metrics: Sample Efficiency (number of steps to reach threshold performance) and Population Diversity over generations. Results should be presented in a table comparing VEB-RL(ReLU) vs. VEB-RL(Elephant), highlighting the correlation between sustained diversity and final performance.</p>
+<h3 id="assignment-6-adaptive-discount-factors-in-ppo-via-variance-control">Assignment 6: Adaptive Discount Factors in PPO via Variance Control</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Reinforcement Learning with Adaptive Discount Factor</strong> (2024) ^^ ** **</li>
+<li><strong>Proximal Policy Optimization (PPO)</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> The discount factor <strong>γ</strong> determines the effective horizon of the agent. A fixed <strong>γ</strong> is often suboptimal; a low <strong>γ</strong> stabilizes early training but leads to myopia, while a high <strong>γ</strong> captures long-term value but increases variance. We propose an adaptive <strong>γ</strong> controller for PPO that adjusts <strong>γ</strong> based on the <strong>variance of the Generalized Advantage Estimation (GAE)</strong> . Can such a mechanism automatically anneal the agent from a stable, myopic learner to a far-sighted optimizer without manual tuning?</p>
+<p><strong>Implementation Plan:</strong> The researcher will modify a standard PPO implementation (e.g., <code>cleanrl</code>). The rollout buffer collection phase must be updated to calculate the empirical variance of the advantage estimates <strong>A</strong>^<strong>t</strong> within a batch.</p>
+<p><strong>γ</strong>t**+<strong>1*</strong>*=<strong>γ</strong>t+<strong>α</strong>⋅**(<strong>σ</strong>t<strong>a</strong>r<strong>g</strong>e<strong>t−</strong>Var**(<strong>A</strong>^<strong>t*</strong>*))**</p>
+<p>The GAE calculation loop must be refactored to accept a dynamic <strong>γ</strong>t. The logic suggests that if variance is low, <strong>γ</strong> can be increased to extend the horizon. If variance exceeds a threshold <strong>σ</strong>t<strong>a</strong>r<strong>g</strong>e<strong>t</strong>, <strong>γ</strong> is decreased to stabilize the updates.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks include <strong>MuJoCo</strong> (Hopper, HalfCheetah) and <strong>Procgen</strong> . The evaluation will compare PPO with fixed <strong>γ</strong>=<strong>0.99</strong> against PPO with Adaptive-<strong>γ</strong>. Metrics include the learning curve stability (variance of returns across seeds) and asymptotic performance.</p>
+<h3 id="assignment-7-gradient-eligibility-traces-in-recurrent-off-policy-rl">Assignment 7: Gradient Eligibility Traces in Recurrent Off-Policy RL</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Deep Reinforcement Learning with Gradient Eligibility Traces</strong> (2025) ^^ ** **</li>
+<li><strong>Efficient Recurrent Off-Policy RL (RESeL)</strong> (NeurIPS 2024) ^^ ** **
+<ul>
+<li><em>GitHub:</em> (<a href="https://github.com/FanmingL/Recurrent-Offpolicy-RL">https://github.com/FanmingL/Recurrent-Offpolicy-RL</a>)</li>
+</ul>
+</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Recurrent Off-Policy RL suffers from the &quot;staleness&quot; problem where hidden states stored in the replay buffer become outdated as the network evolves. While RESeL addresses this with specific learning rates, it does not fully solve the credit assignment issue. The assignment is to integrate <strong>Gradient Eligibility Traces (GET)</strong> , specifically the backward-view formulation compatible with streaming, into the training of RNN-based critics (GRU/LSTM). Can GET provide a more theoretically sound mechanism for credit assignment in recurrent off-policy learning than simple n-step returns?</p>
+<p><strong>Implementation Plan:</strong> Using the <code>FanmingL/Recurrent-Offpolicy-RL</code> repository, the researcher will modify the critic update. Standard BPTT (Backpropagation Through Time) truncates gradients. GET maintains a trace <strong>e</strong>t that accumulates gradients:</p>
+<p><strong>e</strong>t=<strong>λγ</strong>e<strong>t</strong>−<strong>1**</strong>+<strong>∇</strong>θ*<strong>*V</strong>(<strong>s</strong>t)</p>
+<p>The implementation requires refactoring the loss computation to use this trace for updates, effectively implementing a <strong>TD</strong>(<strong>λ</strong>) mechanism for deep recurrent networks. This must be done efficiently on the GPU, potentially requiring a custom CUDA kernel or JAX <code>scan</code> function.</p>
+<p><strong>Evaluation Strategy:</strong> The method will be evaluated on <strong>POMDP-MuJoCo</strong> (Partially Observable MuJoCo), where memory is essential. The comparison will be between RESeL (baseline) and RESeL+GET. Key metrics are sample efficiency and the ability to solve tasks with significant memory dependencies (e.g., Delayed Ant).</p>
+<h3 id="assignment-8-%22to-the-max%22-reward-transformation-with-sinkhorn-distributional-rl">Assignment 8: &quot;To the Max&quot; Reward Transformation with Sinkhorn Distributional RL</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>To the Max: Reinventing Reward in Reinforcement Learning</strong> (ICML 2024) ^^ ** **
+<ul>
+<li><em>GitHub:</em> (<a href="https://github.com/veviurko/To-the-Max">https://github.com/veviurko/To-the-Max</a>)</li>
+</ul>
+</li>
+<li><strong>Sinkhorn Distributional Reinforcement Learning</strong> (NeurIPS 2024) ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> &quot;To the Max&quot; proposes a specific transformation of the reward function to encourage reaching goal states. Distributional RL explicitly models the randomness of returns. The research question investigates the interaction between these two concepts: Does the &quot;To the Max&quot; reward transformation alter the return distribution in a way that makes Distributional RL (specifically Sinkhorn DRL) redundant, or does the combination provide a multiplicative benefit in sparse reward goal-seeking tasks?</p>
+<p><strong>Implementation Plan:</strong> The researcher will implement the reward transformation <strong>R</strong>′<strong>(<strong>s</strong>,<strong>a</strong>)</strong> defined in &quot;To the Max&quot; within the <code>SinkhornDistRL</code> repository.</p>
+<p><strong>R</strong>′<strong>(<strong>s</strong>,<strong>a</strong>)</strong>=<strong>Transformation</strong>(<strong>R</strong>(<strong>s</strong>,<strong>a</strong>))</p>
+<p>The agent will then attempt to learn the distribution of this <em>transformed</em> return. The study requires training agents with four configurations: Standard Reward + Scalar RL, Standard Reward + Sinkhorn RL, Max Reward + Scalar RL, and Max Reward + Sinkhorn RL.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: <strong>Maze</strong> navigation tasks and <strong>Fetch</strong> robotics tasks (sparse rewards). The evaluation will analyze the convergence speed and the shape of the learned value distributions (visualized via density plots).</p>
+<hr>
+<h2 id="theme-ii-model-based-reinforcement-learning">Theme II: Model-Based Reinforcement Learning</h2>
+<p>This theme focuses on the construction and utilization of internal models of the environment. The frontier lies in improving the fidelity of these models through diffusion and transformers, and scaling them to multi-agent and limited-data regimes.</p>
+<h3 id="assignment-9-diffusion-world-models-with-diamonds-diffusion-prior">Assignment 9: Diffusion World Models with DIAMOND's Diffusion Prior</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>DIAMOND: DIffusion As a Model Of eNvironment Dreams</strong> (NeurIPS 2024) ^^ ** **
+<ul>
+<li><em>GitHub:</em> <a href="https://github.com/diamond-wm/diamond">https://github.com/diamond-wm/diamond</a></li>
+</ul>
+</li>
+<li><strong>Diffusion World Model: Future Modeling Beyond Step-by-Step Rollout</strong> (ICML 2024) ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> DIAMOND utilizes a diffusion model to simulate environment dynamics but relies on an autoregressive generation process (predicting <strong>s</strong>t**+<strong>1*</strong>* from <strong>s</strong>t), which is slow for long-horizon planning. The Diffusion World Model (DWM) paper proposes predicting <em>multi-step</em> futures concurrently. The research question is: Can we enhance DIAMOND by integrating the &quot;Future Modeling&quot; architecture from DWM, modifying the diffusion U-Net to denoise a block of <strong>K</strong> future frames simultaneously? This would theoretically accelerate the &quot;dreaming&quot; process (planning) by a factor of **K**.</p>
+<p><strong>Implementation Plan:</strong> Fork the <code>diamond-wm/diamond</code> repository. The core task is to modify the U-Net architecture. Instead of accepting an input tensor of shape <strong>(<strong>B</strong>,<strong>C</strong>,<strong>H</strong>,<strong>W</strong>)</strong>, the model must process <strong>(<strong>B</strong>,<strong>K</strong>,<strong>C</strong>,<strong>H</strong>,<strong>W</strong>)</strong> or a stacked equivalent <strong>(<strong>B</strong>,<strong>K</strong>×</strong>C**,<strong>H</strong>,<strong>W</strong>)**. The diffusion loss function must be updated to denoise the entire trajectory segment: $$ \mathcal{L} = \mathbb{E}_{t, \epsilon, \tau} [ |</p>
+<p>| \epsilon - \epsilon*\theta(x*{t+1:t+K}^\tau, \tau, x<em>t, a</em>{t:t+K-1}) ||^2 ] $$ The agent's planning loop in <code>agent.py</code> must be refactored to query the model once for every <strong>K</strong> steps of imagination.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: <strong>Atari 100k</strong> , specifically visually complex games. The primary metrics are <strong>Wall-clock Training Time</strong> (samples per second) and <strong>Inference Speed</strong> (imagined steps per second), alongside the standard Human Normalized Score to ensure no degradation in policy quality.</p>
+<h3 id="assignment-10-efficientzero-v2-with-lightzero-integration-for-multi-agent-systems">Assignment 10: EfficientZero V2 with LightZero Integration for Multi-Agent Systems</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>EfficientZero V2: Mastering Discrete and Continuous Control</strong> (ICML 2024) ^^ ** **
+<ul>
+<li><em>GitHub:</em> (https://github.com/Shengjiewang-Jason/EfficientZeroV2)</li>
+</ul>
+</li>
+<li><strong>LightZero: A Unified Benchmark for MCTS</strong> (NeurIPS 2023) ^^ ** **
+<ul>
+<li><em>GitHub:</em> <a href="https://github.com/opendilab/LightZero">https://github.com/opendilab/LightZero</a></li>
+</ul>
+</li>
+</ol>
+<p><strong>Novel Research Question:</strong> EfficientZero V2 (EZ-V2) sets the state-of-the-art for limited data control in single-agent domains. LightZero provides a modular MCTS framework that supports multi-agent reinforcement learning (MARL). The assignment is to port EZ-V2's specific algorithmic improvements—specifically the Gumbel search corrections and the value prefix loss—into the LightZero framework to create a <strong>Multi-Agent EfficientZero V2</strong> . Does the improved sample efficiency of EZ-V2 translate to the multi-agent domain, where the joint action space grows exponentially?</p>
+<p><strong>Implementation Plan:</strong> Clone the <code>LightZero</code> repository. Create a new policy class <code>EfficientZeroV2Policy</code> within <code>lzero/policy</code>. This involves migrating the <code>ValuePrefix</code> loss logic and the improved MCTS search policies from the <code>Shengjiewang-Jason</code> repository. $$ \mathcal{L} <em>{prefix} = \sum</em> {k=0}^K |</p>
+<p>| r*{t+k} - \hat{r}(s*{t+k}) ||^2 $$ The implementation must extend these mechanisms to handle joint actions <strong>a</strong>=<strong>(<strong>a</strong>1</strong>,<strong>…</strong>,<strong>a</strong>N**)** and potentially factorized value functions supported by LightZero's <code>ma_muzero</code>.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: <strong>GoBigger</strong> (a complex multi-agent game supported by LightZero) or <strong>SMAC</strong> (StarCraft Multi-Agent Challenge). The metric of interest is the <strong>Win Rate vs. Sample Count</strong> , comparing standard Multi-Agent MuZero against the newly implemented Multi-Agent EfficientZero V2.</p>
+<h3 id="assignment-11-transformer-based-world-models-with-state-space-duality">Assignment 11: Transformer-Based World Models with State-Space Duality</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Transformer-based World Models Are Happy With 100k Interactions</strong> (ICLR 2023) ^^ ** **
+<ul>
+<li><em>GitHub:</em> <a href="https://github.com/jrobine/twm">https://github.com/jrobine/twm</a></li>
+</ul>
+</li>
+<li><strong>Mamba-2: State Space Duality</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Transformers are data-efficient world models but suffer during inference (planning) due to the KV-cache bottleneck. Mamba-2 establishes a theoretical duality between Linear Attention and State Space Models (SSMs). The research question is: Can we replace the dense attention layers in the Transformer World Model (TWM) with the <strong>State Space Duality (SSD)</strong> layers from Mamba-2? This would allow the model to be trained in parallel (Transformer mode) for efficiency but executed recurrently (SSM mode) during MCTS planning, offering <strong>O</strong>(<strong>1</strong>) step complexity.</p>
+<p><strong>Implementation Plan:</strong> Using <code>jrobine/twm</code> as the base, the researcher must replace the <code>SelfAttention</code> modules with <code>Mamba2Block</code> from the <code>mamba-ssm</code> library. The critical engineering challenge is implementing the dual forward passes: one for training that takes the full sequence <strong>x</strong>1**:<strong>T*</strong>* and computes gradients in parallel, and one for the MCTS planner that maintains a recurrent state <strong>h</strong>t and steps forward <strong>x</strong>t**+<strong>1**</strong>=<strong>step</strong>(<strong>x</strong>t,<strong>h</strong>t).</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: <strong>Atari 100k</strong> . The evaluation will compare <strong>Planning Speed (nodes/second)</strong> and <strong>Training Throughput</strong> between the TWM-Attention and TWM-SSD models. We expect comparable sample efficiency with significantly faster wall-clock planning times.</p>
+<h3 id="assignment-12-unizero-vs-efficientzero-v2-a-rigorous-comparative-study">Assignment 12: UniZero vs. EfficientZero V2: A Rigorous Comparative Study</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>UniZero: Unified Tree Search</strong> (arXiv 2024) ^^ ** **</li>
+<li><strong>EfficientZero V2</strong> (ICML 2024) ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Both UniZero and EfficientZero V2 claim state-of-the-art performance on the Atari 100k benchmark using MCTS-based approaches. UniZero emphasizes a unified architecture, while EZ-V2 focuses on algorithmic refinements. No direct, controlled comparison exists. The assignment is to implement both algorithms within the <strong>same</strong> codebase (LightZero) to decouple architectural benefits from implementation details. Which approach yields better sample efficiency when hyperparameters are normalized?</p>
+<p><strong>Implementation Plan:</strong> This is a benchmarking and integration assignment. The researcher must ensure LightZero has fully compliant implementations of both algorithms (UniZero is likely present, EZ-V2 must be added as per Assignment 10). A unified configuration file must be created to ensure both agents use identical network sizes, replay buffer configurations, and pre-processing steps.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: A subset of 10 diverse <strong>Atari</strong> games and 5 <strong>DeepMind Control Suite</strong> tasks. Metrics: Median Human Normalized Score and Interquartile Mean (IQM) with stratified bootstrap confidence intervals (using the <code>rliable</code> library).</p>
+<h3 id="assignment-13-simgolf-for-online-planning-with-latent-world-models">Assignment 13: SimGolf for Online Planning with Latent World Models</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>SimGolf: Simulation-Based Global Search</strong> (NeurIPS 2024) ^^ ** **</li>
+<li><strong>DreamerV3</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> SimGolf introduces a method for &quot;local simulator access&quot; to reset to previously visited states and replan, enhancing sample efficiency. DreamerV3 learns a latent world model. Can we implement the SimGolf planning logic <em>inside</em> the latent space of DreamerV3? Instead of resetting the real environment (which is often impossible), the agent resets its <em>latent</em> state to a critical decision point and performs SimGolf-style search to refine its policy.</p>
+<p><strong>Implementation Plan:</strong> Integrate SimGolf's search strategy into the <code>DreamerV3</code> planning loop. When the agent encounters high Bellman error or uncertainty, it triggers a &quot;SimGolf phase&quot;:</p>
+<ol>
+<li>Reset latent state <strong>z</strong>t to a stored checkpoint <strong>z</strong>s<strong>a</strong>v<strong>e</strong>d.</li>
+<li>Roll out multiple trajectories from <strong>z</strong>s<strong>a</strong>v<strong>e</strong>d using the world model.</li>
+<li>Update the value function estimates based on these imagined rollouts.</li>
+<li>Update the policy.</li>
+</ol>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: <strong>Complex Navigation Tasks</strong> (e.g., D4RL AntMaze or custom mazes) where backtracking and broad search are necessary. Metric: Success rate in finding the goal compared to standard DreamerV3.</p>
+<h3 id="assignment-14-model-based-meta-rl-mamba-with-cross-embodiment">Assignment 14: Model-Based Meta-RL (MAMBA) with Cross-Embodiment</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>MAMBA: MetA-RL Model-Based Algorithm</strong> (NeurIPS/ICLR 2024 Rebuttal context) ^^ ** **</li>
+<li><strong>PEAC: Unsupervised Pre-training for Cross-Embodiment RL</strong> (NeurIPS 2024) ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> MAMBA applies Dreamer-style world models to Meta-RL. PEAC addresses cross-embodiment (agents with different physical structures). The question: Can a MAMBA agent meta-learn a &quot;Universal World Model&quot; that adapts not just to different tasks, but to different <em>bodies</em> (embodiments) by inferring a latent &quot;morphology vector&quot; from interaction history?</p>
+<p><strong>Implementation Plan:</strong> Modify the MAMBA architecture to include a &quot;Morphology Encoder&quot; that takes the history of observations and actions <strong>(<strong>o</strong>1</strong>:<strong>t**</strong>,<strong>a</strong>1**:<strong>t*</strong>*)** and outputs a latent <strong>z</strong>m<strong>or</strong>p<strong>h</strong>. This latent conditions the transition dynamics <strong>p</strong>(<strong>s</strong>′<strong>∣</strong>s**,<strong>a</strong>,<strong>z</strong>m<strong>or</strong>p**h). Train this on a suite of MuJoCo agents (HalfCheetah, Ant, Walker) simultaneously.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: <strong>Cross-Embodiment MuJoCo</strong> (train on Walker/Hopper, test on Ant). Metric: Zero-shot or Few-shot adaptation performance on the unseen embodiment.</p>
+<h3 id="assignment-15-economic-dispatch-with-multi-agent-muzero">Assignment 15: Economic Dispatch with Multi-Agent MuZero</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Economic Dispatch with PPO</strong> (2024) ^^ ** **</li>
+<li><strong>LightZero</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> The Economic Dispatch (ED) problem in power grids involves balancing generation and demand while respecting constraints. Paper ^^ solves this with PPO. Can <strong>Multi-Agent MuZero</strong> , which can plan ahead and anticipate grid dynamics (load changes), outperform the reactive PPO agent in minimizing cost and constraint violations in a dynamic ED scenario? ** **</p>
+<p><strong>Implementation Plan:</strong> Define the Economic Dispatch problem as a <code>Gymnasium</code> environment compatible with LightZero. The environment must simulate a 15-generator system with dynamic load profiles. Configure <code>ma_muzero</code> in LightZero to control the generators.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: IEEE 30-bus or 118-bus systems. Metrics: Total Operational Cost ($) and Frequency of Constraint Violations. Compare PPO vs. MA-MuZero.</p>
+<h3 id="assignment-16-td7-with-model-based-rollouts-hybrid-rl">Assignment 16: TD7 with Model-Based Rollouts (Hybrid RL)</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>TD7</strong> (2023/2024 context) ^^ ** **</li>
+<li><strong>Diffusion World Model</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> TD7 is a model-free algorithm that improves over TD3. Model-Based Policy Optimization (MBPO) showed that augmenting replay buffers with model-generated data improves efficiency. Can we combine TD7 with a <strong>Diffusion World Model</strong> to generate high-fidelity synthetic rollouts, creating a &quot;Model-Based TD7&quot;?</p>
+<p><strong>Implementation Plan:</strong> Use <code>seungju-k1m/sac-td3-td7</code> as the base. Train a Diffusion World Model (from ^^) concurrently. In the update loop, sample real transitions, generate <strong>k</strong>-step synthetic rollouts using DWM, and add them to the TD7 training batch. ** **</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: <strong>MuJoCo</strong> (Humanoid, Dog). Metric: Sample efficiency (performance at 100k, 300k steps).</p>
+<h3 id="assignment-17-stochastic-muzero-with-sinkhorn-divergence">Assignment 17: Stochastic MuZero with Sinkhorn Divergence</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>MuZero</strong> ^^ ** **</li>
+<li><strong>Sinkhorn Distributional RL</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Stochastic MuZero handles chance by learning afterstates. Can we improve the representation of the stochastic value function in the search tree by using <strong>Sinkhorn Distributional Value Estimation</strong> instead of scalar values? This would allow the MCTS to make risk-sensitive decisions based on the full distribution of returns.</p>
+<p><strong>Implementation Plan:</strong> Modify a MuZero implementation (e.g., <code>LightZero</code>) to predict a categorical distribution of returns at each node. Use Sinkhorn divergence loss to train the value prediction network. During MCTS backpropagation, aggregate distributions using convolution (for addition) and mixture (for branching).</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: <strong>Stochastic Atari</strong> (e.g., Backgammon or Poker-like environments if available, or noisy Atari). Metric: Performance in high-variance scenarios.</p>
+<hr>
+<h2 id="theme-iii-offline-and-data-efficient-rl">Theme III: Offline and Data-Efficient RL</h2>
+<p>This theme addresses the challenge of learning policies from fixed datasets without interaction, a prerequisite for real-world deployment where trial-and-error is costly.</p>
+<h3 id="assignment-18-offline-rl-with-consistency-models-generative-qdq">Assignment 18: Offline RL with Consistency Models (Generative QDQ)</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Q-Distribution Guided Q-Learning (QDQ)</strong> (NeurIPS 2024) ^^ ** **</li>
+<li><strong>Consistency Models</strong> (Contextual)</li>
+</ol>
+<p><strong>Novel Research Question:</strong> QDQ uses a consistency model to estimate the uncertainty of Q-values for pessimistic updates in offline RL. We propose extending this: Can the Consistency Model be used to <em>generate</em> synthetic, high-value transitions (data augmentation) that are &quot;stitched&quot; from the dataset distribution but lie in optimistic regions? This &quot;Generative QDQ&quot; would actively expand the support of the dataset towards higher rewards before the RL agent trains on it.</p>
+<p><strong>Implementation Plan:</strong> Using a standard Offline RL repo (e.g., <code>CORL</code>), implement a Consistency Model trained on the trajectory distribution <strong>p</strong>(<strong>s</strong>′<strong>,<strong>r</strong>∣</strong>s**,<strong>a</strong>)<strong>. Construct a &quot;Generation Phase&quot; where the model generates transitions <strong>(<strong>s</strong>^</strong>′</strong>,<strong>r</strong>^<strong>) conditioned on state-action pairs in the dataset that have high Q-values. Augment the replay buffer <strong>D</strong>a</strong>ug**<strong>=<strong>D</strong>∪</strong>D<strong>g</strong>e**n** and train a CQL or IQL agent on this enriched dataset.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: <strong>D4RL</strong> (Medium-Replay datasets where data is scarce and stitching is required). Metric: Normalized Average Return improvement over vanilla QDQ.</p>
+<h3 id="assignment-19-resetting-neural-networks-for-continual-offline-to-online-rl">Assignment 19: Resetting Neural Networks for Continual Offline-to-Online RL</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Online non-stationary learning with automatic soft parameter reset</strong> (NeurIPS 2024) ^^ ** **</li>
+<li><strong>Resetting Neural Networks</strong> (NeurIPS 2023) ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> When fine-tuning an offline RL agent (e.g., CQL) online, the agent often suffers from &quot;plasticity loss&quot;—it cannot adapt to the new online data because its weights have converged to a sharp minimum. Can the &quot;Automatic Soft Parameter Reset&quot; (ASPR) method, governed by an Ornstein-Uhlenbeck drift process, outperform standard &quot;Hard Resets&quot; (ReDo) in preserving the useful offline priors while regaining plasticity during the online phase?</p>
+<p><strong>Implementation Plan:</strong> The researcher will implement the ASPR optimizer wrapper. This wrapper maintains a reference to <strong>θ</strong>ini<strong>t</strong> (the weights at the end of offline training). The update rule is modified:</p>
+<p><strong>θ</strong>t=<strong>θ</strong>t<strong>−</strong>1*<strong>*−</strong>α<strong>t∇</strong>L**(<strong>θ</strong>t<strong>−</strong>1**<strong>)</strong>+<strong>γ</strong>(<strong>θ</strong>ini<strong>t−</strong>θ<strong>t</strong>−**1****)</p>
+<p>This drift term pulls weights softly towards the prior (offline knowledge) while allowing adaptation. Apply this to the Critic networks of a CQL agent during the online fine-tuning phase on D4RL datasets.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: <strong>D4RL to Online</strong> (e.g., train offline on <code>antmaze-medium</code>, fine-tune online on <code>antmaze-large</code>). Metric: Learning curve slope immediately after the online phase starts and final asymptotic performance.</p>
+<h3 id="assignment-20-q-value-regularized-mamba-qm-for-long-horizon-offline-rl">Assignment 20: Q-Value Regularized Mamba (QM) for Long-Horizon Offline RL</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Q-value Regularized Transformer (QT)</strong> (ICML 2024) ^^ ** **</li>
+<li><strong>Mamba</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Similar to Assignment 4 but focused specifically on the <em>regularization</em> aspect. QT relies on the Transformer's attention map to propagate Q-values. Mamba's hidden state <strong>h</strong>t compresses the history. The question: Can we formulate a Q-value regularization term directly on the Mamba hidden state <strong>h</strong>t that is mathematically equivalent to the attention-based regularization in QT, thereby enabling &quot;Stitching via State Space Models&quot;?</p>
+<p><strong>Implementation Plan:</strong> Derive the gradient of the Q-value with respect to the Mamba hidden state <strong>∇</strong>h<strong>t</strong>Q**(<strong>s</strong>t,<strong>a</strong>t)**. Add a loss term that maximizes this Q-value by adjusting the <em>past</em> hidden states through the recurrent dynamics. Implement in <code>charleshsc/QT</code> by swapping the backbone.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: <strong>D4RL Kitchen</strong> (long horizon, sequential subtasks). Metric: Success rate.</p>
+<h3 id="assignment-21-top-erl-vs-harmodt-on-multi-task-benchmarks">Assignment 21: Top-ERL vs. HarmoDT on Multi-Task Benchmarks</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>TOP-ERL: Transformer-based Off-Policy Episodic RL</strong> (ICLR 2025) ^^ ** **</li>
+<li><strong>HarmoDT: Harmony Multi-Task Decision Transformer</strong> (ICML 2024) ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Top-ERL and HarmoDT represent two competing approaches to multi-task offline RL: one uses episodic memory with Transformers (Top-ERL), the other uses gradient modulation (HarmoDT). A direct comparison is missing. The assignment is to benchmark them on the <strong>Meta-World MT50</strong> task set to determine which architectural bias (episodic memory vs. gradient harmony) is superior for generalization.</p>
+<p><strong>Implementation Plan:</strong> Set up the <code>MT50</code> benchmark. Run official implementations of both papers. Create a hybrid: <strong>Harmo-Top-ERL</strong> , which uses HarmoDT's gradient masking <em>inside</em> the Top-ERL update loop.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Meta-World MT50</strong> . Metric: Success rate on held-out tasks.</p>
+<p>no</p>
+<h3 id="assignment-23-lcpo-with-domain-randomization-for-sim-to-real">Assignment 23: LCPO with Domain Randomization for Sim-to-Real</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Online Reinforcement Learning in Non-Stationary Context-Driven Environments (LCPO)</strong> (ICLR 2025) ^^ ** **</li>
+<li><strong>Robustness Reprogramming</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> LCPO is designed for non-stationary environments. Sim-to-Real transfer is a form of non-stationarity (simulation physics <strong></strong>= real physics). Can LCPO, trained on a domain-randomized simulation (varying friction, mass), adapt <em>online</em> to the &quot;real&quot; physics (held-out parameters) faster than standard Domain Randomization baselines?</p>
+<p><strong>Implementation Plan:</strong> Use <code>pybullet</code> to simulate a robot. Train LCPO while varying physics parameters sinusoidally. Test on a setting with fixed but <em>unseen</em> physics parameters.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>PyBullet Hopper</strong> and <strong>Walker</strong> . Metric: Adaptation time (steps to recover 80% performance) after physics shift.</p>
+<h3 id="assignment-24-offline-rl-with-hyperparameter-tuning-networks-hyq">Assignment 24: Offline RL with Hyperparameter Tuning Networks (HyQ)</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>QT</strong> ^^ ** **</li>
+<li><strong>Generalization Analysis</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Offline RL algorithms like QT are sensitive to hyperparameters (e.g., the weight of the Q-regularization <strong>β</strong>). Can we train a <strong>Hypernetwork</strong> that takes dataset statistics (sparsity, horizon length, return variance) as input and predicts the optimal <strong>β</strong> for the QT loss function?</p>
+<p><strong>Implementation Plan:</strong> Extract meta-features from D4RL datasets. Train a small MLP (Hypernet) to predict <strong>β</strong>. The training signal for the Hypernet comes from the validation performance of the QT agent (meta-gradient).</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: <strong>D4RL</strong> suite. Metric: Performance across diverse datasets without manual hyperparameter tuning.</p>
+<h3 id="assignment-25-decision-transformer-with-rime-for-preference-based-offline-rl">Assignment 25: Decision Transformer with RIME for Preference-Based Offline RL</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>RIME: Robust Preference-based RL</strong> (ICML 2024) ^^ ** **</li>
+<li><strong>Decision Transformer</strong></li>
+</ol>
+<p><strong>Novel Research Question:</strong> RIME handles noisy preferences in standard RL. Can we integrate RIME's robust loss function into a <strong>Decision Transformer</strong> (DT) framework? instead of conditioning the DT on returns (which we might not know), we condition it on <em>preference tokens</em> , trained via the RIME objective to be robust to labeling errors in the offline dataset.</p>
+<p><strong>Implementation Plan:</strong> Modify <code>DecisionTransformer</code> to accept preference tokens. Train the sequence model using RIME's robust loss instead of standard cross-entropy on returns.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: <strong>D4RL</strong> with synthetic noisy preferences (simulating human error). Metric: Correlation between conditioned preference and actual return.</p>
+<hr>
+<h2 id="theme-iv-exploration-and-intrinsic-motivation">Theme IV: Exploration and Intrinsic Motivation</h2>
+<p>This theme addresses the sparse reward problem by endowing agents with curiosity and the ability to leverage external knowledge.</p>
+<h3 id="assignment-26-insight-with-semantic-rnd">Assignment 26: INSIGHT with Semantic RND</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>INSIGHT: Neuro-Symbolic RL</strong> (ICML 2024) ^^ ** **</li>
+<li><strong>Intrinsic Motivation with Foundation Models</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Standard Random Network Distillation (RND) calculates novelty on pixels, which is sensitive to noise (e.g., moving leaves). INSIGHT generates structured, semantic embeddings of the state using a distilled Vision Foundation Model. The research question: Does applying RND on the <strong>Semantic Embeddings</strong> of INSIGHT (Semantic RND) lead to more meaningful exploration in visually complex, sparse-reward games?</p>
+<p><strong>Implementation Plan:</strong> Fork <code>ins-rl/insight</code>. Extract the <code>PerceptionModule</code> output. Feed this into an RND predictor/target pair. Add the prediction error as an intrinsic reward. $$ r_{int} = |</p>
+<p>| \hat{f}(\psi*{INSIGHT}(s)) - f(\psi*{INSIGHT}(s)) ||^2 $$</p>
+<p><strong>Evaluation Strategy:</strong> Benchmarks: <strong>Montezuma's Revenge</strong> and <strong>Pitfall</strong> (Atari). Metric: Number of unique rooms visited compared to Pixel-RND.</p>
+<h3 id="assignment-27-joint-intrinsic-motivation-jim-with-language-guided-goals">Assignment 27: Joint Intrinsic Motivation (JIM) with Language-Guided Goals</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Joint Intrinsic Motivation (JIM)</strong> (AAMAS 2024) ^^ ** **</li>
+<li><strong>ReLara</strong> (ICML 2024) ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> JIM rewards joint novelty in multi-agent systems. ReLara uses an assistant to shape rewards. We propose a hybrid: A &quot;Language Assistant&quot; (LLM) observes the multi-agent team and suggests <strong>joint goals</strong> in text (e.g., &quot;Pass the ball to Agent 2&quot;). These goals are embedded and used to shape the intrinsic reward, guiding the JIM exploration toward semantically meaningful coordination patterns.</p>
+<p><strong>Implementation Plan:</strong> Adapt <code>ReLara</code> to a multi-agent setting (e.g., Google Research Football). Use a local LLM (Llama-3-8B) to generate textual goals based on game snapshots. Compute cosine similarity between the current state embedding and the goal embedding. Add this to the JIM intrinsic reward.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Google Research Football</strong> . Metric: Goals scored and pass completion rate.</p>
+<h3 id="assignment-28-neural-mmo-with-foundation-model-intrinsic-motivation">Assignment 28: Neural MMO with Foundation Model Intrinsic Motivation</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Neural MMO 2.0</strong> ^^ ** **</li>
+<li><strong>Fostering Intrinsic Motivation with Foundation Models</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Neural MMO is a massive multi-agent environment with open-ended tasks. Can <strong>CLIP-based Intrinsic Motivation</strong> (using pre-trained CLIP embeddings to measure novelty) drive more diverse emergent behaviors (trading, fighting, exploration) in Neural MMO than standard count-based mechanisms?</p>
+<p><strong>Implementation Plan:</strong> Integrate <code>pufferlib</code> (for Neural MMO) with a CLIP embedding extraction loop. Calculate the entropy of the visited CLIP embedding clusters as a population-level intrinsic reward.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Neural MMO</strong> . Metric: Diversity of learned skills/professions in the population.</p>
+<h3 id="assignment-29-auxdistill-with-auto-generated-auxiliary-tasks">Assignment 29: AuxDistill with Auto-Generated Auxiliary Tasks</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>AuxDistill</strong> (2024) ^^ ** **</li>
+<li><strong>Intrinsic Motivation</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> AuxDistill relies on hand-defined auxiliary tasks to accelerate learning. Can we use an <strong>Intrinsic Motivation</strong> module (like RND or ICM) to <em>automatically</em> identify salient events (e.g., opening a door, picking up a key) and treat them as auxiliary tasks for distillation, removing the need for manual task engineering?</p>
+<p><strong>Implementation Plan:</strong> Modify <code>AuxDistill</code>. Run an RND module. When RND error spikes (surprise), create a temporary auxiliary task: &quot;Return to this state&quot;. Train the policy to solve this aux task and distill it into the main policy.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Habitat Object Rearrangement</strong> . Metric: Success rate without hand-crafted aux rewards.</p>
+<h3 id="assignment-30-lion-optimizer-with-adaptive-parameter-space-noise">Assignment 30: Lion Optimizer with Adaptive Parameter Space Noise</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Lion Optimizer</strong> ^^ ** **</li>
+<li><strong>Parameter Space Noise</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Lion uses sign-based updates: <strong>θ</strong>←<strong>θ</strong>−<strong>η</strong>⋅<strong>sign</strong>(<strong>m</strong>). This binary nature might interact uniquely with Parameter Space Noise (PSN). We propose &quot;Noisy Lion&quot;: injecting discrete noise (flipping signs) into the update step based on an exploration schedule. Does this induce better exploration in parameter space than adding Gaussian noise to the weights?</p>
+<p><strong>Implementation Plan:</strong> Modify <code>lion-pytorch</code>. Inside the <code>step</code> function, add:</p>
+<p><strong>u</strong>t=<strong>sign</strong>(<strong>m</strong>t+<strong>N</strong>(<strong>0</strong>,<strong>σ</strong>t))</p>
+<p>This probabilistically flips the update direction for parameters with low momentum (uncertain directions). Integrate this into a <strong>TD3</strong> agent.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>PyBullet Robotics</strong> . Metric: Exploration efficiency (steps to first reward).</p>
+<h3 id="assignment-31-dicurl-with-mamba-curriculum-generator">Assignment 31: DiCuRL with Mamba Curriculum Generator</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>DiCuRL: Diffusion Curriculum RL</strong> (NeurIPS 2024) ^^ ** **</li>
+<li><strong>Mamba</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> DiCuRL uses diffusion to generate curriculum goals. Diffusion generation is slow. Can we train a <strong>Mamba</strong> model to autoregressively generate a sequence of curriculum goals (<strong>g</strong>1→<strong>g</strong>2→<strong>g</strong>f<strong>ina</strong>l) based on the agent's current capability? Mamba's efficiency allows generating long chains of sub-goals rapidly during training.</p>
+<p><strong>Implementation Plan:</strong> Train a Mamba model on successful trajectories to predict the sequence of &quot;achieved goals&quot;. Use this model to propose intermediate goals for the RL agent during training.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>PointMaze</strong> and <strong>AntMaze</strong> . Metric: Wall-clock training time vs. DiCuRL.</p>
+<h3 id="assignment-32-rational-exploration-in-sparse-rewards">Assignment 32: Rational Exploration in Sparse Rewards</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Rational Activation Functions</strong> ^^ ** **</li>
+<li><strong>Exploration Papers</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Rational Activation Functions (RAFs) are highly flexible. Can we exploit their instability? In sparse reward environments, we can <em>increase</em> the flexibility (degree) of the RAFs in the Actor network to induce high-variance exploratory actions (&quot;Wild Exploration&quot;), and then anneal the degree down to stabilize the policy once rewards are found.</p>
+<p><strong>Implementation Plan:</strong> Implement a dynamic RAF module where the polynomial degree <strong>d</strong> is a hyperparameter. Schedule <strong>d</strong> from high (e.g., 5) to low (e.g., 2) based on the replay buffer's average reward.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Sparse MuJoCo</strong> . Metric: Time to solve.</p>
+<h3 id="assignment-33-count-based-exploration-with-vq-vae-states">Assignment 33: Count-Based Exploration with VQ-VAE States</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>LightZero</strong> (includes VQ-VAE models) ^^ ** **</li>
+<li><strong>Exploration Papers</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Count-based exploration is powerful but intractable in continuous spaces. Can we use the <strong>VQ-VAE</strong> discrete codes from a MuZero-style model (LightZero) to perform exact count-based exploration in the <em>latent</em> space?</p>
+<p><strong>Implementation Plan:</strong> Use <code>LightZero</code>'s VQ-VAE model. Maintain a hash table of visited latent codes <strong>z</strong>q<strong>u</strong>an<strong>t</strong>i<strong>ze</strong>d. Add intrinsic reward <strong>r</strong>∝<strong>1/<strong>N</strong>(<strong>z</strong>)</strong><img src="file:///Users/tahamajs/Documents/uni/DRL/paperAssignments/prompts" alt="">.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Montezuma's Revenge</strong> . Metric: Exploration bonus consistency.</p>
+<hr>
+<h2 id="theme-v-optimization-and-stability">Theme V: Optimization and Stability</h2>
+<p>This theme focuses on the &quot;engine room&quot; of RL—the optimizers and regularization techniques that ensure learning does not collapse.</p>
+<h3 id="assignment-34-spectral-normalization-with-normalize-and-project-nap">Assignment 34: Spectral Normalization with Normalize-and-Project (NaP)</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Normalization and effective learning rates (NaP)</strong> (arXiv 2024) ^^ ** **</li>
+<li><strong>Spectral Regularization</strong> (ICLR 2025) ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> NaP controls the effective learning rate by fixing parameter norms. Spectral Regularization maintains the spectral radius of weight matrices. The synthesis: Does combining NaP (fixing the norm) with Spectral Regularization (shaping the singular values) provide the ultimate defense against <strong>Loss of Plasticity</strong> in continual RL?</p>
+<p><strong>Implementation Plan:</strong> Implement a custom Optimizer wrapper.</p>
+<ol>
+<li>Apply Spectral Regularization loss: <strong>L</strong>s<strong>p</strong>ec=<strong>(<strong>σ</strong>1**</strong>(<strong>W</strong>)<strong>−</strong>1**)**2**.</li>
+<li>Apply NaP projection after the gradient update: <strong>W</strong>←<strong>W</strong>⋅<strong>∣∣</strong>W<strong>∣</strong>∣**F****R**. Apply this to a PPO agent in a Continual Learning setting.</li>
+</ol>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Continual-MuJoCo</strong> (HalfCheetah with changing gravity/friction every 1M steps). Metric: Ability to adapt to new physics without performance degradation (forgetting or plasticity loss).</p>
+<h3 id="assignment-35-distributed-lion-for-multi-agent-rl">Assignment 35: Distributed Lion for Multi-Agent RL</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Distributed Lion</strong> (NeurIPS 2024) ^^ ** **</li>
+<li><strong>MAPPO</strong> (Multi-Agent PPO context)</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Distributed Lion reduces communication overhead by transmitting only the <em>sign</em> of updates (1 bit per parameter). Can we apply this to <strong>Multi-Agent PPO (MAPPO)</strong> where centralized critics require massive bandwidth to aggregate gradients from many agents? This could enable scaling MAPPO to thousands of agents on modest hardware.</p>
+<p><strong>Implementation Plan:</strong> Implement the <code>DistributedLion</code> algorithm using <code>torch.distributed</code>. Apply it to the gradient synchronization step of a MAPPO implementation (e.g., <code>cleanrl</code> or <code>marl-benchmark</code>).</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>StarCraft II (SMAC)</strong> with massive agent counts (if available) or <strong>Neural MMO</strong> . Metric: Bandwidth usage vs. Performance.</p>
+<h3 id="assignment-36-sophia-optimized-crossq">Assignment 36: Sophia-Optimized CrossQ</h3>
+<p><em>(See Assignment 2 - this is a key optimization assignment placed in Theme I for impact, but belongs conceptually here).</em></p>
+<h3 id="assignment-37-proximal-feature-optimization-pfo-with-redo">Assignment 37: Proximal Feature Optimization (PFO) with ReDo</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Proximal Feature Optimization (PFO)</strong> (NeurIPS 2024) ^^ ** **</li>
+<li><strong>ReDo: Resetting Dormant Neurons</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> PFO regularizes pre-activations to stay close to a prior. ReDo resets dormant neurons. Are they complementary? We hypothesize that PFO might <em>prevent</em> neurons from becoming dormant in the first place, making ReDo unnecessary. Alternatively, ReDo might clean up the neurons that PFO fails to save.</p>
+<p><strong>Implementation Plan:</strong> Train PPO agents with four configs: Baseline, PFO, ReDo, PFO+ReDo. Monitor the &quot;Dormant Neuron Ratio&quot;.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Procgen</strong> (high diversity, prone to dormancy). Metric: Generalization gap and dormant ratio.</p>
+<h3 id="assignment-38-soft-parameter-reset-for-ppo-plasticity">Assignment 38: Soft Parameter Reset for PPO Plasticity</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Automatic Soft Parameter Reset</strong> ^^ ** **</li>
+<li><strong>PPO</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> Apply the SDE-based Soft Parameter Reset (from ^^) to the <strong>Policy Network</strong> of PPO in a non-stationary environment. Does soft resetting allow the policy to explore new behaviors (regain plasticity) without catastrophic forgetting of the locomotion primitives? ** **</p>
+<p><strong>Implementation Plan:</strong> Wrap the PPO Actor optimizer with the Soft Reset logic. Trigger resets when entropy drops below a threshold.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Non-Stationary Ant</strong> (Ant's legs change length during training). Metric: Recovery speed.</p>
+<h3 id="assignment-39-context-encoder-specific-learning-rates-resel-in-world-models">Assignment 39: Context-Encoder-Specific Learning Rates (RESeL) in World Models</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>RESeL</strong> (NeurIPS 2024) ^^ ** **</li>
+<li><strong>DreamerV3</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> RESeL shows that recurrent encoders need higher learning rates. Does applying a distinct, higher learning rate to the <strong>RSSM Encoder</strong> of DreamerV3 (relative to the dynamics/decoder models) improve its ability to capture fast-changing details in the environment?</p>
+<p><strong>Implementation Plan:</strong> Modify <code>dreamerv3</code> optimizer config to use parameter groups. Set <code>lr_encoder = 5 * lr_dynamics</code>.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Crafter</strong> (requires memory and detail). Metric: Score and reconstruction error.</p>
+<h3 id="assignment-40-constraint-based-ppo-with-economic-dispatch-logic">Assignment 40: Constraint-Based PPO with Economic Dispatch Logic</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>PPO for Economic Dispatch</strong> ^^ ** **</li>
+<li><strong>Safe RL</strong></li>
+</ol>
+<p><strong>Novel Research Question:</strong> Paper ^^ uses penalty methods and action projection for power grid constraints. Can we generalize this &quot;Action Projection&quot; layer to generic <strong>Safe RL</strong> tasks (e.g., SafetyGym), where the projection maps unsafe actions to the nearest valid action on the constraint manifold? ** **</p>
+<p><strong>Implementation Plan:</strong> Implement a differentiable projection layer <code>safety_projection(action)</code> that solves a QP (Quadratic Program) to satisfy safety constraints. Integrate into PPO Actor.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>SafetyGym</strong> . Metric: Number of safety violations vs. Baseline PPO-Lagrangian.</p>
+<h3 id="assignment-41-gradient-spectral-normalization-gsn-in-transformers">Assignment 41: Gradient Spectral Normalization (GSN) in Transformers</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Gradient Spectral Normalization</strong> ^^ ** **</li>
+<li><strong>Decision Transformer</strong></li>
+</ol>
+<p><strong>Novel Research Question:</strong> GSN reshapes gradient distributions in the frequency domain. Transformers often suffer from gradient scaling issues. Can applying GSN to the gradients of a <strong>Decision Transformer</strong> stabilize training and allow for larger learning rates?</p>
+<p><strong>Implementation Plan:</strong> Implement the FFT-based GSN filter. Apply it to the gradients of the Attention layers in a DT.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>D4RL</strong> . Metric: Max stable learning rate and convergence speed.</p>
+<hr>
+<h2 id="theme-vi-architectures-transformers-mamba-neuro-symbolic">Theme VI: Architectures (Transformers, Mamba, Neuro-Symbolic)</h2>
+<p>This theme explores the cutting-edge architectures that are replacing the standard MLP/CNN backbones in RL.</p>
+<h3 id="assignment-42-rl-gpt-with-self-correction">Assignment 42: RL-GPT with Self-Correction</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>RL-GPT</strong> (NeurIPS 2024) ^^ ** **</li>
+<li><strong>LLM Reasoning Papers</strong></li>
+</ol>
+<p><strong>Novel Research Question:</strong> RL-GPT integrates RL with Code-as-Policy. Can we integrate a <strong>Self-Correction (Reflection)</strong> loop? The LLM generates code, a &quot;Critic LLM&quot; (or the same LLM prompted differently) critiques it, and the RL rewards the <em>improvement</em> between the draft and the corrected code.</p>
+<p><strong>Implementation Plan:</strong> Modify the RL-GPT generation loop. State -&gt; LLM -&gt; Code_v1 -&gt; Reflection -&gt; Code_v2 -&gt; Execute. Reward = <strong>R</strong>(<strong>Code_v2</strong>)<strong>−</strong>R**(<strong>Code_v1</strong>)**.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Minecraft (MineDojo)</strong> . Metric: Task completion rate.</p>
+<h3 id="assignment-43-symbolic-regression-machine-rsrm-for-reward-discovery">Assignment 43: Symbolic Regression Machine (RSRM) for Reward Discovery</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Reinforcement Symbolic Regression Machine (RSRM)</strong> (ICLR 2024) ^^ ** **
+<ul>
+<li><em>GitHub:</em> (<a href="https://github.com/intell-sci-comput/RSRM">https://github.com/intell-sci-comput/RSRM</a>)</li>
+</ul>
+</li>
+</ol>
+<p><strong>Novel Research Question:</strong> RSRM uses RL to find mathematical formulas. Can we use RSRM to <strong>discover the underlying reward function</strong> of a black-box environment from observed transitions <strong>(<strong>s</strong>,<strong>a</strong>,<strong>s</strong>′</strong>) and preferences? Ideally, RSRM would output a symbolic equation (e.g., <strong>R</strong>=<strong>−</strong>0.5<strong>⋅</strong>v<strong>2</strong>) which is then used to train a PPO agent.</p>
+<p><strong>Implementation Plan:</strong> Collect a dataset of transitions and human preferences. Use RSRM to search for a symbolic formula <strong>f</strong>(<strong>s</strong>) that correlates with preferences. Train PPO using <strong>f</strong>(<strong>s</strong>).</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>CartPole</strong> (Hidden reward). Metric: Recovery of the ground-truth reward formula (interpretability) and agent performance.</p>
+<h3 id="assignment-44-text-to-svg-rl-with-diffusion-feedback">Assignment 44: Text-to-SVG RL with Diffusion Feedback</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Text-to-SVG RL</strong> (ICLR 2026 sub) ^^ ** **</li>
+<li><strong>DIAMOND</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> The Text-to-SVG paper uses a VLM as a reward model. This is sparse and noisy. Can we use a <strong>Diffusion Model</strong> trained on SVG-to-Image to provide a <em>dense, differentiable</em> signal? The diffusion model acts as a &quot;critic&quot; that estimates how &quot;real&quot; the rendered SVG looks given the text prompt.</p>
+<p><strong>Implementation Plan:</strong> Train a diffusion model conditioned on text to denoise SVG renderings. Use the diffusion loss (SDS - Score Distillation Sampling) as a gradient for the RL agent generating the SVG code.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>SVG Generation</strong> . Metric: CLIP Score of generated SVGs.</p>
+<h3 id="assignment-45-neuro-symbolic-graph-rl">Assignment 45: Neuro-Symbolic Graph RL</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>INSIGHT</strong> ^^ ** **</li>
+<li><strong>Graph Neural Networks Papers</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> INSIGHT uses an MLP perception module. Many environments (Atari, Starcraft) are naturally graph-structured (objects and relations). Can we replace the perception module with a <strong>Graph Neural Network (GNN)</strong> that extracts a &quot;Symbolic Graph State&quot;, allowing for even more interpretable explanations (e.g., &quot;Agent jumped because Enemy A is close to Platform B&quot;)?</p>
+<p><strong>Implementation Plan:</strong> Modify <code>INSIGHT</code> to extract object lists from Atari RAM or Vision. Build a graph <strong>G</strong>=<strong>(<strong>V</strong>,<strong>E</strong>)</strong>. Feed <strong>G</strong> into a GNN. Feed GNN output to the symbolic policy.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Atari</strong> (Object-centric games like Skiing, Freeway). Metric: Explanation quality (user study or heuristic) and agent score.</p>
+<h3 id="assignment-46-quantized-llms-in-rlhf-loops">Assignment 46: Quantized LLMs in RLHF Loops</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>DuQuant</strong> (NeurIPS 2024) ^^ ** **</li>
+<li><strong>SRPPO</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> RLHF (Reinforcement Learning from Human Feedback) is expensive. Can we train an RLHF policy using <strong>4-bit Quantized LLMs</strong> (via DuQuant) without significant performance degradation? This would democratize RLHF research.</p>
+<p><strong>Implementation Plan:</strong> Integrate <code>bitsandbytes</code> and <code>peft</code> (LoRA) into the SRPPO training loop. Apply DuQuant quantization to the Actor and Critic models.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>HH-RLHF</strong> dataset. Metric: Win-rate against full-precision model vs. Memory savings.</p>
+<h3 id="assignment-47-mamba-2-recurrent-ppo">Assignment 47: Mamba-2 Recurrent PPO</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Mamba-2</strong> ^^ ** **</li>
+<li><strong>Recurrent PPO</strong></li>
+</ol>
+<p><strong>Novel Research Question:</strong> Replace the LSTM in a standard Recurrent PPO agent with a <strong>Mamba-2</strong> block. Does the superior state tracking and linear complexity of Mamba-2 allow PPO to handle significantly longer effective horizons in POMDPs than LSTMs?</p>
+<p><strong>Implementation Plan:</strong> Swap <code>LSTM</code> for <code>Mamba2</code> in <code>cleanrl</code>'s <code>ppo_recurrent.py</code>. Manage the hidden state passing carefully.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Memory Gym</strong> (tasks requiring memorizing sequences of 1000+ steps). Metric: Success rate.</p>
+<h3 id="assignment-48-harmodt-with-label-specific-representation-learning">Assignment 48: HarmoDT with Label-Specific Representation Learning</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>HarmoDT</strong> ^^ ** **</li>
+<li><strong>Generalization Analysis for Label-Specific Representation</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> HarmoDT optimizes masks for tasks. Can we augment it with <strong>Label-Specific Representation Learning</strong> to explicitly disentangle the task ID embedding from the state embedding? We hypothesize this will prevent negative transfer in highly diverse multi-task datasets.</p>
+<p><strong>Implementation Plan:</strong> Add an orthogonality loss term to HarmoDT: <strong>∣∣</strong>Cov**(<strong>z</strong>t<strong>a</strong>s<strong>k,<strong>z</strong>s</strong>t<strong>a</strong>t<strong>e)<strong>∣</strong>∣</strong>F**2.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Meta-World MT50</strong> . Metric: Generalization to unseen tasks.</p>
+<h3 id="assignment-49-boosting-rl-with-auxiliary-short-delays-and-mamba">Assignment 49: Boosting RL with Auxiliary Short Delays and Mamba</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>Boosting RL with Auxiliary Short Delays (AD-RL)</strong> (ICML 2024) ^^ ** **</li>
+<li><strong>Mamba</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> AD-RL helps with delayed feedback. Mamba naturally handles long delays. Are they complementary? We propose combining them: Use Mamba as the backbone to capture the long-term trace, and use AD-RL's auxiliary heads to provide intermediate supervision.</p>
+<p><strong>Implementation Plan:</strong> Integrate AD-RL auxiliary losses into a Mamba-based Actor-Critic.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Delayed MuJoCo</strong> (rewards delayed by 100 steps). Metric: Convergence speed.</p>
+<h3 id="assignment-50-the-%22grand-unified%22-dreamer-agent">Assignment 50: The &quot;Grand Unified&quot; Dreamer Agent</h3>
+<p><strong>Selected Papers:</strong></p>
+<ol>
+<li><strong>DreamerV3</strong> ^^ ** **</li>
+<li><strong>CrossQ</strong> ^^ ** **</li>
+<li><strong>Mamba</strong> ^^ ** **</li>
+</ol>
+<p><strong>Novel Research Question:</strong> <strong>The Capstone.</strong> Can we architect a single agent that combines the three most significant recent advancements?</p>
+<ol>
+<li><strong>World Model:</strong> Uses <strong>Mamba</strong> dynamics (instead of RSSM/RNN).</li>
+<li><strong>Critic:</strong> Uses <strong>CrossQ</strong> (no target networks, batch norm) for value estimation.</li>
+<li><strong>Optimization:</strong> Uses <strong>Sophia</strong> (second-order). This &quot;Frankenstein&quot; agent tests the limits of integrating disparate state-of-the-art modules.</li>
+</ol>
+<p><strong>Implementation Plan:</strong> This requires a massive engineering effort. Start with <code>dreamerv3</code>. Replace RSSM with Mamba-SSM. Replace the Actor-Critic update logic with CrossQ's logic. Replace the optimizer with Sophia.</p>
+<p><strong>Evaluation Strategy:</strong> Benchmark: <strong>Atari 100k</strong> and <strong>DMC</strong> . Metric: Is it the SOTA of SOTAs?</p>
+<hr>
+<h2 id="3-technical-infrastructure-and-evaluation-standards">3. Technical Infrastructure and Evaluation Standards</h2>
+<p>To ensure the scientific validity of these assignments, strict adherence to the following technical standards is mandatory:</p>
+<ol>
+<li><strong>Containerization:</strong> All deliverables must be encapsulated in Docker containers. Use <code>pytorch/pytorch:2.2.0-cuda12.1-cudnn8-devel</code> or <code>ghcr.io/nvidia/jax:2024-03</code> as base images. This ensures reproducibility of CUDA kernel compilations (essential for Mamba and Sinkhorn).</li>
+<li><strong>Reproducibility Protocol:</strong> All evaluation runs must use at least 5 random seeds <strong>(<strong>0</strong>,<strong>1</strong>,<strong>2</strong>,<strong>3</strong>,<strong>4</strong>)</strong>.</li>
+<li><strong>Statistical Rigor:</strong> Results must be reported using the <strong>Interquartile Mean (IQM)</strong> and <strong>Stratified Bootstrap Confidence Intervals</strong> as implemented in the <code>rliable</code> library. Point estimates (mean/median) are insufficient.</li>
+<li><strong>Code Standards:</strong> Python 3.10+ is required. All code must be fully typed (mypy strict mode) and formatted via Black.</li>
+</ol>
+<p>This roadmap represents a strategic investment in solving the &quot;Grand Challenges&quot; of RL: sample efficiency, stability, and generalization. The convergence of these methods is not just a possibility; it is the inevitable direction of the field.</p>
+<p><strong>Signed,</strong></p>
+<p><strong>Director of Advanced Research</strong> <strong>Top-Tier AI Institute</strong></p>
+<p><a href="https://proceedings.neurips.cc/paper_files/paper/2024/file/7371ee6a40da2951303ec7ebdb2150ce-Paper-Conference.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://proceedings.neurips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">proceedings.neurips.ccDistributional Reinforcement Learning with Regularized Wasserstein Loss - NIPS papers<strong>Opens in a new window</strong></a><a href="https://danijar.com/project/dreamerv3/"><img src="https://t1.gstatic.com/faviconV2?url=https://danijar.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">danijar.comMastering Diverse Control Tasks through World Models - Danijar Hafner<strong>Opens in a new window</strong></a><a href="https://arxiv.org/abs/2301.04104"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.org[2301.04104] Mastering Diverse Domains through World Models - arXiv<strong>Opens in a new window</strong></a><a href="https://slogix.in/machine-learning/latest-research-papers-in-distributional-reinforcement-learning/"><img src="https://t1.gstatic.com/faviconV2?url=https://slogix.in/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">slogix.inTop 50 Research Papers in Distributional Reinforcement Learning ...<strong>Opens in a new window</strong></a><a href="https://sb3-contrib.readthedocs.io/en/master/modules/crossq.html"><img src="https://t2.gstatic.com/faviconV2?url=https://sb3-contrib.readthedocs.io/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">sb3-contrib.readthedocs.ioCrossQ — Stable Baselines3 - Contrib 2.8.0a1 documentation<strong>Opens in a new window</strong></a><a href="https://github.com/adityab/CrossQ"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comOfficial code release for &quot;CrossQ: Batch Normalization in Deep Reinforcement Learning for Greater Sample Efficiency and Simplicity&quot; - GitHub<strong>Opens in a new window</strong></a><a href="https://arxiv.org/html/1902.05605v4"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.orgCrossQ: Batch Normalization in Deep Reinforcement Learning for Greater Sample Efficiency and Simplicity - arXiv<strong>Opens in a new window</strong></a><a href="https://arxiv.org/abs/1902.05605"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.org[1902.05605] CrossQ: Batch Normalization in Deep Reinforcement Learning for Greater Sample Efficiency and Simplicity - arXiv<strong>Opens in a new window</strong></a><a href="https://nn.labml.ai/optimizers/sophia.html"><img src="https://t0.gstatic.com/faviconV2?url=https://nn.labml.ai/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">nn.labml.aiSophia Optimizer - labml.ai<strong>Opens in a new window</strong></a><a href="https://proceedings.iclr.cc/paper_files/paper/2024/file/06960915ba8674c7a898ec0b472b80ff-Paper-Conference.pdf"><img src="https://t0.gstatic.com/faviconV2?url=https://proceedings.iclr.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">proceedings.iclr.ccSOPHIA: ASCALABLE STOCHASTIC SECOND-ORDER OPTIMIZER FOR LANGUAGE MODEL PRE-TRAINING - ICLR Proceedings<strong>Opens in a new window</strong></a><a href="https://papers.nips.cc/paper_files/paper/2024/file/cdc1d08ee82d4818758d229abb7f1ce8-Paper-Conference.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://papers.nips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">papers.nips.ccExclusively Penalized Q-learning for Offline Reinforcement Learning - NIPS papers<strong>Opens in a new window</strong></a><a href="https://arxiv.org/html/2507.14736v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.orgBalancing Expressivity and Robustness: Constrained Rational Activations for Reinforcement Learning - arXiv<strong>Opens in a new window</strong></a><a href="https://arxiv.org/abs/2405.17098"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.org[2405.17098] Q-value Regularized Transformer for Offline Reinforcement Learning - arXiv<strong>Opens in a new window</strong></a><a href="https://github.com/charleshsc/QT"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comcharleshsc/QT: ICML'2024: Q-value Regularized Transformer for Offline Reinforcement Learning - GitHub<strong>Opens in a new window</strong></a><a href="https://huggingface.co/docs/transformers/model_doc/mamba"><img src="https://t2.gstatic.com/faviconV2?url=https://huggingface.co/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">huggingface.coMamba - Hugging Face<strong>Opens in a new window</strong></a><a href="https://thegradient.pub/mamba-explained/"><img src="https://t0.gstatic.com/faviconV2?url=https://thegradient.pub/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">thegradient.pubMamba Explained - The Gradient<strong>Opens in a new window</strong></a><a href="https://michielh.medium.com/mamba-for-dummies-linear-time-llms-explained-0d4b51efcf9f"><img src="https://t3.gstatic.com/faviconV2?url=https://michielh.medium.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">michielh.medium.comMamba for Dummies: Efficient Linear-Time LLMs Explained | by Michiel Horstman - Medium<strong>Opens in a new window</strong></a><a href="https://towardsdatascience.com/mamba-ssm-theory-and-implementation-in-keras-and-tensorflow-32d6d4b32546/"><img src="https://t0.gstatic.com/faviconV2?url=https://towardsdatascience.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">towardsdatascience.comMamba: SSM, Theory, and Implementation in Keras and TensorFlow<strong>Opens in a new window</strong></a><a href="https://github.com/yeshenpy/VEB-RL"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comyeshenpy/VEB-RL: (ICML 2024) The official code for Value-Evolutionary-Based Reinforcement Learning - GitHub<strong>Opens in a new window</strong></a><a href="https://arxiv.org/html/2509.19159v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.orgEfficient Reinforcement Learning by Reducing Forgetting with Elephant Activation Functions<strong>Opens in a new window</strong></a><a href="https://www.researchgate.net/publication/396273607_Reinforcement_Learning_with_Adaptive_Discount_Factor_for_Clutch_Judder_Suppression_with_Stable_Learning_in_Two-Speed_EV_Transmission"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">researchgate.netReinforcement Learning with Adaptive Discount Factor for Clutch Judder Suppression with Stable Learning in Two-Speed EV Transmission | Request PDF - ResearchGate<strong>Opens in a new window</strong></a><a href="https://rlj.cs.umass.edu/2025/papers/RLJ_RLC_2025_321.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://rlj.cs.umass.edu/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">rlj.cs.umass.eduReinforcement Learning with Adaptive Temporal Discounting<strong>Opens in a new window</strong></a><a href="https://www.researchgate.net/publication/387925569_PPO_Improvement_in_Different_Environments"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">researchgate.netPPO Improvement in Different Environments - ResearchGate<strong>Opens in a new window</strong></a><a href="https://spinningup.openai.com/en/latest/algorithms/ppo.html"><img src="https://t0.gstatic.com/faviconV2?url=https://spinningup.openai.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">spinningup.openai.comProximal Policy Optimization — Spinning Up documentation - OpenAI<strong>Opens in a new window</strong></a><a href="https://rlj.cs.umass.edu/2025/papers/RLJ_RLC_2025_302.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://rlj.cs.umass.edu/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">rlj.cs.umass.eduDeep Reinforcement Learning with Gradient Eligibility Traces<strong>Opens in a new window</strong></a><a href="https://www.researchgate.net/publication/393685696_Deep_Reinforcement_Learning_with_Gradient_Eligibility_Traces"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">researchgate.net(PDF) Deep Reinforcement Learning with Gradient Eligibility Traces - ResearchGate<strong>Opens in a new window</strong></a><a href="https://arxiv.org/abs/2507.09087"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.org[2507.09087] Deep Reinforcement Learning with Gradient Eligibility Traces - arXiv<strong>Opens in a new window</strong></a><a href="https://github.com/FanmingL/Recurrent-Offpolicy-RL"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comFanmingL/Recurrent-Offpolicy-RL: Implementation of SAC and TD3 based on various RNN and Transformer. - GitHub<strong>Opens in a new window</strong></a><a href="https://github.com/veviurko/To-the-Max"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comCode accompanying our ICML 2024 paper &quot;To the Max: Reinventing Reward in Reinforcement Learning&quot; - GitHub<strong>Opens in a new window</strong></a><a href="https://diamond-wm.github.io/"><img src="https://t2.gstatic.com/faviconV2?url=https://diamond-wm.github.io/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">diamond-wm.github.ioDiamond - diffusion for world modeling<strong>Opens in a new window</strong></a><a href="https://proceedings.neurips.cc/paper_files/paper/2024/file/6bdde0373d53d4a501249547084bed43-Paper-Conference.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://proceedings.neurips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">proceedings.neurips.ccDiffusion for World Modeling: Visual Details Matter in Atari - NIPS papers<strong>Opens in a new window</strong></a><a href="https://arxiv.org/abs/2402.03570"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.org[2402.03570] Diffusion World Model: Future Modeling Beyond Step-by-Step Rollout for Offline Reinforcement Learning - arXiv<strong>Opens in a new window</strong></a><a href="https://github.com/Shengjiewang-Jason/EfficientZeroV2"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comShengjiewang-Jason/EfficientZeroV2: [ICML 2024, Spotlight] EfficientZero V2: Mastering Discrete and Continuous Control with Limited Data - GitHub<strong>Opens in a new window</strong></a><a href="https://arxiv.org/abs/2403.00564"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.org[2403.00564] EfficientZero V2: Mastering Discrete and Continuous Control with Limited Data<strong>Opens in a new window</strong></a><a href="https://github.com/opendilab/LightZero"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.com[NeurIPS 2023 Spotlight] LightZero: A Unified Benchmark for Monte Carlo Tree Search in General Sequential Decision Scenarios (awesome MCTS) - GitHub<strong>Opens in a new window</strong></a><a href="https://openreview.net/forum?id=oIUXpBnyjv"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">openreview.netLightZero: A Unified Benchmark for Monte Carlo Tree Search in General Sequential Decision Scenarios | OpenReview<strong>Opens in a new window</strong></a><a href="https://github.com/jrobine/twm"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comjrobine/twm: Transformer-based World Models - GitHub<strong>Opens in a new window</strong></a><a href="https://arxiv.org/html/2406.10667v2"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.orgUniZero: Generalized and Efficient Planning with Scalable Latent World Models - arXiv<strong>Opens in a new window</strong></a><a href="https://openreview.net/forum?id=7sACcaOmGi&amp;noteId=EkELBhEf7V"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">openreview.netThe Power of Resets in Online Reinforcement Learning - OpenReview<strong>Opens in a new window</strong></a><a href="https://openreview.net/forum?id=1RE0H6mU7M"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">openreview.netMAMBA: an Effective World Model Approach for Meta-Reinforcement Learning<strong>Opens in a new window</strong></a><a href="https://github.com/opendilab/awesome-exploration-rl"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comA curated list of awesome exploration RL resources (continually updated) - GitHub<strong>Opens in a new window</strong></a><a href="https://www.mdpi.com/2673-4591/97/1/24"><img src="https://t1.gstatic.com/faviconV2?url=https://www.mdpi.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">mdpi.comA Reinforcement Learning-Based Proximal Policy Optimization Approach to Solve the Economic Dispatch Problem - MDPI<strong>Opens in a new window</strong></a><a href="https://github.com/seungju-k1m/sac-td3-td7"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.compytorch implementation of SAC, TD3 and TD7 with Mujoco Benchmark results from 4 seeds.<strong>Opens in a new window</strong></a><a href="https://ar5iv.labs.arxiv.org/html/2102.12924"><img src="https://t3.gstatic.com/faviconV2?url=https://ar5iv.labs.arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">ar5iv.labs.arxiv.org[2102.12924] Visualizing MuZero Models - ar5iv<strong>Opens in a new window</strong></a><a href="https://en.wikipedia.org/wiki/MuZero"><img src="https://t2.gstatic.com/faviconV2?url=https://en.wikipedia.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">en.wikipedia.orgMuZero - Wikipedia<strong>Opens in a new window</strong></a><a href="https://proceedings.neurips.cc/paper_files/paper/2024/file/61caa89f7a5366023db6f5736b2c579d-Paper-Conference.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://proceedings.neurips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">proceedings.neurips.ccQ-Distribution guided Q-learning for offline reinforcement learning: Uncertainty penalized Q-value via consistency model - NIPS papers<strong>Opens in a new window</strong></a><a href="https://discovery.ucl.ac.uk/10207117/1/NeurIPS-2024-non-stationary-learning-of-neural-networks-with-automatic-soft-parameter-reset-Paper-Conference.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://discovery.ucl.ac.uk/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">discovery.ucl.ac.ukNon-Stationary Learning of Neural Networks with Automatic Soft Parameter Reset - UCL Discovery<strong>Opens in a new window</strong></a><a href="https://proceedings.neurips.cc/paper_files/paper/2023/file/a6f6a5c517b2b92f3d309786af64086c-Paper-Conference.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://proceedings.neurips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">proceedings.neurips.ccSample-Efficient and Safe Deep Reinforcement Learning via Reset Deep Ensemble Agents<strong>Opens in a new window</strong></a><a href="https://github.com/yinizhilian/ICLR2025-Papers-with-Code"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comyinizhilian/ICLR2025-Papers-with-Code: 历年 ICLR 论文和 ... - GitHub<strong>Opens in a new window</strong></a><a href="https://github.com/charleshsc/HarmoDT"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comICML'2024: HarmoDT: Harmony Multi-Task Decision Transformer for Offline Reinforcement Learning - GitHub<strong>Opens in a new window</strong></a><a href="https://arxiv.org/html/2501.12620v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.orgAdaptive Data Exploitation in Deep Reinforcement Learning - arXiv<strong>Opens in a new window</strong></a><a href="https://openreview.net/group?id=NeurIPS.cc/2024/Conference"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">openreview.netNeurIPS 2024 Conference - OpenReview<strong>Opens in a new window</strong></a><a href="https://github.com/CJReinforce/RIME_ICML2024"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comCJReinforce/RIME_ICML2024: Official code for ICML 2024 paper, &quot;RIME: Robust Preference-based Reinforcement Learning with Noisy Preferences&quot; (ICML 2024 Spotlight) - GitHub<strong>Opens in a new window</strong></a><a href="https://arxiv.org/abs/2403.12451"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.orgEnd-to-End Neuro-Symbolic Reinforcement Learning with Textual Explanations - arXiv<strong>Opens in a new window</strong></a><a href="https://github.com/ins-rl/insight"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comins-rl/insight: Official implementation of the paper &quot;End-to-End Neuro-Symbolic Reinforcement Learning with Textual Explanations&quot; (ICML 2024) - GitHub<strong>Opens in a new window</strong></a><a href="https://arxiv.org/abs/2410.07404"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.org[2410.07404] Fostering Intrinsic Motivation in Reinforcement Learning with Pretrained Foundation Models - arXiv<strong>Opens in a new window</strong></a><a href="https://arxiv.org/abs/2402.03972"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.org[2402.03972] Joint Intrinsic Motivation for Coordinated Exploration in Multi-Agent Deep Reinforcement Learning - arXiv<strong>Opens in a new window</strong></a><a href="https://github.com/mahaozhe/ReLara"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.com[ICML 2024] The algorithm of Reinforcement Learning with an Assistant Reward Agent (ReLara) - GitHub<strong>Opens in a new window</strong></a><a href="https://arxiv.org/html/2411.11318v2"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.orgSyllabus: Portable Curricula for Reinforcement Learning Agents - arXiv<strong>Opens in a new window</strong></a><a href="https://arxiv.org/abs/2406.17168"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.org[2406.17168] Reinforcement Learning via Auxiliary Task Distillation - arXiv<strong>Opens in a new window</strong></a><a href="https://github.com/absdnd/aux_distill"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comabsdnd/aux_distill - GitHub<strong>Opens in a new window</strong></a><a href="https://wiki.cloudfactory.com/docs/mp-wiki/solvers-optimizers/lion"><img src="https://t1.gstatic.com/faviconV2?url=https://wiki.cloudfactory.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">wiki.cloudfactory.comLion - Computer Vision Wiki - CloudFactory<strong>Opens in a new window</strong></a><a href="https://github.com/lucidrains/lion-pytorch"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comLion, new optimizer discovered by Google Brain using genetic algorithms that is purportedly better than Adam(w), in Pytorch - GitHub<strong>Opens in a new window</strong></a><a href="https://arxiv.org/html/2410.11250v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.orgLearning Agents With Prioritization and Parameter Noise in Continuous State and Action Space - arXiv<strong>Opens in a new window</strong></a><a href="https://arxiv.org/abs/1706.01905"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.org[1706.01905] Parameter Space Noise for Exploration - arXiv<strong>Opens in a new window</strong></a><a href="https://proceedings.neurips.cc/paper_files/paper/2024/file/b0e89a49af1fb2ebea69bfc39df0be4a-Paper-Conference.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://proceedings.neurips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">proceedings.neurips.ccDiffusion-based Curriculum Reinforcement Learning<strong>Opens in a new window</strong></a><a href="https://arxiv.org/abs/2407.01800"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.org[2407.01800] Normalization and effective learning rates in reinforcement learning - arXiv<strong>Opens in a new window</strong></a><a href="https://arxiv.org/html/2407.01800v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.orgNormalization and effective learning rates in reinforcement learning - arXiv<strong>Opens in a new window</strong></a><a href="https://proceedings.iclr.cc/paper_files/paper/2025/file/5565ab682d6c7f8d9da34ba0919974b0-Paper-Conference.pdf"><img src="https://t0.gstatic.com/faviconV2?url=https://proceedings.iclr.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">proceedings.iclr.ccLEARNING CONTINUALLY BY SPECTRAL REGULARIZATION - ICLR Proceedings<strong>Opens in a new window</strong></a><a href="https://arxiv.org/html/2406.06811v2"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.orgLearning Continually by Spectral Regularization - arXiv<strong>Opens in a new window</strong></a><a href="https://proceedings.neurips.cc/paper_files/paper/2024/file/20cea6c1b36ae5f69c48427a68b67fbc-Paper-Conference.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://proceedings.neurips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">proceedings.neurips.ccDistributed Lion for Communication Efficient Distributed Training<strong>Opens in a new window</strong></a><a href="https://proceedings.neurips.cc/paper_files/paper/2024/file/81166fbd9cc5adf14031cdb69d3fd6a8-Paper-Conference.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://proceedings.neurips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">proceedings.neurips.ccConnecting Representation, Collapse, and Trust Issues in PPO - NIPS papers<strong>Opens in a new window</strong></a><a href="https://github.com/timoklein/redo"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comtimoklein/redo: ReDo: The Dormant Neuron Phenomenon in Deep Reinforcement Learning (pytorch) - GitHub<strong>Opens in a new window</strong></a><a href="https://www.mdpi.com/2073-8994/17/10/1648"><img src="https://t1.gstatic.com/faviconV2?url=https://www.mdpi.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">mdpi.comRestoring Spectral Symmetry in Gradients: A Normalization Approach for Efficient Neural Network Training - MDPI<strong>Opens in a new window</strong></a><a href="https://github.com/intell-sci-comput/RSRM"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comintell-sci-comput/RSRM: code of ICLR 2024 paper Reinforcement Symbolic Regression Machine - GitHub<strong>Opens in a new window</strong></a><a href="https://openreview.net/forum?id=HkpqT07shd"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">openreview.netReinforcement Learning for Symbolic Graphics Code with Visual Feedback - OpenReview<strong>Opens in a new window</strong></a><a href="https://nips.cc/virtual/2024/papers.html"><img src="https://t0.gstatic.com/faviconV2?url=https://nips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">nips.ccNeurIPS 2024 Papers<strong>Opens in a new window</strong></a><a href="https://papercopilot.com/paper-list/neurips-paper-list/neurips-2024-paper-list/"><img src="https://t1.gstatic.com/faviconV2?url=https://papercopilot.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">papercopilot.comNeurIPS 2024 Accepted Paper List - Paper Copilot<strong>Opens in a new window</strong></a><a href="https://arxiv.org/html/2510.21090v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.orgSelf-Rewarding PPO: Aligning Large Language Models with Demonstrations Only - arXiv<strong>Opens in a new window</strong></a><a href="https://arxiv.org/abs/2402.03141"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.org[2402.03141] Boosting Reinforcement Learning with Strongly Delayed Feedback Through Auxiliary Short Delays - arXiv<strong>Opens in a new window</strong></a></p>
+<p><a href="https://www.paperdigest.org/2024/10/neurips-2024-highlights/"><img src="https://t3.gstatic.com/faviconV2?url=https://www.paperdigest.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.inria.fr/en/neurips-2024-19-papers-selected-inria-saclay-center"><img src="https://t2.gstatic.com/faviconV2?url=https://www.inria.fr/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/mikelma/componet"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/DmitryRyumin/ICML-2025-Papers"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://iclr.cc/virtual/2025/events/spotlight-posters"><img src="https://t0.gstatic.com/faviconV2?url=https://iclr.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://papercopilot.com/paper-list/iclr-paper-list/iclr-2025-paper-list/"><img src="https://t1.gstatic.com/faviconV2?url=https://papercopilot.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://rl-conference.cc/2024/papers.html"><img src="https://t3.gstatic.com/faviconV2?url=https://rl-conference.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/LantaoYu/MARL-Papers"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://huggingface.co/papers/trending"><img src="https://t2.gstatic.com/faviconV2?url=https://huggingface.co/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/BradyFU/Awesome-Multimodal-Large-Language-Models"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2401.16025v9"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2412.20367"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://ojs.aaai.org/index.php/AAAI/article/view/29115/30108"><img src="https://t0.gstatic.com/faviconV2?url=https://ojs.aaai.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://openreview.net/forum?id=vI5cjHMzP4"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2507.07451v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.ijcai.org/proceedings/2025/0788.pdf"><img src="https://t2.gstatic.com/faviconV2?url=https://www.ijcai.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2410.20487v2"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://search.proquest.com/openview/e48d6c2bde48303e653b567ec07f76d2/1.pdf?pq-origsite=gscholar&amp;cbl=36790"><img src="https://t3.gstatic.com/faviconV2?url=https://search.proquest.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2410.20487v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.jmlr.org/papers/volume25/24-0087/24-0087.pdf"><img src="https://t0.gstatic.com/faviconV2?url=https://www.jmlr.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://proceedings.neurips.cc/paper_files/paper/2024/file/c1f66abb52467443ba8fc70e0a32e061-Paper-Conference.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://proceedings.neurips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://ieeexplore.ieee.org/document/10933670/"><img src="https://t3.gstatic.com/faviconV2?url=https://ieeexplore.ieee.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://rlhfbook.com/c/11-policy-gradients.html"><img src="https://t3.gstatic.com/faviconV2?url=https://rlhfbook.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2509.25762v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://openreview.net/forum?id=uGp0mZk0ld"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://tisl.cs.toronto.edu/publication/202407-rlc-aux_tasks_in_rl/rlc2024-aux_tasks_in_rl.pdf"><img src="https://t0.gstatic.com/faviconV2?url=https://tisl.cs.toronto.edu/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/Allenpandas/Reinforcement-Learning-Papers"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/PWhiddy/dreamerv3-poke"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.reddit.com/r/reinforcementlearning/comments/1j8sldl/solo_developed_natural_dreamer_simplest_and/"><img src="https://t2.gstatic.com/faviconV2?url=https://www.reddit.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/danijar/dreamerv3"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/eloialonso/iris"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/volcengine/verl"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.instaclustr.com/education/open-source-ai/top-10-open-source-llms-for-2025/"><img src="https://t3.gstatic.com/faviconV2?url=https://www.instaclustr.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/opendilab/awesome-diffusion-model-in-rl"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2305.13301v4"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.learndatasci.com/tutorials/reinforcement-q-learning-scratch-python-openai-gym/"><img src="https://t3.gstatic.com/faviconV2?url=https://www.learndatasci.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.researchgate.net/publication/371175373_Bigger_Better_Faster_Human-level_Atari_with_human-level_efficiency"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://proceedings.mlr.press/v202/schwarzer23a.html"><img src="https://t1.gstatic.com/faviconV2?url=https://proceedings.mlr.press/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/pdf/2305.19452"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/NoSavedDATA/PyTorch-BBF-Bigger-Better-Faster-Atari-100k"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/lezhang-thu/bigger-better-faster-SAC"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.mdpi.com/2079-3197/11/8/148"><img src="https://t1.gstatic.com/faviconV2?url=https://www.mdpi.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/Nov05/udacity-deep-reinforcement-learning"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/naivoder/TD3"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/topics/td3?l=python&amp;o=asc&amp;s=updated"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/BY571/Soft-Actor-Critic-and-Extensions"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/yhisaki/average-reward-drl"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/topics/sac?o=asc&amp;s=forks"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://medium.com/@kiranvutukuri/43-activation-functions-in-neural-networks-eb5f84b0d496"><img src="https://t0.gstatic.com/faviconV2?url=https://medium.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.superannotate.com/blog/activation-functions-in-neural-networks"><img src="https://t0.gstatic.com/faviconV2?url=https://www.superannotate.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.researchgate.net/publication/397200080_Normalization_and_effective_learning_rates_in_reinforcement_learning"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://ideas.repec.org/p/arx/papers/2508.03910.html"><img src="https://t1.gstatic.com/faviconV2?url=https://ideas.repec.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://proceedings.neurips.cc/paper_files/paper/2024/file/c04d37be05ba74419d2d5705972a9d64-Paper-Conference.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://proceedings.neurips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/mhngu23/Intrinsic-Reward-Motivati-Reinforcement-Learning-Re-Implementation"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://openreview.net/forum?id=mlzh3jX6gW"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.fransoliehoek.net/publications/htmlfiles/b2hd-He24ECAI.html"><img src="https://t1.gstatic.com/faviconV2?url=https://www.fransoliehoek.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.researchgate.net/publication/380218280_MiniZero_Comparative_Analysis_of_AlphaZero_and_MuZero_on_Go_Othello_and_Atari_Games"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/YeWR/EfficientZero"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/index-tts/index-tts"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/opendilab/LightZero/discussions/375"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://opendilab.github.io/LightZero/"><img src="https://t0.gstatic.com/faviconV2?url=https://opendilab.github.io/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://opendilab.github.io/LightZero/tutorials/installation/installation_and_quickstart.html"><img src="https://t0.gstatic.com/faviconV2?url=https://opendilab.github.io/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/opendilab/LightZero/blob/main/docs/source/tutorials/algos/customize_algos.md"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.semanticscholar.org/paper/Parameter-Space-Noise-for-Exploration-Plappert-Houthooft/142497432fe179ddb6ffe600c64a837ec6179550"><img src="https://t0.gstatic.com/faviconV2?url=https://www.semanticscholar.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.worldscientific.com/doi/full/10.1142/S0218001421520133"><img src="https://t3.gstatic.com/faviconV2?url=https://www.worldscientific.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.researchgate.net/publication/385679808_RLion_A_Refined_Lion_Optimizer_for_Deep_Learning"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://par.nsf.gov/servlets/purl/10539920"><img src="https://t2.gstatic.com/faviconV2?url=https://par.nsf.gov/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2405.11432v2"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.researchgate.net/publication/363307581_Stability-certified_reinforcement_learning_control_via_spectral_normalization"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.researchgate.net/publication/387873043_Neuro-Symbolic_AI_in_2024_A_Systematic_Review"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/abs/2503.16799"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://icml.cc/virtual/2024/papers.html"><img src="https://t3.gstatic.com/faviconV2?url=https://icml.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://web.stanford.edu/class/archive/cs/cs224n/cs224n.1244/final-projects/CaiaMaiCostelloJasonDanielLazar.pdf"><img src="https://t2.gstatic.com/faviconV2?url=https://web.stanford.edu/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2305.14342v4"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/Liuhong99/Sophia"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://iabac.org/blog/relu-activation-function"><img src="https://t2.gstatic.com/faviconV2?url=https://iabac.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.reinforcementlearningpath.com/relu-activation-function/"><img src="https://t1.gstatic.com/faviconV2?url=https://www.reinforcementlearningpath.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://developers.google.com/machine-learning/crash-course/neural-networks/activation-functions?authuser=1"><img src="https://t2.gstatic.com/faviconV2?url=https://developers.google.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/xbeat/Machine-Learning/blob/main/Activation%20Functions%20The%20Driving%20Force%20of%20Neural%20Networks.md"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.analyticsvidhya.com/blog/2020/01/fundamentals-deep-learning-activation-functions-when-to-use-them/"><img src="https://t2.gstatic.com/faviconV2?url=https://www.analyticsvidhya.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a></p>
+
+</body>
+</html>
