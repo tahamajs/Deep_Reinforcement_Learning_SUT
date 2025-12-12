@@ -8,6 +8,15 @@
 
 This assignment focuses on theoretical foundations and fundamental concepts of deep reinforcement learning, including function approximation, convergence guarantees, and the challenges that arise when combining deep learning with RL.
 
+## 🚦 Deliverables & Workflow (updated)
+
+- **Notebook stub:** `code/HW7_Notebook.ipynb` — structured (overview → setup/config/seeds → references → run metadata). No execution has been performed; run locally if needed.
+- **Run metadata:** when the notebook metadata cell is run, it writes `reports/run_info.json` with seed, device, versions, timestamp, and commit hash.
+- **Answers:** authoritative solutions live in `HW7_Complete_Solutions.md` (also referenced via `answers/README.md`).
+- **LaTeX report:** `Homework-7-Template/template.tex` now imports the Markdown solutions via the `markdown` package and should be rendered to PDF (e.g., `pdflatex -output-directory ../reports template.tex` from inside `Homework-7-Template`). The intended output path is `reports/Homework-7-Report.pdf`.
+- **Seeding/config:** centralized in the first code cell of the notebook (Python, NumPy, Torch, CUDA deterministic flags).
+- **Description PDF alignment:** questions reside in `reports/HW7_Questions.pdf`; the Markdown and imported PDF are expected to answer all items.
+
 ## 🎯 Learning Objectives
 
 1. **Function Approximation**: Understand linear and non-linear function approximators

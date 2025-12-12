@@ -7,6 +7,7 @@
 \usepackage[T1]{fontenc}
 \usepackage{tgtermes}
 \usepackage[dvipsnames]{xcolor}
+\usepackage[hashEnumerators,smartEllipses]{markdown}
 \usepackage{tocloft}
 \usepackage{titlesec}
 \usepackage{lipsum}  
@@ -124,9 +125,9 @@ Value-Based Theory
 {\color{RoyalPurple} { \small By:} } \\
 \vspace{10pt}
 
-{\color{Blue} { \LARGE [Full Name] } } \\
+{\color{Blue} { \LARGE Student Name } } \\
 \vspace{5pt}
-{\color{RoyalBlue} { \Large [Student Number] } }
+{\color{RoyalBlue} { \Large Student Number } }
 
 
 \vspace*{\fill}
@@ -682,6 +683,25 @@ The results from this section provide fundamental insights into the relationship
 \end{itemize}
 
 \textbf{Connection to Deep RL:} These theoretical results form the foundation for understanding why certain deep RL algorithms work well (e.g., DQN with target networks) and why others may fail (e.g., naive Q-learning with function approximation). The bounds help explain the importance of techniques like experience replay, target networks, and careful initialization in deep RL algorithms.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+{\fontfamily{lmss}\selectfont {\color{DarkBlue}
+
+\section{Solutions (Markdown Import)}
+\label{sec:solutions}
+
+This report automatically ingests the authoritative Markdown solutions to keep the PDF synchronized with the maintained answer key.
+
+\begin{itemize}
+    \item Source Markdown: \texttt{../HW7_Complete_Solutions.md}
+    \item Edit the Markdown file to update any answer; rebuild this PDF afterward.
+    \item The \texttt{markdown} package is used for inline rendering; ensure it is available in your \LaTeX{} installation.
+\end{itemize}
+
+\markdownInput{../HW7_Complete_Solutions.md}
+}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
