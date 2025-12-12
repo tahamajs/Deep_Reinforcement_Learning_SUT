@@ -1,3 +1,525 @@
+# Multi-Agent EfficientZero V2 with LightZero Integration (MA-EZV2)
+
+## 1. Executive Summary
+
+EfficientZero V2 (EZ-V2) advances sample-efficient planning by combining model-based value expansion, Gumbel MCTS search corrections, and value-prefix losses. LightZero offers a modular Monte Carlo Tree Search (MCTS) framework that supports multi-agent reinforcement learning (MARL), notably via `ma_muzero`. This assignment proposes **MA-EZV2**, a synthesis that ports EZ-V2’s algorithmic improvements (Gumbel search, value-prefix, improved dynamics/representation) into LightZero’s multi-agent stack. Goals:
+
+- Extend EZ-V2 to multi-agent domains with joint/parameter-sharing policies.
+- Preserve EZ-V2’s data efficiency under exploding joint action spaces.
+- Benchmark on multi-agent environments (e.g., SMAC, MPE, Hanabi-lite) with controlled compute.
+
+We provide a full blueprint—math, algorithms, architecture, PyTorch-style pseudocode, configs, ablations, evaluation protocols, logging schema, and reproducibility guidance—to deliver a 1000+ line roadmap for implementing MA-EZV2.
+
+---
+
+## 2. Background and Motivation
+
+1. **MuZero/EfficientZero lineage:** combines learned dynamics, policy, and value in a planning loop.
+2. **EZ-V2 improvements:** Gumbel MCTS search correcting value overestimation, value-prefix loss, better representation dynamics.
+3. **Multi-agent challenge:** joint action space grows exponentially; coordination and credit assignment become hard.
+4. **LightZero advantage:** modular policies, tree search, and `ma_muzero` support for MARL; provides infrastructure for distributed self-play and replay.
+5. **Objective:** integrate EZ-V2 components into LightZero to achieve multi-agent sample efficiency and stability.
+
+---
+
+## 3. Core EZ-V2 Components to Port
+
+### 3.1 Gumbel MCTS
+
+- Uses Gumbel noise to sample top-k actions; corrects search bias.
+- Incorporates corrected PUCT with Gumbel top-k selection.
+
+### 3.2 Value Prefix Loss
+
+- Predicts cumulative reward prefixes to stabilize value learning.
+- Loss on predicted prefix vs true accumulated reward over unroll.
+
+### 3.3 Representation & Dynamics Updates
+
+- Improved latent dynamics with reward/value/policy heads.
+- Consistency loss across unroll steps.
+
+---
+
+## 4. Multi-Agent Considerations
+
+1. **Action space:** joint actions $a = (a^1,\dots,a^N)$; can be factorized or centralized.
+2. **Policies:** centralized training with decentralized execution (CTDE); shared encoder; per-agent policy heads.
+3. **Value:** centralized critic (joint latent) or per-agent value; MA-EZV2 favors centralized value for search.
+4. **Search:** tree nodes indexed by joint state; branching via joint action enumeration or factored sampling.
+5. **Credit assignment:** value-prefix can aid; optional per-agent advantage heads.
+
+---
+
+## 5. Notation
+
+- Agents: $i=1..N$.
+- Observations: $o_t^i$; joint state $s_t$ (if available).
+- Actions: $a_t^i$; joint $a_t$.
+- Rewards: $r_t$ (shared) or $r_t^i$; assume shared for primary setting.
+- Discount: $\gamma$.
+- Latent representation: $h_t$.
+
+---
+
+## 6. Model Architecture (LightZero-compatible)
+
+1. **Encoder $f_\theta$:** maps joint observations (or concat agent obs) to latent $h_0$.
+2. **Dynamics $g_\theta$:** $h_{k+1}, r_{k} = g_\theta(h_k, a_k)$.
+3. **Prediction head $p_\theta$:** outputs policy logits (joint or factored) and value $v_k$ from $h_k$.
+4. **Prefix head $u_\theta$:** predicts value prefix $z_k$ (cumulative reward so far).
+5. **Agent factoring:** if factored, policy head outputs per-agent logits conditioned on $h_k$; joint logit via sum or product.
+
+---
+
+## 7. Losses (per unroll)
+
+For unroll length $K$:
+1. **Policy loss:** cross-entropy between predicted logits and target visit counts $\pi_k$ from (Gumbel) MCTS.
+2. **Value loss:** MSE between predicted $v_k$ and n-step/TD target.
+3. **Reward loss:** MSE between predicted $r_k$ and true reward.
+4. **Prefix loss:** MSE between $z_k$ and cumulative reward prefix.
+5. **Consistency loss:** between latent projections across unroll steps.
+Total: $L = \sum_{k=0}^K \alpha_\pi L_\pi + \alpha_v L_v + \alpha_r L_r + \alpha_z L_z + \alpha_c L_c$.
+
+---
+
+## 8. Gumbel MCTS in Multi-Agent
+
+### 8.1 Top-k Selection
+
+- Sample Gumbel noise for joint (or factored) action logits.
+- Select top-k candidates; expand children accordingly.
+
+### 8.2 PUCT with Gumbel
+
+For node $s$, action $a$:
+$$
+U(s,a) = c_{\text{puct}} \cdot P(s,a) \frac{\sqrt{\sum_b N(s,b)}}{1+N(s,a)}.
+$$
+Gumbel noise perturbs $P$ to explore top-k; corrected selection uses adjusted $Q+U$.
+
+### 8.3 Joint vs Factored Search
+
+- **Joint:** enumerate joint action top-k (explodes with agents).
+- **Factored:** sample per-agent top-k, combine via beam search; approximate joint top-k.
+- MA-EZV2 supports both; default factored for scalability.
+
+---
+
+## 9. LightZero Integration Steps
+
+1. **Create `EfficientZeroV2Policy` in `lzero/policy/`.**
+2. **Reuse LightZero MCTS core**; swap in Gumbel top-k search.
+3. **Add value-prefix head** and loss into policy network and training step.
+4. **Support `ma_muzero` configs**: centralized encoder, per-agent policy heads; modify collectors to store joint actions.
+5. **Adjust replay to store prefix targets** (cumulative reward over unroll).
+6. **Update config system**: flags for gumbel_on, prefix_on, factored_search, shared_encoder.
+
+---
+
+## 10. Data Flow (Training)
+
+1. Collect trajectories (self-play or env rollout) using current policy and MCTS.
+2. Store $(o_{0:T}, a_{0:T-1}, r_{0:T-1})$ in replay, with agent IDs if needed.
+3. Sample batch of sequences; build targets with $n$-step returns and visit count distributions from search.
+4. Unroll dynamics for $K$ steps; compute losses (policy/value/reward/prefix/consistency).
+5. Backprop; update params; update target network if used.
+6. Periodically update Gumbel temperature and top-k.
+
+---
+
+## 11. Target Construction
+
+- **Value target**: $G_t^{(n)} = \sum_{k=0}^{n-1} \gamma^k r_{t+k} + \gamma^n v_{t+n}$.
+- **Prefix target**: $\hat{z}_t = \sum_{k=0}^{t-1} \gamma^k r_k$ (or undiscounted prefix).
+- **Policy target**: normalized visit counts from MCTS at root.
+
+---
+
+## 12. Multi-Agent Policy Factoring
+
+1. **Centralized encoder $h$**.
+2. **Per-agent policy head**: $\pi^i(a^i|h)$.
+3. **Joint prior**: $P(a) = \prod_i \pi^i(a^i|h)$.
+4. **Joint value**: single $v(h)$ for all agents (shared reward setting).
+5. **Execution:** decentralized sampling per agent with shared $h$.
+
+---
+
+## 13. Handling Joint Actions in MCTS
+
+- **Joint expand**: enumerate top-k joint actions; suited for small discrete spaces (e.g., MPE).
+- **Factored expand**: sample per-agent top-$k_i$, combine via product-of-top-k; cap total branches.
+- **Action masking:** use env-specific masks to prune illegal joint actions.
+
+---
+
+## 14. Value Prefix in Multi-Agent
+
+- Prefix is shared (team reward). Predict single prefix scalar.
+- Optionally predict per-agent prefix if rewards differ; sum losses.
+
+---
+
+## 15. Replay and Sampling
+
+- Store joint obs/actions; for factored policies, store per-agent actions.
+- Sequence length: unroll K (e.g., 5–10).
+- Prioritized replay optional; if used, priority on value/policy errors.
+
+---
+
+## 16. Hyperparameters (Suggested)
+
+| Component | Value / Range |
+| --------- | ------------- |
+| Unroll K | 5–10 |
+| n-step | 5 |
+| c_puct | 1.25–2.5 |
+| Gumbel top-k | 5–20 (env-dependent) |
+| Gumbel temp | 1.0 → 0.5 anneal |
+| Prefix loss weight α_z | 0.5–1.0 |
+| Consistency weight α_c | 0.25–0.5 |
+| LR | 1e-3 (Adam) |
+| Batch size | 256–512 |
+| Replay size | 1–2M |
+| Discount γ | 0.99 |
+| Dirichlet noise | α=0.3 (root), frac=0.25 |
+| Grad clip | 10.0 |
+
+---
+
+## 17. Benchmarks
+
+- **SMACv2**: 2s3z, 3s5z, 5m_vs_6m.
+- **MPE**: Cooperative navigation, predator-prey.
+- **Hanabi-lite / Pommerman** (optional, more complex).
+- **Ablation sandbox**: small grid MARL.
+
+---
+
+## 18. Metrics
+
+- Win rate / success rate.
+- Episode reward.
+- Sample efficiency (steps to threshold win rate).
+- MCTS stats: visits, depth, value/policy entropy.
+- Value-prefix error.
+- Wall-clock per step; search cost per move.
+
+---
+
+## 19. Ablations
+
+1. Gumbel on/off.
+2. Value-prefix on/off.
+3. Factored vs joint search.
+4. c_puct sweep.
+5. Top-k sweep.
+6. Shared vs per-agent encoder.
+7. Dirichlet noise on/off.
+8. Consistency loss on/off.
+
+---
+
+## 20. Safety and Stability
+
+- Clip gradients.
+- Normalize observations.
+- Warmup: start with higher Dirichlet noise to encourage exploration.
+- If joint branching too large, cap expansions; fall back to factored.
+- Use target network for value head to stabilize unroll.
+
+---
+
+## 21. Logging Schema
+
+- `loss_total`, `loss_pi`, `loss_v`, `loss_r`, `loss_prefix`, `loss_consistency`
+- `win_rate`, `reward_mean`
+- `mcts/visits_mean`, `mcts/depth_mean`, `mcts/entropy`
+- `search/time_per_move`, `search/topk`
+- `prefix/mae`, `value/mse`
+
+---
+
+## 22. Visualization Plan
+
+- Win rate curves.
+_- Value-prefix error vs steps._
+- MCTS visit distribution histograms.
+- Top-k selected actions frequency.
+- Search depth over time.
+- Heatmap of per-agent action entropy.
+
+---
+
+## 23. Implementation Steps in LightZero
+
+1. Add policy class `EfficientZeroV2Policy` extending base MuZero policy.
+2. Implement Gumbel top-k sampler in MCTS module.
+3. Add prefix head and loss to network.
+4. Modify data collector to store prefix targets.
+5. Update config schemas for multi-agent flags.
+6. Ensure evaluator supports multi-agent rollout with decentralized execution.
+
+---
+
+## 24. Pseudocode: Gumbel Top-k (Joint)
+
+```
+logits = policy_logits  # [A] joint actions
+g = -torch.log(-torch.log(torch.rand_like(logits)))
+scores = logits + g
+topk = scores.topk(k, dim=-1)
+```
+
+Use top-k actions for expansion; adjust PUCT to include top-k selection only.
+
+---
+
+## 25. Factored Top-k Pseudocode
+
+```
+scores_i = logits_i + gumbel_i  # per agent
+topk_i = scores_i.topk(k_i)
+beam = combine_cartesian(topk_i, max_beam)  # limit combined branches
+```
+
+---
+
+## 26. Value-Prefix Target Computation
+
+For trajectory $(r_0,\dots,r_T)$:
+$$
+z_t = \sum_{k=0}^{t-1} \gamma^k r_k.
+$$
+Use per-unroll prefix target; if long episodes, clip horizon.
+
+---
+
+## 27. Consistency Loss
+
+Enforce $h_{k+1}$ close to projected $h_k'$:
+$$
+L_c = \| \text{sg}(h_{k+1}) - h_k' \|_2^2 + \| h_{k+1} - \text{sg}(h_k') \|_2^2,
+$$
+where $h_k'$ is projection of $h_k$; sg = stop-grad.
+
+---
+
+## 28. Training Loop Sketch
+
+```
+for batch in replay:
+    h0 = encoder(obs0)
+    loss = 0
+    h = h0
+    prefix = 0
+    for k in range(K):
+        pi_k, v_k, r_k = pred_head(h)
+        loss += alpha_pi * ce(pi_k, pi_target[k])
+        loss += alpha_v * mse(v_k, v_target[k])
+        loss += alpha_r * mse(r_k, r_target[k])
+        loss += alpha_z * mse(prefix, z_target[k])
+        h, r_dyn = dynamics(h, a_target[k])
+        prefix = prefix + gamma**k * r_target[k]
+    loss += alpha_c * consistency(h_unroll)
+    backprop(loss)
+```
+
+---
+
+## 29. Distributed Training Considerations
+
+- Self-play actors generate data; learners train centrally.
+- Sync policy weights periodically; keep replay shared.
+- For multi-agent, ensure each actor runs per-agent policy sampling with shared encoder.
+
+---
+
+## 30. Evaluation Protocol
+
+- Fixed seeds; evaluate every N updates.
+- Rollout with search (same top-k) and without (policy-only) to measure reliance on MCTS.
+- Report search budget (sims per move).
+
+---
+
+## 31. Hyperparameter Tables (SMAC)
+
+| Map | k | c_puct | sims | dir_noise | alpha_z | notes |
+| --- | - | ------ | ---- | --------- | ------- | ----- |
+| 2s3z | 10 | 2.0 | 400 | 0.3 | 0.5 | factored |
+| 3s5z | 10 | 2.0 | 600 | 0.3 | 0.5 | factored |
+| 5m_vs_6m | 15 | 2.5 | 800 | 0.25 | 0.7 | factored |
+
+---
+
+## 32. Hyperparameter Tables (MPE)
+
+| Task | k | sims | dir_noise | alpha_z | notes |
+| ---- | - | ---- | --------- | ------- | ----- |
+| coop_nav | 5 | 200 | 0.25 | 0.5 | joint feasible |
+| predator_prey | 10 | 400 | 0.3 | 0.6 | factored recommended |
+
+---
+
+## 33. Search Efficiency Tricks
+
+- Limit sims per move; share search across symmetric agents.
+- Cache policy logits; reuse in beam expansion.
+- Use reduced precision for search (fp16) if stable.
+
+---
+
+## 34. Performance/Compute Estimates
+
+- SMAC: sims 400–800 → ~50–150 ms/move on A100; throughput depends on map.
+- MPE: lighter; <30 ms/move.
+- Training: 1–2 days for full runs across maps; plan compute accordingly.
+
+---
+
+## 35. Ablation Readouts
+
+- Gumbel vs no-Gumbel: compare win rate and search diversity.
+- Prefix vs no-prefix: track value error, convergence speed.
+- Factored vs joint: branching vs win rate trade-off.
+
+---
+
+## 36. Safety Checks
+
+- Clamp rewards; normalize inputs.
+- If search fails (NaN), reduce sims, k, or temp; check logits.
+- Ensure legal action masks applied per agent.
+
+---
+
+## 37. Logging Examples (TensorBoard/W&B)
+
+- Scalars: losses, win_rate, reward_mean, search_time, sims_per_move.
+- Histograms: action selection counts, value estimates.
+- Text: config, seed, map name.
+
+---
+
+## 38. Visualization Ideas
+
+- Heatmap of visit counts per agent.
+- Timeline of top-k actions across episode.
+- Prefix prediction vs ground truth plots.
+- Search depth histograms.
+
+---
+
+## 39. Debugging Playbook
+
+- Low win rate: increase sims, adjust c_puct, check masks.
+- Overestimation: increase value loss weight, add LCB in selection.
+- Slow training: reduce sims/k, use factored search.
+- Instability: lower LR, clip grads, warmup without prefix loss.
+
+---
+
+## 40. Comparison Baselines
+
+- LightZero `ma_muzero` default.
+- QMIX/VDA2C (for SMAC).
+- MAPPO (strong policy baseline).
+- Show MA-EZV2 improvements in sample efficiency and final win rate.
+
+---
+
+## 41. Code Structure Recommendation
+
+- `policy/efficientzero_v2_ma.py`
+- `models/ezv2_ma_net.py`
+- `mcts/gumbel_topk.py`
+- `configs/ma_ezv2_smac.yaml`, `ma_ezv2_mpe.yaml`
+- `scripts/train_ma_ezv2.py`
+
+---
+
+## 42. Additional Losses (Optional)
+
+- Entropy regularization on policy logits.
+- KL to behavior prior if using behavior cloning warmup.
+- Auxiliary reconstruction of observations (repr learning).
+
+---
+
+## 43. Warmup Strategy
+
+- Start with smaller sims, higher noise; ramp sims up.
+- Optionally pretrain encoder with BC or autoencoding.
+- Delay prefix loss for first few k updates.
+
+---
+
+## 44. Self-Play vs Fixed Opponents
+
+- SMAC is cooperative; self-play not needed.
+- For competitive tasks, consider population-based self-play; maintain opponent pool.
+
+---
+
+## 45. Handling Continuous Actions
+
+- EZ-V2 supports discrete; for continuous (rare in LightZero), discretize or use policy gradients without MCTS (out of scope).
+
+---
+
+## 46. Evaluation Settings
+
+- Use same search budget in eval as train or fixed smaller budget to test policy quality.
+- Deterministic eval (no Dirichlet) unless otherwise noted.
+
+---
+
+## 47. Potential Failure Modes
+
+- Joint action explosion: switch to factored; reduce k.
+- Prefix misalignment: ensure correct cumulative reward; off-by-one bugs.
+- Value drift: add target network; increase value loss weight.
+
+---
+
+## 48. Reproducibility Checklist
+
+- [ ] Seeds logged.
+- [ ] Configs saved.
+- [ ] Checkpoints (policy, target) saved.
+- [ ] Env versions (SMAC map, MPE version) recorded.
+- [ ] Search budget recorded (sims, k).
+
+---
+
+## 49. Statistical Reporting
+
+- Report mean ± std over seeds.
+- Use bootstrap CI for win rate.
+- Provide wall-clock vs performance plots.
+
+---
+
+## 50. Extensions and Future Work
+
+- Hierarchical actions: macro-actions to reduce branching.
+- Curriculum on k/sims based on performance.
+- Integrate latent models (world models) for lookahead.
+- MARL credit assignment: per-agent value heads with shared search.
+
+---
+
+## 51. Closing Summary
+
+MA-EZV2 brings EfficientZero V2’s data-efficient planning to the multi-agent realm via LightZero. By fusing Gumbel-corrected search, value-prefix stabilization, and factored policies, it aims to tame joint action explosion while retaining strong performance. This README provides the math, architecture, algorithms, configs, and experimental playbook needed to implement and evaluate the approach on SMAC and MPE benchmarks.
+
+---
+
+_This README is the complete blueprint for Assignment 10: integrating EfficientZero V2 into LightZero for multi-agent MCTS. Keep math, code, and experiments aligned._
 # Fed-DiffORA: Ensemble-Directed Federated Diffusion Policies for Offline Reinforcement Learning
 
 ## 1. Executive Summary
