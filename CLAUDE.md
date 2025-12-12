@@ -145,6 +145,12 @@ python -m pip check
 - Use lightweight configs when adding new cells; mark heavy cells with comments.
 - Save plots with relative paths inside the assignment folder; avoid absolute paths.
 
+## Math & LaTeX Alignment
+- Keep formulas, derivations, and code consistent: when changing logic, update the matching math in notebooks/READMEs and any LaTeX templates.
+- Prefer expressing updates with explicit equations and variable definitions; reference the exact loss/objective implemented in code.
+- When proposing novel ideas, add concise derivations (gradient steps, Bellman variants, KL terms, constraints) and ensure hyperparameters in code mirror the written equations.
+- Use LaTeX blocks for new math in README/notebook sections; keep symbol names synchronized between text and code.
+
 ## Data Handling
 - Do not commit `downloads/`, `.zip`, `.mp4`, or `.pkl` artifacts; prefer ignored temp dirs.
 - For provided data (e.g., `Other_Assisments/berkeley.../expert_data/*.pkl`), keep paths intact and avoid edits.

@@ -68,6 +68,11 @@ find Other_Assisments -name "*.ipynb"
 - Some data files use `.local` or `.DESKTOP-*` extensions—treat as artifacts, not source.
 - Gym versions differ across assignments; align API handling per folder.
 
+## Math & LaTeX Alignment
+- Keep any derivations or README/LaTeX writeups aligned with code changes (loss terms, KLs, constraints).
+- When adapting CS285 scripts or legacy assignments with novel ideas, add succinct derivations and ensure hyperparameters match the equations you describe.
+- Maintain consistent notation across notebooks, PDFs, and code; update text when adjusting algorithms.
+
 ## Testing Guidelines
 - Few automated tests exist; favor short smoke runs (reduced episodes) for changed modules.
 - Use `python -m py_compile` for touched CS285 modules to ensure import safety.

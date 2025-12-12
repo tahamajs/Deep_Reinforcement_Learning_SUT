@@ -96,6 +96,11 @@ find CAs -name "CA*.ipynb"
 - Large PNG/PDF visualizations exist; avoid regenerating unless needed.
 - Keep epsilon schedules and seed utilities consistent across agents and experiments.
 
+## Math & Theory Alignment
+- When adjusting algorithms, update the accompanying notebook/README math (losses, Bellman updates, gradients) to match code changes.
+- Keep symbol names consistent between equations and implementation (learning rates, discount factors, entropy terms, KL weights).
+- For novel ideas, add short derivations and note any new hyperparameters or constraints; ensure defaults in scripts mirror the formulas.
+
 ## Testing Guidelines
 - Prefer pytest files shipped with the assignment (CA05 `test_project.py`, CA07 `test_implementation.py`, CA08 `test_basic.py`, CA03 `test_ca3.py`).
 - For assignments without tests, run abbreviated training (reduced episodes/steps) and assert shapes/returns.

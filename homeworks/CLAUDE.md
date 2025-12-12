@@ -75,6 +75,11 @@ rg -n "\\begin{document}" homeworks/*/Homework-*-Template/main.tex
 - Some archives contain zipped templates; do not unzip into version control unless needed.
 - Homework folders may contain `requirements.txt` duplicates—install from the folder you are editing.
 
+## Math & LaTeX Alignment
+- Keep notebook formulas and LaTeX templates synchronized with code (loss definitions, gradients, constraints).
+- When introducing new ideas, add concise derivations and define symbols; ensure hyperparameters in notebooks/code match the written equations.
+- Reflect algorithm changes in `Homework-*-Template/main.tex` methodology/experiments sections; keep notation consistent across text, figures, and code.
+
 ## Testing Guidelines
 - Most notebooks lack automated tests; add quick assertions (shape checks, reward thresholds) in new cells if you change core logic.
 - For HW10 packages, run `python -m py_compile` across `src/bootstrapdqn` and any task-specific modules.
