@@ -4,3 +4,7 @@
 - The LaTeX report `../Homework-7-Template/template.tex` imports that Markdown via `\markdownInput`, so updating the Markdown keeps the PDF in sync.
 - If you add alternative formats in this folder, keep them aligned with the Markdown and regenerate the PDF in `../reports/`.
 
+
+
+
+
