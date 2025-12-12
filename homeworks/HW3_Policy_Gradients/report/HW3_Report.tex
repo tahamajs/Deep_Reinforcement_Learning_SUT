@@ -1,0 +1,87 @@
+\documentclass[10pt,conference]{IEEEtran}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\title{Policy Gradient Methods for HW3: REINFORCE, Baselines, and DQN Comparison}
+\author{Taha Majlesi}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study policy gradient methods across four tasks: a custom GridWorld, CartPole with and without a value-function baseline, MountainCarContinuous with Gaussian policies, and a CartPole comparison between REINFORCE and DQN. We summarize objectives, variance-reduction strategies, and discrete vs. continuous action handling. All experiments are configured with centralized seeds and metadata saved alongside the notebooks.
+\end{abstract}
+
+\section{Introduction}
+Policy gradients directly optimize stochastic policies by ascending the expected return. This report aligns the accompanying notebooks with the assignment description and documents configurations, seeds, and metadata needed for reproducibility.
+
+\section{Methodology}
+\subsection{REINFORCE Objective}
+For a trajectory $\tau = (s_0, a_0, r_1, \ldots, s_T)$ sampled from $\pi_\theta$, the objective is
+\begin{equation}
+J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\left[\sum_{t=0}^{T-1} \gamma^t r_{t+1}\right],
+\end{equation}
+with gradient
+\begin{equation}
+\nabla_\theta J(\theta)=\mathbb{E}_{\tau}\left[\sum_{t=0}^{T-1} \nabla_\theta \log \pi_\theta(a_t|s_t)\, G_t\right],
+\end{equation}
+where $G_t$ is the return from $t$ onward.
+
+\subsection{Baseline Variance Reduction}
+Subtracting a baseline $b(s_t)$ yields
+\begin{equation}
+\nabla_\theta J(\theta)=\mathbb{E}_{\tau}\left[\sum_{t=0}^{T-1} \nabla_\theta \log \pi_\theta(a_t|s_t)\, (G_t-b(s_t))\right],
+\end{equation}
+leaving the estimator unbiased because $\mathbb{E}[\nabla_\theta \log \pi_\theta(a_t|s_t)b(s_t)]=0$.
+
+\subsection{Gaussian Policy for Continuous Control}
+For MountainCarContinuous, we use $\pi_\theta(a|s)=\mathcal{N}(\mu_\theta(s), \sigma_\theta^2)$ with log-probability
+\begin{equation}
+\log \pi_\theta(a|s) = -\tfrac{1}{2}\left(\frac{(a-\mu_\theta(s))^2}{\sigma_\theta^2} + 2\log \sigma_\theta + \log 2\pi\right).
+\end{equation}
+
+\subsection{DQN Baseline}
+For comparison on CartPole, we implement a Deep Q-Network that minimizes the temporal-difference loss
+\begin{equation}
+\mathcal{L}_{\text{DQN}} = \mathbb{E}\left[\left(r + \gamma \max_{a'} Q_{\bar{\theta}}(s', a') - Q_\theta(s,a)\right)^2\right],
+\end{equation}
+where $\bar{\theta}$ denotes target-network parameters.
+
+\section{Experiments}
+\textbf{Environments:} GridWorld (custom), CartPole-v1 (discrete), MountainCarContinuous-v0 (continuous).\\
+\textbf{Seeds/Device:} Centralized seed $42$ for Parts 1--3 and $2024$ for Part 4; device auto-detected with CUDA flag logged.\\
+\textbf{Artifacts:} Each notebook writes \texttt{run\_info.json} capturing seed, device, commit hash, and hardware summary.\\
+\textbf{Evaluation:} Episode returns and learning curves; policy entropy for REINFORCE variants; TD loss for DQN.
+
+\section{Ablations}
+We recommend (i) entropy regularization strength sweep, (ii) baseline on/off for CartPole, (iii) Gaussian policy std initialization for MountainCarContinuous, and (iv) replay buffer size and target update frequency for DQN.
+
+\section{Conclusion}
+Centralized configuration, deterministic seeding, and recorded metadata improve comparability across policy-gradient and value-based baselines. The accompanying notebooks implement these safeguards for reproducible HW3 results.
+
+\appendices
+\section{Hyperparameters}
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}l l@{}}
+\toprule
+Seed & 42 (P1--P3), 2024 (P4) \\
+Discount $\gamma$ & per notebook defaults \\
+Learning rate & per notebook defaults \\
+Episodes & per notebook defaults \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Reproducibility Metadata}
+Each run stores \texttt{run\_info.json} with commit hash, hardware (machine, processor, platform), device, and CUDA availability.
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}
+
+
