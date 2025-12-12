@@ -1,0 +1,56 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\title{HW1: Introduction to Reinforcement Learning}
+\author{Taha Majlesi}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report summarizes the HW1 exercises on value-based and policy-based reinforcement learning, including MountainCar control, environment visualization, and a custom Pygame task. We document the experimental configuration, reproducibility practices (seed setting, device logging, and run metadata), and the observed behavior of PPO baselines.
+\end{abstract}
+
+\section{Introduction}
+The assignment explores foundational RL workflows: environment inspection with Gymnasium, visualization, baseline training with PPO from Stable-Baselines3, and custom environment design. The goal is to align the notebook implementation with the course description while maintaining reproducibility and clean modular structure.
+
+\section{Methods}
+\subsection{Environment}
+MountainCar-v0 is used as the primary benchmark with a video recorder for episodic rollouts. Optional headless rendering relies on \texttt{xvfb} for Linux; macOS/Windows users skip the system packages.
+
+\subsection{Algorithm}
+We employ PPO with Stable-Baselines3. The base configuration mirrors the notebook constants:
+\begin{table}[h]
+    \centering
+    \caption{PPO Hyperparameters (BASE\_CONFIG)}
+    \begin{tabular}{ll}
+        \toprule
+        Parameter & Value \\
+        \midrule
+        Total timesteps & 20{,}000 \\
+        Learning rate & $3\times10^{-4}$ \\
+        Discount ($\gamma$) & 0.99 \\
+        Rollout steps & 2048 \\
+        Batch size & 64 \\
+        Video interval & 250 episodes \\
+        Seed & 42 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Reproducibility}
+The first notebook cell centralizes imports and seeds \texttt{random}, NumPy, and Torch (including CUDA branches with deterministic flags). Run metadata is persisted to \texttt{run\_info.json} and records commit hash, hardware, hyperparameters, and device availability. A requirements file pins the versions, and setup instructions recommend a virtual environment.
+
+\section{Experiments}
+Training PPO for 20k timesteps produces a competent policy on MountainCar. The notebook retains visualization helpers (matplotlib inline rendering and optional video recording) to qualitatively assess progress. For the bonus Pygame grid-world, PPO/DQN can be swapped with identical configuration hooks.
+
+\section{Conclusion}
+The HW1 notebook now satisfies the stated structure: setup/configuration precedes environment exploration, followed by model training and qualitative evaluation. Logging and seeding ensure repeatable results, while the LaTeX report documents the configuration expected during grading.
+
+\end{document}
+
+
+
