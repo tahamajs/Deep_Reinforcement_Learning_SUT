@@ -204,7 +204,6 @@ class Brain:
             v_int_loss = self.mse_loss(int_val.squeeze(), int_returns)
             critic_loss = 0.5 * (v_ext_loss + v_int_loss)
 
-            # --- TODO: RND Loss ---
             rnd_loss = self.calculate_rnd_loss(next_obs)
 
             # Total Loss and Backprop
