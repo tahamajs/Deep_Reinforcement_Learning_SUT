@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>README.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="distributional-state-corrected-action-suppression-dist-scas-a-unified-framework-for-risk-sensitive-offline-reinforcement-learning">Distributional State-Corrected Action Suppression (Dist-SCAS): A Unified Framework for Risk-Sensitive Offline Reinforcement Learning</h1>
+<h2 id="1-introduction-the-convergence-of-safety-distribution-and-dynamics">1. Introduction: The Convergence of Safety, Distribution, and Dynamics</h2>
+<p>The domain of Offline Reinforcement Learning (RL) stands at a pivotal intersection of statistical learning theory, optimal control, and generative modeling. The fundamental promise of offline RL—the ability to learn optimal policies from static, previously collected datasets without the risks or costs of online interaction—is tempered by the formidable challenge of distributional shift. When an agent attempts to maximize a value function learned from finite data, it inevitably encounters the &quot;extrapolation error,&quot; where the value estimator erroneously assigns high utility to actions or states outside the support of the training distribution (Out-of-Distribution, or OOD). This phenomenon, often referred to as the &quot;deadly triad&quot; when combined with bootstrapping and function approximation, necessitates mechanisms that enforce conservatism.</p>
+<p>Traditional approaches to enforcing conservatism have largely bifurcated into two distinct schools of thought: <strong>value-based regularizers</strong> , such as Conservative Q-Learning (CQL) or Implicit Q-Learning (IQL), which penalize Q-values for OOD actions ^^; and <strong>policy-constraint methods</strong> , such as Behavior Cloning (BC) or TD3+BC, which explicitly tether the learned policy to the behavior policy <strong>π</strong>β.^^ While effective, these scalar-value approaches often suffer from a reductionist view of uncertainty. They typically conflate <em>epistemic uncertainty</em> (uncertainty due to lack of data) with <em>aleatoric uncertainty</em> (inherent stochasticity in the environment). Consequently, a scalar penalty may suppress a highly promising action simply because the environment is noisy, or conversely, fail to penalize a confident but erroneous extrapolation in a sparse-data regime. ** **</p>
+<p>This report proposes and details the implementation of a novel, comprehensive framework: <strong>Distributional State-Corrected Action Suppression (Dist-SCAS)</strong> . This method synthesizes the geometric state-correction capabilities of the recently proposed SCAS framework ^^ with the statistical robustness of Distributional Reinforcement Learning, specifically focusing on lower-quantile maximization.^^ ** **</p>
+<p>The SCAS framework addresses a critical gap in prior literature: the distinction between OOD actions and OOD states. While CQL effectively suppresses OOD actions on known states, it provides no guarantee that a valid action will not transition the agent into an OOD region of the state space where the value function is undefined. SCAS introduces a model-based regularizer to align the agent's induced transition dynamics with a &quot;Value-Aware State Transition&quot; distribution derived from the dataset.^^ ** **</p>
+<p>Concurrently, Distributional RL posits that modeling the full distribution of returns, <strong>Z</strong>(<strong>s</strong>,<strong>a</strong>), rather than merely the expectation <strong>Q</strong>(<strong>s</strong>,<strong>a</strong>), provides a richer signal for decision-making.^^ By optimizing a policy to maximize a lower quantile (e.g., the 10th percentile or <strong>τ</strong>=<strong>0.1</strong>) of the return distribution, the agent naturally avoids actions with heavy-tailed downside risks—often a proxy for OOD uncertainty—without the need for the computationally expensive negative sampling required by CQL.^^ ** **</p>
+<p>Dist-SCAS represents a unified theory of &quot;Safety through Geometry and Statistics.&quot; By rigorously deriving the mathematical interaction between the SCAS state-correction term and the distributional Bellman operator, this report offers a blueprint for an algorithm that is not only robust to OOD actions and states but also capable of disentangling risk from opportunity. The following sections provide an exhaustive analysis of the theoretical underpinnings, a detailed derivation of the requisite loss functions, a comprehensive guide to code implementation including network architectures and hyperparameter selection, and a strategic validation plan utilizing the D4RL benchmark suite.</p>
+<hr>
+<h2 id="2-theoretical-foundations-and-literature-synthesis">2. Theoretical Foundations and Literature Synthesis</h2>
+<p>To understand the necessity and mechanics of Dist-SCAS, one must first deconstruct the limitations of current state-of-the-art methods and the specific theoretical advances offered by SCAS and Distributional RL.</p>
+<h3 id="21-the-pathology-of-extrapolation-error-in-scalar-offline-rl">2.1 The Pathology of Extrapolation Error in Scalar Offline RL</h3>
+<p>The core objective of standard RL is to maximize the expected cumulative discounted return:</p>
+<p><strong>J</strong>(<strong>π</strong>)<strong>=<strong>E</strong>τ</strong>∼<strong>π**</strong>[<strong>t</strong>=<strong>0</strong>∑<strong>∞γ</strong>t<strong>r</strong>(<strong>s</strong>t,<strong>a</strong>t)**]</p>
+<p>In the offline setting, we only have access to a dataset <strong>D</strong>=<strong>{(<strong>s</strong>,<strong>a</strong>,<strong>r</strong>,<strong>s</strong>′</strong>)} sampled from a behavior policy <strong>π</strong>β. Standard off-policy algorithms like Soft Actor-Critic (SAC) or TD3 approximate the Q-function by minimizing the Bellman error:</p>
+<p><strong>L</strong>Q(<strong>θ</strong>)<strong>=<strong>E</strong>(<strong>s</strong>,<strong>a</strong>,<strong>r</strong>,<strong>s</strong>′</strong>)<strong>∼</strong>D*<strong>*[</strong>(<strong>Q</strong>θ*<strong>*(<strong>s</strong>,<strong>a</strong>)<strong>−</strong>(<strong>r</strong>+<strong>γ</strong>Q</strong>θ**′(<strong>s</strong>′<strong>,<strong>π</strong>(<strong>s</strong>′</strong>)))**)<strong>2</strong>]</p>
+<p>The pathology arises in the maximization step <strong>π</strong>(<strong>s</strong>)<strong>=<strong>arg</strong>max</strong>aQ<strong>θ**</strong>(<strong>s</strong>,<strong>a</strong>)<strong>. Since the Q-function is trained only on samples from <strong>π</strong>β**</strong>, its estimates for actions <strong>a</strong>∈**/<strong>supp</strong>(<strong>π</strong>β****)** are unconstrained and often arbitrarily high due to function approximation noise. The maximization operator exploits these errors, leading the policy towards OOD actions with hallucinated high values.</p>
+<p><strong>Conservative Q-Learning (CQL)</strong> addresses this by adding a regularizer that minimizes Q-values for OOD actions while maximizing them for data actions.^^ ** **</p>
+<p><strong>L</strong>CQ<strong>L**</strong>(<strong>θ</strong>)<strong>=<strong>α</strong>(<strong>E</strong>s</strong>∼<strong>D</strong>,<strong>a</strong>∼<strong>μ</strong>(<strong>a</strong>∣<strong>s</strong>)[<strong>Q</strong>(<strong>s</strong>,<strong>a</strong>)]<strong>−</strong>E<strong>s</strong>∼<strong>D</strong>,<strong>a</strong>∼<strong>π</strong>β(<strong>a</strong>∣<strong>s</strong>)[<strong>Q</strong>(<strong>s</strong>,<strong>a</strong>)]<strong>)</strong>+<strong>L</strong>B<strong>e</strong>ll<strong>man**</strong></p>
+<p>While effective, CQL introduces a complex hyperparameter <strong>α</strong> (the penalty weight) and requires sampling from an approximate inverse distribution <strong>μ</strong>(<strong>a</strong>∣<strong>s</strong>), which is computationally expensive and difficult to tune. Furthermore, CQL operates on the expectation <strong>E</strong>[<strong>Q</strong>], ignoring the variance or shape of the value distribution, which contains critical information about safety.</p>
+<h3 id="22-the-case-for-distributional-reinforcement-learning">2.2 The Case for Distributional Reinforcement Learning</h3>
+<p>Distributional RL replaces the scalar Q-function <strong>Q</strong>(<strong>s</strong>,<strong>a</strong>) with a random variable <strong>Z</strong>(<strong>s</strong>,<strong>a</strong>) representing the full distribution of returns. The Distributional Bellman Operator <strong>T</strong>π is defined as:</p>
+<p><strong>Z</strong>(<strong>s</strong>,<strong>a</strong>)<strong>=<strong>D</strong>R</strong>(<strong>s</strong>,<strong>a</strong>)<strong>+<strong>γ</strong>Z</strong>(<strong>s</strong>′<strong>,<strong>A</strong>′</strong>)<strong>where</strong>A**′<strong>∼</strong>π**(<strong>⋅</strong>∣<strong>s</strong>′<strong>)</strong>,<strong>s</strong>′<strong>∼</strong>P**(<strong>⋅</strong>∣<strong>s</strong>,<strong>a</strong>)**</p>
+<p>The divergence between standard and distributional RL is profound in the offline setting.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Scalar RL (e.g., CQL, IQL)</th>
+<th>Distributional RL (e.g., QR-DQN, TQC)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Value Estimate</strong></td>
+<td>Mean:<strong>E</strong>[<strong>Z</strong>(<strong>s</strong>,<strong>a</strong>)]</td>
+<td>Full Distribution:<strong>P</strong>(<strong>Z</strong>(<strong>s</strong>,<strong>a</strong>)<strong>≤</strong>z**)**</td>
+</tr>
+<tr>
+<td><strong>Uncertainty</strong></td>
+<td>Ignored or Implicit</td>
+<td>Explicitly modeled via variance/quantiles</td>
+</tr>
+<tr>
+<td><strong>Risk Sensitivity</strong></td>
+<td>Risk-Neutral</td>
+<td>Configurable (e.g., CVaR, Lower Quantile)</td>
+</tr>
+<tr>
+<td><strong>OOD Handling</strong></td>
+<td>Requires explicit penalty terms</td>
+<td>Naturally handled via pessimistic quantile selection</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Lower Quantile Maximization:</strong> Recent works like Lower Expectile Q-learning (LEQ) ^^ and Truncated Quantile Critics (TQC) ^^ demonstrate that maximizing a lower quantile (e.g., the <strong>α</strong>-quantile where <strong>α</strong>≈<strong>0.1</strong>) acts as a robust pessimism operator. If an action is OOD, the epistemic uncertainty regarding its outcome results in a high-variance return distribution. Consequently, the lower tail of this distribution drops significantly. By maximizing the lower tail, the agent naturally prefers actions where the outcome is both high-value and certain (low variance), effectively filtering OOD actions without explicit negative sampling.^^ ** **</p>
+<h3 id="23-the-scas-framework-state-correction-vs-action-suppression">2.3 The SCAS Framework: State Correction vs. Action Suppression</h3>
+<p>While Distributional RL addresses value uncertainty, it does not strictly prevent the agent from drifting into OOD states via valid actions—a subtle but critical distinction. <strong>State Correction and Action Suppression (SCAS)</strong> ^^ argues that OOD actions are merely the symptom; the disease is the OOD state visitation. ** **</p>
+<p>SCAS unifies state correction and action suppression by forcing the learned policy's induced transition distribution <strong>P</strong>π**(<strong>s</strong>′<strong>∣</strong>s**) to align with a &quot;target&quot; in-distribution (ID) transition <strong>P</strong>v<strong>a(<strong>s</strong>′<strong>∣</strong>s</strong>). This target distribution is derived from the dataset but re-weighted to favor high-value transitions. The SCAS objective is: $$ \max_\pi \mathbb{E} <em>{s \sim \mathcal{D}} [Q(s, \pi(s))] - \lambda D</em> {KL}(P^\pi(\cdot|s) |</p>
+<p>| P_{va}(\cdot|s)) $$ The key insight from SCAS research is that by regularizing the <em>outcome</em> (next state) rather than just the <em>input</em> (action), the algorithm becomes robust to dynamics shifts and &quot;delusional&quot; policies that exploit model errors.^^ ** **</p>
+<hr>
+<h2 id="3-mathematical-framework-of-dist-scas">3. Mathematical Framework of Dist-SCAS</h2>
+<p>Dist-SCAS merges these philosophies. We define the objective not as maximizing the expected return subject to state constraints, but as maximizing the <strong>risk-adjusted return</strong> (lower quantile) subject to <strong>geometric state-correction constraints</strong> .</p>
+<h3 id="31-the-distributional-bellman-operator-under-state-correction">3.1 The Distributional Bellman Operator under State Correction</h3>
+<p>Let the return distribution be approximated by a set of <strong>N</strong> quantiles, <strong>θ</strong>=<strong>{<strong>θ</strong>1**</strong>,<strong>…</strong>,<strong>θ</strong>N}<strong>, such that <strong>q</strong>τ</strong>i**(<strong>s</strong>,<strong>a</strong>)<strong>=<strong>θ</strong>i</strong>. The standard distributional projection minimizes the Wasserstein distance (approximated by Quantile Huber Loss) between the current distribution and the target distribution **Y**:</p>
+<p><strong>Y</strong>(<strong>s</strong>,<strong>a</strong>)<strong>=<strong>r</strong>+<strong>γ</strong>Z</strong>(<strong>s</strong>′<strong>,<strong>π</strong>(<strong>s</strong>′</strong>))</p>
+<p>In Dist-SCAS, the policy <strong>π</strong> used in the target calculation is the <strong>Distributional-SCAS Policy</strong> , which we denote <strong>π</strong>d<strong>sc</strong>a<strong>s</strong>.</p>
+<h3 id="32-the-risk-adjusted-objective">3.2 The Risk-Adjusted Objective</h3>
+<p>We define the risk-adjusted value <strong>Q</strong>r<strong>i</strong>s<strong>k**</strong>(<strong>s</strong>,<strong>a</strong>)** as the Condition Value at Risk (CVaR) at level **α**:</p>
+<p><strong>Q</strong>r<strong>i</strong>s<strong>k**</strong>(<strong>s</strong>,<strong>a</strong>)<strong>=<strong>CVaR</strong>α**</strong>(<strong>Z</strong>(<strong>s</strong>,<strong>a</strong>))<strong>=<strong>E</strong>[<strong>Z</strong>(<strong>s</strong>,<strong>a</strong>)<strong>∣</strong>Z</strong>(<strong>s</strong>,<strong>a</strong>)<strong>≤</strong>F<strong>Z</strong>−<strong>1**</strong>(<strong>α</strong>)]**</p>
+<p>In a discrete quantile approximation with sorted quantiles <strong>q</strong>1≤<strong>q</strong>2≤<strong>⋯</strong>≤<strong>q</strong>N, this is efficiently computed as the mean of the lowest <strong>k</strong>=<strong>⌊<strong>α</strong>N</strong>⌋ quantiles:</p>
+<p><strong>Q</strong>r<strong>i</strong>s<strong>k**</strong>(<strong>s</strong>,<strong>a</strong>)<strong>≈</strong>k<strong>1**<strong>i</strong>=<strong>1</strong>∑</strong>k*<strong>*q</strong>τ<strong>i</strong>(<strong>s</strong>,<strong>a</strong>)**</p>
+<p>This term replaces the standard <strong>Q</strong>(<strong>s</strong>,<strong>a</strong>) in the policy improvement step.</p>
+<h3 id="33-the-value-aware-state-transition-distribution-pva">3.3 The Value-Aware State Transition Distribution (<strong>P</strong>v<strong>a</strong>)</h3>
+<p>To implement the SCAS regularizer, we must rigorously define <strong>P</strong>v<strong>a**</strong>(<strong>s</strong>′<strong>∣</strong>s**). Following the SCAS literature ^^, <strong>P</strong>v<strong>a</strong> is a distribution supported on the dataset <strong>D</strong> that assigns higher probability to transitions leading to high-value states. ** **</p>
+<p><strong>P</strong>v<strong>a**</strong>(<strong>s</strong>′<strong>∣</strong>s**)<strong>∝</strong>P<strong>D(<strong>s</strong>′<strong>∣</strong>s</strong>)<strong>exp</strong>(<strong>β</strong>V**(<strong>s</strong>′**))</p>
+<p>However, we do not have access to the true manifold of <strong>P</strong>D. We approximate this using a <strong>Conditional Variational Autoencoder (CVAE)</strong> or a <strong>Diffusion Model</strong> trained on the weighted dataset. Let <strong>f</strong>d<strong>y</strong>n(<strong>s</strong>,<strong>a</strong>) be the environment dynamics (approximated by a learned model). The SCAS loss minimizes the distance between the predicted next state and the manifold of <strong>P</strong>v<strong>a</strong>.</p>
+<p>The explicit SCAS loss derived for this framework is:</p>
+<p><strong>L</strong>SC<strong>A</strong>S(<strong>π</strong>)<strong>=<strong>E</strong>s</strong>∼<strong>D</strong>,<strong>a</strong>∼<strong>π</strong>(<strong>⋅</strong>∣<strong>s</strong>)[<strong>s</strong>t<strong>a</strong>r<strong>g</strong>e<strong>t</strong>′∼<strong>P</strong>v<strong>a****(<strong>⋅</strong>∣</strong>s**)<strong>min****∥</strong>f<strong>d</strong>y<strong>n(<strong>s</strong>,<strong>a</strong>)<strong>−</strong>s</strong>t<strong>a</strong>r<strong>g</strong>e<strong>t</strong>′∥<strong>2</strong>2]**</p>
+<p>This form essentially pulls the action <strong>a</strong> such that the resulting state <strong>f</strong>d<strong>y</strong>n(<strong>s</strong>,<strong>a</strong>) lies close to high-value, in-distribution transitions.</p>
+<h3 id="34-the-unified-dist-scas-optimization-problem">3.4 The Unified Dist-SCAS Optimization Problem</h3>
+<p>Combining the components, the optimization problem for the policy parameters <strong>ϕ</strong> is:</p>
+<p><em><em>\phi^* = \arg\max</em>\phi \mathbb{E}*{s \sim \mathcal{D}} \left</em>*</p>
+<p>Crucially, the regularization parameter <strong>λ</strong> is not a static hyperparameter. In Dist-SCAS, we propose an <strong>adaptive uncertainty-weighted regularization</strong> . We utilize the inter-quartile range (IQR) of the return distribution, <strong>Δ</strong>Z(<strong>s</strong>,<strong>a</strong>)<strong>=<strong>q</strong>0.75**<strong>−</strong>q</strong>0.25**, as a proxy for aleatoric uncertainty.</p>
+<p><strong>λ</strong>(<strong>s</strong>,<strong>a</strong>)<strong>=<strong>λ</strong>ba</strong>se⋅**(<strong>1</strong>+<strong>σ</strong>(<strong>Δ</strong>Z****(<strong>s</strong>,<strong>a</strong>)))**</p>
+<p>This novel formulation ensures that state correction is enforced more strictly when the value estimate is uncertain or the environment is noisy, bridging the gap between value-based and model-based constraints.</p>
+<hr>
+<h2 id="4-implementation-strategy-and-architecture">4. Implementation Strategy and Architecture</h2>
+<p>Implementing Dist-SCAS requires a sophisticated architecture that handles quantile regression, policy optimization, and dynamics modeling simultaneously. This section details the necessary components, network structures, and algorithmic flow.</p>
+<h3 id="41-network-architectures">4.1 Network Architectures</h3>
+<p>The system is composed of three primary neural entities: the <strong>Distributional Critic</strong> , the <strong>Actor</strong> , and the <strong>State-Correction Model</strong> .</p>
+<h4 id="411-the-distributional-critic-quantile-network">4.1.1 The Distributional Critic (Quantile Network)</h4>
+<p>We employ a Monotonic Quantile Network (MQN) or a standard MLP with independent quantile heads. Given the continuous action space of D4RL tasks, we follow the architecture of TQC.^^ ** **</p>
+<ul>
+<li><strong>Input:</strong> Concatenation of State <strong>s</strong>∈<strong>R</strong>d<strong>s</strong> and Action <strong>a</strong>∈<strong>R</strong>d<strong>a</strong>.</li>
+<li><strong>Hidden Layers:</strong> 3 layers of 512 units with ReLU activation. This increased capacity (vs. standard 256) is necessary to model the full distribution complexities.</li>
+<li><strong>Output:</strong> A vector of size <strong>N</strong> (number of quantiles). We recommend <strong>N</strong>=<strong>25</strong> or <strong>N</strong>=<strong>50</strong>.</li>
+<li><strong>Ensembling:</strong> To further stabilize training, we use an ensemble of <strong>M</strong>=<strong>2</strong> or <strong>M</strong>=<strong>5</strong> critic networks, similar to TQC. The risk-adjusted value is computed over the pooled quantiles of the ensemble.</li>
+</ul>
+<h4 id="412-the-actor-policy-network">4.1.2 The Actor (Policy Network)</h4>
+<ul>
+<li><strong>Input:</strong> State <strong>s</strong>.</li>
+<li><strong>Structure:</strong> MLP with 2 layers of 256 units.</li>
+<li><strong>Output:</strong> Parameters for a <code>TanhGaussian</code> distribution (mean <strong>μ</strong>, log-std <strong>σ</strong>).</li>
+<li><strong>Activation:</strong> <code>Mish</code> or <code>ReLU</code>. Recent benchmarks suggest <code>Mish</code> provides smoother gradients for actor networks in offline RL.</li>
+</ul>
+<h4 id="413-the-dynamicsstate-correction-model">4.1.3 The Dynamics/State-Correction Model</h4>
+<p>This component is unique to SCAS. We implement it as a <strong>Probabilistic Ensemble of Neural Networks (PENN)</strong> , similar to MOPO (Model-Based Offline Policy Optimization) ^^, but used solely for calculating the regularization loss, not for rollout generation. ** **</p>
+<ul>
+<li><strong>Input:</strong> State <strong>s</strong>, Action <strong>a</strong>.</li>
+<li><strong>Output:</strong> Gaussian distribution params for next state <strong>N</strong>(<strong>μ</strong>s**′,<strong>Σ</strong>s**′).</li>
+<li><strong>Training:</strong> Supervised learning on dataset transitions <strong>{(<strong>s</strong>,<strong>a</strong>,<strong>s</strong>′</strong>)} maximizing likelihood.</li>
+</ul>
+<p>Alternatively, for the &quot;Value-Aware&quot; target <strong>P</strong>v<strong>a</strong>, we train a separate <strong>Action-Conditioned VAE (AC-VAE)</strong> or a <strong>Conditional Diffusion Model</strong> that learns to reconstruct <strong>s</strong>′ given <strong>s</strong> and <em>high-value</em> indicators. A simpler, computationally efficient proxy is to use the nearest-neighbor distance in the embedding space of the dynamics model to the dataset's next states.</p>
+<h3 id="42-detailed-algorithmic-walkthrough">4.2 Detailed Algorithmic Walkthrough</h3>
+<p>The training process involves an interleaved update of the Critic, the Actor, and the Dynamics model.</p>
+<p><strong>Algorithm: Dist-SCAS</strong></p>
+<p><strong>1. Initialization:</strong></p>
+<ul>
+<li>Initialize Ensemble Critics <strong>{<strong>Z</strong>θ</strong>1**,<strong>…</strong>,<strong>Z</strong>θ<strong>M</strong>}**.</li>
+<li>Initialize Actor <strong>π</strong>ϕ.</li>
+<li>Initialize and pre-train Dynamics Model <strong>f</strong>^d<strong>y</strong>n (or VAE) on <strong>D</strong>.</li>
+<li>Target networks <strong>θ</strong>i**′,<strong>ϕ</strong>′** initialized.</li>
+</ul>
+<p><strong>2. Critic Training (Quantile Regression):</strong></p>
+<ul>
+<li>Sample batch <strong>B</strong>=<strong>{(<strong>s</strong>,<strong>a</strong>,<strong>r</strong>,<strong>s</strong>′</strong>,<strong>d</strong>)} from <strong>D</strong>.</li>
+<li>Compute Target Quantiles:
+<ul>
+<li>Sample next action <strong>a</strong>′<strong>∼</strong>π<strong>ϕ</strong>′(<strong>s</strong>′<strong>)</strong>.</li>
+<li>Fetch quantiles from target critics: <strong>z</strong>j**,<strong>k*</strong>*=<strong>Z</strong>θ<strong>j</strong>′<strong>(<strong>s</strong>′</strong>,<strong>a</strong>′**)<strong>k**</strong>.</li>
+<li>Pool all quantiles from all <strong>M</strong> critics.</li>
+<li>Sort pooled quantiles and truncate (optional, TQC style) or keep all.</li>
+<li>Apply Bellman: <strong>y</strong>j**,<strong>k*</strong>*=<strong>r</strong>+<strong>γ</strong>(<strong>1</strong>−<strong>d</strong>)<strong>z</strong>j**,<strong>k**</strong>.</li>
+</ul>
+</li>
+<li>Update Critics:
+<ul>
+<li>Minimize Quantile Huber Loss <strong>L</strong>κ between current estimates <strong>Z</strong>θ<strong>i</strong>(<strong>s</strong>,<strong>a</strong>) and targets <strong>y</strong>.</li>
+</ul>
+</li>
+</ul>
+<p><strong>3. Actor Training (Risk-Sensitive SCAS):</strong></p>
+<ul>
+<li>Generate actions <strong>a</strong>^<strong>∼</strong>π<strong>ϕ**</strong>(<strong>s</strong>)** (using reparameterization trick).</li>
+<li><strong>Distributional Value Step:</strong>
+<ul>
+<li>Query critics to get quantiles <strong>{<strong>q</strong>1**</strong>,<strong>…</strong>,<strong>q</strong>N}** for **(<strong>s</strong>,<strong>a</strong>^**).</li>
+<li>Calculate <strong>Q</strong>r<strong>i</strong>s<strong>k**</strong>=<strong>⌊<strong>α</strong>N</strong>⌋<strong>1**<strong>∑</strong>i</strong>=<strong>1</strong>⌊<strong>α</strong>N**⌋**<strong>q</strong>(<strong>i</strong>)**** (average of lower tail).</li>
+</ul>
+</li>
+<li><strong>SCAS Regularization Step:</strong>
+<ul>
+<li>Predict next state <strong>s</strong>^<strong>′</strong>=<strong>f</strong>^d<strong>y</strong>n(<strong>s</strong>,<strong>a</strong>^<strong>)</strong>.</li>
+<li>Find nearest neighbor <strong>s</strong>NN**′** in batch (or query VAE).</li>
+<li>Calculate <strong>L</strong>SC<strong>A</strong>S=<strong>∥</strong>s**^<strong>′<strong>−</strong>s</strong>NN**′∥<strong>2</strong>.</li>
+</ul>
+</li>
+<li><strong>Total Loss:</strong>
+<ul>
+<li><strong>L</strong>a<strong>c</strong>t<strong>or**</strong>=<strong>−</strong>Q<strong>r</strong>i<strong>s</strong>k+<strong>λ</strong>⋅<strong>L</strong>SC<strong>A</strong>S+<strong>β</strong>H**(**π**) (entropy term).</li>
+<li>Backpropagate <strong>∇</strong>ϕ*<strong>*L</strong>a<strong>c</strong>t**or.</li>
+</ul>
+</li>
+</ul>
+<p><strong>4. Updates:</strong></p>
+<ul>
+<li>Soft update target networks.</li>
+</ul>
+<hr>
+<h2 id="5-implementation-details-and-code-analysis">5. Implementation Details and Code Analysis</h2>
+<p>This section provides specific guidance on translating the theory into PyTorch code, addressing common pitfalls in distributional RL implementation.</p>
+<h3 id="51-the-quantile-huber-loss-implementation">5.1 The Quantile Huber Loss Implementation</h3>
+<p>The Quantile Huber Loss is the engine of the critic. It is asymmetric and requires careful broadcasting to be efficient.</p>
+<p><strong>Python</strong></p>
+<pre class="hljs"><code><div>import torch
+import torch.nn.functional as F
+
+def quantile_huber_loss_f(quantiles, target_quantiles, tau):
+    &quot;&quot;&quot;
+    Args:
+        quantiles: (batch_size, n_quantiles) - Estimation
+        target_quantiles: (batch_size, n_quantiles) - Target
+        tau: (batch_size, n_quantiles) - Quantile centroids
+    Returns:
+        loss: Scalar
+    &quot;&quot;&quot;
+    # Expand dims for pairwise difference
+    # (batch_size, n_quantiles, 1) - (batch_size, 1, n_quantiles)
+    # Result: (batch_size, n_quantiles, n_quantiles)
+    u = target_quantiles.unsqueeze(1) - quantiles.unsqueeze(2)
+
+    # Huber Loss component
+    abs_u = torch.abs(u)
+    kappa = 1.0 # Threshold for Huber loss
+    huber_loss = torch.where(
+        abs_u &lt;= kappa,
+        0.5 * u.pow(2),
+        kappa * (abs_u - 0.5 * kappa)
+    )
+
+    # Asymmetric Quantile Weighting
+    # diff represents the indicator function |tau - I(u&lt;0)|
+    diff = torch.abs(tau.unsqueeze(2) - (u &lt; 0).float().detach())
+
+    # Combined Loss
+    loss = diff * huber_loss
+
+    # Sum over target quantiles (dim=2), mean over current quantiles (dim=1)
+    return loss.sum(dim=2).mean(dim=1).mean()
+</div></code></pre>
+<p><strong>Critical Detail:</strong> The <code>tau</code> (quantile centroids) must be centered. For <strong>N</strong> quantiles, <strong>τ</strong>i=<strong>N</strong>i<strong>−</strong>0.5****. Using <code>u &lt; 0</code> requires detaching from the graph to prevent gradient flow through the indicator function, although PyTorch logic operators usually don't track gradients anyway. Explicit <code>.detach()</code> is safer.</p>
+<h3 id="52-the-risk-sensitive-actor-loss">5.2 The Risk-Sensitive Actor Loss</h3>
+<p>To backpropagate through the quantile sorting, we rely on the property that <code>torch.sort</code> is differentiable with respect to the values.</p>
+<p><strong>Python</strong></p>
+<pre class="hljs"><code><div>def get_lower_cvar(quantiles, alpha=0.1):
+    &quot;&quot;&quot;
+    Computes the CVaR at level alpha.
+    &quot;&quot;&quot;
+    batch_size, n_quantiles = quantiles.shape
+    k = int(alpha * n_quantiles)
+
+    # Sort quantiles (ascending)
+    sorted_quantiles, _ = torch.sort(quantiles, dim=1)
+
+    # Take the lowest k quantiles
+    lower_tail = sorted_quantiles[:, :k]
+
+    # Return the mean of the lower tail
+    return lower_tail.mean(dim=1, keepdim=True)
+</div></code></pre>
+<p><strong>Architectural Nuance:</strong> The choice of <strong>α</strong> is critical.</p>
+<ul>
+<li><strong>α</strong>≈<strong>0.1</strong>: Extremely conservative. Good for <code>medium-replay</code> datasets with high noise.</li>
+<li><strong>α</strong>≈<strong>0.25</strong>: Balanced. Good for <code>medium-expert</code>.</li>
+<li><strong>α</strong>=<strong>1.0</strong>: Risk-neutral (equivalent to mean).</li>
+</ul>
+<h3 id="53-implementing-the-scas-regularizer">5.3 Implementing the SCAS Regularizer</h3>
+<p>We need a differentiable dynamics model. A simple MLP trained with MSE loss often suffices for the regularizer, as we only need the <em>gradient direction</em> to pull the actor towards valid transitions.</p>
+<p><strong>Python</strong></p>
+<pre class="hljs"><code><div>class SCAS_Regularizer(nn.Module):
+    def __init__(self, state_dim, action_dim):
+        super().__init__()
+        # Residual dynamics model: s' = s + f(s,a)
+        self.dynamics = nn.Sequential(
+            nn.Linear(state_dim + action_dim, 256),
+            nn.Mish(),
+            nn.Linear(256, 256),
+            nn.Mish(),
+            nn.Linear(256, state_dim)
+        )
+
+    def forward(self, state, action):
+        return state + self.dynamics(torch.cat([state, action], dim=1))
+
+    def compute_loss(self, state, action, dataset_next_states):
+        &quot;&quot;&quot;
+        Computes distance between predicted next state and nearest dataset state.
+        In practice, finding the exact NN in the whole dataset is slow.
+        Approximation: Use the next_state from the current batch.
+        &quot;&quot;&quot;
+        predicted_next = self.forward(state, action)
+
+        # Simple Proxy: Force consistency with the batch's actual transition
+        # This acts as a behavior cloning regularization on the dynamics level
+        # A more advanced version would search a local neighborhood or VAE latent space.
+        mse_loss = F.mse_loss(predicted_next, dataset_next_states)
+        return mse_loss
+</div></code></pre>
+<p><strong>Advanced SCAS Implementation:</strong> To truly capture &quot;Value-Aware&quot; transitions, the <code>dataset_next_states</code> passed to this loss should ideally be re-sampled from the dataset based on high advantage scores, or the loss should be weighted by the advantage <strong>A</strong>(<strong>s</strong>,<strong>a</strong>) of the batch sample.</p>
+<hr>
+<h2 id="6-experimental-validation-datasets-and-protocol">6. Experimental Validation: Datasets and Protocol</h2>
+<p>To rigorously validate Dist-SCAS, we utilize the <strong>D4RL (Datasets for Deep Data-Driven Reinforcement Learning)</strong> benchmark.^^ The selection of specific environments is crucial to demonstrate the method's unique benefits. ** **</p>
+<h3 id="61-d4rl-environment-selection">6.1 D4RL Environment Selection</h3>
+<table>
+<thead>
+<tr>
+<th>Environment</th>
+<th>Dataset Quality</th>
+<th>Challenge</th>
+<th>Dist-SCAS Hypothesis</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Hopper/Walker2d/HalfCheetah</strong></td>
+<td><code>Medium-Expert</code></td>
+<td>Multi-modal data (optimal + suboptimal policies mixed).</td>
+<td><strong>Distributional Advantage:</strong> Mean-based methods average the modes (leading to mediocre behavior). Dist-SCAS can isolate the &quot;expert&quot; mode via quantile manipulation and SCAS keeps it consistent.</td>
+</tr>
+<tr>
+<td><strong>AntMaze</strong></td>
+<td><code>Umaze</code>, <code>Medium</code>, <code>Large</code></td>
+<td>Sparse rewards, stitching required.</td>
+<td><strong>SCAS Advantage:</strong> These are navigation tasks where OOD state visitation is fatal (agent gets lost). SCAS forces the agent to &quot;connect the dots&quot; of valid transitions.</td>
+</tr>
+<tr>
+<td><strong>Kitchen / Franka</strong></td>
+<td><code>Mixed</code>, <code>Partial</code></td>
+<td>High-dimensional, realistic robotics.</td>
+<td><strong>Unified Advantage:</strong> Complex dynamics require rigorous state correction; sparse data requires distributional pessimism.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-evaluation-metrics">6.2 Evaluation Metrics</h3>
+<p>Beyond the standard <strong>Normalized Score</strong> , we propose tracking specific metrics to validate the internal mechanics of Dist-SCAS:</p>
+<ol>
+<li><strong>OOD Action Rate:</strong> Measure the distance of <strong>π</strong>(<strong>s</strong>) from the behavior <strong>π</strong>β(<strong>s</strong>) (estimated via BC). Dist-SCAS should show lower divergence in high-variance states.</li>
+<li><strong>OOD State Visitation:</strong> During evaluation rollouts, track the minimum distance of the agent's state <strong>s</strong>t to the training dataset <strong>D</strong>. SCAS should explicitly minimize this metric compared to CQL.</li>
+<li><strong>Value Estimation Bias:</strong> Compare estimated <strong>Q</strong>r<strong>i</strong>s<strong>k</strong> vs. actual discounted returns. Dist-SCAS should show a <em>negative bias</em> (underestimation) that correlates with state novelty.</li>
+<li><strong>Quantile Spread:</strong> Monitor the gap between <strong>q</strong>0.9 and <strong>q</strong>0.1. A collapsing spread indicates high confidence; a widening spread indicates effective uncertainty capture.</li>
+</ol>
+<h3 id="63-baseline-comparisons">6.3 Baseline Comparisons</h3>
+<p>To prove efficacy, Dist-SCAS must be benchmarked against:</p>
+<ul>
+<li><strong>CQL (Conservative Q-Learning):</strong> The standard for OOD action suppression.</li>
+<li><strong>IQL (Implicit Q-Learning):</strong> The standard for expectile-based (scalar) offline RL.</li>
+<li><strong>SCAS (Original):</strong> To demonstrate the lift provided by the Distributional Critic.</li>
+<li><strong>TQC (Truncated Quantile Critics):</strong> To demonstrate the lift provided by the SCAS State Correction regularizer in the offline setting.</li>
+</ul>
+<hr>
+<h2 id="7-ablation-studies-and-expected-insights">7. Ablation Studies and Expected Insights</h2>
+<p>A rigorous &quot;new paper&quot; implementation requires ablation studies to dissect the contribution of each component.</p>
+<h3 id="71-ablation-scalar-vs-distributional-scas">7.1 Ablation: Scalar vs. Distributional SCAS</h3>
+<ul>
+<li><strong>Setup:</strong> Replace the Quantile Critic with a standard ensemble of 2 scalar Q-networks (min-clipping). Keep the SCAS regularizer.</li>
+<li><strong>Expected Outcome:</strong> The scalar version will perform well on dense data but struggle on <code>Medium-Replay</code> or <code>AntMaze</code> where the variance of returns is high. The scalar penalty is too uniform; the distributional lower-quantile penalty is adaptive.</li>
+</ul>
+<h3 id="72-ablation-scas-vs-no-state-correction">7.2 Ablation: SCAS vs. No State Correction</h3>
+<ul>
+<li><strong>Setup:</strong> Remove <strong>L</strong>SC<strong>A</strong>S (<strong>λ</strong>=<strong>0</strong>). This essentially reduces the algorithm to an Offline TQC/DSAC.</li>
+<li><strong>Expected Outcome:</strong> The agent may achieve high scores on simple tasks (Hopper) but will fail catastrophically on <strong>AntMaze</strong> . Without SCAS, the agent will select actions that theoretically maximize the lower quantile but physically transport the agent to undefined regions of the maze (OOD states), leading to policy collapse.</li>
+</ul>
+<h3 id="73-ablation-quantile-level-%CE%B1">7.3 Ablation: Quantile Level <strong>α</strong></h3>
+<ul>
+<li><strong>Setup:</strong> Vary <strong>α</strong>∈**{<strong>0.05</strong>,<strong>0.1</strong>,<strong>0.25</strong>,<strong>0.5</strong>}**.</li>
+<li><strong>Expected Outcome:</strong>
+<ul>
+<li><strong>α</strong>=<strong>0.5</strong> (Median): Too risky, high OOD rates.</li>
+<li><strong>α</strong>=<strong>0.05</strong>: Too conservative, agent freezes (similar to high <strong>α</strong> in CQL).</li>
+<li><strong>α</strong>=<strong>0.1</strong>: Sweet spot for offline safety.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="8-conclusion">8. Conclusion</h2>
+<p><strong>Dist-SCAS</strong> represents a coherent evolution in Offline Reinforcement Learning. By acknowledging that safety in offline RL is a dual problem—requiring both <strong>geometric adherence</strong> to the training manifold (via SCAS) and <strong>statistical pessimism</strong> in value estimation (via Distributional RL)—this framework offers a robust solution to the extrapolation error.</p>
+<p>The implementation details provided here, specifically the use of the Quantile Huber Loss for critic training and the derivation of the CVaR-based actor update with dynamics regularization, constitute a complete roadmap for deploying this novel algorithm. The theoretical synergy suggests that Dist-SCAS is particularly well-suited for the most challenging regimes of offline RL: sparse rewards, multi-modal data, and complex dynamics, as exemplified by the AntMaze and Robotics workloads in the D4RL benchmark. Future work lies in the automated tuning of the SCAS regularization parameter <strong>λ</strong> using the distributional variance signal, effectively creating a self-regulating agent that tightens its geometric constraints in the face of statistical uncertainty.</p>
+<hr>
+<h2 id="9-mathematical-deep-dive-dist-scas-objective-and-gradients">9. Mathematical Deep Dive: Dist-SCAS Objective and Gradients</h2>
+<p><strong>Notation:</strong> Dataset $\mathcal{D}$ over $(s,a,r,s',d)$; $d$ is terminal flag. Policy $\pi_\phi$, behavior $\pi_\beta$, critic ensemble ${Z_{\theta_m}}<em>{m=1}^M$ with $N$ quantiles, dynamics/state-correction model $f</em>\psi$.</p>
+<h3 id="91-cvar-risk-from-quantile-critics">9.1 CVaR Risk from Quantile Critics</h3>
+<p>Pooled quantiles $\tilde{q}_{1:MN}(s,a)$ sorted ascending define</p>
+<p>$$
+Q_\text{risk}(s,a) = \frac{1}{k}\sum_{i=1}^k \tilde{q}_i(s,a), \quad k=\lfloor \alpha MN \rfloor.
+$$</p>
+<h3 id="92-distributional-bellman-targets">9.2 Distributional Bellman Targets</h3>
+<p>For each critic $m$:</p>
+<p>$$
+y_j = r + \gamma(1-d), z'_j,\quad z'<em>j \sim Z</em>{\theta'<em>m}(s', a'),\ a' \sim \pi</em>{\phi'}(s').
+$$</p>
+<p>Quantile Huber with $\tau_i=\frac{i-0.5}{N}$:</p>
+<p>$$
+\mathcal{L}<em>\text{crit}(\theta_m)=\mathbb{E}\frac{1}{N}\sum</em>{i=1}^N\sum_{j=1}^N \rho_\kappa(y_j - q^{(m)}_i), \big|\tau_i-\mathbb{1}[y_j&lt;q^{(m)}_i]\big|.
+$$</p>
+<h3 id="93-state-correction-scas-term">9.3 State-Correction (SCAS) Term</h3>
+<p>Residual dynamics $f_\psi(s,a)=s+\delta_\psi(s,a)$; value-aware target $\tilde{s}'\sim \nu(\cdot|s)$ (nearest in-batch or VAE):</p>
+<p>$$
+\mathcal{L}<em>\text{SCAS}(\phi,\psi)=\mathbb{E}</em>{s,a}\big|f_\psi(s,a)-\tilde{s}'\big|_2^2.
+$$</p>
+<h3 id="94-adaptive-weight-via-interquartile-range">9.4 Adaptive Weight via Interquartile Range</h3>
+<p>Let $\Delta Z = q_{0.75}-q_{0.25}$ from pooled quantiles. Set</p>
+<p>$$
+\lambda(s,a)=\lambda_\text{base}\big(1+\sigma(\Delta Z)\big),
+$$</p>
+<p>where $\sigma$ is sigmoid, amplifying penalties where aleatoric spread is high.</p>
+<h3 id="95-actor-objective">9.5 Actor Objective</h3>
+<p>$$
+\mathcal{L}<em>\text{actor}(\phi)= - Q</em>\text{risk}(s,a_\phi) + \lambda(s,a_\phi)|f_\psi(s,a_\phi)-\tilde{s}'|<em>2^2 + \beta \mathcal{H}(\pi</em>\phi(\cdot|s)),
+$$</p>
+<p>with $a_\phi$ from reparameterized Gaussian policy.</p>
+<h3 id="96-contraction-sketch">9.6 Contraction Sketch</h3>
+<p>CVaR-projected Bellman operator is a $\gamma$-contraction in truncated Wasserstein; the convex SCAS penalty preserves contraction, ensuring a fixed point under bounded rewards/dynamics.</p>
+<hr>
+<h2 id="10-algorithm-step-by-step-pseudocode">10. Algorithm (Step-by-Step Pseudocode)</h2>
+<ol>
+<li>Init critics $Z_{\theta_m}$, targets $\theta'<em>m$, actor $\pi</em>\phi$, target $\phi'$, dynamics $f_\psi$.</li>
+<li>Pretrain $f_\psi$ on $(s,a,s')$.</li>
+<li>Loop:
+<ul>
+<li>Sample batch $B$.</li>
+<li>$a' \leftarrow \pi_{\phi'}(s')$; targets $y = r + \gamma(1-d) z'$ from target critics.</li>
+<li>Critic update: minimize quantile Huber to $y$ for all $m$.</li>
+<li>Actor: $a_\phi \leftarrow \pi_\phi(s)$; pooled $\tilde{q}$ → $Q_\text{risk}$; compute $\lambda(s,a_\phi)$; SCAS loss with $f_\psi$ vs batch $s'$; minimize $\mathcal{L}_\text{actor}$.</li>
+<li>Optional: refresh $f_\psi$ on batch.</li>
+<li>Polyak update $\theta',\phi'$.</li>
+</ul>
+</li>
+<li>Eval: deterministic policy; D4RL score + OOD metrics.</li>
+</ol>
+<hr>
+<h2 id="11-pytorch-reference-snippets">11. PyTorch Reference Snippets</h2>
+<h3 id="111-quantile-critic-ensemble">11.1 Quantile Critic Ensemble</h3>
+<pre class="hljs"><code><div>class QuantileMLP(nn.Module):
+    def __init__(self, s_dim, a_dim, n_q=50, hid=512):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(s_dim + a_dim, hid), nn.ReLU(),
+            nn.Linear(hid, hid), nn.ReLU(),
+            nn.Linear(hid, hid), nn.ReLU(),
+            nn.Linear(hid, n_q)
+        )
+
+    def forward(self, s, a):
+        return self.net(torch.cat([s, a], dim=-1))
+</div></code></pre>
+<h3 id="112-cvar-helper">11.2 CVaR Helper</h3>
+<pre class="hljs"><code><div>def cvar_tail(qs: torch.Tensor, alpha: float = 0.1) -&gt; torch.Tensor:
+    q_sorted, _ = torch.sort(qs, dim=1)
+    k = max(1, int(alpha * q_sorted.size(1)))
+    return q_sorted[:, :k].mean(dim=1, keepdim=True)
+</div></code></pre>
+<h3 id="113-scas-regularizer">11.3 SCAS Regularizer</h3>
+<pre class="hljs"><code><div>class SCASReg(nn.Module):
+    def __init__(self, s_dim, a_dim):
+        super().__init__()
+        self.dyn = nn.Sequential(
+            nn.Linear(s_dim + a_dim, 256), nn.Mish(),
+            nn.Linear(256, 256), nn.Mish(),
+            nn.Linear(256, s_dim)
+        )
+
+    def forward(self, s, a):
+        return s + self.dyn(torch.cat([s, a], dim=-1))
+
+    def loss(self, s, a, s_next):
+        return F.mse_loss(self.forward(s, a), s_next)
+</div></code></pre>
+<h3 id="114-quantile-huber-loss">11.4 Quantile Huber Loss</h3>
+<pre class="hljs"><code><div>def quantile_huber(pred, target, taus, kappa=1.0):
+    u = target.unsqueeze(1) - pred.unsqueeze(2)  # [B, N, N]
+    abs_u = u.abs()
+    huber = torch.where(abs_u &lt;= kappa, 0.5 * u.pow(2), kappa * (abs_u - 0.5 * kappa))
+    weight = (taus.unsqueeze(2) - (u.detach() &lt; 0).float()).abs()
+    return (weight * huber).sum(dim=2).mean(dim=1).mean()
+</div></code></pre>
+<hr>
+<h2 id="12-hyperparameters-suggested-defaults">12. Hyperparameters (Suggested Defaults)</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Setting</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Quantiles</td>
+<td>$N$</td>
+<td>50</td>
+</tr>
+<tr>
+<td>Critics</td>
+<td>$M$</td>
+<td>2 (option 5)</td>
+</tr>
+<tr>
+<td>CVaR level</td>
+<td>$\alpha$</td>
+<td>0.1</td>
+</tr>
+<tr>
+<td>LR</td>
+<td>Critic/Actor</td>
+<td>$3\mathrm{e}{-4}$</td>
+</tr>
+<tr>
+<td>Batch</td>
+<td></td>
+<td>256</td>
+</tr>
+<tr>
+<td>Target $\tau$</td>
+<td></td>
+<td>0.005</td>
+</tr>
+<tr>
+<td>SCAS $\lambda$</td>
+<td>$\lambda_\text{base}$</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>Entropy $\beta$</td>
+<td></td>
+<td>0.2</td>
+</tr>
+<tr>
+<td>Discount</td>
+<td>$\gamma$</td>
+<td>0.99 (0.995 AntMaze)</td>
+</tr>
+<tr>
+<td>Dyn hidden</td>
+<td></td>
+<td>256</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="13-evaluation-protocol-d4rl">13. Evaluation Protocol (D4RL)</h2>
+<ul>
+<li>Envs: hopper/walker/halfcheetah (medium-replay, medium-expert), antmaze (umaze, medium, large), kitchen-mixed.</li>
+<li>Metrics: D4RL normalized score, OOD action rate (distance to BC), OOD state distance (NN to dataset), value bias, quantile spread.</li>
+<li>Seeds: ≥5; report mean ± std.</li>
+</ul>
+<hr>
+<h2 id="14-ablations">14. Ablations</h2>
+<ol>
+<li>Remove SCAS ($\lambda=0$) → expect AntMaze failure, higher OOD states.</li>
+<li>Scalar critics (twin Q) → higher OOD action rate, less safety.</li>
+<li>CVaR sweep $\alpha \in {0.05,0.1,0.25,0.5}$.</li>
+<li>Ensemble size $M \in {1,2,5}$.</li>
+<li>Dynamics quality: MLP vs VAE vs diffusion target selector.</li>
+</ol>
+<hr>
+<h2 id="15-practical-tips">15. Practical Tips</h2>
+<ul>
+<li>Normalize states; clip rewards to [-10,10] for mujoco to stabilize tails.</li>
+<li>If quantiles collapse: lower LR, increase $M$, or raise $kappa$.</li>
+<li>If policy freezes: reduce $\lambda_\text{base}$ or cap $\lambda(s,a)$.</li>
+<li>AntMaze: set $\gamma=0.995$, add light Gaussian action noise during eval to avoid deadlocks.</li>
+</ul>
+<hr>
+<h2 id="16-reproducibility-checklist">16. Reproducibility Checklist</h2>
+<ul>
+<li>Fix seeds (PyTorch, NumPy, gym).</li>
+<li>Log hyperparameters, taus, lambda schedule, dataset name, seed.</li>
+<li>Save checkpoints (actor, critics, targets, optimizers) every 100k steps.</li>
+<li>Store evaluation rollouts and OOD metrics with scores.</li>
+</ul>
+<hr>
+<h2 id="17-extension-ideas">17. Extension Ideas</h2>
+<ul>
+<li><strong>CrossQ</strong>: BN-stabilized high-UTD updates with quantile critics.</li>
+<li><strong>Sophia-G</strong>: curvature-aware optimizer for actor.</li>
+<li><strong>Diffusion targets</strong>: sample $\tilde{s}'$ from high-value manifolds.</li>
+<li><strong>Spectral norm</strong>: constrain critic Lipschitz constants.</li>
+</ul>
+<hr>
+<h2 id="18-minimal-training-skeleton-outline">18. Minimal Training Skeleton (Outline)</h2>
+<pre class="hljs"><code><div>for step in range(T):
+    batch = replay.sample()
+    with torch.no_grad():
+        a_next = actor_t(batch.s_next)
+        target_qs = [c_t(batch.s_next, a_next) for c_t in target_critics]
+        pooled = torch.sort(torch.cat(target_qs, dim=1), dim=1)[0]
+        y = batch.r + gamma * (1 - batch.d) * pooled
+    loss_c = sum(quantile_huber(c(batch.s, batch.a), y, taus) for c in critics)
+    a = actor(batch.s)
+    qs = [c(batch.s, a) for c in critics]
+    pooled = torch.sort(torch.cat(qs, dim=1), dim=1)[0]
+    q_risk = cvar_tail(pooled, alpha)
+    lambda_sa = lambda_base * (1 + torch.sigmoid(iqr(pooled)))
+    scas = scas_reg.loss(batch.s, a, batch.s_next)
+    loss_a = (-q_risk + lambda_sa * scas + beta * entropy(actor, batch.s)).mean()
+</div></code></pre>
+<hr>
+<h2 id="19-notebook-visualization-plan">19. Notebook Visualization Plan</h2>
+<ul>
+<li>Training curves: critic loss, SCAS loss, CVaR value, OOD metrics.</li>
+<li>Quantile fan plot for fixed $(s,a)$ over training.</li>
+<li>AntMaze rollouts with state-density overlay vs dataset.</li>
+<li>Scatter of IQR vs $\lambda(s,a)$ to show adaptive penalty behavior.</li>
+</ul>
+<hr>
+<h2 id="20-proof-sketch-cvar-bias-under-ood">20. Proof Sketch: CVaR Bias Under OOD</h2>
+<p>For sub-Gaussian $Z$ with mean $\mu$ and std $\sigma$, $\text{CVaR}_\alpha(Z) \le \mu - \sigma \frac{\phi(\Phi^{-1}(\alpha))}{\alpha}$. OOD inflates epistemic $\sigma$, shrinking CVaR and discouraging uncertain actions without explicit behavior constraints.</p>
+<hr>
+<h2 id="21-dataset-notes">21. Dataset Notes</h2>
+<ul>
+<li>Hopper/Walker: moderate rewards; action L2 penalty optional.</li>
+<li>HalfCheetah: add tanh squashing; consider target entropy -3.</li>
+<li>AntMaze: longer horizon; use $\gamma=0.995$ and larger replay (2M) if memory allows.</li>
+<li>Kitchen: increase hidden sizes (1024) and add LayerNorm.</li>
+</ul>
+<hr>
+<h2 id="22-reporting-guidance">22. Reporting Guidance</h2>
+<ul>
+<li>Equations (Section 9) aligned with code.</li>
+<li>Tables: D4RL scores ± std, OOD metrics, ablations.</li>
+<li>Figures: quantile fan, AntMaze trajectories, SCAS loss vs score.</li>
+<li>Appendix: hyperparameters, compute budget, failure cases.</li>
+</ul>
+<hr>
+<h2 id="23-end-to-end-checklist">23. End-to-End Checklist</h2>
+<ul>
+<li><input type="checkbox" id="checkbox0"><label for="checkbox0">README ≥1000 lines with math + code (this file).</label></li>
+<li><input type="checkbox" id="checkbox1"><label for="checkbox1">Training implements CVaR actor + adaptive SCAS.</label></li>
+<li><input type="checkbox" id="checkbox2"><label for="checkbox2">Dynamics model trained and plugged into regularizer.</label></li>
+<li><input type="checkbox" id="checkbox3"><label for="checkbox3">Evaluation scripts for D4RL + OOD metrics.</label></li>
+<li><input type="checkbox" id="checkbox4"><label for="checkbox4">Ablations executed and logged.</label></li>
+</ul>
+<hr>
+<h2 id="24-closing-remarks">24. Closing Remarks</h2>
+<p>Distributional State-Corrected Action Suppression combines pessimistic distributional value learning with geometry-aware state regularization. By optimizing lower-tail returns and aligning predicted transitions to in-distribution manifolds, it addresses offline RL's twin failures: OOD action overestimation and OOD state drift. The derivations, pseudocode, and hyperparameters here are intended to be immediately actionable for reproducing robust results on the hardest D4RL benchmarks.</p>
+<hr>
+<h2 id="25-experimental-matrix-and-logging-plan">25. Experimental Matrix and Logging Plan</h2>
+<p><strong>Matrix (rows = env, cols = settings):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Env</th>
+<th>Base</th>
+<th>+SCAS</th>
+<th>+SCAS+Adaptive $\lambda$</th>
+<th>+SCAS+Adaptive $\lambda$+Ensemble5</th>
+<th>+Sophia-G</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hopper-m</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Walker2d-m</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>HalfCheetah-m</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>AntMaze-umaze</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>AntMaze-medium</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Kitchen-mixed</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Logging (per step / episode):</strong></p>
+<ul>
+<li>Critic loss, SCAS loss, CVaR value, entropy.</li>
+<li>IQR, $\lambda(s,a)$ statistics (mean, p95).</li>
+<li>OOD action distance (to BC logits or Gaussian KL).</li>
+<li>OOD state distance (NN in dataset embedding).</li>
+<li>Replay buffer coverage (state density histogram).</li>
+<li>D4RL score (eval every 100k gradient steps).</li>
+</ul>
+<hr>
+<h2 id="26-safety-and-robustness-considerations">26. Safety and Robustness Considerations</h2>
+<ul>
+<li><strong>Risk floor:</strong> Optionally cap CVaR to not exceed median to avoid optimism drift.</li>
+<li><strong>Action clipping:</strong> Enforce env action bounds; penalize saturation in actor loss.</li>
+<li><strong>Dynamics uncertainty:</strong> Track ensemble variance of $f_\psi$; inflate $\lambda$ when variance is high (state-uncertainty aware SCAS).</li>
+<li><strong>Stochasticity:</strong> For stochastic envs (kitchen), increase particle count for critics to capture tails.</li>
+<li><strong>Numerical stability:</strong> Use <code>float32</code> with AMP; clamp log-std in actor to [-20, 2]; add small $\epsilon$ in Huber.</li>
+</ul>
+<hr>
+<h2 id="27-failure-modes-and-mitigations">27. Failure Modes and Mitigations</h2>
+<ul>
+<li><strong>Mode collapse in quantiles:</strong> Increase ensemble, raise kappa, or add dropout in critic hidden layers.</li>
+<li><strong>Over-regularization:</strong> If performance stalls, decay $\lambda_\text{base}$ over steps or cap $\lambda(s,a)$ to 5× base.</li>
+<li><strong>Dynamics drift:</strong> Periodically re-pretrain $f_\psi$ on replay or add L2 weight decay.</li>
+<li><strong>AntMaze dead ends:</strong> Add small Gaussian noise to actions during eval; use longer target update interval (every 2 steps).</li>
+<li><strong>Kitchen instability:</strong> Use LayerNorm in critics/actor; increase hidden to 1024; reduce LR to 1e-4.</li>
+</ul>
+<hr>
+<h2 id="28-implementation-checklist-codebase-level">28. Implementation Checklist (Codebase-Level)</h2>
+<ul>
+<li><input type="checkbox" id="checkbox5"><label for="checkbox5">Replay buffer stores $(s,a,r,s',d)$ tensors (float32) and supports large batches (256/512).</label></li>
+<li><input type="checkbox" id="checkbox6"><label for="checkbox6">Actor outputs mean/log-std; sampled via reparameterization with tanh squashing.</label></li>
+<li><input type="checkbox" id="checkbox7"><label for="checkbox7">Critic ensemble forward returns list of quantile tensors [B,N]; pooled via </label><code>torch.sort</code>.</li>
+<li><input type="checkbox" id="checkbox8"><label for="checkbox8">Tau vector precomputed: </label><code>taus = (torch.arange(N, device)/N + 0.5/N).view(1,N)</code>.</li>
+<li><input type="checkbox" id="checkbox9"><label for="checkbox9">SCAS regularizer module with </label><code>.loss</code> API.</li>
+<li><input type="checkbox" id="checkbox10"><label for="checkbox10">Adaptive $\lambda$: compute IQR on pooled quantiles, apply sigmoid, scale by $\lambda_\text{base}$.</label></li>
+<li><input type="checkbox" id="checkbox11"><label for="checkbox11">Target updates: Polyak with $\tau=0.005`; ensure no_grad.</label></li>
+<li><input type="checkbox" id="checkbox12"><label for="checkbox12">Evaluation script computing D4RL normalized score and OOD metrics.</label></li>
+<li><input type="checkbox" id="checkbox13"><label for="checkbox13">Config system (YAML/argparse) exposing alpha, lambda_base, gamma, N, M, kappa, tau_update, batch, seed.</label></li>
+<li><input type="checkbox" id="checkbox14"><label for="checkbox14">Logging (TensorBoard/W&amp;B) for metrics listed in Section 25.</label></li>
+</ul>
+<hr>
+<h2 id="29-sample-yaml-configs">29. Sample YAML Configs</h2>
+<p><strong>hopper-medium-expert.yaml</strong></p>
+<pre class="hljs"><code><div>env: hopper-medium-expert-v2
+seed: 0
+gamma: 0.99
+alpha_cvar: 0.1
+n_quantiles: 50
+n_critics: 2
+lambda_base: 1.0
+lr_actor: 3e-4
+lr_critic: 3e-4
+batch_size: 256
+target_tau: 0.005
+entropy_beta: 0.2
+use_adaptive_lambda: true
+use_amp: true
+</div></code></pre>
+<p><strong>antmaze-medium-diverse.yaml</strong></p>
+<pre class="hljs"><code><div>env: antmaze-medium-diverse-v2
+seed: 0
+gamma: 0.995
+alpha_cvar: 0.1
+n_quantiles: 50
+n_critics: 2
+lambda_base: 2.0
+lr_actor: 3e-4
+lr_critic: 3e-4
+batch_size: 512
+target_tau: 0.005
+entropy_beta: 0.1
+use_adaptive_lambda: true
+use_amp: true
+</div></code></pre>
+<hr>
+<h2 id="30-extended-proof-sketch-bias-control-via-scas">30. Extended Proof Sketch: Bias Control via SCAS</h2>
+<p>Let $s'<em>\pi = f</em>\psi(s,\pi(s))$ and $\tilde{s}'$ from dataset manifold. The SCAS penalty enforces $|s'_\pi - \tilde{s}'|^2 \le \epsilon$. For Lipschitz critic $L_Q$, the bias in target value due to state shift satisfies</p>
+<p>$$
+|Q_\text{risk}(s'<em>\pi,a') - Q</em>\text{risk}(\tilde{s}',a')| \le L_Q |s'_\pi - \tilde{s}'| \le L_Q \sqrt{\epsilon}.
+$$</p>
+<p>Thus bounding SCAS loss bounds value extrapolation bias, complementing CVaR pessimism on action uncertainty.</p>
+<hr>
+<h2 id="31-additional-ablations-to-strengthen-paper-claims">31. Additional Ablations to Strengthen Paper Claims</h2>
+<ul>
+<li><strong>Adaptive vs fixed $\lambda$</strong>: show improved score-variance trade-off.</li>
+<li><strong>IQR vs variance for $\lambda$</strong>: test robustness to heavy-tailed returns.</li>
+<li><strong>Behavior-clone warm-start</strong>: initialize actor from BC; measure impact on AntMaze success.</li>
+<li><strong>Particle count</strong>: $N\in{16,32,50,80}$; plot score vs compute.</li>
+<li><strong>Entropy anneal</strong>: linear decay of $\beta$; inspect exploration vs stability.</li>
+</ul>
+<hr>
+<h2 id="32-qualitative-analyses">32. Qualitative Analyses</h2>
+<ul>
+<li><strong>State visitation heatmaps</strong>: Compare coverage to dataset states (PCA/UMAP).</li>
+<li><strong>Action overlap</strong>: KL between $\pi_\phi$ and $\pi_\beta$ across states.</li>
+<li><strong>Return distribution plots</strong>: Histograms of predicted returns for chosen actions vs OOD actions.</li>
+<li><strong>Trajectories</strong>: Visualize AntMaze paths, highlighting OOD excursions avoided by Dist-SCAS.</li>
+</ul>
+<hr>
+<h2 id="33-engineering-notes-for-large-scale-runs">33. Engineering Notes for Large-Scale Runs</h2>
+<ul>
+<li>Use <code>torch.compile</code> (PyTorch 2.2+) to accelerate critic forward/sort if available.</li>
+<li>Enable AMP for critic/actor; keep quantile loss in float32 to avoid underflow.</li>
+<li>Gradient clipping at 10.0 for both actor and critics.</li>
+<li>Pin memory + prefetch to speed dataloader for large buffers.</li>
+<li>Periodic evaluator process to avoid blocking training loop.</li>
+</ul>
+<hr>
+<h2 id="34-future-research-directions">34. Future Research Directions</h2>
+<ul>
+<li><strong>SCAS with Consistency Models</strong>: use consistency-trained dynamics for smoother manifolds.</li>
+<li><strong>Hybrid MBPO</strong>: roll out short model trajectories gated by SCAS; add to buffer with penalty.</li>
+<li><strong>Uncertainty-guided data pruning</strong>: remove high IQR transitions to test robustness.</li>
+<li><strong>Multi-task offline RL</strong>: extend SCAS to task-conditioned datasets; use task embeddings in $\lambda$.</li>
+<li><strong>Safety constraints</strong>: add cost dimension and optimize joint CVaR over return and cost.</li>
+</ul>
+<hr>
+<h2 id="35-author-checklist-for-submission">35. Author Checklist for Submission</h2>
+<ul>
+<li><input type="checkbox" id="checkbox15"><label for="checkbox15">All equations consistent with code defaults (alpha=0.1, kappa=1.0).</label></li>
+<li><input type="checkbox" id="checkbox16"><label for="checkbox16">Tables: full matrix (Section 25) + ablations (Sections 14, 31).</label></li>
+<li><input type="checkbox" id="checkbox17"><label for="checkbox17">Figures: heatmaps, fan plots, trajectories, OOD metrics.</label></li>
+<li><input type="checkbox" id="checkbox18"><label for="checkbox18">Appendix: configs, hyperparameters, compute budget, additional proofs.</label></li>
+<li><input type="checkbox" id="checkbox19"><label for="checkbox19">Reproducibility: seeds, code links, commit hash.</label></li>
+</ul>
+<hr>
+<h2 id="36-minimal-eval-script-sketch">36. Minimal Eval Script Sketch</h2>
+<pre class="hljs"><code><div>def evaluate(policy, env, episodes=10):
+    scores, ood_actions, ood_states = [], [], []
+    for _ in range(episodes):
+        s, done = env.reset(), False
+        ep_actions, ep_states = [], []
+        while not done:
+            a = policy.act_eval(s)
+            s_next, r, done, info = env.step(a)
+            ep_actions.append(a)
+            ep_states.append(s)
+            s = s_next
+        scores.append(info.get(&quot;episode_score&quot;, 0.0))
+        ood_actions.append(compute_action_kl(ep_actions))
+        ood_states.append(min_dataset_nn(ep_states))
+    return {
+        &quot;score&quot;: np.mean(scores),
+        &quot;score_std&quot;: np.std(scores),
+        &quot;ood_action&quot;: np.mean(ood_actions),
+        &quot;ood_state&quot;: np.mean(ood_states),
+    }
+</div></code></pre>
+<hr>
+<h2 id="37-extended-notebook-cells-to-be-written-in-notebooksmainipynb">37. Extended Notebook Cells (to be written in <code>notebooks/main.ipynb</code>)</h2>
+<ul>
+<li><strong>Data inspection:</strong> plot dataset action/state histograms, reward distribution.</li>
+<li><strong>Training loop cell:</strong> pseudocode mirroring Section 18 with <code>tqdm</code> progress.</li>
+<li><strong>Metric dashboards:</strong> live plots for losses, CVaR, OOD metrics.</li>
+<li><strong>Frontier visualization:</strong> for AntMaze, overlay paths on map; for mujoco, plot return distributions.</li>
+<li><strong>Ablation runner:</strong> loop over configs, log to separate folders.</li>
+</ul>
+<hr>
+<h2 id="38-risks-and-mitigations-table">38. Risks and Mitigations Table</h2>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Cause</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NaN loss</td>
+<td>overflow in sort/Huber</td>
+<td>clip rewards, lower LR, AMP autocast</td>
+</tr>
+<tr>
+<td>Over-conservatism</td>
+<td>high $\lambda$</td>
+<td>cap $\lambda$, schedule decay</td>
+</tr>
+<tr>
+<td>Under-penalization</td>
+<td>low IQR</td>
+<td>floor $\lambda$ at base value</td>
+</tr>
+<tr>
+<td>Dynamics overfit</td>
+<td>small buffer</td>
+<td>dropout/weight decay; ensemble</td>
+</tr>
+<tr>
+<td>Eval variance</td>
+<td>stochasticity</td>
+<td>10 seeds for AntMaze</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="39-open-questions">39. Open Questions</h2>
+<ul>
+<li>Best proxy for $\nu(\cdot|s)$: NN vs VAE vs diffusion?</li>
+<li>Does adaptive $\lambda$ slow learning early? Consider warmup with fixed $\lambda$.</li>
+<li>How does CVaR interact with entropy temperature tuning? Joint schedule may help.</li>
+<li>Could SCAS be applied in online RL as exploration regularizer?</li>
+</ul>
+<hr>
+<h2 id="40-final-notes">40. Final Notes</h2>
+<p>Dist-SCAS is designed for practitioners needing robust offline RL under severe distributional shift. By combining distributional pessimism (CVaR) with geometric state correction (SCAS), it offers a principled way to tame extrapolation while retaining performance. The expanded sections above provide the operational detail—math, code patterns, configs, ablations, and diagnostics—to implement, evaluate, and extend the method in a research setting.</p>
+<hr>
+<h2 id="41-implementation-faq">41. Implementation FAQ</h2>
+<ul>
+<li><strong>Do I need target networks?</strong> Yes—use Polyak with $\tau=0.005$; CrossQ-style removal of targets is risky offline.</li>
+<li><strong>Can I use TD3-style clipped double Q?</strong> Not for quantiles; instead use ensemble pooling to reduce overestimation.</li>
+<li><strong>How many particles for CVaR?</strong> 50 is a good default; fewer may underestimate tails.</li>
+<li><strong>Can SCAS use k-NN instead of dynamics?</strong> For small state spaces, yes; for high-dim, learn $f_\psi$.</li>
+<li><strong>What about actor update frequency?</strong> 1:1 with critic works; try delayed actor every 2 steps if unstable.</li>
+</ul>
+<hr>
+<h2 id="42-unit-tests-recommended">42. Unit Tests (Recommended)</h2>
+<ul>
+<li><strong>Quantile loss finite:</strong> random tensors → loss finite, gradients non-NaN.</li>
+<li><strong>CVaR monotonicity:</strong> increasing all quantiles should increase CVaR.</li>
+<li><strong>SCAS loss zero:</strong> when predicted next == target next, loss == 0.</li>
+<li><strong>Adaptive $\lambda$ bounds:</strong> verify $\lambda \ge \lambda_\text{base}$ and grows with IQR.</li>
+<li><strong>Target update:</strong> after Polyak, parameters change but remain close (norm diff decreases).</li>
+</ul>
+<hr>
+<h2 id="43-compute-budget-estimates">43. Compute Budget Estimates</h2>
+<ul>
+<li>Hopper/Walker/HalfCheetah: 1 GPU (V100/A100), ~4–6 hours for 1M gradient steps with AMP.</li>
+<li>AntMaze medium: 1–2 GPUs, ~10–14 hours; batch 512; gamma 0.995 increases horizon.</li>
+<li>Kitchen: 2 GPUs recommended; larger nets; expect ~12–16 hours.</li>
+<li>Storage: Replay buffers up to ~5–10 GB; checkpoints every 100k steps (~50–100 MB each).</li>
+</ul>
+<hr>
+<h2 id="44-reproduction-steps-minimal">44. Reproduction Steps (Minimal)</h2>
+<ol>
+<li>Install deps: <code>pip install torch geomloss gymnasium[d4rl] mujoco-py</code>.</li>
+<li>Download D4RL datasets (handled on first env reset).</li>
+<li>Train: <code>python train_dist_scas.py --config hopper-medium-expert.yaml</code>.</li>
+<li>Eval: <code>python eval_dist_scas.py --checkpoint ckpt_1M.pt --env hopper-medium-expert-v2</code>.</li>
+<li>Run ablations: loop configs from Section 29; log to <code>runs/{env}/{config}</code>.</li>
+<li>Report: aggregate scores, OOD metrics, plots (Sections 25, 31).</li>
+</ol>
+<hr>
+<h2 id="45-benchmark-specific-hyperparameters">45. Benchmark-Specific Hyperparameters</h2>
+<table>
+<thead>
+<tr>
+<th>Env</th>
+<th>$\gamma$</th>
+<th>$\alpha$</th>
+<th>$\lambda_\text{base}$</th>
+<th>Batch</th>
+<th>Entropy $\beta$</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hopper-medium</td>
+<td>0.99</td>
+<td>0.1</td>
+<td>1.0</td>
+<td>256</td>
+<td>0.2</td>
+<td>standard</td>
+</tr>
+<tr>
+<td>Hopper-medium-expert</td>
+<td>0.99</td>
+<td>0.1</td>
+<td>1.0</td>
+<td>256</td>
+<td>0.2</td>
+<td>keep LR 3e-4</td>
+</tr>
+<tr>
+<td>Walker2d-medium</td>
+<td>0.99</td>
+<td>0.1</td>
+<td>1.0</td>
+<td>256</td>
+<td>0.2</td>
+<td>grad clip 10</td>
+</tr>
+<tr>
+<td>HalfCheetah-medium</td>
+<td>0.99</td>
+<td>0.1</td>
+<td>0.8</td>
+<td>256</td>
+<td>0.2</td>
+<td>clip reward [-10,10]</td>
+</tr>
+<tr>
+<td>AntMaze-umaze</td>
+<td>0.995</td>
+<td>0.1</td>
+<td>2.0</td>
+<td>512</td>
+<td>0.1</td>
+<td>larger batch, longer horizon</td>
+</tr>
+<tr>
+<td>AntMaze-medium</td>
+<td>0.995</td>
+<td>0.1</td>
+<td>2.5</td>
+<td>512</td>
+<td>0.1</td>
+<td>stronger SCAS</td>
+</tr>
+<tr>
+<td>Kitchen-mixed</td>
+<td>0.99</td>
+<td>0.1</td>
+<td>1.5</td>
+<td>512</td>
+<td>0.1</td>
+<td>hidden 1024, LayerNorm</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="46-adaptive-lambda-pseudocode">46. Adaptive $\lambda$ Pseudocode</h2>
+<pre class="hljs"><code><div>def compute_lambda(pooled_qs, lambda_base):
+    q_sorted, _ = torch.sort(pooled_qs, dim=1)  # [B, MN]
+    q25 = q_sorted[:, int(0.25 * q_sorted.size(1))]
+    q75 = q_sorted[:, int(0.75 * q_sorted.size(1))]
+    iqr = q75 - q25
+    lam = lambda_base * (1 + torch.sigmoid(iqr))
+    return lam.unsqueeze(1)  # broadcast over actions if needed
+</div></code></pre>
+<hr>
+<h2 id="47-symbol-glossary-for-consistency-with-code">47. Symbol Glossary (for consistency with code)</h2>
+<table>
+<thead>
+<tr>
+<th>Symbol</th>
+<th>Meaning</th>
+<th>Code variable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>$s,a$</td>
+<td>state, action</td>
+<td><code>s</code>, <code>a</code></td>
+</tr>
+<tr>
+<td>$r$</td>
+<td>reward</td>
+<td><code>r</code></td>
+</tr>
+<tr>
+<td>$d$</td>
+<td>done flag</td>
+<td><code>d</code></td>
+</tr>
+<tr>
+<td>$\gamma$</td>
+<td>discount</td>
+<td><code>gamma</code></td>
+</tr>
+<tr>
+<td>$\alpha$</td>
+<td>CVaR level</td>
+<td><code>alpha_cvar</code></td>
+</tr>
+<tr>
+<td>$N$</td>
+<td>quantiles per critic</td>
+<td><code>n_quantiles</code></td>
+</tr>
+<tr>
+<td>$M$</td>
+<td>number of critics</td>
+<td><code>n_critics</code></td>
+</tr>
+<tr>
+<td>$\kappa$</td>
+<td>Huber threshold</td>
+<td><code>kappa</code></td>
+</tr>
+<tr>
+<td>$\lambda$</td>
+<td>SCAS weight</td>
+<td><code>lambda_base</code> / <code>lambda_sa</code></td>
+</tr>
+<tr>
+<td>$\beta$</td>
+<td>entropy coeff</td>
+<td><code>entropy_beta</code></td>
+</tr>
+<tr>
+<td>$\tau$</td>
+<td>target Polyak</td>
+<td><code>target_tau</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="48-implementation-timeline-suggested">48. Implementation Timeline (Suggested)</h2>
+<ul>
+<li>Day 1: Setup, replay/dataloader, baseline actor/critic scaffolding.</li>
+<li>Day 2: Quantile loss wired, CVaR actor update, target updates.</li>
+<li>Day 3: SCAS dynamics model, adaptive $\lambda$, initial runs on hopper-medium.</li>
+<li>Day 4: AntMaze configuration, logging OOD metrics, fix stability issues.</li>
+<li>Day 5: Ablations (lambda off, scalar critics, alpha sweep), collect results.</li>
+<li>Day 6: Visualizations, notebooks, tables, write-up alignment.</li>
+</ul>
+<hr>
+<h2 id="49-data-structures">49. Data Structures</h2>
+<p>Replay element:</p>
+<pre class="hljs"><code><div>{
+  &quot;obs&quot;: float32[s_dim],
+  &quot;action&quot;: float32[a_dim],
+  &quot;reward&quot;: float32[1],
+  &quot;next_obs&quot;: float32[s_dim],
+  &quot;done&quot;: bool,
+}
+</div></code></pre>
+<p>Batch tensors:</p>
+<ul>
+<li><code>obs</code> [B, s_dim], <code>actions</code> [B, a_dim], <code>rewards</code> [B,1], <code>next_obs</code> [B, s_dim], <code>dones</code> [B,1].</li>
+<li>Optional: store behavior log-probs to compute action KL OOD metric.</li>
+</ul>
+<hr>
+<h2 id="50-licensing-and-attribution">50. Licensing and Attribution</h2>
+<p>Reference implementations: IQN/FQF/TQC repos (MIT/BSD), SCAS GitHub (check license). Ensure derivative code preserves original notices. Cite all papers listed in citations; no proprietary assets included.</p>
+<hr>
+<h3 id="citations">Citations</h3>
+<p>^^ ** **</p>
+<p><a href="https://papers.neurips.cc/paper_files/paper/2020/file/0d2b2061826a5df3221116a5085a6052-Paper.pdf"><img src="https://t0.gstatic.com/faviconV2?url=https://papers.neurips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">papers.neurips.ccConservative Q-Learning for Offline Reinforcement Learning<strong>Opens in a new window</strong></a><a href="https://cs224r.stanford.edu/material/CS224r_Homework3_updated.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://cs224r.stanford.edu/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">cs224r.stanford.eduCS224R Spring 2025 Homework 3 Offline RL(Updated) - CS 224R Deep Reinforcement Learning<strong>Opens in a new window</strong></a><a href="https://arxiv.org/html/2504.11453v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.orgA Clean Slate for Offline RL - arXiv<strong>Opens in a new window</strong></a><a href="https://www.researchgate.net/publication/397195773_Offline_Reinforcement_Learning_with_OOD_State_Correction_and_OOD_Action_Suppression"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">researchgate.netOffline Reinforcement Learning with OOD State Correction and OOD Action Suppression | Request PDF - ResearchGate<strong>Opens in a new window</strong></a><a href="https://proceedings.neurips.cc/paper_files/paper/2024/file/a9f3457fa97f106f1756885237787789-Paper-Conference.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://proceedings.neurips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">proceedings.neurips.ccOffline Reinforcement Learning with OOD State Correction and OOD Action Suppression - NIPS papers<strong>Opens in a new window</strong></a><a href="https://openreview.net/forum?id=OATPSB5JK1"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">openreview.netModel-based Offline Reinforcement Learning with Lower Expectile Q-Learning<strong>Opens in a new window</strong></a><a href="https://openreview.net/pdf/68a0713a71679e2a82d9b8b9cb139bd5f6c3f963.pdf"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">openreview.netMODEL-BASED OFFLINE REINFORCEMENT LEARNING WITH LOWER EXPECTILE Q-LEARNING - OpenReview<strong>Opens in a new window</strong></a><a href="https://openreview.net/pdf?id=NHb6mbD99v"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">openreview.netUNCERTAINTY-AWARE DISTRIBUTIONAL OFFLINE RE- INFORCEMENT LEARNING - OpenReview<strong>Opens in a new window</strong></a><a href="https://ojs.aaai.org/index.php/AAAI/article/view/4527/4405"><img src="https://t0.gstatic.com/faviconV2?url=https://ojs.aaai.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">ojs.aaai.orgQUOTA: The Quantile Option Architecture for Reinforcement Learning - AAAI Publications<strong>Opens in a new window</strong></a><a href="https://www.emergentmind.com/topics/truncated-quantile-critic-tqc-algorithm"><img src="https://t0.gstatic.com/faviconV2?url=https://www.emergentmind.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">emergentmind.comTruncated Quantile Critic (TQC) Algorithm - Emergent Mind<strong>Opens in a new window</strong></a><a href="https://www.econstor.eu/bitstream/10419/331350/1/1933272287.pdf"><img src="https://t0.gstatic.com/faviconV2?url=https://www.econstor.eu/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">econstor.euGradient-based reinforcement learning for dynamic quantile - EconStor<strong>Opens in a new window</strong></a><a href="https://www.researchgate.net/publication/396790047_Tailoring_Portfolio_Choice_via_Quantile-Targeted_Policies"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">researchgate.net(PDF) Tailoring Portfolio Choice via Quantile-Targeted Policies - ResearchGate<strong>Opens in a new window</strong></a><a href="https://arxiv.org/pdf/2505.00503"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">arxiv.orgVariational OOD State Correction for Offline Reinforcement Learning - arXiv<strong>Opens in a new window</strong></a><a href="https://github.com/maoyixiu/SCAS"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">github.comthu-rllab/SCAS: NeurIPS 2024 - GitHub<strong>Opens in a new window</strong></a><a href="https://papers.neurips.cc/paper_files/paper/2023/file/62d2cec62b7fd46dd35fa8f2d4aeb52d-Paper-Datasets_and_Benchmarks.pdf"><img src="https://t0.gstatic.com/faviconV2?url=https://papers.neurips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">papers.neurips.ccCORL: Research-oriented Deep Offline Reinforcement Learning Library<strong>Opens in a new window</strong></a><a href="https://www.researchgate.net/publication/396223636_RAMAC_Multimodal_Risk-Aware_Offline_Reinforcement_Learning_and_the_Role_of_Behavior_Regularization"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">researchgate.netRAMAC: Multimodal Risk-Aware Offline Reinforcement Learning and the Role of Behavior Regularization | Request PDF - ResearchGate<strong>Opens in a new window</strong></a><a href="https://www.kaggle.com/code/auxeno/quantile-regression-dqn-rl"><img src="https://t3.gstatic.com/faviconV2?url=https://www.kaggle.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">kaggle.comQuantile Regression DQN - RL - Kaggle<strong>Opens in a new window</strong></a></p>
+<p><a href="https://nips.cc/virtual/2024/papers.html"><img src="https://t0.gstatic.com/faviconV2?url=https://nips.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://iclr.cc/virtual/2024/events/spotlight-posters"><img src="https://t0.gstatic.com/faviconV2?url=https://iclr.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://proceedings.iclr.cc/paper_files/paper/2024/file/43d7bc009cf5171e7af77a91ee4bb890-Paper-Conference.pdf"><img src="https://t0.gstatic.com/faviconV2?url=https://proceedings.iclr.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://proceedings.iclr.cc/paper_files/paper/2024/file/10a3b1c30b8cceb507b9e8ddcc9a1a6a-Paper-Conference.pdf"><img src="https://t0.gstatic.com/faviconV2?url=https://proceedings.iclr.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2511.11973v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://kwanyoungpark.github.io/LEQ/"><img src="https://t1.gstatic.com/faviconV2?url=https://kwanyoungpark.github.io/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="http://staff.ustc.edu.cn/~lszhuang/Doc/2024-IJCNN-CIDQL.pdf"><img src="https://t0.gstatic.com/faviconV2?url=http://staff.ustc.edu.cn/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="http://ieeexplore.ieee.org/iel8/35/11103457/11103474.pdf"><img src="https://t2.gstatic.com/faviconV2?url=http://ieeexplore.ieee.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2504.03804v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://research-blog.vballoli.com/posts/offline-rl/"><img src="https://t3.gstatic.com/faviconV2?url=https://research-blog.vballoli.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://dblp.org/pid/32/1593-1"><img src="https://t2.gstatic.com/faviconV2?url=https://dblp.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://openreview.net/pdf?id=4l4Gfc1B6E"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://openreview.net/search?term=%F0%9F%98%87%20CXCOCO.com%20%F0%9F%98%88%20order%20cocaine%20Darwin"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://grokipedia.com/page/Q-learning"><img src="https://t0.gstatic.com/faviconV2?url=https://grokipedia.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://iclr.cc/media/iclr-2025/Slides/29841.pdf"><img src="https://t0.gstatic.com/faviconV2?url=https://iclr.cc/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2407.00699v2"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/pdf/2502.10792"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.researchgate.net/publication/389091349_Tackling_the_Zero-Shot_Reinforcement_Learning_Loss_Directly"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://docs.ray.io/en/latest/rllib/rllib-offline.html"><img src="https://t2.gstatic.com/faviconV2?url=https://docs.ray.io/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/abs/2406.12205"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://elischolar.library.yale.edu/cgi/viewcontent.cgi?article=3871&amp;context=cowles-discussion-paper-series"><img src="https://t1.gstatic.com/faviconV2?url=https://elischolar.library.yale.edu/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://docs.pytorch.org/tutorials/intermediate/reinforcement_q_learning.html"><img src="https://t0.gstatic.com/faviconV2?url=https://docs.pytorch.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/pdf/2111.03788"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://docs.pytorch.org/rl/stable/tutorials/coding_dqn.html"><img src="https://t0.gstatic.com/faviconV2?url=https://docs.pytorch.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/toshikwa/fqf-iqn-qrdqn.pytorch"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://spinningup.openai.com/en/latest/algorithms/sac.html"><img src="https://t0.gstatic.com/faviconV2?url=https://spinningup.openai.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://docs.cleanrl.dev/rl-algorithms/sac/"><img src="https://t2.gstatic.com/faviconV2?url=https://docs.cleanrl.dev/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2310.05858v4"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2004.14547v3"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://github.com/xtma/dsac"><img src="https://t1.gstatic.com/faviconV2?url=https://github.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://findingtheta.com/blog/mastering-robotic-manipulation-with-reinforcement-learning-tqc-and-ddpg-for-fetch-environments"><img src="https://t0.gstatic.com/faviconV2?url=https://findingtheta.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://sb3-contrib.readthedocs.io/en/master/modules/tqc.html"><img src="https://t2.gstatic.com/faviconV2?url=https://sb3-contrib.readthedocs.io/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2405.02576v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://tik-db.ee.ethz.ch/file/f03ba7159424072225fd718afc222272/"><img src="https://t3.gstatic.com/faviconV2?url=https://tik-db.ee.ethz.ch/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://futur.upc.edu/RIS/acces_obert/ade/RGVwYXJ0YW1lbnQgZCdFbmdpbnllcmlhIGRlIFNpc3RlbWVzLCBBdXRvbcOgdGljYSBpIEluZm9ybcOgdGljYSBJbmR1c3RyaWFs"><img src="https://t1.gstatic.com/faviconV2?url=https://futur.upc.edu/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.mdpi.com/2076-3417/15/4/1798"><img src="https://t1.gstatic.com/faviconV2?url=https://www.mdpi.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.mdpi.com/2073-8994/17/5/638"><img src="https://t1.gstatic.com/faviconV2?url=https://www.mdpi.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2309.14471"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://liner.com/review/controlling-overestimation-bias-with-truncated-mixture-continuous-distributional-quantile-critics"><img src="https://t2.gstatic.com/faviconV2?url=https://liner.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://compression.stanford.edu/sites/g/files/sbiybj26591/files/media/file/report-reinforcement_learning.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://compression.stanford.edu/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2510.19271v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.researchgate.net/publication/395474480_Generalizing_Beyond_Suboptimality_Offline_Reinforcement_Learning_Learns_Effective_Scheduling_through_Random_Data"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2509.10303v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.researchgate.net/publication/349195345_Risk-Averse_Offline_Reinforcement_Learning"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="http://emergingtrends.stanford.edu/files/original/478c41df78a2ab89c4342e1c7979fdcdd02fd6d1.pdf"><img src="https://t2.gstatic.com/faviconV2?url=http://emergingtrends.stanford.edu/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://support.sas.com/resources/papers/proceedings/proceedings/sugi30/213-30.pdf"><img src="https://t0.gstatic.com/faviconV2?url=https://support.sas.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.researchgate.net/publication/377503816_Quantile_Regression_Model_and_Its_Application_Research"><img src="https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.ibm.com/docs/SSLVMB_sub/statistics_mainhelp_ddita/spss/regression/idh_quantile.html"><img src="https://t0.gstatic.com/faviconV2?url=https://www.ibm.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12571108/"><img src="https://t2.gstatic.com/faviconV2?url=https://pmc.ncbi.nlm.nih.gov/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://openreview.net/forum?id=NHb6mbD99v"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2510.02695v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.arxivdaily.com/thread/53596"><img src="https://t3.gstatic.com/faviconV2?url=https://www.arxivdaily.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://arxiv.org/html/2403.17646v1"><img src="https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://openreview.net/attachment?id=g3IaQTqzeq&amp;name=pdf"><img src="https://t2.gstatic.com/faviconV2?url=https://openreview.net/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://ieeexplore.ieee.org/iel8/11046192/11045962/11046305.pdf"><img src="https://t3.gstatic.com/faviconV2?url=https://ieeexplore.ieee.org/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://www.research.unipd.it/retrieve/e14fb270-5765-3de1-e053-1705fe0ac030/tesi_definitiva_Daniel_Cunico.pdf"><img src="https://t1.gstatic.com/faviconV2?url=https://www.research.unipd.it/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a><a href="https://iclr.pangram.com/reviews?query=&amp;submission_number=&amp;sort_by=submission_id_hash&amp;sort_dir=asc&amp;page=2&amp;prediction_filter=Fully+AI-generated%2CHeavily+AI-edited%2CModerately+AI-edited%2CLightly+AI-edited%2CFully+human-written&amp;rating_filter=5%2C1%2C6%2C9%2C4%2C2&amp;confidence_filter=1%2C2%2C3%2C4%2C5"><img src="https://t1.gstatic.com/faviconV2?url=https://iclr.pangram.com/&amp;client=BARD&amp;type=FAVICON&amp;size=256&amp;fallback_opts=TYPE,SIZE,URL" alt="">Opens in a new window</a></p>
+
+</body>
+</html>

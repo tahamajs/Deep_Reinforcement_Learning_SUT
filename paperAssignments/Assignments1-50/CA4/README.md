@@ -379,6 +379,619 @@ A rigorous "new paper" implementation requires ablation studies to dissect the c
 
 The implementation details provided here, specifically the use of the Quantile Huber Loss for critic training and the derivation of the CVaR-based actor update with dynamics regularization, constitute a complete roadmap for deploying this novel algorithm. The theoretical synergy suggests that Dist-SCAS is particularly well-suited for the most challenging regimes of offline RL: sparse rewards, multi-modal data, and complex dynamics, as exemplified by the AntMaze and Robotics workloads in the D4RL benchmark. Future work lies in the automated tuning of the SCAS regularization parameter **λ** using the distributional variance signal, effectively creating a self-regulating agent that tightens its geometric constraints in the face of statistical uncertainty.
 
+---
+
+## 9. Mathematical Deep Dive: Dist-SCAS Objective and Gradients
+
+**Notation:** Dataset $\mathcal{D}$ over $(s,a,r,s',d)$; $d$ is terminal flag. Policy $\pi_\phi$, behavior $\pi_\beta$, critic ensemble $\{Z_{\theta_m}\}_{m=1}^M$ with $N$ quantiles, dynamics/state-correction model $f_\psi$.
+
+### 9.1 CVaR Risk from Quantile Critics
+
+Pooled quantiles $\tilde{q}_{1:MN}(s,a)$ sorted ascending define
+
+$$
+Q_\text{risk}(s,a) = \frac{1}{k}\sum_{i=1}^k \tilde{q}_i(s,a), \quad k=\lfloor \alpha MN \rfloor.
+$$
+
+### 9.2 Distributional Bellman Targets
+
+For each critic $m$:
+
+$$
+y_j = r + \gamma(1-d)\, z'_j,\quad z'_j \sim Z_{\theta'_m}(s', a'),\ a' \sim \pi_{\phi'}(s').
+$$
+
+Quantile Huber with $\tau_i=\frac{i-0.5}{N}$:
+
+$$
+\mathcal{L}_\text{crit}(\theta_m)=\mathbb{E}\frac{1}{N}\sum_{i=1}^N\sum_{j=1}^N \rho_\kappa(y_j - q^{(m)}_i)\, \big|\tau_i-\mathbb{1}[y_j<q^{(m)}_i]\big|.
+$$
+
+### 9.3 State-Correction (SCAS) Term
+
+Residual dynamics $f_\psi(s,a)=s+\delta_\psi(s,a)$; value-aware target $\tilde{s}'\sim \nu(\cdot|s)$ (nearest in-batch or VAE):
+
+$$
+\mathcal{L}_\text{SCAS}(\phi,\psi)=\mathbb{E}_{s,a}\big\|f_\psi(s,a)-\tilde{s}'\big\|_2^2.
+$$
+
+### 9.4 Adaptive Weight via Interquartile Range
+
+Let $\Delta Z = q_{0.75}-q_{0.25}$ from pooled quantiles. Set
+
+$$
+\lambda(s,a)=\lambda_\text{base}\big(1+\sigma(\Delta Z)\big),
+$$
+
+where $\sigma$ is sigmoid, amplifying penalties where aleatoric spread is high.
+
+### 9.5 Actor Objective
+
+$$
+\mathcal{L}_\text{actor}(\phi)= - Q_\text{risk}(s,a_\phi) + \lambda(s,a_\phi)\|f_\psi(s,a_\phi)-\tilde{s}'\|_2^2 + \beta \mathcal{H}(\pi_\phi(\cdot|s)),
+$$
+
+with $a_\phi$ from reparameterized Gaussian policy.
+
+### 9.6 Contraction Sketch
+
+CVaR-projected Bellman operator is a $\gamma$-contraction in truncated Wasserstein; the convex SCAS penalty preserves contraction, ensuring a fixed point under bounded rewards/dynamics.
+
+---
+
+## 10. Algorithm (Step-by-Step Pseudocode)
+
+1. Init critics $Z_{\theta_m}$, targets $\theta'_m$, actor $\pi_\phi$, target $\phi'$, dynamics $f_\psi$.
+2. Pretrain $f_\psi$ on $(s,a,s')$.
+3. Loop:
+   - Sample batch $B$.
+   - $a' \leftarrow \pi_{\phi'}(s')$; targets $y = r + \gamma(1-d) z'$ from target critics.
+   - Critic update: minimize quantile Huber to $y$ for all $m$.
+   - Actor: $a_\phi \leftarrow \pi_\phi(s)$; pooled $\tilde{q}$ → $Q_\text{risk}$; compute $\lambda(s,a_\phi)$; SCAS loss with $f_\psi$ vs batch $s'$; minimize $\mathcal{L}_\text{actor}$.
+   - Optional: refresh $f_\psi$ on batch.
+   - Polyak update $\theta',\phi'$.
+4. Eval: deterministic policy; D4RL score + OOD metrics.
+
+---
+
+## 11. PyTorch Reference Snippets
+
+### 11.1 Quantile Critic Ensemble
+
+```
+class QuantileMLP(nn.Module):
+    def __init__(self, s_dim, a_dim, n_q=50, hid=512):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(s_dim + a_dim, hid), nn.ReLU(),
+            nn.Linear(hid, hid), nn.ReLU(),
+            nn.Linear(hid, hid), nn.ReLU(),
+            nn.Linear(hid, n_q)
+        )
+
+    def forward(self, s, a):
+        return self.net(torch.cat([s, a], dim=-1))
+```
+
+### 11.2 CVaR Helper
+
+```
+def cvar_tail(qs: torch.Tensor, alpha: float = 0.1) -> torch.Tensor:
+    q_sorted, _ = torch.sort(qs, dim=1)
+    k = max(1, int(alpha * q_sorted.size(1)))
+    return q_sorted[:, :k].mean(dim=1, keepdim=True)
+```
+
+### 11.3 SCAS Regularizer
+
+```
+class SCASReg(nn.Module):
+    def __init__(self, s_dim, a_dim):
+        super().__init__()
+        self.dyn = nn.Sequential(
+            nn.Linear(s_dim + a_dim, 256), nn.Mish(),
+            nn.Linear(256, 256), nn.Mish(),
+            nn.Linear(256, s_dim)
+        )
+
+    def forward(self, s, a):
+        return s + self.dyn(torch.cat([s, a], dim=-1))
+
+    def loss(self, s, a, s_next):
+        return F.mse_loss(self.forward(s, a), s_next)
+```
+
+### 11.4 Quantile Huber Loss
+
+```
+def quantile_huber(pred, target, taus, kappa=1.0):
+    u = target.unsqueeze(1) - pred.unsqueeze(2)  # [B, N, N]
+    abs_u = u.abs()
+    huber = torch.where(abs_u <= kappa, 0.5 * u.pow(2), kappa * (abs_u - 0.5 * kappa))
+    weight = (taus.unsqueeze(2) - (u.detach() < 0).float()).abs()
+    return (weight * huber).sum(dim=2).mean(dim=1).mean()
+```
+
+---
+
+## 12. Hyperparameters (Suggested Defaults)
+
+| Component      | Setting                  | Value                  |
+| -------------- | ------------------------ | ---------------------- |
+| Quantiles      | $N$                      | 50                     |
+| Critics        | $M$                      | 2 (option 5)           |
+| CVaR level     | $\alpha$                | 0.1                    |
+| LR             | Critic/Actor             | $3\mathrm{e}{-4}$      |
+| Batch          |                          | 256                    |
+| Target $\tau$  |                          | 0.005                  |
+| SCAS $\lambda$ | $\lambda_\text{base}$    | 1.0                    |
+| Entropy $\beta$|                          | 0.2                    |
+| Discount       | $\gamma$                | 0.99 (0.995 AntMaze)   |
+| Dyn hidden     |                          | 256                    |
+
+---
+
+## 13. Evaluation Protocol (D4RL)
+
+- Envs: hopper/walker/halfcheetah (medium-replay, medium-expert), antmaze (umaze, medium, large), kitchen-mixed.
+- Metrics: D4RL normalized score, OOD action rate (distance to BC), OOD state distance (NN to dataset), value bias, quantile spread.
+- Seeds: ≥5; report mean ± std.
+
+---
+
+## 14. Ablations
+
+1. Remove SCAS ($\lambda=0$) → expect AntMaze failure, higher OOD states.
+2. Scalar critics (twin Q) → higher OOD action rate, less safety.
+3. CVaR sweep $\alpha \in \{0.05,0.1,0.25,0.5\}$.
+4. Ensemble size $M \in \{1,2,5\}$.
+5. Dynamics quality: MLP vs VAE vs diffusion target selector.
+
+---
+
+## 15. Practical Tips
+
+- Normalize states; clip rewards to [-10,10] for mujoco to stabilize tails.
+- If quantiles collapse: lower LR, increase $M$, or raise $kappa$.
+- If policy freezes: reduce $\lambda_\text{base}$ or cap $\lambda(s,a)$.
+- AntMaze: set $\gamma=0.995$, add light Gaussian action noise during eval to avoid deadlocks.
+
+---
+
+## 16. Reproducibility Checklist
+
+- Fix seeds (PyTorch, NumPy, gym).
+- Log hyperparameters, taus, lambda schedule, dataset name, seed.
+- Save checkpoints (actor, critics, targets, optimizers) every 100k steps.
+- Store evaluation rollouts and OOD metrics with scores.
+
+---
+
+## 17. Extension Ideas
+
+- **CrossQ**: BN-stabilized high-UTD updates with quantile critics.
+- **Sophia-G**: curvature-aware optimizer for actor.
+- **Diffusion targets**: sample $\tilde{s}'$ from high-value manifolds.
+- **Spectral norm**: constrain critic Lipschitz constants.
+
+---
+
+## 18. Minimal Training Skeleton (Outline)
+
+```
+for step in range(T):
+    batch = replay.sample()
+    with torch.no_grad():
+        a_next = actor_t(batch.s_next)
+        target_qs = [c_t(batch.s_next, a_next) for c_t in target_critics]
+        pooled = torch.sort(torch.cat(target_qs, dim=1), dim=1)[0]
+        y = batch.r + gamma * (1 - batch.d) * pooled
+    loss_c = sum(quantile_huber(c(batch.s, batch.a), y, taus) for c in critics)
+    a = actor(batch.s)
+    qs = [c(batch.s, a) for c in critics]
+    pooled = torch.sort(torch.cat(qs, dim=1), dim=1)[0]
+    q_risk = cvar_tail(pooled, alpha)
+    lambda_sa = lambda_base * (1 + torch.sigmoid(iqr(pooled)))
+    scas = scas_reg.loss(batch.s, a, batch.s_next)
+    loss_a = (-q_risk + lambda_sa * scas + beta * entropy(actor, batch.s)).mean()
+```
+
+---
+
+## 19. Notebook Visualization Plan
+
+- Training curves: critic loss, SCAS loss, CVaR value, OOD metrics.
+- Quantile fan plot for fixed $(s,a)$ over training.
+- AntMaze rollouts with state-density overlay vs dataset.
+- Scatter of IQR vs $\lambda(s,a)$ to show adaptive penalty behavior.
+
+---
+
+## 20. Proof Sketch: CVaR Bias Under OOD
+
+For sub-Gaussian $Z$ with mean $\mu$ and std $\sigma$, $\text{CVaR}_\alpha(Z) \le \mu - \sigma \frac{\phi(\Phi^{-1}(\alpha))}{\alpha}$. OOD inflates epistemic $\sigma$, shrinking CVaR and discouraging uncertain actions without explicit behavior constraints.
+
+---
+
+## 21. Dataset Notes
+
+- Hopper/Walker: moderate rewards; action L2 penalty optional.
+- HalfCheetah: add tanh squashing; consider target entropy -3.
+- AntMaze: longer horizon; use $\gamma=0.995$ and larger replay (2M) if memory allows.
+- Kitchen: increase hidden sizes (1024) and add LayerNorm.
+
+---
+
+## 22. Reporting Guidance
+
+- Equations (Section 9) aligned with code.
+- Tables: D4RL scores ± std, OOD metrics, ablations.
+- Figures: quantile fan, AntMaze trajectories, SCAS loss vs score.
+- Appendix: hyperparameters, compute budget, failure cases.
+
+---
+
+## 23. End-to-End Checklist
+
+- [ ] README ≥1000 lines with math + code (this file).
+- [ ] Training implements CVaR actor + adaptive SCAS.
+- [ ] Dynamics model trained and plugged into regularizer.
+- [ ] Evaluation scripts for D4RL + OOD metrics.
+- [ ] Ablations executed and logged.
+
+---
+
+## 24. Closing Remarks
+
+Distributional State-Corrected Action Suppression combines pessimistic distributional value learning with geometry-aware state regularization. By optimizing lower-tail returns and aligning predicted transitions to in-distribution manifolds, it addresses offline RL's twin failures: OOD action overestimation and OOD state drift. The derivations, pseudocode, and hyperparameters here are intended to be immediately actionable for reproducing robust results on the hardest D4RL benchmarks.
+
+---
+
+## 25. Experimental Matrix and Logging Plan
+
+**Matrix (rows = env, cols = settings):**
+
+| Env | Base | +SCAS | +SCAS+Adaptive $\lambda$ | +SCAS+Adaptive $\lambda$+Ensemble5 | +Sophia-G |
+| --- | ---- | ----- | ----------------------- | ---------------------------------- | -------- |
+| Hopper-m | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Walker2d-m | ✓ | ✓ | ✓ | ✓ | ✓ |
+| HalfCheetah-m | ✓ | ✓ | ✓ | ✓ | ✓ |
+| AntMaze-umaze | ✓ | ✓ | ✓ | ✓ | ✓ |
+| AntMaze-medium | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Kitchen-mixed | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+**Logging (per step / episode):**
+- Critic loss, SCAS loss, CVaR value, entropy.
+- IQR, $\lambda(s,a)$ statistics (mean, p95).
+- OOD action distance (to BC logits or Gaussian KL).
+- OOD state distance (NN in dataset embedding).
+- Replay buffer coverage (state density histogram).
+- D4RL score (eval every 100k gradient steps).
+
+---
+
+## 26. Safety and Robustness Considerations
+
+- **Risk floor:** Optionally cap CVaR to not exceed median to avoid optimism drift.
+- **Action clipping:** Enforce env action bounds; penalize saturation in actor loss.
+- **Dynamics uncertainty:** Track ensemble variance of $f_\psi$; inflate $\lambda$ when variance is high (state-uncertainty aware SCAS).
+- **Stochasticity:** For stochastic envs (kitchen), increase particle count for critics to capture tails.
+- **Numerical stability:** Use `float32` with AMP; clamp log-std in actor to [-20, 2]; add small $\epsilon$ in Huber.
+
+---
+
+## 27. Failure Modes and Mitigations
+
+- **Mode collapse in quantiles:** Increase ensemble, raise kappa, or add dropout in critic hidden layers.
+- **Over-regularization:** If performance stalls, decay $\lambda_\text{base}$ over steps or cap $\lambda(s,a)$ to 5× base.
+- **Dynamics drift:** Periodically re-pretrain $f_\psi$ on replay or add L2 weight decay.
+- **AntMaze dead ends:** Add small Gaussian noise to actions during eval; use longer target update interval (every 2 steps).
+- **Kitchen instability:** Use LayerNorm in critics/actor; increase hidden to 1024; reduce LR to 1e-4.
+
+---
+
+## 28. Implementation Checklist (Codebase-Level)
+
+- [ ] Replay buffer stores $(s,a,r,s',d)$ tensors (float32) and supports large batches (256/512).
+- [ ] Actor outputs mean/log-std; sampled via reparameterization with tanh squashing.
+- [ ] Critic ensemble forward returns list of quantile tensors [B,N]; pooled via `torch.sort`.
+- [ ] Tau vector precomputed: `taus = (torch.arange(N, device)/N + 0.5/N).view(1,N)`.
+- [ ] SCAS regularizer module with `.loss` API.
+- [ ] Adaptive $\lambda$: compute IQR on pooled quantiles, apply sigmoid, scale by $\lambda_\text{base}$.
+- [ ] Target updates: Polyak with $\tau=0.005`; ensure no_grad.
+- [ ] Evaluation script computing D4RL normalized score and OOD metrics.
+- [ ] Config system (YAML/argparse) exposing alpha, lambda_base, gamma, N, M, kappa, tau_update, batch, seed.
+- [ ] Logging (TensorBoard/W&B) for metrics listed in Section 25.
+
+---
+
+## 29. Sample YAML Configs
+
+**hopper-medium-expert.yaml**
+```
+env: hopper-medium-expert-v2
+seed: 0
+gamma: 0.99
+alpha_cvar: 0.1
+n_quantiles: 50
+n_critics: 2
+lambda_base: 1.0
+lr_actor: 3e-4
+lr_critic: 3e-4
+batch_size: 256
+target_tau: 0.005
+entropy_beta: 0.2
+use_adaptive_lambda: true
+use_amp: true
+```
+
+**antmaze-medium-diverse.yaml**
+```
+env: antmaze-medium-diverse-v2
+seed: 0
+gamma: 0.995
+alpha_cvar: 0.1
+n_quantiles: 50
+n_critics: 2
+lambda_base: 2.0
+lr_actor: 3e-4
+lr_critic: 3e-4
+batch_size: 512
+target_tau: 0.005
+entropy_beta: 0.1
+use_adaptive_lambda: true
+use_amp: true
+```
+
+---
+
+## 30. Extended Proof Sketch: Bias Control via SCAS
+
+Let $s'_\pi = f_\psi(s,\pi(s))$ and $\tilde{s}'$ from dataset manifold. The SCAS penalty enforces $\|s'_\pi - \tilde{s}'\|^2 \le \epsilon$. For Lipschitz critic $L_Q$, the bias in target value due to state shift satisfies
+
+$$
+|Q_\text{risk}(s'_\pi,a') - Q_\text{risk}(\tilde{s}',a')| \le L_Q \|s'_\pi - \tilde{s}'\| \le L_Q \sqrt{\epsilon}.
+$$
+
+Thus bounding SCAS loss bounds value extrapolation bias, complementing CVaR pessimism on action uncertainty.
+
+---
+
+## 31. Additional Ablations to Strengthen Paper Claims
+
+- **Adaptive vs fixed $\lambda$**: show improved score-variance trade-off.
+- **IQR vs variance for $\lambda$**: test robustness to heavy-tailed returns.
+- **Behavior-clone warm-start**: initialize actor from BC; measure impact on AntMaze success.
+- **Particle count**: $N\in\{16,32,50,80\}$; plot score vs compute.
+- **Entropy anneal**: linear decay of $\beta$; inspect exploration vs stability.
+
+---
+
+## 32. Qualitative Analyses
+
+- **State visitation heatmaps**: Compare coverage to dataset states (PCA/UMAP).
+- **Action overlap**: KL between $\pi_\phi$ and $\pi_\beta$ across states.
+- **Return distribution plots**: Histograms of predicted returns for chosen actions vs OOD actions.
+- **Trajectories**: Visualize AntMaze paths, highlighting OOD excursions avoided by Dist-SCAS.
+
+---
+
+## 33. Engineering Notes for Large-Scale Runs
+
+- Use `torch.compile` (PyTorch 2.2+) to accelerate critic forward/sort if available.
+- Enable AMP for critic/actor; keep quantile loss in float32 to avoid underflow.
+- Gradient clipping at 10.0 for both actor and critics.
+- Pin memory + prefetch to speed dataloader for large buffers.
+- Periodic evaluator process to avoid blocking training loop.
+
+---
+
+## 34. Future Research Directions
+
+- **SCAS with Consistency Models**: use consistency-trained dynamics for smoother manifolds.
+- **Hybrid MBPO**: roll out short model trajectories gated by SCAS; add to buffer with penalty.
+- **Uncertainty-guided data pruning**: remove high IQR transitions to test robustness.
+- **Multi-task offline RL**: extend SCAS to task-conditioned datasets; use task embeddings in $\lambda$.
+- **Safety constraints**: add cost dimension and optimize joint CVaR over return and cost.
+
+---
+
+## 35. Author Checklist for Submission
+
+- [ ] All equations consistent with code defaults (alpha=0.1, kappa=1.0).
+- [ ] Tables: full matrix (Section 25) + ablations (Sections 14, 31).
+- [ ] Figures: heatmaps, fan plots, trajectories, OOD metrics.
+- [ ] Appendix: configs, hyperparameters, compute budget, additional proofs.
+- [ ] Reproducibility: seeds, code links, commit hash.
+
+---
+
+## 36. Minimal Eval Script Sketch
+
+```
+def evaluate(policy, env, episodes=10):
+    scores, ood_actions, ood_states = [], [], []
+    for _ in range(episodes):
+        s, done = env.reset(), False
+        ep_actions, ep_states = [], []
+        while not done:
+            a = policy.act_eval(s)
+            s_next, r, done, info = env.step(a)
+            ep_actions.append(a)
+            ep_states.append(s)
+            s = s_next
+        scores.append(info.get("episode_score", 0.0))
+        ood_actions.append(compute_action_kl(ep_actions))
+        ood_states.append(min_dataset_nn(ep_states))
+    return {
+        "score": np.mean(scores),
+        "score_std": np.std(scores),
+        "ood_action": np.mean(ood_actions),
+        "ood_state": np.mean(ood_states),
+    }
+```
+
+---
+
+## 37. Extended Notebook Cells (to be written in `notebooks/main.ipynb`)
+
+- **Data inspection:** plot dataset action/state histograms, reward distribution.
+- **Training loop cell:** pseudocode mirroring Section 18 with `tqdm` progress.
+- **Metric dashboards:** live plots for losses, CVaR, OOD metrics.
+- **Frontier visualization:** for AntMaze, overlay paths on map; for mujoco, plot return distributions.
+- **Ablation runner:** loop over configs, log to separate folders.
+
+---
+
+## 38. Risks and Mitigations Table
+
+| Risk | Cause | Mitigation |
+| ---- | ----- | ---------- |
+| NaN loss | overflow in sort/Huber | clip rewards, lower LR, AMP autocast |
+| Over-conservatism | high $\lambda$ | cap $\lambda$, schedule decay |
+| Under-penalization | low IQR | floor $\lambda$ at base value |
+| Dynamics overfit | small buffer | dropout/weight decay; ensemble |
+| Eval variance | stochasticity | 10 seeds for AntMaze |
+
+---
+
+## 39. Open Questions
+
+- Best proxy for $\nu(\cdot|s)$: NN vs VAE vs diffusion?
+- Does adaptive $\lambda$ slow learning early? Consider warmup with fixed $\lambda$.
+- How does CVaR interact with entropy temperature tuning? Joint schedule may help.
+- Could SCAS be applied in online RL as exploration regularizer?
+
+---
+
+## 40. Final Notes
+
+Dist-SCAS is designed for practitioners needing robust offline RL under severe distributional shift. By combining distributional pessimism (CVaR) with geometric state correction (SCAS), it offers a principled way to tame extrapolation while retaining performance. The expanded sections above provide the operational detail—math, code patterns, configs, ablations, and diagnostics—to implement, evaluate, and extend the method in a research setting.
+
+---
+
+## 41. Implementation FAQ
+
+- **Do I need target networks?** Yes—use Polyak with $\tau=0.005$; CrossQ-style removal of targets is risky offline.
+- **Can I use TD3-style clipped double Q?** Not for quantiles; instead use ensemble pooling to reduce overestimation.
+- **How many particles for CVaR?** 50 is a good default; fewer may underestimate tails.
+- **Can SCAS use k-NN instead of dynamics?** For small state spaces, yes; for high-dim, learn $f_\psi$.
+- **What about actor update frequency?** 1:1 with critic works; try delayed actor every 2 steps if unstable.
+
+---
+
+## 42. Unit Tests (Recommended)
+
+- **Quantile loss finite:** random tensors → loss finite, gradients non-NaN.
+- **CVaR monotonicity:** increasing all quantiles should increase CVaR.
+- **SCAS loss zero:** when predicted next == target next, loss == 0.
+- **Adaptive $\lambda$ bounds:** verify $\lambda \ge \lambda_\text{base}$ and grows with IQR.
+- **Target update:** after Polyak, parameters change but remain close (norm diff decreases).
+
+---
+
+## 43. Compute Budget Estimates
+
+- Hopper/Walker/HalfCheetah: 1 GPU (V100/A100), ~4–6 hours for 1M gradient steps with AMP.
+- AntMaze medium: 1–2 GPUs, ~10–14 hours; batch 512; gamma 0.995 increases horizon.
+- Kitchen: 2 GPUs recommended; larger nets; expect ~12–16 hours.
+- Storage: Replay buffers up to ~5–10 GB; checkpoints every 100k steps (~50–100 MB each).
+
+---
+
+## 44. Reproduction Steps (Minimal)
+
+1. Install deps: `pip install torch geomloss gymnasium[d4rl] mujoco-py`.
+2. Download D4RL datasets (handled on first env reset).
+3. Train: `python train_dist_scas.py --config hopper-medium-expert.yaml`.
+4. Eval: `python eval_dist_scas.py --checkpoint ckpt_1M.pt --env hopper-medium-expert-v2`.
+5. Run ablations: loop configs from Section 29; log to `runs/{env}/{config}`.
+6. Report: aggregate scores, OOD metrics, plots (Sections 25, 31).
+
+---
+
+## 45. Benchmark-Specific Hyperparameters
+
+| Env | $\gamma$ | $\alpha$ | $\lambda_\text{base}$ | Batch | Entropy $\beta$ | Notes |
+| --- | -------- | -------- | --------------------- | ----- | --------------- | ----- |
+| Hopper-medium | 0.99 | 0.1 | 1.0 | 256 | 0.2 | standard |
+| Hopper-medium-expert | 0.99 | 0.1 | 1.0 | 256 | 0.2 | keep LR 3e-4 |
+| Walker2d-medium | 0.99 | 0.1 | 1.0 | 256 | 0.2 | grad clip 10 |
+| HalfCheetah-medium | 0.99 | 0.1 | 0.8 | 256 | 0.2 | clip reward [-10,10] |
+| AntMaze-umaze | 0.995 | 0.1 | 2.0 | 512 | 0.1 | larger batch, longer horizon |
+| AntMaze-medium | 0.995 | 0.1 | 2.5 | 512 | 0.1 | stronger SCAS |
+| Kitchen-mixed | 0.99 | 0.1 | 1.5 | 512 | 0.1 | hidden 1024, LayerNorm |
+
+---
+
+## 46. Adaptive $\lambda$ Pseudocode
+
+```
+def compute_lambda(pooled_qs, lambda_base):
+    q_sorted, _ = torch.sort(pooled_qs, dim=1)  # [B, MN]
+    q25 = q_sorted[:, int(0.25 * q_sorted.size(1))]
+    q75 = q_sorted[:, int(0.75 * q_sorted.size(1))]
+    iqr = q75 - q25
+    lam = lambda_base * (1 + torch.sigmoid(iqr))
+    return lam.unsqueeze(1)  # broadcast over actions if needed
+```
+
+---
+
+## 47. Symbol Glossary (for consistency with code)
+
+| Symbol | Meaning | Code variable |
+| ------ | ------- | ------------- |
+| $s,a$ | state, action | `s`, `a` |
+| $r$ | reward | `r` |
+| $d$ | done flag | `d` |
+| $\gamma$ | discount | `gamma` |
+| $\alpha$ | CVaR level | `alpha_cvar` |
+| $N$ | quantiles per critic | `n_quantiles` |
+| $M$ | number of critics | `n_critics` |
+| $\kappa$ | Huber threshold | `kappa` |
+| $\lambda$ | SCAS weight | `lambda_base` / `lambda_sa` |
+| $\beta$ | entropy coeff | `entropy_beta` |
+| $\tau$ | target Polyak | `target_tau` |
+
+---
+
+## 48. Implementation Timeline (Suggested)
+
+- Day 1: Setup, replay/dataloader, baseline actor/critic scaffolding.
+- Day 2: Quantile loss wired, CVaR actor update, target updates.
+- Day 3: SCAS dynamics model, adaptive $\lambda$, initial runs on hopper-medium.
+- Day 4: AntMaze configuration, logging OOD metrics, fix stability issues.
+- Day 5: Ablations (lambda off, scalar critics, alpha sweep), collect results.
+- Day 6: Visualizations, notebooks, tables, write-up alignment.
+
+---
+
+## 49. Data Structures
+
+Replay element:
+```
+{
+  "obs": float32[s_dim],
+  "action": float32[a_dim],
+  "reward": float32[1],
+  "next_obs": float32[s_dim],
+  "done": bool,
+}
+```
+
+Batch tensors:
+- `obs` [B, s_dim], `actions` [B, a_dim], `rewards` [B,1], `next_obs` [B, s_dim], `dones` [B,1].
+- Optional: store behavior log-probs to compute action KL OOD metric.
+
+---
+
+## 50. Licensing and Attribution
+
+Reference implementations: IQN/FQF/TQC repos (MIT/BSD), SCAS GitHub (check license). Ensure derivative code preserves original notices. Cite all papers listed in citations; no proprietary assets included.
+
+---
+
 ### Citations
 
 ^^ \*\* \*\*
