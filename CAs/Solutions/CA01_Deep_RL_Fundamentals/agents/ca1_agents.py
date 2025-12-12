@@ -7,8 +7,8 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-from ..models.ca1_models import DQN, DuelingDQN
-from ..utils.ca1_utils import device
+from models.ca1_models import DQN, DuelingDQN
+from utils.ca1_utils import device
 
 
 class ReplayBuffer:

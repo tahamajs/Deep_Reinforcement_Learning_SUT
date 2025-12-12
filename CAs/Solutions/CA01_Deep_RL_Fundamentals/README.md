@@ -72,6 +72,10 @@ scores = train_actor_critic_agent(ac_agent, env, n_episodes=1000)
 print(f"Actor-Critic training completed. Final average score: {np.mean(scores[-100:]):.2f}")
 ```
 
+### Run Metadata
+
+Each run records reproducibility metadata (commit hash, hyperparameters, hardware, timestamp) to `experiments/results/run_info.json`. Inspect this file after experiments to track the exact configuration used.
+
 ## Modules Overview
 
 ### ca1_agents.py

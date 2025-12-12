@@ -71,9 +71,10 @@ class AgentEvaluator:
             if render:
                 self.env.render()
 
-            action = self.agent.act(state, eps=0.0)  # No exploration during evaluation
+            # Prefer deterministic/greedy action for DQN-like agents; fall back to stochastic
+            action_choice = self._select_action(state)
 
-            result = self.env.step(action)
+            result = self.env.step(action_choice)
             if len(result) == 4:
                 next_state, reward, done, _ = result
             else:
@@ -88,6 +89,17 @@ class AgentEvaluator:
                 break
 
         return score, length
+
+    def _select_action(self, state):
+        """Select an action compatible with different agent interfaces."""
+        try:
+            action_out = self.agent.act(state, eps=0.0)
+        except TypeError:
+            action_out = self.agent.act(state)
+
+        if isinstance(action_out, tuple):
+            return action_out[0]
+        return action_out
 
     def plot_results(self, save_path: Optional[str] = None) -> None:
         """Plot evaluation results."""

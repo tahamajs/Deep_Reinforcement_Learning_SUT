@@ -1,9 +1,15 @@
+import json
+import os
+import platform
+import random
+import subprocess
+from datetime import datetime
+from typing import Any, Dict, List, Tuple
+
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import random
-import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import List, Tuple, Any
 
 
 def set_seed(seed: int = 42) -> None:
@@ -57,3 +63,36 @@ def gym_step(env, action: Any) -> Tuple[np.ndarray, float, bool, dict]:
         next_state, reward, terminated, truncated, info = result
         done = terminated or truncated
     return np.array(next_state, dtype=np.float32), float(reward), bool(done), info
+
+
+def _git_commit_hash() -> str:
+    """Best-effort retrieval of current git commit hash."""
+    try:
+        return (
+            subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL)
+            .decode("utf-8")
+            .strip()
+        )
+    except Exception:
+        return "unknown"
+
+
+def write_run_info(path: str, hyperparams: Dict[str, Any], extra: Dict[str, Any] | None = None) -> None:
+    """Persist run metadata for reproducibility."""
+    info = {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "commit": _git_commit_hash(),
+        "hyperparameters": hyperparams,
+        "hardware": {
+            "platform": platform.platform(),
+            "python": platform.python_version(),
+            "cuda_available": torch.cuda.is_available(),
+            "cuda_device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+        },
+    }
+    if extra:
+        info["extra"] = extra
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(info, f, indent=2)

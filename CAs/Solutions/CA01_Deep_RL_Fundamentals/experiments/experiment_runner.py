@@ -5,19 +5,20 @@ This module contains functions for running comprehensive experiments
 and generating detailed reports and visualizations.
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import json
 import os
-from typing import Dict, List, Any, Tuple, Optional
-from collections import defaultdict
 import time
+from collections import defaultdict
+from typing import Any, Dict, List, Optional, Tuple
 
-from ..agents.ca1_agents import DQNAgent, REINFORCEAgent, ActorCriticAgent
-from ..environments.custom_envs import create_cartpole_env
-from ..evaluation.evaluators import AgentEvaluator, compare_agents, plot_comparison
-from ..utils.ca1_utils import set_seed, moving_average
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+
+from agents.ca1_agents import ActorCriticAgent, DQNAgent, REINFORCEAgent
+from environments.custom_envs import create_cartpole_env
+from evaluation.evaluators import AgentEvaluator, compare_agents, plot_comparison
+from utils.ca1_utils import moving_average, set_seed, write_run_info
 
 
 class ExperimentRunner:
@@ -163,7 +164,7 @@ class ExperimentRunner:
 
     def _train_dqn_agent(self, agent: DQNAgent, env, n_episodes: int) -> List[float]:
         """Train DQN agent and return scores."""
-        from ..agents.ca1_agents import train_dqn_agent
+        from agents.ca1_agents import train_dqn_agent
 
         return train_dqn_agent(agent, env, n_episodes=n_episodes, max_t=200)
 
@@ -171,7 +172,7 @@ class ExperimentRunner:
         self, agent: REINFORCEAgent, env, n_episodes: int
     ) -> List[float]:
         """Train REINFORCE agent and return scores."""
-        from ..agents.ca1_agents import train_reinforce_agent
+        from agents.ca1_agents import train_reinforce_agent
 
         return train_reinforce_agent(agent, env, n_episodes=n_episodes, max_t=200)
 
@@ -179,7 +180,7 @@ class ExperimentRunner:
         self, agent: ActorCriticAgent, env, n_episodes: int
     ) -> List[float]:
         """Train Actor-Critic agent and return scores."""
-        from ..agents.ca1_agents import train_actor_critic_agent
+        from agents.ca1_agents import train_actor_critic_agent
 
         return train_actor_critic_agent(agent, env, n_episodes=n_episodes, max_t=200)
 
@@ -507,6 +508,21 @@ class ExperimentRunner:
             json.dump(summary_stats, f, indent=2)
 
         print(f"Detailed results saved to {self.results_dir}")
+
+        # Save run metadata
+        run_info_path = os.path.join(self.results_dir, "run_info.json")
+        hyperparams = {
+            "n_training_episodes": None,
+            "n_eval_episodes": None,
+            "n_runs": None,
+        }
+        if self.experiment_results:
+            sample_alg = next(iter(self.experiment_results.values()))
+            hyperparams["n_training_episodes"] = len(sample_alg["training_scores"][0])
+            hyperparams["n_eval_episodes"] = len(sample_alg["evaluation_results"][0].get("scores", []))
+            hyperparams["n_runs"] = len(sample_alg["training_scores"])
+
+        write_run_info(run_info_path, hyperparams=hyperparams, extra={"results_dir": self.results_dir})
 
 
 def run_quick_demo():
