@@ -1,10 +1,11 @@
 Perform a comprehensive code review of recent changes:
 
-1. Check code follows Python style, typing, mask discipline, and import-safety rules from `CLAUDE.md` and `src/CLAUDE.md`.
-2. Verify proper error handling and masking (no silent broadcasting, no unchecked shapes).
-3. Ensure documentation is updated where math/behavior changes (docstrings, README/report alignment).
-4. Review test coverage for new functionality; confirm targeted pytest or py_compile was run.
-5. Check for security risks (secrets, unsafe shell calls, network/file side effects on import).
-6. Validate performance implications (tensor shapes, OOM risks, device transfers).
-7. Confirm notebooks remain non-executed unless intentionally run; outputs clean.
-8. Provide specific, actionable feedback with file/line references.
+1. Check code follows our Python, Gym, and notebook conventions from CLAUDE.md and sub-CLAUDEs.
+2. Verify proper error handling, seeding, and device placement; no side effects on import.
+3. Ensure notebooks stay lightweight (outputs stripped unless requested) and heavy cells are marked.
+4. Review test coverage or smoke runs for changed assignments; confirm pytest/py_compile when relevant.
+5. Check security: no secrets, no large artifacts committed, answers/ PDFs untouched unless intended.
+6. Validate performance implications (avoid runaway rollouts, GPU/CPU thrash, memory growth).
+7. Confirm documentation/README updates match code defaults and CLI flags.
+
+Provide specific, actionable feedback with file references and suggested fixes.

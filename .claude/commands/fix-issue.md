@@ -1,14 +1,15 @@
 Analyze and fix GitHub issue: $ARGUMENTS
 
 Steps:
+1. Fetch details: `gh issue view $ARGUMENTS` (or read linked ticket) to capture requirements.
+2. Identify scope: locate relevant assignment folder (`CAs/`, `homeworks/`, or `Other_Assisments/`) and read the nearest CLAUDE.md.
+3. Search codebase with `rg` for symbols and configs tied to the issue.
+4. Plan a minimal fix; avoid cross-assignment churn. Keep seeds and APIs consistent.
+5. Implement changes following folder patterns (agents/environments/utils/notebooks as appropriate).
+6. Add/update tests or lightweight smoke checks (pytest or py_compile) relevant to touched files.
+7. Strip notebook outputs if modified.
+8. Run targeted checks: `python -m py_compile <files>` and `python -m pytest <tests>` where available.
+9. Craft a descriptive commit message summarizing scope and checks.
+10. If using GitHub flow, open PR with context and risks noted.
 
-1. Fetch details: `gh issue view $ARGUMENTS`
-2. Identify scope and relevant modules/assignments; read nearest `CLAUDE.md` and `AGENTS.md`.
-3. Search codebase with `rg -n "<term>" src assignments-hard` scoped to the issue.
-4. Plan changes respecting masking, import-safety, and theory alignment.
-5. Implement fix following established patterns; keep configs/dataclasses updated.
-6. Add/update tests (targeted pytest) or py_compile checks for touched files.
-7. Run `python -m ruff check <files>` (if available) and targeted pytest.
-8. Draft Conventional Commit message summarizing intent/scope.
-9. If needed, prepare PR with `gh pr create` and note checks run.
-10. Include a short reviewer note on risk areas, test coverage, and any skipped checks.
+Always respect safety rules (no secrets, no destructive commands, no force push without approval).

@@ -6,35 +6,39 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -E \"rm -rf /|git push --force|git reset --hard\" >/dev/null; then echo 'BLOCKED: destructive command' && exit 2; fi"
+            "command": "if [[ \"$CLAUDE_TOOL_INPUT\" == *'rm -rf'* || \"$CLAUDE_TOOL_INPUT\" == *'git push --force'* || \"$CLAUDE_TOOL_INPUT\" == *'git reset --hard'* ]]; then echo 'BLOCKED: destructive command detected'; exit 2; fi"
+          },
+          {
+            "type": "command",
+            "command": "if [[ \"$CLAUDE_TOOL_INPUT\" == *'answers/'* ]]; then echo 'Heads-up: answers/ is read-mostly; confirm before editing.'; fi"
           }
         ]
       },
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$CLAUDE_FILE_PATHS\" | grep -E \"\\.env|report\\.tex|slides/\" >/dev/null; then echo 'WARNING: sensitive path, require explicit approval'; fi"
-          },
-          {
-            "type": "command",
-            "command": "echo \"Editing: $CLAUDE_FILE_PATHS\""
+            "command": "echo 'Editing: '$CLAUDE_FILE_PATHS''"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "for f in $CLAUDE_FILE_PATHS; do case \"$f\" in *.py) python -m ruff format \"$f\" 2>/dev/null || true ;; esac; done"
+            "command": "if echo $CLAUDE_FILE_PATHS | grep -E '\\.(py)$'; then python -m ruff format $CLAUDE_FILE_PATHS 2>/dev/null || python -m black $CLAUDE_FILE_PATHS 2>/dev/null || true; fi"
           },
           {
             "type": "command",
-            "command": "for f in $CLAUDE_FILE_PATHS; do if echo \"$f\" | grep -q \"assignments-hard/.*/tests/\"; then python -m pytest \"$(dirname \"$f\")\" 2>/dev/null || true; fi; done"
+            "command": "if echo $CLAUDE_FILE_PATHS | grep -E '\\.(py)$'; then python -m py_compile $CLAUDE_FILE_PATHS 2>/dev/null || true; fi"
+          },
+          {
+            "type": "command",
+            "command": "if echo $CLAUDE_FILE_PATHS | grep -E '\\.(ipynb)$'; then nbstripout $CLAUDE_FILE_PATHS 2>/dev/null || true; fi"
           }
         ]
       }
