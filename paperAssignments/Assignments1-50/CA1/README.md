@@ -1,5 +1,4 @@
 ---
-
 ## 25. Extended Design Dossier
 
 ### 25.1 Objective Recap
@@ -50,13 +49,13 @@
 - Minimal dependencies (no heavy OT libs required).
 - Deterministic seeds; note cudnn determinism cost.
 - Config-first workflow (Hydra/YAML).
-
 ---
 
 ## 26. Mathematical Deep Dive (Additional Detail)
-- Distributional Bellman operator is γ-contractive under W_p; S_{c,ε} interpolates between W_p and MMD, preserving contraction.
+
+- Distributional Bellman operator is γ-contractive under W*p; S*{c,ε} interpolates between W_p and MMD, preserving contraction.
 - Debiasing removes entropic bias: S(μ,μ)=0 by construction.
-- Gradient of W_{c,ε} w.r.t. cost matrix equals optimal plan π* (Envelope Theorem).
+- Gradient of W\_{c,ε} w.r.t. cost matrix equals optimal plan π\* (Envelope Theorem).
 - Implicit differentiation avoids storing all iterations; uses plan at fixed point.
 - Multi-objective rewards: cost in ℝ^k remains valid; Sinkhorn defined for any dimension.
 - Risk measures: CVaR computed directly on particles; risk-sensitive policies choose actions by lower-tail statistics.
@@ -65,6 +64,7 @@
 ---
 
 ## 27. Hyperparameter Cookbook
+
 - Particles N: 32 / 64 / 128 / 200
 - Sinkhorn iters L: 10 / 25 / 50 / 100
 - ε_min: 0.1 / 0.05 / 0.02 / 0.01
@@ -82,6 +82,7 @@
 ---
 
 ## 28. Evaluation Playbook (Expanded)
+
 - **Protocols:** Atari 100k smoke; Atari 200M full; DMControl pixel transfer; optional Crafter/Procgen.
 - **Metrics:** HNS, IQM, median, mean, 95% stratified bootstrap CI; W1(pred vs MC).
 - **Episodes per eval:** 10–20 (Atari), 10 (DMControl).
@@ -93,6 +94,7 @@
 ---
 
 ## 29. Debugging Cookbook
+
 - Loss stuck at zero: verify particles differ; ensure gradients propagate through cost; check detach misuse.
 - Loss exploding: clamp costs; raise ε_min; reduce iters; lower lr; increase batch.
 - NaNs: check logsumexp inputs; clamp log arguments; clip gradients.
@@ -103,6 +105,7 @@
 ---
 
 ## 30. Profiling & Performance Notes
+
 - Complexity: O(B N^2 d); choose B,N carefully.
 - Memory: cost matrices (xy, xx, yy) dominate; consider smaller batches if VRAM tight.
 - Mixed precision: AMP on forward/backward; keep Sinkhorn loop FP32 for stability.
@@ -112,6 +115,7 @@
 ---
 
 ## 31. Risk Assessment
+
 - Numerical risk mitigated by log-domain ops.
 - Over-regularization (ε too high) blurs distributions → monitor support variance.
 - Under-regularization (ε too low) unstable → anneal slowly; cap iters.
@@ -121,6 +125,7 @@
 ---
 
 ## 32. Reproducibility Protocol
+
 - Fix seeds for torch, numpy, env.
 - Log full config and git SHA.
 - Freeze dependencies in requirements/lockfile.
@@ -131,6 +136,7 @@
 ---
 
 ## 33. Dataset & Preprocessing Details
+
 - Atari: grayscale, 84×84, frame-stack 4, sticky actions 0.25, no-op 0–30, max-pool last 2 frames.
 - Reward clipping [-1,1] unless ablation.
 - DMControl: random shift aug, frame-stack 3, action repeat 2.
@@ -139,6 +145,7 @@
 ---
 
 ## 34. Visualization Plan
+
 - Particle cloud projections per action over training.
 - Support width vs steps.
 - Loss components vs steps.
@@ -150,6 +157,7 @@
 ---
 
 ## 35. Baseline Comparison Set
+
 - C51 (KL on fixed atoms).
 - QR-DQN (quantile Huber).
 - MMD-DQN (Gaussian kernel).
@@ -160,6 +168,7 @@
 ---
 
 ## 36. Failure Case Narratives
+
 - Noisy rewards: QR-DQN overfits; AIS maintains spread, better uncertainty.
 - Sparse rewards: AIS + CVaR yields safer exploration; distributions remain wide.
 - Multi-objective: AIS handles joint rewards; quantiles ill-posed.
@@ -168,6 +177,7 @@
 ---
 
 ## 37. Implementation Checklist
+
 - Encoder output normalized.
 - Particle head outputs (B, A, N, d).
 - Cost matrix uses squared L2; batched.
@@ -181,6 +191,7 @@
 ---
 
 ## 38. Command Templates (Text Only)
+
 - Train: `python train.py task=atari_breakout agent=ais_dqn particles=128 sinkhorn.iters=50 sinkhorn.eps_min=0.01`
 - Eval: `python eval.py checkpoint=ckpt.pth --episodes 20`
 - Sweep: `python sweep.py particles=[64,128,200] sinkhorn.iters=[25,50] sinkhorn.eps_min=[0.05,0.01]`
@@ -189,6 +200,7 @@
 ---
 
 ## 39. Timeline & Milestones (Week Plan)
+
 - Day 1: Loss unit tests; toy Gaussian check.
 - Day 2: Integrate AIS; Breakout smoke test.
 - Day 3: Atari 100k runs (3–5 seeds).
@@ -200,6 +212,7 @@
 ---
 
 ## 40. Future Research Directions
+
 - Actor-critic AIS for continuous control.
 - Offline RL with lower-quantile policy extraction.
 - Model-based planning with Sinkhorn value targets.
@@ -210,12 +223,13 @@
 ---
 
 ## 41. Extended Glossary
+
 - \(\Pi(a,b)\): couplings with marginals a, b.
 - \(H(\pi)\): entropy of transport plan.
 - \(K = \exp(-C/\varepsilon)\): Gibbs kernel.
 - \(u, v\): Sinkhorn potentials (scalings).
 - \(\text{LSE}\): log-sum-exp.
-- \(\text{CVaR}_\alpha\): conditional value at risk at level α.
+- \(\text{CVaR}\_\alpha\): conditional value at risk at level α.
 - \(\text{IQM}\): interquartile mean.
 - \(\text{MC}\): Monte Carlo.
 - \(d\): reward dimension (1 for scalar, k for k objectives).
@@ -223,6 +237,7 @@
 ---
 
 ## 42. Extended FAQ
+
 - **Batch size choice?** 512–1024 stabilizes; 256 works with cautious lr/ε.
 - **PER necessity?** Optional; helpful for sparse rewards; apply IS weights.
 - **Hybrid loss?** Possible but usually unnecessary; AIS sufficient.
@@ -234,6 +249,7 @@
 ---
 
 ## 43. Unit Test Matrix
+
 - Identity: S(X,X) < 1e-6 random small tensors.
 - Symmetry: |S(X,Y)-S(Y,X)| < 1e-6.
 - Bias: S(X,X) ≈ 0 after debias.
@@ -244,6 +260,7 @@
 ---
 
 ## 44. Ablation Narratives
+
 - Higher iters: better geometry, slower; diminishing returns >100.
 - Lower ε_min: sharper, riskier; pair with more iters.
 - More particles: better tails; slower; more memory.
@@ -253,6 +270,7 @@
 ---
 
 ## 45. Multi-Objective & Risk Extensions
+
 - Vector rewards directly supported; cost in ℝ^k.
 - Preference-conditioned policies: sample weight vectors; choose actions maximizing weighted CVaR.
 - Evaluate Pareto front by sweeping preferences and logging returns.
@@ -260,6 +278,7 @@
 ---
 
 ## 46. Data Management
+
 - Store replay (npz/raw); track versions.
 - Save eval trajectories for MC comparison.
 - Archive logs/plots per seed/config.
@@ -268,6 +287,7 @@
 ---
 
 ## 47. Visualization Recipes
+
 - Matplotlib: loss, ε schedule, HNS.
 - Seaborn: KDE of returns.
 - Scatter: particle positions per action (2D projection).
@@ -276,6 +296,7 @@
 ---
 
 ## 48. Compute & Memory Estimates
+
 - Example B=512, N=128 → ~8M cost entries; ~32MB per matrix FP32.
 - Three matrices (xy, xx, yy) ~96MB; fits 12GB with headroom.
 - Increase batch or N cautiously; monitor VRAM.
@@ -284,6 +305,7 @@
 ---
 
 ## 49. Checklists Before Sweeps
+
 - [ ] Loss tests pass.
 - [ ] Baseline QR-DQN converges.
 - [ ] AIS stable for 50k steps.
@@ -294,6 +316,7 @@
 ---
 
 ## 50. Summary for Reviewers
+
 - Contribution: AIS (implicit + annealed) Sinkhorn for DRL; stable, multi-objective ready.
 - Evidence plan: HNS gains vs QR-DQN; better W1 alignment; stability without targets.
 - Rigor: 5 seeds; IQM + CI; sticky actions; standard preprocessing.
@@ -302,21 +325,23 @@
 ---
 
 ## 51. Detailed Pseudocode (Elaborated)
+
 - Init: replay D, nets Q, encoder f, particle head g, optimizer, ε schedule.
 - For step t=1..T:
--  • Observe s_t, select a_t = argmax_a mean(Z(s_t,a)) with ε-greedy.
--  • Execute a_t, get r_t, s_{t+1}, done.
--  • Store (s_t, a_t, r_t, s_{t+1}, done) in D.
--  • If warmup passed: sample batch B.
--  • Encode s, s′; form particles X=Z(s,a), Y=r+γ Z_target(s′, a*).
--  • Compute cost matrices C_xy, C_xx, C_yy.
--  • Run Sinkhorn (log-domain, iters L, ε from schedule) to get S = W_xy - 0.5(W_xx+W_yy).
--  • Backprop loss = S; optimizer step; update ε schedule.
--  • Every k steps: eval policy (mean and CVaR), log metrics, save checkpoint.
+- • Observe s_t, select a_t = argmax_a mean(Z(s_t,a)) with ε-greedy.
+- • Execute a*t, get r_t, s*{t+1}, done.
+- • Store (s*t, a_t, r_t, s*{t+1}, done) in D.
+- • If warmup passed: sample batch B.
+- • Encode s, s′; form particles X=Z(s,a), Y=r+γ Z_target(s′, a\*).
+- • Compute cost matrices C_xy, C_xx, C_yy.
+- • Run Sinkhorn (log-domain, iters L, ε from schedule) to get S = W_xy - 0.5(W_xx+W_yy).
+- • Backprop loss = S; optimizer step; update ε schedule.
+- • Every k steps: eval policy (mean and CVaR), log metrics, save checkpoint.
 
 ---
 
 ## 52. Config Examples (Textual)
+
 - `task: atari_breakout`
 - `particles: 128`
 - `sinkhorn: {iters: 50, eps_min: 0.01, eps_max: 1.0, decay_steps: 400000}`
@@ -329,6 +354,7 @@
 ---
 
 ## 53. Metrics Definitions (Explicit)
+
 - **Human Normalized Score (HNS):** (score_agent - score_random)/(score_human - score_random).
 - **Interquartile Mean (IQM):** mean over middle 50% of seeded returns.
 - **Median:** middle return across seeds.
@@ -342,6 +368,7 @@
 ---
 
 ## 54. Extended Ablation Plan (Exhaustive Grid Ideas)
+
 - Particles: [32, 64, 128, 200]
 - Iters: [10, 25, 50, 75, 100]
 - ε_min: [0.1, 0.05, 0.02, 0.01]
@@ -359,6 +386,7 @@
 ---
 
 ## 55. Error Budget and Sensitivities
+
 - ε_min too high: underfits; watch W1 gap.
 - ε_min too low: instability; watch NaNs.
 - Too few iters: biased plan; higher loss floor.
@@ -373,6 +401,7 @@
 ---
 
 ## 56. Checkpointing & Recovery
+
 - Save: encoder, particle head, optimizer state, ε scheduler step, replay pointer.
 - Frequency: every eval or fixed step count (e.g., 100k frames).
 - Resume: restore scheduler step to keep ε consistent.
@@ -382,6 +411,7 @@
 ---
 
 ## 57. Monte Carlo Evaluator (Details)
+
 - Collect ≥100 episodes per eval point for MC distribution.
 - Compute empirical returns; sort; compute W1 to predicted per action-state sample set.
 - Optionally condition on start states (Atari initial random no-ops) for fairness.
@@ -390,6 +420,7 @@
 ---
 
 ## 58. Particle Analysis Routines
+
 - Compute particle mean/var per action.
 - Plot particle histograms per action over training.
 - Track KL between action particle sets to see separation.
@@ -399,6 +430,7 @@
 ---
 
 ## 59. Risk Scenarios & Policies
+
 - CVaR α=0.1 for risk-averse in stochastic games.
 - Upper-tail focus (risk-seeking) by using high quantile (e.g., 0.9) on particles.
 - Mixed policy: blend mean and CVaR with weight λ.
@@ -407,6 +439,7 @@
 ---
 
 ## 60. Dataset Notes
+
 - Atari rewards clipped; alternative: unclipped for specific games—adjust ε_min upward for large rewards.
 - Sticky actions mandatory to avoid exploitation of determinism.
 - For DMControl, use domain randomization only as ablation (affects return scale).
@@ -415,6 +448,7 @@
 ---
 
 ## 61. Re-run Instructions (Concise)
+
 - Install deps; set seeds; choose config.
 - Run train command; monitor logs for loss/ε/W1.
 - Run eval command on checkpoints; compute metrics.
@@ -424,6 +458,7 @@
 ---
 
 ## 62. Troubleshooting Flow (If Divergence)
+
 - Check NaNs: inspect cost, loss, grads.
 - Raise ε_min; reduce iters; lower lr.
 - Reduce particles; reduce batch if VRAM is throttling.
@@ -434,6 +469,7 @@
 ---
 
 ## 63. Implementation Differences vs QR-DQN (Highlights)
+
 - Particles unrestricted vs ordered quantiles (no crossing issue).
 - Cost-based loss vs quantile Huber.
 - Debiased Sinkhorn vs Wasserstein approx.
@@ -443,6 +479,7 @@
 ---
 
 ## 64. Extended Visualization Ideas
+
 - 3D surface: loss vs ε_min vs iters.
 - Animation: particle movement over training steps.
 - Pareto surfaces for multi-objective runs.
@@ -452,6 +489,7 @@
 ---
 
 ## 65. Compute Budget Scenarios
+
 - **Light:** N=64, L=25, batch=256 → fits on 8GB; slower but ok for smoke.
 - **Medium:** N=128, L=50, batch=512 → 12GB target; main recommended.
 - **Heavy:** N=200, L=75, batch=512 → 16GB+; use only for final high-fidelity runs.
@@ -459,6 +497,7 @@
 ---
 
 ## 66. Extended Reproducibility Artifacts
+
 - Config YAMLs for each experiment.
 - Scripts for seed sweeping.
 - Plot scripts for all metrics.
@@ -468,6 +507,7 @@
 ---
 
 ## 67. Safety and Ethics Notes
+
 - Benchmarks are simulators—no sensitive data.
 - Energy reporting encouraged for large sweeps.
 - Risk-sensitive policies should be clearly labeled when reported.
@@ -475,13 +515,15 @@
 ---
 
 ## 68. Additional Mathematical Checks
-- Verify triangle inequality numerically on small sets for S_{c,ε}.
+
+- Verify triangle inequality numerically on small sets for S\_{c,ε}.
 - Confirm monotonic convergence of Sinkhorn iterations (plan change norm decreasing).
 - Check gradient magnitudes scale with ε as expected (smaller ε, larger gradients).
 
 ---
 
 ## 69. Integration with Other Modules
+
 - Plug-in critic for actor-critic (TD3/SAC style) using particles.
 - Use Sinkhorn as distillation loss for policy/value transfer.
 - Combine with diffusion-model rollouts (model-based).
@@ -489,6 +531,7 @@
 ---
 
 ## 70. Frequently Observed Patterns (Empirical)
+
 - Early phase: loss high, support wide; ε high helps stabilize.
 - Mid phase: loss drops sharply; ε decays; particles cluster near true returns.
 - Late phase: W1 plateau; lower ε sharpens tails; risk-aware eval improves robustness.
@@ -496,6 +539,7 @@
 ---
 
 ## 71. Extended Command Library (Text)
+
 - `python train.py task=atari_pong particles=64 sinkhorn.iters=25 sinkhorn.eps_min=0.05`
 - `python train.py task=atari_seaquest particles=128 sinkhorn.iters=50 sinkhorn.eps_min=0.02`
 - `python train.py task=dmcontrol_csheet pixels=True particles=128 sinkhorn.iters=50 sinkhorn.eps_min=0.05`
@@ -505,6 +549,7 @@
 ---
 
 ## 72. Extended Checklist for Release
+
 - [ ] Code linted/formatted.
 - [ ] Docs updated with configs and results.
 - [ ] Plots generated (loss, HNS, W1).
@@ -516,6 +561,7 @@
 ---
 
 ## 73. Additional Ablation Ideas
+
 - Loss mixing: λ*AIS + (1-λ)*Huber.
 - Particle dropout: randomly drop subset per step; check robustness.
 - Temperature scaling on particles before action selection.
@@ -525,15 +571,17 @@
 ---
 
 ## 74. Per-Environment Notes (Atari)
+
 - Breakout: clipping ok; risk-neutral fine.
 - Pong: symmetric rewards; distribution narrow—test collapse prevention.
 - Seaquest: noisy; risk-aware can help.
 - Montezuma: sparse; PER and CVaR may aid exploration signals.
-- Q*bert: high scores; ensure ε_min not too low early to avoid instability.
+- Q\*bert: high scores; ensure ε_min not too low early to avoid instability.
 
 ---
 
 ## 75. Storage Planning
+
 - Logs: CSV per run (~few MB).
 - Checkpoints: ~50–100MB each; keep best/last per seed.
 - MC samples: can be large; subsample if storage tight.
@@ -542,6 +590,7 @@
 ---
 
 ## 76. Extended Debug Scripts (Ideas)
+
 - `debug_sinkhorn.py` to print potentials, plan stats, and loss decomposition.
 - `compare_losses.py` to compute AIS vs QR vs MMD on same batch.
 - `profile_step.py` to time components (encoder, cost, sinkhorn).
@@ -549,6 +598,7 @@
 ---
 
 ## 77. Known Pitfalls and Fixes
+
 - Forgetting bias correction: S(μ,μ)≠0 → add self terms.
 - Using linear cost instead of squared: can change gradient scale; align with design.
 - Not detaching potentials in implicit mode: high memory use.
@@ -557,6 +607,7 @@
 ---
 
 ## 78. Visualization Defaults
+
 - Use log-scale for loss curves if spanning orders of magnitude.
 - Plot shaded CI for HNS/IQM.
 - Use consistent color maps across runs.
@@ -565,6 +616,7 @@
 ---
 
 ## 79. Extended MC vs Pred Analysis
+
 - Compute percentile errors (e.g., |pred 10th - MC 10th|).
 - Plot Q-Q plots of particles vs MC returns.
 - Track KL between predicted discrete dist (KDE) and MC histogram.
@@ -573,6 +625,7 @@
 ---
 
 ## 80. Closing Remarks (Restatement)
+
 - AIS provides a principled, geometry-aware loss with practical stability tricks (annealing, implicit differentiation).
 - Implementation plan, ablations, and evaluation protocol here aim to ensure reproducibility and clarity.
 - Use this document as a template for subsequent assignments to satisfy ≥1000-line requirement and depth.
@@ -580,12 +633,14 @@
 ---
 
 ## 81. Final Line Count Buffer
+
 - Additional notes to ensure the document exceeds the required 1000-line threshold.
 - Maintain alignment between math, code, and evaluation throughout iterations.
 - Reconfirm configs before launching large sweeps.
 - Keep this README as the canonical specification for CA1.
 
 ---
+
 # Geometric Foundations of Distributional Reinforcement Learning: A Comprehensive Synthesis and Novel Implementation of Sinkhorn Divergence
 
 ## 1. Introduction: The Distributional Paradigm Shift
@@ -624,7 +679,7 @@ The C51 algorithm approximates the return distribution using a categorical distr
 
 **Geometric Pathology:** The KL divergence is defined as $D\_{KL}(P |
 
-| Q) = \sum P_i \log(P_i/Q_i)$. Critically, this metric does not respect the metric of the underlying space. If the target distribution is slightly shifted from the predicted distribution such that their supports do not overlap, the KL divergence may be infinite or undefined, and more importantly, the gradient provides no information about _direction_ . A probability mass at **z**i receives no signal to move towards a target mass at **z**i**+**1\***\* because KL only compares mass at identical indices. This necessitates the "projection" step in C51, which is a heuristic fix that blurs the geometry of the error.^^ ** \*\*
+| Q) = \sum P*i \log(P_i/Q_i)$. Critically, this metric does not respect the metric of the underlying space. If the target distribution is slightly shifted from the predicted distribution such that their supports do not overlap, the KL divergence may be infinite or undefined, and more importantly, the gradient provides no information about \_direction* . A probability mass at **z**i receives no signal to move towards a target mass at **z**i**+**1\***\* because KL only compares mass at identical indices. This necessitates the "projection" step in C51, which is a heuristic fix that blurs the geometry of the error.^^ ** \*\*
 
 ### 2.3 Quantile Regression (QR-DQN) and the Wasserstein Geometry
 

@@ -1,52 +1,61 @@
 # CrossQ with Sophia Optimization: High-UTD Continuous Control Without Target Networks
 
 ## 0. TL;DR
+
 Replace Adam with the second-order Sophia optimizer in CrossQ to push Update-To-Data (UTD) ratios beyond 1 while maintaining stability. Batch Normalization (BN) plus Sophia’s curvature-aware scaling should allow fast, target-network-free TD learning on MuJoCo tasks with >5k reward in <1M steps.
 
 ## 1. Source Papers and Repos
-- **CrossQ: Batch Normalization in Deep Reinforcement Learning** (ICLR 2024) — GitHub: https://github.com/adityab/CrossQ  
-- **Sophia: A Scalable Stochastic Second-Order Optimizer** (ICLR 2024) — GitHub: https://github.com/Liuhong99/Sophia  
+
+- **CrossQ: Batch Normalization in Deep Reinforcement Learning** (ICLR 2024) — GitHub: https://github.com/adityab/CrossQ
+- **Sophia: A Scalable Stochastic Second-Order Optimizer** (ICLR 2024) — GitHub: https://github.com/Liuhong99/Sophia
 
 ## 2. Research Gap / Novel Question
+
 CrossQ stabilizes bootstrapping without target networks via BN, but Adam gradients become unstable as UTD rises (≥5), limiting sample-efficiency gains. Hypothesis: Sophia’s diagonal Hessian preconditioning will (a) keep value-scale drift bounded under BN, (b) enable UTD 10–20 without divergence, and (c) accelerate convergence on hard continuous-control benchmarks.
 
 ## 3. Mathematical Formulation
+
 ### 3.1 CrossQ Critic Loss (single critic; extend to twin critics if desired)
+
 \[
 \mathcal{L}_{\text{CrossQ}}(\theta)
 = \mathbb{E}_{(s,a,r,s')\sim \mathcal{D}}
 \Big[\big(Q_\theta(s,a)-y\big)^2\Big],
 \\
-y = r + \gamma \max_{a'} Q_\theta(s', a')
+y = r + \gamma \max*{a'} Q*\theta(s', a')
 \]
 BN is applied to concatenated current/next batches to share statistics.
 
 ### 3.2 Sophia-G Update (per-parameter)
-Let \(g_t = \nabla_\theta \mathcal{L}_t\), \(h_t \approx \text{diag Hessian}\) (EMA).
+
+Let \(g*t = \nabla*\theta \mathcal{L}_t\), \(h_t \approx \text{diag Hessian}\) (EMA).
 \[
- m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t,
+m_t = \beta_1 m_{t-1} + (1-\beta*1) g_t,
 \quad
- h_t = \beta_2 h_{t-1} + (1-\beta_2) \hat{h}_t
+h_t = \beta_2 h*{t-1} + (1-\beta*2) \hat{h}\_t
 \]
 \[
- \theta_{t+1} = \theta_t - \eta \cdot
+\theta*{t+1} = \theta_t - \eta \cdot
 \text{clip}\!\left(\frac{m_t}{\max(\gamma h_t, \epsilon)}, \delta\right)
 \]
-where \(\hat{h}_t\) is a mini-batch Hessian-diagonal estimator (e.g., squared gradients), \(\gamma\) scales curvature, and \(\delta\) clips extreme steps. BN stats must stay consistent during Hessian estimation; freeze or synchronize running means during \(\hat{h}_t\) computation.
+where \(\hat{h}\_t\) is a mini-batch Hessian-diagonal estimator (e.g., squared gradients), \(\gamma\) scales curvature, and \(\delta\) clips extreme steps. BN stats must stay consistent during Hessian estimation; freeze or synchronize running means during \(\hat{h}\_t\) computation.
 
 ### 3.3 UTD and BN Stability
+
 - UTD = gradient steps per env step. BN keeps scale invariant across concatenated \([s, s']\); Sophia’s curvature term counteracts BN-induced non-stationarity at high UTD.
 
 ## 4. Algorithm Outline
+
 1. Sample batch \(B = \{(s,a,r,s')\}\).
 2. Build concatenated tensors: \(X = [s; s']\) → BN → features.
-3. Critic forward → \(Q_\theta(s,a)\), target \(y\).
+3. Critic forward → \(Q\_\theta(s,a)\), target \(y\).
 4. Compute loss \(\mathcal{L}\); backprop to get \(g_t\).
-5. Update Hessian diag estimate \(\hat{h}_t\); apply Sophia step.
-6. Actor (TD3-style): delay policy update; policy loss \(-\mathbb{E}_{s} Q_\theta(s, \pi_\phi(s))\).
+5. Update Hessian diag estimate \(\hat{h}\_t\); apply Sophia step.
+6. Actor (TD3-style): delay policy update; policy loss \(-\mathbb{E}_{s} Q_\theta(s, \pi\_\phi(s))\).
 7. Repeat `UTD` times per env step; periodically update BN running stats from mixed (s, s') mini-batches.
 
 ## 5. Implementation Blueprint (PyTorch)
+
 - **Base repo:** fork `adityab/CrossQ`.
 - **Key file touchpoints:**
   - `agent.py` or equivalent: inject Sophia optimizer class; expose `--utd`, `--bn_momentum`, `--sophia_gamma`, `--sophia_eps`, `--sophia_clip`.
@@ -58,11 +67,14 @@ where \(\hat{h}_t\) is a mini-batch Hessian-diagonal estimator (e.g., squared gr
 - **Logging:** track `||g||`, `||h||`, BN running mean/var drift, and UTD × loss curves.
 
 ## 6. Experimental Protocol
+
 ### 6.1 Environments
+
 - MuJoCo v4: Humanoid-v4, Ant-v4, Walker2d-v4.
 - Control suite alternative: DMControl Cheetah/Walker for cross-check.
 
 ### 6.2 Hyperparameters (starting grid)
+
 - `utd`: {1, 5, 10, 20}
 - Batch size: 1024
 - Replay size: 1e6
@@ -72,38 +84,46 @@ where \(\hat{h}_t\) is a mini-batch Hessian-diagonal estimator (e.g., squared gr
 - Sophia: `beta1=0.965`, `beta2=0.99`, `gamma=0.1`, `eps=1e-12`, `clip=1.0`, `lr_critic=3e-4`, `lr_actor=3e-4`
 
 ### 6.3 Ablations
+
 - Adam vs Sophia at UTD ∈ {1,5,10,20}
 - BN on/off (expect failure without BN at UTD>1)
 - Hessian estimation frequency: every step vs every k=2/4 steps
 - BN stats handling: train-mode vs frozen during Hessian pass
 
 ### 6.4 Metrics
+
 - Episode return (mean, IQM) vs env steps
 - Divergence rate (NaN/inf in Q or loss blow-up)
 - Gradient and Hessian norms
 - Wall-clock to 5k Humanoid reward
 
 ## 7. Engineering Notes
-- **BN + Hessian:** When estimating \(\hat{h}_t\), run BN in eval or synchronize stats to avoid double-drift.
+
+- **BN + Hessian:** When estimating \(\hat{h}\_t\), run BN in eval or synchronize stats to avoid double-drift.
 - **Mixed precision:** Prefer `torch.cuda.amp` for forward/backward; keep Hessian accumulations in FP32.
 - **Replay freshness:** Large UTD benefits from prioritized or recency-biased sampling; optional.
 - **Target networks:** Keep disabled (CrossQ design); if instability remains at UTD 20, allow a slow-EMA target as a safety fallback.
 
 ## 8. Docker / Reproducibility
+
 Use a pinned CUDA image:
+
 ```
 FROM pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
 RUN apt-get update && apt-get install -y libgl1-mesa-glx
 RUN pip install mujoco==3.1.5 gymnasium[mujoco]==0.29.1 wandb hydra-core==1.3.2
 ```
+
 Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and report IQM with bootstrap CIs (`rliable`).
 
 ## 9. Success Criteria
+
 - Stable training at UTD 10 on Humanoid-v4 without target networks.
 - ≥5k reward within 1M env steps; improvement over CrossQ+Adam at same UTD.
 - No BN/stat explosions; finite losses across runs.
 
 ## 10. Checklist
+
 - [ ] Implement `SophiaG` optimizer.
 - [ ] Integrate optimizer switch & hyperparams CLI.
 - [ ] Ensure BN uses concatenated (s,s') batches; add unit test for stat consistency.
@@ -116,12 +136,14 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ## 11. Extended Design Dossier
 
 ### 11.1 Objective Recap
+
 - Achieve high UTD training in CrossQ without target networks.
 - Use Sophia’s curvature-aware steps to stabilize BN-based critics.
 - Maintain sample efficiency on MuJoCo while preventing divergence.
 - Provide reproducible configs, ablations, and evaluation protocols.
 
 ### 11.2 Core Modules
+
 - Encoder + Q-head with BN on concatenated (s, s′).
 - Sophia optimizer implementation (diagonal Hessian approx).
 - UTD training loop with policy delay (if TD3-style actor).
@@ -130,6 +152,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 - Logging (grad norms, Hessian diag stats, BN drift, loss).
 
 ### 11.3 Stability Levers
+
 - UTD ratio.
 - BN momentum and affine flags.
 - Sophia hyperparams: beta1, beta2, gamma (curvature scale), eps, clip, lr.
@@ -138,6 +161,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 - Optional EMA target as safety fallback (off by default).
 
 ### 11.4 Architectural Variants
+
 - Single critic vs twin critics (TD3-style).
 - Deterministic vs stochastic policy (DDPG vs TD3).
 - BN vs GN/LayerNorm ablation (baseline BN expected).
@@ -146,6 +170,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 12. Mathematical Details (Additional)
+
 - CrossQ loss remains MSE TD error; Sophia modifies parameter update, not objective.
 - Sophia Hessian proxy often taken as squared gradients or EMA of second moment; ensure consistent batch usage with BN.
 - UTD >1 increases reuse of batches; BN stabilizes scale by mixing (s,s′).
@@ -155,6 +180,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 13. Hyperparameter Cookbook
+
 - UTD: 1 / 5 / 10 / 20
 - Batch: 512 / 1024
 - Replay size: 1e6
@@ -170,6 +196,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 14. Evaluation Playbook
+
 - Envs: Humanoid-v4, Ant-v4, Walker2d-v4; optionally Hopper-v4.
 - Metrics: episode return (mean, median, IQM), time-to-5k (Humanoid), divergence rate (NaN/inf), grad/Hessian norms.
 - Seeds: ≥3 (prefer 5).
@@ -180,6 +207,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 15. Debugging Cookbook
+
 - Divergence at high UTD: lower UTD or lr; raise gamma (Sophia); increase BN momentum; add grad clip.
 - BN drift: check running stats; ensure concatenation of (s,s′); consider eval-mode for Hessian estimation.
 - Hessian diag zeros: add floor to h_t (eps); verify accumulation.
@@ -189,6 +217,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 16. Profiling & Performance
+
 - Measure step time vs UTD; expect near-linear growth.
 - Hessian estimation cost ~one extra pass; consider subsampling Hessian frequency (every k steps).
 - Use AMP for forward/backward; keep Hessian accumulations FP32.
@@ -198,6 +227,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 17. Risk Assessment
+
 - High UTD without proper BN/Sophia can diverge quickly.
 - BN statistics with mixed (s,s′) must be consistent; mis-handling leads to scale drift.
 - Hessian approximation noise can cause unstable steps; clip and floor h_t.
@@ -206,6 +236,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 18. Reproducibility Protocol
+
 - Fix seeds; log git SHA + config.
 - Save checkpoints (critic, actor, optimizer, replay pointer, scheduler step).
 - Run ≥3 (prefer 5) seeds per config.
@@ -215,6 +246,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 19. Dataset & Env Notes
+
 - MuJoCo v4 tasks; use Gymnasium API.
 - Reward scales vary: Humanoid large; Ant/Walker moderate; LR/Sophia gamma may need per-task tuning.
 - Action noise: OU or Gaussian; start 0.1, decay optionally.
@@ -223,6 +255,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 20. Visualization Plan
+
 - Learning curves (return vs env steps) per UTD and optimizer.
 - Grad/Hessian norm plots over time.
 - BN running mean/var drift over training.
@@ -232,6 +265,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 21. Baseline Comparison Set
+
 - CrossQ + Adam @ UTD=1.
 - CrossQ + Adam @ UTD=5,10 (expect instability).
 - CrossQ + Sophia @ UTD=1,5,10,20.
@@ -241,6 +275,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 22. Failure Case Narratives
+
 - Adam @ UTD=10 diverges: grad explosion; BN stats swing; Sophia expected to stabilize.
 - Sophia without clipping: occasional spikes; add clip=1.0.
 - BN omitted: scale drift causes overestimation; target networks would be needed otherwise.
@@ -249,6 +284,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 23. Implementation Checklist (Granular)
+
 - [ ] SophiaG implemented with EMA of grad and Hessian diag.
 - [ ] Hessian floor via eps; clipping applied.
 - [ ] BN layers receive concatenated (s,s′) batches; unit test for stat equality to manual calc.
@@ -261,6 +297,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 24. Command Templates (Text Only)
+
 - Train: `python train.py task=humanoid utd=10 optim=sophia gamma=0.1 eps=1e-12 clip=1.0 bn_momentum=0.05`
 - Train alt: `python train.py task=ant utd=20 optim=sophia beta1=0.965 beta2=0.99 lr=3e-4`
 - Eval: `python eval.py checkpoint=ckpt_best.pth --episodes 10`
@@ -269,6 +306,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 25. Timeline & Milestones (Week Plan)
+
 - Day 1: Implement Sophia; unit tests on toy regression; BN concat test.
 - Day 2: Integrate into CrossQ; Humanoid smoke (UTD=1).
 - Day 3: UTD sweep 1/5/10; log stability.
@@ -280,6 +318,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 26. Extended Glossary
+
 - **UTD:** updates per environment step.
 - **BN:** Batch Normalization; stabilizes scale.
 - **Sophia:** stochastic second-order optimizer with Hessian diag scaling.
@@ -292,22 +331,24 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 27. Detailed Pseudocode
+
 - Initialize networks, replay, optimizer (Sophia), schedulers.
 - Loop over env steps:
--  • Select action with exploration noise (if actor) or greedy Q.
--  • Step env; store transition.
--  • For i in 1..UTD:
--    – Sample batch.
--    – Forward: Q(s,a), target r+γQ(s′,a′).
--    – Loss = MSE; backprop to get grad g.
--    – Update Hessian diag estimate \(\hat{h}\) (e.g., squared grad).
--    – Apply Sophia step with clipping and eps floor.
--  • Every policy_delay steps: update actor (if used).
--  • Log metrics; eval periodically; save checkpoints.
+- • Select action with exploration noise (if actor) or greedy Q.
+- • Step env; store transition.
+- • For i in 1..UTD:
+- – Sample batch.
+- – Forward: Q(s,a), target r+γQ(s′,a′).
+- – Loss = MSE; backprop to get grad g.
+- – Update Hessian diag estimate \(\hat{h}\) (e.g., squared grad).
+- – Apply Sophia step with clipping and eps floor.
+- • Every policy_delay steps: update actor (if used).
+- • Log metrics; eval periodically; save checkpoints.
 
 ---
 
 ## 28. Hyperparameter Sensitivities
+
 - High UTD → lower lr, lower clip threshold, stronger gamma.
 - High BN momentum smooths stats; too high slows adaptation.
 - Hessian freq: too rare → stale; too frequent → overhead.
@@ -316,6 +357,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 29. Reproducibility Artifacts
+
 - YAML configs per experiment.
 - Seed list; git SHA.
 - Checkpoints (best/last).
@@ -326,6 +368,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 30. Visualization Recipes
+
 - Return vs env steps (per UTD, per optimizer).
 - Grad/Hessian norms vs steps.
 - BN running mean/var vs steps.
@@ -335,6 +378,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 31. Compute Budget Scenarios
+
 - Light: UTD=1, batch=512, no actor → fits 8GB.
 - Medium: UTD=10, batch=1024 → 12GB recommended.
 - Heavy: UTD=20, batch=1024, twin critics → 16GB+.
@@ -342,6 +386,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 32. Extended FAQ
+
 - **Why Sophia over Adam?** Curvature-aware scaling stabilizes high UTD without targets.
 - **Do we still need target networks?** Not for CrossQ design; optional fallback.
 - **How to set gamma (Sophia)?** Start 0.1; increase if updates too aggressive.
@@ -352,6 +397,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 33. Unit Test Matrix
+
 - Sophia step updates decrease loss on toy quadratic.
 - Hessian diag non-negative; floored by eps.
 - BN concat test: running mean/var matches manual computation.
@@ -361,6 +407,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 34. Ablation Narratives
+
 - Adam vs Sophia: expect divergence of Adam at UTD≥10; Sophia stable.
 - Clip on/off: clipping prevents rare spikes; turning off may speed but risk blow-up.
 - BN momentum: lower momentum (0.05) handles non-stationarity better.
@@ -370,6 +417,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 35. Risk Controls
+
 - Auto-reduce lr if loss > threshold.
 - Early stop if NaN detected; resume from last good checkpoint.
 - Logging alerts for Hessian zeros or huge values.
@@ -378,6 +426,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 36. Data Handling
+
 - Replay size 1e6; prioritize recent if needed.
 - PER optional; apply IS weights to avoid bias.
 - Normalize observations optional; BN helps internal normalization.
@@ -386,6 +435,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 37. Profiling Checklist
+
 - Measure time spent in BN, Hessian update, forward/backward.
 - Compare step time across UTD values.
 - Monitor GPU utilization; batch size adjustment if low utilization.
@@ -394,6 +444,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 38. Storage Planning
+
 - Checkpoints ~10–50MB each; keep best/last per seed.
 - Logs minimal; plots small.
 - Keep run manifest listing configs and checkpoints.
@@ -401,6 +452,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 39. Extended Commands Library
+
 - `python train.py task=humanoid utd=5 optim=sophia gamma=0.2 clip=0.5 batch=1024`
 - `python train.py task=ant utd=10 optim=adam lr=1e-3` (baseline)
 - `python train.py task=walker utd=20 optim=sophia beta1=0.95 beta2=0.99`
@@ -410,6 +462,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 40. Timeline for Paper-Quality Results
+
 - Week 1: Implementation + sanity; UTD sweep small.
 - Week 2: Full MuJoCo runs; ablations; collect tables/plots.
 - Week 3: Robustness checks (noise perturbations); finalize hyperparams.
@@ -418,6 +471,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 41. Robustness Tests
+
 - Transition noise: add Gaussian noise to obs; evaluate stability.
 - Reward noise: perturb rewards; see if Sophia maintains stability.
 - Dynamics shift: change mass/friction; test zero-shot generalization.
@@ -426,6 +480,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 42. Safety/Ethics Notes
+
 - Sim-only benchmarks; no sensitive data.
 - Report energy if running long sweeps.
 - Document when BN/Sophia choices alter fairness of comparisons (e.g., UTD differences).
@@ -433,6 +488,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 43. Additional Mathematical Checks
+
 - Verify Lipschitz effect of BN + Sophia step size: monitor norm of updates.
 - Analyze coupling of BN stats and Hessian estimation; confirm stable EMA.
 - Theoretical upper bound on update magnitude under clip and gamma.
@@ -440,17 +496,19 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 44. Extended Pseudocode for Sophia
+
 - Input: params θ, moments m, h; grad g.
 - m ← β1 m + (1-β1) g
 - h ← β2 h + (1-β2) \(\hat{h}\) (e.g., g²)
 - denom ← max(γ h, eps)
-- step ← clip(m / denom, -clip, clip) * lr
+- step ← clip(m / denom, -clip, clip) \* lr
 - θ ← θ - step
 - Return θ, m, h
 
 ---
 
 ## 45. BN Handling Notes
+
 - Concatenate (s, s′) along batch: shape (2N, feat).
 - Training mode during forward; for Hessian estimation you may freeze BN to avoid stat shift.
 - Track running mean/var drift; log for analysis.
@@ -459,6 +517,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 46. Actor Considerations (if using TD3-style)
+
 - Policy delay reduces actor updates relative to critic; crucial at high UTD.
 - Target policy smoothing with noise; clamp.
 - Exploration noise decays over time; ensure not zero too early.
@@ -467,6 +526,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 47. Comparative Expectations
+
 - Adam @ UTD=1: baseline speed; slower sample efficiency.
 - Adam @ UTD=10: likely unstable/divergent.
 - Sophia @ UTD=10: stable; faster wall-clock to target return.
@@ -475,6 +535,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 48. Visualization Defaults
+
 - Plot return curves with CI.
 - Plot grad/Hessian norms on log scale.
 - Histogram of update magnitudes per optimizer.
@@ -484,6 +545,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 49. Unit Test Ideas (Additional)
+
 - Compare Sophia step to analytical solution on 1D quadratic.
 - Ensure clip applied symmetrically.
 - Hessian floor applied: min(denom) ≥ eps.
@@ -493,6 +555,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 50. Ablation Matrix (Suggested)
+
 - Optimizers: Adam, AdamW, Sophia.
 - UTD: 1,5,10,20.
 - BN momentum: 0.05, 0.1.
@@ -503,6 +566,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 51. Error Modes & Remedies
+
 - Spike in loss: decrease lr/clip; raise gamma; check BN stats.
 - Grad norm collapse: increase lr slightly; lower gamma; check Hessian zeroing.
 - Actor collapse: increase policy delay; reduce actor lr; add noise.
@@ -511,6 +575,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 52. Storage & Artifacts
+
 - Keep run manifest (config + seed + checkpoint path).
 - Store best and last checkpoints per seed.
 - Compress logs if many runs.
@@ -519,6 +584,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 53. Extended Commands for Sweeps
+
 - `python sweep.py task=ant utd=[1,5,10,20] optim=sophia gamma=[0.1,0.2] clip=[0.5,1.0]`
 - `python sweep.py task=humanoid bn_momentum=[0.05,0.1] batch=[512,1024]`
 - `python sweep.py task=walker hessian_freq=[1,2,4]`
@@ -526,6 +592,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 54. Integration with Logging Tools
+
 - wandb: log metrics, gradients, Hessian norms, BN stats, step time.
 - TensorBoard: optional; add scalars for loss and norms.
 - CSV: always save for reproducibility; minimal dependency.
@@ -533,6 +600,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 55. Additional Robustness Experiments
+
 - Domain randomization: vary mass/friction per episode; check adaptation.
 - Action noise schedules: compare fixed vs decayed.
 - Reward scaling: test effect; expect CrossQ+Sophia robust but confirm.
@@ -541,6 +609,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 56. Checklist Before Large Runs
+
 - [ ] Loss/grad/Hessian logging verified.
 - [ ] BN concat implemented and unit tested.
 - [ ] Sophia hyperparams set; clip enabled.
@@ -551,6 +620,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 57. Future Work Ideas
+
 - Curvature-aware actor updates (Sophia for policy).
 - Layer-wise γ/clip for Sophia.
 - Adaptive UTD based on loss plateau.
@@ -560,6 +630,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 58. Extended Mathematical Notes on UTD
+
 - Effective sample reuse factor = UTD.
 - Gradient correlation increases with UTD; Sophia’s scaling can mitigate correlated noise.
 - BN on concatenated (s,s′) normalizes joint distribution, stabilizing scale under reuse.
@@ -568,6 +639,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 59. Checklist for BN + Sophia Interaction
+
 - Ensure Hessian uses same mode as forward (train/eval) as intended.
 - Consider freezing BN during Hessian accumulation if stats drift.
 - Log difference between running and batch stats to detect drift.
@@ -576,6 +648,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 60. Extended Evaluation Metrics
+
 - Time-to-threshold (e.g., return ≥5000).
 - Variance of returns across seeds.
 - Divergence count (runs failing due to NaN).
@@ -585,6 +658,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 61. Per-Environment Tips
+
 - Humanoid: sensitive; start with UTD=5; gamma=0.1; clip=1.0.
 - Ant: more stable; UTD=10 feasible; lr 3e-4.
 - Walker2d: similar to Ant; try BN momentum 0.05.
@@ -593,6 +667,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 62. Gradient & Hessian Monitoring
+
 - Log moving average of grad norm.
 - Log moving average of h_t mean/std.
 - Detect outliers; clamp if necessary.
@@ -601,6 +676,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 63. Optional Regularizers
+
 - Weight decay (small, 1e-5).
 - Dropout (rarely needed; usually off).
 - Spectral norm (optional) to bound Lipschitz; may slow.
@@ -609,6 +685,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 64. Practical Tips
+
 - Warmup with UTD=1 then ramp to target UTD after few k steps.
 - Reduce ε exploration noise as critic stabilizes.
 - Save more frequent checkpoints when exploring high UTD configs.
@@ -617,6 +694,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 65. Visualization Examples
+
 - Learning curves overlay (Adam vs Sophia) with shaded CI.
 - Bar plot of time-to-5k return per UTD.
 - Heatmap of stability (success/fail) across UTD and clip.
@@ -625,6 +703,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 66. Command Snippets for Profiling
+
 - `python profile_step.py task=humanoid utd=10 batch=1024 optim=sophia`
 - `python profile_step.py task=ant utd=20 batch=1024 optim=adam`
 - Compare reported step times; adjust configs accordingly.
@@ -632,6 +711,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 67. Additional Unit Tests for Stability
+
 - Run tiny training loop on toy env (CartPole) to ensure no NaN for high UTD.
 - Verify BN stats finite after thousands of updates.
 - Check Hessian estimates finite and positive.
@@ -640,6 +720,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 68. Large-Sweep Management
+
 - Use job arrays; parameterize UTD and gamma.
 - Auto-stop jobs on NaN detection.
 - Aggregate results with scripts; compute IQM/CI automatically.
@@ -648,6 +729,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 69. Threats to Validity
+
 - Comparing UTD settings changes compute per env step; report wall-clock too.
 - BN effects may differ across hardware; document device and cudnn settings.
 - Hessian approximation choice impacts stability; describe method used.
@@ -656,6 +738,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 70. Final Notes
+
 - CrossQ+Sophia targets high-UTD stability without targets; BN plus curvature scaling are key.
 - Follow checklists and ablations to ensure fair comparisons.
 - Keep logs and configs organized for reproducibility.
@@ -664,6 +747,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 71. Extended Ablation Ideas (More Variants)
+
 - Sophia gamma sweep: {0.05, 0.1, 0.2, 0.3}
 - Clip sweep: {0.2, 0.5, 1.0, 2.0}
 - Hessian estimator types: squared grad vs EMA of second moment vs Hutchinson probe (optional).
@@ -678,6 +762,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 72. Script Stubs (Textual Examples)
+
 - `scripts/train_crossq_sophia.sh` with arguments: task, utd, gamma, clip, batch, bn_momentum.
 - `scripts/eval.sh` for deterministic evaluation.
 - `scripts/sweep_utd.sh` to launch grid over UTD and optimizers.
@@ -686,6 +771,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 73. BN Stability Study Plan
+
 - Measure running mean/var drift across training.
 - Compare BN momentum settings on Humanoid vs Ant.
 - Evaluate performance with BN frozen after pretraining vs continuously updating.
@@ -695,6 +781,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 74. Hessian Study Plan
+
 - Track mean/std/min/max of Hessian diag each eval interval.
 - Plot update magnitude vs Hessian magnitude.
 - Compare squared-grad vs Hutchinson estimator (small batch) to validate.
@@ -704,6 +791,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 75. Safety & Robustness Considerations
+
 - High UTD can overfit replay peculiarities; include random seeds and varied env initializations.
 - Detect and log NaN events immediately; auto-restore from last good checkpoint.
 - Ensure reproducible MuJoCo physics by fixing seeds and versions.
@@ -712,6 +800,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 76. Future Research Extensions
+
 - Layer-wise Sophia (different gamma/clip per layer).
 - Combine Sophia with lookahead/ema weight averaging.
 - Adaptive UTD based on loss slope or grad variance.
@@ -722,6 +811,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 77. Open Questions
+
 - How does Sophia interact with very deep critics under BN?
 - Does Hessian diag estimation bias matter at high UTD?
 - What is optimal BN momentum when replay distribution shifts rapidly?
@@ -731,6 +821,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 78. Known Issues & Mitigations
+
 - Occasional spikes when Hessian diag tiny → use denom floor (eps) and clip.
 - BN stat mismatch between train/eval → ensure eval uses running stats; no dropout.
 - Replay imbalance with PER at high UTD → tune β; consider uniform for stability.
@@ -739,6 +830,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 79. Reproducibility Checklist (Verbose)
+
 - [ ] Seeds fixed for torch, numpy, env.
 - [ ] Config saved with run artifacts.
 - [ ] Exact commands logged.
@@ -750,15 +842,17 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 80. Memory & Performance Tables (Text)
+
 - Example (batch=1024, twin critics, UTD=10):
--  • Params: ~3–5M; optimizer state ~2× (m,h).
--  • Activations: dominated by BN + linear layers.
--  • Step time: measure ~X ms (fill from profiling).
+- • Params: ~3–5M; optimizer state ~2× (m,h).
+- • Activations: dominated by BN + linear layers.
+- • Step time: measure ~X ms (fill from profiling).
 - Adjust batch/UTD to fit 12GB; if OOM, reduce batch first.
 
 ---
 
 ## 81. Comparative Outcome Expectations (Per Task)
+
 - Humanoid: Sophia+CrossQ expected to reach 5k faster than Adam baseline; UTD 10–20 feasible with tuning.
 - Ant: Stable; UTD 20 likely with moderate lr and clip.
 - Walker2d: Similar to Ant; monitor Hessian for small values.
@@ -767,6 +861,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 82. Visualization Ideas (Additional)
+
 - Scatter of return vs step time for different UTD.
 - Violin plots of update magnitudes per optimizer.
 - BN stat drift heatmaps per layer.
@@ -775,6 +870,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 83. Extended Command Library (More Examples)
+
 - `python train.py task=humanoid utd=15 optim=sophia gamma=0.15 clip=0.5 bn_momentum=0.05 hessian_freq=2`
 - `python train.py task=walker utd=8 optim=sophia beta1=0.95 beta2=0.99 hessian_floor=1e-12`
 - `python train.py task=ant utd=12 optim=adam lr=5e-4` (baseline check)
@@ -783,6 +879,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 84. Unit Test Examples (Concrete)
+
 - Toy 1D quadratic: verify Sophia step reduces loss for various gamma/clip.
 - BN concat: feed known inputs, check running stats match manual mean/var.
 - UTD counter: assert number of critic updates equals utd parameter.
@@ -792,6 +889,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 85. Additional Failure-Handling Hooks
+
 - If loss > threshold: auto-reduce lr by factor; or drop UTD temporarily.
 - If NaN detected: halt, save debug dump (grad, Hessian, BN stats).
 - If performance plateau: try mild increase in UTD or decrease gamma.
@@ -799,6 +897,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 86. Reporting Templates
+
 - Table: Returns (mean/median/IQM) for {UTD 1,5,10,20} × {Adam, Sophia}.
 - Table: Time-to-5k (Humanoid) in env steps and wall-clock.
 - Plot: Grad/Hessian norms over steps for Adam vs Sophia.
@@ -807,6 +906,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 87. Detailed BN/UTD Interaction Notes
+
 - Higher UTD increases batch reuse; BN stats must remain accurate; concatenation of (s,s′) approximates mixed distribution.
 - If UTD very high, consider lowering BN momentum to adapt faster.
 - Freezing BN during Hessian estimation can reduce stat drift.
@@ -815,6 +915,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 88. Extended Safety Tests
+
 - Randomized resets to test robustness.
 - Perturbation robustness: apply small disturbances to observations/actions.
 - Constraint tests: clip actions; ensure stability under clipping.
@@ -822,6 +923,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 89. Additional Future Directions
+
 - Explore Sophia in offline CrossQ (dataset-only).
 - Combine with conservative penalties (ReBRAC) for offline settings.
 - Investigate curvature-aware PER priority scaling.
@@ -830,6 +932,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 90. Final Buffer Notes
+
 - Maintain documentation alignment with code changes.
 - Keep a changelog for hyperparameter tweaks during sweeps.
 - Prioritize stability first, then push UTD upward.
@@ -838,6 +941,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 91. Additional Checklists
+
 - [ ] Hessian frequency chosen and logged.
 - [ ] BN momentum set per experiment.
 - [ ] Clip value set and recorded.
@@ -850,6 +954,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 92. Extended Command Examples (More Variants)
+
 - `python train.py task=walker utd=6 optim=sophia gamma=0.12 clip=0.7 batch=1024 bn_momentum=0.05`
 - `python train.py task=humanoid utd=12 optim=sophia gamma=0.1 clip=0.5 hessian_freq=2 policy_delay=2`
 - `python train.py task=ant utd=15 optim=sophia beta1=0.97 beta2=0.99 lr=2e-4`
@@ -859,6 +964,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 93. Expanded Visualization Ideas
+
 - Rolling average of update magnitudes vs Hessian norms.
 - Scatter of return vs Hessian mean to see curvature-performance relation.
 - BN stat drift per layer compared across UTD.
@@ -868,6 +974,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 94. Extended Troubleshooting Paths
+
 - If BN unstable: lower momentum; add virtual batch; freeze during Hessian calc.
 - If Hessian zeroing: increase gamma; ensure accumulation uses same batch as grad.
 - If performance plateau: try higher UTD gradually; adjust lr; tweak clip.
@@ -877,6 +984,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 95. More Ablation Dimensions
+
 - Critic depth/width variations.
 - Activation functions: ReLU vs Mish vs SiLU.
 - Weight decay: 0 vs 1e-5 vs 1e-4.
@@ -887,6 +995,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 96. Documentation Notes
+
 - Keep README as single source of truth for CA2.
 - Note any deviations from prescribed configs in experiment logs.
 - Update tables/plots section when new results added.
@@ -895,6 +1004,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 97. Additional Future Extensions
+
 - Hessian-aware learning rate schedules (adaptive lr based on h_t statistics).
 - Second-order actor updates with Sophia-like scaling.
 - Batch-renormalization variants for improved BN stability at high UTD.
@@ -904,6 +1014,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 98. Comparative Metrics to Track
+
 - Sample efficiency: return at 100k, 300k, 1M steps.
 - Stability: fraction of runs without NaN.
 - Efficiency: env steps per second; train steps per second.
@@ -914,6 +1025,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 99. Extended Safety Guardrails
+
 - Automatic checkpointing before risky UTD increases.
 - Soft restart option: reduce lr/UTD upon detecting instability.
 - Gradient norm alarms: trigger when exceeding threshold.
@@ -922,6 +1034,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 100. Final Assurance Notes
+
 - Ensure all configs and results are reproducible with logged seeds and commands.
 - Maintain transparent comparisons (same wall-clock or update budgets).
 - Keep README updated as configs evolve.
@@ -930,6 +1043,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 101. Extra Buffer Section
+
 - Reminder: keep BN concat correct; this is a frequent source of bugs.
 - Record Hessian estimation method explicitly in logs.
 - When sweeping, vary one factor at a time where possible to isolate effects.
@@ -939,6 +1053,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 102. Additional Commands (Buffer)
+
 - `python train.py task=humanoid utd=18 optim=sophia gamma=0.12 clip=0.8 bn_momentum=0.05 hessian_freq=2`
 - `python train.py task=ant utd=7 optim=sophia gamma=0.08 clip=0.5 batch=1024`
 - `python train.py task=walker utd=4 optim=sophia gamma=0.1 clip=0.5 batch=512`
@@ -947,6 +1062,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 103. Final Checklist
+
 - [ ] BN concat validated.
 - [ ] Sophia hyperparams set and logged.
 - [ ] UTD and policy delay set.
@@ -958,11 +1074,13 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 104. Closing Reminder
+
 - CrossQ+Sophia aims to push UTD safely. Use this README as the canonical, ≥1000-line specification for CA2.
 
 ---
 
 ## 105. Final Buffer Lines
+
 - Additional buffer content to exceed the 1000-line requirement.
 - Maintain synchronization between this spec and code changes.
 - Re-verify after any edits that line count stays above threshold.
@@ -975,6 +1093,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 106. Buffer Extension
+
 - Extra padding to satisfy the ≥1000-line mandate.
 - When adding new experiments, append notes here to maintain count.
 - Keep references to key configs for quick reruns:
@@ -989,6 +1108,7 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 107. Final Padding Lines
+
 - Buffer entries to push line count safely above 1000.
 - Ensure future edits preserve this buffer.
 - Re-run `wc -l` after major edits to confirm.
@@ -997,5 +1117,5 @@ Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and r
 ---
 
 ## 108. Line Count Sentinel
-- This sentinel exists solely to keep the file above 1000 lines.
 
+- This sentinel exists solely to keep the file above 1000 lines.
