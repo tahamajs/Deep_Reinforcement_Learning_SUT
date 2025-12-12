@@ -227,6 +227,15 @@ The grading will be based on the following criteria, with a total of 290 points:
 
 {\fontfamily{lmss}\selectfont {\color{DarkBlue}
 
+\section{Implementation and Reproducibility Notes}
+\begin{itemize}
+    \item Begin experiments with a centralized seed/device cell (for \texttt{random}, \texttt{numpy}, \texttt{torch}, and CUDA) and log the selected device.
+    \item Save run metadata to \texttt{run\_info.json} (commit hash, hyperparameters, dataset/environment, hardware); align reported results with that snapshot.
+    \item Keep secrets (e.g., W\&B API keys) in environment variables or a local \texttt{.env} that is ignored by git; never hardcode them in notebooks.
+    \item Notebook flow should follow: overview $\rightarrow$ setup/config $\rightarrow$ data/env $\rightarrow$ model $\rightarrow$ training $\rightarrow$ evaluation; this report should reflect the exact settings used.
+    \item Before long runs, run quick checks (e.g., \texttt{python -m py\_compile} on edited modules) and perform a short smoke rollout for shape/finite-loss sanity.
+\end{itemize}
+
 \section{Task 1: Bootstrap DQN Variants}
 
 \subsection{Introduction and Background}
