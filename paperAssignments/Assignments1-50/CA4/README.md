@@ -516,18 +516,18 @@ def quantile_huber(pred, target, taus, kappa=1.0):
 
 ## 12. Hyperparameters (Suggested Defaults)
 
-| Component      | Setting                  | Value                  |
-| -------------- | ------------------------ | ---------------------- |
-| Quantiles      | $N$                      | 50                     |
-| Critics        | $M$                      | 2 (option 5)           |
-| CVaR level     | $\alpha$                | 0.1                    |
-| LR             | Critic/Actor             | $3\mathrm{e}{-4}$      |
-| Batch          |                          | 256                    |
-| Target $\tau$  |                          | 0.005                  |
-| SCAS $\lambda$ | $\lambda_\text{base}$    | 1.0                    |
-| Entropy $\beta$|                          | 0.2                    |
-| Discount       | $\gamma$                | 0.99 (0.995 AntMaze)   |
-| Dyn hidden     |                          | 256                    |
+| Component       | Setting               | Value                |
+| --------------- | --------------------- | -------------------- |
+| Quantiles       | $N$                   | 50                   |
+| Critics         | $M$                   | 2 (option 5)         |
+| CVaR level      | $\alpha$              | 0.1                  |
+| LR              | Critic/Actor          | $3\mathrm{e}{-4}$    |
+| Batch           |                       | 256                  |
+| Target $\tau$   |                       | 0.005                |
+| SCAS $\lambda$  | $\lambda_\text{base}$ | 1.0                  |
+| Entropy $\beta$ |                       | 0.2                  |
+| Discount        | $\gamma$              | 0.99 (0.995 AntMaze) |
+| Dyn hidden      |                       | 256                  |
 
 ---
 
@@ -651,16 +651,17 @@ Distributional State-Corrected Action Suppression combines pessimistic distribut
 
 **Matrix (rows = env, cols = settings):**
 
-| Env | Base | +SCAS | +SCAS+Adaptive $\lambda$ | +SCAS+Adaptive $\lambda$+Ensemble5 | +Sophia-G |
-| --- | ---- | ----- | ----------------------- | ---------------------------------- | -------- |
-| Hopper-m | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Walker2d-m | ✓ | ✓ | ✓ | ✓ | ✓ |
-| HalfCheetah-m | ✓ | ✓ | ✓ | ✓ | ✓ |
-| AntMaze-umaze | ✓ | ✓ | ✓ | ✓ | ✓ |
-| AntMaze-medium | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Kitchen-mixed | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Env            | Base | +SCAS | +SCAS+Adaptive $\lambda$ | +SCAS+Adaptive $\lambda$+Ensemble5 | +Sophia-G |
+| -------------- | ---- | ----- | ------------------------ | ---------------------------------- | --------- |
+| Hopper-m       | ✓    | ✓     | ✓                        | ✓                                  | ✓         |
+| Walker2d-m     | ✓    | ✓     | ✓                        | ✓                                  | ✓         |
+| HalfCheetah-m  | ✓    | ✓     | ✓                        | ✓                                  | ✓         |
+| AntMaze-umaze  | ✓    | ✓     | ✓                        | ✓                                  | ✓         |
+| AntMaze-medium | ✓    | ✓     | ✓                        | ✓                                  | ✓         |
+| Kitchen-mixed  | ✓    | ✓     | ✓                        | ✓                                  | ✓         |
 
 **Logging (per step / episode):**
+
 - Critic loss, SCAS loss, CVaR value, entropy.
 - IQR, $\lambda(s,a)$ statistics (mean, p95).
 - OOD action distance (to BC logits or Gaussian KL).
@@ -708,6 +709,7 @@ Distributional State-Corrected Action Suppression combines pessimistic distribut
 ## 29. Sample YAML Configs
 
 **hopper-medium-expert.yaml**
+
 ```
 env: hopper-medium-expert-v2
 seed: 0
@@ -726,6 +728,7 @@ use_amp: true
 ```
 
 **antmaze-medium-diverse.yaml**
+
 ```
 env: antmaze-medium-diverse-v2
 seed: 0
@@ -845,13 +848,13 @@ def evaluate(policy, env, episodes=10):
 
 ## 38. Risks and Mitigations Table
 
-| Risk | Cause | Mitigation |
-| ---- | ----- | ---------- |
-| NaN loss | overflow in sort/Huber | clip rewards, lower LR, AMP autocast |
-| Over-conservatism | high $\lambda$ | cap $\lambda$, schedule decay |
-| Under-penalization | low IQR | floor $\lambda$ at base value |
-| Dynamics overfit | small buffer | dropout/weight decay; ensemble |
-| Eval variance | stochasticity | 10 seeds for AntMaze |
+| Risk               | Cause                  | Mitigation                           |
+| ------------------ | ---------------------- | ------------------------------------ |
+| NaN loss           | overflow in sort/Huber | clip rewards, lower LR, AMP autocast |
+| Over-conservatism  | high $\lambda$         | cap $\lambda$, schedule decay        |
+| Under-penalization | low IQR                | floor $\lambda$ at base value        |
+| Dynamics overfit   | small buffer           | dropout/weight decay; ensemble       |
+| Eval variance      | stochasticity          | 10 seeds for AntMaze                 |
 
 ---
 
@@ -912,15 +915,15 @@ Dist-SCAS is designed for practitioners needing robust offline RL under severe d
 
 ## 45. Benchmark-Specific Hyperparameters
 
-| Env | $\gamma$ | $\alpha$ | $\lambda_\text{base}$ | Batch | Entropy $\beta$ | Notes |
-| --- | -------- | -------- | --------------------- | ----- | --------------- | ----- |
-| Hopper-medium | 0.99 | 0.1 | 1.0 | 256 | 0.2 | standard |
-| Hopper-medium-expert | 0.99 | 0.1 | 1.0 | 256 | 0.2 | keep LR 3e-4 |
-| Walker2d-medium | 0.99 | 0.1 | 1.0 | 256 | 0.2 | grad clip 10 |
-| HalfCheetah-medium | 0.99 | 0.1 | 0.8 | 256 | 0.2 | clip reward [-10,10] |
-| AntMaze-umaze | 0.995 | 0.1 | 2.0 | 512 | 0.1 | larger batch, longer horizon |
-| AntMaze-medium | 0.995 | 0.1 | 2.5 | 512 | 0.1 | stronger SCAS |
-| Kitchen-mixed | 0.99 | 0.1 | 1.5 | 512 | 0.1 | hidden 1024, LayerNorm |
+| Env                  | $\gamma$ | $\alpha$ | $\lambda_\text{base}$ | Batch | Entropy $\beta$ | Notes                        |
+| -------------------- | -------- | -------- | --------------------- | ----- | --------------- | ---------------------------- |
+| Hopper-medium        | 0.99     | 0.1      | 1.0                   | 256   | 0.2             | standard                     |
+| Hopper-medium-expert | 0.99     | 0.1      | 1.0                   | 256   | 0.2             | keep LR 3e-4                 |
+| Walker2d-medium      | 0.99     | 0.1      | 1.0                   | 256   | 0.2             | grad clip 10                 |
+| HalfCheetah-medium   | 0.99     | 0.1      | 0.8                   | 256   | 0.2             | clip reward [-10,10]         |
+| AntMaze-umaze        | 0.995    | 0.1      | 2.0                   | 512   | 0.1             | larger batch, longer horizon |
+| AntMaze-medium       | 0.995    | 0.1      | 2.5                   | 512   | 0.1             | stronger SCAS                |
+| Kitchen-mixed        | 0.99     | 0.1      | 1.5                   | 512   | 0.1             | hidden 1024, LayerNorm       |
 
 ---
 
@@ -940,19 +943,19 @@ def compute_lambda(pooled_qs, lambda_base):
 
 ## 47. Symbol Glossary (for consistency with code)
 
-| Symbol | Meaning | Code variable |
-| ------ | ------- | ------------- |
-| $s,a$ | state, action | `s`, `a` |
-| $r$ | reward | `r` |
-| $d$ | done flag | `d` |
-| $\gamma$ | discount | `gamma` |
-| $\alpha$ | CVaR level | `alpha_cvar` |
-| $N$ | quantiles per critic | `n_quantiles` |
-| $M$ | number of critics | `n_critics` |
-| $\kappa$ | Huber threshold | `kappa` |
-| $\lambda$ | SCAS weight | `lambda_base` / `lambda_sa` |
-| $\beta$ | entropy coeff | `entropy_beta` |
-| $\tau$ | target Polyak | `target_tau` |
+| Symbol    | Meaning              | Code variable               |
+| --------- | -------------------- | --------------------------- |
+| $s,a$     | state, action        | `s`, `a`                    |
+| $r$       | reward               | `r`                         |
+| $d$       | done flag            | `d`                         |
+| $\gamma$  | discount             | `gamma`                     |
+| $\alpha$  | CVaR level           | `alpha_cvar`                |
+| $N$       | quantiles per critic | `n_quantiles`               |
+| $M$       | number of critics    | `n_critics`                 |
+| $\kappa$  | Huber threshold      | `kappa`                     |
+| $\lambda$ | SCAS weight          | `lambda_base` / `lambda_sa` |
+| $\beta$   | entropy coeff        | `entropy_beta`              |
+| $\tau$    | target Polyak        | `target_tau`                |
 
 ---
 
@@ -970,6 +973,7 @@ def compute_lambda(pooled_qs, lambda_base):
 ## 49. Data Structures
 
 Replay element:
+
 ```
 {
   "obs": float32[s_dim],
@@ -981,6 +985,7 @@ Replay element:
 ```
 
 Batch tensors:
+
 - `obs` [B, s_dim], `actions` [B, a_dim], `rewards` [B,1], `next_obs` [B, s_dim], `dones` [B,1].
 - Optional: store behavior log-probs to compute action KL OOD metric.
 
