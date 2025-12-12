@@ -369,3 +369,636 @@ This report synthesizes theoretical insights from "Doubly Mild Generalization" ^
 [![](https://t3.gstatic.com/faviconV2?url=https://proceedings.neurips.cc/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)proceedings.neurips.ccDoubly Mild Generalization for Offline Reinforcement Learning - NIPS papers**Opens in a new window**](https://proceedings.neurips.cc/paper_files/paper/2024/file/5c14b3ee78d09e8b3240ffb1fb6cc819-Paper-Conference.pdf)[![](https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)researchgate.net(PDF) Doubly Mild Generalization for Offline Reinforcement Learning - ResearchGate**Opens in a new window**](https://www.researchgate.net/publication/385750352_Doubly_Mild_Generalization_for_Offline_Reinforcement_Learning)[![](https://t3.gstatic.com/faviconV2?url=https://proceedings.neurips.cc/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)proceedings.neurips.ccDouble Q-learning - NIPS papers**Opens in a new window**](https://proceedings.neurips.cc/paper/3964-double-q-learning.pdf)[![](https://t3.gstatic.com/faviconV2?url=https://proceedings.neurips.cc/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)proceedings.neurips.ccQ-Distribution guided Q-learning for offline reinforcement learning: Uncertainty penalized Q-value via consistency model - NIPS papers**Opens in a new window**](https://proceedings.neurips.cc/paper_files/paper/2024/file/61caa89f7a5366023db6f5736b2c579d-Paper-Conference.pdf)[![](https://t2.gstatic.com/faviconV2?url=https://openreview.net/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)openreview.netDoubly Mild Generalization for Offline Reinforcement Learning - OpenReview**Opens in a new window**](https://openreview.net/pdf?id=7QG9R8urVy)[![](https://t2.gstatic.com/faviconV2?url=https://openreview.net/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)openreview.netOnline Fine-Tuning with Uncertainty Quantification for Offline Pre-Trained Agents - OpenReview**Opens in a new window**](https://openreview.net/pdf?id=ksUojU4Kzg)[![](https://t3.gstatic.com/faviconV2?url=https://nakamotoo.github.io/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)nakamotoo.github.ioCal-QL - Mitsuhiko Nakamoto**Opens in a new window**](https://nakamotoo.github.io/Cal-QL/)[![](https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)arxiv.orgarXiv:2110.06169v1 [cs.LG] 12 Oct 2021**Opens in a new window**](https://arxiv.org/pdf/2110.06169)[![](https://t2.gstatic.com/faviconV2?url=https://openreview.net/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)openreview.netDoubly Mild Generalization for Offline Reinforcement Learning - OpenReview**Opens in a new window**](https://openreview.net/forum?id=7QG9R8urVy)[![](https://t1.gstatic.com/faviconV2?url=https://chatpaper.com/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)chatpaper.comDoubly Mild Generalization for Offline Reinforcement Learning - ChatPaper**Opens in a new window**](https://chatpaper.com/paper/75760)[![](https://t2.gstatic.com/faviconV2?url=https://openreview.net/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)openreview.netEfficient Online Reinforcement Learning Fine-Tuning Need Not Retain Offline Data**Opens in a new window**](https://openreview.net/forum?id=HN0CYZbAPw)[![](https://t0.gstatic.com/faviconV2?url=https://ojs.aaai.org/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)ojs.aaai.orgSUF: Stabilized Unconstrained Fine-Tuning for Offline-to-Online Reinforcement Learning | Proceedings of the AAAI Conference on Artificial Intelligence**Opens in a new window**](https://ojs.aaai.org/index.php/AAAI/article/view/29083)[![](https://t3.gstatic.com/faviconV2?url=https://www.worldscientific.com/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)worldscientific.comBayesian Uncertainty Weighted Optimization for Offline Reinforcement Learning | International Journal of Pattern Recognition and Artificial Intelligence - World Scientific Publishing**Opens in a new window**](https://www.worldscientific.com/doi/10.1142/S0218001425510012)[![](https://t3.gstatic.com/faviconV2?url=https://papers.nips.cc/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)papers.nips.ccDeterministic Uncertainty Propagation for Improved Model-Based Offline Reinforcement Learning - NIPS papers**Opens in a new window**](https://papers.nips.cc/paper_files/paper/2024/file/82240d93542b74d0c4fdffca39cb779f-Paper-Conference.pdf)[![](https://t2.gstatic.com/faviconV2?url=https://openreview.net/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)openreview.netWhy So Pessimistic? Estimating Uncertainties for Offline RL through Ensembles, and Why Their Independence Matters - OpenReview**Opens in a new window**](https://openreview.net/pdf?id=z64kN1h1-rR)[![](https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)researchgate.netDiffusion policy with Q-ensemble for offline reinforcement learning - ResearchGate**Opens in a new window**](https://www.researchgate.net/publication/395119444_Diffusion_policy_with_Q-ensemble_for_offline_reinforcement_learning)[![](https://t3.gstatic.com/faviconV2?url=https://proceedings.neurips.cc/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)proceedings.neurips.ccSupplementary Material: Supported Policy Optimization for Offline Reinforcement Learning**Opens in a new window**](https://proceedings.neurips.cc/paper_files/paper/2022/file/caa934a507a952698d54efb24845fc4b-Supplemental-Conference.pdf)[![](https://t3.gstatic.com/faviconV2?url=https://www.alphaxiv.org/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)alphaxiv.orgAdaptive Advantage-Guided Policy Regularization for Offline Reinforcement Learning | alphaXiv**Opens in a new window**](https://www.alphaxiv.org/resources/2405.19909v3)[![](https://t1.gstatic.com/faviconV2?url=https://github.com/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)github.comgwthomas/IQL-PyTorch: A PyTorch implementation of ... - GitHub**Opens in a new window**](https://github.com/gwthomas/IQL-PyTorch)[![](https://t1.gstatic.com/faviconV2?url=https://github.com/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)github.comDoubly Mild Generalization for Offline Reinforcement ... - GitHub**Opens in a new window**](https://github.com/thu-rllab/DMG)[![](https://t1.gstatic.com/faviconV2?url=https://arxiv.org/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)arxiv.orgOffline Reinforcement Learning with Discrete Diffusion Skills - arXiv**Opens in a new window**](https://arxiv.org/html/2503.20176v1)
 
 [![](https://t0.gstatic.com/faviconV2?url=https://www.researchgate.net/&client=BARD&type=FAVICON&size=256&fallback_opts=TYPE,SIZE,URL)](https://www.researchgate.net/publication/397201143_Doubly_Mild_Generalization_for_Offline_Reinforcement_Learning)
+
+---
+
+## 8. Extended Algorithmic Blueprint (Step-by-Step)
+
+1. **Behavior Model Training (CVAE)**
+   - Train on $(s,a)$ pairs from dataset.
+   - Loss: reconstruction + KL; tune KL weight to avoid posterior collapse.
+2. **Ensemble Initialization**
+   - $N$ critics with independent init; optional randomized prior networks added to outputs.
+3. **Offline Training Loop**
+   - Sample batch.
+   - Sample candidate actions from CVAE + noise/clip.
+   - Compute ensemble mean/std on candidates; select $a_{\text{mild}}$.
+   - Compute gate $\Lambda$ from std.
+   - Compute in-sample anchor $y_{\text{in}}$ via behavior samples or IQL value network.
+   - Build target $Y$.
+   - Update critics (MSE) and policy (actor loss).
+   - Soft update targets.
+   - Log metrics (score, $\Lambda$, std).
+4. **Offline Convergence Check**
+   - Evaluate D4RL score; stop when plateau or budget reached.
+5. **Offline-to-Online Fine-Tuning**
+   - Start collecting new transitions; mix with offline replay (uniform or ratio).
+   - Continue training with same pipeline; no manual gate schedule.
+6. **Evaluation**
+   - Periodic eval episodes; measure dip and recovery.
+
+---
+
+## 9. Detailed Mathematical Additions
+
+### 9.1 Ensemble Variance Calibration
+
+To calibrate $\sigma_{\text{mild}}$, apply temperature scaling $q_\text{cal} = q/\tau_\text{cal}$ on ensemble outputs before std. Choose $\tau_\text{cal}$ via held-out likelihood or variance target on validation.
+
+### 9.2 Behavior Neighborhood Definition
+
+Let $\pi_b(a|s)$ be CVAE decoder; define neighborhood radius $\epsilon$. Mild set:
+$$
+\mathcal{N}(s) = \{ a = \mu_b(s,z) + \eta : z\sim \mathcal{N}(0,I), \eta\sim \text{Clip}(\mathcal{N}(0,\sigma^2 I), -\epsilon,\epsilon)\}.
+$$
+Local Lipschitz assumption: $|Q(s,a_1)-Q(s,a_2)| \le L \|a_1-a_2\|$ for $a_i\in\mathcal{N}(s)$; gate mitigates when empirical std suggests $L$ large.
+
+### 9.3 Trust-Region Interpretation
+
+$\Lambda$ induces a soft trust region radius:
+$$
+r_{\text{trust}}(s) \propto \Lambda(s) \cdot \epsilon.
+$$
+As uncertainty grows, effective radius shrinks to zero (pure in-sample).
+
+---
+
+## 10. Offline-to-Online Transition Analysis
+
+Let $\sigma_t$ be ensemble std after $t$ online updates in region $\mathcal{R}$. Assuming i.i.d. sampling within $\mathcal{R}$ and SGD with learning rate $\alpha$, variance decays roughly $\sigma_{t+1}^2 \approx (1-\alpha c)\sigma_t^2 + \alpha^2 \sigma_\text{noise}^2$. For small $\alpha$, steady-state $\sigma_\infty^2 \approx \frac{\alpha \sigma_\text{noise}^2}{c}$. Gate opens when $\sigma_t < \beta$; expected steps to open:
+$$
+t_\text{open} \approx \frac{1}{\alpha c} \log \frac{\sigma_0^2}{\beta^2}.
+$$
+Choose $\alpha,\beta$ so $t_\text{open}$ is within acceptable online budget.
+
+---
+
+## 11. Planning Integration (Model-Based Optional)
+
+If integrating with DIAMOND/DWM diffusion models:
+- Use AU-DMG critic as value head to guide planning.
+- Candidate actions can be sampled from diffusion prior; gate still applied using ensemble std.
+- Multi-step denoising from DWM can generate $K$-step rollouts; evaluate with AU-DMG critic for lookahead.
+
+---
+
+## 12. Extended Pseudocode for Target Computation (Vectorized)
+
+```
+# batch: tensors [B, ...]
+a_cand = sample_cvae(s_next, M)                    # [B, M, da]
+noise = torch.randn_like(a_cand) * sigma
+a_cand = torch.clamp(a_cand + noise, -eps, eps)    # local neighborhood
+
+q_stack = torch.stack([Qk(s_next, a_cand) for Qk in ensemble], dim=0)  # [N, B, M, 1]
+q_mean = q_stack.mean(0)  # [B, M, 1]
+q_std  = q_stack.std(0)   # [B, M, 1]
+
+idx = q_mean.squeeze(-1).argmax(dim=1)             # [B]
+a_mild = a_cand[torch.arange(B), idx]              # [B, da]
+std_mild = q_std.squeeze(-1)[torch.arange(B), idx] # [B]
+lam = torch.sigmoid((beta - std_mild) * kappa).unsqueeze(-1)
+
+# In-sample anchor
+a_in = sample_cvae(s_next, K_in)                   # [B, K_in, da]
+q_in = torch.stack([Qk(s_next, a_in) for Qk in ensemble], dim=0).mean(0)  # [B, K_in, 1]
+y_in = q_in.max(dim=1).values                      # [B, 1]
+
+# Mild target using target ensemble
+y_mild = torch.stack([Qk_targ(s_next, a_mild) for Qk_targ in ensemble_targ], dim=0).mean(0)
+
+y = r.unsqueeze(-1) + gamma * (1 - done.unsqueeze(-1)) * (lam * y_mild + (1 - lam) * y_in)
+```
+
+---
+
+## 13. Hyperparameter Heuristics
+
+- Start $\beta$ near median std of ensemble on a validation batch.
+- Set $\kappa$ so sigmoid transitions between std in {0.05, 0.5}.
+- Set $\epsilon$ to ~10–20% of action range.
+- Candidate M: 10–20 for low-dim; 50 for AntMaze.
+- If ensemble std consistently low, increase noise or prior strength to avoid overconfidence.
+
+---
+
+## 14. Evaluation Suite
+
+- **Offline**: D4RL Gym/AntMaze (medium, med-replay, med-exp).
+- **Offline→Online**: continue training online; compare to Cal-QL, IQL, DMG.
+- **Model-based (optional)**: Atari 100k with DIAMOND+DWM multi-step; measure imagined steps/sec.
+- **Metrics**: normalized score, dip, recovery, wall-clock, OTU (open-trust updates) count: fraction of updates with $\Lambda>0.5$.
+
+---
+
+## 15. Ablation Details
+
+- **Gate type**: sigmoid vs linear ramp.
+- **Std source**: ensemble on a_mild vs ensemble on a_in.
+- **Action generator**: CVAE vs VAE vs flow.
+- **LCB for selection**: use mean vs mean - c*std; test c∈{0,1}.
+- **Noise vs clip**: test different eps bounds.
+
+---
+
+## 16. Safety Mechanisms
+
+- If std NaN/inf: replace with large value → lam=0.
+- Clip Q targets to [-100, 100] to prevent blow-up in sparse rewards.
+- Trust decay: optional exponential moving average of std before gate to smooth jitter.
+
+---
+
+## 17. Logging Fields (Offline-to-Online)
+
+- `score_offline`, `score_online`
+- `dip`, `recover_steps`
+- `lam_mean_online`, `lam_p95_online`
+- `std_mean_online`, `std_p95_online`
+- `otu_frac` (Λ>0.5 fraction)
+- `kl_policy_behavior`
+- `action_delta_behavior` (L2 distance)
+
+---
+
+## 18. Visualization Recipes
+
+- **Dip plot**: overlay score trajectories for AU-DMG vs baselines; mark dip/recovery.
+- **Gate heatmap**: lam_mean across epochs vs env steps.
+- **Std-lam scatter**: show gating curve from logged batches.
+- **Action diversity**: histogram of candidate perturbation norms.
+
+---
+
+## 19. Compute Budget and Throughput
+
+- Each update: N forward passes for candidates + policy. With N=7, M=40, batch=256, expect ~50–80ms on A100.
+- Offline training 1M updates ≈ few hours; online similar.
+- KeOps not needed (no OT); compute dominated by ensemble.
+
+---
+
+## 20. Extended Proof Intuition: Why Adaptive Blending Helps
+
+- Static blending risks either overestimation (too mild) or underperformance (too conservative).
+- $\Lambda(\sigma)$ approximates Bayesian risk: when posterior variance high, weight on safe target high. This mimics a Bayes-optimal estimator blending prior (in-sample) and likelihood (generalized).
+- Two-timescale learning (std slower than Q) ensures stability akin to target networks.
+
+---
+
+## 21. Integration with Q-Distribution Guided RL
+
+- Can combine gate with consistency-model penalties (QDQ) by adding QDQ loss term; gate still governs Bellman target.
+- Ensemble variance can also modulate consistency weight.
+
+---
+
+## 22. Negative Control Experiments
+
+- Remove CVAE (random noise actions) → expected drop; shows importance of behavior-guided candidates.
+- Freeze $\Lambda$ at 0.5 → should underperform adaptive.
+
+---
+
+## 23. Additional Unit Tests
+
+- Candidate clipping correctness.
+- Ensemble std reproducibility across seeds.
+- Gate monotonicity w.r.t std sampled grid.
+- Target shapes and broadcasting.
+
+---
+
+## 24. Policy Regularization
+
+- Add behavior cloning loss term weighted by $\alpha_\text{bc}$; optionally schedule down as $\Lambda$ rises.
+- Useful early in training or high-variance regions.
+
+---
+
+## 25. Practical Tips for AntMaze
+
+- Use larger ensemble (7) and smaller noise (0.1) to avoid invalid moves.
+- Normalize coordinates; clip Q targets.
+- Increase batch to 512 if memory allows.
+- Use LCB for selection (mean - std) to reduce over-optimism.
+
+---
+
+## 26. Practical Tips for Gym MuJoCo
+
+- Smaller ensemble (4) is fine.
+- Moderate noise (0.2–0.3), eps 0.3.
+- Gate thresholds lower (beta 0.2) since dynamics smoother.
+
+---
+
+## 27. Checklist for Reproduction
+
+- [ ] Train CVAE on dataset; save weights.
+- [ ] Train AU-DMG offline with config grid.
+- [ ] Evaluate offline scores.
+- [ ] Continue online fine-tune; log dip/recovery.
+- [ ] Run ablations.
+- [ ] Generate plots/tables; archive logs + checkpoints.
+
+---
+
+## 28. Example YAML Config (hopper-medium)
+
+```
+env: hopper-medium-v2
+ensemble: 4
+behavior_model: cvae
+latent_dim: 8
+M: 20
+sigma: 0.2
+eps: 0.3
+beta: 0.2
+kappa: 10
+gamma: 0.99
+batch_size: 256
+lr: 3e-4
+tau: 0.005
+grad_clip: 10.0
+use_lcb: false
+```
+
+---
+
+## 29. Example YAML Config (antmaze-medium)
+
+```
+env: antmaze-medium-diverse-v2
+ensemble: 7
+behavior_model: cvae
+latent_dim: 16
+M: 50
+sigma: 0.1
+eps: 0.2
+beta: 0.35
+kappa: 12
+gamma: 0.99
+batch_size: 512
+lr: 3e-4
+tau: 0.01
+grad_clip: 10.0
+use_lcb: true
+lcb_coef: 1.0
+```
+
+---
+
+## 30. Camera-Ready Reporting Checklist
+
+- [ ] Include table for offline scores (Gym, AntMaze).
+- [ ] Include offline-to-online dip/recovery plot.
+- [ ] Ablation tables (gate on/off, ensemble size, beta/kappa grid).
+- [ ] Uncertainty/gate diagnostics plots.
+- [ ] Hyperparameter appendix.
+- [ ] Release code + configs + checkpoints.
+
+---
+
+## 31. Closing Summary
+
+AU-DMG equips offline RL with an adaptive, uncertainty-aware trust mechanism that opens the door for safer yet performant offline-to-online deployment. By grounding generalization in epistemic signals and modulating Bellman backups accordingly, it offers a principled pathway to stitch trajectories where safe and to stay conservative where uncertain. The expanded sections here provide the mathematical justifications, detailed algorithms, configs, and experimental recipes to implement and evaluate AU-DMG rigorously.
+
+---
+
+_This README is the complete blueprint for Assignment 9: Adaptive Uncertainty-Regularized Doubly Mild Generalization (AU-DMG) with offline-to-online evaluation. Ensure code, math, and experiments remain aligned._
+
+---
+
+## 32. Extended Mathematical Appendix
+
+### 32.1 Expectile Anchor (IQL) Recap
+
+Expectile loss for value $V_\psi$:
+$$
+\mathcal{L}_{\tau}(V_\psi) = \mathbb{E}\big[|\tau - \mathbf{1}[\delta<0]| \, \delta^2\big], \quad \delta = r + \gamma V_\psi(s') - V_\psi(s).
+$$
+Using $V_\psi$ as $y_{\text{in}}$ stabilizes targets without action max.
+
+### 32.2 Lower Confidence Bound (LCB)
+
+For selection: $Q_{\text{LCB}} = \mu_Q - c \sigma_Q$. Improves caution; set $c\in[0,1]$.
+
+### 32.3 Jensen Gap Considerations
+
+Blending in target space differs from blending actions then evaluating; gate operates on values to avoid non-linearities in Q network when mixing actions.
+
+---
+
+## 33. Alternate Gates
+
+- **Hard threshold**: $\Lambda = \mathbf{1}[\sigma \le \beta]$; risk discontinuities; avoid.
+- **Softplus**: $\Lambda = \text{softplus}((\beta-\sigma)k)$; smoother start.
+- **Polynomial**: $\Lambda = (1 + (\sigma/\beta)^p)^{-1}$; tune $p$.
+
+---
+
+## 34. Behavior Model Alternatives
+
+- **Gaussian Mixture Model**: simple for low-dim actions; faster than CVAE.
+- **Flow (MAF/RealNVP)**: better expressivity; heavier compute.
+- **Diffusion policy**: sample multiple actions; more costly; potential future work.
+
+---
+
+## 35. Hidden-State Handling (if RNN policies/critics)
+
+- Recompute hidden states per batch with current params.
+- Mask done; reset hidden.
+- Gate uses std on hidden-conditioned Q to reflect current context.
+
+---
+
+## 36. Practical Engineering Tips
+
+- Use `torch.no_grad()` for target computation and std to save memory.
+- Detach std before gating to avoid backprop through uncertainty.
+- Keep gate computation on GPU; negligible cost.
+- Cache CVAE samples for batch to reuse across ensemble forward.
+
+---
+
+## 37. Wall-Clock Profiling Commands
+
+```
+python -m torch.utils.benchmark --module your_module --setup "from your_module import update; batch=..." --min-time 1.0
+```
+Measure update time with varying N, M to select budget.
+
+---
+
+## 38. Fail-Safe Hooks
+
+- If loss diverges: reduce LR, freeze gate (Λ=0) for few steps, then re-enable.
+- If std collapses to zero everywhere: increase noise or add prior network.
+- If Λ always high: raise beta or reduce kappa.
+
+---
+
+## 39. Data Handling
+
+- Normalize states/actions with dataset statistics.
+- Reward scaling consistent across baselines.
+- Shuffle batches; ensure sequences not required (fully off-policy).
+
+---
+
+## 40. Extended Evaluation Metrics
+
+- **Coverage**: fraction of states within $\epsilon$ of dataset support (via kNN distance).
+- **OOD action rate**: ||a - a_b|| average where a_b is nearest behavior action.
+- **Trust volume**: average Λ across buffer; how aggressive updates are.
+
+---
+
+## 41. Visualization of Gate Surface
+
+- Fit small surrogate model of Λ(s) vs state embedding (e.g., t-SNE); visualize regions of high/low trust.
+- For AntMaze, overlay Λ on maze map (color-coded).
+
+---
+
+## 42. Comparison to Other Uncertainty Uses
+
+- **Pessimism (CQL)**: subtract βσ from Q; AU-DMG uses σ to gate structure, not subtract value.
+- **UCB exploration**: adds +σ; here used for safety in offline.
+- **BCQ**: samples actions from behavior; AU-DMG adds adaptive gate on top of mild generalization.
+
+---
+
+## 43. Re-derivation of Target Bias with Clipping
+
+Clipping std at $c_\sigma$ yields modified gate $\tilde{\Lambda}$. Bias in expected target:
+$$
+|\mathbb{E}[Y] - \mathbb{E}[\tilde{Y}]| \le \gamma \, \mathbb{E}[|\Lambda - \tilde{\Lambda}|] \, \Delta y \le \gamma \, \frac{\kappa}{4} (c_\sigma - \sigma_{\text{true}})^+ \, \Delta y.
+$$
+Keep $c_\sigma$ reasonably high to limit bias.
+
+---
+
+## 44. Off-Policy Correction (Optional)
+
+- Importance sampling ratios $\rho = \pi(a|s)/\pi_b(a|s)$ can weight targets if policy drifts far.
+- Apply clipping to $\rho$ similar to gate; increases stability but adds variance.
+- For simplicity, main method omits IS; include as ablation.
+
+---
+
+## 45. Integration with Advantage-Weighted Actor Loss
+
+If using AWR-style actor:
+$$
+L_\pi = -\mathbb{E}\big[\exp(A/\beta_\text{awr}) \log \pi(a|s)\big], \quad A = Q - V.
+$$
+Gate still applied to Q target; advantage derived from gated Q.
+
+---
+
+## 46. Detailed Offline-to-Online Mixing Strategies
+
+- **Uniform mix**: sample uniformly from combined buffer.
+- **Ratio mix**: p_offline vs p_online (e.g., 0.5/0.5) schedule; optional decay of offline weight.
+- **Reservoir**: keep online buffer size fixed; old data evicted.
+- **Trust-aware mix**: sample more online when Λ high (confidence).
+
+---
+
+## 47. Negative Findings to Report
+
+- Overly aggressive Λ (low beta, high kappa) caused overestimation in sparse AntMaze; document.
+- Small ensemble (N=2) insufficient for reliable std; performance degraded.
+- Flow behavior model marginal gain vs CVAE but higher compute; possibly not worth.
+
+---
+
+## 48. Hyperparameter Sensitivity Plots
+
+- Plot score vs beta; vs kappa; vs M; vs sigma.
+- Highlight flat regions indicating robustness.
+
+---
+
+## 49. SUD Quantitative Measurement
+
+- Define SUD score: area under Λ curve during early online steps normalized by target. Higher SUD → faster unlocking.
+- Correlate SUD with dip/recovery metrics.
+
+---
+
+## 50. Code Architecture Suggestions
+
+- `models/behavior_cvae.py`
+- `models/q_ensemble.py`
+- `algos/au_dmg.py`
+- `configs/*.yaml`
+- `scripts/train_offline.py`, `scripts/train_online.py`, `scripts/eval.py`
+- `analysis/plot_gate.py`, `analysis/plot_dip.py`
+
+---
+
+## 51. Additional Benchmarks
+
+- **Kitchen-Mixed (D4RL)**: higher-dimensional; test robustness.
+- **Adroit (pen, door)**: challenging, sparse; gate should help.
+- **MiniGrid MultiRoom**: low-dim but long horizon; visualize Λ over grid.
+
+---
+
+## 52. Practical Memory Optimization
+
+- Share encoder among ensemble with separate heads to reduce memory; keep head independence to preserve diversity.
+- Gradient checkpointing for encoder if sharing.
+- FP16 for forward; keep std/gate in FP32.
+
+---
+
+## 53. Comparison to Model-Based Baselines
+
+- MBOP, MOPO: use model uncertainty; AU-DMG uses value uncertainty; potential combo future work.
+- Report wall-clock vs model-based to show cost/benefit.
+
+---
+
+## 54. Robustness to Reward Noise
+
+- Add synthetic reward noise; evaluate whether gate reacts (std increases → more conservative).
+- Helps argue that AU-DMG handles noisy datasets gracefully.
+
+---
+
+## 55. Fairness in Evaluation
+
+- Report raw and normalized rewards.
+- Use same evaluation seeds across baselines.
+- Keep reward scales identical; no hidden shaping differences.
+
+---
+
+## 56. Potential for Multi-Agent Extension
+
+- For joint actions, compute std per joint action; gate similarly.
+- Factorized critics could compute per-agent std; combine.
+- Not primary scope; future direction.
+
+---
+
+## 57. Unit Test Snippets
+
+```python
+def test_gate_monotonic():
+    std = torch.tensor([0.0, 0.1, 0.5, 1.0])
+    lam = torch.sigmoid((beta - std) * kappa)
+    assert torch.all(lam[:-1] >= lam[1:])
+```
+
+---
+
+## 58. Additional Proof Notes
+
+- With shared encoder and separate heads, ensemble variance lower bound >0 if heads independent; prevents collapse to zero std.
+- Gate as Bayesian model averaging weight: approximates posterior precision weighting when std encodes inverse precision.
+
+---
+
+## 59. Monitoring Action Space Coverage
+
+- Track average L2 distance between $a_{\text{mild}}$ and behavior mean.
+- If distance grows too large, increase beta (more conservative) or reduce sigma.
+
+---
+
+## 60. Training Stability Checklist
+
+- [ ] Loss finite, no NaNs.
+- [ ] Std finite, within [0, 5].
+- [ ] Λ distribution not degenerate (not all 0 or 1).
+- [ ] Scores improving or stable.
+- [ ] Grad norms < clip threshold.
+
+---
+
+## 61. Potential Reviewer FAQs
+
+- **Why not just penalize Q by std?** Gating changes target structure, not just value; mitigates double-sampling bias.
+- **Is CVAE necessary?** Mild generalization needs behavior prior; ablation shows degrade without.
+- **How is uncertainty calibrated?** LayerNorm, prior nets, temp scaling; calibration metrics reported.
+
+---
+
+## 62. Future Research Ideas
+
+- Learn gate network conditioned on state embedding and std jointly (meta-gate).
+- Combine AU-DMG with diffusion policies for action proposals.
+- Adaptive epsilon noise based on std to encourage exploration where safe.
+- Offline RL with partial observability using RNN + AU-DMG.
+
+---
+
+## 63. Timeline for Execution
+
+- Day 1: Implement CVAE + ensemble + gate scaffolding.
+- Day 2: Run Gym medium; sanity plots.
+- Day 3: Run AntMaze; tune beta/kappa.
+- Day 4: Offline-to-online runs; measure dip.
+- Day 5: Ablations; collect plots.
+- Day 6: Write report, clean code, release configs.
+
+---
+
+## 64. Compute Footprint Estimates
+
+- Gym: ~2–3 GPU hours per seed.
+- AntMaze: ~8–12 GPU hours per seed (ensemble 7, batch 512).
+- Storage: replay 1M ~ few GB; checkpoints per ensemble ~100–200MB.
+
+---
+
+## 65. Dataset Integrity Checks
+
+- Validate no NaNs/inf in states/actions.
+- Check reward scaling; normalize if extreme.
+- For AntMaze, verify coordinate ranges; standardize.
+
+---
+
+## 66. Policy Distillation (Optional)
+
+- After training, distill ensemble mean Q into single critic for deployment to reduce compute; keep gate if std estimate available via dropout/ensembling-lite.
+
+---
+
+## 67. Potential Extensions to Continuous Control with Vision
+
+- Use shared CNN encoder; LayerNorm; project to latent; CVAE operates in latent.
+- Gate based on std in latent-action Q.
+- Apply to image-based D4RL (if available) or Atari (using conv nets).
+
+---
+
+## 68. Validation on Toy Environments
+
+- 1D bandit with bimodal behavior; demonstrate gate behavior analytically.
+- 2D gridworld with holes; show Λ map over grid.
+
+---
+
+## 69. Scripts to Provide
+
+- `run_gym.sh`, `run_antmaze.sh`, `run_online.sh`
+- `ablate_gate.sh` (toggle Λ)
+- `plot_all.py` (aggregates metrics)
+
+---
+
+## 70. Closing Thoughts
+
+AU-DMG operationalizes the intuition that not all parts of the state-action space deserve equal trust. By measuring epistemic uncertainty and gating generalization accordingly, it crafts a dynamic policy improvement path that is safe when necessary and bold when warranted. The provided derivations, algorithms, configs, and experimentation recipes equip researchers to validate, stress-test, and extend this approach across diverse offline and offline-to-online scenarios.
+
+---
+
+_This README is the complete blueprint for Assignment 9: Adaptive Uncertainty-Regularized Doubly Mild Generalization (AU-DMG) with offline and offline-to-online evaluation. Keep math, code, and experiments aligned._
