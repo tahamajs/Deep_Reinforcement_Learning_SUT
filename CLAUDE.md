@@ -21,6 +21,7 @@
 - **MUST NOT** delete/move assignment folders, test files, or templates; keep structure stable.
 - **MUST** keep random seeding deterministic in scripts and notebooks; thread seeds through configs and helper calls.
 - **MUST** respect Gym/Gymnasium API differences (reset/step signatures) when editing older assignments.
+- **MUST** keep code clean and self-explanatory; avoid unnecessary comments or commented-out code—prefer clear naming and structure instead.
 
 ### Best Practices (SHOULD)
 - **SHOULD** keep functions under ~60 lines; extract helpers in `utils/` or `experiments/`.

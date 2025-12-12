@@ -67,6 +67,7 @@ find Other_Assisments -name "*.ipynb"
 - Large `downloads/` and `results/` directories are present; avoid scanning or modifying them.
 - Some data files use `.local` or `.DESKTOP-*` extensions—treat as artifacts, not source.
 - Gym versions differ across assignments; align API handling per folder.
+- Keep implementations clean; avoid unnecessary comments or commented-out code in scripts and notebooks.
 
 ## Math & LaTeX Alignment
 - Keep any derivations or README/LaTeX writeups aligned with code changes (loss terms, KLs, constraints).

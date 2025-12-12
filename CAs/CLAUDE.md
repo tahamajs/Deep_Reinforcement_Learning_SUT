@@ -53,6 +53,7 @@ CAxx_*/
 - ✅ **DO** keep seeding and device handling explicit (see `CAs/Solutions/CA05_Advanced_DQN_Methods/agents/dqn_agent.py`).
 - ✅ **DO** keep replay buffers and exploration logic isolated (`utils/replay_buffer.py`).
 - ❌ **DON'T** add side effects on import—wrap script logic in `if __name__ == "__main__":`.
+- ❌ **DON'T** leave unnecessary comments or commented-out code; keep implementations clean and self-explanatory.
 
 #### Environments
 - ✅ Use wrappers in `environments/` for compatibility (e.g., `gym_reset`, `gym_step`).

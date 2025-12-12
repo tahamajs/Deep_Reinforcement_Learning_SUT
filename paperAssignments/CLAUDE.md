@@ -9,6 +9,7 @@
 - **MUST** update derivations when code changes (e.g., Bellman variants, KL terms, entropy bonuses, regularizers, safety constraints).
 - **MUST** annotate any approximations/assumptions used in code (e.g., truncation, clipping, baselines, target networks).
 - **MUST NOT** leave placeholder math; provide full equations for objectives and updates.
+- **MUST** keep code and LaTeX clean and self-explanatory; avoid unnecessary comments or commented-out blocks.
 
 ## Recommended Workflow
 ```bash

@@ -44,6 +44,7 @@ HWx/
 - ✅ Mark long-running cells with comments and prefer reduced episode counts.
 - ❌ Do not alter `answers/` unless explicitly preparing official solutions.
 - ❌ Avoid embedding large videos/figures; link or store externally.
+- ❌ Avoid unnecessary comments or commented-out code; keep cells clean and self-explanatory.
 
 ### Package-style homework (HW10)
 - ✅ Keep types intact (`py.typed` present under `src/bootstrapdqn`).
