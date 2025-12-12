@@ -1,0 +1,94 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+
+\title{Exploration Methods in Reinforcement Learning: A Practical Audit and Bernoulli Bandit Baseline}
+
+\author{\IEEEauthorblockN{Anonymous}\\
+\IEEEauthorblockA{Deep Reinforcement Learning Course (HW8)}}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We audit exploration baselines for HW8 and provide a compact, reproducible Bernoulli multi-armed bandit implementation covering $\epsilon$-greedy, UCB1, and Thompson Sampling. The notebook centralizes configuration, seeding, and run metadata, while this report aligns the methodology and experiment design with the assignment description. Placeholder figures and tables indicate expected outputs after running the accompanying notebook.
+\end{abstract}
+
+\section{Introduction}
+Exploration is critical in sparse-reward settings. We focus on three canonical strategies with finite-time guarantees in bandits and practical success in deep RL exploration bonuses. The accompanying notebook implements these baselines with centralized seeds and hyperparameters to satisfy course reproducibility rules.
+
+\section{Methodology}
+Consider a Bernoulli bandit with $K$ arms, means $\mu_i \in (0,1)$, horizon $T$, and optimal mean $\mu^\star = \max_i \mu_i$. Regret after $T$ pulls is $R_T = T \mu^\star - \sum_{t=1}^T r_t$.
+\subsection{$\epsilon$-Greedy}
+Action selection: with probability $\epsilon$, sample uniformly; otherwise select $\arg\max_a \hat{\mu}_a$. Updates use running means $\hat{\mu}_a \leftarrow \hat{\mu}_a + (r_t - \hat{\mu}_a)/N_a$.
+\subsection{UCB1}
+Optimism in the face of uncertainty selects
+$a_t = \arg\max_a \hat{\mu}_a + c \sqrt{\frac{\ln t}{N_a}}$,
+with initialization pulling each arm once. For Bernoulli rewards, $R_T = O(\sqrt{T \log T})$.
+\subsection{Thompson Sampling (Beta--Bernoulli)}
+Maintain $\alpha_a, \beta_a$ counts, sample $\tilde{\mu}_a \sim \mathrm{Beta}(\alpha_a, \beta_a)$, and play $\arg\max_a \tilde{\mu}_a$. Update $\alpha_a \leftarrow \alpha_a + r_t$, $\beta_a \leftarrow \beta_a + 1 - r_t$.
+
+\section{Experiments}
+We generate synthetic means $\mu_i \sim \mathcal{U}(0.05,0.95)$ with $K=10$ and horizon $T=5000$ (configurable). Each policy runs once per seed; users may average over seeds. Regret curves are saved to \texttt{pictures/hw8\_regret.png}.
+
+\begin{figure}[t]
+    \centering
+    \fbox{\parbox{0.9\linewidth}{Run the notebook to render the regret plot here.}}
+    \caption{Cumulative regret for $\epsilon$-greedy, UCB1, and Thompson Sampling.}
+\end{figure}
+
+\begin{table}[t]
+    \centering
+    \begin{tabular}{lcc}
+        \toprule
+        Method & Mean Reward & Final Regret \\
+        \midrule
+        $\epsilon$-greedy & -- & -- \\
+        UCB1 & -- & -- \\
+        Thompson & -- & -- \\
+        \bottomrule
+    \end{tabular}
+    \caption{Populate after running the notebook.}
+\end{table}
+
+\section{Conclusion}
+The provided notebook and this report satisfy HW8 structural requirements: centralized configuration, seeded execution, metadata logging, and an IEEE-aligned write-up. Extending to deep RL settings can reuse the same logging and evaluation scaffolding.
+
+\appendices
+\section{Hyperparameters and Metadata}
+Table~\ref{tab:hparams} mirrors the notebook configuration.
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lc}
+        \toprule
+        Hyperparameter & Value \\
+        \midrule
+        Arms ($K$) & 10 \\
+        Horizon ($T$) & 5000 \\
+        $\epsilon$ & 0.1 \\
+        UCB $c$ & 2.0 \\
+        $\alpha_0, \\beta_0$ & 1.0, 1.0 \\
+        Seed & 7 \\
+        Device & CPU/GPU auto-detect \\
+        \bottomrule
+    \end{tabular}
+    \caption{Notebook defaults. Adjust and re-log via \texttt{run\_info.json}.}
+    \label{tab:hparams}
+\end{table}
+
+\section{References}
+\begin{thebibliography}{00}
+\bibitem{auer2002} P. Auer et al., ``Finite-time analysis of the multiarmed bandit problem,'' \emph{Machine Learning}, 2002.
+\bibitem{thompson1933} W. Thompson, ``On the likelihood that one unknown probability exceeds another,'' \emph{Biometrika}, 1933.
+\bibitem{lattimore2020} T. Lattimore and C. Szepesvári, \emph{Bandit Algorithms}, 2020.
+\end{thebibliography}
+
+\end{document}
+
+
+

@@ -23,11 +23,30 @@ This assignment explores the exploration-exploitation dilemma in reinforcement l
 ```
 HW8_Exploration_Methods/
 ├── code/                       # (For this assignment, implement if required)
+│   ├── HW8_Notebook.ipynb      # Structured workflow: config → data → policies → training → viz → metadata
+│   └── requirements.txt        # Minimal deps for the notebook
 ├── answers/                    # (Submit written/coded answers)
 ├── reports/
+│   └── HW8_Report.tex          # IEEE-style write-up aligned to the notebook
 │   └── HW8_Questions.pdf      # Assignment questions
 └── README.md
 ```
+
+### 🔧 How to run the provided notebook
+
+1) Create a virtual environment in this folder and install dependencies:
+```bash
+cd homeworks/HW8_Exploration_Methods/code
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+```
+2) Open `HW8_Notebook.ipynb` and run cells top-down. The first code cell centralizes seeds, device, and hyperparameters. A `run_info.json` file is written to capture commit hash, hardware, and config.
+3) Regret plots are saved under `homeworks/pictures/hw8_regret.png` (directory is auto-created).
+
+### 📝 Report alignment
+
+- `reports/HW8_Report.tex` uses the IEEEtran class and summarizes the notebook’s Bernoulli bandit baselines (ε-greedy, UCB1, Thompson). Compile with `pdflatex` (twice) after running the notebook to refresh figures and tables.
+
 
 ## 📚 Core Concepts
 
