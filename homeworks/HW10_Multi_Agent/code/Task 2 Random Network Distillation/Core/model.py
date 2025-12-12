@@ -2,8 +2,13 @@
 # This module defines the neural networks used in the RND+PPO agent.
 # Students are expected to implement the TargetModel and PredictorModel architectures and their initialization.
 
+from __future__ import annotations
+
 from abc import ABC
+from typing import Tuple
+
 import numpy as np
+import torch
 from torch import nn
 from torch.nn import functional as F
 from torch.distributions.categorical import Categorical
@@ -15,7 +20,9 @@ def conv_shape(input, kernel_size, stride, padding=0):
 
 # === Policy Network ===
 class PolicyModel(nn.Module, ABC):
-    def __init__(self, state_shape, n_actions):
+    """Recurrent policy network producing policy logits and intrinsic/extrinsic values."""
+
+    def __init__(self, state_shape: Tuple[int, int, int], n_actions: int) -> None:
         super(PolicyModel, self).__init__()
         self.state_shape = state_shape
         self.n_actions = n_actions
@@ -44,7 +51,9 @@ class PolicyModel(nn.Module, ABC):
                 nn.init.orthogonal_(layer.weight, gain=np.sqrt(2))
                 layer.bias.data.zero_()
 
-    def forward(self, inputs, hidden_state):
+    def forward(
+        self, inputs: torch.Tensor, hidden_state: torch.Tensor
+    ) -> Tuple[Categorical, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         if inputs.ndim == 5:
             inputs = inputs.squeeze(1)
 
@@ -68,11 +77,12 @@ class PolicyModel(nn.Module, ABC):
 
 # === Target Model ===
 class TargetModel(nn.Module, ABC):
-    def __init__(self, state_shape):
+    """Fixed random network that produces target features for RND."""
+
+    def __init__(self, state_shape: Tuple[int, int, int]) -> None:
         super(TargetModel, self).__init__()
-        # === TODO: Implement Target Model architecture ===
         # Define 3 convolutional layers followed by a fully connected layer.
-        # The output should be a 512-dimensional encoded feature vector.
+        # The output is a 512-dimensional encoded feature vector.
 
         c, w, h = state_shape
 
@@ -90,27 +100,21 @@ class TargetModel(nn.Module, ABC):
 
         self._init_weights()  # Call this after defining layers
 
-    def _init_weights(self):
-        # === TODO: Initialize all layers with orthogonal weights ===
-        # For most layers use gain=np.sqrt(2).
-        # Call orthogonal_ on each conv and linear layer.
+    def _init_weights(self) -> None:
+        """Orthogonal initialization for convolutional and linear layers."""
         for layer in self.modules():
             if isinstance(layer, (nn.Conv2d, nn.Linear)):
                 nn.init.orthogonal_(layer.weight, gain=np.sqrt(2))
                 layer.bias.data.zero_()
 
-    def forward(self, inputs):
-        # === TODO: Implement forward pass ===
-        # Normalize input, pass through conv layers, flatten, and return encoded features.
-        # Normalize input to [0, 1] range
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        """Normalize input, encode with conv stack, and return 512-dim features."""
         x = inputs / 255.0
 
-        # Pass through convolutional layers with ReLU activations
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
 
-        # Flatten and pass through fully connected layer
         x = x.view(x.size(0), -1)  # Flatten
         encoded_features = self.encoded_features(x)
 
@@ -119,12 +123,12 @@ class TargetModel(nn.Module, ABC):
 
 # === Predictor Model ===
 class PredictorModel(nn.Module, ABC):
-    def __init__(self, state_shape):
+    """Trainable network that learns to predict the target features."""
+
+    def __init__(self, state_shape: Tuple[int, int, int]) -> None:
         super(PredictorModel, self).__init__()
-        # === TODO: Implement Predictor Model architecture ===
-        # It should match the target model up to encoded features,
-        # and then include 1 or 2 additional linear layers.
-        # End with a layer that outputs a 512-dim feature vector (same as TargetModel).
+        # Match the target model up to encoded features,
+        # with additional linear layers before the final 512-d output.
 
         c, w, h = state_shape
 
@@ -145,36 +149,28 @@ class PredictorModel(nn.Module, ABC):
 
         self._init_weights()  # Call this after defining layers
 
-    def _init_weights(self):
-        # === TODO: Initialize all layers with orthogonal weights ===
-        # Use gain=np.sqrt(2) for hidden layers.
-        # Use gain=np.sqrt(0.01) if you want to slow learning on final output layer (optional).
+    def _init_weights(self) -> None:
+        """Orthogonal initialization; use a smaller gain on the output layer to stabilize learning."""
         for layer in self.modules():
             if isinstance(layer, (nn.Conv2d, nn.Linear)):
                 if layer == self.encoded_features:
-                    # Use smaller gain for final output layer to slow learning
                     nn.init.orthogonal_(layer.weight, gain=np.sqrt(0.01))
                 else:
                     nn.init.orthogonal_(layer.weight, gain=np.sqrt(2))
                 layer.bias.data.zero_()
 
-    def forward(self, inputs):
-        # === TODO: Implement forward pass ===
-        # Normalize input, pass through conv layers and extra FC layers, then return final encoded vector.
-        # Normalize input to [0, 1] range
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        """Normalize input, process through conv + MLP, and return 512-d predicted features."""
         x = inputs / 255.0
 
-        # Pass through convolutional layers with ReLU activations
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
 
-        # Flatten and pass through fully connected layers
         x = x.view(x.size(0), -1)  # Flatten
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
 
-        # Final encoded features
         encoded_features = self.encoded_features(x)
 
         return encoded_features

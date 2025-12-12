@@ -1,17 +1,24 @@
 # ppo_rnd_agent.py
 # Core module for PPO policy, Random Network Distillation (RND), and training logic.
 
-import torch
+from __future__ import annotations
+
+from typing import Tuple
+
 import numpy as np
+import torch
 from torch.optim.adam import Adam
+
 from Core.model import PolicyModel, PredictorModel, TargetModel
-from Common.utils import mean_of_list, RunningMeanStd
+from Common.utils import RunningMeanStd, mean_of_list
 
 torch.backends.cudnn.benchmark = True  # Optional performance boost for CNNs
 
 
 class Brain:
-    def __init__(self, **config):
+    """Combined PPO + RND agent."""
+
+    def __init__(self, **config) -> None:
         self.config = config
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -36,7 +43,9 @@ class Brain:
         self.int_reward_rms = RunningMeanStd(shape=(1,))
         self.mse_loss = torch.nn.MSELoss()
 
-    def get_actions_and_values(self, obs_tensor, hidden_state):
+    def get_actions_and_values(
+        self, obs_tensor: torch.Tensor, hidden_state: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         obs_tensor = obs_tensor.to(self.device)
         hidden_state = hidden_state.to(self.device)
         with torch.no_grad():
@@ -54,7 +63,9 @@ class Brain:
             new_hidden.cpu(),
         )
 
-    def calculate_int_rewards(self, next_obs, batch=True):
+    def calculate_int_rewards(
+        self, next_obs: np.ndarray, batch: bool = True
+    ) -> np.ndarray:
         if not batch:
             next_obs = np.expand_dims(next_obs, axis=0)
 
@@ -63,11 +74,6 @@ class Brain:
         ).astype(np.float32)
 
         norm_obs = torch.tensor(norm_obs).to(self.device)
-
-        # === TODO: Intrinsic Reward ===
-        # Use predictor_model and target_model to extract features
-        # Compute squared error (MSE) between predicted and target features
-        # Take mean over feature dimension (dim=1)
 
         with torch.no_grad():
             # Get target features (fixed random network)
@@ -84,7 +90,7 @@ class Brain:
 
         return int_reward  # → np.array
 
-    def normalize_int_rewards(self, int_rewards):
+    def normalize_int_rewards(self, int_rewards: np.ndarray) -> np.ndarray:
         gamma = self.config["int_gamma"]
         returns = []
         for rewards in int_rewards:
@@ -99,7 +105,14 @@ class Brain:
 
         return int_rewards / (np.sqrt(self.int_reward_rms.var) + 1e-8)
 
-    def get_gae(self, rewards, values, next_values, dones, gamma):
+    def get_gae(
+        self,
+        rewards: np.ndarray,
+        values: np.ndarray,
+        next_values: np.ndarray,
+        dones: np.ndarray,
+        gamma: float,
+    ) -> np.ndarray:
         lam = self.config["lambda"]
         advantages = []
 
@@ -222,12 +235,7 @@ class Brain:
             ext_returns,
         )
 
-    def calculate_rnd_loss(self, obs):
-        # === TODO: RND Loss Computation ===
-        # Use predictor_model and target_model on obs to compute prediction error
-        # Compute squared error, apply dropout mask using config["predictor_proportion"]
-        # Reduce the loss to a scalar value
-
+    def calculate_rnd_loss(self, obs: torch.Tensor) -> torch.Tensor:
         # Normalize observations
         norm_obs = np.clip(
             (obs.cpu().numpy() - self.state_rms.mean) / (self.state_rms.var**0.5), -5, 5
@@ -250,7 +258,8 @@ class Brain:
         masked_loss = loss * mask.float()
 
         # Compute final loss as mean of masked losses
-        final_loss = torch.mean(masked_loss)
+        active = mask.float().sum().clamp(min=1.0)
+        final_loss = masked_loss.sum() / active
 
         return final_loss
 
