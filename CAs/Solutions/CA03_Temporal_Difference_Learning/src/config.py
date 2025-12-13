@@ -52,3 +52,4 @@ class VisualizationConfig:
 SEED = 42
 np.random.seed(SEED)
 
+
