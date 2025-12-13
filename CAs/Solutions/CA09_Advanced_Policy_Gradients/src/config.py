@@ -65,3 +65,4 @@ class Config:
 # Instantiate config for easier access
 config = Config()
 
+
