@@ -34,3 +34,4 @@ def smooth_curve(scores: list, window_size: int = 20) -> np.ndarray:
     """
     return np.convolve(scores, np.ones(window_size) / window_size, mode="valid")
 
+
