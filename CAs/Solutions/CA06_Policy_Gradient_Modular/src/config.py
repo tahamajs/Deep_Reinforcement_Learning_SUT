@@ -47,3 +47,4 @@ class Config:
     MAX_TIMESTEPS = 500
     PRINT_INTERVAL = 10
 
+
