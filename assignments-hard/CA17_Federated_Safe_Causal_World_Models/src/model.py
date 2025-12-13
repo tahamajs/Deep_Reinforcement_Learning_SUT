@@ -185,3 +185,4 @@ class SafetyCritic(nn.Module):
         predicted_cost = self.cost_critic_mlp(latent_features)
         return predicted_cost
 
+

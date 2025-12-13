@@ -347,3 +347,4 @@ class DreamerFuNAgent:
         self._current_manager_goal = torch.zeros(1, self.manager_config.goal_dim, device=self.device)
         self._worker_steps_taken = 0
 
+

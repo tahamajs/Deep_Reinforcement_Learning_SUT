@@ -85,3 +85,4 @@ def update_config_with_env_dims(env_name: str):
     RSSM_CONFIG.action_dim = action_dim
     AGENT_CONFIG.action_dim = action_dim
 
+

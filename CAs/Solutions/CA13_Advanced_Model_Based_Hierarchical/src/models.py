@@ -331,3 +331,4 @@ class WorkerCritic(nn.Module):
         x = torch.cat([latent_state, goal], dim=-1)
         return self.model(x)
 
+

@@ -178,3 +178,4 @@ class FeudalWorker(nn.Module):
         x = torch.cat([state, subgoal], dim=-1)
         return self.net(x)
 
+

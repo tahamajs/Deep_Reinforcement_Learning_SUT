@@ -55,3 +55,4 @@ class MCACConfig(MultiAgentConfig, CommunicationConfig, MAMLConfig):
 # Instantiate the main configuration object
 config = MCACConfig()
 
+

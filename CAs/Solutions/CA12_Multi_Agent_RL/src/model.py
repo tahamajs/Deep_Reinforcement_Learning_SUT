@@ -121,3 +121,4 @@ class CommunicationDecoder(nn.Module):
         """Forward pass, returns the decoded message context."""
         return self.network(messages.flatten(start_dim=1))
 
+

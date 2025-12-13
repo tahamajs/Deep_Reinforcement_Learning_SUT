@@ -120,3 +120,4 @@ class CausalGraphLearner:
         self.causal_graph = new_adjacency
         return self.causal_graph
 
+

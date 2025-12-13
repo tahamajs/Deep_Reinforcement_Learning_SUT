@@ -78,3 +78,4 @@ def logic_regularization_loss(
 
     return gamma * violation_penalty
 
+
