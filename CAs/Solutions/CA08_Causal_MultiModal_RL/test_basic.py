@@ -14,6 +14,10 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+from config import SEED, SAVE_DIR, RESULTS_DIR, LOGS_DIR, STATE_DIM, ACTION_DIM, MODAL_DIMS, HIDDEN_DIM
+from models.fusion_networks import CrossModalAttentionNetwork
+from agents.causal_rl_agent import CausalRLAgent, CausalMultiModalAgent
+from agents.causal_discovery import CausalGraph
 
 # Add current directory to Python path
 current_dir = Path(__file__).parent
@@ -60,8 +64,8 @@ def test_basic_functionality():
         ax.set_ylabel("Y")
 
         # Save test plot
-        os.makedirs("visualizations", exist_ok=True)
-        plt.savefig("visualizations/test_plot.png", dpi=150, bbox_inches="tight")
+        os.makedirs(SAVE_DIR, exist_ok=True)
+        plt.savefig(os.path.join(SAVE_DIR, "test_plot.png"), dpi=150, bbox_inches="tight")
         plt.close()
 
         print("  ✅ Matplotlib plotting and saving successful")
@@ -94,6 +98,21 @@ def test_advanced_components():
         from algorithms.advanced_meta_transfer_learning import MAMLCausalLearner
 
         print("  ✅ Advanced Meta-Learning imported successfully")
+        
+        # Test mock agent creation
+        mock_graph = CausalGraph([f"Var{i}" for i in range(STATE_DIM + ACTION_DIM)])
+        mock_causal_agent = CausalRLAgent(
+            state_dim=STATE_DIM,
+            action_dim=ACTION_DIM,
+            causal_graph=mock_graph,
+        )
+        print("  ✅ Mock CausalRLAgent created successfully")
+
+        mock_fusion_net = CrossModalAttentionNetwork(MODAL_DIMS, HIDDEN_DIM)
+        mock_multimodal_agent = CausalMultiModalAgent(
+            state_dim=STATE_DIM, action_dim=ACTION_DIM, modal_dims=MODAL_DIMS
+        )
+        print("  ✅ Mock CausalMultiModalAgent created successfully")
 
         return True
 
@@ -159,7 +178,7 @@ def create_test_visualization():
 
         plt.tight_layout()
         plt.savefig(
-            "visualizations/test_comprehensive_plot.png", dpi=300, bbox_inches="tight"
+            os.path.join(SAVE_DIR, "test_comprehensive_plot.png"), dpi=300, bbox_inches="tight"
         )
         plt.close()
 
@@ -177,11 +196,11 @@ def main():
     print("=" * 60)
 
     # Create necessary directories
-    os.makedirs("visualizations", exist_ok=True)
-    os.makedirs("results", exist_ok=True)
-    os.makedirs("logs", exist_ok=True)
+    os.makedirs(SAVE_DIR, exist_ok=True)
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    os.makedirs(LOGS_DIR, exist_ok=True)
 
-    print("✅ Directories created: visualizations/, results/, logs/")
+    print(f"✅ Directories created: {SAVE_DIR}, {RESULTS_DIR}, {LOGS_DIR}")
 
     # Run tests
     tests = [

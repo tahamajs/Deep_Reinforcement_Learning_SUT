@@ -15,245 +15,255 @@ import numpy as np
 from typing import Dict, List, Tuple, Optional, Any
 from .latent_actor import LatentActor
 from .latent_critic import LatentCritic
+from ..experiments.config import AGENT_CONFIG, DREAMER_CONFIG, GLOBAL_CONFIG
+from ..models.rssm import RSSM
+from collections import deque
+import random
+
+
+class LatentActorCritic(nn.Module):
+    """Complete latent actor-critic"""
+
+    def __init__(self, latent_dim: int, action_dim: int, hidden_dim: int = 256):
+        super().__init__()
+        self.actor = LatentActor(latent_dim, action_dim, hidden_dim)
+        self.critic = LatentCritic(latent_dim, hidden_dim)
+
+    def act(self, latent: torch.Tensor, deterministic: bool = False) -> torch.Tensor:
+        """Select action in latent space"""
+        if deterministic:
+            mean, _ = self.actor(latent)
+            return torch.tanh(mean)
+        else:
+            action, _ = self.actor.sample(latent)
+            return action
+
+    def evaluate(
+        self, latents: torch.Tensor, actions: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Evaluate actions in latent space"""
+        mean, log_std = self.actor(latents)
+        std = torch.exp(log_std)
+
+        normal = Normal(mean, std)
+        log_prob = normal.log_prob(actions).sum(dim=-1, keepdim=True)
+        log_prob -= torch.log(1 - actions.pow(2) + 1e-6).sum(dim=-1, keepdim=True)
+
+        values = self.critic(latents)
+
+        return log_prob, values
 
 
 class DreamerAgent:
-    """
-    Dreamer-style agent for planning in latent space.
-
-    This agent implements the Dreamer algorithm, which consists of:
-    1. A world model that learns to predict future observations and rewards
-    2. An actor-critic that plans in the latent space of the world model
-    3. Imagination-based planning for sample-efficient learning
-
-    Attributes:
-        world_model: The learned world model for state prediction
-        actor: Policy network in latent space
-        critic: Value network in latent space
-        device: Computing device (CPU/GPU)
-        gamma: Discount factor
-        lambda_: Lambda parameter for GAE
-        imagination_horizon: Number of steps to imagine ahead
-        stats: Training statistics dictionary
-    """
+    """Complete Dreamer agent implementation"""
 
     def __init__(
-        self,
-        world_model: nn.Module,
-        state_dim: int,
-        action_dim: int,
-        device: torch.device,
-        actor_lr: float = 8e-5,
-        critic_lr: float = 8e-5,
-        gamma: float = 0.99,
-        lambda_: float = 0.95,
-        imagination_horizon: int = 15,
+        self, obs_dim: int, action_dim: int, global_config: Any
     ):
-        """
-        Initialize the Dreamer agent.
+        self.obs_dim = obs_dim
+        self.action_dim = action_dim
+        self.latent_dim = global_config.dreamer_config.agent_config.latent_dim
+        self.imagination_horizon = global_config.dreamer_config.agent_config.imagination_horizon
+        self.device = global_config.device
 
-        Args:
-            world_model: Pre-trained world model
-            state_dim: Dimension of latent state space
-            action_dim: Number of possible actions
-            device: Computing device
-            actor_lr: Learning rate for actor
-            critic_lr: Learning rate for critic
-            gamma: Discount factor
-            lambda_: GAE lambda parameter
-            imagination_horizon: Steps to imagine in planning
-        """
-        self.world_model = world_model
-        self.device = device
-        self.gamma = gamma
-        self.lambda_ = lambda_
-        self.imagination_horizon = imagination_horizon
+        # World model components
+        self.rssm = RSSM(
+            obs_dim=self.obs_dim,
+            action_dim=self.action_dim,
+            latent_dim=global_config.dreamer_config.rssm_config.latent_dim,
+            hidden_dim=global_config.dreamer_config.rssm_config.hidden_dim,
+            stochastic_size=global_config.dreamer_config.rssm_config.stochastic_size,
+        ).to(self.device)
 
-        # Align dims with world_model if available
-        wm_state_dim = getattr(world_model, "latent_dim", state_dim)
-        wm_action_dim = getattr(world_model, "action_dim", action_dim)
-        if wm_state_dim != state_dim or wm_action_dim != action_dim:
-            # Non-fatal: prefer world model dims to avoid shape mismatches
-            state_dim = wm_state_dim
-            action_dim = wm_action_dim
+        # Actor-critic in latent space
+        self.actor_critic = LatentActorCritic(
+            latent_dim=self.latent_dim,
+            action_dim=self.action_dim,
+            hidden_dim=global_config.dreamer_config.agent_config.hidden_dim,
+        ).to(self.device)
 
-        self.actor = LatentActor(state_dim, action_dim).to(device)
-        self.critic = LatentCritic(state_dim).to(device)
+        # Experience buffer
+        self.buffer = deque(maxlen=100000)
 
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=actor_lr)
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_lr)
+        # Optimizers
+        self.world_optimizer = optim.Adam(self.rssm.parameters(), lr=global_config.dreamer_config.rssm_config.learning_rate)
+        self.actor_optimizer = optim.Adam(self.actor_critic.actor.parameters(), lr=global_config.dreamer_config.agent_config.actor_lr)
+        self.critic_optimizer = optim.Adam(
+            self.actor_critic.critic.parameters(), lr=global_config.dreamer_config.agent_config.critic_lr
+        )
 
-        self.stats = {
-            "actor_loss": [],
-            "critic_loss": [],
-            "imagination_reward": [],
-            "policy_entropy": [],
-        }
+    def select_action(
+        self, obs: torch.Tensor, deterministic: bool = False
+    ) -> torch.Tensor:
+        """Select action using current world model"""
+        # Encode observation
+        with torch.no_grad():
+            obs_tensor = torch.tensor(obs, dtype=torch.float32).unsqueeze(0).to(self.device)
+            post_params = self.rssm.obs_encoder(obs_tensor)
+            latent = self.rssm._sample_latent(*post_params.chunk(2, dim=-1))
 
-    def imagine_trajectories(
-        self, initial_states: torch.Tensor, batch_size: int = 50
-    ) -> Dict[str, torch.Tensor]:
-        """
-        Generate imagined trajectories using the world model.
+            # Get action from actor
+            action = self.actor_critic.act(latent, deterministic)
 
-        Args:
-            initial_states: Initial latent states [batch_size, state_dim]
-            batch_size: Number of trajectories to generate
+        return action.squeeze(0).cpu().numpy()
 
-        Returns:
-            Dictionary containing imagined states, actions, rewards, and values
-        """
-        horizon = self.imagination_horizon
+    def store_transition(
+        self, obs: np.ndarray, action: np.ndarray, reward: float, next_obs: np.ndarray, done: bool
+    ):
+        """Store transition in buffer"""
+        self.buffer.append(
+            {
+                "obs": obs,
+                "action": action,
+                "reward": reward,
+                "next_obs": next_obs,
+                "done": done,
+            }
+        )
 
-        states = [initial_states]
-        actions = []
-        rewards = []
-        log_probs = []
-        values = []
+    def update_world_model(self, batch_size: int) -> Dict[str, float]:
+        """Update world model using data from buffer"""
+        if len(self.buffer) < batch_size:
+            return {}
 
-        current_state = initial_states
+        # Sample batch
+        batch = random.sample(list(self.buffer), batch_size)
+        obs_batch = torch.tensor(np.array([t["obs"] for t in batch]), dtype=torch.float32).to(self.device)
+        action_batch = torch.tensor(np.array([t["action"] for t in batch]), dtype=torch.float32).to(self.device)
+        reward_batch = torch.tensor([t["reward"] for t in batch], dtype=torch.float32).to(self.device)
+        # next_obs_batch = torch.tensor(np.array([t["next_obs"] for t in batch]), dtype=torch.float32).to(self.device)
 
-        for t in range(horizon):
-            action, log_prob = self.actor.sample(current_state)
-            value = self.critic(current_state)
+        self.world_optimizer.zero_grad()
 
-            actions.append(action)
-            log_probs.append(log_prob)
-            values.append(value)
+        # Process sequence (simplified single-step for now)
+        det_state = torch.zeros(batch_size, self.rssm.deterministic_size, device=self.device)
+        prev_latent = torch.zeros(batch_size, self.rssm.stochastic_size, device=self.device)
 
-            if hasattr(self.world_model, "dynamics"):
-                if self.world_model.dynamics.stochastic:
-                    next_state, _, _ = self.world_model.dynamics(current_state, action)
-                else:
-                    next_state = self.world_model.dynamics(current_state, action)
-                reward = self.world_model.reward_model(current_state, action)
-            else:
-                batch_size = current_state.shape[0]
-                h_dim = self.world_model.deter_dim
-                z_dim = self.world_model.stochastic_size
+        # Observation step
+        (
+            det_state,
+            post_latent,
+            obs_recon,
+            reward_pred,
+            continue_pred,
+            prior_mean,
+            prior_log_var,
+            post_mean,
+            post_log_var,
+        ) = self.rssm.observe_step(obs_batch, det_state, action_batch, prev_latent)
 
-                h = current_state[:, :h_dim]
-                z = current_state[:, h_dim : h_dim + z_dim]
+        # Losses
+        obs_loss = F.mse_loss(obs_recon, obs_batch)
+        reward_loss = F.mse_loss(reward_pred.squeeze(), reward_batch)
+        continue_loss = F.binary_cross_entropy(
+            continue_pred.squeeze(),
+            torch.tensor([not t["done"] for t in batch], dtype=torch.float32, device=self.device),
+        )
 
-                h, z, _ = self.world_model.imagine(h, z, action)
-                next_state = torch.cat([h, z], dim=-1)
-                reward = self.world_model.predict_reward(h, z)
+        # KL divergence between posterior and prior
+        kl_loss = self._kl_divergence(
+            post_mean, post_log_var, prior_mean, prior_log_var
+        )
 
-            states.append(next_state)
-            rewards.append(reward)
-            current_state = next_state
+        total_loss = obs_loss + reward_loss + continue_loss + kl_loss
 
-        states = torch.stack(states[:-1])  # Exclude last state
-        actions = torch.stack(actions)
-        rewards = torch.stack(rewards)
-        log_probs = torch.stack(log_probs)
-        values = torch.stack(values)
-
-        final_value = self.critic(states[-1])
+        total_loss.backward()
+        self.world_optimizer.step()
 
         return {
-            "states": states,
-            "actions": actions,
-            "rewards": rewards,
-            "log_probs": log_probs,
-            "values": values,
-            "final_value": final_value,
+            "obs_loss": obs_loss.item(),
+            "reward_loss": reward_loss.item(),
+            "continue_loss": continue_loss.item(),
+            "kl_loss": kl_loss.item(),
+            "total_world_loss": total_loss.item(),
         }
 
-    def compute_returns_and_advantages(self, trajectory):
-        """Compute returns and advantages using GAE"""
-        # Detach to avoid backpropagating through imagination/critic graphs
-        rewards = trajectory["rewards"].detach()
-        values = trajectory["values"].detach()
-        final_value = trajectory["final_value"].detach()
+    def _kl_divergence(
+        self,
+        mean1: torch.Tensor,
+        log_var1: torch.Tensor,
+        mean2: torch.Tensor,
+        log_var2: torch.Tensor,
+    ) -> torch.Tensor:
+        """Compute KL divergence between two Gaussians"""
+        var1 = torch.exp(log_var1)
+        var2 = torch.exp(log_var2)
 
-        returns = torch.zeros_like(rewards)
-        advantages = torch.zeros_like(rewards)
+        kl = 0.5 * (log_var2 - log_var1 + (var1 + (mean1 - mean2).pow(2)) / var2 - 1)
+        return kl.sum()
 
-        last_return = final_value
-        last_advantage = 0
+    def update_actor_critic(self, batch_size: int) -> Dict[str, float]:
+        """Update actor-critic using imagination"""
+        if len(self.buffer) < batch_size:
+            return {}
 
-        for t in reversed(range(len(rewards))):
-            returns[t] = rewards[t] + self.gamma * last_return
+        # Sample initial states from buffer
+        batch = random.sample(list(self.buffer), batch_size)
+        obs_batch = torch.tensor(np.array([t["obs"] for t in batch]), dtype=torch.float32).to(self.device)
 
-            delta = (
-                rewards[t]
-                + self.gamma * (final_value if t == len(rewards) - 1 else values[t + 1])
-                - values[t]
+        # Encode initial observations
+        with torch.no_grad():
+            post_params = self.rssm.obs_encoder(obs_batch)
+            init_latent = self.rssm._sample_latent(*post_params.chunk(2, dim=-1))
+            init_det_state = torch.zeros(batch_size, self.rssm.deterministic_size, device=self.device)
+
+        # Imagine trajectories
+        imagined_latents = []
+        imagined_rewards = []
+        imagined_actions = []
+        imagined_log_probs = []
+
+        latent = init_latent
+        det_state = init_det_state
+
+        for _ in range(self.imagination_horizon):
+            # Sample action
+            action, log_prob = self.actor_critic.actor.sample(latent)
+
+            # Imagine next state
+            det_state, latent, reward, _ = self.rssm.imagine_step(
+                det_state, action, latent
             )
-            advantages[t] = delta + self.gamma * self.lambda_ * last_advantage
 
-            last_return = returns[t]
-            last_advantage = advantages[t]
+            imagined_latents.append(latent)
+            imagined_rewards.append(reward)
+            imagined_actions.append(action)
+            imagined_log_probs.append(log_prob)
 
-        return returns, advantages
+        # Stack imagined trajectory
+        imagined_latents = torch.stack(imagined_latents)  # [horizon, batch, latent_dim]
+        imagined_rewards = torch.stack(imagined_rewards)  # [horizon, batch, 1]
+        imagined_actions = torch.stack(imagined_actions)  # [horizon, batch, action_dim]
+        imagined_log_probs = torch.stack(imagined_log_probs)  # [horizon, batch, 1]
 
-    def update_actor_critic(self, trajectory):
-        """Update actor and critic networks"""
-        states = trajectory["states"]
-        actions = trajectory["actions"]
-        log_probs = trajectory["log_probs"]
+        # Compute returns
+        returns = self._compute_returns(imagined_rewards, gamma=AGENT_CONFIG.gamma)
 
-        states = states.view(-1, states.shape[-1])
-        actions = actions.view(-1, actions.shape[-1])
-        log_probs = log_probs.view(-1)
-
-        returns, advantages = self.compute_returns_and_advantages(trajectory)
-        # Detach targets for stable updates
-        returns = returns.view(-1).detach()
-        advantages = advantages.view(-1).detach()
-
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
+        # Update critic
         self.critic_optimizer.zero_grad()
-        # Detach states to avoid gradients flowing into the world model/actor graph
-        values_pred = self.critic(states.detach())
-        critic_loss = F.mse_loss(values_pred, returns)
-        critic_loss.backward(retain_graph=False)
-        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 10.0)
+        values = self.actor_critic.critic(imagined_latents.view(-1, self.latent_dim))
+        critic_loss = F.mse_loss(values, returns.view(-1, 1))
+        critic_loss.backward()
         self.critic_optimizer.step()
 
+        # Update actor
         self.actor_optimizer.zero_grad()
-
-        # Detach states to avoid backpropagating through the critic's graph
-        action_mean, action_std = self.actor(states.detach())
-        dist = Normal(action_mean, action_std)
-
-        # Use detached actions from the imagination to avoid linking to old actor graph
-        actions_detached = actions.detach()
-        raw_actions = torch.atanh(
-            torch.clamp(actions_detached / self.actor.action_range, -0.999, 0.999)
-        )
-        new_log_probs = dist.log_prob(raw_actions).sum(dim=-1)
-        new_log_probs -= (
-            2 * (np.log(2) - raw_actions - F.softplus(-2 * raw_actions))
-        ).sum(dim=-1)
-
-        actor_loss = -(new_log_probs * advantages.detach()).mean()
-
-        entropy = dist.entropy().sum(dim=-1).mean()
-        actor_loss -= 0.001 * entropy
-
+        advantages = returns - values.detach()
+        actor_loss = -(imagined_log_probs.view(-1) * advantages.view(-1)).mean()
         actor_loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), 10.0)
         self.actor_optimizer.step()
 
-        self.stats["actor_loss"].append(actor_loss.item())
-        self.stats["critic_loss"].append(critic_loss.item())
-        self.stats["imagination_reward"].append(trajectory["rewards"].mean().item())
-        self.stats["policy_entropy"].append(entropy.item())
-
         return {
-            "actor_loss": actor_loss.item(),
-            "critic_loss": critic_loss.item(),
-            "entropy": entropy.item(),
-            "mean_advantage": advantages.mean().item(),
+            "actor_loss": actor_loss.item(), "critic_loss": critic_loss.item()
         }
 
-    def train_step(self, initial_states):
-        """Single training step"""
-        trajectory = self.imagine_trajectories(initial_states)
-
-        losses = self.update_actor_critic(trajectory)
-
-        return losses
+    def _compute_returns(
+        self, rewards: torch.Tensor, gamma: float = 0.99
+    ) -> torch.Tensor:
+        """Compute discounted returns"""
+        returns = []
+        R = 0
+        for r in reversed(rewards):
+            R = r + gamma * R
+            returns.insert(0, R)
+        return torch.stack(returns)

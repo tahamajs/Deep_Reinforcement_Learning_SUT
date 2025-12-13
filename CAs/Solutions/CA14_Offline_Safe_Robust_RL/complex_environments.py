@@ -22,7 +22,20 @@ from dataclasses import dataclass
 
 @dataclass
 class EnvironmentConfig:
-    """Configuration for complex environments."""
+    """
+    Configuration for complex environments.
+
+    Attributes:
+        size (int): Size of the grid-world environment (e.g., size x size). Defaults to 10.
+        num_agents (int): Number of agents in the environment. Defaults to 3.
+        num_objectives (int): Number of objectives in multi-objective environments. Defaults to 2.
+        observation_noise (float): Standard deviation of noise added to observations. Defaults to 0.1.
+        action_noise (float): Standard deviation of noise added to actions. Defaults to 0.05.
+        dynamic_changes (bool): Whether the environment undergoes dynamic changes over time. Defaults to True.
+        partial_observability (bool): Whether agents have partial observability. Defaults to True.
+        physics_enabled (bool): Whether basic physics (e.g., momentum) are enabled. Defaults to True.
+        adversarial_mode (bool): Whether an adversarial agent is active in the environment. Defaults to False.
+    """
 
     size: int = 10
     num_agents: int = 3
@@ -36,895 +49,935 @@ class EnvironmentConfig:
 
 
 class DynamicMultiObjectiveEnvironment:
-    """Dynamic Multi-Objective Environment with changing goals."""
+    """
+    Dynamic Multi-Objective Environment with changing goals.
+
+    This environment features multiple agents, dynamic objectives, obstacles, and hazards.
+    It simulates a complex, non-stationary setting suitable for advanced RL research.
+
+    Args:
+        config (EnvironmentConfig): Configuration object for the environment settings.
+    """
 
     def __init__(self, config: EnvironmentConfig):
         self.config = config
-        self.size = config.size
+        self.grid_size = config.size
+        self.num_agents = config.num_agents
         self.num_objectives = config.num_objectives
         self.dynamic_changes = config.dynamic_changes
+        self.physics_enabled = config.physics_enabled
 
-        # Dynamic objectives
-        self.objectives = []
-        self.objective_weights = np.random.dirichlet(np.ones(config.num_objectives))
-        self.objective_change_frequency = 50
-        self.step_count = 0
+        self.agent_positions: List[List[int]] = []
+        self.agent_velocities: List[List[float]] = []
+        self.objectives: List[Dict[str, Any]] = []
+        self.obstacles: List[List[int]] = []
+        self.hazards: List[List[int]] = []
+        self.current_step = 0
+        self.max_steps = self.grid_size * 20
 
-        # Agent state
-        self.agent_pos = np.array([0, 0], dtype=np.float32)
-        self.agent_velocity = np.array([0, 0], dtype=np.float32)
+        self.reset()
 
-        # Environment state
-        self.obstacles = self._generate_obstacles()
-        self.resources = self._generate_resources()
-        self.hazards = self._generate_hazards()
+    def _generate_obstacles(self) -> List[List[int]]:
+        """
+        Generate random obstacle positions within the grid.
 
-        # Physics parameters
-        self.friction = 0.9
-        self.max_velocity = 2.0
-
-        # Observation space
-        self.observation_space = (
-            2 + 2 + self.num_objectives * 2 + 10
-        )  # pos + vel + objectives + local info
-        self.action_space = 4  # up, down, left, right
-
-    def _generate_obstacles(self):
-        """Generate dynamic obstacles."""
+        Returns:
+            List[List[int]]: A list of [x, y] coordinates for obstacles.
+        """
+        num_obstacles = self.grid_size // 3
         obstacles = []
-        for _ in range(self.size // 3):
-            pos = np.random.randint(1, self.size - 1, 2)
-            obstacles.append(pos)
+        for _ in range(num_obstacles):
+            obstacles.append([random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1)])
         return obstacles
 
-    def _generate_resources(self):
-        """Generate resources for objectives."""
+    def _generate_resources(self) -> List[Dict[str, Any]]:
+        """
+        Generate random resource positions and values.
+
+        Returns:
+            List[Dict[str, Any]]: A list of dictionaries, each with 'position' ([x, y]) and 'value' (float).
+        """
+        num_resources = self.grid_size // 2
         resources = []
-        for _ in range(self.num_objectives * 3):
-            pos = np.random.randint(0, self.size, 2)
-            resource_type = np.random.randint(0, self.num_objectives)
-            value = np.random.uniform(0.5, 2.0)
-            resources.append({"pos": pos, "type": resource_type, "value": value})
+        for _ in range(num_resources):
+            pos = [random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1)]
+            resources.append({"position": pos, "value": random.uniform(0.1, 1.0)})
         return resources
 
-    def _generate_hazards(self):
-        """Generate hazardous areas."""
+    def _generate_hazards(self) -> List[List[int]]:
+        """
+        Generate random hazard zone positions.
+
+        Returns:
+            List[List[int]]: A list of [x, y] coordinates for hazards.
+        """
+        num_hazards = self.grid_size // 4
         hazards = []
-        for _ in range(self.size // 4):
-            pos = np.random.randint(0, self.size, 2)
-            radius = np.random.uniform(0.5, 1.5)
-            damage = np.random.uniform(0.1, 0.5)
-            hazards.append({"pos": pos, "radius": radius, "damage": damage})
+        for _ in range(num_hazards):
+            hazards.append([random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1)])
         return hazards
 
     def _update_objectives(self):
-        """Update dynamic objectives."""
-        if (
-            self.dynamic_changes
-            and self.step_count % self.objective_change_frequency == 0
-        ):
-            # Change objective weights
-            self.objective_weights = np.random.dirichlet(np.ones(self.num_objectives))
+        """
+        Dynamically update objective positions or values.
+        Called if `self.dynamic_changes` is True.
+        """
+        if self.dynamic_changes and self.current_step % 10 == 0:
+            for obj in self.objectives:
+                obj["position"] = [
+                    (obj["position"][0] + random.choice([-1, 0, 1])) % self.grid_size,
+                    (obj["position"][1] + random.choice([-1, 0, 1])) % self.grid_size,
+                ]
+                obj["value"] = max(0.1, obj["value"] + random.uniform(-0.1, 0.1))
 
-            # Move some objectives
-            for i in range(len(self.objectives)):
-                if np.random.random() < 0.3:  # 30% chance to move
-                    self.objectives[i] = np.random.randint(0, self.size, 2)
+    def _apply_physics(self, agent_id: int, action: np.ndarray) -> np.ndarray:
+        """
+        Apply simplified physics to update agent velocity and position.
 
-    def _apply_physics(self, action):
-        """Apply realistic physics to agent movement."""
-        # Convert action to force
-        force = np.array([0.0, 0.0])
-        if action == 0:  # up
-            force[1] = 1.0
-        elif action == 1:  # down
-            force[1] = -1.0
-        elif action == 2:  # left
-            force[0] = -1.0
-        elif action == 3:  # right
-            force[0] = 1.0
+        Args:
+            agent_id (int): The ID of the agent.
+            action (np.ndarray): The action taken by the agent (e.g., [dx, dy] force).
 
-        # Apply force to velocity
-        self.agent_velocity += force * 0.1
+        Returns:
+            np.ndarray: The new position of the agent [x, y].
+        """
+        if not self.physics_enabled:
+            move = np.array([0, 0])
+            if action == 0:  # Up
+                move[1] = -1
+            elif action == 1:  # Down
+                move[1] = 1
+            elif action == 2:  # Left
+                move[0] = -1
+            elif action == 3:  # Right
+                move[0] = 1
+            # Apply action noise
+            move = (move + np.random.normal(0, self.config.action_noise, size=2)).astype(int)
 
-        # Apply friction
-        self.agent_velocity *= self.friction
+            new_pos = [
+                (self.agent_positions[agent_id][0] + move[0]) % self.grid_size,
+                (self.agent_positions[agent_id][1] + move[1]) % self.grid_size,
+            ]
+            return np.array(new_pos)
 
-        # Limit velocity
-        velocity_magnitude = np.linalg.norm(self.agent_velocity)
-        if velocity_magnitude > self.max_velocity:
-            self.agent_velocity = (
-                self.agent_velocity / velocity_magnitude * self.max_velocity
-            )
+        # Simple physics: action influences velocity, velocity influences position
+        acceleration = action[:2] * 0.1  # Assume action is a 2D force vector for continuous control
+        self.agent_velocities[agent_id] = [
+            self.agent_velocities[agent_id][0] + acceleration[0],
+            self.agent_velocities[agent_id][1] + acceleration[1],
+        ]
+        # Add damping
+        self.agent_velocities[agent_id] = [
+            v * 0.9 for v in self.agent_velocities[agent_id]
+        ]
 
-        # Update position
-        self.agent_pos = self.agent_pos.astype(np.float32) + self.agent_velocity.astype(
-            np.float32
-        )
+        new_pos = [
+            (self.agent_positions[agent_id][0] + int(self.agent_velocities[agent_id][0])) % self.grid_size,
+            (self.agent_positions[agent_id][1] + int(self.agent_velocities[agent_id][1])) % self.grid_size,
+        ]
+        return np.array(new_pos)
 
-        # Boundary constraints
-        self.agent_pos = np.clip(self.agent_pos, 0.0, float(self.size - 1))
-        self.agent_pos = self.agent_pos.astype(np.float32)
+    def _check_collisions(self) -> List[bool]:
+        """
+        Check for collisions between agents and obstacles.
 
-    def _check_collisions(self):
-        """Check for collisions with obstacles."""
-        collision_penalty = 0
-        for obstacle in self.obstacles:
-            distance = np.linalg.norm(self.agent_pos - obstacle)
-            if distance < 0.5:  # Collision threshold
-                collision_penalty += 1.0
-                # Push agent away from obstacle
-                direction = self.agent_pos - obstacle
-                if np.linalg.norm(direction) > 0:
-                    direction = direction / np.linalg.norm(direction)
-                    self.agent_pos = obstacle + direction * 0.6
-        return collision_penalty
+        Returns:
+            List[bool]: A list of booleans, True if agent i collided, False otherwise.
+        """
+        collisions = [False] * self.num_agents
+        for i, pos in enumerate(self.agent_positions):
+            if pos in self.obstacles:
+                collisions[i] = True
+            for j, other_pos in enumerate(self.agent_positions):
+                if i != j and pos == other_pos:
+                    collisions[i] = True  # Agent-agent collision
+        return collisions
 
-    def _check_hazards(self):
-        """Check for hazard damage."""
-        damage = 0
-        for hazard in self.hazards:
-            distance = np.linalg.norm(self.agent_pos - hazard["pos"])
-            if distance < hazard["radius"]:
-                damage += hazard["damage"] * (1 - distance / hazard["radius"])
-        return damage
+    def _check_hazards(self) -> List[bool]:
+        """
+        Check if agents are in hazard zones.
 
-    def _collect_resources(self):
-        """Collect nearby resources."""
-        collected_value = np.zeros(self.num_objectives)
-        resources_to_remove = []
+        Returns:
+            List[bool]: A list of booleans, True if agent i is in a hazard zone, False otherwise.
+        """
+        in_hazard = [False] * self.num_agents
+        for i, pos in enumerate(self.agent_positions):
+            if pos in self.hazards:
+                in_hazard[i] = True
+        return in_hazard
 
-        for i, resource in enumerate(self.resources):
-            distance = np.linalg.norm(self.agent_pos - resource["pos"])
-            if distance < 0.5:  # Collection threshold
-                collected_value[resource["type"]] += resource["value"]
-                resources_to_remove.append(i)
+    def _collect_resources(self) -> List[float]:
+        """
+        Check if agents collect any resources and return rewards.
 
-        # Remove collected resources
-        for i in reversed(resources_to_remove):
-            self.resources.pop(i)
+        Returns:
+            List[float]: A list of rewards, one for each agent.
+        """
+        rewards = [0.0] * self.num_agents
+        for i, pos in enumerate(self.agent_positions):
+            for resource in self.resources:
+                if pos == resource["position"]:
+                    rewards[i] += resource["value"]
+                    self.resources.remove(resource) # Remove collected resource
+                    self.resources.extend(self._generate_resources()) # Respawn
+        return rewards
 
-        return collected_value
+    def reset(self) -> Tuple[List[np.ndarray], Dict[str, Any]]:
+        """
+        Reset the environment to its initial state.
 
-    def reset(self):
-        """Reset environment."""
-        self.agent_pos = np.array([0, 0], dtype=np.float32)
-        self.agent_velocity = np.array([0, 0], dtype=np.float32)
-        self.step_count = 0
-
-        # Regenerate dynamic elements
+        Returns:
+            Tuple[List[np.ndarray], Dict[str, Any]]: A tuple containing initial observations for all agents
+                                                   and an info dictionary.
+        """
+        self.agent_positions = [
+            [random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1)]
+            for _ in range(self.num_agents)
+        ]
+        self.agent_velocities = [[0.0, 0.0] for _ in range(self.num_agents)]
+        self.objectives = [
+            {
+                "position": [
+                    random.randint(0, self.grid_size - 1),
+                    random.randint(0, self.grid_size - 1),
+                ],
+                "value": random.uniform(0.5, 2.0),
+            }
+            for _ in range(self.num_objectives)
+        ]
         self.obstacles = self._generate_obstacles()
-        self.resources = self._generate_resources()
         self.hazards = self._generate_hazards()
+        self.resources = self._generate_resources()
+        self.current_step = 0
+        return self.get_observation(), {}
 
-        # Initialize objectives
-        self.objectives = []
-        for _ in range(self.num_objectives):
-            self.objectives.append(np.random.randint(0, self.size, 2))
+    def get_observation(self) -> List[np.ndarray]:
+        """
+        Get observations for all agents. Observations include agent's own position,
+        relative positions of other agents, objectives, obstacles, and hazards.
 
-        return self.get_observation()
+        Returns:
+            List[np.ndarray]: A list of NumPy arrays, each representing an agent's observation.
+        """
+        observations = []
+        for i, agent_pos in enumerate(self.agent_positions):
+            obs = []
+            # Own position
+            obs.extend(agent_pos)
 
-    def get_observation(self):
-        """Get current observation."""
-        obs = []
+            # Relative positions of other agents
+            for j, other_pos in enumerate(self.agent_positions):
+                if i != j:
+                    obs.extend([other_pos[0] - agent_pos[0], other_pos[1] - agent_pos[1]])
 
-        # Agent position and velocity
-        obs.extend(self.agent_pos / self.size)  # Normalized position
-        obs.extend(self.agent_velocity / self.max_velocity)  # Normalized velocity
+            # Relative positions of objectives
+            for obj in self.objectives:
+                obs.extend([obj["position"][0] - agent_pos[0], obj["position"][1] - agent_pos[1], obj["value"]])
 
-        # Objective information
-        for objective in self.objectives:
-            rel_pos = (objective - self.agent_pos) / self.size
-            obs.extend(rel_pos)
+            # Relative positions of obstacles
+            for obs_pos in self.obstacles:
+                obs.extend([obs_pos[0] - agent_pos[0], obs_pos[1] - agent_pos[1]])
 
-        # Local environment information
-        local_info = self._get_local_info()
-        obs.extend(local_info)
+            # Relative positions of hazards
+            for haz_pos in self.hazards:
+                obs.extend([haz_pos[0] - agent_pos[0], haz_pos[1] - agent_pos[1]])
 
-        return np.array(obs, dtype=np.float32)
+            # Add noise to observation
+            observations.append(np.array(obs, dtype=np.float32) + np.random.normal(0, self.config.observation_noise, size=len(obs)))
+        return observations
 
-    def _get_local_info(self):
-        """Get local environment information."""
-        local_info = []
+    def step(self, actions: List[np.ndarray]) -> Tuple[List[np.ndarray], List[float], List[bool], Dict[str, Any]]:
+        """
+        Take a step in the environment given actions from all agents.
 
-        # Distance to nearest obstacle
-        min_obstacle_dist = float("inf")
-        for obstacle in self.obstacles:
-            dist = np.linalg.norm(self.agent_pos - obstacle)
-            min_obstacle_dist = min(min_obstacle_dist, dist)
-        local_info.append(min_obstacle_dist / self.size)
+        Args:
+            actions (List[np.ndarray]): A list of actions, one for each agent.
+                                      For discrete actions, each element is an int (0:up, 1:down, 2:left, 3:right).
+                                      For continuous actions (if physics_enabled), each element is a 2D force vector.
 
-        # Distance to nearest resource
-        min_resource_dist = float("inf")
-        for resource in self.resources:
-            dist = np.linalg.norm(self.agent_pos - resource["pos"])
-            min_resource_dist = min(min_resource_dist, dist)
-        local_info.append(min_resource_dist / self.size)
+        Returns:
+            Tuple[List[np.ndarray], List[float], List[bool], Dict[str, Any]]:
+                - next_observations (List[np.ndarray]): New observations for all agents.
+                - rewards (List[float]): Rewards for all agents.
+                - dones (List[bool]): Done flags for all agents (True if episode finished for any agent).
+                - info (Dict[str, Any]): Additional information about the step.
+        """
+        self.current_step += 1
+        rewards = [0.0] * self.num_agents
 
-        # Distance to nearest hazard
-        min_hazard_dist = float("inf")
-        for hazard in self.hazards:
-            dist = np.linalg.norm(self.agent_pos - hazard["pos"])
-            min_hazard_dist = min(min_hazard_dist, dist)
-        local_info.append(min_hazard_dist / self.size)
-
-        # Resource density in local area
-        local_resources = 0
-        for resource in self.resources:
-            if np.linalg.norm(self.agent_pos - resource["pos"]) < 2.0:
-                local_resources += 1
-        local_info.append(local_resources / 10.0)
-
-        # Fill remaining space
-        while len(local_info) < 10:
-            local_info.append(0.0)
-
-        return local_info[:10]
-
-    def step(self, action):
-        """Take step in environment."""
-        self.step_count += 1
-
-        # Update dynamic objectives
-        self._update_objectives()
-
-        # Apply physics
-        self._apply_physics(action)
+        # Update agent positions based on actions and physics
+        new_agent_positions = []
+        for i, action in enumerate(actions):
+            new_agent_positions.append(self._apply_physics(i, action))
+        self.agent_positions = new_agent_positions
 
         # Check collisions and hazards
-        collision_penalty = self._check_collisions()
-        hazard_damage = self._check_hazards()
+        collisions = self._check_collisions()
+        in_hazard = self._check_hazards()
+
+        # Compute rewards from objectives
+        for i, agent_pos in enumerate(self.agent_positions):
+            for obj in self.objectives:
+                dist = np.linalg.norm(np.array(agent_pos) - np.array(obj["position"])) # type: ignore
+                rewards[i] += obj["value"] / (1 + dist) # Reward inversely proportional to distance
+
+            if collisions[i]:
+                rewards[i] -= 5.0 # Penalty for collision
+            if in_hazard[i]:
+                rewards[i] -= 1.0 # Cost for being in hazard
 
         # Collect resources
-        collected_value = self._collect_resources()
+        resource_rewards = self._collect_resources()
+        for i in range(self.num_agents):
+            rewards[i] += resource_rewards[i]
 
-        # Compute multi-objective reward
-        reward = np.sum(collected_value * self.objective_weights)
-        reward -= collision_penalty
-        reward -= hazard_damage
+        # Dynamic environment changes
+        self._update_objectives()
 
-        # Check termination
-        done = self.step_count >= 200 or np.sum(collected_value) > 10
+        # Check if episode is done
+        dones = [self.current_step >= self.max_steps] * self.num_agents
 
-        info = {
-            "collected_value": collected_value,
-            "objective_weights": self.objective_weights,
-            "collision_penalty": collision_penalty,
-            "hazard_damage": hazard_damage,
-            "step_count": self.step_count,
-        }
-
-        return self.get_observation(), reward, done, info
+        info = {"collisions": collisions, "in_hazard": in_hazard}
+        return self.get_observation(), rewards, dones, info
 
 
 class PartiallyObservableEnvironment:
-    """Partially Observable Environment with limited visibility."""
+    """
+    Partially Observable Environment with limited visibility.
+
+    Agents in this environment have a limited field of view, making full state
+    knowledge unavailable and requiring strategies for dealing with uncertainty.
+
+    Args:
+        config (EnvironmentConfig): Configuration object for the environment settings.
+    """
 
     def __init__(self, config: EnvironmentConfig):
         self.config = config
-        self.size = config.size
-        self.visibility_radius = 3.0
+        self.grid_size = config.size
+        self.num_agents = config.num_agents
+        self.partial_observability = config.partial_observability
         self.observation_noise = config.observation_noise
 
-        # Agent state
-        self.agent_pos = np.array([0, 0], dtype=np.float32)
-        self.agent_orientation = 0.0  # Angle in radians
+        self.agent_positions: List[List[int]] = []
+        self.target_positions: List[List[int]] = []
+        self.obstacle_positions: List[List[int]] = []
+        self.enemy_positions: List[List[int]] = []
+        self.visibility_radius = self.grid_size // 3  # Agents can only see within this radius
+        self.current_step = 0
+        self.max_steps = self.grid_size * 20
 
-        # Environment state
-        self.targets = self._generate_targets()
-        self.obstacles = self._generate_obstacles()
-        self.enemies = self._generate_enemies()
+        self.reset()
 
-        # Observation space (limited by visibility)
-        self.observation_space = 2 + 8 + 4  # pos + local_map + orientation_info
-        self.action_space = 5  # forward, left, right, turn_left, turn_right
+    def _generate_targets(self) -> List[List[int]]:
+        """
+        Generate random target positions.
 
-    def _generate_targets(self):
-        """Generate targets to collect."""
+        Returns:
+            List[List[int]]: A list of [x, y] coordinates for targets.
+        """
+        num_targets = self.grid_size // 4
         targets = []
-        for _ in range(5):
-            pos = np.random.randint(0, self.size, 2)
-            value = np.random.uniform(0.5, 2.0)
-            targets.append({"pos": pos, "value": value, "collected": False})
+        for _ in range(num_targets):
+            targets.append([random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1)])
         return targets
 
-    def _generate_obstacles(self):
-        """Generate obstacles."""
+    def _generate_obstacles(self) -> List[List[int]]:
+        """
+        Generate random obstacle positions.
+
+        Returns:
+            List[List[int]]: A list of [x, y] coordinates for obstacles.
+        """
+        num_obstacles = self.grid_size // 3
         obstacles = []
-        for _ in range(self.size // 2):
-            pos = np.random.randint(0, self.size, 2)
-            obstacles.append(pos)
+        for _ in range(num_obstacles):
+            obstacles.append([random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1)])
         return obstacles
 
-    def _generate_enemies(self):
-        """Generate enemy agents."""
+    def _generate_enemies(self) -> List[List[int]]:
+        """
+        Generate random enemy positions that move dynamically.
+
+        Returns:
+            List[List[int]]: A list of [x, y] coordinates for enemies.
+        """
+        num_enemies = self.grid_size // 5
         enemies = []
-        for _ in range(3):
-            pos = np.random.randint(0, self.size, 2)
-            speed = np.random.uniform(0.5, 1.5)
-            enemies.append(
-                {
-                    "pos": pos,
-                    "speed": speed,
-                    "direction": np.random.uniform(0, 2 * np.pi),
-                }
-            )
+        for _ in range(num_enemies):
+            enemies.append([random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1)])
         return enemies
 
-    def _get_visible_objects(self):
-        """Get objects within visibility radius."""
-        visible_objects = {"targets": [], "obstacles": [], "enemies": []}
+    def _get_visible_objects(self, agent_pos: List[int]) -> Dict[str, List[List[int]]]:
+        """
+        Determine which objects are visible to a given agent based on its visibility radius.
 
-        for target in self.targets:
-            if not target["collected"]:
-                distance = np.linalg.norm(self.agent_pos - target["pos"])
-                if distance <= self.visibility_radius:
-                    # Check if object is in field of view
-                    angle_to_target = np.arctan2(
-                        target["pos"][1] - self.agent_pos[1],
-                        target["pos"][0] - self.agent_pos[0],
-                    )
-                    angle_diff = abs(angle_to_target - self.agent_orientation)
-                    if angle_diff <= np.pi / 2:  # 90-degree field of view
-                        visible_objects["targets"].append(
-                            {
-                                "pos": target["pos"],
-                                "value": target["value"],
-                                "distance": distance,
-                            }
-                        )
+        Args:
+            agent_pos (List[int]): The [x, y] position of the agent.
 
-        for obstacle in self.obstacles:
-            distance = np.linalg.norm(self.agent_pos - obstacle)
-            if distance <= self.visibility_radius:
-                angle_to_obstacle = np.arctan2(
-                    obstacle[1] - self.agent_pos[1], obstacle[0] - self.agent_pos[0]
-                )
-                angle_diff = abs(angle_to_obstacle - self.agent_orientation)
-                if angle_diff <= np.pi / 2:
-                    visible_objects["obstacles"].append(
-                        {"pos": obstacle, "distance": distance}
-                    )
+        Returns:
+            Dict[str, List[List[int]]]: A dictionary containing visible targets, obstacles, and enemies.
+        """
+        visible_targets = []
+        visible_obstacles = []
+        visible_enemies = []
 
-        for enemy in self.enemies:
-            distance = np.linalg.norm(self.agent_pos - enemy["pos"])
-            if distance <= self.visibility_radius:
-                angle_to_enemy = np.arctan2(
-                    enemy["pos"][1] - self.agent_pos[1],
-                    enemy["pos"][0] - self.agent_pos[0],
-                )
-                angle_diff = abs(angle_to_enemy - self.agent_orientation)
-                if angle_diff <= np.pi / 2:
-                    visible_objects["enemies"].append(
-                        {
-                            "pos": enemy["pos"],
-                            "distance": distance,
-                            "speed": enemy["speed"],
-                        }
-                    )
+        for target_pos in self.target_positions:
+            if self._is_in_sight(agent_pos, target_pos):
+                visible_targets.append(target_pos)
 
-        return visible_objects
+        for obs_pos in self.obstacle_positions:
+            if self._is_in_sight(agent_pos, obs_pos):
+                visible_obstacles.append(obs_pos)
 
-    def _update_enemies(self):
-        """Update enemy positions."""
-        for enemy in self.enemies:
-            # Simple random movement
-            enemy["direction"] += np.random.uniform(-0.5, 0.5)
-            enemy["pos"] = enemy["pos"].astype(np.float32) + (enemy["speed"] * np.array(
-                [np.cos(enemy["direction"]), np.sin(enemy["direction"])]
-            )).astype(np.float32)
+        for enemy_pos in self.enemy_positions:
+            if self._is_in_sight(agent_pos, enemy_pos):
+                visible_enemies.append(enemy_pos)
 
-            # Keep enemies within bounds
-            enemy["pos"] = np.clip(enemy["pos"], 0.0, float(self.size - 1))
-
-    def reset(self):
-        """Reset environment."""
-        self.agent_pos = np.array([0, 0], dtype=np.float32)
-        self.agent_orientation = 0.0
-
-        # Regenerate environment
-        self.targets = self._generate_targets()
-        self.obstacles = self._generate_obstacles()
-        self.enemies = self._generate_enemies()
-
-        return self.get_observation()
-
-    def get_observation(self):
-        """Get partial observation."""
-        obs = []
-
-        # Agent position and orientation
-        obs.extend(self.agent_pos / self.size)
-        obs.append(self.agent_orientation / (2 * np.pi))  # Normalized orientation
-
-        # Visible objects
-        visible_objects = self._get_visible_objects()
-
-        # Local map (8 directions)
-        local_map = [0.0] * 8
-        for target in visible_objects["targets"]:
-            angle = np.arctan2(
-                target["pos"][1] - self.agent_pos[1],
-                target["pos"][0] - self.agent_pos[0],
-            )
-            direction = int((angle + np.pi) / (2 * np.pi) * 8) % 8
-            local_map[direction] = target["value"]
-
-        for obstacle in visible_objects["obstacles"]:
-            angle = np.arctan2(
-                obstacle["pos"][1] - self.agent_pos[1],
-                obstacle["pos"][0] - self.agent_pos[0],
-            )
-            direction = int((angle + np.pi) / (2 * np.pi) * 8) % 8
-            local_map[direction] = -1.0  # Obstacle indicator
-
-        obs.extend(local_map)
-
-        # Orientation information
-        obs.append(np.cos(self.agent_orientation))
-        obs.append(np.sin(self.agent_orientation))
-        obs.append(0.0)  # Placeholder
-        obs.append(0.0)  # Placeholder
-
-        # Add observation noise
-        if self.observation_noise > 0:
-            noise = np.random.normal(0, self.observation_noise, len(obs))
-            obs = np.array(obs) + noise
-
-        return np.array(obs, dtype=np.float32)
-
-    def step(self, action):
-        """Take step in environment."""
-        # Update enemies
-        self._update_enemies()
-
-        # Apply action
-        if action == 0:  # forward
-            new_pos = self.agent_pos + 0.5 * np.array(
-                [np.cos(self.agent_orientation), np.sin(self.agent_orientation)]
-            )
-            if self._is_valid_position(new_pos):
-                self.agent_pos = new_pos
-        elif action == 1:  # left
-            new_pos = self.agent_pos + 0.5 * np.array(
-                [
-                    np.cos(self.agent_orientation + np.pi / 2),
-                    np.sin(self.agent_orientation + np.pi / 2),
-                ]
-            )
-            if self._is_valid_position(new_pos):
-                self.agent_pos = new_pos
-        elif action == 2:  # right
-            new_pos = self.agent_pos + 0.5 * np.array(
-                [
-                    np.cos(self.agent_orientation - np.pi / 2),
-                    np.sin(self.agent_orientation - np.pi / 2),
-                ]
-            )
-            if self._is_valid_position(new_pos):
-                self.agent_pos = new_pos
-        elif action == 3:  # turn_left
-            self.agent_orientation += np.pi / 8
-        elif action == 4:  # turn_right
-            self.agent_orientation -= np.pi / 8
-
-        # Keep agent within bounds
-        self.agent_pos = np.clip(self.agent_pos, 0, self.size - 1)
-
-        # Check for target collection
-        reward = 0
-        for target in self.targets:
-            if not target["collected"]:
-                distance = np.linalg.norm(self.agent_pos - target["pos"])
-                if distance < 0.5:
-                    reward += target["value"]
-                    target["collected"] = True
-
-        # Check for enemy collision
-        penalty = 0
-        for enemy in self.enemies:
-            distance = np.linalg.norm(self.agent_pos - enemy["pos"])
-            if distance < 0.5:
-                penalty += 1.0
-
-        # Check termination
-        done = all(target["collected"] for target in self.targets) or penalty > 0
-
-        info = {
-            "targets_collected": sum(target["collected"] for target in self.targets),
-            "total_targets": len(self.targets),
-            "enemy_collision": penalty > 0,
+        return {
+            "targets": visible_targets,
+            "obstacles": visible_obstacles,
+            "enemies": visible_enemies,
         }
 
-        return self.get_observation(), reward - penalty, done, info
+    def _is_in_sight(self, agent_pos: List[int], object_pos: List[int]) -> bool:
+        """
+        Check if an object is within the agent's visibility radius.
 
-    def _is_valid_position(self, pos):
-        """Check if position is valid (not in obstacle)."""
-        for obstacle in self.obstacles:
-            if np.linalg.norm(pos - obstacle) < 0.5:
-                return False
-        return True
+        Args:
+            agent_pos (List[int]): The [x, y] position of the agent.
+            object_pos (List[int]): The [x, y] position of the object.
+
+        Returns:
+            bool: True if the object is in sight, False otherwise.
+        """
+        distance = math.sqrt((agent_pos[0] - object_pos[0])**2 + (agent_pos[1] - object_pos[1])**2)
+        return distance <= self.visibility_radius
+
+    def _update_enemies(self):
+        """
+        Update the positions of enemies randomly.
+        """
+        for i in range(len(self.enemy_positions)):
+            move = random.choice([[-1, 0], [1, 0], [0, -1], [0, 1], [0, 0]])
+            new_pos = [
+                (self.enemy_positions[i][0] + move[0]) % self.grid_size,
+                (self.enemy_positions[i][1] + move[1]) % self.grid_size,
+            ]
+            self.enemy_positions[i] = new_pos
+
+    def reset(self) -> Tuple[List[np.ndarray], Dict[str, Any]]:
+        """
+        Reset the environment to its initial state.
+
+        Returns:
+            Tuple[List[np.ndarray], Dict[str, Any]]: A tuple containing initial observations for all agents
+                                                   and an info dictionary.
+        """
+        self.agent_positions = [
+            [random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1)]
+            for _ in range(self.num_agents)
+        ]
+        self.target_positions = self._generate_targets()
+        self.obstacle_positions = self._generate_obstacles()
+        self.enemy_positions = self._generate_enemies()
+        self.current_step = 0
+        return self.get_observation(), {}
+
+    def get_observation(self) -> List[np.ndarray]:
+        """
+        Get observations for all agents, respecting partial observability.
+
+        Returns:
+            List[np.ndarray]: A list of NumPy arrays, each representing an agent's observation.
+        """
+        observations = []
+        for i, agent_pos in enumerate(self.agent_positions):
+            obs = []
+            # Own position
+            obs.extend(agent_pos)
+
+            if self.partial_observability:
+                visible_objects = self._get_visible_objects(agent_pos)
+                # Relative positions of visible targets
+                for target_pos in visible_objects["targets"]:
+                    obs.extend([target_pos[0] - agent_pos[0], target_pos[1] - agent_pos[1]])
+
+                # Relative positions of visible obstacles
+                for obs_pos in visible_objects["obstacles"]:
+                    obs.extend([obs_pos[0] - agent_pos[0], obs_pos[1] - agent_pos[1]])
+
+                # Relative positions of visible enemies
+                for enemy_pos in visible_objects["enemies"]:
+                    obs.extend([enemy_pos[0] - agent_pos[0], enemy_pos[1] - agent_pos[1]])
+            else:
+                # Full observability
+                for target_pos in self.target_positions:
+                    obs.extend([target_pos[0] - agent_pos[0], target_pos[1] - agent_pos[1]])
+                for obs_pos in self.obstacle_positions:
+                    obs.extend([obs_pos[0] - agent_pos[0], obs_pos[1] - agent_pos[1]])
+                for enemy_pos in self.enemy_positions:
+                    obs.extend([enemy_pos[0] - agent_pos[0], enemy_pos[1] - agent_pos[1]])
+
+            # Add noise to observation
+            observations.append(np.array(obs, dtype=np.float32) + np.random.normal(0, self.observation_noise, size=len(obs)))
+        return observations
+
+    def step(self, actions: List[int]) -> Tuple[List[np.ndarray], List[float], List[bool], Dict[str, Any]]:
+        """
+        Take a step in the environment given actions from all agents.
+
+        Args:
+            actions (List[int]): A list of integer actions, one for each agent (0:up, 1:down, 2:left, 3:right).
+
+        Returns:
+            Tuple[List[np.ndarray], List[float], List[bool], Dict[str, Any]]:
+                - next_observations (List[np.ndarray]): New observations for all agents.
+                - rewards (List[float]): Rewards for all agents.
+                - dones (List[bool]): Done flags for all agents (True if episode finished for any agent).
+                - info (Dict[str, Any]): Additional information about the step.
+        """
+        self.current_step += 1
+        rewards = [0.0] * self.num_agents
+
+        # Update agent positions
+        new_agent_positions = []
+        for i, action in enumerate(actions):
+            current_pos = list(self.agent_positions[i]) # Ensure it's a list for modification
+            if action == 0:  # Up
+                current_pos[1] = (current_pos[1] - 1) % self.grid_size
+            elif action == 1:  # Down
+                current_pos[1] = (current_pos[1] + 1) % self.grid_size
+            elif action == 2:  # Left
+                current_pos[0] = (current_pos[0] - 1) % self.grid_size
+            elif action == 3:  # Right
+                current_pos[0] = (current_pos[0] + 1) % self.grid_size
+            new_agent_positions.append(current_pos)
+        self.agent_positions = new_agent_positions
+
+        self._update_enemies() # Enemies move randomly
+
+        # Compute rewards
+        for i, agent_pos in enumerate(self.agent_positions):
+            # Reward for reaching targets
+            if agent_pos in self.target_positions:
+                rewards[i] += 10.0
+                self.target_positions.remove(agent_pos) # Remove collected target
+                self.target_positions.extend(self._generate_targets()) # Respawn new target
+
+            # Penalty for hitting obstacles
+            if agent_pos in self.obstacle_positions:
+                rewards[i] -= 5.0
+
+            # Penalty for encountering enemies
+            if agent_pos in self.enemy_positions:
+                rewards[i] -= 3.0
+
+        # Check if episode is done
+        dones = [self.current_step >= self.max_steps] * self.num_agents
+
+        info = {"targets_remaining": len(self.target_positions)}
+        return self.get_observation(), rewards, dones, info
+
+    def _is_valid_position(self, pos: List[int]) -> bool:
+        """
+        Check if a given position is within the grid boundaries.
+
+        Args:
+            pos (List[int]): The [x, y] position to check.
+
+        Returns:
+            bool: True if the position is valid, False otherwise.
+        """
+        return 0 <= pos[0] < self.grid_size and 0 <= pos[1] < self.grid_size
 
 
 class ContinuousControlEnvironment:
-    """Continuous Control Environment with realistic dynamics."""
+    """
+    Continuous Control Environment with realistic dynamics.
+
+    This environment simulates a physics-based continuous control task, where
+    agents exert continuous forces (actions) to navigate to targets.
+
+    Args:
+        config (EnvironmentConfig): Configuration object for the environment settings.
+    """
 
     def __init__(self, config: EnvironmentConfig):
         self.config = config
         self.size = config.size
+        self.num_agents = config.num_agents
+        self.action_noise = config.action_noise
+        self.physics_enabled = True  # Always enabled for continuous control
 
-        # Agent state (continuous)
-        self.agent_pos = np.array([0.0, 0.0], dtype=np.float32)
-        self.agent_velocity = np.array([0.0, 0.0], dtype=np.float32)
-        self.agent_angle = 0.0
-        self.agent_angular_velocity = 0.0
+        self.agent_positions: List[np.ndarray] = []  # Continuous positions
+        self.agent_velocities: List[np.ndarray] = []
+        self.agent_mass = 1.0
+        self.targets: List[np.ndarray] = []
+        self.obstacles: List[np.ndarray] = []
 
-        # Physics parameters
-        self.mass = 1.0
-        self.moment_of_inertia = 0.1
-        self.drag_coefficient = 0.1
-        self.max_force = 2.0
-        self.max_torque = 1.0
+        self.current_step = 0
+        self.max_steps = self.size * 50
+        self.dt = 0.1  # Time step for physics simulation
 
-        # Environment
-        self.targets = self._generate_targets()
-        self.obstacles = self._generate_obstacles()
+        self.reset()
 
-        # Action space (continuous force and torque)
-        self.action_space = 3  # force_x, force_y, torque
-        self.observation_space = (
-            8  # pos, vel, angle, angular_vel, target_rel_pos, obstacle_dist
-        )
+    def _generate_targets(self) -> List[np.ndarray]:
+        """
+        Generate random target positions in continuous space.
 
-    def _generate_targets(self):
-        """Generate targets."""
+        Returns:
+            List[np.ndarray]: A list of 2D NumPy arrays for target positions.
+        """
+        num_targets = self.size // 4
         targets = []
-        for _ in range(3):
-            pos = np.random.uniform(1, self.size - 1, 2)
-            targets.append({"pos": pos, "collected": False})
+        for _ in range(num_targets):
+            targets.append(np.random.uniform(0, self.size, size=2))
         return targets
 
-    def _generate_obstacles(self):
-        """Generate obstacles."""
+    def _generate_obstacles(self) -> List[np.ndarray]:
+        """
+        Generate random obstacle positions in continuous space.
+
+        Returns:
+            List[np.ndarray]: A list of 2D NumPy arrays for obstacle positions.
+        """
+        num_obstacles = self.size // 3
         obstacles = []
-        for _ in range(5):
-            pos = np.random.uniform(0, self.size, 2)
-            radius = np.random.uniform(0.3, 0.8)
-            obstacles.append({"pos": pos, "radius": radius})
+        for _ in range(num_obstacles):
+            obstacles.append(np.random.uniform(0, self.size, size=2))
         return obstacles
 
-    def reset(self):
-        """Reset environment."""
-        self.agent_pos = np.array([0.0, 0.0], dtype=np.float32)
-        self.agent_velocity = np.array([0.0, 0.0], dtype=np.float32)
-        self.agent_angle = 0.0
-        self.agent_angular_velocity = 0.0
+    def reset(self) -> Tuple[List[np.ndarray], Dict[str, Any]]:
+        """
+        Reset the environment to its initial state.
 
-        # Regenerate environment
+        Returns:
+            Tuple[List[np.ndarray], Dict[str, Any]]: A tuple containing initial observations for all agents
+                                                   and an info dictionary.
+        """
+        self.agent_positions = [np.random.uniform(0, self.size, size=2) for _ in range(self.num_agents)]
+        self.agent_velocities = [np.zeros(2) for _ in range(self.num_agents)]
         self.targets = self._generate_targets()
         self.obstacles = self._generate_obstacles()
+        self.current_step = 0
+        return self.get_observation(), {}
 
-        return self.get_observation()
+    def get_observation(self) -> List[np.ndarray]:
+        """
+        Get observations for all agents in continuous space.
 
-    def get_observation(self):
-        """Get observation."""
-        obs = []
+        Observations include agent's own position, velocity, and relative positions
+        of targets and obstacles.
 
-        # Agent state
-        obs.extend(self.agent_pos / self.size)
-        obs.extend(self.agent_velocity / 5.0)  # Normalized velocity
-        obs.append(self.agent_angle / (2 * np.pi))
-        obs.append(self.agent_angular_velocity / 5.0)
+        Returns:
+            List[np.ndarray]: A list of NumPy arrays, each representing an agent's observation.
+        """
+        observations = []
+        for i, agent_pos in enumerate(self.agent_positions):
+            obs = []
+            # Own position and velocity
+            obs.extend(agent_pos.tolist())
+            obs.extend(self.agent_velocities[i].tolist())
 
-        # Target information
-        if self.targets:
-            nearest_target = min(
-                self.targets, key=lambda t: np.linalg.norm(self.agent_pos - t["pos"])
-            )
-            rel_pos = (nearest_target["pos"] - self.agent_pos) / self.size
-            obs.extend(rel_pos)
-        else:
-            obs.extend([0.0, 0.0])
+            # Relative positions of targets
+            for target_pos in self.targets:
+                obs.extend((target_pos - agent_pos).tolist())
 
-        # Obstacle information
-        if self.obstacles:
-            nearest_obstacle = min(
-                self.obstacles, key=lambda o: np.linalg.norm(self.agent_pos - o["pos"])
-            )
-            distance = (
-                np.linalg.norm(self.agent_pos - nearest_obstacle["pos"]) / self.size
-            )
-            obs.append(distance)
-        else:
-            obs.append(1.0)
+            # Relative positions of obstacles
+            for obs_pos in self.obstacles:
+                obs.extend((obs_pos - agent_pos).tolist())
 
-        return np.array(obs, dtype=np.float32)
+            # Add noise to observation
+            observations.append(np.array(obs, dtype=np.float32) + np.random.normal(0, self.config.observation_noise, size=len(obs)))
+        return observations
 
-    def step(self, action):
-        """Take step with continuous control."""
-        # Parse action
-        force_x = np.clip(action[0], -self.max_force, self.max_force)
-        force_y = np.clip(action[1], -self.max_force, self.max_force)
-        torque = np.clip(action[2], -self.max_torque, self.max_torque)
+    def step(self, actions: List[np.ndarray]) -> Tuple[List[np.ndarray], List[float], List[bool], Dict[str, Any]]:
+        """
+        Take a step in the environment given continuous actions (forces) from all agents.
 
-        # Apply forces
-        force = np.array([force_x, force_y])
-        acceleration = force / self.mass
+        Args:
+            actions (List[np.ndarray]): A list of 2D NumPy arrays, each representing a continuous
+                                      force vector (action) for an agent.
 
-        # Apply torque
-        angular_acceleration = torque / self.moment_of_inertia
+        Returns:
+            Tuple[List[np.ndarray], List[float], List[bool], Dict[str, Any]]:
+                - next_observations (List[np.ndarray]): New observations for all agents.
+                - rewards (List[float]): Rewards for all agents.
+                - dones (List[bool]): Done flags for all agents (True if episode finished for any agent).
+                - info (Dict[str, Any]): Additional information about the step.
+        """
+        self.current_step += 1
+        rewards = [0.0] * self.num_agents
+        dones = [self.current_step >= self.max_steps] * self.num_agents
 
-        # Update velocity
-        self.agent_velocity += acceleration * 0.1
-        self.agent_angular_velocity += angular_acceleration * 0.1
+        new_agent_positions = []
+        for i, action in enumerate(actions):
+            # Apply action noise
+            action_with_noise = action + np.random.normal(0, self.action_noise, size=action.shape)
 
-        # Apply drag
-        self.agent_velocity *= 1 - self.drag_coefficient
-        self.agent_angular_velocity *= 1 - self.drag_coefficient
+            # Apply physics: F = ma, a = F/m, v = v + a*dt, p = p + v*dt
+            acceleration = action_with_noise / self.agent_mass
+            self.agent_velocities[i] = self.agent_velocities[i] + acceleration * self.dt
 
-        # Update position
-        self.agent_pos = self.agent_pos.astype(np.float32) + (
-            self.agent_velocity * 0.1
-        ).astype(np.float32)
-        self.agent_angle += self.agent_angular_velocity * 0.1
+            # Update position
+            new_pos = self.agent_positions[i] + self.agent_velocities[i] * self.dt
 
-        # Keep angle in [0, 2π]
-        self.agent_angle = self.agent_angle % (2 * np.pi)
+            # Boundary conditions (wrap around)
+            new_pos = np.mod(new_pos, self.size)
+            new_agent_positions.append(new_pos)
+        self.agent_positions = new_agent_positions
 
-        # Boundary constraints
-        self.agent_pos = np.clip(self.agent_pos, 0, self.size)
+        # Compute rewards
+        for i, agent_pos in enumerate(self.agent_positions):
+            # Reward for being close to targets
+            for target_pos in self.targets:
+                distance_to_target = np.linalg.norm(agent_pos - target_pos)
+                rewards[i] += 1.0 / (1.0 + distance_to_target) # Inverse distance reward
 
-        # Check collisions
-        collision_penalty = 0
-        for obstacle in self.obstacles:
-            distance = np.linalg.norm(self.agent_pos - obstacle["pos"])
-            if distance < obstacle["radius"]:
-                collision_penalty += 1.0
-                # Push agent away
-                direction = self.agent_pos - obstacle["pos"]
-                if np.linalg.norm(direction) > 0:
-                    direction = direction / np.linalg.norm(direction)
-                    self.agent_pos = obstacle["pos"] + direction * obstacle["radius"]
+            # Penalty for being close to obstacles
+            for obs_pos in self.obstacles:
+                distance_to_obstacle = np.linalg.norm(agent_pos - obs_pos)
+                if distance_to_obstacle < 0.5: # Collision radius
+                    rewards[i] -= 5.0
+                    dones[i] = True # End episode on collision
 
-        # Check target collection
-        reward = 0
-        for target in self.targets:
-            if not target["collected"]:
-                distance = np.linalg.norm(self.agent_pos - target["pos"])
-                if distance < 0.3:
-                    reward += 1.0
-                    target["collected"] = True
-
-        # Distance-based reward
-        if self.targets:
-            nearest_target = min(
-                self.targets, key=lambda t: np.linalg.norm(self.agent_pos - t["pos"])
-            )
-            distance_reward = (
-                -np.linalg.norm(self.agent_pos - nearest_target["pos"]) / self.size
-            )
-            reward += distance_reward * 0.1
-
-        # Check termination
-        done = (
-            all(target["collected"] for target in self.targets) or collision_penalty > 0
-        )
-
-        info = {
-            "targets_collected": sum(target["collected"] for target in self.targets),
-            "collision_penalty": collision_penalty,
-        }
-
-        return self.get_observation(), reward - collision_penalty, done, info
+        info = {}
+        return self.get_observation(), rewards, dones, info
 
 
 class AdversarialEnvironment:
-    """Adversarial Environment with adaptive opponents."""
+    """
+    Adversarial Environment with adaptive opponents.
+
+    This environment includes an adaptive adversarial agent that attempts to
+    disrupt the main agent's performance, suitable for testing robust RL algorithms.
+
+    Args:
+        config (EnvironmentConfig): Configuration object for the environment settings.
+    """
 
     def __init__(self, config: EnvironmentConfig):
         self.config = config
-        self.size = config.size
+        self.grid_size = config.size
+        self.num_agents = config.num_agents  # Main agents
         self.adversarial_mode = config.adversarial_mode
+        self.observation_noise = config.observation_noise
 
-        # Agent state
-        self.agent_pos = np.array([0, 0], dtype=np.float32)
+        self.agent_positions: List[List[int]] = []
+        self.adversary_position: Optional[List[int]] = None # Single adversary for simplicity
+        self.targets: List[List[int]] = []
+        self.obstacles: List[List[int]] = []
 
-        # Adversarial opponent
-        self.opponent_pos = np.array([self.size - 1, self.size - 1], dtype=np.float32)
-        self.opponent_strategy = "random"  # random, aggressive, defensive
-        self.opponent_adaptation_rate = 0.1
+        self.current_step = 0
+        self.max_steps = self.grid_size * 20
+        self.adversary_strength = 0.5 # How much the adversary can influence
 
-        # Environment
-        self.targets = self._generate_targets()
-        self.obstacles = self._generate_obstacles()
+        self.reset()
 
-        # Strategy tracking
-        self.agent_strategy_history = []
-        self.opponent_performance = {"random": 0, "aggressive": 0, "defensive": 0}
+    def _generate_targets(self) -> List[List[int]]:
+        """
+        Generate random target positions.
 
-        self.observation_space = (
-            2 + 2 + 2 + 3
-        )  # agent_pos + opponent_pos + target_pos + strategy_info
-        self.action_space = 4
-
-    def _generate_targets(self):
-        """Generate targets."""
+        Returns:
+            List[List[int]]: A list of [x, y] coordinates for targets.
+        """
+        num_targets = self.grid_size // 4
         targets = []
-        for _ in range(3):
-            pos = np.random.randint(0, self.size, 2)
-            targets.append({"pos": pos, "collected": False, "collector": None})
+        for _ in range(num_targets):
+            targets.append([random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1)])
         return targets
 
-    def _generate_obstacles(self):
-        """Generate obstacles."""
+    def _generate_obstacles(self) -> List[List[int]]:
+        """
+        Generate random obstacle positions.
+
+        Returns:
+            List[List[int]]: A list of [x, y] coordinates for obstacles.
+        """
+        num_obstacles = self.grid_size // 3
         obstacles = []
-        for _ in range(self.size // 3):
-            pos = np.random.randint(0, self.size, 2)
-            obstacles.append(pos)
+        for _ in range(num_obstacles):
+            obstacles.append([random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1)])
         return obstacles
 
     def _update_opponent_strategy(self):
-        """Update opponent strategy based on agent behavior."""
-        if not self.agent_strategy_history:
+        """
+        Update the adversarial opponent's strategy.
+
+        This could involve adapting its policy based on the main agents' performance,
+        e.g., moving closer to agents with high rewards, or blocking paths.
+        For now, it moves randomly towards the closest agent.
+        """
+        if self.adversary_position is None or not self.adversarial_mode:
             return
 
-        # Analyze agent strategy
-        recent_strategies = self.agent_strategy_history[-10:]
-        if len(recent_strategies) >= 5:
-            # Determine agent strategy
-            if np.mean(recent_strategies) > 0.6:
-                agent_strategy = "aggressive"
-            elif np.mean(recent_strategies) < 0.4:
-                agent_strategy = "defensive"
-            else:
-                agent_strategy = "random"
+        # Simple adversarial strategy: move towards the closest agent
+        if self.agent_positions:
+            closest_agent_pos = min(
+                self.agent_positions, key=lambda p: np.linalg.norm(np.array(p) - np.array(self.adversary_position)) # type: ignore
+            )
+            adv_move = [0, 0]
+            if closest_agent_pos[0] > self.adversary_position[0]:
+                adv_move[0] = 1
+            elif closest_agent_pos[0] < self.adversary_position[0]:
+                adv_move[0] = -1
+            if closest_agent_pos[1] > self.adversary_position[1]:
+                adv_move[1] = 1
+            elif closest_agent_pos[1] < self.adversary_position[1]:
+                adv_move[1] = -1
 
-            # Adapt opponent strategy
-            if agent_strategy == "aggressive":
-                self.opponent_strategy = "defensive"
-            elif agent_strategy == "defensive":
-                self.opponent_strategy = "aggressive"
-            else:
-                self.opponent_strategy = "random"
+            self.adversary_position = [
+                (self.adversary_position[0] + adv_move[0]) % self.grid_size,
+                (self.adversary_position[1] + adv_move[1]) % self.grid_size,
+            ]
 
-    def _get_opponent_action(self):
-        """Get opponent action based on current strategy."""
-        if self.opponent_strategy == "aggressive":
-            # Move towards agent
-            direction = self.agent_pos - self.opponent_pos
-            if np.linalg.norm(direction) > 0:
-                direction = direction / np.linalg.norm(direction)
-                action = np.argmax(np.abs(direction))
-                if direction[action] < 0:
-                    action += 2  # Convert to action space
-        elif self.opponent_strategy == "defensive":
-            # Move towards targets
-            if self.targets:
-                nearest_target = min(
-                    self.targets,
-                    key=lambda t: np.linalg.norm(self.opponent_pos - t["pos"]),
-                )
-                direction = nearest_target["pos"] - self.opponent_pos
-                if np.linalg.norm(direction) > 0:
-                    direction = direction / np.linalg.norm(direction)
-                    action = np.argmax(np.abs(direction))
-                    if direction[action] < 0:
-                        action += 2
-            else:
-                action = np.random.randint(0, 4)
-        else:  # random
-            action = np.random.randint(0, 4)
+    def _get_opponent_action(self) -> List[int]:
+        """
+        Get the adversarial opponent's action.
+        For this simplified environment, the opponent's action is determined by its internal strategy.
 
-        return action
+        Returns:
+            List[int]: The [dx, dy] movement chosen by the opponent.
+        """
+        # Placeholder for more complex adversarial policies
+        if self.adversary_position is None:
+            return [0, 0]
+        # The _update_opponent_strategy already updates the position, so this just returns a dummy action.
+        return [0, 0]
 
-    def reset(self):
-        """Reset environment."""
-        self.agent_pos = np.array([0, 0], dtype=np.float32)
-        self.opponent_pos = np.array([self.size - 1, self.size - 1], dtype=np.float32)
-        self.opponent_strategy = "random"
+    def reset(self) -> Tuple[List[np.ndarray], Dict[str, Any]]:
+        """
+        Reset the environment to its initial state.
 
-        # Regenerate environment
+        Returns:
+            Tuple[List[np.ndarray], Dict[str, Any]]: A tuple containing initial observations for all main agents
+                                                   and an info dictionary.
+        """
+        self.agent_positions = [
+            [random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1)]
+            for _ in range(self.num_agents)
+        ]
+        if self.adversarial_mode:
+            self.adversary_position = [
+                random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1)
+            ]
+        else:
+            self.adversary_position = None
         self.targets = self._generate_targets()
         self.obstacles = self._generate_obstacles()
+        self.current_step = 0
+        return self.get_observation(), {}
 
-        # Reset strategy tracking
-        self.agent_strategy_history = []
-        self.opponent_performance = {"random": 0, "aggressive": 0, "defensive": 0}
+    def get_observation(self) -> List[np.ndarray]:
+        """
+        Get observations for all main agents.
 
-        return self.get_observation()
+        Observations include agent's own position, relative positions of other agents,
+        targets, obstacles, and if in adversarial mode, the adversary's relative position.
 
-    def get_observation(self):
-        """Get observation."""
-        obs = []
+        Returns:
+            List[np.ndarray]: A list of NumPy arrays, each representing a main agent's observation.
+        """
+        observations = []
+        for i, agent_pos in enumerate(self.agent_positions):
+            obs = []
+            # Own position
+            obs.extend(agent_pos)
 
-        # Agent position
-        obs.extend(self.agent_pos / self.size)
+            # Relative positions of other agents
+            for j, other_pos in enumerate(self.agent_positions):
+                if i != j:
+                    obs.extend([other_pos[0] - agent_pos[0], other_pos[1] - agent_pos[1]])
 
-        # Opponent position
-        obs.extend(self.opponent_pos / self.size)
+            # Relative positions of targets
+            for target_pos in self.targets:
+                obs.extend([target_pos[0] - agent_pos[0], target_pos[1] - agent_pos[1]])
 
-        # Nearest target position
-        if self.targets:
-            nearest_target = min(
-                self.targets, key=lambda t: np.linalg.norm(self.agent_pos - t["pos"])
-            )
-            obs.extend(nearest_target["pos"] / self.size)
-        else:
-            obs.extend([0.0, 0.0])
+            # Relative positions of obstacles
+            for obs_pos in self.obstacles:
+                obs.extend([obs_pos[0] - agent_pos[0], obs_pos[1] - agent_pos[1]])
 
-        # Strategy information
-        strategy_vector = [0.0, 0.0, 0.0]
-        if self.opponent_strategy == "random":
-            strategy_vector[0] = 1.0
-        elif self.opponent_strategy == "aggressive":
-            strategy_vector[1] = 1.0
-        else:  # defensive
-            strategy_vector[2] = 1.0
-        obs.extend(strategy_vector)
+            # Adversary position
+            if self.adversarial_mode and self.adversary_position:
+                obs.extend([self.adversary_position[0] - agent_pos[0], self.adversary_position[1] - agent_pos[1]])
 
-        return np.array(obs, dtype=np.float32)
+            # Add noise to observation
+            observations.append(np.array(obs, dtype=np.float32) + np.random.normal(0, self.observation_noise, size=len(obs)))
+        return observations
 
-    def step(self, action):
-        """Take step in adversarial environment."""
-        # Update opponent strategy
-        self._update_opponent_strategy()
+    def step(self, actions: List[int]) -> Tuple[List[np.ndarray], List[float], List[bool], Dict[str, Any]]:
+        """
+        Take a step in the environment given actions from all main agents.
 
-        # Get opponent action
-        opponent_action = self._get_opponent_action()
+        Args:
+            actions (List[int]): A list of integer actions, one for each main agent (0:up, 1:down, 2:left, 3:right).
 
-        # Apply agent action
-        self._apply_action(self.agent_pos, action)
+        Returns:
+            Tuple[List[np.ndarray], List[float], List[bool], Dict[str, Any]]:
+                - next_observations (List[np.ndarray]): New observations for all main agents.
+                - rewards (List[float]): Rewards for all main agents.
+                - dones (List[bool]): Done flags for all main agents (True if episode finished for any agent).
+                - info (Dict[str, Any]): Additional information about the step.
+        """
+        self.current_step += 1
+        rewards = [0.0] * self.num_agents
 
-        # Apply opponent action
-        self._apply_action(self.opponent_pos, opponent_action)
+        # Update main agent positions
+        new_agent_positions = []
+        for i, action in enumerate(actions):
+            new_pos = self._apply_action(self.agent_positions[i], action)
+            new_agent_positions.append(new_pos)
+        self.agent_positions = new_agent_positions
 
-        # Check target collection
-        reward = 0
-        for target in self.targets:
-            if not target["collected"]:
-                agent_distance = np.linalg.norm(self.agent_pos - target["pos"])
-                opponent_distance = np.linalg.norm(self.opponent_pos - target["pos"])
+        # Update adversary position if in adversarial mode
+        if self.adversarial_mode:
+            self._update_opponent_strategy()
 
-                if agent_distance < 0.5 and opponent_distance >= 0.5:
-                    reward += 1.0
-                    target["collected"] = True
-                    target["collector"] = "agent"
-                elif opponent_distance < 0.5 and agent_distance >= 0.5:
-                    reward -= 0.5
-                    target["collected"] = True
-                    target["collector"] = "opponent"
+        # Compute rewards
+        for i, agent_pos in enumerate(self.agent_positions):
+            # Reward for reaching targets
+            if agent_pos in self.targets:
+                rewards[i] += 10.0
+                self.targets.remove(agent_pos) # Remove collected target
+                self.targets.extend(self._generate_targets()) # Respawn new target
 
-        # Track strategy
-        self.agent_strategy_history.append(action / 4.0)  # Normalize action
+            # Penalty for hitting obstacles
+            if agent_pos in self.obstacles:
+                rewards[i] -= 5.0
 
-        # Check termination
-        done = all(target["collected"] for target in self.targets)
+            # Penalty for being close to adversary
+            if self.adversarial_mode and self.adversary_position:
+                dist_to_adversary = np.linalg.norm(np.array(agent_pos) - np.array(self.adversary_position)) # type: ignore
+                if dist_to_adversary < 1.5: # Close proximity penalty
+                    rewards[i] -= 3.0 * (1.5 - dist_to_adversary) * self.adversary_strength
 
-        info = {
-            "targets_collected": sum(
-                1 for t in self.targets if t["collector"] == "agent"
-            ),
-            "opponent_strategy": self.opponent_strategy,
-            "opponent_targets": sum(
-                1 for t in self.targets if t["collector"] == "opponent"
-            ),
-        }
+        # Check if episode is done
+        dones = [self.current_step >= self.max_steps] * self.num_agents
 
-        return self.get_observation(), reward, done, info
+        info = {"targets_remaining": len(self.targets)}
+        if self.adversarial_mode and self.adversary_position:
+            info["adversary_pos"] = self.adversary_position
+        return self.get_observation(), rewards, dones, info
 
-    def _apply_action(self, pos, action):
-        """Apply action to position."""
-        new_pos = pos.copy()
+    def _apply_action(self, pos: List[int], action: int) -> List[int]:
+        """
+        Apply a discrete action to a given position.
 
-        if action == 0 and pos[1] < self.size - 1:  # up
-            new_pos[1] += 1
-        elif action == 1 and pos[1] > 0:  # down
-            new_pos[1] -= 1
-        elif action == 2 and pos[0] > 0:  # left
-            new_pos[0] -= 1
-        elif action == 3 and pos[0] < self.size - 1:  # right
-            new_pos[0] += 1
+        Args:
+            pos (List[int]): The current [x, y] position.
+            action (int): The discrete action (0:up, 1:down, 2:left, 3:right).
 
-        # Check obstacle collision
-        if new_pos.tolist() not in [obs.tolist() for obs in self.obstacles]:
-            pos[:] = new_pos
+        Returns:
+            List[int]: The new [x, y] position after applying the action.
+        """
+        new_pos = list(pos)
+        if action == 0:  # Up
+            new_pos[1] = (new_pos[1] - 1) % self.grid_size
+        elif action == 1:  # Down
+            new_pos[1] = (new_pos[1] + 1) % self.grid_size
+        elif action == 2:  # Left
+            new_pos[0] = (new_pos[0] - 1) % self.grid_size
+        elif action == 3:  # Right
+            new_pos[0] = (new_pos[0] + 1) % self.grid_size
+        return new_pos

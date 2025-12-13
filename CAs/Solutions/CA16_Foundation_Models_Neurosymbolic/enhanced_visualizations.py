@@ -18,21 +18,28 @@ from matplotlib.colors import LinearSegmentedColormap
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
+from pathlib import Path
 import warnings
 warnings.filterwarnings('ignore')
 
+from src.config import config
+
+# Ensure output directory exists
+FIGURE_DIR = Path(config.OUTPUT_DIR) / "pictures"
+FIGURE_DIR.mkdir(parents=True, exist_ok=True)
 
 def create_attention_heatmap(attention_weights, titles=None, figsize=(12, 8)):
     """
     Create comprehensive attention heatmap visualization.
     """
+    num_heads_to_plot = min(len(attention_weights), config.NUM_ATTENTION_HEADS_TO_PLOT)
     if titles is None:
         titles = ['Head ' + str(i) for i in range(len(attention_weights))]
     
     fig, axes = plt.subplots(2, 2, figsize=figsize)
     axes = axes.flatten()
     
-    for i, (attn, title) in enumerate(zip(attention_weights[:4], titles[:4])):
+    for i, (attn, title) in enumerate(zip(attention_weights[:num_heads_to_plot], titles[:num_heads_to_plot])):
         if isinstance(attn, torch.Tensor):
             attn = attn.detach().cpu().numpy()
         
@@ -190,7 +197,7 @@ def visualize_feature_space(features_dict, labels=None, figsize=(12, 6)):
         feat = features_dict[name]
         if isinstance(feat, torch.Tensor):
             feat = feat.detach().cpu().numpy()
-        feature_arrays.append(feat.flatten()[:1000])  # Limit sample size
+        feature_arrays.append(feat.flatten()[:config.MAX_FEATURE_SAMPLES])  # Limit sample size
     
     combined_features = np.vstack(feature_arrays)
     
@@ -217,7 +224,7 @@ def visualize_feature_space(features_dict, labels=None, figsize=(12, 6)):
     
     # Feature correlation heatmap
     if len(feature_names) > 1:
-        feature_matrix = np.array(feature_arrays).T[:50]  # Sample first 50 points
+        feature_matrix = np.array(feature_arrays).T[:config.MAX_FEATURE_CORRELATION_SAMPLES]  # Sample first N points
         correlation_matrix = np.corrcoef(feature_matrix.T)
         
         im = ax2.imshow(correlation_matrix, cmap='RdBu_r', vmin=-1, vmax=1)
@@ -255,8 +262,8 @@ def create_model_architecture_diagram(figsize=(15, 10)):
         (1, 6, 2, 1, 'State Embed'),
         (1, 4, 2, 1, 'Action Embed'),
         (1, 2, 2, 1, 'Return Embed'),
-        (4, 4, 2, 1, 'Positional\nEncoding'),
-        (6, 5, 2, 1, 'Transformer\nEncoder'),
+        (4, 4, 2, 1, 'Positional\\nEncoding'),
+        (6, 5, 2, 1, 'Transformer\\nEncoder'),
         (6, 2, 2, 1, 'Action Head'),
         (2, 2, 1, 1, 'Output')
     ]
@@ -290,19 +297,19 @@ def create_model_architecture_diagram(figsize=(15, 10)):
     
     # Components
     components2 = [
-        (1, 6, 2, 1, 'Neural\nPerception'),
-        (1, 4, 2, 1, 'Symbolic\nReasoning'),
-        (1, 2, 2, 1, 'Rule\nApplication'),
-        (4, 5, 2, 1, 'Feature\nFusion'),
-        (6, 4, 2, 1, 'Policy\nNetwork'),
-        (6, 2, 2, 1, 'Value\nNetwork'),
+        (1, 6, 2, 1, 'Neural\\nPerception'),
+        (1, 4, 2, 1, 'Symbolic\\nReasoning'),
+        (1, 2, 2, 1, 'Rule\\nApplication'),
+        (4, 5, 2, 1, 'Feature\\nFusion'),
+        (6, 4, 2, 1, 'Policy\\nNetwork'),
+        (6, 2, 2, 1, 'Value\\nNetwork'),
         (5, 1, 2, 0.5, 'Output')
     ]
     
     colors2 = ['#87CEEB', '#FFA500', '#32CD32', '#FF69B4', '#9370DB', '#20B2AA', '#DC143C']
     
     for (x, y, w, h, text), color in zip(components2, colors2):
-        rect = Rectangle((x, y), w: h, facecolor=color, edgecolor='black', linewidth=2)
+        rect = Rectangle((x, y), w, h, facecolor=color, edgecolor='black', linewidth=2)
         ax2.add_patch(rect)
         ax2.text(x + w/2, y + h/2, text, ha='center', va='center',
                 fontsize=10, fontweight='bold')
@@ -394,12 +401,12 @@ def run_enhanced_visualizations():
     rewards = np.cumsum(np.random.normal(0, 0.5, 30)) + np.linspace(0, 5, 30)
     
     # Attention weights (mock)
-    attention_weights = [np.random.rand(8, 8) for _ in range(4)]
+    attention_weights = [np.random.rand(config.STATE_DIM, config.STATE_DIM) for _ in range(config.NUM_ATTENTION_HEADS_TO_PLOT)]
     
     # Feature space
     features_dict = {
-        'Neural Features': np.random.randn(100, 64),
-        'Symbolic Features': np.random.randn(100, 32),
+        'Neural Features': np.random.randn(100, config.TRANSFORMER_DIM),
+        'Symbolic Features': np.random.randn(100, config.SYMBOLIC_FEATURE_DIM),
     }
     
     # Performance comparison
@@ -431,29 +438,29 @@ def run_enhanced_visualizations():
     print("Creating visualizations...")
     
     # Generate all visualizations
-    fig1 = create_attention_heatmap(attention_headers=['Query', 'Key', 'Value', 'Output'])
-    plt.savefig('attention_heatmap.png', dpi=150, bbox_inches='tight')
-    plt.show()
+    fig1 = create_attention_heatmap(attention_weights, titles=['Head 1', 'Head 2', 'Head 3', 'Head 4'])
+    plt.savefig(FIGURE_DIR / 'attention_heatmap.png', dpi=150, bbox_inches='tight')
+    plt.close(fig1)
     
     fig2 = plot_training_dynamics(losses, rewards)
-    plt.savefig('training_dynamics.png', dpi=150, bbox_inches='tight')
-    plt.show()
+    plt.savefig(FIGURE_DIR / 'training_dynamics.png', dpi=150, bbox_inches='tight')
+    plt.close(fig2)
     
     fig3 = create_performance_comparison(results_dict)
-    plt.savefig('perance_comparison.png', dpi=150, bbox_inches='tight')
-    plt.show()
+    plt.savefig(FIGURE_DIR / 'performance_comparison.png', dpi=150, bbox_inches='tight')
+    plt.close(fig3)
     
     fig4 = visualize_feature_space(features_dict)
-    plt.savefig('feature_visualization.png', dpi=150, bbox_inches='tight')
-    plt.show()
+    plt.savefig(FIGURE_DIR / 'feature_visualization.png', dpi=150, bbox_inches='tight')
+    plt.close(fig4)
     
     fig5 = create_model_architecture_diagram()
-    plt.savefig('architecture_diagrams.png', dpi=150, bbox_inches='tight')
-    plt.show()
+    plt.savefig(FIGURE_DIR / 'architecture_diagrams.png', dpi=150, bbox_inches='tight')
+    plt.close(fig5)
     
     fig6 = plot_uncertainty_analysis(uncertainties_dict)
-    plt.savefig('uncertainty_analysis.png', dpi=150, bbox_inches='tight')
-    plt.show()
+    plt.savefig(FIGURE_DIR / 'uncertainty_analysis.png', dpi=150, bbox_inches='tight')
+    plt.close(fig6)
     
     print("✅ All visualizations completed!")
     return True

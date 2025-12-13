@@ -1,0 +1,331 @@
+\\documentclass[journal]{IEEEtran}
+\\usepackage{amsmath,amsfonts}
+\\usepackage{algorithmic}
+\\usepackage{array}
+\\usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
+\\usepackage{textcomp}
+\\usepackage{stfloats}
+\\usepackage{url}
+\\usepackage{verbatim}
+\\usepackage{graphicx}
+\\usepackage{cite}
+\\hyphenation{op-tical net-works semi-conduc-tor IEEE-Xplore}
+% updated with the latest information from the \\LaTeX{} template
+
+\\begin{document}
+\\title{Advanced Deep Q-Networks for Value-Based Reinforcement Learning: A Synthesis of Modern Techniques}
+
+\\author{Deep Reinforcement Learning Course, Sharif University of Technology}
+
+% The paper headers
+\\markboth{Sharif University of Technology,~Vol.~1, No.~1, December~2025}%
+{Deep Reinforcement Learning Course: \\Make-ups for CA07}
+
+\\maketitle
+
+\\begin{abstract}
+This paper presents a comprehensive synthesis and implementation of advanced Deep Q-Network (DQN) architectures, integrating key improvements from modern reinforcement learning research. We detail the theoretical foundations and practical implementations of Vanilla DQN, Double DQN, Dueling DQN, and Noisy DQN. Building upon these, we outline a roadmap for incorporating components from Rainbow DQN, including Prioritized Experience Replay, N-step Q-learning, and Distributional RL (C51), aiming for a unified, state-of-the-art agent. Our work emphasizes a modular Python codebase designed for clarity, reproducibility, and educational utility, accompanied by rigorous mathematical derivations and a structured experimental analysis framework. We demonstrate how these techniques address fundamental challenges in DQN, such as overestimation bias and inefficient exploration, paving the way for more stable and sample-efficient learning in complex environments.
+\\end{abstract}
+
+\\begin{IEEEkeywords}
+Deep Reinforcement Learning, Q-Networks, DQN, Double DQN, Dueling DQN, Noisy DQN, Rainbow DQN, Value-Based Methods.
+\\end{IEEEkeywords}
+
+\\section{Introduction}
+Reinforcement Learning (RL) has achieved remarkable successes in various domains, from mastering complex games like Go and chess \cite{silver2016mastering} to controlling robotic systems \cite{levine2016end}. A cornerstone of modern RL is the Deep Q-Network (DQN) \cite{mnih2013playing, mnih2015human}, which combines Q-learning with deep neural networks to handle high-dimensional state spaces. Despite its breakthroughs, vanilla DQN suffers from several limitations, including overestimation bias and inefficient exploration, which can hinder learning stability and performance.
+
+This work addresses these challenges by presenting a synthesized implementation of several advanced DQN variants. Our primary contribution lies in integrating these sophisticated techniques into a single, modular, and theoretically-aligned Python framework. We provide detailed mathematical derivations and discuss the practical implications of each component. Specifically, we implement and analyze:
+\\begin{itemize}
+    \\item \\textbf{Vanilla DQN}: The foundational algorithm with experience replay and target networks.
+    \\item \\textbf{Double DQN} \cite{vanhasselt2015deep}: A method to mitigate the inherent overestimation bias in standard DQN.
+    \\item \\textbf{Dueling DQN} \cite{wang2016dueling}: An architectural innovation that explicitly separates state-value and advantage functions, enhancing generalization.
+    \\item \\textbf{Noisy DQN} \cite{fortunato2017noisy}: A robust exploration strategy that introduces learned noise into network parameters, replacing hand-tuned $\\epsilon$-greedy schedules.
+\\end{itemize}
+Furthermore, we establish a clear path for future expansion towards a full Rainbow DQN agent \cite{hessel2017rainbow}, by outlining the theoretical and implementation details for Prioritized Experience Replay (PER), N-step Q-learning, and Distributional Reinforcement Learning (C51). The aim is to create an educational and research-ready codebase that facilitates the understanding and experimentation of these advanced value-based methods.
+
+\\section{Related Work}
+The journey of Deep Q-Networks began with Mnih et al.'s seminal work \cite{mnih2013playing, mnih2015human}, demonstrating human-level control in Atari games using a combination of Q-learning, deep convolutional neural networks, experience replay, and a separate target network. This laid the foundation for subsequent advancements.
+
+Double DQN \cite{vanhasselt2015deep} emerged as a crucial improvement by addressing the overestimation of Q-values, a common issue in standard DQN where the max operator in the Bellman target can lead to optimistic value estimates. By decoupling the selection of the action from its evaluation, Double DQN significantly improved stability and performance.
+
+Concurrently, architectural innovations like Dueling DQN \cite{wang2016dueling} focused on how the neural network represents Q-values. By decomposing the Q-function into a state-value function and an advantage function for each action, the network can learn more robust representations, particularly in environments where the value of a state is largely independent of the specific action taken.
+
+Exploration in early DQN variants relied heavily on $\\epsilon$-greedy policies, which often required careful tuning of the $\\epsilon$ decay schedule. Noisy Networks \cite{fortunato2017noisy} offered an alternative by incorporating stochasticity directly into the network weights. This intrinsic noise allows the agent to learn an exploration strategy, often leading to more efficient and effective discovery of optimal policies.
+
+The culmination of many of these individual improvements was the Rainbow DQN \cite{hessel2017rainbow}, which showed that combining six key extensions (Double DQN, Prioritized Replay, Dueling Networks, Multi-step Learning, Distributional RL, and Noisy Nets) yielded synergistic effects, achieving state-of-the-art performance across a wide range of Atari games. Our work provides a structured framework for exploring these individual components and their eventual combination.
+
+\\section{Methodology}
+This section provides a detailed mathematical exposition of the DQN variants implemented in this project, alongside their theoretical underpinnings.
+
+\\subsection{Deep Q-Networks (DQN)}
+The objective of Q-learning is to estimate the optimal action-value function $Q^*(s, a)$, which represents the maximum expected return achievable by taking action $a$ in state $s$ and then following the optimal policy. The Bellman optimality equation defines this function recursively:
+\\[
+Q^*(s, a) = \\mathbb{E}_{s\' \\sim P(\\cdot|s,a)} \\left[ r + \\gamma \\max_{a\'} Q^*(s\', a\') \\right]
+\\]
+where $r$ is the immediate reward, $\\gamma \\in [0, 1)$ is the discount factor, and $P(\\cdot|s,a)$ is the transition probability to the next state $s'$.
+
+DQN approximates $Q^*(s, a)$ using a deep neural network $Q(s, a; \\theta)$. To stabilize the training of this network, two main techniques are employed:
+\\begin{enumerate}
+    \\item \\textbf{Experience Replay} \cite{lin1992self}: Transitions $(s_t, a_t, r_t, s_{t+1}, d_t)$ are stored in a replay buffer $\\mathcal{D}$. Mini-batches are uniformly sampled from $\\mathcal{D}$, breaking the temporal correlations in the agent's experience and making the data more i.i.d.
+    \\item \\textbf{Target Network}: A separate target Q-network, $Q(s, a; \\theta^-)$, is used to compute the target Q-values. The parameters $\\theta^-$ are a delayed copy of the online network's parameters $\\theta$, updated periodically (e.g., every $C$ steps). This mitigates instability caused by trying to bootstrap from a rapidly changing target.
+\\end{enumerate}
+The loss function for DQN is the Mean Squared Error (MSE) between the predicted Q-value and the target Q-value:
+\\[
+L(\\theta) = \\mathbb{E}_{(s,a,r,s\',d) \\sim U(\\mathcal{D})} \\left[ \\left( y_t^{DQN} - Q(s_t, a_t; \\theta) \\right)^2 \\right]
+\\]
+where the target $y_t^{DQN}$ is defined as:
+\\[
+y_t^{DQN} = r_{t+1} + \\gamma \\max_{a\'} Q(s_{t+1}, a\'; \\theta^-) (1 - d_{t+1})
+\\]
+Here, $(1 - d_{t+1})$ acts as a mask, setting the future reward to zero if the episode terminates at $s_{t+1}$.
+
+\\subsection{Double Deep Q-Networks (Double DQN)}
+DQN's use of the $\\max$ operator to select and evaluate the next action in the target $y_t^{DQN}$ can lead to an overestimation bias, especially in environments with noisy or uncertain rewards. This bias can propagate and destabilize learning. Double DQN \cite{vanhasselt2015deep} addresses this by decoupling the action selection from the action evaluation.
+The target $y_t^{DoubleDQN}$ is formulated as:
+\\[
+y_t^{DoubleDQN} = r_{t+1} + \\gamma Q(s_{t+1}, \\arg\\max_{a\'} Q(s_{t+1}, a\'; \\theta); \\theta^-) (1 - d_{t+1})
+\\]
+In this formulation, the online network $Q(\\cdot; \\theta)$ is used to select the action $a' = \\arg\\max_{a\'} Q(s_{t+1}, a\'; \\theta)$ that maximizes the Q-value in the next state $s_{t+1}$. However, the value of this action $Q(s_{t+1}, a'; \\theta^-)$ is then evaluated by the target network $Q(\\cdot; \\theta^-)$. This separation significantly reduces the positive bias and improves the accuracy of value estimates.
+
+\\subsection{Dueling Deep Q-Networks (Dueling DQN)}
+Dueling DQN \cite{wang2016dueling} introduces an architectural modification to the Q-network rather than a change in the Bellman update rule. The network is designed to explicitly separate the representation of state-value and action-advantage functions. For a given state $s$, the network outputs both a scalar state-value $V(s)$ and a vector of advantage values $A(s, a)$ for each action $a$.
+The Q-function is then reconstructed from these two components:
+\\[
+Q(s, a; \\theta) = V(s; \\xi) + \\left( A(s, a; \\psi) - \\frac{1}{|\\mathcal{A}|} \\sum_{a\'} A(s, a\'; \\psi) \\right)
+\\]
+Here, $\\theta = (\\xi, \\psi)$ represents the combined parameters of the state-value stream (parameterized by $\\xi$) and the advantage stream (parameterized by $\\psi$). The subtraction of the average advantage (or max advantage) from the advantage stream is crucial for identifiability, ensuring that $V(s)$ represents the true state value and $A(s, a)$ represents the relative advantage of action $a$. This architecture allows the network to learn the value of states more efficiently, as it does not need to re-learn the effect of each action on the environment's outcome, but rather focuses on which actions are better than others.
+
+\\subsection{Noisy Networks for Exploration}
+Traditional exploration strategies, such as $\\epsilon$-greedy, rely on injecting extrinsic noise into the action selection process. The $\\epsilon$ parameter often requires careful annealing schedules, which can be brittle and domain-specific. Noisy Networks \cite{fortunato2017noisy} propose an alternative by introducing stochasticity directly into the network's weights, leading to parameter-space exploration.
+
+A standard linear layer $y = W\\mathbf{x} + b$ is replaced with a noisy linear layer:
+\\[
+y = (W^{\\mu} + W^{\\sigma} \\odot \\epsilon^W) \\mathbf{x} + (b^{\\mu} + b^{\\sigma} \\odot \\epsilon^b)
+\\]
+where $W^{\\mu}, b^{\\mu}$ are the learnable weights and biases, and $W^{\\sigma}, b^{\\sigma}$ are learnable standard deviations for the noise. $\\epsilon^W, \\epsilon^b$ are random variables (e.g., from a factorized Gaussian distribution). The noise is typically resampled at the beginning of each episode. This allows the agent to implicitly learn the optimal amount of exploration, as the network itself learns to produce variable outputs in a state-dependent manner.
+
+\\subsection{Planned Rainbow DQN Components}
+The full Rainbow DQN agent \cite{hessel2017rainbow} combines six key improvements to achieve state-of-the-art performance. We outline the theoretical integration of the remaining three components:
+
+\\subsubsection{Prioritized Experience Replay (PER)}
+Instead of sampling experiences uniformly, PER \cite{schaul2015prioritized} prioritizes transitions that are more "surprising" or have higher temporal difference (TD) error. This allows the agent to learn more efficiently from challenging experiences.
+The probability of sampling transition $i$ is given by:
+\\[
+P(i) = \\frac{p_i^\\alpha}{\\sum_k p_k^\\alpha}
+\\]
+where $p_i = |\\delt-i| + \\epsilon$, with $\\delt-i$ being the TD error for transition $i$, and $\\epsilon$ a small positive constant to ensure all transitions have a non-zero probability. The exponent $\\alpha \\in [0, 1]$ determines the level of prioritization. To correct for the bias introduced by non-uniform sampling, Importance Sampling (IS) weights are used during the gradient update:
+\\[
+w_i = \\left( \\frac{1}{N} \\cdot \\frac{1}{P(i)} \\right)^\\beta
+\\]
+where $N$ is the buffer size and $\\beta$ is an annealing exponent from $[0, 1]$ that gradually moves towards 1 during training. The loss function is then weighted by these IS weights:
+\\[
+L_{PER}(\\theta) = \\mathbb{E}_{(s,a,r,s\',d) \\sim P(\\mathcal{D})} \\left[ w_i \\left( y_t - Q(s_t, a_t; \\theta) \\right)^2 \\right]
+\\]
+
+\\subsubsection{N-step Q-learning}
+The standard DQN update uses a 1-step Bellman target. N-step Q-learning \cite{watkins1989learning} extends this by accumulating rewards for $N$ steps before bootstrapping from the target Q-network. The $N$-step return $G_t^{(N)}$ is defined as:
+\\[
+G_t^{(N)} = \\sum_{k=0}^{N-1} \\gamma^k r_{t+k+1} + \\gamma^N \\max_{a\'} Q(s_{t+N}, a\'; \\theta^-) (1 - d_{t+N})
+\\]
+The loss function remains similar to DQN, but with the $N$-step return replacing the 1-step return as the target:
+\\[
+L(\\theta) = \\mathbb{E}_{(s,a,r,s\',d) \\sim U(\\mathcal{D})} \\left[ \\left( G_t^{(N)} - Q(s_t, a_t; \\theta) \\right)^2 \\right]
+\\]
+N-step returns provide a richer and less biased signal than 1-step returns (reducing variance compared to Monte Carlo), often leading to faster learning and improved performance.
+
+\\subsubsection{Distributional Reinforcement Learning (C51)}
+Instead of learning the expected Q-value, Distributional RL \cite{bellemare2017distributional} aims to learn the full distribution over returns. The C51 algorithm (Categorical 51-atom distribution) models this distribution as a categorical distribution over a fixed, discrete set of 51 atoms spanning a defined value range $[V_{\\min}, V_{\\max}]$.
+The network outputs probabilities $p_i(s, a)$ for each atom $z_i \\in [V_{\\min}, V_{\\max}]$. The target distribution $Tz_j$ is computed by applying the Bellman operator to each atom and then projecting it back onto the fixed support. The loss function is the Kullback-Leibler (KL) divergence between the projected target distribution and the predicted distribution:
+\\[
+L_{C51}(\\theta) = - \\sum_i T_i \\log p_i(s,a;\\theta)
+\\]
+where $T_i$ are the probabilities of the projected target distribution. This approach provides a more complete understanding of uncertainty in returns and can lead to more robust policies.
+
+\\section{Experiments}
+This section outlines the experimental setup, the environments chosen for evaluation, and the methodology for analyzing the performance of the implemented DQN variants.
+
+\\subsection{Environments}
+We evaluate our agents on classical control tasks from the Gymnasium library:
+\\begin{itemize}
+    \\item \\textbf{CartPole-v1}: The agent must balance a pole on a cart by moving the cart left or right. It has a continuous state space and a discrete action space.
+    \\item \\textbf{MountainCar-v0}: An underpowered car must drive up a steep hill. The reward is sparse (only given upon reaching the flag). It has a continuous state space and a discrete action space.
+    \\item \\textbf{Acrobot-v1}: A two-link robot needs to swing its end effector above a target height. This is an underactuated system with a continuous state space and a discrete action space.
+\\end{itemize}
+
+\\subsection{Experimental Setup}
+All experiments are conducted using the hyperparameters defined in `src/config.py`. Each agent is trained for a specified number of episodes, and its performance is evaluated periodically. We ensure reproducibility by setting a fixed random seed (also defined in `src/config.py`).
+
+\\subsection{Evaluation Metrics}
+The primary evaluation metrics include:
+\\begin{itemize}
+    \\item \\textbf{Average Episode Reward}: The mean reward accumulated over an episode, typically averaged over a window of recent episodes to show learning progress.
+    \\item \\textbf{Loss Curves}: The mean squared error of the Q-value prediction over training steps.
+    \\item \\textbf{Epsilon Decay}: For $\\epsilon$-greedy agents, the schedule of $\\epsilon$ over episodes.
+    \\item \\textbf{Overestimation Bias}: For Double DQN, an analysis of the difference between online Q-values and target Q-values.
+    \\item \\textbf{Value-Advantage Decomposition}: For Dueling DQN, an analysis of the contributions of the state-value and advantage streams.
+\\end{itemize}
+
+\\subsection{Planned Experiments and Visualizations}
+We will conduct the following experiments, with results visualized in `notebooks/main.ipynb` and saved to the `pictures/` directory:
+
+\\begin{figure}[ht]
+    \\centering
+    \\includegraphics[width=0.9\\linewidth]{../pictures/dqn_variants_comparison.png}
+    \\caption{Comparison of Learning Curves for DQN Variants.}
+    \\label{fig:dqn_comparison}
+\\end{figure}
+
+\\begin{enumerate}
+    \\item \\textbf{DQN Variants Comparison}:
+    \\begin{itemize}
+        \\item \\textit{Objective}: To compare the learning speed, stability, and final performance of Vanilla DQN, Double DQN, Dueling DQN, Dueling Double DQN, and Noisy DQN.
+        \\item \\textit{Visualization}: Learning curves (smoothed episode rewards), loss curves, and bar charts of final average rewards and training stability (variance of scores). (See Figure \\ref{fig:dqn_comparison} as an example placeholder.)
+    \\end{itemize}
+    \\item \\textbf{Hyperparameter Optimization Study}:
+    \\begin{itemize}
+        \\item \\textit{Objective}: To understand the sensitivity of agent performance to key hyperparameters such as learning rate, hidden layer dimensions, and $\\epsilon$-greedy/noisy network schedules.
+        \\item \\textit{Visualization}: Bar charts showing the impact of different hyperparameter choices on final performance.
+    \\end{itemize}
+    \\item \\textbf{Robustness Analysis}:
+    \\begin{itemize}
+        \\item \\textit{Objective}: To assess the robustness of the best-performing agents to different random seeds and varying reward scales.
+        \\item \\textit{Visualization}: Plots showing performance across multiple seeds and performance curves across different reward scaling factors.
+    \\end{itemize}
+    \\item \\textbf{Rainbow Components Ablation Study (Planned)}:
+    \\begin{itemize}
+        \\item \\textit{Objective}: To quantitatively evaluate the individual and synergistic contributions of PER, N-step learning, and Distributional RL when integrated.
+        \\item \\textit{Visualization}: Comparative plots and tables detailing the performance gains from each added component.
+    \\end{itemize}
+\\end{enumerate}
+
+\\section{Conclusion}
+This project provides a robust and modular implementation of advanced Deep Q-Networks, synthesizing key improvements from contemporary reinforcement learning research. By systematically integrating Double DQN, Dueling DQN, and Noisy DQN, we offer a comprehensive framework for understanding and experimenting with value-based methods that address fundamental limitations of vanilla DQN. The detailed theoretical derivations and structured codebase lay the groundwork for further exploration, particularly towards a full Rainbow DQN agent incorporating Prioritized Experience Replay, N-step Q-learning, and Distributional RL. Our experimental analysis framework is designed to provide clear insights into the performance benefits and trade-offs of each technique across various classical control environments. This work serves as a valuable resource for both educational purposes and further research into robust and efficient deep reinforcement learning algorithms.
+
+\\section{Broader Impact}
+The advancements in Deep Reinforcement Learning, as explored in this project, have significant broader impacts across various sectors. By developing more stable, sample-efficient, and robust RL agents, we contribute to technologies capable of operating in complex, real-world scenarios.
+\\begin{itemize}
+    \\item \\textbf{Positive Impacts}: Improved RL agents can lead to more efficient robotic systems, better autonomous navigation, optimized resource management in smart grids, and enhanced decision-making in medical diagnostics. The modular and well-documented codebase promotes education and accelerates research in the field, making advanced RL techniques more accessible.
+    \\item \\textbf{Negative Impacts and Ethical Considerations}: As RL systems become more powerful, ethical considerations around their autonomy, accountability, and potential misuse become critical. Biases in training data can lead to unfair or discriminatory outcomes. The use of RL in autonomous weapon systems raises serious concerns. It is imperative that researchers and developers prioritize ethical guidelines, transparency, and safety in the deployment of these technologies. Furthermore, the computational resources required for training complex deep RL models raise environmental concerns due to energy consumption.
+\\end{itemize}
+Future work should focus not only on performance gains but also on developing interpretable, fair, and energy-efficient RL systems, ensuring that these powerful technologies are used responsibly for societal benefit.
+
+\\bibliographystyle{IEEEtran}
+\\bibliography{references} % This will refer to references.bib file
+
+\\newpage
+\\appendix
+
+\\section*{APPENDIX A: Detailed Mathematical Proofs and Derivations}
+\\subsection{Bellman Optimality Equation}
+The Bellman optimality equation for the Q-function states that the optimal Q-value for a state-action pair $(s,a)$ is the expected immediate reward plus the discounted maximum future Q-value over all possible next states $s'$ and actions $a'$.
+\\[
+Q^*(s, a) = \\mathbb{E}_{s\' \\sim P(\\cdot|s,a)} \\left[ r + \\gamma \\max_{a\'} Q^*(s\', a\') \\right]
+\\]
+To derive this, consider the definition of the optimal Q-function as $Q^*(s,a) = \\max_{\\pi} \\mathbb{E}[R_t | S_t=s, A_t=a, \\pi]$, where $R_t = \\sum_{k=0}^{\\infty} \\gamma^k r_{t+k+1}$ is the discounted return.
+By definition, the optimal policy $\\pi^*$ takes action $a^* = \\arg\\max_{a\'} Q^*(s, a')$.
+Thus,
+\\begin{align*}
+Q^*(s,a) &= \\mathbb{E}[r_{t+1} + \\gamma R_{t+1} | S_t=s, A_t=a, \\pi^*] \\\\
+&= \\mathbb{E}_{s\' \\sim P(\\cdot|s,a)}[r_{t+1} + \\gamma Q^*(s\', \\pi^*(s\')) | S_t=s, A_t=a] \\\\
+&= \\mathbb{E}_{s\' \\sim P(\\cdot|s,a)}[r_{t+1} + \\gamma \\max_{a\'} Q^*(s\', a\')]
+\\end{align*}
+This is the fundamental recursive relationship that Q-learning aims to solve.
+
+\\subsection{DQN Loss Function Derivation}
+The DQN loss function is derived from the Bellman equation, treating the target as a fixed value from the target network. For a transition $(s_t, a_t, r_{t+1}, s_{t+1}, d_{t+1})$ sampled from the replay buffer, the target Q-value is $y_t^{DQN} = r_{t+1} + \\gamma \\max_{a\'} Q(s_{t+1}, a\'; \\theta^-) (1 - d_{t+1})$. The loss is the squared difference between the current Q-network's output for $(s_t, a_t)$ and this target:
+\\[
+L(\\theta) = \\frac{1}{2} \\left( y_t^{DQN} - Q(s_t, a_t; \\theta) \\right)^2
+\\]
+The gradient with respect to the online network parameters $\\theta$ is:
+\\[
+\\nabla_{\\theta} L(\\theta) = \\left( y_t^{DQN} - Q(s_t, a_t; \\theta) \\right) \\nabla_{\\theta} Q(s_t, a_t; \\theta)
+\\]
+This gradient is then used in stochastic gradient descent to update $\\theta$. Note that the gradient is not taken with respect to the target network parameters $\\theta^-$.
+
+\\subsection{Dueling DQN Advantage-Value Decomposition Uniqueness}
+The decomposition $Q(s, a) = V(s) + A(s, a)$ is inherently unidentifiable. For any constant $k$, we can set $V'(s) = V(s) + k$ and $A'(s, a) = A(s, a) - k$, and the Q-value remains unchanged: $V'(s) + A'(s, a) = V(s) + A(s, a)$.
+To ensure a unique decomposition and meaningful learning, a constraint is typically applied. A common constraint is to force the advantage function to have zero mean (or maximum to be zero):
+\\[
+\\sum_{a\'} A(s, a\') = 0 \\quad \\text{or} \\quad \\max_{a\'} A(s, a\') = 0
+\\]
+Our implementation uses the subtraction of the average advantage:
+\\[
+Q(s, a; \\theta) = V(s; \\xi) + \\left( A(s, a; \\psi) - \\frac{1}{|\\mathcal{A}|} \\sum_{a\'} A(s, a\'; \\psi) \\right)
+\\]
+This ensures that the advantages are normalized relative to the mean advantage, and thus $V(s)$ effectively becomes the state value, while $A(s,a)$ represents how much better or worse action $a$ is compared to the average action in state $s$.
+
+\\section*{APPENDIX B: Additional Qualitative Examples and Visualizations}
+This section will contain additional plots and figures generated from the `notebooks/main.ipynb` to provide deeper insights into agent behavior, Q-value distributions, and training dynamics.
+
+\\begin{figure}[ht]
+    \\centering
+    \\includegraphics[width=0.9\\linewidth]{../pictures/q_value_distribution.png}
+    \\caption{Distribution of Q-Values for a given state-action pair for different DQN variants. (Placeholder)}
+    \\label{fig:q_distribution}
+\\end{figure}
+
+\\begin{figure}[ht]
+    \\centering
+    \\includegraphics[width=0.9\\linewidth]{../pictures/epsilon_decay_schedule.png}
+    \\caption{Epsilon-greedy decay schedule over training episodes. (Placeholder)}
+    \\label{fig:epsilon_decay}
+\\end{figure}
+
+\\begin{itemize}
+    \\item \\textbf{Q-Value Distributions}: Visualizations of Q-value distributions for specific states or over entire episodes, highlighting how different DQN variants (e.g., Double DQN vs. Vanilla DQN) manage overestimation. (See Figure \\ref{fig:q_distribution} as an example placeholder.)
+    \\item \\textbf{Epsilon/Noise Schedules}: Plots of the $\\epsilon$-greedy decay for standard DQNs and the learned noise magnitudes for Noisy DQN. (See Figure \\ref{fig:epsilon_decay} as an example placeholder.)
+    \\item \\textbf{State-Action Maps}: For simple environments, visualizations of the learned optimal policy or Q-values across the state space.
+    \\item \\textbf{Failure Cases}: Analysis of scenarios where agents fail or perform sub-optimally, providing insights into their limitations.
+\\end{itemize}
+
+\\section*{APPENDIX C: Hyperparameter Settings}
+All experiments in this project utilize the hyperparameters defined in `src/config.py`. The key parameters are summarized in Table \\ref{tab:hyperparameters}.
+
+\\begin{table}[htbp]
+    \\caption{Key Hyperparameter Settings}
+    \\centering
+    \\begin{tabular}{|l|l|l|}
+        \\hline
+        \\textbf{Category} & \\textbf{Parameter} & \\textbf{Value} \\\\
+        \\hline
+        General & `SEED` & 42 \\\\
+        & `DEVICE` & `\"cuda\"` or `\"cpu\"` \\\\
+        \\hline
+        Environment & `ENV_NAME` & `\"CartPole-v1\"` \\\\
+        & `MAX_EPISODE_STEPS` & 500 \\\\
+        & `EVAL_MAX_STEPS` & 500 \\\\
+        \\hline
+        Agent & `HIDDEN_DIM` & 128 \\\\
+        & `LR` & 1e-3 \\\\
+        & `GAMMA` & 0.99 \\\\
+        & `BATCH_SIZE` & 64 \\\\
+        & `REPLAY_BUFFER_SIZE` & 100000 \\\\
+        & `TARGET_UPDATE_FREQ` & 10 \\\\
+        \\hline
+        Exploration & `EPSILON_START` & 1.0 \\\\
+        (Epsilon-greedy) & `EPSILON_END` & 0.01 \\\\
+        & `EPSILON_DECAY` & 0.995 \\\\
+        \\hline
+        Exploration & `NOISE_STD` & 0.1 \\\\
+        (NoisyNets) & & \\\\
+        \\hline
+        (Planned) PER & `PER_ALPHA` & 0.6 \\\\
+        & `PER_BETA_START` & 0.4 \\\\
+        & `PER_BETA_FRAMES` & 100000 \\\\
+        & `PER_EPS` & 1e-6 \\\\
+        \\hline
+        (Planned) N-step & `N_STEPS` & 3 \\\\
+        \\hline
+        (Planned) C51 & `V_MIN` & -10.0 \\\\
+        & `V_MAX` & 10.0 \\\\
+        & `N_ATOMS` & 51 \\\\
+        \\hline
+        Training Loop & `TRAIN_EPISODES` & 500 \\\\
+        & `EVAL_EPISODES` & 10 \\\\
+        & `LOG_INTERVAL` & 50 \\\\
+        \\hline
+    \\end{tabular}
+    \\label{tab:hyperparameters}
+\\end{table}
+
+\\end{document}

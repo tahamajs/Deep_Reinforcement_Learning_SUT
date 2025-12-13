@@ -1,0 +1,329 @@
+\\documentclass[conference]{IEEEtran}
+\\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\\usepackage{cite}
+\\usepackage{amsmath,amssymb,amsfonts}
+\\usepackage{algorithmic}
+\\usepackage{graphicx}
+\\usepackage{textcomp}
+\\usepackage{xcolor}
+\\def\\BibTeX{{\\rm B\\kern-.05em{\sc i\\kern-.025em b}\\kern-.08em
+    T\\kern-.1667em\\lower.7ex\\hbox{E}\\kern-.125emX}}
+\\begin{document}
+
+\\title{Model-Based Hierarchical Reinforcement Learning for Complex Control}
+
+\\author{\\IEEEauthorblockN{1\\textsuperscript{st} A. Author}
+\\IEEEauthorblockA{\\textit{dept. name of organization (of Aff.)} \\\\
+\\textit{name of organization (of Aff.)}\\
+City, Country \\\\
+email@ieee.org}
+\\and
+\\IEEEauthorblockN{2\\textsuperscript{nd} B. Author}
+\\IEEEauthorblockA{\\textit{dept. name of organization (of Aff.)} \\\\
+\\textit{name of organization (of Aff.)}\\
+City, Country \\\\
+email@ieee.org}
+\\and
+\\IEEEauthorblockN{3\\textsuperscript{rd} C. Author}
+\\IEEEauthorblockA{\\textit{dept. name of organization (of Aff.)} \\\\
+\\textit{name of organization (of Aff.)}\\
+City, Country \\\\
+email@ieee.org}
+\\and
+\\IEEEauthorblockN{4\\textsuperscript{th} D. Author}
+\\IEEEauthorblockA{\\textit{dept. name of organization (of Aff.)} \\\\
+\\textit{name of organization (of Aff.)}\\
+City, Country \\\\
+email@ieee.org}
+\\and
+\\IEEEauthorblockN{5\\textsuperscript{th} E. Author}
+\\IEEEauthorblockA{\\textit{dept. name of organization (of Aff.)} \\\\
+\\textit{name of organization (of Aff.)}\\
+City, Country \\\\
+email@ieee.org}
+\\and
+\\IEEEauthorblockN{6\\textsuperscript{th} F. Author}
+\\IEEEauthorblockA{\\textit{dept. name of organization (of Aff.)} \\\\
+\\textit{name of organization (of Aff.)}\\
+City, Country \\\\
+email@ieee.org}
+}
+
+\\maketitle
+
+\\begin{abstract}
+Reinforcement Learning (RL) has shown great promise in solving complex sequential decision-making problems. However, existing model-free methods often suffer from high sample complexity, especially in environments with sparse rewards or long horizons. Model-based RL (MBRL) addresses this by learning a predictive model of the environment, enabling efficient planning and data augmentation. Concurrently, Hierarchical RL (HRL) tackles long-horizon tasks by decomposing them into sub-problems, allowing agents to learn at multiple levels of temporal abstraction. In this paper, we propose a novel framework that synthesizes Model-Based Reinforcement Learning with Hierarchical Reinforcement Learning (MB-HRL). Our approach leverages a learned dynamics model to facilitate efficient goal generation for a high-level manager and accelerated subgoal achievement for a low-level worker. The manager utilizes the model for strategic planning over abstract states, while the worker employs model-generated simulations for rapid policy learning to achieve specific subgoals. We demonstrate that this synergy leads to improved sample efficiency, enhanced exploration, and more robust policy learning in challenging environments.
+\\end{abstract}
+
+\\begin{IEEEkeywords}
+Reinforcement Learning, Model-Based RL, Hierarchical RL, Deep Learning, Artificial Intelligence
+\\end{IEEEkeywords}
+
+\\section{Introduction}
+Deep Reinforcement Learning (DRL) has achieved superhuman performance across a diverse range of tasks, from classic Atari games to complex robotic manipulation. Despite these successes, DRL agents often face significant challenges in real-world scenarios, primarily due to their demanding sample efficiency requirements. Learning effective policies from scratch in environments with sparse reward signals, prohibitively long horizons, or high-dimensional continuous state-action spaces often necessitates millions or billions of environmental interactions, making them impractical for many applications.
+
+Two prominent paradigms have emerged to address these limitations: Model-Based Reinforcement Learning (MBRL) and Hierarchical Reinforcement Learning (HRL). MBRL aims to improve sample efficiency by learning a forward dynamics model of the environment. This model allows the agent to simulate future interactions, generate synthetic experience, and perform look-ahead planning without costly real-world trials. Consequently, MBRL methods can often achieve comparable or superior performance to model-free counterparts with significantly less data.
+
+HRL, on the other hand, provides a powerful framework for tackling long-horizon decision-making by introducing temporal abstraction. Instead of learning a single policy that maps states to primitive actions, HRL agents operate at multiple levels of control. A high-level agent (manager) sets abstract goals or selects high-level actions (options), while a low-level agent (worker) executes primitive actions to achieve these goals or complete the selected options. This decomposition simplifies the overall learning problem, promotes more structured exploration, and can lead to policies that generalize better across tasks.
+
+While both MBRL and HRL offer compelling advantages, they also present their own set of challenges. MBRL performance heavily relies on the accuracy of the learned dynamics model; errors can compound over long planning horizons, leading to suboptimal or unsafe behaviors. HRL often struggles with effective goal generation and intrinsic reward design, as well as the inherent sample inefficiency of training multiple interacting policies.
+
+This paper proposes a novel synthesis: \textit{Model-Based Hierarchical Reinforcement Learning (MB-HRL)}. We argue that combining the strengths of MBRL and HRL can mitigate their individual weaknesses, leading to a more robust, sample-efficient, and scalable framework for complex control. Our core contribution is to integrate a learned dynamics model into a hierarchical architecture, where the model serves multiple purposes:
+\\begin{enumerate}
+    \\item To assist the high-level manager in generating meaningful and achievable subgoals by allowing it to `dream` and evaluate potential future states.
+    \\item To accelerate the learning of the low-level worker by generating synthetic experiences for subgoal achievement, effectively acting as an internal simulator.
+    \\item To provide a mechanism for more informed exploration within the hierarchical structure.
+\\end{enumerate}
+The remainder of this paper is organized as follows: Section \\ref{sec:related_work} discusses related work in MBRL and HRL. Section \\ref{sec:methodology} details the proposed MB-HRL framework, including its architecture, learning objectives, and the integration of the dynamics model. Section \\ref{sec:experiments} outlines our experimental setup and expected results, and Section \\ref{sec:conclusion} concludes with a summary and discussion of future work.
+
+\\section{Related Work}
+The foundational concepts of Model-Based Reinforcement Learning and Hierarchical Reinforcement Learning have been extensively studied independently. Recent advancements have demonstrated the potential benefits of combining elements from these fields, albeit often with specific focuses.
+
+\\subsection{Model-Based Reinforcement Learning}
+Early work in MBRL primarily focused on tabular environments and known dynamics models. With the advent of deep learning, neural networks have been successfully employed to learn complex, non-linear dynamics models. \\cite{hafner2020mastering, kaiser2019model} showcased the power of World Models, where agents learn compact latent representations of the environment and plan entirely within this learned latent space. These models predict future states, rewards, and even value functions, drastically reducing the need for real-world interactions. Techniques like Model Predictive Control (MPC) leverage these learned models by iteratively planning optimal action sequences, executing only the first action, and replanning at each step. Dyna-Q \\cite{sutton1991dyna} is another seminal MBRL algorithm that integrates planning from a learned model with direct learning from real experience, demonstrating improved data efficiency. While powerful, MBRL methods are susceptible to model inaccuracies, which can lead to divergent behavior over long planning horizons.
+
+\\subsection{Hierarchical Reinforcement Learning}
+HRL formalizes the idea of temporal abstraction, allowing agents to operate at different levels of decision-making. The options framework \\cite{sutton1999intra} provided a theoretical foundation, defining options as temporally extended actions with initiation sets, policies, and termination conditions. Building on this, Goal-Conditioned Reinforcement Learning (GCRL) enables agents to learn policies conditioned on explicit goals \\cite{andrychowicz2017hindsight}. Hindsight Experience Replay (HER) significantly improves the sample efficiency of GCRL by re-labeling failed experiences with achieved goals, making every episode useful for learning. Feudal Networks \\cite{vezhnevets2017feudal} introduced a manager-worker hierarchy where a high-level manager sets subgoals for a low-level worker, fostering intrinsic motivation and disentangled control. Despite their benefits, HRL methods face challenges in designing effective intrinsic reward functions and generating meaningful subgoals, especially in complex environments where the space of possible goals is vast and unstructured.
+
+\\subsection{Bridging MBRL and HRL}
+Some research has explored integrating aspects of model-based planning within hierarchical structures. For instance, models have been used to guide exploration for hierarchical agents or to learn better goal representations. However, a comprehensive framework that systematically uses a learned dynamics model to enhance goal generation, accelerate worker learning through simulation, and facilitate overall hierarchical policy optimization remains an active area of research. Our work aims to provide such a unified framework, explicitly addressing the interplay between learned dynamics and multi-level control.
+
+\\section{Methodology} \\label{sec:methodology}
+Our Model-Based Hierarchical Reinforcement Learning (MB-HRL) framework integrates a learned dynamics model into a two-level hierarchical architecture. The core idea is to leverage the predictive capabilities of the dynamics model to enhance goal generation for a high-level manager and accelerate subgoal achievement for a low-level worker.
+
+\\subsection{System Architecture}
+The MB-HRL architecture comprises three primary components: a Dynamics Model, a Manager Policy, and a Worker Policy.
+
+\\subsubsection{Dynamics Model}
+The Dynamics Model \\( f_\\theta \\) is a neural network responsible for predicting the next state and reward given the current state and action. It operates at the primitive action level and is crucial for enabling model-based planning and simulation for both the manager and worker.
+\\begin{equation}
+    \\hat{s}_{t+1}, \\hat{r}_t = f_\\theta(s_t, a_t)
+    \\label{eq:dynamics_model}
+\\end{equation}
+Here, \\( s_t \\) is the current state, \\( a_t \\) is the primitive action taken, \\( \\hat{s}_{t+1} \\) is the predicted next state, and \\( \\hat{r}_t \\) is the predicted reward. The parameters \\( \\theta \\) of the dynamics model are trained by minimizing the prediction error with respect to observed transitions \\( (s_t, a_t, r_t, s_{t+1}) \\) from the environment. The loss function for the dynamics model is defined as:
+\\begin{equation}
+    \\mathcal{L}_{\\text{dyn}}(\\theta) = \\mathbb{E}_{(s_t, a_t, r_t, s_{t+1}) \\sim \\mathcal{D}} [ \\| s_{t+1} - \\hat{s}_{t+1} \\|^2 + \\| r_t - \\hat{r}_t \\|^2 ]
+    \\label{eq:dynamics_loss}
+\\end{equation}
+where \\( \\mathcal{D} \\) is the replay buffer containing real environmental experiences. For continuous state and reward spaces, Mean Squared Error (MSE) is typically used. In stochastic environments, the dynamics model could predict the parameters of a conditional probability distribution, e.g., mean and variance for a Gaussian distribution of next states.
+
+\\subsubsection{Manager Policy}
+The Manager Policy \\( \\pi_M(g_t | s_t) \\) is a high-level controller that operates at a slower temporal scale. It observes the current global state \\( s_t \\) and selects a subgoal \\( g_t \\) to be achieved by the worker. A key aspect of our framework is that the manager leverages the learned Dynamics Model for intelligent subgoal generation. Instead of generating goals randomly or based on heuristics, the manager can perform internal simulations using \\( f_\\theta \\) to explore potential future states and evaluate the reachability and desirability of different subgoals. This model-based planning enables the manager to set more informed and achievable subgoals that align with long-term extrinsic rewards.
+\\begin{equation}
+    g_t \\sim \\pi_M(s_t)
+    \\label{eq:manager_policy}
+\\end{equation}
+The manager's policy can be learned using standard RL algorithms (e.g., Actor-Critic) where the "actions" are subgoals. The rewards for the manager are the extrinsic rewards received from the environment, potentially discounted over the duration of the subgoal.
+
+\\subsubsection{Worker Policy}
+The Worker Policy \\( \\pi_W(a_t | s_t, g_t) \\) is a low-level controller that operates at the primitive action level. Given the current state \\( s_t \\) and the subgoal \\( g_t \\) provided by the manager, the worker selects a primitive action \\( a_t \\) to move towards the subgoal.
+\\begin{equation}
+    a_t \\sim \\pi_W(s_t, g_t)
+    \\label{eq:worker_policy}
+\\end{equation}
+The worker is primarily motivated by an intrinsic reward function \\( r_I(s_t, a_t, s_{t+1}, g_t) \\) that encourages progress towards the current subgoal. A common intrinsic reward is based on the reduction in distance to the subgoal:
+\\begin{equation}
+    r_I(s_t, a_t, s_{t+1}, g_t) = -\\|s_{t+1} - g_t\\|_2 + \\|s_t - g_t\\|_2
+    \\label{eq:intrinsic_reward}
+\\end{equation}
+This reward function pushes the worker to minimize the distance to the subgoal \\( g_t \\). The worker's learning is significantly accelerated by the dynamics model. Similar to Dyna-Q, the worker can generate simulated experiences by performing rollouts in \\( f_\\theta \\) starting from its current state and attempting to reach the subgoal. These synthetic experiences augment the real experiences, allowing for more frequent and efficient policy updates for \\( \\pi_W \\).
+
+\\subsection{Learning Objectives and Training Process}
+The training of the MB-HRL framework involves concurrently learning the dynamics model, manager policy, and worker policy.
+
+\\subsubsection{Dynamics Model Training}
+The dynamics model is continuously updated through supervised learning. At each step, a batch of real transitions \\( (s_t, a_t, r_t, s_{t+1}) \\) is sampled from a global replay buffer \\( \\mathcal{D} \\), and the model parameters \\( \\theta \\) are updated by minimizing \\( \\mathcal{L}_{\\text{dyn}}(\\theta) \\) as defined in Eq. \\eqref{eq:dynamics_loss}.
+
+\\subsubsection{Worker Policy Training}
+The worker policy \\( \\pi_W \\) is trained using a goal-conditioned RL algorithm (e.g., Soft Actor-Critic or DDPG) that optimizes for the intrinsic reward \\( r_I \\).
+A critical enhancement is the use of the dynamics model for \textit{internal simulation}. During worker training, in addition to real experiences, synthetic experiences can be generated:
+\\begin{enumerate}
+    \\item Sample a state-subgoal pair \\( (s, g) \\) from the worker's experience buffer.
+    \\item From state \\( s \\), the worker takes action \\( a \\) according to \\( \\pi_W(a | s, g) \\).
+    \\item Use the dynamics model \\( f_\\theta \\) to predict the next state \\( s\' \\) and reward \\( r \\): \\( s\', r = f_\\theta(s, a) \\).
+    \\item Compute the intrinsic reward \\( r_I(s, a, s\', g) \\) for this simulated transition.
+    \\item Use \\( (s, a, r_I, s\', g) \\) as a synthetic experience to update \\( \\pi_W \\).
+\\end{enumerate}
+This process, akin to Dyna-Q planning for the worker, allows for significant acceleration of learning, as the worker can practice achieving subgoals many times in the model before interacting with the real environment. Hindsight Experience Replay (HER) \\cite{andrychowicz2017hindsight} can also be integrated here, where achieved states are re-purposed as goals to further improve sample efficiency.
+
+\\subsubsection{Manager Policy Training}
+The manager policy \\( \\pi_M \\) is updated based on the extrinsic rewards from the environment. The manager's "action" is the subgoal \\( g_t \\). The learning process for the manager involves:
+\\begin{enumerate}
+    \\item **Subgoal Selection:** The manager observes \\( s_t \\) and uses its policy \\( \\pi_M \\) to select a subgoal \\( g_t \\). Importantly, this selection can be guided by planning over the dynamics model. For instance, the manager can run short MPC-like rollouts in \\( f_\\theta \\) from \\( s_t \\) to identify a sequence of actions that leads to a desirable state, which then becomes \\( g_t \\). The manager can also evaluate the "cost" or "probability of success" of achieving a candidate subgoal using the dynamics model, influencing its choice.
+    \\item **Extrinsic Reward Collection:** The manager allows the worker to execute primitive actions until the subgoal is achieved or a maximum number of worker steps is reached. During this period, the manager accumulates extrinsic rewards from the environment.
+    \\item **Policy Update:** The manager's policy is updated using standard RL algorithms, with the accumulated extrinsic reward serving as the primary feedback. The value function for the manager can incorporate the expected return from its chosen subgoal, potentially estimated by rolling out the worker's policy in the dynamics model.
+\\end{enumerate}
+The manager's learning is a form of meta-learning or learning at a higher abstraction, where the dynamics model provides a powerful tool for foresight and planning.
+
+\\subsection{Intrinsic Reward Design}
+While Eq. \\eqref{eq:intrinsic_reward} provides a basic intrinsic reward, more sophisticated designs can be employed. For example, a shape-based reward that is denser than a simple Euclidean distance, or one that incorporates novelty bonuses when exploring new states under a given subgoal. The intrinsic reward is critical for effectively guiding the worker.
+
+\\section{Experiments} \\label{sec:experiments}
+To evaluate the effectiveness of our proposed MB-HRL framework, we will conduct experiments on a suite of benchmark tasks, ranging from simple gridworlds to more complex continuous control environments. Our primary objectives are to demonstrate improved sample efficiency, enhanced exploration capabilities, and superior performance compared to both purely model-free HRL and purely model-based flat RL baselines.
+
+\\subsection{Environments}
+We will use the following environments:
+\\begin{enumerate}
+    \\item \textbf{SimpleGridWorld:} A custom-built 2D grid environment designed to clearly illustrate the hierarchical decision-making process and the benefits of model-based planning. This environment will feature sparse rewards and potentially long paths to goals.
+    \\item \textbf{Goal-conditioned Fetch Environments (Gymnasium):} These robotic manipulation tasks (e.g., `FetchReach-v2`, `FetchSlide-v2`) naturally lend themselves to HRL and provide a challenge for dynamics modeling due to their continuous state and action spaces and inherent physics.
+    \\item \textbf{Sparse Reward Continuous Control Tasks:} Environments such as `MountainCarContinuous-v0` or variants of `HalfCheetah` with sparse rewards to emphasize the sample efficiency benefits of our model-based approach.
+\\end{enumerate}
+
+\\subsection{Baselines}
+We will compare MB-HRL against several strong baselines:
+\\begin{enumerate}
+    \\item \textbf{Model-Free Hierarchical RL (e.g., Feudal Networks without explicit model usage):} A standard HRL approach that learns manager and worker policies without an explicit dynamics model for planning or internal simulation. This will highlight the contribution of model-based components.
+    \\item \textbf{Flat Model-Based RL (e.g., PlaNet/Dreamer-like agent):} A single-level model-based agent that learns a dynamics model and performs planning, but without hierarchical decomposition. This will assess the benefits of hierarchical abstraction.
+    \\item \textbf{Flat Model-Free RL (e.g., SAC/DDPG):} A strong model-free baseline to establish the overall performance context.
+\\end{enumerate}
+
+\\subsection{Evaluation Metrics}
+Performance will be assessed using the following metrics:
+\\begin{enumerate}
+    \\item \textbf{Cumulative Episode Reward:} The sum of rewards obtained per episode, averaged over multiple seeds.
+    \\item \textbf{Sample Efficiency:} The number of environment steps required to reach a certain performance threshold.
+    \\item \textbf{Success Rate:} For goal-conditioned tasks, the percentage of episodes where the desired goal is achieved.
+    \\item \textbf{Dynamics Model Accuracy:} Mean Squared Error of state and reward predictions on held-out data, to ensure the model is learning effectively.
+    \\item \textbf{Qualitative Analysis:} Visualizations of learned trajectories, manager-generated subgoals, and worker policies in the `SimpleGridWorld` to provide intuitive understanding.
+\\end{enumerate}
+
+\\subsection{Experimental Setup}
+All experiments will be run with multiple random seeds (e.g., 5-10) to ensure statistical robustness. Hyperparameters for all agents will be carefully tuned to ensure fair comparisons. Training will proceed for a fixed number of environment steps or episodes. Results will be presented with confidence intervals. We will use a dedicated `pictures/` directory to store all generated plots and figures.
+
+\\begin{figure}[ht]
+    \\centering
+    \\includegraphics[width=0.9\\linewidth]{../pictures/fig_01_convergence.png}
+    \\caption{Example convergence plot showing cumulative reward over training steps for different agents. (Placeholder)}
+    \\label{fig:convergence}
+\\end{figure}
+
+\\section{Ablation Study} \\label{sec:ablation}
+To understand the individual contributions of the model-based components to our MB-HRL framework, we will perform an ablation study. This will involve systematically removing or modifying specific elements of the proposed synthesis.
+
+\\subsection{Key Ablations}
+\\begin{enumerate}
+    \\item \textbf{No Model-Based Goal Generation:} The manager selects subgoals randomly or based on simpler heuristics, without consulting the dynamics model for planning. This will reveal the impact of model-based goal-setting.
+    \\item \textbf{No Model-Based Worker Acceleration:} The worker learns its policy solely from real-world intrinsic rewards, without the benefit of synthetic experiences generated by the dynamics model. This will quantify the sample efficiency gain from model-based worker training.
+    \\item \textbf{Imperfect Dynamics Model:} Introduce noise or limit the capacity of the dynamics model to simulate scenarios where the model is not perfectly accurate. This will help understand the robustness of MB-HRL to model errors.
+\\end{enumerate}
+
+\\section{Conclusion} \\label{sec:conclusion}
+This paper introduced Model-Based Hierarchical Reinforcement Learning (MB-HRL), a novel framework that synthesizes the strengths of model-based and hierarchical reinforcement learning. By integrating a learned dynamics model into a two-level hierarchical architecture, we aim to address key challenges in complex control, including sample inefficiency, exploration, and effective goal generation.
+
+Our proposed framework leverages the dynamics model to enable a high-level manager to perform intelligent subgoal planning by `dreaming` potential future states, while a low-level worker benefits from accelerated policy learning through model-generated simulations. This synergy allows the manager to set more informed and achievable subgoals and empowers the worker to learn how to achieve these subgoals with significantly less real-world interaction.
+
+We anticipate that MB-HRL will demonstrate superior sample efficiency and performance on a range of complex control tasks, providing a significant step towards more scalable and robust reinforcement learning systems. The modular design of our framework also facilitates future extensions and adaptations to diverse problem settings.
+
+\\section{Broader Impact}
+The advancements in reinforcement learning, particularly in areas like model-based and hierarchical control, have significant potential for positive societal impact, including autonomous systems, robotics, and resource management. Our MB-HRL framework, by improving sample efficiency and handling complexity, could accelerate the deployment of intelligent agents in real-world applications where data collection is expensive or risky.
+
+However, it is crucial to consider the potential ethical implications. The enhanced planning capabilities of model-based agents, combined with the abstract reasoning of hierarchical control, could lead to unforeseen emergent behaviors. The use of learned models also raises concerns about robustness to distributional shifts and potential vulnerabilities if models are exploited. Future research must rigorously address safety, interpretability, and the alignment of complex RL systems with human values to ensure responsible development and deployment.
+
+\\section*{Acknowledgment}
+The authors would like to thank... (Placeholder for acknowledgments)
+
+\\appendices
+
+\\section*{APPENDIX A: Detailed Proofs}
+
+\\subsection{Dynamics Model Loss Derivation}
+Given a dynamics model \\( f_\\theta(s_t, a_t) = (\\hat{s}_{t+1}, \\hat{r}_t) \\), trained on transitions \\( (s_t, a_t, r_t, s_{t+1}) \\) sampled from a replay buffer \\( \\mathcal{D} \\), the objective is to minimize the discrepancy between the model's predictions and the observed outcomes. Assuming Gaussian noise for the prediction errors and using Maximum Likelihood Estimation, the negative log-likelihood loss for both state and reward prediction (for simplicity assuming independent errors) leads to a Mean Squared Error (MSE) objective.
+
+For state prediction, if \\( s_{t+1} \\sim \\mathcal{N}(\\hat{s}_{t+1}, \\Sigma_s) \\), then the negative log-likelihood is proportional to \\( \\| s_{t+1} - \\hat{s}_{t+1} \\|^2_{\\Sigma_s^{-1}} \\). Similarly for reward prediction, if \\( r_t \\sim \\mathcal{N}(\\hat{r}_t, \\Sigma_r) \\), the negative log-likelihood is proportional to \\( \\| r_t - \\hat{r}_t \\|^2_{\\Sigma_r^{-1}} \\). Assuming unit variance (or learning variance explicitly), the combined loss becomes:
+
+\\begin{equation}
+    \\mathcal{L}_{\\text{dyn}}(\\theta) = \\mathbb{E}_{(s_t, a_t, r_t, s_{t+1}) \\sim \\mathcal{D}} [ \\| s_{t+1} - f_\\theta^s(s_t, a_t) \\|^2 + \\| r_t - f_\\theta^r(s_t, a_t) \\|^2 ]
+\\end{equation}
+where \\( f_\\theta^s \\) and \\( f_\\theta^r \\) denote the state and reward prediction heads of the dynamics model, respectively. This loss drives the model to accurately predict both the next state and the immediate reward.
+
+\\subsection{Worker Intrinsic Reward Gradient}
+Consider the intrinsic reward for the worker as defined in Eq. \\eqref{eq:intrinsic_reward}:
+\\begin{equation}
+    r_I(s_t, a_t, s_{t+1}, g_t) = -\\|s_{t+1} - g_t\\|_2 + \\|s_t - g_t\\|_2
+\\end{equation}
+The worker's policy \\( \\pi_W(a_t | s_t, g_t) \\) aims to maximize the expected sum of these intrinsic rewards. The gradient of the expected return with respect to the worker's policy parameters \\( \\phi \\) can be derived using standard policy gradient theorems. For a simple episodic setting and assuming continuous actions:
+
+\\begin{equation}
+    \\nabla_\\phi J_W(\\phi) = \\mathbb{E}_{\\pi_W} [ \\nabla_\\phi \\log \\pi_W(a_t | s_t, g_t) Q^{\\pi_W}(s_t, a_t, g_t) ]
+\\end{equation}
+where \\( Q^{\\pi_W} \\) is the action-value function for the worker under its policy \\( \\pi_W \\) with respect to the intrinsic reward. This value function can be learned via actor-critic methods, where the critic approximates \\( Q^{\\pi_W} \\) and the actor updates \\( \\pi_W \\) using its gradients.
+
+\\section*{APPENDIX B: Additional Qualitative Examples}
+
+\\subsection{Learned Trajectories in GridWorld}
+\\begin{figure}[ht]
+    \\centering
+    \\includegraphics[width=0.9\\linewidth]{../pictures/gridworld_trajectory.png}
+    \\caption{Example trajectory of the MB-HRL agent in the SimpleGridWorld. The manager sets a sequence of subgoals (green circles), and the worker executes primitive actions (blue path) to reach each subgoal. (Placeholder)}
+    \\label{fig:gridworld_trajectory}
+\\end{figure}
+This figure will illustrate how the manager breaks down a long-horizon task into a sequence of manageable subgoals, and how the worker navigates to each of these subgoals. We will visually depict the manager's decision points and the worker's execution traces, highlighting the benefits of the hierarchical decomposition.
+
+\\subsection{Dynamics Model Prediction Accuracy}
+\\begin{figure}[ht]
+    \\centering
+    \\includegraphics[width=0.9\\linewidth]{../pictures/dynamics_prediction.png}
+    \\caption{Visualization of the dynamics model's state predictions compared to actual environment transitions over several timesteps. (Placeholder)}
+    \\label{fig:dynamics_prediction}
+\\end{figure}
+This visualization will show the accuracy of the learned dynamics model by plotting predicted state trajectories against actual observed trajectories, potentially including uncertainty estimates from a model ensemble. This helps to understand the quality of the internal simulator used by the agent.
+
+\\section*{APPENDIX C: Hyperparameters}
+
+\\begin{table}[ht]
+\\caption{Key Hyperparameters for MB-HRL Framework}
+\\centering
+\\begin{tabular}{|l|l|l|}
+\\hline
+\\textbf{Component} & \\textbf{Parameter} & \\textbf{Value} \\
+\\hline
+Dynamics Model & Hidden Dimensions & 256 \\
+               & Learning Rate & 1e-4 \\
+               & Ensemble Size & 5 \\
+\\hline
+Manager & Subgoal Dimensions & 2 (GridWorld) \\
+        & Learning Rate & 1e-3 \\
+        & Discount Factor \\( \\gamma_M \\) & 0.99 \\
+        & Update Frequency & 100 worker steps \\
+\\hline
+Worker  & Hidden Dimensions & 128 \\
+        & Learning Rate & 1e-3 \\
+        & Discount Factor \\( \\gamma_W \\) & 0.95 \\
+        & Replay Buffer Size & 1e5 \\
+        & HER K & 4 \\
+\\hline
+Training & Total Environment Steps & 1e6 \\
+         & Batch Size & 256 \\
+         & Random Seeds & 5 \\
+\\hline
+\\end{tabular}
+\\label{tab:hyperparameters}
+\\end{table}
+This table provides a detailed list of hyperparameters used for training and evaluation. These values will be set in `src/config.py`.
+
+\\begin{thebibliography}{00}
+\\bibitem{hafner2020mastering}
+D. Hafner, T. Lillicrap, M. Norouzi, and H. van Hasselt, ``Mastering Atari with Discrete World Models,''
+    in \textit{International Conference on Learning Representations (ICLR)}, 2020.
+\\bibitem{kaiser2019model}
+L. Kaiser, M. Babaeizadeh, G. Hinton, Q. Chen, A. Karpathy, R. Kumar, and I. Sutskever, ``Model-Based Reinforcement Learning for Atari,''
+    in \textit{International Conference on Learning Representations (ICLR)}, 2019.
+\\bibitem{sutton1999intra}
+R. S. Sutton, D. Precup, and S. Singh, ``Intra-option learning about courses of action,''
+    \\textit{Artificial Intelligence}, vol. 112, no. 1-2, pp. 181-211, 1999.
+\\bibitem{andrychowicz2017hindsight}
+M. Andrychowicz, F. Wolski, A. Ray, J. Schneider, R. Fong, P. Welinder, B. McGrew, J. Tobin, P. Prokopec, R. Sutskever, and W. Zaremba, ``Hindsight Experience Replay,''
+    in \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2017.
+\\bibitem{vezhnevets2017feudal}
+A. S. Vezhnevets, H. Soyer, S. Mahesch, J. T. Springenberg, and R. Hadsell, ``Feudal Networks for Hierarchical Reinforcement Learning,''
+    in \textit{International Conference on Machine Learning (ICML)}, 2017.
+\\bibitem{sutton1991dyna}
+R. S. Sutton, ``Dyna-Q: A Planning Method,''
+    in \textit{Proceedings of the Eighth International Workshop on Machine Learning}, 1991, pp. 195-201.
+
+\\end{thebibliography}
+
+
+
+\\end{document}

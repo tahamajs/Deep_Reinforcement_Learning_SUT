@@ -127,47 +127,88 @@ class ConvDuelingDQN(nn.Module):
 
 
 class DuelingDQNAgent(DQNAgent):
-    """Dueling DQN agent with value-advantage architecture"""
+    """
+    Dueling DQN Agent - separates value and advantage streams.
 
-    def __init__(self, state_size, action_size, **kwargs):
-        super().__init__(state_size, action_size, **kwargs)
-        self.agent_type = "Dueling DQN"
+    This agent utilizes a Dueling Q-network architecture where the Q-value function
+    is decomposed into a state-value function V(s) and an advantage function A(s,a).
+    This decomposition allows for better generalization across actions without
+    changing the policy.
+    """
 
-        # Override with dueling network
-        if isinstance(state_size, tuple):  # Convolutional input
-            self.q_network = ConvDuelingDQN(state_size, action_size).to(device)
-        else:  # Fully connected input
-            self.q_network = DuelingDQN(state_size, action_size).to(device)
+    def __init__(self, *args, **kwargs):
+        """
+        Initializes the DuelingDQNAgent.
 
-        self.target_network = type(self.q_network)(state_size, action_size).to(device)
-        self.update_target_network()
+        Overrides the Q-networks with the DuelingQNetwork architecture.
 
-        # Reinitialize optimizer with new network
-        self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.lr)
+        Args:
+            *args: Variable length argument list for DQNAgent.
+            **kwargs: Arbitrary keyword arguments for DQNAgent.
+        """
+        super().__init__(*args, **kwargs)
+        # Override networks with dueling architecture
+        self.q_network = DuelingQNetwork(self.state_dim, self.action_dim).to(
+            self.device
+        )
+        self.target_network = DuelingQNetwork(self.state_dim, self.action_dim).to(
+            self.device
+        )
+        self.target_network.load_state_dict(self.q_network.state_dict())
+        self.target_network.eval()
 
-        # Additional tracking for analysis
-        self.value_estimates = []
-        self.advantage_estimates = []
+        # Reinitialize optimizer with new network parameters
+        self.optimizer = torch.optim.Adam(
+            self.q_network.parameters(), lr=kwargs.get("lr", 1e-3)
+        )
 
-    def get_value_advantage_estimates(self, state):
-        """Extract value and advantage estimates for analysis"""
+    def update(self) -> float:
+        """
+        Updates the Q-network using the Dueling DQN algorithm.
+
+        This involves sampling a batch of transitions, calculating the target Q-values
+        (using a standard DQN-style target calculation, but with the Dueling network),
+        and performing a gradient descent step on the online Dueling Q-network.
+
+        Returns:
+            float: The loss value from the update step.
+        """
+        if len(self.replay_buffer) < self.batch_size:
+            return 0.0
+
+        # Sample batch
+        transitions = self.replay_buffer.sample(self.batch_size)
+        batch = Transition(*zip(*transitions))
+
+        states = torch.FloatTensor(np.array(batch.state)).to(self.device)
+        actions = torch.LongTensor(batch.action).to(self.device)
+        rewards = torch.FloatTensor(batch.reward).to(self.device)
+        next_states = torch.FloatTensor(np.array(batch.next_state)).to(self.device)
+        dones = torch.FloatTensor(batch.done).to(self.device)
+
+        # Current Q values
+        current_q = self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze()
+
+        # Target Q values (standard DQN for simplicity in dueling update, Double DQN can also be combined)
         with torch.no_grad():
-            if isinstance(state, np.ndarray):
-                state = torch.FloatTensor(state).unsqueeze(0).to(device)
+            next_q = self.target_network(next_states).max(1)[0]
+            target_q = rewards + (1 - dones) * self.gamma * next_q
 
-            # Get features
-            if hasattr(self.q_network, "feature_layer"):
-                features = self.q_network.feature_layer(state)
-                value = self.q_network.value_stream(features).item()
-                advantages = (
-                    self.q_network.advantage_stream(features).squeeze(0).cpu().numpy()
-                )
-            else:
-                # For convolutional networks, we can't easily extract intermediate values
-                value = None
-                advantages = None
+        # Loss and update
+        loss = F.mse_loss(current_q, target_q)
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
-        return value, advantages
+        # Update target network
+        self.steps += 1
+        if self.steps % self.target_update_freq == 0:
+            self.target_network.load_state_dict(self.q_network.state_dict())
+
+        # Decay epsilon
+        self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
+
+        return loss.item()
 
 
 class DuelingAnalysis:

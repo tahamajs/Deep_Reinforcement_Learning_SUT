@@ -1,0 +1,373 @@
+\\documentclass[journal]{IEEEtran}
+\\usepackage{amsmath,amsfonts}
+\\usepackage{algorithmic}
+\\usepackage{array}
+\\usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
+\\usepackage{textcomp}
+\\usepackage{stfloats}
+\\usepackage{url}
+\\usepackage{verbatim}
+\\usepackage{graphicx}
+\\usepackage{cite}
+\\usepackage{hyperref}
+\\hyphenation{op-tical net-works semi-conduc-tor IEEE-Xplore}
+% updated with \\LaTeX2e
+\\begin{document}
+\\title{Deep Reinforcement Learning Fundamentals: DQN, REINFORCE, and Actor-Critic}
+\\author{Taha Maji, \\IEEEmembership{Student Member, IEEE}
+\\thanks{This work was submitted to the University of [University Name] as part of the Deep Reinforcement Learning Course. (Corresponding author: Taha Maji.)}
+\\thanks{Taha Maji is with the Department of Computer Science, University of [University Name], [City], [Country] (e-mail: taha.maji@[university.email.domain]).}}
+
+\\maketitle
+
+\\begin{abstract}
+This report presents a comprehensive introduction to the foundational concepts and practical implementations of Deep Reinforcement Learning (DRL). We delve into the theoretical underpinnings of Markov Decision Processes (MDPs), various value functions, and the fundamental Bellman equations. Building upon this, we explore dynamic programming, Monte Carlo methods, and temporal difference learning. The core of this work focuses on the implementation of Deep Q-Networks (DQN), REINFORCE, and Actor-Critic algorithms using PyTorch and Gymnasium environments. The code is structured modularly for clarity and reusability, demonstrating best practices in DRL development. Detailed mathematical derivations and a thorough explanation of implementation choices are provided, along with experimental analysis on the CartPole-v1 environment to compare algorithm performance, stability, and sample efficiency. This work serves as a foundational guide for understanding and implementing modern deep reinforcement learning approaches.
+\\end{abstract}
+
+\\begin{IEEEkeywords}
+Deep Reinforcement Learning, Markov Decision Process, Value Functions, Bellman Equations, Deep Q-Networks, REINFORCE, Actor-Critic, Experience Replay, Target Networks, Dueling DQN, Double DQN, Prioritized Experience Replay, Policy Gradient, Temporal Difference Learning.
+\\end{IEEEkeywords}
+
+\\section{Introduction}
+\IEEEPARstart{D}{eep} Reinforcement Learning (DRL) is a powerful paradigm that integrates deep neural networks with reinforcement learning, enabling agents to learn optimal behaviors directly from interactions with complex environments. This field has achieved remarkable success in diverse domains, from mastering intricate games like Go \cite{silver2016mastering} and Atari \cite{mnih2015human} to controlling robotic systems \cite{levine2016end}. This assignment aims to establish a solid theoretical and practical foundation in DRL, serving as a stepping stone for more advanced topics.
+
+The increasing complexity of real-world problems often renders traditional Reinforcement Learning (RL) methods, which rely on tabular representations or hand-crafted features, impractical. DRL addresses this challenge by leveraging the function approximation capabilities of deep neural networks to handle high-dimensional state and action spaces. This report outlines the theoretical foundations of DRL, followed by the practical implementation and experimental analysis of three prominent algorithms: Deep Q-Networks (DQN), REINFORCE, and Actor-Critic methods.
+
+The structure of this report is as follows: Section \\ref{sec:theory} introduces the theoretical foundations of DRL, including Markov Decision Processes, policies, returns, and Bellman equations. Section \\ref{sec:dp} and \\ref{sec:mc} briefly touch upon Dynamic Programming and Monte Carlo methods, respectively. Section \\ref{sec:td} covers Temporal Difference Learning. Section \\ref{sec:drl_algs} details the implemented DRL algorithms and their advanced variants. Section \\ref{sec:codebase} describes the modular codebase structure. Section \\ref{sec:experiments} outlines the experimental design and discusses the results. Section \\ref{sec:comparison} provides a comparative analysis and explores advanced topics. Finally, Section \\ref{sec:conclusion} concludes the report and suggests future research directions.
+
+\\section{Theoretical Foundations}
+\\label{sec:theory}
+This section introduces the fundamental mathematical concepts that underpin Reinforcement Learning.
+
+\\subsection{Markov Decision Processes (MDPs)}
+A Markov Decision Process provides a mathematical framework for modeling sequential decision-making in environments where outcomes are partly random and partly under the control of a decision maker. An MDP is formally defined by a tuple $(\\mathcal{S}, \\mathcal{A}, P, R, \\gamma)$, where:
+\\begin{itemize}
+    \\item $\\mathcal{S}$: A finite set of states.
+    \\item $\\mathcal{A}$: A finite set of actions.
+    \\item $P(s\'|s,a)$: The state transition probability, representing the probability of transitioning to state $s\'$ from state $s$ after taking action $a$.
+    \\item $R(s,a,s\')$: The reward function, specifying the immediate reward received after transitioning from state $s$ to $s\'$ via action $a$.
+    \\item $\\gamma \\in [0, 1]$: The discount factor, which determines the present value of future rewards. A value of $\\gamma$ close to 0 makes the agent short-sighted, while a value close to 1 makes it far-sighted.
+\\end{itemize}
+The \\textbf{Markov Property} is central to MDPs: ``The future is independent of the past given the present.'' Mathematically, this means:
+$$P(S_{t+1} = s\' | S_t = s, A_t = a, S_{t-1}, A_{t-1}, \\dots, S_0, A_0) = P(S_{t+1} = s\' | S_t = s, A_t = a)$$
+
+\\subsection{Policies}
+A \\textbf{policy} $\\pi$ is a mapping from states to probabilities of selecting each action. It defines the agent's behavior.
+\\begin{itemize}
+    \\item \\textbf{Deterministic Policy}: $a = \\pi(s)$, where a specific action is chosen for each state.
+    \\item \\textbf{Stochastic Policy}: $\\pi(a|s) = P(A_t = a | S_t = s)$, where a probability distribution over actions is given for each state.
+\\end{itemize}
+
+\\subsection{Return and Value Functions}
+The goal of an RL agent is to maximize the \\textbf{expected return}, which is the total discounted reward accumulated over time.
+
+\\textbf{Return ($G_t$)}: The total discounted reward from time step $t$ onwards:
+$$G_t = R_{t+1} + \\gamma R_{t+2} + \\gamma^2 R_{t+3} + \\dots = \\sum_{k=0}^{\\infty} \\gamma^k R_{t+k+1}$$
+
+\\textbf{State-Value Function ($V^\\pi(s)$)}: The expected return when starting in state $s$ and following policy $\\pi$.
+$$V^\\pi(s) = \\mathbb{E}_\\pi [G_t | S_t = s]$$
+
+\\textbf{Action-Value Function ($Q^\\pi(s,a)$)}: The expected return when starting in state $s$, taking action $a$, and thereafter following policy $\\pi$.
+$$Q^\\pi(s,a) = \\mathbb{E}_\\pi [G_t | S_t = s, A_t = a]$$
+
+\\subsection{Bellman Equations}
+The Bellman equations are fundamental to RL, providing recursive relationships for value functions.
+
+\\textbf{Bellman Expectation Equation for $V^\\pi(s)$}:
+$$V^\\pi(s) = \\sum_a \\pi(a|s) \\sum_{s\'} P(s\'|s,a) [R(s,a,s\') + \\gamma V^\\pi(s\')]$$
+
+\\textbf{Bellman Expectation Equation for $Q^\\pi(s,a)$}:
+$$Q^\\pi(s,a) = \\sum_{s\'} P(s\'|s,a) [R(s,a,s\') + \\gamma \\sum_{a\'} \\pi(a\'|s\') Q^\\pi(s\',a\')]$$
+
+\\textbf{Bellman Optimality Equation for $V^*(s)$}:
+$$V^*(s) = \\max_a \\sum_{s\'} P(s\'|s,a) [R(s,a,s\') + \\gamma V^*(s\')]$$
+
+\\textbf{Bellman Optimality Equation for $Q^*(s,a)$}:
+$$Q^*(s,a) = \\sum_{s\'} P(s\'|s,a) [R(s,a,s\') + \\gamma \\max_{a\'} Q^*(s\',a\')]$$
+
+\\section{Dynamic Programming Methods}
+\\label{sec:dp}
+Dynamic Programming (DP) methods are a collection of algorithms that can be used to compute optimal policies and value functions, assuming a perfect model of the MDP (i.e., known $P$ and $R$).
+
+\\subsection{Policy Evaluation}
+Policy evaluation aims to compute the state-value function $V^\\pi$ for a given policy $\\pi$. It is an iterative process:
+$$V_{k+1}(s) = \\sum_a \\pi(a|s) \\sum_{s\'} P(s\'|s,a) [R(s,a,s\') + \\gamma V_k(s\')]$$
+This iterative update is guaranteed to converge to $V^\\pi(s)$ as $k \\to \\infty$.
+
+\\subsection{Policy Improvement}
+Given the value function for a policy $\\pi$, we can improve the policy by making it greedy with respect to $Q^\\pi$.
+$$\\pi\'(s) = \\arg\\max_a Q^\\pi(s,a)$$
+This new policy $\\pi\'$ is guaranteed to be better than or equal to $\\pi$.
+
+\\subsection{Value Iteration}
+Value iteration directly computes the optimal value function $V^*$ by repeatedly applying the Bellman Optimality Equation as an update rule:
+$$V_{k+1}(s) = \\max_a \\sum_{s\'} P(s\'|s,a) [R(s,a,s\') + \\gamma V_k(s\')]$$
+Once $V^*(s)$ is found, the optimal policy can be derived by choosing actions greedily with respect to $Q^*(s,a)$.
+
+\\section{Monte Carlo Methods}
+\\label{sec:mc}
+Monte Carlo (MC) methods learn directly from episodes of experience. They do not require a model of the environment's dynamics. Instead, they average returns observed from many episodes.
+
+\\subsection{First-Visit Monte Carlo Prediction}
+To estimate $V^\\pi(s)$, First-Visit MC averages the returns received after the \\textit{first} time state $s$ is visited in an episode.
+
+\\subsection{Every-Visit Monte Carlo Prediction}
+Every-Visit MC averages the returns received after \\textit{each} time state $s$ is visited in an episode.
+
+\\subsection{Monte Carlo Control (GLIE)}
+Monte Carlo control aims to find an optimal policy without a model. It typically involves an iterative process of policy evaluation and policy improvement, often employing a ``greedy in the limit of infinite exploration'' (GLIE) condition to ensure convergence. This involves using $\\epsilon$-greedy policies and decaying $\\epsilon$ over time.
+
+\\section{Temporal Difference (TD) Learning}
+\\label{sec:td}
+Temporal Difference (TD) learning combines ideas from Monte Carlo and Dynamic Programming. Like MC, TD methods learn directly from experience without a model. Like DP, TD methods update estimates based in part on other learned estimates (bootstrapping), without waiting for a final outcome.
+
+\\subsection{TD(0) / SARSA}
+SARSA (State-Action-Reward-State-Action) is an \\textbf{on-policy} TD control algorithm. The update rule for the action-value function $Q(s,a)$ is:
+$$Q(S_t, A_t) \\leftarrow Q(S_t, A_t) + \\alpha [R_{t+1} + \\gamma Q(S_{t+1}, A_{t+1}) - Q(S_t, A_t)]$$
+Here, the next action $A_{t+1}$ is chosen using the \\textit{current} policy, which is why it's on-policy.
+
+\\subsection{Q-Learning}
+Q-Learning is a model-free, \\textbf{off-policy} TD control algorithm. The update rule is:
+$$Q(S_t, A_t) \\leftarrow Q(S_t, A_t) + \\alpha [R_{t+1} + \\gamma \\max_{a} Q(S_{t+1}, a) - Q(S_t, A_t)]$$
+In Q-learning, the agent learns the value of the optimal action $a\'$ in the next state $S_{t+1}$ (using $\\max_a$), regardless of the action actually taken by the current policy. This makes it off-policy.
+
+\\subsection{TD($\\lambda$) Methods}
+TD($\\lambda$) methods extend TD(0) by using eligibility traces, which provide a way to combine single-step TD updates with multi-step returns. It bridges the gap between TD(0) and Monte Carlo methods, allowing for more efficient credit assignment over longer sequences of actions.
+
+\\section{Deep Reinforcement Learning Algorithms}
+\\label{sec:drl_algs}
+This section details the core DRL algorithms implemented in this assignment.
+
+\\subsection{Deep Q-Networks (DQN)}
+DQN extends Q-Learning by using a deep neural network (the Q-network) to approximate the optimal action-value function $Q^*(s,a)$. Key innovations include:
+\\begin{enumerate}
+    \\item \\textbf{Experience Replay}: Stores transitions $(s_t, a_t, r_{t+1}, s_{t+1}, done)$ in a replay buffer, allowing the agent to sample mini-batches of past experiences for training. This breaks correlations between successive samples and smooths the data distribution, improving stability.
+    \\item \\textbf{Target Network}: Uses a separate, periodically updated network (the target Q-network $Q(\\cdot; \\theta^-)$) to compute the target values for the Bellman update. This stabilizes training by providing a fixed target for a number of training steps, preventing oscillations.
+\\end{enumerate}
+The \\textbf{DQN Loss Function} is typically a Mean Squared Error (MSE) between the current Q-value and the target Q-value:
+$$L(\\theta) = \\mathbb{E}_{(s,a,r,s\') \\sim D} \\left[ \\left( r + \\gamma \\max_{a\'} Q(s\',a\';\\theta^-) - Q(s,a;\\theta) \\right)^2 \\right]$$
+Where $\\theta$ are the parameters of the main Q-network and $\\theta^-$ are the parameters of the target network.
+
+\\subsubsection{Advanced DQN Variants}
+\\begin{itemize}
+    \\item \\textbf{Double DQN} \cite{hasselt2016deep}: Addresses the overestimation bias of Q-values inherent in standard DQN. It decouples the action selection from action evaluation. The next action $A_{t+1}^*$ is chosen using the \\textit{online} Q-network, but its value is estimated using the \\textit{target} Q-network:
+    $$Q_{target}(s,a) = r + \\gamma Q(s\', \\arg\\max_{a\'} Q(s\',a\'; \\theta); \\theta^-)$$
+    \\item \\textbf{Dueling DQN} \cite{wang2016dueling}: Modifies the network architecture to estimate the state-value function $V(s)$ and the advantage function $A(s,a)$ separately, then combines them to produce the Q-values. This allows the network to learn which states are valuable independently of the actions taken. The Q-value is computed as:
+    $$Q(s,a; \\theta, \\alpha, \\beta) = V(s; \\theta, \\beta) + \\left( A(s,a; \\theta, \\alpha) - \\frac{1}{|\\mathcal{A}|} \\sum_{a\'} A(s,a\'; \\theta, \\alpha) \\right)$$
+    The subtraction of the mean advantage addresses the identifiability problem between $V(s)$ and $A(s,a)$.
+    \\item \\textbf{Prioritized Experience Replay (PER)} \cite{schaul2015prioritized}: Instead of uniform sampling from the replay buffer, PER samples transitions with higher TD-error more frequently. This prioritizes learning from surprising or important experiences, leading to faster convergence.
+    \\begin{itemize}
+        \\item \\textbf{TD-error}: $\\delta = |Q_{target} - Q_{expected}|$
+        \\item \\textbf{Sampling Probability}: $P(i) = \\frac{p_i^\\alpha}{\\sum_k p_k^\\alpha}$, where $p_i$ is the priority of transition $i$ (e.g., $|\\delt-i| + \\epsilon$).
+        \\item \\textbf{Importance Sampling (IS) Weights}: To correct for the bias introduced by prioritized sampling, IS weights are used in the loss function: $w_i = (N \\cdot P(i))^{-\\beta} / \\max_k w_k$. The loss becomes $L(\\theta) = w_i \\cdot (TD\\_error)^2$.
+    \\end{itemize}
+\\end{itemize}
+
+\\subsection{Policy Gradient Methods (REINFORCE)}
+REINFORCE (Monte Carlo Policy Gradient) \cite{williams1992simple} is an \\textbf{on-policy} algorithm that directly optimizes the policy $\\pi_\\theta(a|s)$ with parameters $\\theta$. It uses Monte Carlo estimates of the return to update the policy.
+
+The \\textbf{Policy Gradient Theorem} states that the gradient of the performance measure $J(\\theta)$ (e.g., expected return) with respect to the policy parameters is:
+$$\\nabla_\\theta J(\\theta) = \\mathbb{E}_{\\pi_\\theta} \\left[ \\nabla_\\theta \\log \\pi_\\theta(A_t|S_t) G_t \\right]$$
+In REINFORCE, we approximate this expectation using a single episode:
+$$\\theta_{t+1} = \\theta_t + \\alpha \\nabla_\\theta \\log \\pi_\\theta(A_t|S_t) G_t$$
+Where $G_t$ is the return from time step $t$.
+
+\\subsection{Actor-Critic Methods}
+Actor-Critic methods \cite{konda2000actor} combine policy-based (actor) and value-based (critic) approaches to leverage the strengths of both. The \\textbf{actor} is a policy network that decides which action to take, while the \\textbf{critic} is a value network that evaluates the action taken by the actor.
+\\begin{itemize}
+    \\item \\textbf{Actor Update}: Uses the policy gradient, but instead of the full return $G_t$, it uses a TD-error or advantage estimate from the critic.
+    $$\\theta_{t+1} = \\theta_t + \\alpha_\\theta \\nabla_\\theta \\log \\pi_\\theta(A_t|S_t) \\delta_t$$
+    Where $\\delta_t = R_{t+1} + \\gamma V_w(S_{t+1}) - V_w(S_t)$ is the TD-error (or advantage $A(s,a) = Q(s,a) - V(s)$).
+    \\item \\textbf{Critic Update}: Uses TD learning (e.g., MSE loss) to update its value function parameters $w$.
+    $$w_{t+1} = w_t + \\alpha_w \\delta_t \\nabla_w V_w(S_t)$$
+\\end{itemize}
+Actor-Critic methods typically have lower variance than REINFORCE (due to bootstrapping from the critic) and can be more sample efficient than pure policy gradient methods.
+
+\\section{Modular Codebase Structure}
+\\label{sec:codebase}
+The project's Python codebase is structured modularly to enhance readability, maintainability, and reusability, following best practices for DRL implementations.
+\\begin{verbatim}
+CAs/Solutions/CA01_Deep_RL_Fundamentals/
+├── src/
+│   ├── __init__.py          # Package initializer
+│   ├── agents/              # RL agent implementations
+│   │   ├── __init__.py
+│   │   └── ca1_agents.py
+│   ├── data/                # Data structures like replay buffers
+│   │   ├── __init__.py
+│   │   └── buffers.py
+│   ├── models/              # Neural network architectures
+│   │   ├── __init__.py
+│   │   └── ca1_models.py
+│   ├── utils/               # General utility functions
+│   │   ├── __init__.py
+│   │   └── ca1_utils.py
+│   └── config.py            # Hyperparameter configurations
+├── CA1.ipynb               # Main notebook for theory, implementation demos, and experiments
+├── README.md               # Project overview and detailed lecture notes
+├── requirements.txt        # Python dependencies
+├── run.sh                  # Example script to run experiments
+├── test_setup.py           # Basic setup tests
+├── environments/           # Custom Gymnasium environments or wrappers
+├── evaluation/             # Scripts for evaluating agent performance
+├── experiments/            # Experiment runners and logging
+├── visualization/          # Saved plots and figures
+└── results.json            # JSON file for storing experiment results
+\\end{verbatim}
+
+\\subsection{`src/config.py`}
+This file centralizes all hyperparameters for the various DRL algorithms and experiments. Using dataclasses ensures type safety and immutability for configurations.
+\\begin{itemize}
+    \\item \\textbf{`DQNConfig`}: Configuration for DQN and its variants (Double, Dueling, Noisy).
+    \\item \\textbf{`REINFORCEConfig`}: Configuration for the REINFORCE agent.
+    \\item \\textbf{`ActorCriticConfig`}: Configuration for the Actor-Critic agent.
+    \\item \\textbf{`ExperimentConfig`}: Overall configuration for running experiments, including environment details and references to agent-specific configs.
+\\end{itemize}
+
+\\subsection{`src/models/ca1_models.py`}
+Contains the neural network architectures used by the agents.
+\\begin{itemize}
+    \\item \\textbf{`DQN(nn.Module)`}: Standard feedforward Q-network.
+    \\item \\textbf{`DuelingDQN(nn.Module)`}: Implements the Dueling architecture with separate value and advantage streams.
+    \\item \\textbf{`PolicyNetwork(nn.Module)`}: Network for approximating policies in REINFORCE and Actor-Critic, outputting action probabilities.
+    \\item \\textbf{`ValueNetwork(nn.Module)`}: Network for approximating the state-value function in Actor-Critic.
+    \\item \\textbf{`NoisyLinear(nn.Module)`}: A linear layer with added parameter noise for exploration, used in `NoisyDQN`.
+    \\item \\textbf{`NoisyDQN(nn.Module)`}: DQN agent using `NoisyLinear` layers for intrinsic exploration.
+\\end{itemize}
+
+\\subsection{`src/data/buffers.py`}
+Manages experience replay mechanisms critical for off-policy algorithms.
+\\begin{itemize}
+    \\item \\textbf{`ReplayBuffer`}: A standard experience replay buffer that stores and uniformly samples transitions (`state`, `action`, `reward`, `next_state`, `done`). Implemented using `collections.deque`.
+    \\item \\textbf{`PrioritizedReplayBuffer`}: An advanced replay buffer that samples transitions based on their temporal difference (TD) error, giving higher priority to more surprising experiences. Includes support for Importance Sampling (IS) weights to correct for sampling bias.
+\\end{itemize}
+
+\\subsection{`src/agents/ca1_agents.py`}
+Implements the core logic for each DRL agent, inheriting from a `BaseAgent` abstract class for a consistent interface.
+\\begin{itemize}
+    \\item \\textbf{`BaseAgent(ABC)`}: Abstract base class defining common methods for RL agents (`act`, `learn`, `save`, `load`).
+    \\item \\textbf{`DQNAgent(BaseAgent)`}: Implements the standard DQN algorithm with support for Double DQN and Dueling DQN, using `ReplayBuffer`.
+    \\item \\textbf{`ImprovedDQNAgent(DQNAgent)`}: Extends `DQNAgent` to incorporate `PrioritizedReplayBuffer`, demonstrating an advanced DQN variant.
+    \\item \\textbf{`REINFORCEAgent(BaseAgent)`}: Implements the REINFORCE policy gradient algorithm. It collects full episode trajectories before performing a single update.
+    \\item \\textbf{`ActorCriticAgent(BaseAgent)`}: Implements the Actor-Critic algorithm, which combines a policy network (actor) and a value network (critic) for online learning and reduced variance.
+\\end{itemize}
+
+\\subsection{`src/utils/ca1_utils.py`}
+Provides a collection of general utility functions to support the DRL agents and experiments.
+\\begin{itemize}
+    \\item \\textbf{`set_seed(seed: int)`}: Ensures reproducibility by setting random seeds for NumPy, PyTorch, and Python's `random` module.
+    \\item \\textbf{`moving_average(x: List[float], window: int)`}: Computes the moving average of a list of values, useful for smoothing learning curves.
+    \\item \\textbf{`gym_reset(env: gym.Env)`}: Handles the `reset()` method for different versions of Gymnasium, returning the initial state.
+    \\item \\textbf{`gym_step(env: gym.Env, action: Any)`}: Handles the `step()` method for different versions of Gymnasium, returning the next state, reward, done flag, and info.
+\\end{itemize}
+
+\\section{Experimental Design and Results}
+\\label{sec:experiments}
+To effectively evaluate and compare the DRL algorithms, a systematic experimental approach is crucial. This section outlines the design and expected results of experiments on the CartPole-v1 environment.
+
+\\subsection{Environment Setup: CartPole-v1}
+\\begin{itemize}
+    \\item \\textbf{Observation Space}: 4 continuous values representing cart position, cart velocity, pole angle, and pole angular velocity.
+    \\item \\textbf{Action Space}: 2 discrete actions: 0 (push cart left) and 1 (push cart right).
+    \\item \\textbf{Reward}: +1 for every timestep the pole remains upright.
+    \\item \\textbf{Episode Termination}: Occurs when the pole angle exceeds $\\pm 12$ degrees, the cart position exceeds $\\pm 2.4$ units, or the episode length reaches 500 (or `max_t` if set).
+    \\item \\textbf{Goal}: Achieve an average reward of 195.0 over 100 consecutive episodes.
+\\end{itemize}
+
+\\subsection{Training Functions}
+The `CA1.ipynb` notebook (and implicitly `src/agents/ca1_agents.py` through training functions) includes dedicated training loops for each agent type:
+\\begin{itemize}
+    \\item \\textbf{`train_dqn_agent(agent: DQNAgent, env: gym.Env, ...)`}: Orchestrates the training of DQN agents, including experience collection, learning updates, and epsilon decay.
+    \\item \\textbf{`train_reinforce_agent(agent: REINFORCEAgent, env: gym.Env, ...)`}: Manages episode generation and policy updates for REINFORCE.
+    \\item \\textbf{`train_actor_critic_agent(agent: ActorCriticAgent, env: gym.Env, ...)`}: Coordinates actor and critic updates within an episode for Actor-Critic agents.
+\\end{itemize}
+
+\\subsection{Sample Efficiency Experiment}
+\\textbf{Objective}: Compare how efficiently different algorithms learn from environmental interactions.
+\\begin{itemize}
+    \\item \\textbf{Measurement}: Number of total environment `steps` (timesteps) required to reach a predefined performance threshold (e.g., average score of 195 over 100 episodes).
+    \\item \\textbf{Metrics}: `Timesteps to Threshold` (primary), `Area Under the Learning Curve (AUC)` (secondary), `Performance after a Fixed Number of Steps`.
+    \\item \\textbf{Fair Comparison}: All agents are trained on the same environment, with consistent network architectures, and results are averaged over multiple runs with different random seeds for robustness.
+\\end{itemize}
+\\textbf{Expected Results}:
+\\begin{itemize}
+    \\item \\textbf{DQN (and its variants)} are generally expected to be more sample-efficient than REINFORCE and Actor-Critic due to the use of experience replay and stable target networks.
+    \\item \\textbf{Prioritized Experience Replay} should further boost DQN's sample efficiency.
+    \\item \\textbf{REINFORCE} typically requires more samples due to its Monte Carlo nature and high variance.
+    \\item \\textbf{Actor-Critic} should offer a balance, being more sample-efficient than REINFORCE but potentially less so than advanced DQN.
+\\end{itemize}
+
+\\subsection{Hyperparameter Sensitivity Analysis}
+\\textbf{Objective}: Understand the impact of key hyperparameters (e.g., learning rate, discount factor) on algorithm performance and stability.
+\\begin{itemize}
+    \\item \\textbf{Methodology}: Run agents with various combinations of hyperparameters and observe changes in average score, convergence speed, and stability.
+    \\item \\textbf{Visualization}: Plot performance curves for different hyperparameter settings.
+\\end{itemize}
+\\textbf{Expected Findings}:
+\\begin{itemize}
+    \\item Each algorithm will exhibit sensitivity to its specific hyperparameters. Optimal learning rates are crucial for all methods. Higher discount factors (close to 1) often lead to more long-sighted behavior but can also increase instability.
+    \\item DQN's performance is sensitive to `epsilon_decay` and `buffer_size`.
+    \\item REINFORCE can be highly sensitive to the learning rate due to its high variance.
+    \\item Actor-Critic requires careful tuning of both actor and critic learning rates.
+\\end{itemize}
+
+\\section{Comparative Analysis and Advanced Topics}
+\\label{sec:comparison}
+\\subsection{Algorithm Comparison Summary}
+\\begin{table}[htbp]
+\\caption{Comparison of DRL Algorithms}
+\\begin{tabular}{|c|c|c|c|}
+\\hline
+\\textbf{Feature} & \\textbf{DQN} & \\textbf{REINFORCE} & \\textbf{Actor-Critic} \\\\
+\\hline
+\\textbf{Type} & Value-based (Off-policy) & Policy-based (On-policy) & Hybrid (On-policy) \\\\
+\\hline
+\\textbf{Memory Req.} & High (Replay Buffer) & Low (per episode) & Medium \\\\
+\\hline
+\\textbf{Stability} & High (Target Networks) & Low (High Variance) & Medium (Bootstrapping) \\\\
+\\hline
+\\textbf{Sample Eff.} & High & Low & Medium \\\\
+\\hline
+\\textbf{Exploration} & $\\epsilon$-greedy, Noisy Nets & Stochastic Policy & Stochastic Policy \\\\
+\\hline
+\\textbf{Action Space} & Discrete & Discrete/Continuous (with GMM) & Discrete/Continuous \\\\
+\\hline
+\\textbf{Key Mechanisms} & Q-network, Target Net, Replay & Policy Network, Monte Carlo & Actor Net, Critic Net, TD-Error \\\\
+\\hline
+\\end{tabular}
+\\label{table:algo_comparison}
+\\end{table}
+
+\\subsection{Key Insights}
+\\begin{itemize}
+    \\item \\textbf{DQN and its variants} are powerful for environments with discrete action spaces, offering high sample efficiency and stable learning through techniques like experience replay and target networks. They excel in scenarios where data can be reused effectively.
+    \\item \\textbf{REINFORCE} is a fundamental policy gradient method, simple to implement, and can handle continuous action spaces. However, its high variance often makes it less sample-efficient and stable, requiring many episodes for convergence.
+    \\item \\textbf{Actor-Critic methods} strike a balance between policy-based and value-based approaches. By using a critic to estimate the value function, they reduce the variance of policy gradient estimates compared to REINFORCE, leading to more stable and faster learning. They are versatile for both discrete and continuous action spaces.
+\\end{itemize}
+
+\\subsection{When to Use Each Algorithm}
+\\begin{itemize}
+    \\item \\textbf{Use DQN when}: The environment has a discrete action space, sample efficiency is critical, and you can manage a large replay buffer. Advanced DQN variants (Dueling, Double, PER) offer significant improvements.
+    \\item \\textbf{Use REINFORCE when}: You are starting with policy gradients, the problem is relatively simple, or you need direct policy optimization for interpretability. It can be a good baseline for more complex policy-based methods.
+    \\item \\textbf{Use Actor-Critic when}: You need a balance of sample efficiency and stability for continuous control problems or complex discrete action spaces. It's often a stepping stone to more advanced actor-critic algorithms like A2C, A3C, PPO, or SAC.
+\\end{itemize}
+
+\\subsection{Advanced Topics for Further Study}
+This assignment provides a solid foundation, but the field of DRL is vast. Consider exploring:
+\\begin{itemize}
+    \\item \\textbf{More Advanced DQN Variants}: Rainbow DQN (combining multiple DQN improvements), Distributional DQN, Quantile Regression DQN.
+    \\item \\textbf{Advanced Policy Gradient Methods}: Proximal Policy Optimization (PPO), Trust Region Policy Optimization (TRPO), Soft Actor-Critic (SAC).
+    \\item \\textbf{Model-Based Reinforcement Learning}: Algorithms that learn a model of the environment dynamics to plan or improve policy learning (e.g., Model-Predictive Control, Dyna-Q).
+    \\item \\textbf{Multi-Agent Reinforcement Learning}: Extending DRL to scenarios with multiple interacting agents.
+    \\item \\textbf{Offline Reinforcement Learning}: Learning policies from fixed datasets of experience without further environmental interaction.
+\\end{itemize}
+
+\\section{Conclusion and Future Work}
+\\label{sec:conclusion}
+This assignment successfully introduces the core concepts and fundamental algorithms of Deep Reinforcement Learning. We've established a modular codebase for DQN, REINFORCE, and Actor-Critic, supported by essential utilities and configuration management. The theoretical derivations and practical implementations provide a clear understanding of how these algorithms function and interact with environments. While the CartPole-v1 environment serves as an excellent starting point, future work could involve applying these refined algorithms to more complex environments (e.g., Atari games, robotic control tasks), conducting extensive hyperparameter tuning using automated tools, and exploring cutting-edge DRL research to synthesize novel methods. The modular structure of this project facilitates such extensions, allowing for continuous growth and exploration within the DRL landscape.
+
+\\section*{References}
+\\bibliographystyle{IEEEtran}
+\\bibliography{references}
+
+\\end{document}

@@ -18,11 +18,17 @@ __version__ = "1.0.0"
 __author__ = "CA16 Implementation Team"
 
 # Import main components
-from .agents import *
-from .environments import *
-from .models import *
-from .experiments import *
-from .utils import *
+from .src.agents import *
+from .src.environments import *
+from .src.foundation_models import *
+from .src.experiments import *
+from .src.utils import *
+from .src.continual_learning import *
+from .src.human_ai_collaboration import *
+from .src.real_world_deployment import *
+from .src.deployment_ethics import *
+from .src.advanced_computation import *
+from .src.neurosymbolic import *
 
 __all__ = [
     # Agents

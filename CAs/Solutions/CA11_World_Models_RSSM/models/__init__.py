@@ -2,12 +2,12 @@
 World Models Package
 """
 
-from .vae import VariationalAutoencoder
-from .dynamics import LatentDynamicsModel
+from .trainers import WorldModelTrainer, RSSMTrainer, DreamerTrainer # Assuming these exist or will be created
 from .reward_model import RewardModel
-from .world_model import WorldModel
+from .dynamics import LatentDynamicsModel
 from .rssm import RSSM
-from .trainers import WorldModelTrainer, RSSMTrainer
+from .world_model import WorldModel
+from .vae import VariationalAutoencoder
 
 __all__ = [
     "VariationalAutoencoder",

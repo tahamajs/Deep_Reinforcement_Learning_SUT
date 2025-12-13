@@ -1,0 +1,1203 @@
+\\documentclass[journal]{IEEEtran}
+
+\\usepackage{amsmath,amsfonts}
+\\usepackage{algorithmic}
+\\usepackage{array}
+\\usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
+\\usepackage{textcomp}
+\\usepackage{stfloats}
+\\usepackage{url}
+\\usepackage{verbatim}
+\\usepackage{graphicx}
+\\usepackage{cite}
+\\hyphenation{op-tical net-works semi-conduc-tor}
+
+\\begin{document}
+
+\\title{Modular Implementation and Comparative Analysis of Policy Gradient Methods in Deep Reinforcement Learning}
+
+\\author{
+\\IEEEauthorblockN{Taha Maji}
+\\IEEEauthorblockA{\\textit{Department of Computer Science} \\\\
+\\textit{University of [Your University Name]} \\\\
+[Your Email Address]}
+}
+
+\\maketitle
+
+\\begin{abstract}
+This paper presents a comprehensive and modular implementation of various policy gradient methods in deep reinforcement learning. We explore the theoretical foundations, practical implementations, and performance characteristics of algorithms such as REINFORCE, REINFORCE with Baseline, Actor-Critic, and Proximal Policy Optimization (PPO). The implementation emphasizes a clean, `src`-based architecture for maintainability and scalability, separating concerns into dedicated modules for configuration, neural network models, agents, and utility functions. Through systematic experimentation and visualization on discrete and continuous control tasks (CartPole-v1 and Pendulum-v1), we demonstrate the convergence properties, sample efficiency, and practical trade-offs of these algorithms. Our analysis provides insights into algorithm selection for diverse reinforcement learning scenarios, highlighting the benefits of variance reduction techniques and the robust performance of PPO.
+\\end{abstract}
+
+\\begin{IEEEkeywords}
+Policy Gradient, REINFORCE, Actor-Critic, PPO, Deep Reinforcement Learning, Continuous Control, Variance Reduction.
+\\end{IEEEkeywords}
+
+\\section{Introduction}
+Reinforcement Learning (RL) has emerged as a powerful paradigm for solving complex decision-making problems, where an agent learns to interact with an environment to maximize a cumulative reward signal. Among the various classes of RL algorithms, policy gradient methods stand out for their ability to directly optimize a parameterized policy, mapping states to actions. This direct approach offers distinct advantages, particularly in environments with continuous action spaces or where learning a stochastic policy is beneficial \cite{sutton2018reinforcement}.
+
+Value-based methods, such as Q-learning and Deep Q-Networks (DQN), learn value functions from which a policy is implicitly derived. While effective in many discrete control tasks, these methods often struggle with high-dimensional or continuous action spaces, necessitating approximation techniques that can be computationally expensive or introduce significant errors. Policy gradient methods, conversely, parameterize the policy directly using neural networks and update these parameters through gradient ascent on an objective function that quantifies the expected return. This direct optimization allows for more natural handling of continuous action spaces and the learning of stochastic policies, which are crucial in environments with partial observability or where exploration is inherently uncertain.
+
+This paper provides a modular implementation and comparative analysis of key policy gradient algorithms. We start with the foundational REINFORCE algorithm, progress to variance-reduced variants like REINFORCE with Baseline and Actor-Critic methods, and culminate with Proximal Policy Optimization (PPO), a state-of-the-art algorithm known for its robust performance. Our goal is to present a clean, organized, and extensible codebase that facilitates understanding, experimentation, and further research in policy gradient methods.
+
+The remainder of this paper is structured as follows: Section \\ref{sec:methodology} details the theoretical foundations and modular implementation of each algorithm. Section \\ref{sec:experiments} outlines the experimental setup and presents a comparative analysis of their performance. Section \\ref{sec:conclusion} concludes the paper with a summary of findings and directions for future work.
+
+\\section{Methodology and Modular Implementation}
+\\label{sec:methodology}
+Our implementation adheres to a modular design, with all core logic encapsulated within a `src/` directory. This structure promotes reusability, maintainability, and clarity, aligning with best practices for research software development.
+
+\\subsection{Modular Architecture}
+The project\'s modular structure is organized into the following key components:
+\\begin{itemize}
+    \\item \\textbf{\\texttt{src/config.py}}: Centralizes all global hyperparameters, environment names, random seeds, and device settings (CPU/GPU).
+    \\item \\textbf{\\texttt{src/model.py}}: Defines the neural network architectures for policies (discrete \\texttt{PolicyNetwork}, continuous \\texttt{ContinuousPolicyNetwork}) and value functions (\\texttt{ValueNetwork}).
+    \\item \\textbf{\\texttt{src/agents.py}}: Contains the implementations of various policy gradient agents: \\texttt{REINFORCEAgent}, \\texttt{REINFORCEBaselineAgent}, \\texttt{ActorCriticAgent}, \\texttt{PPOAgent}, and \\texttt{ContinuousPPOAgent}.
+    \\item \\textbf{\\texttt{src/utils.py}}: Provides utility functions for training loops, performance analysis, comparative experiments, hyperparameter sensitivity analysis, curriculum learning demonstrations, and plotting routines.
+\\end{itemize}
+
+\\subsection{Theoretical Foundations and Algorithm Implementations}
+
+\\subsubsection{The Policy Gradient Theorem}
+The Policy Gradient Theorem states that the gradient of the expected return $J(\\theta)$ with respect to the policy parameters $\\theta$ can be expressed as:
+\\begin{equation}
+    \\nabla_\\theta J(\\theta) = \\mathbb{E}_{s \\sim \\rho^\\pi, a \\sim \\pi_\\theta} \\left[ \\nabla_\\theta \\log \\pi_\\theta(a|s) Q^\\pi(s,a) \\right]
+    \\label{eq:policy_gradient_theorem}
+\\end{equation}
+where $\\rho^\\pi$ is the stationary distribution of states, $\\pi_\\theta(a|s)$ is the policy, and $Q^\\pi(s,a)$ is the action-value function. This theorem forms the basis for all policy gradient algorithms, allowing direct optimization of the policy.
+
+\\subsubsection{REINFORCE (Monte Carlo Policy Gradient)}
+The REINFORCE algorithm \cite{williams1992simple} is a direct application of the Policy Gradient Theorem using Monte Carlo estimates of the return $G_t$. For each episode, a full trajectory is collected, and the policy is updated based on the observed returns:
+\\begin{equation}
+    \\theta \\leftarrow \\theta + \\alpha \\nabla_\\theta \\log \\pi_\\theta(a_t|s_t) G_t
+    \\label{eq:reinforce_update}
+\end{equation}
+where $\\alpha$ is the learning rate. While straightforward, REINFORCE often suffers from high variance in its gradient estimates due to the noisy Monte Carlo returns, leading to slow and unstable convergence.
+
+\\subsubsection{REINFORCE with Baseline}
+To reduce the high variance of REINFORCE, a common technique is to subtract a baseline $b(s_t)$ from the return $G_t$. The state-value function $V^\\pi(s_t)$ is typically used as a baseline. The policy gradient estimate becomes:
+\\begin{equation}
+    \\nabla_\\theta J(\\theta) \\approx \\nabla_\\theta \\log \\pi_\\theta(a_t|s_t) (G_t - V^\\pi(s_t))
+    \\label{eq:reinforce_baseline}
+\\end{equation}
+Subtracting $V^\\pi(s_t)$ does not change the expected value of the gradient but significantly reduces its variance, as $(G_t - V^\\pi(s_t))$ is an estimate of the advantage function $A^\\pi(s_t,a_t)$. In our \\texttt{REINFORCEBaselineAgent}, a separate \\texttt{ValueNetwork} is trained to approximate $V^\\pi(s_t)$.
+
+\\subsubsection{Actor-Critic Methods}
+Actor-Critic methods combine policy-based and value-based approaches, maintaining both an \\textit{actor} (policy) and a \\textit{critic} (value function). The critic learns the state-value function $V_\\phi(s)$ and provides a low-variance estimate of the advantage function to guide the actor\'s updates. The actor is updated using the critic\'s feedback, typically through the Temporal Difference (TD) error as the advantage estimate:
+\\begin{equation}
+    \\nabla_\\theta J(\\theta) \\approx \\nabla_\\theta \\log \\pi_\\theta(a_t|s_t) (r_t + \\gamma V_\\phi(s_{t+1}) - V_\\phi(s_t))
+    \\label{eq:actor_critic_update}
+\\end{equation}
+In our \\texttt{ActorCriticAgent}, \\texttt{PolicyNetwork} serves as the actor and \\texttt{ValueNetwork} as the critic, updated simultaneously.
+
+\\subsubsection{Proximal Policy Optimization (PPO)}
+PPO \cite{schulman2017proximal} is a state-of-the-art policy gradient algorithm that balances sample efficiency with training stability. It constrains policy updates using a clipped surrogate objective function, preventing new policies from deviating too far from the old policy. The clipped objective is given by:
+\\begin{equation}
+    L^{CLIP}(\\theta) = \\mathbb{E}_t \\left[ \\min(r_t(\\theta) \\hat{A}_t, \\text{clip}(r_t(\\theta), 1-\\epsilon, 1+\\epsilon) \\hat{A}_t) \\right]
+    \\label{eq:ppo_clip}
+\\end{equation}
+where $r_t(\\theta) = \\frac{\\pi_\\theta(a_t|s_t)}{\\pi_{\\theta_{old}}(a_t|s_t)}$ is the probability ratio, $\\hat{A}_t$ is the advantage estimate (often using Generalized Advantage Estimation, GAE), and $\\epsilon$ is a small clipping hyperparameter. Our \\texttt{PPOAgent} and \\texttt{ContinuousPPOAgent} implement this objective, with the latter utilizing \\texttt{ContinuousPolicyNetwork} for continuous action spaces.
+
+\\section{Experiments and Results}
+\\label{sec:experiments}
+We conducted a series of experiments to evaluate and compare the implemented policy gradient methods. All experiments were performed using the modularized codebase, ensuring reproducibility and consistency.
+
+\\subsection{Experimental Setup}
+\\label{subsec:exp_setup}
+\\begin{itemize}
+    \\item \\textbf{Environments}:
+    \\begin{itemize}
+        \\item \\textbf{Discrete Control}: CartPole-v1, a classic control problem from Gymnasium, where the goal is to balance a pole on a cart.
+        \\item \\textbf{Continuous Control}: Pendulum-v1, another Gymnasium environment, where the task is to swing up and balance an inverted pendulum.
+    \\end{itemize}
+    \\item \\textbf{Hyperparameters}: All hyperparameters (learning rates, discount factors, clipping parameters for PPO, episode counts) are centrally managed in \\texttt{src/config.py}. A global random seed is used for reproducibility.
+    \\item \\textbf{Metrics}: We evaluate algorithms based on:
+    \\begin{itemize}
+        \\item \\textbf{Average Episode Reward}: Smoothed average reward over recent episodes.
+        \\item \\textbf{Learning Curves}: Plots showing reward progression over training episodes.
+        \\item \\textbf{Training Stability}: Variance of rewards in later training stages.
+        \\item \\textbf{Sample Efficiency}: Number of episodes required to reach a performance threshold.
+    \\end{itemize}
+\\end{itemize}
+
+\\subsection{Comparative Analysis of Policy Gradient Variants}
+We compared REINFORCE, REINFORCE with Baseline, Actor-Critic, and PPO on the CartPole-v1 environment. Figure \\ref{fig:comparison} illustrates the learning curves and final performance of these algorithms.
+
+\\begin{figure}[htbp]
+    \\centering
+    \\includegraphics[width=\\linewidth]{../visualizations/policy_gradient_comparison.png}
+    \\caption{Comparative analysis of policy gradient variants on CartPole-v1. (a) Learning Curves showing smoothed average rewards. (b) Final Average Score comparison. (c) Training Stability (Score Variance). (d) Sample Efficiency (Episodes to Threshold).}
+    \\label{fig:comparison}
+\\end{figure}
+
+As expected, REINFORCE exhibits high variance and slower convergence. The introduction of a baseline significantly improves stability for REINFORCE with Baseline. Actor-Critic further enhances learning by bootstrapping the value function. PPO demonstrates the most stable and efficient learning, consistently achieving optimal performance on CartPole-v1 within fewer episodes.
+
+\\subsection{Hyperparameter Sensitivity Analysis}
+We conducted a sensitivity analysis for learning rates and discount factors (gamma) using the REINFORCE with Baseline agent on CartPole-v1. Figure \\ref{fig:hyperparameter_sensitivity} shows how different values impact the final average score.
+
+\\begin{figure}[htbp]
+    \\centering
+    \\includegraphics[width=\\linewidth]{../visualizations/policy_gradient_hyperparameter_sensitivity.png}
+    \\caption{Hyperparameter sensitivity analysis for learning rate and discount factor (gamma). (a) Learning Rate Sensitivity. (b) Discount Factor Sensitivity.}
+    \\label{fig:hyperparameter_sensitivity}
+\\end{figure}
+
+The results indicate that performance is highly sensitive to both learning rate and gamma, with optimal values leading to significantly better outcomes. Extremely high or low learning rates can lead to instability or slow learning, respectively. Similarly, an appropriate discount factor is crucial for balancing immediate and future rewards.
+
+\\subsection{Curriculum Learning Demonstration}
+A basic curriculum learning demonstration was performed on CartPole-v1 to illustrate how progressive training can accelerate learning. Figure \\ref{fig:curriculum_learning} shows the learning progress across different "difficulty" stages.
+
+\\begin{figure}[htbp]
+    \\centering
+    \\includegraphics[width=\\linewidth]{../visualizations/curriculum_learning_demo.png}
+    \\caption{Curriculum learning demonstration on CartPole-v1, showing smoothed average rewards across progressively challenging stages.}
+    \\label{fig:curriculum_learning}
+\\end{figure}
+
+The demonstration, while simplified, suggests that an agent can benefit from learning in a structured sequence of tasks, where knowledge gained in easier stages facilitates learning in more challenging ones.
+
+\\section{Conclusion and Future Work}
+\\label{sec:conclusion}
+This work has presented a comprehensive, modular implementation and comparative analysis of various policy gradient methods within a deep reinforcement learning framework. We successfully refactored a monolithic codebase into a clean, `src`-based architecture, enhancing its maintainability, readability, and extensibility.
+
+Our experimental results reaffirm the theoretical understanding of these algorithms: REINFORCE provides a foundational but high-variance approach, while the integration of baselines and critic networks in Actor-Critic methods significantly improves learning stability and sample efficiency. PPO stands out for its robust performance and ability to consistently solve control tasks by managing policy updates through a clipped objective. We also demonstrated the applicability of these methods to continuous control and explored the impact of key hyperparameters and the potential benefits of curriculum learning.
+
+\\subsection{Future Work}
+Several avenues for future research and extension exist:
+\\begin{itemize}
+    \\item \\textbf{Generalized Advantage Estimation (GAE)}: Implement GAE \cite{schulman2015highdimensional} for more sophisticated and flexible advantage estimation, further improving variance reduction in actor-critic and PPO.
+    \\item \\textbf{Asynchronous Advantage Actor-Critic (A3C)}: Explore asynchronous training setups with multiple agents for improved sample efficiency and wall-clock time, leveraging parallel computation.
+    \\item \\textbf{Trust Region Policy Optimization (TRPO)}: Implement TRPO \cite{schulman2015trust} to compare its theoretical guarantees and practical performance against PPO.
+    \\item \\textbf{Off-Policy Policy Gradients}: Investigate off-policy algorithms like DDPG, TD3, or SAC for enhanced sample efficiency, particularly in continuous control tasks.
+    \\item \\textbf{Integration with Complex Environments}: Apply the modularized agents to more challenging and high-dimensional environments (e.g., MuJoCo physics simulations, Atari games) to assess scalability and performance in complex scenarios.
+    \\item \\textbf{Meta-Reinforcement Learning}: Extend the policy gradient foundations to meta-learning frameworks, enabling agents to learn how to learn across different tasks.
+\\end{itemize}
+
+This modular framework serves as a strong foundation for further exploration and development in the field of deep reinforcement learning, facilitating both educational understanding and advanced research.
+
+\\section*{References}
+\\bibliographystyle{IEEEtran}
+\\bibliography{references}
+
+\\appendix
+\\section*{Appendix A: Implementation Details}
+\\subsection{Codebase Structure}
+The `CA06_Policy_Gradient_Modular` directory is structured as follows:
+\\begin{verbatim}
+CA06_Policy_Gradient_Modular/
+├── main.py                     # Main execution script
+├── run.sh                      # (Legacy) Bash execution script
+├── requirements.txt            # Python dependencies
+├── README.md                   # Comprehensive project documentation
+├── CA6.ipynb                   # (Legacy) Original Jupyter notebook
+├── training_examples.py        # (Legacy) Old monolithic training examples
+├──
+├── src/                        # Core modular implementation
+│   ├── config.py               # Global configuration and hyperparameters
+│   ├── model.py                # Neural network architectures
+│   ├── agents.py               # Policy gradient agents
+│   ├── losses.py               # Custom loss function definitions
+│   ├── data.py                 # Environment and data handling
+│   └── utils.py                # Training, analysis, and plotting utilities
+├──
+├── notebooks/                  # Jupyter notebooks for execution
+│   └── main.ipynb              # Primary notebook for experiments and results
+├──
+├── visualizations/             # Generated plots and figures
+├── results/                    # Training logs and detailed results
+├── logs/                       # System-level or verbose debugging logs
+└── CA6_files/                  # Original notebook outputs
+\\end{verbatim}
+
+\\subsection{Hyperparameters from `src/config.py`}
+All key hyperparameters are defined in `src/config.py` to ensure easy management and reproducibility. A snippet is provided below:
+\\begin{verbatim}
+import torch
+
+class Config:
+    # General
+    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    SEED = 42
+
+    # Environment
+    ENV_NAME_DISCRETE = "CartPole-v1"
+    ENV_NAME_CONTINUOUS = "Pendulum-v1"
+
+    # Network
+    HIDDEN_DIM = 128
+
+    # REINFORCE Agent
+    REINFORCE_LR = 1e-3
+    REINFORCE_GAMMA = 0.99
+    REINFORCE_EPISODES = 1000
+
+    # REINFORCE with Baseline Agent
+    REINFORCE_BASELINE_LR_POLICY = 1e-3
+    REINFORCE_BASELINE_LR_VALUE = 1e-3
+    REINFORCE_BASELINE_GAMMA = 0.99
+    REINFORCE_BASELINE_EPISODES = 1000
+
+    # Actor-Critic Agent
+    ACTOR_CRITIC_LR_ACTOR = 1e-4
+    ACTOR_CRITIC_LR_CRITIC = 1e-3
+    ACTOR_CRITIC_GAMMA = 0.99
+    ACTOR_CRITIC_EPISODES = 1000
+
+    # PPO Agent (Discrete)
+    PPO_LR = 3e-4
+    PPO_GAMMA = 0.99
+    PPO_EPS_CLIP = 0.2
+    PPO_K_EPOCHS = 4
+    PPO_EPISODES = 1000
+
+    # PPO Agent (Continuous)
+    CONTINUOUS_PPO_LR = 3e-4
+    CONTINUOUS_PPO_GAMMA = 0.99
+    CONTINUOUS_PPO_EPS_CLIP = 0.2
+    CONTINUOUS_PPO_K_EPOCHS = 4
+    CONTINUOUS_PPO_EPISODES = 1000
+
+    # Training
+    MAX_TIMESTEPS = 500
+    PRINT_INTERVAL = 10
+\\end{verbatim}
+
+\\subsection{Neural Network Architectures from `src/model.py`}
+The `src/model.py` defines the various neural network architectures used by the agents.
+\\begin{verbatim}
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.distributions import Normal
+from typing import Tuple
+
+class PolicyNetwork(nn.Module):
+    # ... implementation details ...
+    def __init__(self, state_dim: int, action_dim: int, hidden_dim: int = 128):
+        super(PolicyNetwork, self).__init__()
+        self.fc1 = nn.Linear(state_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc3 = nn.Linear(hidden_dim, action_dim)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return F.softmax(x, dim=-1)
+
+class ValueNetwork(nn.Module):
+    # ... implementation details ...
+    def __init__(self, state_dim: int, hidden_dim: int = 128):
+        super(ValueNetwork, self).__init__()
+        self.fc1 = nn.Linear(state_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc3 = nn.Linear(hidden_dim, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
+
+class ContinuousPolicyNetwork(nn.Module):
+    # ... implementation details ...
+    def __init__(self, state_dim: int, action_dim: int, hidden_dim: int = 128):
+        super(ContinuousPolicyNetwork, self).__init__()
+        self.fc1 = nn.Linear(state_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.mean_head = nn.Linear(hidden_dim, action_dim)
+        self.log_std_head = nn.Linear(hidden_dim, action_dim)
+
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        mean = self.mean_head(x)
+        log_std = self.log_std_head(x)
+        log_std = torch.clamp(log_std, min=-20, max=2)
+        return mean, log_std
+
+    def sample(self, state: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        mean, log_std = self.forward(state)
+        std = log_std.exp()
+        dist = Normal(mean, std)
+        action = dist.sample()
+        log_prob = dist.log_prob(action).sum(dim=-1, keepdim=True)
+        return action, log_prob
+\\end{verbatim}
+
+\\subsection{Agent Implementations from `src/agents.py`}
+The core logic for each reinforcement learning agent is implemented in `src/agents.py`.
+\\begin{verbatim}
+import torch
+import torch.optim as optim
+import torch.nn.functional as F
+from torch.distributions import Categorical, Normal
+import numpy as np
+from typing import Tuple, List
+
+from src.model import PolicyNetwork, ValueNetwork, ContinuousPolicyNetwork
+from src.config import Config
+
+class REINFORCEAgent:
+    # ... implementation details ...
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        lr: float = Config.REINFORCE_LR,
+        gamma: float = Config.REINFORCE_GAMMA,
+        hidden_dim: int = Config.HIDDEN_DIM,
+    ):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.gamma = gamma
+        self.device = Config.DEVICE
+
+        self.policy = PolicyNetwork(state_dim, action_dim, hidden_dim).to(self.device)
+        self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
+
+        self.log_probs: List[torch.Tensor] = []
+        self.rewards: List[float] = []
+
+    def select_action(self, state: np.ndarray) -> Tuple[int, torch.Tensor]:
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        probs = self.policy(state)
+        dist = Categorical(probs)
+        action = dist.sample()
+        log_prob = dist.log_prob(action)
+        return action.item(), log_prob
+
+    def store_transition(self, log_prob: torch.Tensor, reward: float):
+        self.log_probs.append(log_prob)
+        self.rewards.append(reward)
+
+    def update_policy(self) -> float:
+        returns = []
+        G = 0
+        for reward in reversed(self.rewards):
+            G = reward + self.gamma * G
+            returns.insert(0, G)
+        returns = torch.tensor(returns).to(self.device)
+        returns = (returns - returns.mean()) / (returns.std() + 1e-8)
+
+        policy_loss = []
+        for log_prob, G in zip(self.log_probs, returns):
+            policy_loss.append(-log_prob * G)
+        policy_loss = torch.cat(policy_loss).sum()
+
+        self.optimizer.zero_grad()
+        policy_loss.backward()
+        self.optimizer.step()
+
+        self.log_probs = []
+        self.rewards = []
+        return policy_loss.item()
+
+class REINFORCEBaselineAgent:
+    # ... implementation details ...
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        lr_policy: float = Config.REINFORCE_BASELINE_LR_POLICY,
+        lr_value: float = Config.REINFORCE_BASELINE_LR_VALUE,
+        gamma: float = Config.REINFORCE_BASELINE_GAMMA,
+        hidden_dim: int = Config.HIDDEN_DIM,
+    ):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.gamma = gamma
+        self.device = Config.DEVICE
+
+        self.policy = PolicyNetwork(state_dim, action_dim, hidden_dim).to(self.device)
+        self.value_net = ValueNetwork(state_dim, hidden_dim).to(self.device)
+
+        self.policy_optimizer = optim.Adam(self.policy.parameters(), lr=lr_policy)
+        self.value_optimizer = optim.Adam(self.value_net.parameters(), lr=lr_value)
+
+        self.log_probs: List[torch.Tensor] = []
+        self.rewards: List[float] = []
+        self.states: List[np.ndarray] = []
+
+    def select_action(self, state: np.ndarray) -> Tuple[int, torch.Tensor]:
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        probs = self.policy(state)
+        dist = Categorical(probs)
+        action = dist.sample()
+        log_prob = dist.log_prob(action)
+        return action.item(), log_prob
+
+    def store_transition(
+        self, state: np.ndarray, log_prob: torch.Tensor, reward: float
+    ):
+        self.states.append(state)
+        self.log_probs.append(log_prob)
+        self.rewards.append(reward)
+
+    def update_policy(self) -> Tuple[float, float]:
+        returns = []
+        G = 0
+        for reward in reversed(self.rewards):
+            G = reward + self.gamma * G
+            returns.insert(0, G)
+        returns = torch.tensor(returns).to(self.device)
+
+        states = torch.FloatTensor(np.array(self.states)).to(self.device)
+        values = self.value_net(states).squeeze()
+
+        advantages = returns - values.detach()
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+
+        value_loss = F.mse_loss(values, returns)
+        self.value_optimizer.zero_grad()
+        value_loss.backward()
+        self.value_optimizer.step()
+
+        policy_loss = []
+        for log_prob, advantage in zip(self.log_probs, advantages):
+            policy_loss.append(-log_prob * advantage)
+        policy_loss = torch.cat(policy_loss).sum()
+
+        self.policy_optimizer.zero_grad()
+        policy_loss.backward()
+        self.policy_optimizer.step()
+
+        self.log_probs = []
+        self.rewards = []
+        self.states = []
+        return policy_loss.item(), value_loss.item()
+
+
+class ActorCriticAgent:
+    # ... implementation details ...
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        lr_actor: float = Config.ACTOR_CRITIC_LR_ACTOR,
+        lr_critic: float = Config.ACTOR_CRITIC_LR_CRITIC,
+        gamma: float = Config.ACTOR_CRITIC_GAMMA,
+        hidden_dim: int = Config.HIDDEN_DIM,
+    ):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.gamma = gamma
+        self.device = Config.DEVICE
+
+        self.actor = PolicyNetwork(state_dim, action_dim, hidden_dim).to(self.device)
+        self.critic = ValueNetwork(state_dim, hidden_dim).to(self.device)
+
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr_actor)
+        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr_critic)
+
+    def select_action(self, state: np.ndarray) -> Tuple[int, torch.Tensor]:
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        probs = self.actor(state)
+        dist = Categorical(probs)
+        action = dist.sample()
+        log_prob = dist.log_prob(action)
+        return action.item(), log_prob
+
+    def update(
+        self,
+        state: np.ndarray,
+        action: int,
+        reward: float,
+        next_state: np.ndarray,
+        done: bool,
+        log_prob: torch.Tensor,
+    ) -> Tuple[float, float]:
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        next_state = torch.FloatTensor(next_state).unsqueeze(0).to(self.device)
+
+        value = self.critic(state)
+        next_value = self.critic(next_state) if not done else torch.tensor([[0.0]]).to(self.device)
+
+        td_target = reward + self.gamma * next_value
+        advantage = td_target - value
+
+        critic_loss = F.mse_loss(value, td_target.detach())
+        self.critic_optimizer.zero_grad()
+        critic_loss.backward()
+        self.critic_optimizer.step()
+
+        actor_loss = -log_prob * advantage.detach()
+        self.actor_optimizer.zero_grad()
+        actor_loss.backward()
+        self.actor_optimizer.step()
+
+        return actor_loss.item(), critic_loss.item()
+
+
+class PPOAgent:
+    # ... implementation details ...
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        lr: float = Config.PPO_LR,
+        gamma: float = Config.PPO_GAMMA,
+        eps_clip: float = Config.PPO_EPS_CLIP,
+        k_epochs: int = Config.PPO_K_EPOCHS,
+        hidden_dim: int = Config.HIDDEN_DIM,
+    ):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.lr = lr
+        self.gamma = gamma
+        self.eps_clip = eps_clip
+        self.k_epochs = k_epochs
+        self.device = Config.DEVICE
+
+        self.policy = PolicyNetwork(state_dim, action_dim, hidden_dim).to(self.device)
+        self.value_net = ValueNetwork(state_dim, hidden_dim).to(self.device)
+        self.policy_old = PolicyNetwork(state_dim, action_dim, hidden_dim).to(self.device)
+        self.policy_old.load_state_dict(self.policy.state_dict())
+
+        self.optimizer = optim.Adam(
+            list(self.policy.parameters()) + list(self.value_net.parameters()), lr=lr
+        )
+        self.mse_loss = nn.MSELoss()
+
+        self.memory: List[Tuple] = []
+
+    def select_action(
+        self, state: np.ndarray
+    ) -> Tuple[int, torch.Tensor, torch.Tensor]:
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        probs = self.policy_old(state)
+        dist = Categorical(probs)
+        action = dist.sample()
+        log_prob = dist.log_prob(action)
+        state_value = self.value_net(state)
+        return action.item(), log_prob, state_value
+
+    def store_transition(self, transition: Tuple):
+        self.memory.append(transition)
+
+    def update(self) -> Tuple[float, float]:
+        states = torch.FloatTensor([t[0] for t in self.memory]).to(self.device)
+        actions = torch.LongTensor([t[1] for t in self.memory]).to(self.device)
+        log_probs_old = torch.stack([t[2] for t in self.memory]).to(self.device)
+        rewards = torch.FloatTensor([t[3] for t in self.memory]).to(self.device)
+        dones = torch.FloatTensor([t[4] for t in self.memory]).to(self.device)
+
+        discounted_rewards = []
+        reward = 0
+        for reward_t, done in zip(reversed(rewards), reversed(dones)):
+            if done:
+                reward = 0
+            reward = reward_t + self.gamma * reward
+            discounted_rewards.insert(0, reward)
+
+        discounted_rewards = torch.FloatTensor(discounted_rewards).to(self.device)
+        discounted_rewards = (discounted_rewards - discounted_rewards.mean()) / (
+            discounted_rewards.std() + 1e-8
+        )
+
+        total_policy_loss = 0
+        total_value_loss = 0
+
+        for _ in range(self.k_epochs):
+            probs = self.policy(states)
+            dist = Categorical(probs)
+            log_probs = dist.log_prob(actions)
+            state_values = self.value_net(states).squeeze()
+
+            ratios = torch.exp(log_probs - log_probs_old.squeeze())
+            advantages = discounted_rewards - state_values.detach()
+
+            surr1 = ratios * advantages
+            surr2 = (
+                torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
+            )
+
+            policy_loss = -torch.min(surr1, surr2).mean()
+            value_loss = self.mse_loss(state_values, discounted_rewards)
+
+            self.optimizer.zero_grad()
+            (policy_loss + 0.5 * value_loss).backward()
+            self.optimizer.step()
+
+            total_policy_loss += policy_loss.item()
+            total_value_loss += value_loss.item()
+
+        self.policy_old.load_state_dict(self.policy.state_dict())
+        self.memory = []
+        return total_policy_loss / self.k_epochs, total_value_loss / self.k_epochs
+
+
+class ContinuousPPOAgent:
+    # ... implementation details ...
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        lr: float = Config.CONTINUOUS_PPO_LR,
+        gamma: float = Config.CONTINUOUS_PPO_GAMMA,
+        eps_clip: float = Config.CONTINUOUS_PPO_EPS_CLIP,
+        k_epochs: int = Config.CONTINUOUS_PPO_K_EPOCHS,
+        hidden_dim: int = Config.HIDDEN_DIM,
+    ):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.lr = lr
+        self.gamma = gamma
+        self.eps_clip = eps_clip
+        self.k_epochs = k_epochs
+        self.device = Config.DEVICE
+
+        self.policy = ContinuousPolicyNetwork(state_dim, action_dim, hidden_dim).to(self.device)
+        self.policy_old = ContinuousPolicyNetwork(state_dim, action_dim, hidden_dim).to(self.device)
+        self.policy_old.load_state_dict(self.policy.state_dict())
+
+        self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
+        self.memory: List[Tuple] = []
+
+    def select_action(self, state: np.ndarray) -> Tuple[np.ndarray, torch.Tensor]:
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        action, log_prob = self.policy.sample(state)
+        return action.detach().cpu().numpy().flatten(), log_prob
+
+    def store_transition(self, transition: Tuple):
+        self.memory.append(transition)
+
+    def update(self) -> float:
+        states = torch.FloatTensor([t[0] for t in self.memory]).to(self.device)
+        actions = torch.FloatTensor([t[1] for t in self.memory]).to(self.device)
+        log_probs_old = torch.stack([t[2] for t in self.memory]).to(self.device)
+        rewards = torch.FloatTensor([t[3] for t in self.memory]).to(self.device)
+        dones = torch.FloatTensor([t[4] for t in self.memory]).to(self.device)
+
+        discounted_rewards = []
+        reward = 0
+        for reward_t, done in zip(reversed(rewards), reversed(dones)):
+            if done:
+                reward = 0
+            reward = reward_t + self.gamma * reward
+            discounted_rewards.insert(0, reward)
+
+        discounted_rewards = torch.FloatTensor(discounted_rewards).to(self.device)
+        discounted_rewards = (discounted_rewards - discounted_rewards.mean()) / (
+            discounted_rewards.std() + 1e-8
+        )
+
+        total_loss = 0
+
+        for _ in range(self.k_epochs):
+            mean, log_std = self.policy(states)
+            std = log_std.exp()
+            dist = Normal(mean, std)
+            log_probs = dist.log_prob(actions).sum(dim=-1, keepdim=True)
+
+            ratios = torch.exp(log_probs - log_probs_old)
+            advantages = discounted_rewards.unsqueeze(-1)
+
+            surr1 = ratios * advantages
+            surr2 = (
+                torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
+            )
+
+            loss = -torch.min(surr1, surr2).mean()
+
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+            total_loss += loss.item()
+
+        self.policy_old.load_state_dict(self.policy.state_dict())
+        self.memory = []
+        return total_loss / self.k_epochs
+\\end{verbatim}
+
+\\subsection{Utility Functions from `src/utils.py`}
+The `src/utils.py` contains the training, analysis, and plotting routines.
+\\begin{verbatim}
+import gymnasium as gym
+import numpy as np
+from typing import Dict, List, Optional
+import torch
+import matplotlib.pyplot as plt
+import os
+
+from src.agents import REINFORCEAgent, REINFORCEBaselineAgent, ActorCriticAgent, PPOAgent, ContinuousPPOAgent
+from src.config import Config
+
+def train_reinforce_agent(
+    env_name: str = Config.ENV_NAME_DISCRETE,
+    episodes: int = Config.REINFORCE_EPISODES,
+    lr: float = Config.REINFORCE_LR,
+    gamma: float = Config.REINFORCE_GAMMA,
+) -> Dict[str, List[float]]:
+    print(f"Training REINFORCE on {env_name}")
+    print("=" * 40)
+
+    env = gym.make(env_name)
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.n
+
+    agent = REINFORCEAgent(state_dim, action_dim, lr, gamma)
+
+    scores = []
+    losses = []
+
+    for episode in range(episodes):
+        state, _ = env.reset(seed=Config.SEED)
+        episode_reward = 0
+        done = False
+
+        while not done:
+            action, log_prob = agent.select_action(state)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
+
+            agent.store_transition(log_prob, reward)
+            episode_reward += reward
+            state = next_state
+
+        loss = agent.update_policy()
+        losses.append(loss)
+        scores.append(episode_reward)
+
+        if (episode + 1) % Config.PRINT_INTERVAL == 0:
+            avg_score = np.mean(scores[-Config.PRINT_INTERVAL:])
+            print(
+                f"Episode {episode+1:4d} | Average Score: {avg_score:6.1f} | Loss: {loss:.4f}"
+            )
+
+    env.close()
+    return {"scores": scores, "losses": losses}
+
+def train_reinforce_baseline_agent(
+    env_name: str = Config.ENV_NAME_DISCRETE,
+    episodes: int = Config.REINFORCE_BASELINE_EPISODES,
+    lr_policy: float = Config.REINFORCE_BASELINE_LR_POLICY,
+    lr_value: float = Config.REINFORCE_BASELINE_LR_VALUE,
+    gamma: float = Config.REINFORCE_BASELINE_GAMMA,
+) -> Dict[str, List[float]]:
+    print(f"Training REINFORCE+Baseline on {env_name}")
+    print("=" * 45)
+
+    env = gym.make(env_name)
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.n
+
+    agent = REINFORCEBaselineAgent(state_dim, action_dim, lr_policy, lr_value, gamma)
+
+    scores = []
+    policy_losses = []
+    value_losses = []
+
+    for episode in range(episodes):
+        state, _ = env.reset(seed=Config.SEED)
+        episode_reward = 0
+        done = False
+
+        while not done:
+            action, log_prob = agent.select_action(state)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
+
+            agent.store_transition(state, log_prob, reward)
+            episode_reward += reward
+            state = next_state
+
+        policy_loss, value_loss = agent.update_policy()
+        policy_losses.append(policy_loss)
+        value_losses.append(value_loss)
+        scores.append(episode_reward)
+
+        if (episode + 1) % Config.PRINT_INTERVAL == 0:
+            avg_score = np.mean(scores[-Config.PRINT_INTERVAL:])
+            print(
+                f"Episode {episode+1:4d} | Average Score: {avg_score:6.1f} | Policy Loss: {policy_loss:.4f} | Value Loss: {value_loss:.4f}"
+            )
+
+    env.close()
+    return {"scores": scores, "policy_losses": policy_losses, "value_losses": value_losses}
+
+def train_actor_critic_agent(
+    env_name: str = Config.ENV_NAME_DISCRETE,
+    episodes: int = Config.ACTOR_CRITIC_EPISODES,
+    lr_actor: float = Config.ACTOR_CRITIC_LR_ACTOR,
+    lr_critic: float = Config.ACTOR_CRITIC_LR_CRITIC,
+    gamma: float = Config.ACTOR_CRITIC_GAMMA,
+) -> Dict[str, List[float]]:
+    print(f"Training Actor-Critic on {env_name}")
+    print("=" * 35)
+
+    env = gym.make(env_name)
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.n
+
+    agent = ActorCriticAgent(state_dim, action_dim, lr_actor, lr_critic, gamma)
+
+    scores = []
+    actor_losses = []
+    critic_losses = []
+
+    for episode in range(episodes):
+        state, _ = env.reset(seed=Config.SEED)
+        episode_reward = 0
+        done = False
+
+        while not done:
+            action, log_prob = agent.select_action(state)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
+
+            actor_loss, critic_loss = agent.update(
+                state, action, reward, next_state, done, log_prob
+            )
+
+            actor_losses.append(actor_loss)
+            critic_losses.append(critic_loss)
+            episode_reward += reward
+            state = next_state
+
+        scores.append(episode_reward)
+
+        if (episode + 1) % Config.PRINT_INTERVAL == 0:
+            avg_score = np.mean(scores[-Config.PRINT_INTERVAL:])
+            print(
+                f"Episode {episode+1:4d} | Average Score: {avg_score:6.1f} | Actor Loss: {actor_loss:.4f} | Critic Loss: {critic_loss:.4f}"
+            )
+
+    env.close()
+    return {
+        "scores": scores,
+        "actor_losses": actor_losses,
+        "critic_losses": critic_losses,
+    }
+
+def train_ppo_agent(
+    env_name: str = Config.ENV_NAME_DISCRETE,
+    episodes: int = Config.PPO_EPISODES,
+    lr: float = Config.PPO_LR,
+    gamma: float = Config.PPO_GAMMA,
+    eps_clip: float = Config.PPO_EPS_CLIP,
+    k_epochs: int = Config.PPO_K_EPOCHS,
+) -> Dict[str, List[float]]:
+    print(f"Training PPO on {env_name}")
+    print("=" * 25)
+
+    env = gym.make(env_name)
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.n
+
+    agent = PPOAgent(state_dim, action_dim, lr, gamma, eps_clip, k_epochs)
+
+    scores = []
+    policy_losses = []
+    value_losses = []
+
+    episode_rewards = []
+    episode_length = 0
+
+    for episode in range(episodes):
+        state, _ = env.reset(seed=Config.SEED)
+        episode_reward = 0
+        done = False
+
+        while not done:
+            action, log_prob, state_value = agent.select_action(state)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
+
+            agent.store_transition((state, action, log_prob, reward, done))
+
+            episode_reward += reward
+            state = next_state
+            episode_length += 1
+
+            if done:
+                policy_loss, value_loss = agent.update()
+                policy_losses.append(policy_loss)
+                value_losses.append(value_loss)
+                episode_rewards.append(episode_reward)
+                episode_length = 0
+
+        scores.append(episode_reward)
+
+        if (episode + 1) % Config.PRINT_INTERVAL == 0:
+            avg_score = np.mean(scores[-Config.PRINT_INTERVAL:])
+            print(
+                f"Episode {episode+1:4d} | Average Score: {avg_score:6.1f} | Policy Loss: {policy_loss:.4f} | Value Loss: {value_loss:.4f}"
+            )
+
+    env.close()
+    return {"scores": scores, "policy_losses": policy_losses, "value_losses": value_losses}
+
+
+def train_continuous_ppo_agent(
+    env_name: str = Config.ENV_NAME_CONTINUOUS,
+    episodes: int = Config.CONTINUOUS_PPO_EPISODES,
+    lr: float = Config.CONTINUOUS_PPO_LR,
+    gamma: float = Config.CONTINUOUS_PPO_GAMMA,
+    eps_clip: float = Config.CONTINUOUS_PPO_EPS_CLIP,
+    k_epochs: int = Config.CONTINUOUS_PPO_K_EPOCHS,
+) -> Dict[str, List[float]]:
+    print(f"Training PPO on {env_name} (Continuous)")
+    print("=" * 40)
+
+    env = gym.make(env_name)
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.shape[0]
+
+    agent = ContinuousPPOAgent(state_dim, action_dim, lr, gamma, eps_clip, k_epochs)
+
+    scores = []
+    losses = []
+
+    episode_rewards = []
+    episode_length = 0
+
+    for episode in range(episodes):
+        state, _ = env.reset(seed=Config.SEED)
+        episode_reward = 0
+        done = False
+
+        while not done:
+            action, log_prob = agent.select_action(state)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
+
+            agent.store_transition((state, action, log_prob.item(), reward, done))
+
+            episode_reward += reward
+            state = next_state
+            episode_length += 1
+
+            if len(agent.memory) >= Config.MAX_TIMESTEPS:
+                loss = agent.update()
+                losses.append(loss)
+                agent.memory = []
+
+        if agent.memory:
+            loss = agent.update()
+            losses.append(loss)
+
+        episode_rewards.append(episode_reward)
+        scores.append(episode_reward)
+
+        if (episode + 1) % Config.PRINT_INTERVAL == 0:
+            avg_score = np.mean(scores[-Config.PRINT_INTERVAL:])
+            print(f"Episode {episode+1:4d} | Average Score: {avg_score:6.1f}")
+
+    env.close()
+    return {"scores": scores, "losses": losses}
+
+
+def compare_policy_gradient_variants(
+    env_name: str = Config.ENV_NAME_DISCRETE, episodes: int = Config.REINFORCE_EPISODES
+) -> Dict[str, Dict]:
+    print(f"Comparing Policy Gradient Variants on {env_name}")
+    print("=" * 55)
+
+    results = {}
+
+    print("\\n1. Training REINFORCE...")
+    results["REINFORCE"] = train_reinforce_agent(
+        env_name, episodes=episodes, lr=Config.REINFORCE_LR, gamma=Config.REINFORCE_GAMMA
+    )
+
+    print("\\n2. Training REINFORCE + Baseline...")
+    results["REINFORCE_Baseline"] = train_reinforce_baseline_agent(
+        env_name, episodes=episodes, lr_policy=Config.REINFORCE_BASELINE_LR_POLICY, lr_value=Config.REINFORCE_BASELINE_LR_VALUE, gamma=Config.REINFORCE_BASELINE_GAMMA
+    )
+
+    print("\\n3. Training Actor-Critic...")
+    results["Actor_Critic"] = train_actor_critic_agent(
+        env_name, episodes=episodes, lr_actor=Config.ACTOR_CRITIC_LR_ACTOR, lr_critic=Config.ACTOR_CRITIC_LR_CRITIC, gamma=Config.ACTOR_CRITIC_GAMMA
+    )
+
+    print("\\n4. Training PPO...")
+    results["PPO"] = train_ppo_agent(
+        env_name, episodes=episodes, lr=Config.PPO_LR, gamma=Config.PPO_GAMMA, eps_clip=Config.PPO_EPS_CLIP, k_epochs=Config.PPO_K_EPOCHS
+    )
+
+    return results
+
+
+def plot_policy_gradient_comparison(
+    results: Dict[str, Dict], save_path: Optional[str] = None
+):
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+
+    methods = list(results.keys())
+    colors = ["blue", "green", "red", "purple"]
+
+    for method, color in zip(methods, colors):
+        scores = results[method]["scores"]
+        smoothed_scores = np.convolve(scores, np.ones(50) / 50, mode="valid")
+        axes[0, 0].plot(smoothed_scores, label=method, color=color, linewidth=2)
+
+    axes[0, 0].set_xlabel("Episode")
+    axes[0, 0].set_ylabel("Smoothed Score")
+    axes[0, 0].set_title("Learning Curves Comparison")
+    axes[0, 0].legend()
+    axes[0, 0].grid(True, alpha=0.3)
+
+    final_scores = [np.mean(results[method]["scores"][-Config.PRINT_INTERVAL:]) for method in methods]
+    axes[0, 1].bar(methods, final_scores, alpha=0.7, edgecolor="black")
+    axes[0, 1].set_ylabel("Final Average Score")
+    axes[0, 1].set_title("Final Performance Comparison")
+    axes[0, 1].grid(True, alpha=0.3)
+
+    score_variances = [np.var(results[method]["scores"][-200:]) for method in methods]
+    axes[1, 0].bar(
+        methods, score_variances, alpha=0.7, edgecolor="black", color="orange"
+    )
+    axes[1, 0].set_ylabel("Score Variance")
+    axes[1, 0].set_title("Training Stability (Lower is Better)")
+    axes[1, 0].grid(True, alpha=0.3)
+
+    threshold = 195
+    sample_efficiencies = []
+
+    for method in methods:
+        scores = results[method]["scores"]
+        episodes_to_threshold = len(scores)
+        for i, score in enumerate(scores):
+            if score >= threshold:
+                episodes_to_threshold = i + 1
+                break
+        sample_efficiencies.append(episodes_to_threshold)
+
+    axes[1, 1].bar(
+        methods, sample_efficiencies, alpha=0.7, edgecolor="black", color="green"
+    )
+    axes[1, 1].set_ylabel("Episodes to Threshold")
+    axes[1, 1].set_title("Sample Efficiency (Lower is Better)")
+    axes[1, 1].grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.show()
+
+
+def hyperparameter_sensitivity_analysis(
+    env_name: str = Config.ENV_NAME_DISCRETE, episodes: int = Config.REINFORCE_EPISODES // 3
+):
+    print("Policy Gradient Hyperparameter Sensitivity Analysis")
+    print("=" * 55)
+
+    learning_rates = [1e-4, 5e-4, 1e-3, 5e-3]
+    lr_results = {}
+
+    print("\\nTesting different learning rates...")
+    for lr in learning_rates:
+        print(f"  Learning Rate: {lr}")
+        result = train_reinforce_baseline_agent(env_name, episodes=episodes, lr_policy=lr)
+        lr_results[lr] = np.mean(result["scores"][-Config.PRINT_INTERVAL:])
+
+    gamma_values = [0.9, 0.95, 0.99, 0.995]
+    gamma_results = {}
+
+    print("\\nTesting different gamma values...")
+    for gamma in gamma_values:
+        print(f"  Gamma: {gamma}")
+        result = train_reinforce_baseline_agent(env_name, episodes=episodes, gamma=gamma)
+        gamma_results[gamma] = np.mean(result["scores"][-Config.PRINT_INTERVAL:])
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+    lrs = list(lr_results.keys())
+    scores = list(lr_results.values())
+    axes[0].plot(lrs, scores, "o-", linewidth=2, markersize=8)
+    axes[0].set_xlabel("Learning Rate")
+    axes[0].set_ylabel("Final Average Score")
+    axes[0].set_title("Learning Rate Sensitivity")
+    axes[0].set_xscale("log")
+    axes[0].grid(True, alpha=0.3)
+
+    gammas = list(gamma_results.keys())
+    scores = list(gamma_results.values())
+    axes[1].plot(gammas, scores, "o-", linewidth=2, markersize=8, color="green")
+    axes[1].set_xlabel("Gamma (Discount Factor)")
+    axes[1].set_ylabel("Final Average Score")
+    axes[1].set_title("Discount Factor Sensitivity")
+    axes[1].grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    os.makedirs("visualizations", exist_ok=True)
+    plt.savefig(
+        os.path.join("visualizations", "policy_gradient_hyperparameter_sensitivity.png"), dpi=300, bbox_inches="tight"
+    )
+    plt.show()
+
+    return {"learning_rates": lr_results, "gamma_values": gamma_results}
+
+
+def curriculum_learning_demo(env_name: str = Config.ENV_NAME_DISCRETE, episodes: int = Config.REINFORCE_EPISODES):
+    print("Curriculum Learning Demonstration")
+    print("=" * 40)
+
+    env_configs = [
+        {"name": "Easy", "episodes_per_stage": episodes // 3},
+        {"name": "Medium", "episodes_per_stage": episodes // 3},
+        {"name": "Hard", "episodes_per_stage": episodes // 3},
+    ]
+
+    curriculum_results = {}
+    agent_for_curriculum = None
+
+    for i, config in enumerate(env_configs):
+        print(f"\\nTraining on {config['name']} environment stage...")
+
+        env = gym.make(env_name)
+        state_dim = env.observation_space.shape[0]
+        action_dim = env.action_space.n
+
+        if agent_for_curriculum is None:
+            agent_for_curriculum = REINFORCEBaselineAgent(state_dim, action_dim)
+        else:
+            pass
+
+        scores = []
+
+        for episode in range(config["episodes_per_stage"]):
+            state, _ = env.reset(seed=Config.SEED + i)
+            episode_reward = 0
+            done = False
+
+            while not done:
+                action, log_prob = agent_for_curriculum.select_action(state)
+                next_state, reward, terminated, truncated, _ = env.step(action)
+                done = terminated or truncated
+
+                agent_for_curriculum.store_transition(state, log_prob, reward)
+                episode_reward += reward
+                state = next_state
+
+            agent_for_curriculum.update_policy()
+            scores.append(episode_reward)
+
+            if (episode + 1) % Config.PRINT_INTERVAL == 0:
+                avg_score = np.mean(scores[-Config.PRINT_INTERVAL:])
+                print(
+                    f"  Stage {config['name']} Episode {episode+1:4d} | Average Score: {avg_score:6.1f}"
+                )
+
+        curriculum_results[config["name"]] = scores
+        env.close()
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    for env_type, scores in curriculum_results.items():
+        smoothed_scores = np.convolve(scores, np.ones(20) / 20, mode="valid")
+        ax.plot(smoothed_scores, label=env_type, linewidth=2)
+
+    ax.set_xlabel("Episode")
+    ax.set_ylabel("Smoothed Score")
+    ax.set_title("Curriculum Learning Progress")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    os.makedirs("visualizations", exist_ok=True)
+    plt.savefig(os.path.join("visualizations", "curriculum_learning_demo.png"), dpi=300, bbox_inches="tight")
+    plt.show()
+
+    return curriculum_results
+\\end{verbatim}

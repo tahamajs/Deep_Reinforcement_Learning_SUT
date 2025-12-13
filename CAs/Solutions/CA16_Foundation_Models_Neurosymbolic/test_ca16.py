@@ -14,20 +14,31 @@ import time
 import json
 import os
 import sys
+from pathlib import Path
 
-# Add current directory to path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Add current directory to path for config import
+sys.path.insert(0, str(Path(__file__).parent))
 
-# Import CA16 modules
+from src.config import config
+
+# Import CA16 modules from src
 try:
-    from foundation_models import DecisionTransformer, MultiTaskDecisionTransformer
-    from neurosymbolic import SymbolicKnowledgeBase, NeurosymbolicPolicy
-    from continual_learning import ContinualLearningAgent, MAML
-    from human_ai_collaboration import CollaborativeAgent, PreferenceRewardModel
-    from environments import SymbolicGridWorld, CollaborativeGridWorld, ContinualLearningEnvironment
-    from advanced_computing import QuantumInspiredRL, NeuromorphicNetwork
-    from deployment_ethics import ProductionRLSystem, SafetyMonitor, EthicsChecker
-    from visualizations import create_attention_heatmap, plot_training_dynamics, create_performance_comparison
+    from src.foundation_models.algorithms import DecisionTransformer, MultiTaskDecisionTransformer
+    from src.neurosymbolic.knowledge_base import SymbolicKnowledgeBase
+    from src.neurosymbolic.policies import NeurosymbolicPolicy
+    from src.continual_learning.continual_agent import ContinualLearningAgent
+    from src.continual_learning.meta_learning import MAML
+    from src.human_ai_collaboration.collaborative_agent import CollaborativeAgent
+    from src.human_ai_collaboration.preference_model import PreferenceRewardModel
+    from src.environments.symbolic_env import SymbolicGridWorld
+    from src.environments.collaborative_env import CollaborativeGridWorld
+    from src.environments.continual_env import ContinualEnv as ContinualLearningEnvironment # Renamed for clarity
+    from src.advanced_computation.quantum_rl import QuantumInspiredRL
+    from src.advanced_computation.neuromorphic_networks import NeuromorphicNetwork
+    from src.real_world_deployment.production_systems import ProductionRLSystem
+    from src.real_world_deployment.safety_monitoring import SafetyMonitor
+    from src.deployment_ethics.ethics_checker import EthicsChecker
+    from enhanced_visualizations import create_attention_heatmap, plot_training_dynamics, create_performance_comparison
     print("All CA16 modules imported successfully!")
 except ImportError as e:
     print(f"Import error: {e}")
@@ -50,20 +61,19 @@ def test_foundation_models():
         # Test Decision Transformer
         print("Testing Decision Transformer...")
         dt = DecisionTransformer(
-            state_dim=4,
-            action_dim=2,
-            hidden_dim=64,
-            num_layers=3,
-            num_heads=4,
-            max_length=100,
+            state_dim=config.STATE_DIM,
+            action_dim=config.ACTION_DIM,
+            model_dim=config.TRANSFORMER_DIM,
+            num_layers=config.NUM_LAYERS,
+            num_heads=config.NUM_HEADS,
         )
         
         # Test forward pass
-        batch_size = 8
-        seq_length = 10
+        batch_size = config.BATCH_SIZE
+        seq_length = config.SEQ_LEN
         
-        states = torch.randn(batch_size, seq_length, 4)
-        actions = torch.randint(0, 2, (batch_size, seq_length))
+        states = torch.randn(batch_size, seq_length, config.STATE_DIM)
+        actions = torch.randint(0, config.ACTION_DIM, (batch_size, seq_length))
         returns_to_go = torch.randn(batch_size, seq_length, 1)
         timesteps = torch.arange(seq_length).unsqueeze(0).repeat(batch_size, 1)
         
@@ -89,13 +99,12 @@ def test_foundation_models():
         # Test Multi-Task Decision Transformer
         print("Testing Multi-Task Decision Transformer...")
         mtdt = MultiTaskDecisionTransformer(
-            state_dim=4,
-            action_dim=2,
-            hidden_dim=64,
-            num_layers=3,
-            num_heads=4,
-            max_length=100,
-            num_tasks=3,
+            state_dim=config.STATE_DIM,
+            action_dim=config.ACTION_DIM,
+            model_dim=config.TRANSFORMER_DIM,
+            num_layers=config.NUM_LAYERS,
+            num_heads=config.NUM_HEADS,
+            num_tasks=config.NUM_TASKS,
         )
         
         # Test forward pass
@@ -135,11 +144,11 @@ def test_neurosymbolic_rl():
         kb.add_predicate("obstacle", 1)  # obstacle(location)
         
         # Add rules
-        kb.add_rule("reachable(X, Y)", ["at(agent, X)", "not obstacle(Y)"], 0.8)
-        kb.add_rule("safe_move(X, Y)", ["at(agent, X)", "not obstacle(Y)", "reachable(X, Y)"], 0.9)
+        kb.add_rule(LogicalRule("reachable", ["at", "not obstacle"], 0.8))
+        kb.add_rule(LogicalRule("safe_move", ["at", "not obstacle", "reachable"], 0.9))
         
         # Test inference
-        facts = ["at(agent, (0,0))", "goal((5,5))", "obstacle((2,2))"]
+        facts = {"at": {"agent": (0,0)}, "goal": {(5,5)}, "obstacle": {(2,2)}}
         kb.add_facts(facts)
         
         # Forward chaining
@@ -160,14 +169,14 @@ def test_neurosymbolic_rl():
         # Test Neurosymbolic Policy
         print("Testing Neurosymbolic Policy...")
         policy = NeurosymbolicPolicy(
-            state_dim=4,
-            action_dim=4,
-            hidden_dim=32,
-            symbolic_dim=8,
+            state_dim=config.STATE_DIM,
+            action_dim=config.ACTION_DIM,
+            hidden_dim=config.NEURO_HIDDEN_DIM,
+            symbolic_dim=config.SYMBOLIC_FEATURE_DIM,
         )
         
         # Test policy
-        state = torch.randn(1, 4)
+        state = torch.randn(1, config.STATE_DIM)
         action_logits, value = policy(state)
         
         print(f"✓ Neurosymbolic policy output shapes: {action_logits.shape}, {value.shape}")
@@ -196,19 +205,19 @@ def test_continual_learning():
         # Test Continual Learning Agent
         print("Testing Continual Learning Agent...")
         agent = ContinualLearningAgent(
-            state_dim=4,
-            action_dim=2,
-            hidden_dim=64,
-            num_tasks=3,
+            state_dim=config.STATE_DIM,
+            action_dim=config.ACTION_DIM,
+            hidden_dim=config.CL_HIDDEN_DIM,
+            num_tasks=config.NUM_TASKS,
         )
         
         # Test on multiple tasks
         task_performances = {}
         
-        for task_id in range(3):
+        for task_id in range(config.NUM_TASKS):
             # Generate mock data for task
-            states = torch.randn(100, 4)
-            actions = torch.randint(0, 2, (100,))
+            states = torch.randn(100, config.STATE_DIM)
+            actions = torch.randint(0, config.ACTION_DIM, (100,))
             rewards = torch.randn(100)
             
             # Train agent on task
@@ -245,19 +254,19 @@ def test_continual_learning():
         # Test MAML
         print("Testing MAML...")
         maml = MAML(
-            model=nn.Sequential(nn.Linear(4, 32), nn.ReLU(), nn.Linear(32, 2)),
-            inner_lr=0.01,
-            meta_lr=0.001,
-            adaptation_steps=5,
+            model=nn.Sequential(nn.Linear(config.STATE_DIM, config.MAML_HIDDEN_DIM), nn.ReLU(), nn.Linear(config.MAML_HIDDEN_DIM, config.ACTION_DIM)),
+            inner_lr=config.MAML_INNER_LR,
+            meta_lr=config.MAML_META_LR,
+            adaptation_steps=config.MAML_ADAPTATION_STEPS,
         )
         
         # Generate mock meta-tasks
         meta_tasks = []
-        for _ in range(3):
+        for _ in range(config.NUM_TASKS):
             task = {
-                "states": torch.randn(50, 4),
-                "actions": torch.randint(0, 2, (50,)),
-                "rewards": torch.randn(50),
+                "states": torch.randn(config.BATCH_SIZE, config.STATE_DIM),
+                "actions": torch.randint(0, config.ACTION_DIM, (config.BATCH_SIZE,)),
+                "rewards": torch.randn(config.BATCH_SIZE),
             }
             meta_tasks.append(task)
         
@@ -292,14 +301,14 @@ def test_human_ai_collaboration():
         # Test Collaborative Agent
         print("Testing Collaborative Agent...")
         agent = CollaborativeAgent(
-            state_dim=4,
-            action_dim=2,
-            hidden_dim=32,
-            confidence_threshold=0.7,
+            state_dim=config.STATE_DIM,
+            action_dim=config.ACTION_DIM,
+            hidden_dim=config.COLLAB_HIDDEN_DIM,
+            confidence_threshold=config.COLLABORATION_THRESHOLD,
         )
         
         # Test collaboration
-        state = torch.randn(1, 4)
+        state = torch.randn(1, config.STATE_DIM)
         action, confidence = agent.get_action(state)
         
         print(f"✓ Agent action: {action}, confidence: {confidence}")
@@ -317,14 +326,14 @@ def test_human_ai_collaboration():
         # Test Preference Reward Model
         print("Testing Preference Reward Model...")
         preference_model = PreferenceRewardModel(
-            state_dim=4,
-            action_dim=2,
-            hidden_dim=32,
+            state_dim=config.STATE_DIM,
+            action_dim=config.ACTION_DIM,
+            hidden_dim=config.PREFERENCE_HIDDEN_DIM,
         )
         
         # Test preference learning
-        state1 = torch.randn(1, 4)
-        state2 = torch.randn(1, 4)
+        state1 = torch.randn(1, config.STATE_DIM)
+        state2 = torch.randn(1, config.STATE_DIM)
         action1 = torch.tensor([0])
         action2 = torch.tensor([1])
         preference = torch.tensor([1.0])  # Prefer action1
@@ -356,7 +365,7 @@ def test_environments():
     try:
         # Test Symbolic Grid World
         print("Testing Symbolic Grid World...")
-        symbolic_env = SymbolicGridWorld(size=5, num_goals=2, num_obstacles=3)
+        symbolic_env = SymbolicGridWorld(size=config.ENV_SIZE, num_goals=config.NUM_GOALS, num_obstacles=config.NUM_OBSTACLES)
         
         obs, info = symbolic_env.reset()
         print(f"✓ Symbolic environment observation shape: {obs.shape}")
@@ -379,7 +388,7 @@ def test_environments():
     try:
         # Test Collaborative Grid World
         print("Testing Collaborative Grid World...")
-        collaborative_env = CollaborativeGridWorld(size=5, num_goals=2, num_obstacles=3)
+        collaborative_env = CollaborativeGridWorld(size=config.ENV_SIZE, num_goals=config.NUM_GOALS, num_obstacles=config.NUM_OBSTACLES)
         
         obs, info = collaborative_env.reset()
         print(f"✓ Collaborative environment observation shape: {obs.shape}")
@@ -402,7 +411,7 @@ def test_environments():
     try:
         # Test Continual Learning Environment
         print("Testing Continual Learning Environment...")
-        continual_env = ContinualLearningEnvironment(num_tasks=3, state_dim=4, action_dim=2)
+        continual_env = ContinualLearningEnvironment(num_tasks=config.NUM_TASKS, state_dim=config.STATE_DIM, action_dim=config.ACTION_DIM)
         
         obs, info = continual_env.reset()
         print(f"✓ Continual environment observation shape: {obs.shape}")
@@ -437,13 +446,13 @@ def test_advanced_computing():
         # Test Quantum-Inspired RL
         print("Testing Quantum-Inspired RL...")
         quantum_rl = QuantumInspiredRL(
-            state_dim=4,
-            action_dim=2,
-            num_qubits=4,
-            num_layers=2,
+            state_dim=config.STATE_DIM,
+            action_dim=config.ACTION_DIM,
+            num_qubits=config.QUANTUM_NUM_QUBITS,
+            num_layers=config.QUANTUM_NUM_LAYERS,
         )
         
-        state = torch.randn(1, 4)
+        state = torch.randn(1, config.STATE_DIM)
         action_logits = quantum_rl(state)
         
         print(f"✓ Quantum RL output shape: {action_logits.shape}")
@@ -461,14 +470,14 @@ def test_advanced_computing():
         # Test Neuromorphic Network
         print("Testing Neuromorphic Network...")
         neuromorphic_net = NeuromorphicNetwork(
-            input_dim=4,
-            hidden_dim=16,
-            output_dim=2,
-            num_layers=2,
-            time_steps=5,
+            input_dim=config.STATE_DIM,
+            hidden_dim=config.NEUROMORPHIC_HIDDEN_DIM,
+            output_dim=config.ACTION_DIM,
+            num_layers=config.NEUROMORPHIC_NUM_LAYERS,
+            time_steps=config.NEUROMORPHIC_TIME_STEPS,
         )
         
-        input_spikes = torch.randn(1, 4)
+        input_spikes = torch.randn(1, config.STATE_DIM)
         output_rates = neuromorphic_net(input_spikes)
         
         print(f"✓ Neuromorphic network output shape: {output_rates.shape}")
@@ -497,26 +506,26 @@ def test_deployment_ethics():
         # Test Production RL System
         print("Testing Production RL System...")
         model = nn.Sequential(
-            nn.Linear(4, 32),
+            nn.Linear(config.STATE_DIM, config.PROD_HIDDEN_DIM),
             nn.ReLU(),
-            nn.Linear(32, 2),
+            nn.Linear(config.PROD_HIDDEN_DIM, config.ACTION_DIM),
         )
         
         production_system = ProductionRLSystem(model)
         
         # Deploy system
-        config = {
+        deploy_config = {
             "model_path": "test_model.pth",
-            "environment_config": {"state_dim": 4, "action_dim": 2},
-            "safety_config": {"threshold": 0.8},
+            "environment_config": {"state_dim": config.STATE_DIM, "action_dim": config.ACTION_DIM},
+            "safety_config": {"threshold": config.SAFETY_THRESHOLD},
         }
         
-        deployed = production_system.deploy(config)
+        deployed = production_system.deploy(deploy_config)
         print(f"✓ System deployed: {deployed}")
         
         # Test inference
         if deployed:
-            state = torch.randn(1, 4)
+            state = torch.randn(1, config.STATE_DIM)
             action, info = production_system.inference(state)
             print(f"✓ Inference completed: {action.shape}, info: {info}")
         
@@ -533,7 +542,7 @@ def test_deployment_ethics():
         # Test Safety Monitor
         print("Testing Safety Monitor...")
         safety_monitor = SafetyMonitor(
-            safety_thresholds={"inference_time": 0.1, "memory_usage": 0.8},
+            safety_thresholds={"inference_time": config.SAFETY_INFERENCE_TIME_THRESHOLD, "memory_usage": config.SAFETY_MEMORY_USAGE_THRESHOLD},
         )
         
         safety_monitor.start_monitoring()
@@ -555,7 +564,7 @@ def test_deployment_ethics():
         # Test Ethics Checker
         print("Testing Ethics Checker...")
         ethics_checker = EthicsChecker(
-            ethical_guidelines={"bias_threshold": 0.1, "fairness_threshold": 0.8},
+            ethical_guidelines={"bias_threshold": config.ETHICS_BIAS_THRESHOLD, "fairness_threshold": config.ETHICS_FAIRNESS_THRESHOLD},
         )
         
         predictions = torch.randn(100, 2)
@@ -587,8 +596,8 @@ def test_visualizations():
     try:
         # Test attention heatmap
         print("Testing attention heatmap...")
-        attention_weights = torch.randn(4, 8)  # 4 heads, 8 sequence length
-        fig = create_attention_heatmap(attention_weights, "Test Attention")
+        attention_weights = [torch.randn(config.SEQ_LEN, config.SEQ_LEN) for _ in range(config.NUM_ATTENTION_HEADS_TO_PLOT)]
+        fig = create_attention_heatmap(attention_weights, titles=['Head ' + str(i) for i in range(config.NUM_ATTENTION_HEADS_TO_PLOT)])
         print("✓ Attention heatmap created")
         
         results["attention_heatmap"] = {"created": True}
@@ -605,7 +614,7 @@ def test_visualizations():
             "rewards": [0.1, 0.3, 0.5, 0.7, 0.9],
             "episodes": list(range(5)),
         }
-        fig = plot_training_dynamics(training_data, "Test Training")
+        fig = plot_training_dynamics(training_data["losses"], training_data["rewards"])
         print("✓ Training dynamics plot created")
         
         results["training_dynamics"] = {"created": True}
@@ -618,11 +627,11 @@ def test_visualizations():
         # Test performance comparison
         print("Testing performance comparison...")
         comparison_data = {
-            "Method A": 0.8,
-            "Method B": 0.7,
-            "Method C": 0.9,
+            "Method A": {'final_score': 0.8, 'sample_efficiency': 0.9, 'learning_curve': [0.1, 0.2, 0.4, 0.6, 0.8]},
+            "Method B": {'final_score': 0.7, 'sample_efficiency': 0.8, 'learning_curve': [0.05, 0.15, 0.3, 0.5, 0.7]},
+            "Method C": {'final_score': 0.9, 'sample_efficiency': 0.7, 'learning_curve': [0.2, 0.4, 0.6, 0.7, 0.9]},
         }
-        fig = create_performance_comparison(comparison_data, "Test Comparison")
+        fig = create_performance_comparison(comparison_data)
         print("✓ Performance comparison plot created")
         
         results["performance_comparison"] = {"created": True}
@@ -641,7 +650,7 @@ def run_comprehensive_test():
     print("Testing all CA16 components...")
     
     # Create results directory
-    os.makedirs("test_results", exist_ok=True)
+    os.makedirs(config.OUTPUT_DIR, exist_ok=True)
     
     # Run all tests
     all_results = {}
@@ -701,7 +710,7 @@ def run_comprehensive_test():
     print(f"  Total individual tests: {total_tests}")
     
     # Save results
-    results_file = os.path.join("test_results", "comprehensive_test_results.json")
+    results_file = Path(config.OUTPUT_DIR) / "comprehensive_test_results.json"
     with open(results_file, 'w') as f:
         json.dump(all_results, f, indent=2, default=str)
     

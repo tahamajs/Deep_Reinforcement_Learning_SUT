@@ -2,336 +2,328 @@
 
 ## Overview
 
-This project presents a comprehensive study of Deep Q-Networks (DQN) and advanced value-based reinforcement learning methods. The implementation includes basic DQN, Double DQN, Dueling DQN, and advanced variants, with all code modularized into separate Python files for better organization and reusability. The project focuses on theoretical foundations, experimental analysis, and performance comparisons.
+This project provides a comprehensive implementation and analysis of Deep Q-Networks (DQN) and several advanced value-based reinforcement learning methods. Building upon foundational DQN principles, this work synthesizes improvements from key research papers to enhance stability, reduce bias, and improve sample efficiency. The core algorithms implemented include:
+
+-   **Vanilla DQN**: The foundational algorithm with experience replay and target networks.
+-   **Double DQN**: Addresses overestimation bias inherent in standard DQN.
+-   **Dueling DQN**: Improves Q-value estimation by decoupling state-value and advantage functions.
+-   **Dueling Double DQN**: Combines the benefits of both Dueling and Double DQN.
+-   **Noisy DQN**: Replaces epsilon-greedy exploration with parameter-space noise for more effective exploration.
+-   **(Planned) Rainbow DQN Components**: Integration of Prioritized Experience Replay, N-step Q-learning, and Distributional RL (C51) to achieve state-of-the-art performance.
+
+The project emphasizes a modular code structure, rigorous theoretical grounding, and comprehensive experimental analysis.
+
+## Research Synthesis: Beyond Vanilla DQN
+
+This project synthesizes ideas primarily from:
+
+1.  **"Playing Atari with Deep Reinforcement Learning" (Mnih et al., 2013)**: The original DQN paper, introducing the core concepts of using deep neural networks to approximate Q-functions, coupled with experience replay and target networks for stability.
+2.  **"Deep Reinforcement Learning with Double Q-learning" (van Hasselt et al., 2015)**: Addresses the overestimation bias of DQN by decoupling the action selection and action evaluation processes, leading to more accurate value estimates.
+3.  **"Dueling Network Architectures for Deep Reinforcement Learning" (Wang et al., 2016)**: Proposes a network architecture that explicitly separates the representation of state-value and advantage functions, improving the agent's ability to generalize across actions without affecting the policy.
+4.  **"Noisy Networks for Exploration" (Fortunato et al., 2017)**: Introduces stochastic layers (noisy nets) that add noise to the network weights, allowing the agent to explore more efficiently without relying on an external epsilon-greedy schedule.
+5.  **"Rainbow: Combining Improvements in Deep Reinforcement Learning" (Hessel et al., 2017)**: A seminal work that combines six key DQN extensions (Double DQN, Prioritized Replay, Dueling Networks, Multi-step Learning, Distributional RL, and Noisy Nets) to achieve a new state-of-the-art in Atari games.
+
+Our novel synthesis combines these elements into a structured codebase, providing both individual implementations and a pathway towards a full Rainbow DQN agent. The primary research gap addressed is the integration of these sophisticated techniques into a clean, modular, and theoretically-aligned framework suitable for educational and research purposes, allowing for easy experimentation with various combinations of these improvements.
 
 ## Project Structure
 
 ```
 CA07_DQN_Value_Based_Methods/
-├── CA7.ipynb                    # Main Jupyter notebook
-├── run.sh                       # Complete execution script
-├── test_implementation.py        # Test script for verification
-├── training_examples.py         # Example training scripts
+├── README.md                    # This comprehensive guide
+├── run.sh                       # Script to run all experiments
+├── test_implementation.py       # Unit tests for verification
+├── training_examples.py         # Example training and analysis scripts
 ├── requirements.txt             # Python dependencies
-├── README.md                    # This file
-├── agents/                      # Core DQN implementations
-│   ├── __init__.py
-│   ├── core.py                  # Basic DQN, ReplayBuffer, DQNAgent
-│   ├── double_dqn.py            # Double DQN implementation
-│   ├── dueling_dqn.py           # Dueling DQN architecture
-│   └── utils.py                 # Visualization and analysis utilities
-├── experiments/                 # Experiment scripts
-│   ├── __init__.py
-│   ├── basic_dqn_experiment.py
-│   └── comprehensive_dqn_analysis.py
-├── environments/                # Environment wrappers
-│   └── __init__.py
-├── evaluation/                  # Evaluation tools
-│   └── __init__.py
-├── models/                      # Neural network models
-│   └── __init__.py
-├── utils/                       # Utility functions
-│   └── __init__.py
-├── visualizations/              # Generated plots (created during execution)
-├── results/                     # Results and data (created during execution)
-└── logs/                        # Execution logs (created during execution)
+├── src/                         # Modularized core implementations
+│   ├── __init__.py              # Package initializer
+│   ├── config.py                # Centralized hyperparameters
+│   ├── agents.py                # DQN agent implementations (Vanilla, Double, Dueling, Noisy)
+│   ├── models.py                # Neural network architectures (QNetwork, DuelingQNetwork, NoisyLinear, NoisyQNetwork)
+│   ├── data.py                  # Data structures (ReplayBuffer, PrioritizedReplayBuffer - planned)
+│   ├── utils.py                 # General utility functions (seeding, smoothing)
+│   └── losses.py                # Custom loss functions (e.g., for Distributional RL - planned)
+├── notebooks/                   # Jupyter notebooks for interactive walkthroughs and visualizations
+│   └── main.ipynb               # Main execution and visualization notebook (planned)
+├── pictures/                    # Generated plots and figures from notebooks
+├── visualizations/              # Generated plots from scripts
+├── results/                     # Experiment results and data
+└── logs/                        # Execution logs
 ```
 
-## Key Features
+## Code Map
 
-### Implemented Algorithms
+### `src/config.py`
 
-1. **Basic DQN**
+-   **Purpose**: Centralizes all hyperparameters and configuration settings for the entire project. This includes environment details, agent parameters (learning rates, discount factors, buffer sizes), exploration strategies (epsilon-greedy, noisy net parameters), and advanced Rainbow DQN components (PER, N-step, C51).
+-   **Key Classes**: `DQNConfig`
 
-   - Experience replay buffer
-   - Target networks for stability
-   - ε-greedy exploration
+### `src/data.py`
 
-2. **Double DQN**
+-   **Purpose**: Implements data structures necessary for experience replay.
+-   **Key Classes**:
+    -   `ReplayBuffer`: Stores `(state, action, reward, next_state, done)` tuples for off-policy training.
+    -   `(Planned) PrioritizedReplayBuffer`: An extension for prioritized sampling of experiences, giving more importance to transitions with high TD-error.
 
-   - Addresses overestimation bias
-   - Decouples action selection from evaluation
+### `src/models.py`
 
-3. **Dueling DQN**
-   - Value-advantage decomposition
-   - Separate streams for value and advantage functions
+-   **Purpose**: Defines the neural network architectures used as Q-functions.
+-   **Key Classes**:
+    -   `QNetwork`: A simple feed-forward neural network for basic Q-value approximation.
+    -   `DuelingQNetwork`: Implements the dueling architecture, separating state-value (`V`) and advantage (`A`) streams.
+    -   `NoisyLinear`: A linear layer with parameter-space noise, used in `NoisyQNetwork` for exploration.
+    -   `NoisyQNetwork`: A Q-network built with `NoisyLinear` layers, replacing epsilon-greedy.
+    -   `(Planned) CategoricalQNetwork`: For Distributional RL (C51), outputs a distribution over Q-values.
 
-### Analysis Tools
+### `src/agents.py`
 
-- Performance comparison across algorithms
-- Q-value distribution analysis
-- Learning curve visualization
-- Bias analysis and debugging tools
+-   **Purpose**: Contains the implementations of various DQN agents. Each agent wraps a Q-network, handles experience replay, and manages the training loop logic.
+-   **Key Classes**:
+    -   `DQNAgent`: Basic DQN agent.
+    -   `DoubleDQNAgent`: Extends `DQNAgent` with Double Q-learning updates.
+    -   `DuelingDQNAgent`: Extends `DQNAgent` with a `DuelingQNetwork`.
+    -   `DuelingDoubleDQNAgent`: Combines `DoubleDQNAgent` logic with a `DuelingQNetwork`.
+    -   `NoisyDQNAgent`: Extends `DQNAgent` to use `NoisyQNetwork` for exploration.
+    -   `(Planned) RainbowDQNAgent`: Will combine all Rainbow components into a single agent.
+
+### `src/losses.py`
+
+-   **Purpose**: Will contain custom loss functions, especially for advanced variants.
+-   **Key Functions**:
+    -   `(Planned) c51_loss`: Loss function for Distributional Reinforcement Learning (C51).
+
+### `src/utils.py`
+
+-   **Purpose**: Provides general utility functions for the project.
+-   **Key Functions**:
+    -   `set_seed`: Ensures reproducibility across random number generators.
+    -   `smooth_curve`: Applies a rolling average for visualizing noisy learning curves.
+    -   `(Planned) PerformanceTracker`, `ExperimentLogger`, `save_results`, `load_results`, etc.
 
 ## Installation
 
-1. **Clone or navigate to the project directory**
+1.  **Clone or navigate to the project directory**:
+    ```bash
+    cd CAs/Solutions/CA07_DQN_Value_Based_Methods
+    ```
 
-2. **Install dependencies:**
+2.  **Create and activate a virtual environment**:
+    ```bash
+    python -m venv .venv
+    source .venv/bin/activate
+    ```
 
+3.  **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **For GPU support (optional):**
+4.  **For GPU support (optional)**:
+    If you have a CUDA-enabled GPU, ensure `torch` and `torchvision` are installed with CUDA support. Check PyTorch's official website for the correct command for your specific CUDA version. Example for CUDA 11.8:
    ```bash
    pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
    ```
 
-## Quick Start
+## Usage
 
 ### 1. Run All Experiments
 
-Execute the complete experiment suite:
+The `run.sh` script executes a comprehensive suite of experiments, including training various DQN agents, hyperparameter studies, and robustness analyses.
 
 ```bash
-# Make script executable and run
 chmod +x run.sh
 ./run.sh
 ```
 
-This will:
-
-- Install dependencies
-- Run all experiments
-- Generate comprehensive visualizations
-- Create detailed analysis reports
-- Save results in organized folders
+This script will:
+-   Set up the Python environment.
+-   Run training for Vanilla DQN, Double DQN, Dueling DQN, Dueling Double DQN, and Noisy DQN.
+-   Conduct hyperparameter optimization studies.
+-   Perform robustness analyses (e.g., across random seeds and reward scales).
+-   Generate plots and save results in the `visualizations/`, `results/`, and `logs/` directories.
 
 ### 2. Test Implementation
 
-Verify the implementation works correctly:
+Verify the correctness of the core implementations using `pytest`:
 
 ```bash
-python test_implementation.py
+python -m pytest test_implementation.py
 ```
 
-### 3. Run Individual Experiments
+### 3. Run Individual Experiments/Demos
 
-Execute specific experiments:
+You can run specific training and analysis examples:
 
 ```bash
-# Basic DQN experiment
-python experiments/basic_dqn_experiment.py
-
-# Comprehensive analysis
-python experiments/comprehensive_dqn_analysis.py
-
-# Training examples
 python training_examples.py
 ```
 
-### 4. Using the DQN Package
+Or execute individual experiment scripts (these will be updated or replaced by `training_examples.py`):
 
-```python
-from agents.core import DQNAgent
-from agents.double_dqn import DoubleDQNAgent
-from agents.dueling_dqn import DuelingDQNAgent
-import gymnasium as gym
-
-# Create environment
-env = gym.make('CartPole-v1')
-
-# Create agent
-agent = DQNAgent(
-    state_dim=env.observation_space.shape[0],
-    action_dim=env.action_space.n,
-    lr=1e-3,
-    gamma=0.99,
-    epsilon_decay=0.995
-)
-
-# Train
-for episode in range(100):
-    reward, info = agent.train_episode(env)
-    if (episode + 1) % 25 == 0:
-        print(f"Episode {episode}: Reward = {reward}")
-
-# Evaluate
-results = agent.evaluate(env, num_episodes=10)
-print(f"Mean reward: {results['mean_reward']:.2f}")
+```bash
+# Example (existing, may be deprecated in favor of training_examples.py)
+python experiments/basic_dqn_experiment.py
 ```
 
-### Educational Notebook
+### 4. Interactive Development with Jupyter Notebook
 
-The main `CA7.ipynb` notebook provides:
+The `notebooks/main.ipynb` (planned) will provide an interactive environment for:
+-   Exploring theoretical concepts.
+-   Visualizing agent behavior and learning curves.
+-   Conducting ad-hoc experiments and analysis.
+-   Generating publication-quality figures for the report.
 
-- **IEEE Format**: Structured as an academic paper with proper sections
-- **Theoretical Foundations**: Mathematical formulations and problem definitions
-- **Clean Imports**: All code imported from modular Python files
-- **Interactive Visualizations**: Q-learning concepts and performance analysis
-- **Comprehensive Comparisons**: Side-by-side evaluation of all DQN variants
-- **IEEE-Style References**: Properly cited academic references
-
-## Key Concepts Covered
-
-### Theoretical Foundations
-
-- Q-learning and its limitations
-- Deep Q-Network architecture
-- Experience replay and target networks
-- Overestimation bias and solutions
-
-### Implementation Details
-
-- Neural network design for Q-learning
-- Experience replay buffer management
-- Target network updates
-- Exploration strategies
-
-### Advanced Techniques
-
-- Double DQN for bias reduction
-- Dueling architecture for better value estimation
-- Performance analysis and debugging
-
-## Advanced Features
-
-### Implemented Algorithms
-
-1. **Basic DQN**
-
-   - Experience replay buffer
-   - Target networks for stability
-   - ε-greedy exploration
-   - Gradient clipping
-
-2. **Double DQN**
-
-   - Addresses overestimation bias
-   - Decouples action selection from evaluation
-   - Bias analysis tools
-
-3. **Dueling DQN**
-
-   - Value-advantage decomposition
-   - Separate streams for value and advantage functions
-   - Advanced architecture analysis
-
-4. **Dueling Double DQN**
-   - Combines both improvements
-   - Best of both worlds
-
-### Analysis Tools
-
-- **Performance Comparison**: Side-by-side evaluation of all DQN variants
-- **Q-value Analysis**: Distribution and correlation analysis
-- **Hyperparameter Sensitivity**: Learning rate, architecture, exploration studies
-- **Robustness Analysis**: Seed and reward scaling robustness
-- **Convergence Analysis**: Learning efficiency and stability metrics
-- **Visualization Suite**: Comprehensive plotting and reporting tools
-
-### Environment Support
-
-- **CartPole-v1**: Classic control benchmark
-- **MountainCar-v0**: Sparse reward environment
-- **Acrobot-v1**: Underactuated system
-- **Custom Wrappers**: Reward shaping, state normalization, statistics tracking
-
-## Results and Performance
-
-### CartPole-v1 Environment
-
-- **Basic DQN**: Typically achieves ~150-200 average reward
-- **Double DQN**: Improved stability, ~180-220 average reward
-- **Dueling DQN**: Better sample efficiency, ~200-250 average reward
-- **Dueling Double DQN**: Best performance, ~220-280 average reward
-
-### Key Insights
-
-- Experience replay significantly improves stability
-- Target networks prevent divergence
-- Double DQN reduces overestimation bias by ~30%
-- Dueling architecture improves value estimation accuracy
-- Combined approaches yield best results
-- Robust to hyperparameter variations
-- Stable across different random seeds
-
-## Configuration
-
-### Hyperparameters
-
-Default configurations work well for CartPole:
-
-```python
-agent = DQNAgent(
-    lr=1e-3,                    # Learning rate
-    gamma=0.99,                 # Discount factor
-    epsilon_start=1.0,          # Initial exploration
-    epsilon_end=0.01,           # Final exploration
-    epsilon_decay=0.995,        # Exploration decay rate
-    buffer_size=20000,          # Replay buffer size
-    batch_size=64,              # Training batch size
-    target_update_freq=100      # Target network update frequency
-)
+To run the notebook:
+```bash
+jupyter lab
+# Then open notebooks/main.ipynb
 ```
 
-### Environment Setup
+## Theoretical Foundations and Mathematical Derivations
 
-The code is designed to work with Gymnasium environments:
+### Q-learning Basics
 
-- **CartPole-v1**: Classic control, discrete actions
-- **MountainCar-v0**: Continuous states, harder exploration
-- **Acrobot-v1**: Underactuated system
+The core idea of Q-learning is to learn an action-value function \(Q(s, a)\) that estimates the expected total future reward (return) for taking action \(a\) in state \(s\) and thereafter following an optimal policy. The optimal Q-function, \(Q^*(s, a)\), satisfies the Bellman optimality equation:
 
-## Generated Outputs
+\[
+Q^*(s, a) = \mathbb{E}_{s' \sim P(\cdot|s,a)} \left[ r + \gamma \max_{a'} Q^*(s', a') \right]
+\]
 
-After running the experiments, you'll find:
+where \(r\) is the immediate reward, \(\gamma\) is the discount factor, and \(s'\) is the next state.
 
-### Visualizations (`visualizations/`)
+### Deep Q-Networks (DQN)
 
-- `basic_dqn_experiment.png` - Basic DQN training results
-- `dqn_variants_comparison.png` - Comparison of all variants
-- `dqn_hyperparameter_optimization.png` - Hyperparameter sensitivity
-- `dqn_robustness_analysis.png` - Robustness studies
-- `summary_report.png` - Comprehensive summary
-- `q_value_analysis.png` - Q-value distribution analysis
+DQN approximates the optimal action-value function \(Q^*(s, a)\) using a deep neural network, \(Q(s, a; \theta)\), parameterized by \(\theta\). To stabilize training, DQN employs:
 
-### Results (`results/`)
+1.  **Experience Replay**: Stores transitions \((s_t, a_t, r_t, s_{t+1}, d_t)\) in a replay buffer and samples mini-batches randomly. This breaks correlations between consecutive samples and improves data efficiency.
+2.  **Target Network**: Uses a separate target Q-network, \(Q(s, a; \theta^-)\), with parameters \(\theta^-\) that are periodically updated from the online network's parameters \(\theta\). This creates a stable target for the Q-value updates, preventing oscillations.
 
-- `comprehensive_analysis_results.json` - Detailed numerical results
-- `summary.txt` - Text summary of experiments
-- `evaluation_results.json` - Agent evaluation data
+The loss function for DQN is the Mean Squared Error (MSE) between the current Q-estimate and the target Q-value:
 
-### Logs (`logs/`)
+\[
+L(\theta) = \mathbb{E}_{(s,a,r,s',d) \sim U(\mathcal{D})} \left[ \left( r + \gamma \max_{a'} Q(s', a'; \theta^-) - Q(s, a; \theta) \right)^2 \right]
+\]
 
-- `basic_dqn_experiment.log` - Basic experiment logs
-- `comprehensive_dqn_analysis.log` - Analysis logs
-- `training_examples.log` - Training example logs
+where \(U(\mathcal{D})\) denotes sampling uniformly from the replay buffer \(\mathcal{D}\).
+
+### Double DQN
+
+DQN is known to suffer from overestimation bias due to the `max` operator in the target Q-value calculation. Double DQN addresses this by decoupling the action selection from the action evaluation. The target Q-value is calculated as:
+
+\[
+Y^{DoubleDQN}_t = r_{t+1} + \gamma Q(s_{t+1}, \arg\max_{a'} Q(s_{t+1}, a'; \theta); \theta^-)
+\]
+
+Here, the online network \(\theta\) is used to select the best action \(a'\) in the next state \(s_{t+1}\), but the target network \(\theta^-\) is used to evaluate the Q-value for that action. This prevents the same network from both selecting and evaluating the action, reducing overestimation.
+
+### Dueling DQN
+
+Dueling DQN proposes a new network architecture rather than a change to the learning algorithm. The Q-network is decomposed into two separate streams:
+
+1.  **State-Value Stream**: Outputs the value of the state, \(V(s; \xi)\).
+2.  **Advantage Stream**: Outputs the advantage of each action, \(A(s, a; \psi)\).
+
+These two streams are then combined to produce the Q-values:
+
+\[
+Q(s, a; \theta) = V(s; \xi) + \left( A(s, a; \psi) - \frac{1}{|\mathcal{A}|} \sum_{a'} A(s, a'; \psi) \right)
+\]
+
+where \(\theta = (\xi, \psi)\) represents the combined parameters of the two streams. This decomposition allows the network to learn the value of states independently of the actions, which can be particularly beneficial in environments where many actions have similar effects on the environment.
+
+### Noisy Networks for Exploration
+
+Traditional DQN uses an \(\epsilon\)-greedy policy for exploration, where \(\epsilon\) decays over time. Noisy Networks introduce noise directly into the weights of the neural network, allowing the agent to learn its own exploration strategy. Each linear layer \(W\mathbf{x} + b\) is replaced by a noisy layer:
+
+\[
+(W + \sigma^w \odot \epsilon^w) \mathbf{x} + (b + \sigma^b \odot \epsilon^b)
+\]
+
+where \(\sigma^w\) and \(\sigma^b\) are learnable standard deviations, and \(\epsilon^w, \epsilon^b\) are random variables. The noise is reset at the beginning of each episode, encouraging consistent exploration over an episode.
+
+## (Planned) Rainbow DQN Components
+
+### Prioritized Experience Replay (PER)
+
+Instead of uniformly sampling experiences from the replay buffer, PER samples transitions based on their temporal difference (TD) error magnitude. Transitions with higher TD error are sampled more frequently, as they are considered more "surprising" or informative. This can lead to faster learning.
+
+The probability of sampling transition \(i\) is given by:
+
+\[
+P(i) = \frac{p_i^\alpha}{\sum_k p_k^\alpha}
+\]
+
+where \(p_i = |\delt-i| + \epsilon\) (\(\delt-i\) is the TD error, \(\epsilon\) is a small positive constant to ensure non-zero probability), and \(\alpha\) is a prioritization exponent. Importance Sampling (IS) weights are used to correct for the bias introduced by non-uniform sampling:
+
+\[
+w_i = \left( \frac{1}{N} \cdot \frac{1}{P(i)} \right)^\beta
+\]
+
+where \(N\) is the buffer size and \(\beta\) is an annealing exponent.
+
+### N-step Q-learning
+
+Standard DQN uses a 1-step Bellman target. N-step Q-learning extends this by considering \(N\) future rewards before bootstrapping from the target Q-network. The \(N\)-step return is calculated as:
+
+\[
+G_t^{(N)} = \sum_{k=0}^{N-1} \gamma^k r_{t+k+1} + \gamma^N \max_{a'} Q(s_{t+N}, a'; \theta^-)
+\]
+
+This provides a richer signal for learning, bridging the gap between 1-step Q-learning and Monte Carlo methods, often leading to faster and more stable learning.
+
+### Distributional RL (C51)
+
+Instead of learning the expected Q-value \(Q(s, a)\), Distributional RL (specifically C51, Categorical 51-atom distribution) learns a categorical distribution over possible returns. The Q-value is then the expectation of this learned distribution. The target distribution is projected onto the support of the current Q-network, and the loss minimizes the KL-divergence between the projected target distribution and the predicted distribution.
+
+## Experimental Analysis
+
+This section will detail the experimental setup, environments used, and expected results.
+
+### Environments
+
+-   **CartPole-v1**: A classic control problem, balancing a pole on a cart. Discrete action space, continuous state space.
+-   **MountainCar-v0**: A sparse reward problem, pushing an underpowered car up a hill. Discrete action space, continuous state space.
+-   **Acrobot-v1**: An underactuated system, swinging a two-link robot to reach a target height. Discrete action space, continuous state space.
+
+### Planned Experiments
+
+1.  **Comparison of DQN Variants**: Train and compare the performance (learning curves, final average rewards, training stability) of Vanilla DQN, Double DQN, Dueling DQN, Dueling Double DQN, and Noisy DQN.
+2.  **Hyperparameter Sensitivity Analysis**: Investigate the impact of learning rate, hidden layer size, and exploration schedule on agent performance.
+3.  **Robustness Analysis**: Evaluate agent performance across different random seeds and reward scaling factors to assess robustness.
+4.  **Ablation Study of Rainbow Components**: (Planned, once implemented) Analyze the individual and combined contributions of Prioritized Replay, N-step learning, and Distributional RL.
+
+### Expected Results
+
+-   Double DQN is expected to outperform Vanilla DQN by reducing overestimation bias.
+-   Dueling DQN should show improved sample efficiency and stability compared to Vanilla DQN, especially in environments where state values are more consistent across actions.
+-   Dueling Double DQN is anticipated to combine the benefits, yielding robust performance.
+-   Noisy DQN is expected to demonstrate more effective and consistent exploration than epsilon-greedy, potentially leading to faster convergence or higher final rewards.
+-   Rainbow DQN (once fully implemented) should achieve superior performance across all metrics due to the synergistic combination of its components.
+
+## Installation and Setup Notes
+
+### Recommended Python Version
+
+Python 3.8+ is recommended.
+
+### Virtual Environment
+
+Always use a virtual environment to manage dependencies.
+
+### GPU Acceleration
+
+Leverage CUDA-enabled GPUs for faster training. Ensure your PyTorch installation is compatible with your GPU drivers.
 
 ## Contributing
 
-To extend this project:
-
-1. **Add new DQN variants** in the `agents/` package
-2. **Create new experiments** in the `experiments/` directory
-3. **Add analysis tools** to `agents/utils.py`
-4. **Add new environments** in `environments/`
-5. **Update the notebook** with new findings
-
-## Troubleshooting
-
-### Common Issues
-
-1. **CUDA out of memory**: Reduce batch size or use CPU
-2. **Slow training**: Check if GPU is being used
-3. **Import errors**: Ensure all dependencies are installed
-4. **Plotting issues**: Install matplotlib and seaborn
-
-### Performance Tips
-
-- Use GPU for faster training
-- Adjust batch size based on available memory
-- Monitor Q-value distributions for debugging
-- Use smaller networks for faster experimentation
+Contributions are welcome! Please ensure that any new code adheres to the project's coding standards, includes appropriate type hints and docstrings, and is covered by tests where applicable.
 
 ## References
 
-- [Playing Atari with Deep Reinforcement Learning](https://arxiv.org/abs/1312.5602) - Original DQN paper
-- [Deep Reinforcement Learning with Double Q-learning](https://arxiv.org/abs/1509.06461) - Double DQN
-- [Dueling Network Architectures for Deep Reinforcement Learning](https://arxiv.org/abs/1511.06581) - Dueling DQN
-- [Rainbow: Combining Improvements in Deep Reinforcement Learning](https://arxiv.org/abs/1710.02298) - Rainbow DQN
-- [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236) - Nature DQN paper
+1.  Mnih, V., Kavukcuoglu, K., Silver, D., Graves, A., Antonoglou, I., Wierstra, D., & Riedmiller, M. (2013). Playing Atari with Deep Reinforcement Learning. *arXiv preprint arXiv:1312.5602*.
+2.  Van Hasselt, H., Guez, A., & Silver, D. (2015). Deep Reinforcement Learning with Double Q-learning. *arXiv preprint arXiv:1509.06461*.
+3.  Wang, Z., Schaul, T., Hessel, M., van Hasselt, H., Silver, D., & de Freitas, N. (2016). Dueling Network Architectures for Deep Reinforcement Learning. *arXiv preprint arXiv:1511.06581*.
+4.  Fortunato, M., Azar, M. G., Piot, B., Hessel, M., Budden, J., van Hasselt, H., ... & Blundell, C. (2017). Noisy Networks for Exploration. *arXiv preprint arXiv:1706.10295*.
+5.  Hessel, M., Modayil, J., van Hasselt, H., Schaul, T., Ostrovski, G., Dabney, W., ... & Silver, D. (2017). Rainbow: Combining Improvements in Deep Reinforcement Learning. *Proceedings of the AAAI Conference on Artificial Intelligence, 32*(1).
 
 ## License
 

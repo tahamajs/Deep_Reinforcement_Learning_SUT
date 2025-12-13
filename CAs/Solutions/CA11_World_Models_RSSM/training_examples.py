@@ -15,12 +15,19 @@ Key Components:
 Author: DRL Course Team
 """
 
+from models.vae import VariationalAutoencoder
+from models.rssm import RSSM
+from agents.dreamer_agent import DreamerAgent
+from experiments.config import (
+    VAE_CONFIG,
+    DREAMER_CONFIG,
+    GLOBAL_CONFIG,
+    update_config_with_env_dims,
+)
+
 import torch
-import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-import torch.distributions as dist
-from torch.distributions import Normal, Independent
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -36,7 +43,7 @@ warnings.filterwarnings("ignore")
 
 
 # Set random seeds for reproducibility
-def set_seed(seed: int = 42):
+def set_seed(seed: int = GLOBAL_CONFIG.seed):
     """Set random seeds for reproducibility"""
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -46,596 +53,7 @@ def set_seed(seed: int = 42):
         torch.cuda.manual_seed_all(seed)
 
 
-set_seed(42)
-
-# =============================================================================
-# VARIATIONAL AUTOENCODER FOR WORLD MODELS
-# =============================================================================
-
-
-class VAEEncoder(nn.Module):
-    """Variational encoder for world models"""
-
-    def __init__(self, obs_dim: int, latent_dim: int, hidden_dim: int = 256):
-        super().__init__()
-        self.obs_dim = obs_dim
-        self.latent_dim = latent_dim
-
-        self.encoder = nn.Sequential(
-            nn.Linear(obs_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 2 * latent_dim),  # Mean and log variance
-        )
-
-    def forward(self, obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Encode observation to latent distribution parameters"""
-        params = self.encoder(obs)
-        mean, log_var = params.chunk(2, dim=-1)
-        return mean, log_var
-
-    def sample(self, mean: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
-        """Sample from latent distribution"""
-        std = torch.exp(0.5 * log_var)
-        eps = torch.randn_like(std)
-        return mean + eps * std
-
-
-class VAEDecoder(nn.Module):
-    """Variational decoder for world models"""
-
-    def __init__(self, latent_dim: int, obs_dim: int, hidden_dim: int = 256):
-        super().__init__()
-        self.latent_dim = latent_dim
-        self.obs_dim = obs_dim
-
-        self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, obs_dim),
-            nn.Sigmoid(),  # Assuming normalized observations
-        )
-
-    def forward(self, latent: torch.Tensor) -> torch.Tensor:
-        """Decode latent to observation"""
-        return self.decoder(latent)
-
-
-class VariationalAutoencoder(nn.Module):
-    """Complete VAE for world models"""
-
-    def __init__(self, obs_dim: int, latent_dim: int, hidden_dim: int = 256):
-        super().__init__()
-        self.obs_dim = obs_dim
-        self.latent_dim = latent_dim
-
-        self.encoder = VAEEncoder(obs_dim, latent_dim, hidden_dim)
-        self.decoder = VAEDecoder(latent_dim, obs_dim, hidden_dim)
-
-    def encode(
-        self, obs: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Encode observation and sample latent"""
-        mean, log_var = self.encoder(obs)
-        latent = self.encoder.sample(mean, log_var)
-        return latent, mean, log_var
-
-    def decode(self, latent: torch.Tensor) -> torch.Tensor:
-        """Decode latent to observation"""
-        return self.decoder(latent)
-
-    def forward(
-        self, obs: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Full VAE forward pass"""
-        latent, mean, log_var = self.encode(obs)
-        reconstruction = self.decode(latent)
-        return reconstruction, latent, mean, log_var
-
-    def loss_function(
-        self,
-        reconstruction: torch.Tensor,
-        obs: torch.Tensor,
-        mean: torch.Tensor,
-        log_var: torch.Tensor,
-    ) -> torch.Tensor:
-        """VAE loss: reconstruction + KL divergence"""
-        # Reconstruction loss
-        recon_loss = F.mse_loss(reconstruction, obs, reduction="sum")
-
-        # KL divergence
-        kl_loss = -0.5 * torch.sum(1 + log_var - mean.pow(2) - log_var.exp())
-
-        return recon_loss + kl_loss
-
-
-# =============================================================================
-# RECURRENT STATE SPACE MODEL (RSSM)
-# =============================================================================
-
-
-class RSSM(nn.Module):
-    """Recurrent State Space Model for world models"""
-
-    def __init__(
-        self,
-        obs_dim: int,
-        action_dim: int,
-        latent_dim: int = 32,
-        hidden_dim: int = 256,
-        stochastic_size: int = 32,
-    ):
-        super().__init__()
-        self.obs_dim = obs_dim
-        self.action_dim = action_dim
-        self.latent_dim = latent_dim
-        self.stochastic_size = stochastic_size
-        self.deterministic_size = latent_dim - stochastic_size
-
-        # Observation encoder
-        self.obs_encoder = nn.Sequential(
-            nn.Linear(obs_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 2 * stochastic_size),  # Posterior parameters
-        )
-
-        # Recurrent model (GRU)
-        self.rnn = nn.GRUCell(stochastic_size + action_dim, self.deterministic_size)
-
-        # Prior model
-        self.prior_net = nn.Sequential(
-            nn.Linear(self.deterministic_size, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 2 * stochastic_size),  # Prior parameters
-        )
-
-        # Decoder
-        self.decoder = nn.Sequential(
-            nn.Linear(stochastic_size + self.deterministic_size, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, obs_dim),
-            nn.Sigmoid(),
-        )
-
-        # Reward predictor
-        self.reward_predictor = nn.Sequential(
-            nn.Linear(stochastic_size + self.deterministic_size, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1),
-        )
-
-        # Continue predictor (for episode termination)
-        self.continue_predictor = nn.Sequential(
-            nn.Linear(stochastic_size + self.deterministic_size, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1),
-            nn.Sigmoid(),
-        )
-
-    def imagine_step(
-        self,
-        prev_state: torch.Tensor,
-        prev_action: torch.Tensor,
-        prev_latent: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """One step of imagination in latent space"""
-        # Update deterministic state
-        rnn_input = torch.cat([prev_latent, prev_action], dim=-1)
-        det_state = self.rnn(rnn_input, prev_state)
-
-        # Sample from prior
-        prior_params = self.prior_net(det_state)
-        prior_mean, prior_log_var = prior_params.chunk(2, dim=-1)
-        prior_latent = self._sample_latent(prior_mean, prior_log_var)
-
-        # Predict reward and continue
-        full_state = torch.cat([prior_latent, det_state], dim=-1)
-        reward = self.reward_predictor(full_state)
-        continue_prob = self.continue_predictor(full_state)
-
-        return det_state, prior_latent, reward, continue_prob
-
-    def observe_step(
-        self, obs: torch.Tensor, prev_state: torch.Tensor, prev_action: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        """One step of observation processing"""
-        # Update deterministic state
-        rnn_input = torch.cat(
-            [
-                (
-                    prev_latent
-                    if "prev_latent" in locals()
-                    else torch.zeros_like(prev_state[:, : self.stochastic_size])
-                ),
-                prev_action,
-            ],
-            dim=-1,
-        )
-        det_state = self.rnn(rnn_input, prev_state)
-
-        # Posterior from observation
-        posterior_params = self.obs_encoder(obs)
-        post_mean, post_log_var = posterior_params.chunk(2, dim=-1)
-        post_latent = self._sample_latent(post_mean, post_log_var)
-
-        # Prior for comparison
-        prior_params = self.prior_net(det_state)
-        prior_mean, prior_log_var = prior_params.chunk(2, dim=-1)
-
-        # Decode observation
-        full_state = torch.cat([post_latent, det_state], dim=-1)
-        obs_reconstruction = self.decoder(full_state)
-        reward_pred = self.reward_predictor(full_state)
-        continue_pred = self.continue_predictor(full_state)
-
-        return (
-            det_state,
-            post_latent,
-            obs_reconstruction,
-            reward_pred,
-            continue_pred,
-            prior_mean,
-            prior_log_var,
-            post_mean,
-            post_log_var,
-        )
-
-    def _sample_latent(self, mean: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
-        """Sample from latent distribution"""
-        std = torch.exp(0.5 * log_var)
-        eps = torch.randn_like(std)
-        return mean + eps * std
-
-    def imagine_trajectory(
-        self,
-        initial_state: torch.Tensor,
-        initial_latent: torch.Tensor,
-        actions: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Imagine trajectory given action sequence"""
-        det_states = []
-        latents = []
-        rewards = []
-
-        state = initial_state
-        latent = initial_latent
-
-        for action in actions:
-            state, latent, reward, _ = self.imagine_step(state, action, latent)
-            det_states.append(state)
-            latents.append(latent)
-            rewards.append(reward)
-
-        return torch.stack(det_states), torch.stack(latents), torch.stack(rewards)
-
-
-# =============================================================================
-# LATENT ACTOR-CRITIC
-# =============================================================================
-
-
-class LatentActor(nn.Module):
-    """Actor for latent space policy"""
-
-    def __init__(self, latent_dim: int, action_dim: int, hidden_dim: int = 256):
-        super().__init__()
-        self.latent_dim = latent_dim
-        self.action_dim = action_dim
-
-        self.actor = nn.Sequential(
-            nn.Linear(latent_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(
-                hidden_dim, 2 * action_dim
-            ),  # Mean and log std for continuous actions
-        )
-
-    def forward(self, latent: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Get action distribution parameters"""
-        params = self.actor(latent)
-        mean, log_std = params.chunk(2, dim=-1)
-        log_std = torch.clamp(log_std, -20, 2)  # Clamp for numerical stability
-        return mean, log_std
-
-    def sample(self, latent: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Sample action from policy"""
-        mean, log_std = self.forward(latent)
-        std = torch.exp(log_std)
-
-        normal = Normal(mean, std)
-        action = normal.rsample()
-
-        # Compute log probability
-        log_prob = normal.log_prob(action).sum(dim=-1, keepdim=True)
-
-        # Squash action to [-1, 1]
-        action = torch.tanh(action)
-        log_prob -= torch.log(1 - action.pow(2) + 1e-6).sum(dim=-1, keepdim=True)
-
-        return action, log_prob
-
-
-class LatentCritic(nn.Module):
-    """Critic for latent space value estimation"""
-
-    def __init__(self, latent_dim: int, hidden_dim: int = 256):
-        super().__init__()
-        self.critic = nn.Sequential(
-            nn.Linear(latent_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1),
-        )
-
-    def forward(self, latent: torch.Tensor) -> torch.Tensor:
-        """Estimate value of latent state"""
-        return self.critic(latent)
-
-
-class LatentActorCritic(nn.Module):
-    """Complete latent actor-critic"""
-
-    def __init__(self, latent_dim: int, action_dim: int, hidden_dim: int = 256):
-        super().__init__()
-        self.actor = LatentActor(latent_dim, action_dim, hidden_dim)
-        self.critic = LatentCritic(latent_dim, hidden_dim)
-
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=1e-4)
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=1e-4)
-
-    def act(self, latent: torch.Tensor, deterministic: bool = False) -> torch.Tensor:
-        """Select action in latent space"""
-        if deterministic:
-            mean, _ = self.actor(latent)
-            return torch.tanh(mean)
-        else:
-            action, _ = self.actor.sample(latent)
-            return action
-
-    def evaluate(
-        self, latents: torch.Tensor, actions: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Evaluate actions in latent space"""
-        mean, log_std = self.actor(latents)
-        std = torch.exp(log_std)
-
-        normal = Normal(mean, std)
-        log_prob = normal.log_prob(actions).sum(dim=-1, keepdim=True)
-        log_prob -= torch.log(1 - actions.pow(2) + 1e-6).sum(dim=-1, keepdim=True)
-
-        values = self.critic(latents)
-
-        return log_prob, values
-
-
-# =============================================================================
-# DREAMER AGENT
-# =============================================================================
-
-
-class DreamerAgent:
-    """Complete Dreamer agent implementation"""
-
-    def __init__(
-        self,
-        obs_dim: int,
-        action_dim: int,
-        latent_dim: int = 32,
-        hidden_dim: int = 256,
-        imagination_horizon: int = 15,
-    ):
-        self.obs_dim = obs_dim
-        self.action_dim = action_dim
-        self.latent_dim = latent_dim
-        self.imagination_horizon = imagination_horizon
-
-        # World model components
-        self.rssm = RSSM(obs_dim, action_dim, latent_dim, hidden_dim)
-
-        # Actor-critic in latent space
-        self.actor_critic = LatentActorCritic(latent_dim, action_dim, hidden_dim)
-
-        # Experience buffer
-        self.buffer = deque(maxlen=100000)
-
-        # Optimizers
-        self.world_optimizer = optim.Adam(self.rssm.parameters(), lr=1e-3)
-        self.actor_optimizer = optim.Adam(self.actor_critic.actor.parameters(), lr=8e-5)
-        self.critic_optimizer = optim.Adam(
-            self.actor_critic.critic.parameters(), lr=8e-5
-        )
-
-    def select_action(
-        self, obs: torch.Tensor, deterministic: bool = False
-    ) -> torch.Tensor:
-        """Select action using current world model"""
-        # Encode observation
-        with torch.no_grad():
-            obs_tensor = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
-            latent, _, _ = self.rssm.obs_encoder(obs_tensor).chunk(2, dim=-1)
-            latent = self.rssm._sample_latent(
-                *self.rssm.obs_encoder(obs_tensor).chunk(2, dim=-1)
-            )
-
-            # Get action from actor
-            action = self.actor_critic.act(latent, deterministic)
-
-        return action.squeeze(0).numpy()
-
-    def store_transition(
-        self,
-        obs: torch.Tensor,
-        action: torch.Tensor,
-        reward: float,
-        next_obs: torch.Tensor,
-        done: bool,
-    ):
-        """Store transition in buffer"""
-        self.buffer.append(
-            {
-                "obs": obs,
-                "action": action,
-                "reward": reward,
-                "next_obs": next_obs,
-                "done": done,
-            }
-        )
-
-    def update_world_model(self, batch_size: int = 50) -> Dict[str, float]:
-        """Update world model using data from buffer"""
-        if len(self.buffer) < batch_size:
-            return {}
-
-        # Sample batch
-        batch = random.sample(list(self.buffer), batch_size)
-        obs_batch = torch.stack([torch.tensor(t["obs"]) for t in batch])
-        action_batch = torch.stack([torch.tensor(t["action"]) for t in batch])
-        reward_batch = torch.tensor([t["reward"] for t in batch], dtype=torch.float32)
-        next_obs_batch = torch.stack([torch.tensor(t["next_obs"]) for t in batch])
-
-        self.world_optimizer.zero_grad()
-
-        # Process sequence (simplified single-step for now)
-        det_state = torch.zeros(batch_size, self.rssm.deterministic_size)
-        prev_latent = torch.zeros(batch_size, self.rssm.stochastic_size)
-
-        # Observation step
-        (
-            det_state,
-            post_latent,
-            obs_recon,
-            reward_pred,
-            continue_pred,
-            prior_mean,
-            prior_log_var,
-            post_mean,
-            post_log_var,
-        ) = self.rssm.observe_step(obs_batch, det_state, action_batch)
-
-        # Losses
-        obs_loss = F.mse_loss(obs_recon, obs_batch)
-        reward_loss = F.mse_loss(reward_pred.squeeze(), reward_batch)
-        continue_loss = F.binary_cross_entropy(
-            continue_pred.squeeze(),
-            torch.tensor([not t["done"] for t in batch], dtype=torch.float32),
-        )
-
-        # KL divergence between posterior and prior
-        kl_loss = self._kl_divergence(
-            post_mean, post_log_var, prior_mean, prior_log_var
-        )
-
-        total_loss = obs_loss + reward_loss + continue_loss + kl_loss
-
-        total_loss.backward()
-        self.world_optimizer.step()
-
-        return {
-            "obs_loss": obs_loss.item(),
-            "reward_loss": reward_loss.item(),
-            "continue_loss": continue_loss.item(),
-            "kl_loss": kl_loss.item(),
-            "total_world_loss": total_loss.item(),
-        }
-
-    def _kl_divergence(
-        self,
-        mean1: torch.Tensor,
-        log_var1: torch.Tensor,
-        mean2: torch.Tensor,
-        log_var2: torch.Tensor,
-    ) -> torch.Tensor:
-        """Compute KL divergence between two Gaussians"""
-        var1 = torch.exp(log_var1)
-        var2 = torch.exp(log_var2)
-
-        kl = 0.5 * (log_var2 - log_var1 + (var1 + (mean1 - mean2).pow(2)) / var2 - 1)
-        return kl.sum()
-
-    def update_actor_critic(self, batch_size: int = 50) -> Dict[str, float]:
-        """Update actor-critic using imagination"""
-        if len(self.buffer) < batch_size:
-            return {}
-
-        # Sample initial states from buffer
-        batch = random.sample(list(self.buffer), batch_size)
-        obs_batch = torch.stack([torch.tensor(t["obs"]) for t in batch])
-
-        # Encode initial observations
-        with torch.no_grad():
-            post_params = self.rssm.obs_encoder(obs_batch)
-            init_latent = self.rssm._sample_latent(*post_params.chunk(2, dim=-1))
-            init_det_state = torch.zeros(batch_size, self.rssm.deterministic_size)
-
-        # Imagine trajectories
-        imagined_latents = []
-        imagined_rewards = []
-        imagined_actions = []
-        imagined_log_probs = []
-
-        latent = init_latent
-        det_state = init_det_state
-
-        for _ in range(self.imagination_horizon):
-            # Sample action
-            action, log_prob = self.actor_critic.actor.sample(latent)
-
-            # Imagine next state
-            det_state, latent, reward, _ = self.rssm.imagine_step(
-                det_state, action, latent
-            )
-
-            imagined_latents.append(latent)
-            imagined_rewards.append(reward)
-            imagined_actions.append(action)
-            imagined_log_probs.append(log_prob)
-
-        # Stack imagined trajectory
-        imagined_latents = torch.stack(imagined_latents)  # [horizon, batch, latent_dim]
-        imagined_rewards = torch.stack(imagined_rewards)  # [horizon, batch, 1]
-        imagined_actions = torch.stack(imagined_actions)  # [horizon, batch, action_dim]
-        imagined_log_probs = torch.stack(imagined_log_probs)  # [horizon, batch, 1]
-
-        # Compute returns
-        returns = self._compute_returns(imagined_rewards)
-
-        # Update critic
-        self.critic_optimizer.zero_grad()
-        values = self.actor_critic.critic(imagined_latents.view(-1, self.latent_dim))
-        critic_loss = F.mse_loss(values, returns.view(-1, 1))
-        critic_loss.backward()
-        self.critic_optimizer.step()
-
-        # Update actor
-        self.actor_optimizer.zero_grad()
-        advantages = returns - values.detach()
-        actor_loss = -(imagined_log_probs.view(-1) * advantages.view(-1)).mean()
-        actor_loss.backward()
-        self.actor_optimizer.step()
-
-        return {"actor_loss": actor_loss.item(), "critic_loss": critic_loss.item()}
-
-    def _compute_returns(
-        self, rewards: torch.Tensor, gamma: float = 0.99
-    ) -> torch.Tensor:
-        """Compute discounted returns"""
-        returns = []
-        R = 0
-        for r in reversed(rewards):
-            R = r + gamma * R
-            returns.insert(0, R)
-        return torch.stack(returns)
-
+set_seed(GLOBAL_CONFIG.seed)
 
 # =============================================================================
 # TRAINING UTILITIES
@@ -643,28 +61,33 @@ class DreamerAgent:
 
 
 def train_vae_world_model(
-    env_name: str = "Pendulum-v1",
-    latent_dim: int = 32,
-    num_episodes: int = 100,
-    batch_size: int = 64,
-    seed: int = 42,
+    env_name: str = VAE_CONFIG.env_name,
+    latent_dim: int = VAE_CONFIG.latent_dim,
+    num_episodes: int = VAE_CONFIG.num_episodes_data_collection,
+    batch_size: int = VAE_CONFIG.batch_size,
+    seed: int = GLOBAL_CONFIG.seed,
 ) -> Dict[str, Any]:
     """Train VAE-based world model"""
 
     set_seed(seed)
+    update_config_with_env_dims(env_name)
 
     env = gym.make(env_name)
     obs_dim = env.observation_space.shape[0]
 
-    vae = VariationalAutoencoder(obs_dim, latent_dim)
-    optimizer = optim.Adam(vae.parameters(), lr=1e-3)
+    vae = VariationalAutoencoder(
+        obs_dim=obs_dim,
+        latent_dim=latent_dim,
+        hidden_dim=VAE_CONFIG.hidden_dim,
+    ).to(GLOBAL_CONFIG.device)
+    optimizer = optim.Adam(vae.parameters(), lr=VAE_CONFIG.learning_rate)
 
     # Collect experience
     print(f"Collecting experience for VAE training on {env_name}")
     observations = []
 
     for episode in tqdm(range(num_episodes)):
-        obs, _ = env.reset()
+        obs, _ = env.reset(seed=GLOBAL_CONFIG.seed + episode)
         done = False
 
         while not done:
@@ -676,13 +99,13 @@ def train_vae_world_model(
     env.close()
 
     # Convert to tensor
-    obs_tensor = torch.tensor(np.array(observations), dtype=torch.float32)
+    obs_tensor = torch.tensor(np.array(observations), dtype=torch.float32).to(GLOBAL_CONFIG.device)
 
     # Train VAE
     print("Training VAE world model...")
     losses = {"reconstruction": [], "kl": [], "total": []}
 
-    num_epochs = 100
+    num_epochs = VAE_CONFIG.num_epochs
     for epoch in tqdm(range(num_epochs)):
         # Shuffle data
         indices = torch.randperm(len(obs_tensor))
@@ -719,23 +142,24 @@ def train_vae_world_model(
 
 
 def train_dreamer_agent(
-    env_name: str = "Pendulum-v1",
-    num_episodes: int = 1000,
-    max_steps: int = 200,
-    seed: int = 42,
+    env_name: str = DREAMER_CONFIG.env_name,
+    num_episodes: int = DREAMER_CONFIG.num_episodes,
+    max_steps: int = DREAMER_CONFIG.max_steps,
+    seed: int = GLOBAL_CONFIG.seed,
 ) -> Dict[str, Any]:
     """Train Dreamer agent"""
 
     set_seed(seed)
+    update_config_with_env_dims(env_name)
 
     env = gym.make(env_name)
     obs_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
 
-    agent = DreamerAgent(obs_dim, action_dim)
+    agent = DreamerAgent(obs_dim, action_dim, GLOBAL_CONFIG)
 
     episode_rewards = []
-    world_losses = {"obs": [], "reward": [], "kl": [], "total": []}
+    world_losses = {"obs": [], "reward": [], "continue": [], "kl": [], "total": []}
     actor_losses = []
     critic_losses = []
 
@@ -743,7 +167,7 @@ def train_dreamer_agent(
     print("=" * 40)
 
     for episode in tqdm(range(num_episodes)):
-        obs, _ = env.reset()
+        obs, _ = env.reset(seed=GLOBAL_CONFIG.seed + episode)
         episode_reward = 0
 
         for step in range(max_steps):
@@ -762,15 +186,15 @@ def train_dreamer_agent(
         episode_rewards.append(episode_reward)
 
         # Update world model
-        if len(agent.buffer) > 100:
-            world_loss_dict = agent.update_world_model()
+        if len(agent.buffer) > agent.rssm.stochastic_size:  # Minimum batch size for RSSM
+            world_loss_dict = agent.update_world_model(batch_size=DREAMER_CONFIG.agent_config.batch_size)
             for key, value in world_loss_dict.items():
                 if key in world_losses and value is not None:
                     world_losses[key].append(value)
 
         # Update actor-critic
-        if len(agent.buffer) > 100:
-            ac_loss_dict = agent.update_actor_critic()
+        if len(agent.buffer) > agent.rssm.stochastic_size:
+            ac_loss_dict = agent.update_actor_critic(batch_size=DREAMER_CONFIG.agent_config.batch_size)
             if "actor_loss" in ac_loss_dict:
                 actor_losses.append(ac_loss_dict["actor_loss"])
                 critic_losses.append(ac_loss_dict["critic_loss"])
@@ -794,7 +218,7 @@ def train_dreamer_agent(
 
 
 def compare_world_model_methods(
-    env_name: str = "Pendulum-v1", num_runs: int = 3, num_episodes: int = 200
+    env_name: str = DREAMER_CONFIG.env_name, num_runs: int = 3, num_episodes: int = DREAMER_CONFIG.num_episodes // 5
 ) -> Dict[str, Any]:
     """Compare different world model approaches"""
 
@@ -807,16 +231,17 @@ def compare_world_model_methods(
         run_rewards = []
 
         for run in range(num_runs):
-            set_seed(42 + run)
+            set_seed(GLOBAL_CONFIG.seed + run)
+            update_config_with_env_dims(env_name)
 
             if method == "VAE World Model":
                 # For VAE, just collect random experience
                 env = gym.make(env_name)
                 rewards = []
                 for episode in range(num_episodes):
-                    obs, _ = env.reset()
+                    obs, _ = env.reset(seed=GLOBAL_CONFIG.seed + episode)
                     episode_reward = 0
-                    for step in range(200):
+                    for step in range(DREAMER_CONFIG.max_steps):
                         action = env.action_space.sample()
                         obs, reward, terminated, truncated, _ = env.step(action)
                         episode_reward += reward
@@ -827,7 +252,7 @@ def compare_world_model_methods(
                 run_rewards.append(rewards)
             else:  # Dreamer
                 result = train_dreamer_agent(
-                    env_name, num_episodes=num_episodes, seed=42 + run
+                    env_name, num_episodes=num_episodes, seed=GLOBAL_CONFIG.seed + run
                 )
                 run_rewards.append(result["episode_rewards"])
 
@@ -856,7 +281,7 @@ def analyze_world_model_representations(save_path: Optional[str] = None) -> plt.
     print("=" * 50)
 
     # Generate synthetic data for visualization
-    np.random.seed(42)
+    np.random.seed(GLOBAL_CONFIG.seed)
     n_samples = 1000
 
     # Create different types of observations
@@ -870,7 +295,7 @@ def analyze_world_model_representations(save_path: Optional[str] = None) -> plt.
 
     # Simulate VAE encoding
     latent_dim = 2
-    np.random.seed(42)
+    np.random.seed(GLOBAL_CONFIG.seed)
     # Mock latent representations for visualization
     latents = np.random.normal(0, 1, (n_samples, latent_dim))
 
@@ -1239,5 +664,5 @@ if __name__ == "__main__":
     print("4. analyze_world_model_representations() - Representation analysis")
     print("5. comprehensive_world_models_analysis() - Full method comparison")
     print("\nExample usage:")
-    print("results = train_dreamer_agent(num_episodes=500)")
+    print(f"results = train_dreamer_agent(num_episodes={DREAMER_CONFIG.num_episodes})")
     # print("comparison = compare_world_model_methods()")

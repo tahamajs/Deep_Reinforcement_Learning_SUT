@@ -28,64 +28,64 @@ warnings.filterwarnings("ignore")
 
 
 class DoubleDQNAgent(DQNAgent):
-    """Double DQN agent that addresses overestimation bias"""
+    """
+    Double DQN Agent - addresses overestimation bias in Q-learning.
 
-    def __init__(self, state_size, action_size, **kwargs):
-        super().__init__(state_size, action_size, **kwargs)
-        self.agent_type = "Double DQN"
+    Double DQN uses two Q-networks: one to select the action and another to
+    evaluate the Q-value for that action, decoupling the selection from the
+    evaluation step to mitigate the overestimation problem inherent in standard DQN.
+    """
 
-        # Additional tracking for bias analysis
-        self.q_value_estimates = []
-        self.target_values = []
+    def update(self) -> float:
+        """
+        Updates the Q-network using the Double DQN algorithm.
 
-    def train_step(self):
-        """Double DQN training step with bias correction"""
-        if len(self.memory) < self.batch_size:
-            return None
+        This involves sampling a batch of transitions from the replay buffer,
+        calculating the target Q-values using the Double DQN approach,
+        and performing a gradient descent step on the online Q-network.
 
-        # Sample batch of experiences
-        experiences = self.memory.sample(self.batch_size)
-        batch = self.experience_to_batch(experiences)
+        Returns:
+            float: The loss value from the update step.
+        """
+        if len(self.replay_buffer) < self.batch_size:
+            return 0.0
 
-        states, actions, rewards, next_states, dones = batch
+        # Sample batch
+        transitions = self.replay_buffer.sample(self.batch_size)
+        batch = Transition(*zip(*transitions))
 
-        # Current Q values
-        current_q_values = self.q_network(states).gather(1, actions)
+        states = torch.FloatTensor(np.array(batch.state)).to(self.device)
+        actions = torch.LongTensor(batch.action).to(self.device)
+        rewards = torch.FloatTensor(batch.reward).to(self.device)
+        next_states = torch.FloatTensor(np.array(batch.next_state)).to(self.device)
+        dones = torch.FloatTensor(batch.done).to(self.device)
 
-        # Double DQN target computation
+        # Current Q values from online network
+        current_q = self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze()
+
+        # Double DQN: select next action with online Q-network, evaluate with target Q-network
         with torch.no_grad():
-            # Action selection: use online network
-            next_actions = self.q_network(next_states).argmax(1, keepdim=True)
-            # Action evaluation: use target network
-            next_q_values = self.target_network(next_states).gather(1, next_actions)
-            target_q_values = rewards + (self.gamma * next_q_values * (1 - dones))
+            # Select best action from the online Q-network for the next state
+            next_online_q_values = self.q_network(next_states)
+            next_actions = next_online_q_values.argmax(1)
 
-        # Compute loss
-        loss = F.mse_loss(current_q_values, target_q_values)
+            # Evaluate the selected actions using the target Q-network
+            next_target_q = self.target_network(next_states).gather(1, next_actions.unsqueeze(1)).squeeze()
+            target_q = rewards + (1 - dones) * self.gamma * next_target_q
 
-        # Optimize
+        # Loss and update
+        loss = F.mse_loss(current_q, target_q)
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
         self.optimizer.step()
 
-        # Update target network periodically
-        self.step_count += 1
-        if self.step_count % self.target_update_freq == 0:
-            self.update_target_network()
+        # Update target network
+        self.steps += 1
+        if self.steps % self.target_update_freq == 0:
+            self.target_network.load_state_dict(self.q_network.state_dict())
 
         # Decay epsilon
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
-
-        # Store training metrics
-        self.losses.append(loss.item())
-        avg_q_value = current_q_values.mean().item()
-        avg_target = target_q_values.mean().item()
-
-        self.q_values.append(avg_q_value)
-        self.q_value_estimates.append(avg_q_value)
-        self.target_values.append(avg_target)
+        self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
 
         return loss.item()
 

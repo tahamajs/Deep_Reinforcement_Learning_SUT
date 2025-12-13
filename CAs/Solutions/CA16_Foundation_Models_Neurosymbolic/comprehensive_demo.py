@@ -13,10 +13,13 @@ import seaborn as sns
 from pathlib import Path
 import sys
 
+# Import config
+from src.config import config
+
 # Setup
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-np.random.seed(42)
-torch.manual_seed(42)
+device = torch.device(config.DEVICE)
+np.random.seed(config.SEED)
+torch.manual_seed(config.SEED)
 
 print("=" * 70)
 print("CA16: Comprehensive Demonstration of Cutting-Edge Deep RL")
@@ -32,28 +35,32 @@ print("\n" + "=" * 70)
 print("1. FOUNDATION MODELS")
 print("=" * 70)
 
-from foundation_models import (
+from src.foundation_models.algorithms import (
     DecisionTransformer,
     MultiTaskDecisionTransformer,
     InContextLearner,
+    ScalingAnalyzer,
+)
+from src.foundation_models.training import (
     FoundationModelTrainer,
     MultiTaskTrainer,
     InContextTrainer,
-    ScalingAnalyzer,
 )
 
 # 1.1 Decision Transformer
 print("\n[1.1] Decision Transformer Training...")
-state_dim, action_dim, seq_len, batch_size = 12, 4, 20, 16
+state_dim, action_dim, seq_len, batch_size = (
+    config.STATE_DIM, config.ACTION_DIM, config.SEQ_LEN, config.BATCH_SIZE
+)
 dt_model = DecisionTransformer(
-    state_dim=state_dim, action_dim=action_dim, model_dim=128, num_heads=8, num_layers=6
+    state_dim=state_dim, action_dim=action_dim, model_dim=config.TRANSFORMER_DIM, num_heads=config.NUM_HEADS, num_layers=config.NUM_LAYERS
 ).to(device)
 
-trainer = FoundationModelTrainer(dt_model, lr=1e-3, device=str(device))
+trainer = FoundationModelTrainer(dt_model, lr=config.LEARNING_RATE, device=str(device))
 
 # Training loop
 dt_losses = []
-for step in range(50):
+for step in range(config.NUM_EPOCHS):
     states = torch.randn(batch_size, seq_len, state_dim).to(device)
     actions = torch.zeros(batch_size, seq_len, action_dim).to(device)
     idx = torch.randint(0, action_dim, (batch_size, seq_len), device=device)
@@ -70,20 +77,20 @@ print(
 
 # 1.2 Multi-Task Learning
 print("\n[1.2] Multi-Task Decision Transformer...")
-num_tasks = 3
+num_tasks = config.NUM_TASKS
 mt_model = MultiTaskDecisionTransformer(
     state_dim=state_dim,
     action_dim=action_dim,
     num_tasks=num_tasks,
-    model_dim=128,
-    num_heads=8,
-    num_layers=4,
+    model_dim=config.TRANSFORMER_DIM,
+    num_heads=config.NUM_HEADS,
+    num_layers=config.NUM_LAYERS,
 ).to(device)
 
-mt_trainer = MultiTaskTrainer(mt_model, lr=1e-3, device=str(device))
+mt_trainer = MultiTaskTrainer(mt_model, lr=config.LEARNING_RATE, device=str(device))
 
 mt_losses_by_task = {i: [] for i in range(num_tasks)}
-for step in range(30):
+for step in range(config.NUM_EPOCHS):
     task_id = step % num_tasks
     task_ids = torch.tensor([task_id] * batch_size, device=device)
 
@@ -104,24 +111,24 @@ for task_id, losses in mt_losses_by_task.items():
 # 1.3 In-Context Learning
 print("\n[1.3] In-Context Learning...")
 icl_model = InContextLearner(
-    state_dim=state_dim, action_dim=action_dim, model_dim=128, num_heads=8, num_layers=4
+    state_dim=state_dim, action_dim=action_dim, model_dim=config.TRANSFORMER_DIM, num_heads=config.NUM_HEADS, num_layers=config.NUM_LAYERS
 ).to(device)
 
-icl_trainer = InContextTrainer(icl_model, lr=1e-3, device=str(device))
+icl_trainer = InContextTrainer(icl_model, lr=config.LEARNING_RATE, device=str(device))
 
 icl_losses = []
-for step in range(30):
+for step in range(config.NUM_EPOCHS):
     # Context examples (few-shot)
-    context_states = torch.randn(batch_size, 5, state_dim).to(device)
-    context_actions = torch.zeros(batch_size, 5, action_dim).to(device)
-    idx = torch.randint(0, action_dim, (batch_size, 5), device=device)
+    context_states = torch.randn(batch_size, config.CONTEXT_LENGTH, state_dim).to(device)
+    context_actions = torch.zeros(batch_size, config.CONTEXT_LENGTH, action_dim).to(device)
+    idx = torch.randint(0, action_dim, (batch_size, config.CONTEXT_LENGTH), device=device)
     context_actions.scatter_(2, idx.unsqueeze(-1), 1.0)
-    context_returns = torch.randn(batch_size, 5).to(device)
+    context_returns = torch.randn(batch_size, config.CONTEXT_LENGTH).to(device)
 
     # Query examples
-    query_states = torch.randn(batch_size, 10, state_dim).to(device)
-    query_actions = torch.zeros(batch_size, 10, action_dim).to(device)
-    idx = torch.randint(0, action_dim, (batch_size, 10), device=device)
+    query_states = torch.randn(batch_size, config.QUERY_LENGTH, state_dim).to(device)
+    query_actions = torch.zeros(batch_size, config.QUERY_LENGTH, action_dim).to(device)
+    idx = torch.randint(0, action_dim, (batch_size, config.QUERY_LENGTH), device=device)
     query_actions.scatter_(2, idx.unsqueeze(-1), 1.0)
 
     loss = icl_trainer.train_step(
@@ -137,9 +144,9 @@ print(
 print("\n[1.4] Scaling Laws Analysis...")
 analyzer = ScalingAnalyzer()
 
-model_sizes = [32, 64, 128, 256, 512]
-performances = [0.5, 0.65, 0.75, 0.82, 0.87]
-dataset_sizes = [1000, 5000, 10000, 50000, 100000]
+model_sizes = config.SCALING_MODEL_SIZES
+performances = config.SCALING_PERFORMANCES
+dataset_sizes = config.SCALING_DATASET_SIZES
 
 results = analyzer.analyze_scaling(model_sizes, performances, dataset_sizes)
 print(f"✅ Scaling Analysis:")
@@ -153,8 +160,10 @@ print("\n" + "=" * 70)
 print("2. NEUROSYMBOLIC RL")
 print("=" * 70)
 
-from neurosymbolic import (
+from src.neurosymbolic.policies import (
     NeurosymbolicAgent,
+)
+from src.neurosymbolic.knowledge_base import (
     SymbolicKnowledgeBase,
     LogicalPredicate,
     LogicalRule,
@@ -174,7 +183,7 @@ kb.add_predicate(goal_pred)
 kb.add_predicate(action_allowed_pred)
 
 # Add rules
-rule1 = LogicalRule(action_allowed_pred, [safe_pred, goal_pred], weight=1.0)
+rule1 = LogicalRule(action_allowed_pred, [safe_pred, goal_pred], weight=config.SYMBOLIC_WEIGHT)
 kb.add_rule(rule1)
 
 # Add facts
@@ -189,13 +198,13 @@ print(
 # 2.2 Neurosymbolic Agent
 print("\n[2.2] Neurosymbolic Agent Training...")
 ns_agent = NeurosymbolicAgent(
-    state_dim=state_dim, action_dim=action_dim, knowledge_base=kb, lr=1e-3
+    state_dim=state_dim, action_dim=action_dim, knowledge_base=kb, lr=config.LEARNING_RATE
 )
 
 ns_losses = []
 ns_rewards = []
 
-for episode in range(30):
+for episode in range(config.NUM_EPOCHS):
     states = torch.randn(batch_size, state_dim)
 
     with torch.no_grad():
@@ -219,43 +228,48 @@ print("\n" + "=" * 70)
 print("3. HUMAN-AI COLLABORATION")
 print("=" * 70)
 
-from human_ai_collaboration import (
+from src.human_ai_collaboration.collaborative_agent import (
     CollaborativeAgent,
-    HumanFeedbackCollector,
+)
+from src.human_ai_collaboration.preference_model import (
     PreferenceModel,
-    InteractiveLearner,
+)
+from src.human_ai_collaboration.feedback_collector import (
+    HumanFeedbackCollector,
+)
+from src.human_ai_collaboration.trust_model import (
     TrustModel,
 )
 
 # 3.1 Collaborative Agent
 print("\n[3.1] Collaborative Agent...")
 collab_agent = CollaborativeAgent(
-    state_dim=state_dim, action_dim=action_dim, collaboration_threshold=0.7
+    state_dim=state_dim, action_dim=action_dim, collaboration_threshold=config.COLLABORATION_THRESHOLD
 )
 
 collab_rewards = []
 collab_interventions = []
 
-for episode in range(40):
+for episode in range(config.NUM_EPOCHS):
     state = torch.randn(state_dim)
     action, confidence = collab_agent.select_action(state)
 
     # Mock environment step
-    reward = np.random.normal(1.0 if confidence > 0.7 else 0.5, 0.3)
+    reward = np.random.normal(1.0 if confidence > config.COLLABORATION_THRESHOLD else 0.5, 0.3)
     collab_rewards.append(reward)
 
-    if confidence < 0.7:
+    if confidence < config.COLLABORATION_THRESHOLD:
         collab_interventions.append(episode)
 
 print(f"✅ Collaborative Agent: Avg Reward = {np.mean(collab_rewards):.4f}")
-print(f"   Human Interventions: {len(collab_interventions)}/40 episodes")
+print(f"   Human Interventions: {len(collab_interventions)}/{config.NUM_EPOCHS} episodes")
 
 # 3.2 Preference Learning
 print("\n[3.2] Preference Model Training...")
-pref_model = PreferenceModel(state_dim=state_dim, action_dim=action_dim, hidden_dim=64)
+pref_model = PreferenceModel(state_dim=state_dim, action_dim=action_dim, hidden_dim=config.PREFERENCE_HIDDEN_DIM)
 
 pref_losses = []
-for step in range(30):
+for step in range(config.NUM_EPOCHS):
     state1 = torch.randn(batch_size, state_dim)
     action1 = torch.randint(0, action_dim, (batch_size,))
     state2 = torch.randn(batch_size, state_dim)
@@ -272,7 +286,7 @@ print(
 
 # 3.3 Trust Modeling
 print("\n[3.3] Trust Model...")
-trust_model = TrustModel(state_dim=state_dim, action_dim=action_dim, hidden_dim=64)
+trust_model = TrustModel(state_dim=state_dim, action_dim=action_dim, hidden_dim=config.TRUST_HIDDEN_DIM)
 
 with torch.no_grad():
     sample_states = torch.randn(10, state_dim)
@@ -290,11 +304,17 @@ print("\n" + "=" * 70)
 print("4. CONTINUAL LEARNING")
 print("=" * 70)
 
-from continual_learning import (
+from src.continual_learning.continual_agent import (
     ContinualLearningAgent,
+)
+from src.continual_learning.meta_learning import (
     MAML,
     Reptile,
+)
+from src.continual_learning.ewc import (
     ElasticWeightConsolidation,
+)
+from src.continual_learning.dynamic_architectures import (
     ProgressiveNetwork,
     DynamicNetwork,
 )
@@ -302,15 +322,15 @@ from continual_learning import (
 # 4.1 Continual Learning Agent
 print("\n[4.1] Continual Learning Agent...")
 cl_agent = ContinualLearningAgent(
-    state_dim=state_dim, action_dim=action_dim, hidden_dim=128
+    state_dim=state_dim, action_dim=action_dim, hidden_dim=config.CL_HIDDEN_DIM
 )
 
 task_performances = {}
-for task_id in range(3):
+for task_id in range(config.NUM_TASKS):
     print(f"   Training on Task {task_id}...")
 
     task_rewards = []
-    for episode in range(20):
+    for episode in range(config.CL_EPISODES_PER_TASK):
         state = torch.randn(state_dim)
         action = cl_agent.select_action(state, task_id)
 
@@ -326,9 +346,9 @@ print(f"✅ Continual Learning: Trained on {len(task_performances)} tasks")
 # 4.2 MAML (Meta-Learning)
 print("\n[4.2] MAML Meta-Learning...")
 base_model = nn.Sequential(
-    nn.Linear(state_dim, 64), nn.ReLU(), nn.Linear(64, action_dim)
+    nn.Linear(state_dim, config.META_HIDDEN_DIM), nn.ReLU(), nn.Linear(config.META_HIDDEN_DIM, action_dim)
 )
-maml_agent = MAML(base_model, inner_lr=0.01, meta_lr=0.001, adaptation_steps=5)
+maml_agent = MAML(base_model, inner_lr=config.MAML_INNER_LR, meta_lr=config.MAML_META_LR, adaptation_steps=config.MAML_ADAPTATION_STEPS)
 
 print(
     f"✅ MAML: Initialized with {sum(p.numel() for p in maml_agent.model.parameters())} parameters"
@@ -337,12 +357,12 @@ print(
 # 4.3 Elastic Weight Consolidation
 print("\n[4.3] Elastic Weight Consolidation (EWC)...")
 policy_net = nn.Sequential(
-    nn.Linear(state_dim, 128), nn.ReLU(), nn.Linear(128, action_dim)
+    nn.Linear(state_dim, config.EWC_HIDDEN_DIM), nn.ReLU(), nn.Linear(config.EWC_HIDDEN_DIM, action_dim)
 )
-ewc = ElasticWeightConsolidation(policy_net, lambda_ewc=1000.0)
+ewc = ElasticWeightConsolidation(policy_net, lambda_ewc=config.EWC_LAMBDA)
 
 # Simulate learning task 1
-for step in range(20):
+for step in range(config.EWC_TRAINING_STEPS):
     states = torch.randn(batch_size, state_dim)
     actions = torch.randint(0, action_dim, (batch_size,))
     ewc.update_ewc_params(states)
@@ -354,11 +374,11 @@ print(
 # 4.4 Progressive Networks
 print("\n[4.4] Progressive Networks...")
 prog_net = ProgressiveNetwork(
-    input_dim=state_dim, hidden_dims=[64, 64], output_dim=action_dim, num_columns=3
+    input_dim=state_dim, hidden_dims=config.PROG_NET_HIDDEN_DIMS, output_dim=action_dim, num_columns=config.PROG_NET_INITIAL_COLUMNS
 )
 
 # Add columns for new tasks
-for task_id in range(2):
+for task_id in range(config.PROG_NET_NEW_COLUMNS):
     prog_net.add_column()
 
 with torch.no_grad():
@@ -374,21 +394,27 @@ print("\n" + "=" * 70)
 print("5. ENVIRONMENTS")
 print("=" * 70)
 
-from environments import (
+from src.environments.symbolic_env import (
     SymbolicGridWorld,
+)
+from src.environments.collaborative_env import (
     CollaborativeGridWorld,
+)
+from src.environments.continual_env import (
     ContinualEnv,
+)
+from src.environments.multi_modal_env import (
     MultiModalEnv,
 )
 
 # 5.1 Symbolic GridWorld
 print("\n[5.1] Symbolic GridWorld...")
-sym_env = SymbolicGridWorld(size=8)
+sym_env = SymbolicGridWorld(size=config.ENV_SIZE)
 obs, info = sym_env.reset()
 
 sym_rewards = []
-for step in range(50):
-    action = np.random.randint(0, 4)
+for step in range(config.ENV_STEPS):
+    action = np.random.randint(0, config.ACTION_DIM)
     obs, reward, done, truncated, info = sym_env.step(action)
     sym_rewards.append(reward)
 
@@ -400,14 +426,14 @@ print(f"   Grid size: {sym_env.size}x{sym_env.size}, Steps: {len(sym_rewards)}")
 
 # 5.2 Collaborative GridWorld
 print("\n[5.2] Collaborative GridWorld...")
-collab_env = CollaborativeGridWorld(size=8)
+collab_env = CollaborativeGridWorld(size=config.ENV_SIZE)
 obs, info = collab_env.reset()
 
 collab_env_rewards = []
 human_assists = 0
 
-for step in range(50):
-    action = np.random.randint(0, 4)
+for step in range(config.ENV_STEPS):
+    action = np.random.randint(0, config.ACTION_DIM)
     obs, reward, done, truncated, info = collab_env.step(action)
     collab_env_rewards.append(reward)
 
@@ -422,14 +448,14 @@ print(f"   Human Assists: {human_assists}")
 
 # 5.3 Continual Environment
 print("\n[5.3] Continual Environment...")
-cont_env = ContinualEnv(num_tasks=3, state_dim=state_dim, action_dim=action_dim)
+cont_env = ContinualEnv(num_tasks=config.NUM_TASKS, state_dim=state_dim, action_dim=action_dim)
 
-for task_id in range(3):
+for task_id in range(config.NUM_TASKS):
     cont_env.set_task(task_id)
     obs = cont_env.reset()
 
     task_rewards = []
-    for step in range(20):
+    for step in range(config.CL_EPISODES_PER_TASK):
         action = np.random.randint(0, action_dim)
         obs, reward, done = cont_env.step(action)
         task_rewards.append(reward)
@@ -449,17 +475,23 @@ print("6. ADVANCED COMPUTATIONAL PARADIGMS")
 print("=" * 70)
 
 try:
-    from advanced_computational import (
+    from src.advanced_computation.quantum_rl import (
         QuantumInspiredRL,
+    )
+    from src.advanced_computation.neuromorphic_networks import (
         NeuromorphicNetwork,
+    )
+    from src.advanced_computation.federated_rl import (
         FederatedRLAgent,
+    )
+    from src.advanced_computation.energy_efficient import (
         EnergyEfficientRL,
     )
 
     # 6.1 Quantum-Inspired RL
     print("\n[6.1] Quantum-Inspired RL...")
     quantum_agent = QuantumInspiredRL(
-        state_dim=state_dim, action_dim=action_dim, num_qubits=4
+        state_dim=state_dim, action_dim=action_dim, num_qubits=config.QUANTUM_NUM_QUBITS
     )
 
     with torch.no_grad():
@@ -471,7 +503,7 @@ try:
     # 6.2 Neuromorphic Computing
     print("\n[6.2] Neuromorphic Networks...")
     neuro_net = NeuromorphicNetwork(
-        input_dim=state_dim, hidden_dim=128, output_dim=action_dim
+        input_dim=state_dim, hidden_dim=config.NEUROMORPHIC_HIDDEN_DIM, output_dim=action_dim
     )
 
     with torch.no_grad():
@@ -482,7 +514,7 @@ try:
     # 6.3 Federated RL
     print("\n[6.3] Federated RL...")
     fed_agent = FederatedRLAgent(
-        state_dim=state_dim, action_dim=action_dim, num_clients=5
+        state_dim=state_dim, action_dim=action_dim, num_clients=config.FEDERATED_NUM_CLIENTS
     )
 
     print(f"✅ Federated RL: {fed_agent.num_clients} clients")
@@ -509,10 +541,16 @@ print("7. REAL-WORLD DEPLOYMENT")
 print("=" * 70)
 
 try:
-    from real_world_deployment import (
+    from src.real_world_deployment.production_systems import (
         ProductionRLSystem,
+    )
+    from src.real_world_deployment.safety_monitoring import (
         SafetyMonitor,
+    )
+    from src.deployment_ethics.ethics_checker import (
         EthicsChecker,
+    )
+    from src.real_world_deployment.quality_assurance import (
         QualityAssurance,
     )
 
@@ -525,7 +563,7 @@ try:
 
     # 7.2 Safety Monitoring
     print("\n[7.2] Safety Monitor...")
-    safety_monitor = SafetyMonitor(state_dim=state_dim, action_dim=action_dim)
+    safety_monitor = SafetyMonitor(state_dim=state_dim, action_dim=action_dim, safety_threshold=config.SAFETY_THRESHOLD)
 
     for i in range(10):
         test_state = torch.randn(state_dim)

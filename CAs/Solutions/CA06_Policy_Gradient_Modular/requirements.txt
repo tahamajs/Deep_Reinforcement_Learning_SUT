@@ -2,39 +2,40 @@
 
 # Core ML/DL frameworks
 torch>=2.0.0
-torchvision>=0.15.0
-torchaudio>=2.0.0
+# torchvision>=0.15.0 # Not directly used
+# torchaudio>=2.0.0 # Not directly used
 
 # Reinforcement Learning
-gymnasium>=0.29.0
-gymnasium[atari]>=0.29.0
-gymnasium[box2d]>=0.29.0
-stable-baselines3>=2.0.0
+gymnasium>=0.29.1
+# gymnasium[atari]>=0.29.0 # Optional, uncomment if needed
+# gymnasium[box2d]>=0.29.0 # Optional, uncomment if needed
+# stable-baselines3>=2.0.0 # Not used in this modular implementation
 
 # Scientific computing
-numpy>=1.21.0
-scipy>=1.9.0
-pandas>=1.5.0
+numpy>=1.26.0
+scipy>=1.11.0 # Updated to a more recent version
+pandas>=2.1.0 # Updated to a more recent version
 
 # Visualization
-matplotlib>=3.5.0
-seaborn>=0.11.0
-plotly>=5.0.0
+matplotlib>=3.8.0 # Updated to a more recent version
+seaborn>=0.13.0 # Updated to a more recent version
+# plotly>=5.0.0 # Not directly used for basic visualization
 
 # Jupyter and notebook support
 jupyter>=1.0.0
 ipywidgets>=8.0.0
-notebook>=6.4.0
+notebook>=7.0.0 # Updated to a more recent version
 
 # Utilities
-tqdm>=4.64.0
-wandb>=0.13.0
-tensorboard>=2.10.0
+tqdm>=4.66.0 # Updated to a more recent version
+# wandb>=0.13.0 # Not used in this basic setup
+# tensorboard>=2.10.0 # Not used in this basic setup
 
 # Development and testing
 pytest>=7.0.0
-black>=22.0.0
-flake8>=5.0.0
+# black>=22.0.0 # Not used for auto-formatting by the model
+# flake8>=5.0.0 # Not used for linting by the model
+mypy>=1.7.0 # Added for static type checking
 
 # Optional: For advanced environments
 # mujoco>=2.3.0  # Uncomment if using MuJoCo environments

@@ -1,0 +1,207 @@
+\\documentclass[journal]{IEEEtran}
+\\usepackage{amsmath}
+\\usepackage{amssymb}
+\\usepackage{graphicx}
+\\usepackage{cite}
+\\usepackage{xcolor}
+\\usepackage{hyperref}
+
+\\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+}
+
+\\title{Meta-Communicative Actor-Critic (MCAC) for Dynamic Multi-Agent Coordination}
+
+\\author{DRL Course Team}
+
+\\begin{document}
+
+\\maketitle
+
+\\begin{abstract}
+This paper introduces the Meta-Communicative Actor-Critic (MCAC) framework, a novel approach designed to address dynamic coordination challenges in multi-agent reinforcement learning (MARL). MCAC synthesizes Multi-Agent Actor-Critic (MAAC) with emergent communication and Model-Agnostic Meta-Learning (MAML) to enable agents to rapidly adapt their communication protocols and policies to new tasks or changing team compositions with few-shot experience. We explicitly identify the research gap in enabling on-the-fly adaptation of emergent communication in complex MARL settings. Through rigorous mathematical derivations and a modular architectural design, MCAC provides a robust solution for enhanced sample efficiency and robustness in highly dynamic multi-agent environments.
+\\end{abstract}
+
+\\begin{IEEEkeywords}
+Multi-Agent Reinforcement Learning, Meta-Learning, Emergent Communication, Actor-Critic, Dynamic Coordination, Few-Shot Adaptation.
+\\end{IEEEkeywords}
+
+\\section{Introduction}
+Multi-agent reinforcement learning (MARL) presents significant challenges due to non-stationarity, partial observability, and complex credit assignment problems \cite{Lowe2017}. While considerable progress has been made in developing algorithms for cooperative and competitive multi-agent settings, a critical gap remains in enabling agents to dynamically adapt their communication strategies and policies in rapidly changing environments. Existing emergent communication methods often rely on extensive training within fixed scenarios, limiting their generalization capabilities to novel tasks or unforeseen communicative partners.
+
+This paper proposes the Meta-Communicative Actor-Critic (MCAC) framework, a novel synthesis designed to bridge this gap. MCAC integrates the strengths of:
+\\begin{enumerate}
+    \\item \\textbf{Multi-Agent Actor-Critic (MAAC)}: Providing a robust foundation for centralized training and decentralized execution, crucial for stabilizing learning in non-stationary multi-agent environments.
+    \\item \\textbf{Emergent Communication}: Allowing agents to learn a communication protocol from scratch, which is essential for effective coordination in complex tasks where explicit communication rules are unknown or difficult to design.
+    \\item \\textbf{Model-Agnostic Meta-Learning (MAML)}: Empowering agents with the ability to "learn to adapt" their communication and action policies rapidly to new tasks or altered team dynamics with minimal experience.
+\\end{enumerate}
+The core research gap addressed by MCAC is the lack of adaptive emergent communication in dynamic MARL settings. By meta-learning how to generate and interpret messages, agents can overcome the limitations of fixed communication protocols, leading to superior coordination, improved sample efficiency, and enhanced robustness when faced with unpredictable changes in the environment or agent composition.
+
+\\section{Related Work}
+The MCAC framework builds upon three distinct yet complementary lines of research: Multi-Agent Actor-Critic methods, Emergent Communication, and Meta-Learning.
+
+\\subsection{Multi-Agent Actor-Critic (MAAC)}
+Centralized Training Decentralized Execution (CTDE) paradigms, exemplified by MADDPG \cite{Lowe2017}, have been highly successful in MARL. In CTDE, a centralized critic observes the states and actions of all agents to learn a global value function, while decentralized actors make decisions based on their local observations. This approach addresses the non-stationarity issue by providing a stable learning signal for each agent's policy. Our framework adopts the MAAC architecture as its foundational learning mechanism.
+
+\\subsection{Emergent Communication in MARL}
+Emergent communication aims to develop communication protocols directly through reinforcement learning, without explicit engineering of message structures \cite{Sukhbaatar2016}. Agents learn to send and receive messages that facilitate coordination, especially in partially observable environments. However, a significant challenge lies in the adaptability of these learned protocols. Often, emergent communication systems are brittle to changes in the environment or the set of communicating agents.
+
+\\subsection{Meta-Learning for Adaptation}
+Meta-learning focuses on learning algorithms that can quickly adapt to new tasks from a distribution of related tasks \cite{Finn2017}. MAML is a prominent meta-learning algorithm that learns an initialization of model parameters such that a few gradient steps on a new task yield strong performance. While MAML has been applied to single-agent and some multi-agent settings, its integration with emergent communication to enable adaptive communication protocols in dynamic MARL remains largely unexplored.
+
+\\section{Methodology}
+The Meta-Communicative Actor-Critic (MCAC) framework extends the CTDE paradigm by introducing meta-learning capabilities to both the action policies and the emergent communication module. We aim to enable rapid adaptation of communication protocols and policies to novel multi-agent tasks.
+
+\\subsection{System Overview}
+The MCAC system consists of $N$ agents. Each agent $i$ has a local observation $o_i$, and can perform an action $-i$ and send a message $m_i$. A centralized critic $Q(s, a_1, \dots, a_N, m_1, \dots, m_N)$ evaluates the joint actions and messages. Each agent $i$ has an actor $\pi_i(-i | o_i, M_{\neg i})$ which also takes into account messages $M_{\neg i}$ from other agents. The key novelty is a meta-learner that adapts the parameters of both $\pi_i$ and the communication encoder/decoder for new tasks.
+
+\\subsection{Meta-Learning for Communication and Policy Adaptation}
+Our meta-learning approach is inspired by MAML. We consider a distribution of multi-agent tasks $\mathcal{T}$. For each task $\tau \sim \mathcal{T}$, we sample a $K$-shot support set and a query set. The goal is to learn a set of initial parameters $\\theta = \\{\\theta_1, \dots, \\theta_N\\}$ for the agents' policies and communication modules such that, with a few gradient steps on the support set of a new task, the agents perform well on the query set.
+
+Let $\\mathcal{L}_{\\tau,i}(\\thet-i, \\text{Comm}_i)$ be the loss for agent $i$ on task $\\tau$, considering both its policy parameters $\\thet-i$ and communication module parameters $\\text{Comm}_i$. The inner loop updates for a specific task $\\tau$ are:
+$$ \\phi_{i,\\tau} = \\thet-i - \\alpha \\nabla_{\\thet-i} \\mathcal{L}_{\\tau,i}(\\thet-i, \\text{Comm}_i) $$
+$$ \\text{Comm}_{i,\\tau} = \\text{Comm}_i - \\beta \\nabla_{\\text{Comm}_i} \\mathcal{L}_{\\tau,i}(\\thet-i, \\text{Comm}_i) $$
+where $\\alpha$ and $\\beta$ are inner-loop learning rates. The outer loop meta-optimization then updates the initial parameters $\\theta$ and $\\text{Comm}$ across tasks:
+$$ \\theta \\leftarrow \\theta - \\gamma \\nabla_{\\theta} \\sum_{\\tau \\sim \\mathcal{T}} \\mathcal{L}_{\\tau,i}(\\phi_{i,\\tau}, \\text{Comm}_{i,\\tau}) $$
+$$ \\text{Comm} \\leftarrow \\text{Comm} - \\delta \\nabla_{\\text{Comm}} \\sum_{\\tau \\sim \\mathcal{T}} \\mathcal{L}_{\\tau,i}(\\phi_{i,\\tau}, \\text{Comm}_{i,\\tau}) $$
+Here, $\\gamma$ and $\\delta$ are outer-loop meta-learning rates. This process allows the agents to learn a communication-aware policy that can rapidly adapt to the specific communication needs and environmental dynamics of new tasks.
+
+\\subsection{Emergent Communication Module}
+Each agent $i$ has a communication module that encodes its local observation and internal state into a message $m_i$, and decodes incoming messages from other agents $M_{\neg i}$ to influence its policy.
+The message generation is given by:
+$$ m_i = f_{\\text{enc},i}(o_i, h_i) $$
+where $f_{\\text{enc},i}$ is an encoder neural network parameterized by $\\text{Comm}_i^{\\text{enc}}$, and $h_i$ is the agent's internal state.
+The decoded messages influence the policy:
+$$ \\pi_i(-i | o_i, M_{\neg i}) = g_{\\text{policy},i}(o_i, f_{\\text{dec},i}(M_{\neg i})) $$
+where $f_{\\text{dec},i}$ is a decoder neural network parameterized by $\\text{Comm}_i^{\\text{dec}}$. The parameters $\\text{Comm}_i^{\\text{enc}}$ and $\\text{Comm}_i^{\\text{dec}}$ are part of the meta-learned communication module.
+
+\\subsection{Centralized Critic for Meta-Communicative Agents}
+The centralized critic $Q$ receives the global state $s$, all agents' actions $a_1, \dots, a_N$, and all messages $m_1, \dots, m_N$. This allows the critic to provide a stable learning signal by accounting for the full context of inter-agent interactions, including communication.
+The critic loss is:
+$$ L_Q = \\mathbb{E}[(Q(s, a_1, \dots, a_N, m_1, \dots, m_N) - y)^2] $$
+where $y = r + \\gamma Q'(s', a'_1, \dots, a'_N, m'_1, \dots, m'_N)$, and $Q'$ is a target network.
+
+\\subsection{Actor Update with Communication}
+Each actor $\pi_i$ is updated using the policy gradient theorem, leveraging the centralized critic and its local observation augmented by decoded messages.
+$$ \\nabla_{\\thet-i} J_i = \\mathbb{E}[\\nabla_{\\thet-i} \\log \\pi_i(-i | o_i, f_{\\text{dec},i}(M_{\neg i})) \\cdot A_i] $$
+where $A_i$ is the advantage, derived from the centralized Q-function.
+
+\\section{Experiments}
+To validate the MCAC framework, we propose a series of experiments across various multi-agent environments with dynamic elements.
+
+\\subsection{Experimental Setup}
+\\subsubsection{Environments}
+We will utilize modified versions of existing multi-agent environments to introduce dynamic elements:
+\\begin{enumerate}
+    \\item \\textbf{Dynamic Cooperative Navigation}: Agents must navigate to target locations, but the optimal path or target locations can change mid-episode, requiring flexible communication.
+    \\item \\textbf{Adaptive Resource Allocation}: Agents must collectively allocate resources to dynamic demands, where resource availability or agent utility functions can change.
+    \\item \\textbf{Evolving Predator-Prey}: Competitive environments where predator or prey behaviors can subtly shift, requiring adaptive communication for coordination or counter-strategies.
+\\end{enumerate}
+
+\\subsubsection{Baselines}
+We will compare MCAC against the following baselines:
+\\begin{enumerate}
+    \\item \\textbf{Independent Learning (IL)}: Each agent acts independently without explicit coordination or communication.
+    \\item \\textbf{MAAC}: A standard Multi-Agent Actor-Critic framework without meta-learning or explicit emergent communication.
+    \\item \\textbf{MAAC with Fixed Communication}: MAAC augmented with a pre-trained (but non-adaptive) emergent communication module.
+    \\item \\textbf{MAML-MAAC}: MAAC with MAML applied to policies, but without meta-learning the communication module.
+\\end{enumerate}
+
+\\subsubsection{Metrics}
+\\begin{enumerate}
+    \\item \\textbf{Episode Return}: Average cumulative reward per episode.
+    \\item \\textbf{Adaptation Speed}: Number of gradient steps or episodes required to achieve a certain performance threshold on new tasks.
+    \\item \\textbf{Communication Efficiency}: Analysis of message content and its correlation with improved coordination.
+    \\item \\textbf{Robustness}: Performance degradation when faced with significantly different or adversarial task variations.
+\\end{enumerate}
+
+\\subsection{Ablation Study}
+To understand the contribution of each component, we will conduct ablation studies by disabling or modifying key aspects of MCAC:
+\\begin{enumerate}
+    \\item \\textbf{No Meta-Learning on Communication}: Only policies are meta-learned, communication parameters are fixed.
+    \\item \\textbf{Fixed Policy, Meta-Learned Communication}: Only communication parameters are meta-learned, policies are fixed.
+    \\item \\textbf{Varied Communication Bandwidth}: Test the impact of different message dimensions.
+\\end{enumerate}
+
+\\section{Conclusion and Broader Impact}
+\\subsection{Conclusion}
+The Meta-Communicative Actor-Critic (MCAC) framework offers a promising direction for developing intelligent multi-agent systems capable of dynamic coordination in complex and rapidly changing environments. By synthesizing MAAC, emergent communication, and MAML, MCAC addresses the critical research gap of adaptive communication in MARL. Our proposed methodology enables agents to meta-learn flexible communication protocols and policies, leading to enhanced adaptability, sample efficiency, and robustness. The rigorous experimental design, including comparisons against strong baselines and comprehensive ablation studies, will validate the effectiveness of MCAC in various dynamic multi-agent tasks.
+
+\\subsection{Broader Impact}
+The development of highly adaptive multi-agent systems has significant broader impacts:
+\\begin{enumerate}
+    \\item \\textbf{Autonomous Systems}: Improved coordination in autonomous vehicle fleets, drone swarms, and robotic teams operating in dynamic real-world scenarios.
+    \\item \\textbf{Resource Management}: More efficient and adaptive resource allocation in smart grids, supply chains, and disaster response.
+    \\item \\textbf{Human-AI Collaboration}: Enabling AI agents to adapt their communication and collaboration strategies when interacting with humans in complex tasks.
+    \\item \\textbf{Fundamental AI Research}: Advancing our understanding of emergent intelligence, communication, and learning-to-learn paradigms in multi-agent settings.
+\\end{enumerate}
+While the potential benefits are substantial, it is crucial to consider ethical implications, such as ensuring fairness in resource allocation, preventing adversarial exploitation in competitive scenarios, and designing transparent communication protocols for human oversight. Future work will focus on scaling MCAC to larger agent populations and more complex, real-world environments, alongside a thorough investigation of its societal impact.
+
+\\section*{References}
+\\bibliographystyle{IEEEtran}
+\\bibliography{references}
+
+\\appendix
+\\section{Detailed Proofs}
+This appendix provides detailed mathematical derivations for the Meta-Communicative Actor-Critic (MCAC) framework.
+
+\\subsection{Meta-Objective Derivation}
+The meta-objective for MCAC aims to optimize initial parameters $(\\theta, \\text{Comm})$ such that after a few gradient steps on a new task $\\tau$, the adapted parameters $(\\phi_{\\tau}, \\text{Comm}_{\\tau})$ achieve high performance.
+Let $J(\\phi_{\\tau}, \\text{Comm}_{\\tau})$ be the performance metric (e.g., episode return) on a task $\\tau$. We want to maximize $\\mathbb{E}_{\\tau \\sim \\mathcal{T}}[J(\\phi_{\\tau}, \\text{Comm}_{\\tau})]$.
+The meta-gradient with respect to $\\thet-i$ is given by:
+$$ \\nabla_{\\thet-i} \\mathbb{E}_{\\tau}[J(\\phi_{i,\\tau}, \\text{Comm}_{i,\\tau})] = \\mathbb{E}_{\\tau}[\\nabla_{\\thet-i} J(\\phi_{i,\\tau}, \\text{Comm}_{i,\\tau})] $$
+Using the chain rule, and assuming $\\phi_{i,\\tau}$ and $\\text{Comm}_{i,\\tau}$ are functions of $\\thet-i$ and $\\text{Comm}_i$ respectively:
+$$ \\nabla_{\\thet-i} J(\\phi_{i,\\tau}, \\text{Comm}_{i,\\tau}) = \\nabla_{\\phi_{i,\\tau}} J \\cdot \\nabla_{\\thet-i} \\phi_{i,\\tau} + \\nabla_{\\text{Comm}_{i,\\tau}} J \\cdot \\nabla_{\\thet-i} \\text{Comm}_{i,\\tau} $$
+From the inner-loop update rules:
+$$ \\nabla_{\\thet-i} \\phi_{i,\\tau} = I - \\alpha \\nabla_{\\thet-i}^2 \\mathcal{L}_{\\tau,i}(\\thet-i, \\text{Comm}_i) $$
+$$ \\nabla_{\\thet-i} \\text{Comm}_{i,\\tau} = - \\beta \\nabla_{\\thet-i} \\nabla_{\\text{Comm}_i} \\mathcal{L}_{\\tau,i}(\\thet-i, \\text{Comm}_i) $$
+Substituting these back, we get the meta-gradient for $\\thet-i$:
+$$ \\nabla_{\\thet-i} J = \\nabla_{\\phi_{i,\\tau}} J \\cdot (I - \\alpha \\nabla_{\\thet-i}^2 \\mathcal{L}_{\\tau,i}) - \\nabla_{\\text{Comm}_{i,\\tau}} J \\cdot \\beta \\nabla_{\\thet-i} \\nabla_{\\text{Comm}_i} \\mathcal{L}_{\\tau,i} $$
+A similar derivation applies to the meta-gradient for $\\text{Comm}_i$. These second-order derivatives can be approximated or computed using automatic differentiation.
+
+\\section{Additional Qualitative Examples}
+This section would include visualizations of emergent communication patterns, agent trajectories, and interaction graphs in different dynamic tasks.
+\\begin{figure}[ht]
+\\centering
+\\includegraphics[width=0.9\\linewidth]{../pictures/fig_01_communication_patterns.png}
+\\caption{Emergent communication patterns in a cooperative navigation task, demonstrating how agents learn to transmit crucial information about obstacles or target locations. (Placeholder)}
+\\end{figure}
+
+\\begin{figure}[ht]
+\\centering
+\\includegraphics[width=0.9\\linewidth]{../pictures/fig_02_adaptive_trajectories.png}
+\\caption{Adaptive agent trajectories when faced with a sudden change in environmental dynamics, highlighting the rapid adaptation capabilities of MCAC. (Placeholder)}
+\\end{figure}
+
+\\section{Hyperparameters}
+\\begin{table}[ht]
+\\centering
+\\caption{Key Hyperparameters for MCAC Framework}
+\\label{tab:hyperparameters}
+\\begin{tabular}{|l|l|}
+\\hline
+\\textbf{Parameter} & \\textbf{Value} \\\\
+\\hline
+Number of Agents & 3 \\\\
+Observation Dimension & 10 \\\\
+Action Dimension & 4 \\\\
+Hidden Layer Dimensions & {[}256, 256{]} \\\\
+Outer Loop Learning Rate (Policy) & 1e-3 \\\\
+Outer Loop Learning Rate (Communication) & 1e-3 \\\\
+Inner Loop Learning Rate (Policy) & 1e-2 \\\\
+Inner Loop Learning Rate (Communication) & 1e-2 \\\\
+Discount Factor ($\\gamma$) & 0.99 \\\\
+Soft Target Update Rate ($\\tau$) & 0.005 \\\\
+Replay Buffer Size & 1,000,000 \\\\
+Batch Size & 256 \\\\
+Communication Message Dimension & 32 \\\\
+Number of Inner Loop Steps & 1 \\\\
+Number of Outer Loop Steps & 1000 \\\\
+\\hline
+\\end{tabular}
+\\end{table}
+
+\\end{document}

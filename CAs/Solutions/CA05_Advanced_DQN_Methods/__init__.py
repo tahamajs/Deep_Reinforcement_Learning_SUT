@@ -33,7 +33,8 @@ from .environments import (
     make_env,
 )
 
-from .utils import ReplayBuffer, PrioritizedReplayBuffer, QNetwork, DuelingQNetwork
+from .utils.replay_buffers import ReplayBuffer, PrioritizedReplayBuffer
+from .utils.network_architectures import QNetwork, DuelingQNetwork
 
 # Main training function
 from .training_examples import train_dqn_agent, dqn_variant_comparison

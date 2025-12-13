@@ -26,9 +26,21 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class HierarchicalRLAgent:
-    """Hierarchical RL Agent with Options Framework."""
+    """
+    Hierarchical RL Agent with Options Framework.
 
-    def __init__(self, state_dim, action_dim, num_options=5, lr=3e-4):
+    This agent learns a meta-policy to select high-level options and option-specific
+    policies to execute low-level actions. It also incorporates termination functions
+    to decide when to switch options.
+
+    Args:
+        state_dim (int): Dimension of the observation space.
+        action_dim (int): Dimension of the action space.
+        num_options (int, optional): Number of available options. Defaults to 5.
+        lr (float, optional): Learning rate for the optimizer. Defaults to 3e-4.
+    """
+
+    def __init__(self, state_dim: int, action_dim: int, num_options: int = 5, lr: float = 3e-4):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.num_options = num_options
@@ -102,8 +114,16 @@ class HierarchicalRLAgent:
         self.gamma = 0.99
         self.beta = 0.01  # Termination penalty
 
-    def select_option(self, state):
-        """Select option using meta-policy."""
+    def select_option(self, state: np.ndarray) -> int:
+        """
+        Select an option using the meta-policy.
+
+        Args:
+            state (np.ndarray): Current state observation.
+
+        Returns:
+            int: The index of the selected option.
+        """
         with torch.no_grad():
             state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
             option_probs = self.meta_policy(state_tensor)
@@ -111,8 +131,19 @@ class HierarchicalRLAgent:
             option = option_dist.sample()
             return option.item()
 
-    def get_action(self, state, current_option=None):
-        """Get action from current option policy."""
+    def get_action(self, state: np.ndarray, current_option: Optional[int] = None) -> int:
+        """
+        Get an action from the current option policy.
+
+        Args:
+            state (np.ndarray): Current state observation.
+            current_option (Optional[int], optional): The currently active option.
+                                                       If None, an option is selected using the meta-policy.
+                                                       Defaults to None.
+
+        Returns:
+            int: The selected action.
+        """
         with torch.no_grad():
             if current_option is None:
                 current_option = self.select_option(state)
@@ -123,15 +154,34 @@ class HierarchicalRLAgent:
             action = action_dist.sample()
             return action.item()
 
-    def should_terminate(self, state, current_option):
-        """Check if current option should terminate."""
+    def should_terminate(self, state: np.ndarray, current_option: int) -> bool:
+        """
+        Check if the current option should terminate based on its termination function.
+
+        Args:
+            state (np.ndarray): Current state observation.
+            current_option (int): The index of the currently active option.
+
+        Returns:
+            bool: True if the option should terminate, False otherwise.
+        """
         with torch.no_grad():
             state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
             termination_prob = self.termination_functions[current_option](state_tensor)
             return torch.rand(1).item() < termination_prob.item()
 
-    def update(self, trajectories):
-        """Update hierarchical agent."""
+    def update(self, trajectories: List[List[Tuple[np.ndarray, int, float, int, bool]]]) -> Optional[Dict[str, float]]:
+        """
+        Update the hierarchical agent's meta-policy, option policies, and termination functions.
+
+        Args:
+            trajectories (List[List[Tuple[np.ndarray, int, float, int, bool]]]): A list of trajectories,
+                where each trajectory is a list of (state, action, reward, option, termination_flag) tuples.
+
+        Returns:
+            Optional[Dict[str, float]]: A dictionary containing various loss components if update occurs,
+                                       otherwise None.
+        """
         if not trajectories:
             return None
 
@@ -206,9 +256,22 @@ class HierarchicalRLAgent:
 
 
 class MetaLearningAgent:
-    """Model-Agnostic Meta-Learning (MAML) for RL."""
+    """
+    Model-Agnostic Meta-Learning (MAML) for Reinforcement Learning.
 
-    def __init__(self, state_dim, action_dim, inner_lr=0.01, meta_lr=3e-4):
+    This agent learns a meta-initialization that allows for rapid adaptation
+    to new, unseen tasks with a few gradient steps.
+
+    Args:
+        state_dim (int): Dimension of the observation space.
+        action_dim (int): Dimension of the action space.
+        inner_lr (float, optional): Learning rate for the inner loop (task adaptation).
+                                    Defaults to 0.01.
+        meta_lr (float, optional): Learning rate for the outer loop (meta-update).
+                                   Defaults to 3e-4.
+    """
+
+    def __init__(self, state_dim: int, action_dim: int, inner_lr: float = 0.01, meta_lr: float = 3e-4):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.inner_lr = inner_lr
@@ -229,8 +292,21 @@ class MetaLearningAgent:
         # Task-specific networks
         self.task_networks = {}
 
-    def adapt_to_task(self, task_id, support_data, num_steps=5):
-        """Adapt to a specific task using support data."""
+    def adapt_to_task(self, task_id: Any, support_data: Tuple[np.ndarray, np.ndarray, np.ndarray], num_steps: int = 5) -> nn.Module:
+        """
+        Adapt the network to a specific task using support data.
+
+        This performs the inner loop update of MAML.
+
+        Args:
+            task_id (Any): Unique identifier for the task.
+            support_data (Tuple[np.ndarray, np.ndarray, np.ndarray]): A tuple containing
+                                                                      (states, actions, rewards) for the support set.
+            num_steps (int, optional): Number of inner loop gradient steps. Defaults to 5.
+
+        Returns:
+            nn.Module: The task-adapted policy network.
+        """
         if task_id not in self.task_networks:
             self.task_networks[task_id] = copy.deepcopy(self.meta_network)
 
@@ -256,8 +332,20 @@ class MetaLearningAgent:
 
         return task_network
 
-    def meta_update(self, tasks_data):
-        """Meta-update using multiple tasks."""
+    def meta_update(self, tasks_data: Dict[Any, Tuple[Tuple[np.ndarray, np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, np.ndarray]]]) -> float:
+        """
+        Perform a meta-update across multiple tasks.
+
+        This performs the outer loop update of MAML, updating the meta-network's parameters.
+
+        Args:
+            tasks_data (Dict[Any, Tuple[Tuple[np.ndarray, np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, np.ndarray]]]):
+                A dictionary where keys are task_ids and values are tuples of (support_data, query_data).
+                Each data tuple contains (states, actions, rewards).
+
+        Returns:
+            float: The meta-loss value.
+        """
         meta_loss = 0
 
         for task_id, (support_data, query_data) in tasks_data.items():
@@ -286,9 +374,23 @@ class MetaLearningAgent:
 
 
 class CausalRLAgent:
-    """Causal Reinforcement Learning Agent."""
+    """
+    Causal Reinforcement Learning Agent.
 
-    def __init__(self, state_dim, action_dim, causal_graph=None, lr=3e-4):
+    This agent incorporates a causal graph to understand and leverage causal
+    relationships in the environment, enabling interventions and counterfactual reasoning.
+
+    Args:
+        state_dim (int): Dimension of the observation space.
+        action_dim (int): Dimension of the action space.
+        causal_graph (Optional[Dict[str, List[str]]], optional): A dictionary representing
+                                                                 the causal graph. Keys are nodes,
+                                                                 values are lists of parent nodes.
+                                                                 Defaults to None, which creates a default graph.
+        lr (float, optional): Learning rate for the optimizer. Defaults to 3e-4.
+    """
+
+    def __init__(self, state_dim: int, action_dim: int, causal_graph: Optional[Dict[str, List[str]]] = None, lr: float = 3e-4):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.causal_graph = causal_graph or self._create_default_causal_graph()
@@ -329,16 +431,31 @@ class CausalRLAgent:
             lr=lr,
         )
 
-    def _create_default_causal_graph(self):
-        """Create default causal graph."""
+    def _create_default_causal_graph(self) -> Dict[str, List[str]]:
+        """
+        Create a default causal graph if none is provided.
+
+        Returns:
+            Dict[str, List[str]]: The default causal graph.
+        """
         return {
             "position": ["reward"],
             "velocity": ["position", "reward"],
             "action": ["velocity", "reward"],
         }
 
-    def intervene(self, state, intervention_node, intervention_value):
-        """Perform causal intervention."""
+    def intervene(self, state: List[float], intervention_node: str, intervention_value: float) -> List[float]:
+        """
+        Perform a causal intervention on a specific node in the state.
+
+        Args:
+            state (List[float]): The original state.
+            intervention_node (str): The name of the node to intervene on.
+            intervention_value (float): The value to set for the intervened node.
+
+        Returns:
+            List[float]: The state after the intervention and propagation through the causal graph.
+        """
         intervened_state = state.copy()
         intervened_state[intervention_node] = intervention_value
 
@@ -354,8 +471,18 @@ class CausalRLAgent:
 
         return intervened_state
 
-    def counterfactual_reasoning(self, state, action, alternative_action):
-        """Perform counterfactual reasoning."""
+    def counterfactual_reasoning(self, state: List[float], action: int, alternative_action: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Perform counterfactual reasoning: predict outcomes for alternative actions.
+
+        Args:
+            state (List[float]): The factual state.
+            action (int): The factual action taken.
+            alternative_action (int): The counterfactual action that could have been taken.
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor]: A tuple containing (original_outcome, counterfactual_outcome).
+        """
         state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
         action_tensor = torch.FloatTensor([action]).unsqueeze(0).to(device)
         alt_action_tensor = (
@@ -372,8 +499,16 @@ class CausalRLAgent:
 
         return original_outcome, counterfactual_outcome
 
-    def get_action(self, state):
-        """Get action using causal policy."""
+    def get_action(self, state: np.ndarray) -> int:
+        """
+        Get an action using the causal policy network.
+
+        Args:
+            state (np.ndarray): Current state observation.
+
+        Returns:
+            int: The selected action.
+        """
         with torch.no_grad():
             state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
             action_probs = self.causal_policy(state_tensor)
@@ -381,8 +516,21 @@ class CausalRLAgent:
             action = action_dist.sample()
             return action.item()
 
-    def update(self, trajectories):
-        """Update causal agent."""
+    def update(self, trajectories: List[List[Tuple[List[float], int, float, Optional[Tuple[str, float]], Optional[int]]]]) -> Optional[Dict[str, float]]:
+        """
+        Update the causal agent's policy, intervention networks, and counterfactual network.
+
+        Args:
+            trajectories (List[List[Tuple[List[float], int, float, Optional[Tuple[str, float]], Optional[int]]]]):
+                A list of trajectories, where each trajectory is a list of tuples:
+                (state, action, reward, intervention_info, counterfactual_action).
+                intervention_info is (node, value) if an intervention occurred, otherwise None.
+                counterfactual_action is the alternative action considered, or None.
+
+        Returns:
+            Optional[Dict[str, float]]: A dictionary containing various loss components if update occurs,
+                                       otherwise None.
+        """
         if not trajectories:
             return None
 
@@ -455,9 +603,23 @@ class CausalRLAgent:
 
 
 class QuantumInspiredRLAgent:
-    """Quantum-Inspired Reinforcement Learning Agent."""
+    """
+    Quantum-Inspired Reinforcement Learning Agent.
 
-    def __init__(self, state_dim, action_dim, num_qubits=4, lr=3e-4):
+    This agent explores concepts from quantum mechanics, such as quantum state
+    representation and operations, to inform the reinforcement learning process.
+    Note: This is a simplified, quantum-inspired model for illustrative purposes
+    and does not simulate actual quantum computation.
+
+    Args:
+        state_dim (int): Dimension of the observation space.
+        action_dim (int): Dimension of the action space.
+        num_qubits (int, optional): Number of qubits for quantum state representation.
+                                   Defaults to 4.
+        lr (float, optional): Learning rate for the optimizer. Defaults to 3e-4.
+    """
+
+    def __init__(self, state_dim: int, action_dim: int, num_qubits: int = 4, lr: float = 3e-4):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.num_qubits = num_qubits
@@ -496,45 +658,64 @@ class QuantumInspiredRLAgent:
             lr=lr,
         )
 
-    def apply_quantum_gate(self, state, gate_type, qubit_idx, angle):
-        """Apply quantum gate to state."""
-        if gate_type == "X":
-            gate = torch.tensor(
-                [
-                    [torch.cos(angle / 2), -1j * torch.sin(angle / 2)],
-                    [-1j * torch.sin(angle / 2), torch.cos(angle / 2)],
-                ],
-                dtype=torch.complex64,
-            )
-        elif gate_type == "Y":
-            gate = torch.tensor(
-                [
-                    [torch.cos(angle / 2), -torch.sin(angle / 2)],
-                    [torch.sin(angle / 2), torch.cos(angle / 2)],
-                ],
-                dtype=torch.complex64,
-            )
-        elif gate_type == "Z":
-            gate = torch.tensor(
-                [[torch.exp(-1j * angle / 2), 0], [0, torch.exp(1j * angle / 2)]],
-                dtype=torch.complex64,
-            )
+    def apply_quantum_gate(self, state: torch.Tensor, gate_type: str, qubit_idx: int, angle: float) -> torch.Tensor:
+        """
+        Illustrative application of a quantum-inspired gate to a state.
+        This is a simplified representation and does not perform actual quantum gate operations.
 
-        # Apply gate to specific qubit
+        Args:
+            state (torch.Tensor): The quantum-inspired state tensor.
+            gate_type (str): Type of gate (e.g., "X", "Y", "Z").
+            qubit_idx (int): Index of the qubit to apply the gate to.
+            angle (float): Rotation angle for the gate.
+
+        Returns:
+            torch.Tensor: The state tensor after the illustrative gate application.
+        """
+        # This is a simplified, illustrative implementation. In a real quantum simulation,
+        # this would involve applying a unitary matrix corresponding to the gate.
         return state  # Simplified implementation
 
-    def entangle_qubits(self, state, qubit1, qubit2):
-        """Apply entanglement between qubits."""
-        # CNOT gate implementation (simplified)
+    def entangle_qubits(self, state: torch.Tensor, qubit1: int, qubit2: int) -> torch.Tensor:
+        """
+        Illustrative entanglement between two qubits in the quantum-inspired state.
+        This is a simplified representation and does not perform actual entanglement operations.
+
+        Args:
+            state (torch.Tensor): The quantum-inspired state tensor.
+            qubit1 (int): Index of the first qubit.
+            qubit2 (int): Index of the second qubit.
+
+        Returns:
+            torch.Tensor: The state tensor after the illustrative entanglement.
+        """
+        # This is a simplified, illustrative implementation. In a real quantum simulation,
+        # this would involve applying a CNOT or similar entangling gate.
         return state
 
-    def quantum_measurement(self, state):
-        """Perform quantum measurement."""
+    def quantum_measurement(self, state: torch.Tensor) -> torch.Tensor:
+        """
+        Perform a quantum-inspired measurement, converting quantum probabilities to classical.
+
+        Args:
+            state (torch.Tensor): The quantum-inspired state tensor (amplitudes).
+
+        Returns:
+            torch.Tensor: Probabilities obtained from the measurement.
+        """
         probabilities = torch.abs(state) ** 2
         return probabilities
 
-    def get_action(self, state):
-        """Get action using quantum-inspired policy."""
+    def get_action(self, state: np.ndarray) -> int:
+        """
+        Get an action using the quantum-inspired policy, combining classical and quantum components.
+
+        Args:
+            state (np.ndarray): Current state observation.
+
+        Returns:
+            int: The selected action.
+        """
         with torch.no_grad():
             # Classical component
             state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
@@ -552,8 +733,18 @@ class QuantumInspiredRLAgent:
             action = action_dist.sample()
             return action.item()
 
-    def update(self, trajectories):
-        """Update quantum-inspired agent."""
+    def update(self, trajectories: List[List[Tuple[np.ndarray, int, float]]]) -> Optional[Dict[str, float]]:
+        """
+        Update the quantum-inspired agent's classical policy and quantum state parameters.
+
+        Args:
+            trajectories (List[List[Tuple[np.ndarray, int, float]]]): A list of trajectories,
+                where each trajectory is a list of (state, action, reward) tuples.
+
+        Returns:
+            Optional[Dict[str, float]]: A dictionary containing various loss components if update occurs,
+                                       otherwise None.
+        """
         if not trajectories:
             return None
 
@@ -599,9 +790,20 @@ class QuantumInspiredRLAgent:
 
 
 class NeurosymbolicRLAgent:
-    """Neuro-Symbolic Reinforcement Learning Agent."""
+    """
+    Neuro-Symbolic Reinforcement Learning Agent.
 
-    def __init__(self, state_dim, action_dim, symbolic_dim=32, lr=3e-4):
+    This agent combines a neural network for perception (encoding states into symbolic representations)
+    with a symbolic reasoning module for logical inference and planning, guiding the policy decision.
+
+    Args:
+        state_dim (int): Dimension of the observation space.
+        action_dim (int): Dimension of the action space.
+        symbolic_dim (int, optional): Dimension of the symbolic representation. Defaults to 32.
+        lr (float, optional): Learning rate for the optimizer. Defaults to 3e-4.
+    """
+
+    def __init__(self, state_dim: int, action_dim: int, symbolic_dim: int = 32, lr: float = 3e-4):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.symbolic_dim = symbolic_dim
@@ -643,8 +845,16 @@ class NeurosymbolicRLAgent:
             lr=lr,
         )
 
-    def symbolic_reasoning(self, symbolic_state):
-        """Perform symbolic reasoning."""
+    def symbolic_reasoning(self, symbolic_state: torch.Tensor) -> torch.Tensor:
+        """
+        Perform symbolic reasoning based on the symbolic state.
+
+        Args:
+            symbolic_state (torch.Tensor): The neural network's encoded symbolic representation of the state.
+
+        Returns:
+            torch.Tensor: The reasoned symbolic state after applying symbolic rules and reasoner.
+        """
         # Apply symbolic rules
         reasoned_state = torch.matmul(symbolic_state, self.symbolic_rules)
 
@@ -653,8 +863,16 @@ class NeurosymbolicRLAgent:
 
         return reasoned_state
 
-    def get_action(self, state):
-        """Get action using neuro-symbolic policy."""
+    def get_action(self, state: np.ndarray) -> int:
+        """
+        Get an action using the neuro-symbolic policy.
+
+        Args:
+            state (np.ndarray): Current state observation.
+
+        Returns:
+            int: The selected action.
+        """
         with torch.no_grad():
             state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
 
@@ -671,8 +889,18 @@ class NeurosymbolicRLAgent:
 
             return action.item()
 
-    def update(self, trajectories):
-        """Update neuro-symbolic agent."""
+    def update(self, trajectories: List[List[Tuple[np.ndarray, int, float]]]) -> Optional[Dict[str, float]]:
+        """
+        Update the neuro-symbolic agent's neural encoder, symbolic reasoner, and policy network.
+
+        Args:
+            trajectories (List[List[Tuple[np.ndarray, int, float]]]): A list of trajectories,
+                where each trajectory is a list of (state, action, reward) tuples.
+
+        Returns:
+            Optional[Dict[str, float]]: A dictionary containing various loss components if update occurs,
+                                       otherwise None.
+        """
         if not trajectories:
             return None
 
@@ -719,9 +947,21 @@ class NeurosymbolicRLAgent:
 
 
 class FederatedRLAgent:
-    """Federated Reinforcement Learning Agent."""
+    """
+    Federated Reinforcement Learning Agent.
 
-    def __init__(self, state_dim, action_dim, num_clients=5, lr=3e-4):
+    This agent orchestrates collaborative training of a global policy across multiple
+    decentralized clients without centralizing their local data, using federated averaging.
+
+    Args:
+        state_dim (int): Dimension of the observation space.
+        action_dim (int): Dimension of the action space.
+        num_clients (int, optional): Number of participating clients. Defaults to 5.
+        lr (float, optional): Learning rate for client optimizers and global optimizer.
+                              Defaults to 3e-4.
+    """
+
+    def __init__(self, state_dim: int, action_dim: int, num_clients: int = 5, lr: float = 3e-4):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.num_clients = num_clients
@@ -752,8 +992,19 @@ class FederatedRLAgent:
         self.federation_rounds = 0
         self.client_data_sizes = [0] * num_clients
 
-    def local_update(self, client_id, trajectories):
-        """Perform local update on client."""
+    def local_update(self, client_id: int, trajectories: List[List[Tuple[np.ndarray, int, float]]]) -> Optional[float]:
+        """
+        Perform a local policy update on a specific client using its collected trajectories.
+
+        Args:
+            client_id (int): Identifier of the client performing the update.
+            trajectories (List[List[Tuple[np.ndarray, int, float]]]): A list of trajectories
+                collected by the client, where each trajectory is a list of (state, action, reward) tuples.
+
+        Returns:
+            Optional[float]: The total loss from the local update if trajectories are provided,
+                             otherwise None.
+        """
         if not trajectories:
             return None
 
@@ -783,8 +1034,16 @@ class FederatedRLAgent:
 
         return total_loss.item()
 
-    def federated_averaging(self):
-        """Perform federated averaging."""
+    def federated_averaging(self) -> int:
+        """
+        Perform federated averaging to update the global model based on client parameters.
+
+        This aggregates the weights of all client models, typically weighted by their data sizes,
+        and updates the global policy. Client models are then synchronized with the new global policy.
+
+        Returns:
+            int: The current federation round number.
+        """
         # Collect client parameters
         client_params = []
         for client_policy in self.client_policies:
@@ -813,8 +1072,18 @@ class FederatedRLAgent:
 
         return self.federation_rounds
 
-    def get_action(self, state, client_id=None):
-        """Get action from global or client policy."""
+    def get_action(self, state: np.ndarray, client_id: Optional[int] = None) -> int:
+        """
+        Get an action from either the global policy or a specific client's policy.
+
+        Args:
+            state (np.ndarray): Current state observation.
+            client_id (Optional[int], optional): If provided, action is taken from this client's policy.
+                                                 Otherwise, the global policy is used. Defaults to None.
+
+        Returns:
+            int: The selected action.
+        """
         with torch.no_grad():
             state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
 
@@ -827,8 +1096,19 @@ class FederatedRLAgent:
             action = action_dist.sample()
             return action.item()
 
-    def update(self, client_trajectories):
-        """Update federated agent."""
+    def update(self, client_trajectories: List[List[List[Tuple[np.ndarray, int, float]]]]) -> Optional[Dict[str, Any]]:
+        """
+        Update the federated learning agent by performing local updates on clients
+        and then aggregating them via federated averaging.
+
+        Args:
+            client_trajectories (List[List[List[Tuple[np.ndarray, int, float]]]]): A list of lists of trajectories,
+                where each inner list corresponds to a client's collected trajectories.
+
+        Returns:
+            Optional[Dict[str, Any]]: A dictionary containing client losses, federation round,
+                                    and average client loss if updates occur, otherwise None.
+        """
         if not client_trajectories:
             return None
 

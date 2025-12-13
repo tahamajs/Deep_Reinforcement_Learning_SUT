@@ -1,341 +1,242 @@
-# CA13: Advanced Model-Based RL and World Models
-
-This repository contains implementations for Computer Assignment 13 of the Deep Reinforcement Learning course, focusing on advanced model-based reinforcement learning techniques including world models, sample efficiency methods, and hierarchical RL.
-
-## 📚 Overview
-
-This assignment explores cutting-edge techniques in deep reinforcement learning:
-
-- **Model-Based vs Model-Free RL**: Comparative analysis of approaches
-- **World Models**: Variational Autoencoder-based environment modeling
-- **Imagination-Based Learning**: Planning in latent space
-- **Sample Efficiency**: Prioritized replay, data augmentation, auxiliary tasks
-- **Transfer Learning**: Multi-task and meta-learning approaches
-- **Hierarchical RL**: Options framework and feudal networks
-- **Multi-Agent RL**: Coordination and communication protocols
-
-## 🏗️ Project Structure
-
-```
-CA13/
-├── CA13.ipynb              # Main assignment notebook
-├── agents/                 # RL agent implementations
-│   ├── __init__.py
-│   ├── model_free.py      # DQN and other model-free agents
-│   ├── model_based.py     # Model-based RL agents
-│   ├── sample_efficient.py # Sample efficiency techniques
-│   └── hierarchical.py    # Hierarchical RL agents
-├── models/                 # Neural network architectures
-│   ├── __init__.py
-│   └── world_model.py     # VAE-based world models
-├── environments/           # Custom environments
-│   ├── __init__.py
-│   └── grid_world.py      # Grid world environments
-├── buffers/                # Experience replay buffers
-│   ├── __init__.py
-│   └── replay_buffer.py   # Standard and prioritized replay
-├── evaluation/             # Evaluation framework
-│   ├── __init__.py
-│   └── advanced_evaluator.py # Comprehensive evaluation tools
-├── utils/                  # Utility functions
-│   ├── __init__.py
-│   ├── visualization.py   # Plotting and analysis tools
-│   └── helpers.py         # Helper functions
-├── training_examples.py    # Training scripts and examples
-├── requirements.txt        # Dependencies
-└── README.md              # This file
-```
-
-## 🚀 Quick Start
-
-### Installation
-
-1. Clone the repository:
-
-```bash
-git clone <repository-url>
-cd CA13
-```
-
-2. Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-3. Run the main notebook:
-
-```bash
-jupyter notebook CA13.ipynb
-```
-
-### Basic Usage
-
-```python
-from agents.model_free import DQNAgent
-from agents.model_based import ModelBasedAgent
-from models.world_model import VariationalWorldModel
-from environments.grid_world import SimpleGridWorld
-from training_examples import train_dqn_agent, evaluate_agent
-
-# Create environment
-env = SimpleGridWorld(size=5)
-
-# Create agent
-agent = DQNAgent(
-    state_dim=2,
-    action_dim=4,
-    learning_rate=1e-3
-)
-
-# Train agent
-results = train_dqn_agent(env, agent, num_episodes=200)
-
-# Evaluate agent
-eval_results = evaluate_agent(env, agent, num_episodes=10)
-```
-
-## 🔬 Key Components
-
-### World Models
-
-```python
-from models.world_model import VariationalWorldModel
+# Dreamer-FuN: Hierarchical World Models for Long-Horizon Sample-Efficient Exploration
 
-# Create VAE-based world model
-world_model = VariationalWorldModel(
-    obs_dim=4,
-    action_dim=2,
-    latent_dim=32
-)
-
-# Train on environment data
-losses = world_model.compute_loss(obs, actions, rewards, next_obs, dones)
-
-# Generate imagined trajectories
-imagined_trajectory = world_model.imagine_trajectory(z_start, actions, horizon=10)
-```
-
-### Sample Efficient Agents
-
-```python
-from agents.sample_efficient import SampleEfficientAgent
-
-# Create sample-efficient agent with prioritized replay and auxiliary tasks
-agent = SampleEfficientAgent(
-    state_dim=4,
-    action_dim=2,
-    hidden_dim=128
-)
-
-# Training includes data augmentation and auxiliary learning
-losses = agent.update(batch_size=32)
-```
-
-### Hierarchical RL
-
-```python
-from agents.hierarchical import OptionsCriticAgent, FeudalAgent
-
-# Options-Critic agent
-oc_agent = OptionsCriticAgent(
-    state_dim=4,
-    action_dim=2,
-    num_options=4
-)
-
-# Feudal Networks agent
-feudal_agent = FeudalAgent(
-    state_dim=4,
-    action_dim=2,
-    goal_dim=16,
-    temporal_horizon=10
-)
-```
-
-### Multi-Agent RL
-
-```python
-from environments.grid_world import MultiAgentGridWorld
-from agents.model_free import MultiAgentDQN
-
-# Create multi-agent environment
-ma_env = MultiAgentGridWorld(size=7, n_agents=3)
-
-# Create multi-agent system with communication
-ma_system = MultiAgentDQN(
-    n_agents=3,
-    state_dim=obs_dim,
-    action_dim=4,
-    enable_communication=True
-)
-```
-
-## 📊 Evaluation Framework
-
-The evaluation framework provides comprehensive analysis tools:
-
-```python
-from evaluation.advanced_evaluator import AdvancedRLEvaluator
-
-# Create evaluator
-evaluator = AdvancedRLEvaluator(
-    environments=[env1, env2, env3],
-    agents={'DQN': dqn_agent, 'MB': mb_agent},
-    metrics=['sample_efficiency', 'reward', 'transfer']
-)
-
-# Run comprehensive evaluation
-results = evaluator.comprehensive_evaluation()
-evaluator.generate_report()
-evaluator.plot_results()
-```
+## 1. Introduction to Dreamer-FuN
 
-## 🎯 Experiments
-
-### Model-Free vs Model-Based Comparison
+This document serves as comprehensive lecture notes for Dreamer-FuN, a novel reinforcement learning (RL) agent that synthesizes the strengths of model-based learning with hierarchical control. It is designed to achieve sample-efficient exploration and robust performance in long-horizon tasks, particularly those with sparse rewards. Dreamer-FuN integrates the powerful world modeling and imagination capabilities of DreamerV3 with the goal-setting and sub-goal execution architecture of Feudal Networks (FuN).
 
-Compare different RL approaches on the same environment:
+### 1.1 The Research Gap
 
-```python
-from training_examples import compare_agents
+Traditional RL methods often struggle with sample efficiency, especially in complex environments requiring vast amounts of interaction to learn effective policies. Model-based RL (MBRL) agents like DreamerV3 have shown significant progress by learning a world model to predict future states and rewards, enabling efficient planning through imagined trajectories. However, their ability to handle temporally extended reasoning and hierarchical decomposition can be limited.
 
-results = compare_agents(
-    env=env,
-    agents={
-        'DQN': dqn_agent,
-        'Model-Based': mb_agent,
-        'Sample-Efficient': se_agent
-    },
-    num_episodes=200
-)
+Conversely, Hierarchical RL (HRL) methods, such as Feudal Networks (FuN), excel at decomposing complex problems into sub-problems, with a high-level manager setting goals for a low-level worker. This approach facilitates long-horizon credit assignment. Yet, most HRL methods are model-free, which can be inherently sample-inefficient, requiring extensive real-world interactions.
 
-# Plot comparison
-plot_training_curves(results, save_path='comparison.png')
-```
-
-### Hyperparameter Sweep
-
-```python
-from training_examples import hyperparameter_sweep
+Dreamer-FuN bridges this gap by combining efficient model-based planning with structured hierarchical goal-setting. Our primary objective is to leverage the predictive power of a learned world model within a hierarchical framework to achieve superior sample efficiency and robust performance in long-horizon, sparse-reward environments.
 
-param_grid = {
-    'learning_rate': [1e-4, 1e-3, 1e-2],
-    'hidden_dim': [64, 128, 256],
-    'gamma': [0.95, 0.99, 0.995]
-}
-
-results_df = hyperparameter_sweep(
-    env=env,
-    agent_class=DQNAgent,
-    param_grid=param_grid,
-    num_episodes=100
-)
-```
+### 1.2 Novelty and Synthesis
 
-## 📈 Visualization Tools
+Dreamer-FuN proposes a new architecture that merges:
+1.  **DreamerV3**: For its state-of-the-art capabilities in learning a compact and predictive world model from high-dimensional observations, and for training policies by planning in the learned latent space using imagination.
+2.  **Feudal Networks (FuN)**: For its hierarchical control architecture, which enables a manager to set abstract goals and a worker to execute those goals over extended periods.
 
-The utils module provides extensive visualization capabilities:
+The core synthesis lies in using the DreamerV3-like world model as the foundational predictive engine for *both* the manager and the worker. The manager sets goals in the world model's learned latent space, and the worker learns to achieve these sub-goals by planning and acting within the imagined trajectories generated by the world model. This synergy aims to combine the sample efficiency of model-based planning with the structured exploration and long-horizon reasoning of hierarchical control.
 
-```python
-from utils.visualization import (
-    plot_training_curves,
-    plot_world_model_analysis,
-    plot_multi_agent_analysis,
-    create_summary_table
-)
+## 2. Theoretical Framework and Mathematical Derivations
 
-# Plot training progress
-plot_training_curves({
-    'DQN': dqn_rewards,
-    'Model-Based': mb_rewards
-}, title='Learning Curves Comparison')
+This section provides a detailed theoretical grounding for Dreamer-FuN, including the mathematical derivations for its core components: the World Model, the Manager, and the Worker.
 
-# Analyze world model
-plot_world_model_analysis(world_model_results)
+### 2.1 World Model
 
-# Multi-agent coordination analysis
-plot_multi_agent_analysis(ma_results)
+The World Model is the predictive core of Dreamer-FuN, adapted from the principles of DreamerV3. It learns to represent the environment dynamics, rewards, and observations in a compact latent space. This model is crucial for enabling imagination-based planning for both the Manager and the Worker.
 
-# Create summary table
-summary_df = create_summary_table(results)
-print(summary_df)
-```
+#### 2.1.1 Components of the World Model
 
-## 🔧 Configuration
-
-Use the configuration system for reproducible experiments:
-
-```python
-from utils.helpers import create_config_template, save_config, load_config
-
-# Create configuration
-config = create_config_template()
-
-# Modify configuration
-config['agent']['learning_rate'] = 5e-4
-config['training']['num_episodes'] = 500
-
-# Save configuration
-save_config(config, 'experiment_config.json')
-
-# Load configuration
-config = load_config('experiment_config.json')
-```
-
-## 📚 Theoretical Background
-
-This implementation is based on several key papers:
-
-- **World Models** (Ha & Schmidhuber, 2018): VAE-based world modeling
-- **Dreamer** (Hafner et al., 2020): Imagination-based learning
-- **Options-Critic** (Bacon et al., 2017): Hierarchical RL
-- **Feudal Networks** (Vezhnevets et al., 2017): Manager-worker hierarchies
-- **Prioritized Experience Replay** (Schaul et al., 2016): Sample efficiency
-
-## 🎓 Learning Objectives
-
-By completing this assignment, students will:
-
-1. **Understand** the trade-offs between model-free and model-based RL
-2. **Implement** world models using variational autoencoders
-3. **Apply** imagination-based planning in latent space
-4. **Design** sample-efficient learning algorithms
-5. **Build** hierarchical decision-making systems
-6. **Develop** multi-agent coordination protocols
-7. **Evaluate** advanced RL methods comprehensively
-
-## 🚀 Advanced Features
-
-- **Modular Architecture**: Easy to extend and modify
-- **Comprehensive Evaluation**: Multiple metrics and visualizations
-- **Multi-Agent Support**: Communication and coordination protocols
-- **World Model Integration**: VAE-based environment modeling
-- **Hierarchical Learning**: Options and feudal networks
-- **Sample Efficiency**: Prioritized replay and auxiliary tasks
-- **Transfer Learning**: Multi-task and meta-learning frameworks
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Course instructors for guidance and feedback
-- OpenAI Gym/Gymnasium for environment frameworks
-- PyTorch team for deep learning framework
-- Research community for foundational papers
-
----
-
-**Happy Learning!** 🎉
-
-For questions or issues, please open an issue in the repository.
+The World Model consists of several interconnected neural network modules:
+*   **Encoder (`h_enc`):** Maps high-dimensional raw observations \(o_t \in \mathbb{R}^{D_o}\) to an initial latent representation.
+*   **RSSM (Recurrent State-Space Model):** This is the core dynamics model, composed of:
+    *   **Prior (Dynamics) Model (`p_dyn`):** Predicts the next latent state \(s_t\) given the previous hidden state \(h_{t-1}\) and action \(a_{t-1}\). This forms the recurrent part.
+        \[ s_t \sim p(s_t | h_{t-1}, a_{t-1}) \]\[ h_t = f_{recurrent}(h_{t-1}, s_t, a_{t-1}) \]
+    *   **Posterior (Representation) Model (`q_rep`):** Updates the latent state \(s_t\) by incorporating the current observation \(o_t\). This allows the model to correct its predictions based on actual sensory input.
+        \[ s_t \sim q(s_t | h_t, o_t) \]
+*   **Reward Model (`p_rew`):** Predicts the immediate reward \(r_t \in \mathbb{R}\) given the current latent state \(s_t\) (or a combination of \(h_t\) and \(s_t\)).
+    \[ r_t \sim p(r_t | h_t, s_t) \]
+*   **Observation Model (`p_obs`):** Reconstructs the original observation \(o_t\) from the latent state \(s_t\) (or a combination of \(h_t\) and \(s_t\)). This forces the latent space to capture salient information.
+    \[ o_t \sim p(o_t | h_t, s_t) \]
+
+#### 2.1.2 World Model Training Objective
+
+The World Model is trained to maximize the likelihood of observed transitions. This involves a reconstruction objective for observations and rewards, and a KL divergence regularization to ensure the posterior latent states are close to the prior latent states. This ensures the dynamics model is predictive even without direct observations.
+
+The full training objective for the World Model, \(\mathcal{L}_{WM}\), aims to maximize the evidence lower bound (ELBO) on the log-likelihood of the observed data:
+
+\[ \mathcal{L}_{WM} = \mathbb{E}_{p(o_{1:T}, r_{1:T}, a_{1:T})} \left[ \sum_{t=1}^T ( \log p(o_t | h_t, s_t) + \log p(r_t | h_t, s_t) - \beta D_{KL}[q(s_t|h_t, o_t) || p(s_t|h_{t-1}, a_{t-1})] ) \right] \]
+
+Where:
+*   \(T\) is the sequence length.
+*   \(p(o_t | h_t, s_t)\) is the log-likelihood of reconstructing the observation.
+*   \(p(r_t | h_t, s_t)\) is the log-likelihood of predicting the reward.
+*   \(D_{KL}[q(s_t|h_t, o_t) || p(s_t|h_{t-1}, a_{t-1})]\) is the KL divergence between the posterior (representation) and prior (dynamics) distributions of the latent state. This acts as a regularization term, often scaled by \(\beta\).
+*   \(h_t\) is the recurrent hidden state.
+*   \(s_t\) is the stochastic latent state.
+
+### 2.2 Hierarchical Control: Manager and Worker
+
+Inspired by Feudal Networks, Dreamer-FuN employs a manager-worker hierarchy. Both entities operate within the rich latent space provided by the trained World Model. This allows for abstract goal setting and efficient sub-goal achievement.
+
+#### 2.2.1 Manager
+
+The Manager (`M`) operates at a coarser temporal scale. Its responsibility is to set abstract, temporally extended goals \(g_t\) for the Worker to achieve. These goals are also represented in the World Model's latent space, providing a semantic and consistent representation.
+
+*   **Manager's Policy:** The Manager learns a policy \(\pi_M(g_t | h_t, s_t)\) that maps the current latent state \((h_t, s_t))\) to a distribution over possible goals \(g_t\).
+    \[ g_t \sim \pi_M(g_t | h_t, s_t) \]
+*   **Goal Representation:** A goal \(g_t\) is typically a vector in the same dimensionality as the latent state or a lower-dimensional embedding thereof, signifying a desired future latent state.
+*   **Intrinsic Reward for Manager:** The Manager's learning signal comes from an intrinsic reward that reflects the Worker's progress towards its set goals. This intrinsic reward \(r^I_t\) can be designed in several ways. A common approach is the negative distance between the current achieved latent state \(s_{t+N}\) (after \(N\) worker steps) and the goal \(g_t\):
+    \[ r^I_t = -\|s_{t+N} - g_t\|^2 \]
+    Alternatively, a more sophisticated intrinsic reward might measure how much the worker *changes* the state in the direction of the goal or an uncertainty-based reward. For Dreamer-FuN, we will focus on a distance-based reward in the latent space.
+*   **Manager's Objective:** The Manager's policy is trained using a standard actor-critic approach, but *in the imagined trajectories generated by the World Model*. The Manager's objective is to maximize the expected sum of these intrinsic rewards over its longer horizon \(H_M\) (number of worker sub-episodes):
+    \[ \mathcal{L}_M = \mathbb{E}_{\pi_M, \pi_W, WM} \left[ \sum_{k=0}^{H_M-1} \gamma_{M}^k r^I_{t + k \cdot N} \right] \]
+    Where \(\gamma_M\) is the manager's discount factor. The Manager learns its policy by maximizing its own value function \(V_M(h_t, s_t)\) and Q-function \(Q_M(h_t, s_t, g_t)\) through model-predictive control within the imagination of the World Model.
+
+#### 2.2.2 Worker
+
+The Worker (`W`) operates at a faster temporal resolution and receives a goal \(g_t\) from the Manager. Its task is to generate primitive actions \(a_t\) for \(N\) steps to achieve that specific goal.
+
+*   **Worker's Policy:** The Worker learns a policy \(\pi_W(a_t | h_t, s_t, g_t)\) that maps the current latent state \((h_t, s_t))\) and the given goal \(g_t\) to a distribution over primitive actions \(a_t\).
+    \[ a_t \sim \pi_W(a_t | h_t, s_t, g_t) \]
+*   **Worker's Reward:** The Worker is trained to maximize a combination of intrinsic rewards (from the Manager) and extrinsic rewards (from the environment).
+    \[ R_W = \sum_{k=0}^{N-1} \gamma_{W}^k (\alpha r^I_{t+k} + (1-\alpha) r^E_{t+k}) \]
+    Where:
+    *   \(r^I_{t+k}\) is the intrinsic reward, typically reflecting progress towards \(g_t\). We can redefine this as the negative distance from the current state to the goal: \(r^I_{t+k} = -\|s_{t+k} - g_t\|^2\).
+    *   \(r^E_{t+k}\) is the extrinsic reward from the environment.
+    *   \(\alpha \in [0,1]\) is a weighting factor balancing intrinsic and extrinsic motivation.
+    *   \(\gamma_W\) is the worker's discount factor.
+*   **Worker's Objective:** Similar to the Manager, the Worker's policy is trained using actor-critic methods, leveraging the World Model to perform short-horizon planning within imagined trajectories to achieve its sub-goals. The worker's objective is to maximize the expected return \(R_W\).
+
+### 2.3 Integrated Training Procedure
+
+The training of Dreamer-FuN is an iterative process that alternates between updating the World Model and training the hierarchical control policies (Manager and Worker). This ensures that all components learn synergistically and adapt to each other's improvements.
+
+1.  **Experience Collection:**
+    *   The current Manager and Worker policies interact with the real environment for a certain number of steps/episodes.
+    *   Transitions \((o_t, a_t, r_t, o_{t+1}))\) are collected and stored in a replay buffer.
+2.  **World Model Update:**
+    *   Random batches of sequences are sampled from the replay buffer.
+    *   The World Model (Encoder, RSSM, Reward Model, Observation Model) is updated using the objective \(\mathcal{L}_{WM}\) to improve its predictive accuracy of environment dynamics, rewards, and observations.
+3.  **Worker Policy Training (in Imagination):**
+    *   After updating the World Model, the Worker's policy is trained.
+    *   The Manager proposes a goal \(g_t\) (or a goal from the replay buffer is used).
+    *   The Worker generates imagined trajectories using the World Model, conditioned on the current latent state and the goal.
+    *   The Worker's actor and critic networks are updated by maximizing the expected return \(R_W\) over these imagined trajectories, considering both intrinsic and extrinsic rewards.
+4.  **Manager Policy Training (in Imagination):**
+    *   The Manager's policy is then trained.
+    *   The Manager samples imagined trajectories from the World Model over a longer horizon.
+    *   For each Manager step, a goal is set, and the Worker's imagined execution is evaluated based on the intrinsic reward \(r^I_t\).
+    *   The Manager's actor and critic networks are updated by maximizing the expected intrinsic return \(R_M\) over its planning horizon \(H_M\).
+
+This alternating training allows the World Model to continuously refine its understanding of the environment, while the Manager and Worker learn to leverage this understanding for effective hierarchical control and sample-efficient exploration.
+
+## 3. Code Map: File-by-File Explanation
+
+The `src/` directory will house the core logic for Dreamer-FuN, structured as a modular Python package.
+
+*   `src/config.py`:
+    *   **Purpose:** Centralized configuration for all hyperparameters. This file defines all numerical parameters, network dimensions, learning rates, buffer sizes, training steps, and environment names.
+    *   **Content:** Contains `dataclass` definitions for various configurations (e.g., `WorldModelConfig`, `ManagerConfig`, `WorkerConfig`, `TrainingConfig`, `EnvironmentConfig`).
+*   `src/models.py`:
+    *   **Purpose:** Defines the neural network architectures for the World Model components, Manager's policy, and Worker's policy.
+    *   **Content:**
+        *   `Encoder`, `Decoder` (Observation Model)
+        *   `RSSM` (Recurrent State-Space Model with `Prior` and `Posterior` networks)
+        *   `RewardModel`
+        *   `ManagerActor`, `ManagerCritic`
+        *   `WorkerActor`, `WorkerCritic`
+*   `src/losses.py`:
+    *   **Purpose:** Implements the loss functions derived in the Theoretical Framework section.
+    *   **Content:**
+        *   `world_model_loss`: Computes \(\mathcal{L}_{WM}\).
+        *   `manager_loss`: Computes \(\mathcal{L}_M\).
+        *   `worker_loss`: Computes \(\mathcal{L}_W\).
+        *   Utility functions for KL divergence, reconstruction errors.
+*   `src/data.py`:
+    *   **Purpose:** Handles data storage and retrieval, including the replay buffer and data loading utilities.
+    *   **Content:**
+        *   `ReplayBuffer`: Stores environment transitions.
+        *   `DreamerFuNDataset`: A PyTorch `Dataset` for sampling sequences for World Model training.
+        *   `create_dataloader`: Utility to create data loaders.
+*   `src/agents.py`:
+    *   **Purpose:** Orchestrates the interaction between the World Model, Manager, and Worker. This is the main agent interface.
+    *   **Content:**
+        *   `DreamerFuNAgent`: A high-level class that encapsulates the World Model, Manager, and Worker. It provides methods for acting in the environment, updating the world model, and training the hierarchical policies.
+*   `src/environments.py`:
+    *   **Purpose:** Provides wrappers for Gymnasium environments to ensure consistent interfaces and handle observation/action space transformations.
+    *   **Content:**
+        *   `DreamerFuNEnvWrapper`: Standardizes environment interactions.
+*   `src/utils.py`:
+    *   **Purpose:** General utility functions such as setting random seeds, device management, and logging.
+    *   **Content:**
+        *   `set_seed`, `get_device`
+        *   `Logger`: For tracking training progress and metrics.
+        *   `save_checkpoint`, `load_checkpoint`: For model persistence.
+
+## 4. Dataset Specifications
+
+Dreamer-FuN is designed to operate on standard Gymnasium (formerly Gym) environments. For initial evaluation and development, we will focus on:
+
+*   **DeepMind Control Suite (via `dm_control` wrapper):**
+    *   **Examples:** `Walker-walk`, `Humanoid-run`, `Cheetah-run`.
+    *   **Observation Space:** High-dimensional image observations (e.g., `(3, 64, 64)`) or feature vectors.
+    *   **Action Space:** Continuous control actions.
+    *   **Preprocessing:** Image observations will be normalized to \([0, 1])\) and potentially resized. Continuous actions will be clipped to environment bounds.
+*   **Minigrid Environments:**
+    *   **Examples:** `MiniGrid-DoorKey-8x8-v0`, `MiniGrid-LavaGapS8-v0`.
+    *   **Observation Space:** Egocentric grid-based observations (e.g., `(7, 7, 3)`) or a flattened vector.
+    *   **Action Space:** Discrete actions (e.g., `turn_left`, `turn_right`, `forward`, `pickup`, `drop`).
+    *   **Preprocessing:** Grid observations will be flattened or processed as image-like inputs.
+*   **Custom Long-Horizon Grid Worlds:**
+    *   **Purpose:** Specifically designed to test hierarchical planning and sparse rewards.
+    *   **Observation Space:** Typically grid-based, similar to Minigrid.
+    *   **Action Space:** Discrete.
+    *   **Preprocessing:** Similar to Minigrid.
+
+### 4.1 Data Schema and Preprocessing
+
+*   **Observations:** `(batch_size, sequence_length, *observation_shape)`. Will be converted to `torch.Tensor` and normalized.
+*   **Actions:** `(batch_size, sequence_length, action_dim)`. Will be converted to `torch.Tensor`.
+*   **Rewards:** `(batch_size, sequence_length, 1)`. Will be converted to `torch.Tensor`.
+*   **Terminated/Truncated Flags:** `(batch_size, sequence_length, 1)`. Boolean flags indicating episode termination.
+
+All data will be stored in a `ReplayBuffer` as raw transitions and then batched into sequences for World Model training.
+
+## 5. Execution Notebook (`notebooks/main.ipynb`)
+
+The `notebooks/main.ipynb` will be the exclusive entry point for running experiments, training the Dreamer-FuN agent, and visualizing results. It will be structured to provide a complete workflow from setup to publication-quality figures.
+
+### 5.1 Workflow Outline
+
+1.  **Imports & Setup:**
+    *   Import necessary libraries (`torch`, `numpy`, `matplotlib`, `seaborn`, `gymnasium`).
+    *   Import modules from `src/` (e.g., `config`, `agents`, `data`, `utils`).
+    *   Set random seeds for reproducibility using `src.utils.set_seed()`.
+    *   Detect and configure the device (CPU/GPU) using `src.utils.get_device()`.
+
+2.  **Configuration Loading:**
+    *   Load hyperparameters from `src.config.py`.
+
+3.  **Environment Initialization:**
+    *   Create and wrap the chosen Gymnasium environment using `src.environments.DreamerFuNEnvWrapper`.
+
+4.  **Agent Initialization:**
+    *   Instantiate the `src.agents.DreamerFuNAgent` with the loaded configurations.
+
+5.  **Data Initialization:**
+    *   Initialize the `src.data.ReplayBuffer`.
+
+6.  **Training Loop:**
+    *   Implement the main training loop, orchestrating experience collection, World Model updates, Worker training, and Manager training.
+    *   Log training progress (losses, rewards, intrinsic rewards) using `src.utils.Logger`.
+    *   Periodically save model checkpoints.
+
+7.  **Evaluation:**
+    *   After training, evaluate the trained `DreamerFuNAgent` on a separate set of evaluation episodes.
+    *   Record episode returns, success rates, and other relevant metrics.
+
+8.  **Visualization:**
+    *   Generate publication-quality figures using `matplotlib` and `seaborn`.
+    *   **Plots to include:**
+        *   **Loss Curves:** World Model loss, Manager loss, Worker loss over training steps.
+        *   **Episode Returns:** Average episode return over training episodes, comparing with baselines (if available).
+        *   **Goal Attainment:** Visualization of the Worker's ability to achieve Manager's goals.
+        *   **Latent Space Trajectories:** If feasible, project and visualize trajectories within the learned latent space, showing Manager goals and Worker paths.
+        *   **Reconstructed Observations:** Show original observations alongside the World Model's reconstructions.
+    *   **Image Saving:** All plots will be saved programmatically to the `pictures/` directory:
+        ```python
+        import matplotlib.pyplot as plt
+        plt.figure(figsize=(10, 6))
+        # ... plotting code ...
+        plt.title('Training Loss')
+        plt.xlabel('Training Steps')
+        plt.ylabel('Loss')
+        plt.savefig('../pictures/fig_01_training_loss.png', dpi=300, bbox_inches='tight')
+        plt.close()
+        ```
+
+This structure ensures that `main.ipynb` serves as a self-contained, executable demonstration of Dreamer-FuN, producing reproducible results and high-quality visualizations.

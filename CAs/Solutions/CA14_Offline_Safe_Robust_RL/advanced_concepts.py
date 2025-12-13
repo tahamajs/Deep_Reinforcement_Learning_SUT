@@ -31,9 +31,20 @@ import os
 
 
 class TransferLearningAgent:
-    """Transfer Learning Agent for domain adaptation."""
+    """
+    Transfer Learning Agent for domain adaptation.
 
-    def __init__(self, source_state_dim, target_state_dim, action_dim, lr=3e-4):
+    This agent leverages a pre-trained policy from a source domain and adapts it
+    to a new target domain using domain adaptation layers and fine-tuning.
+
+    Args:
+        source_state_dim (int): Dimension of the state space in the source domain.
+        target_state_dim (int): Dimension of the state space in the target domain.
+        action_dim (int): Dimension of the action space.
+        lr (float, optional): Learning rate for the optimizer. Defaults to 3e-4.
+    """
+
+    def __init__(self, source_state_dim: int, target_state_dim: int, action_dim: int, lr: float = 3e-4):
         self.source_state_dim = source_state_dim
         self.target_state_dim = target_state_dim
         self.action_dim = action_dim
@@ -78,8 +89,15 @@ class TransferLearningAgent:
         self.transfer_losses = []
         self.adaptation_losses = []
 
-    def adapt_to_target_domain(self, target_data, num_epochs=100):
-        """Adapt to target domain using transfer learning."""
+    def adapt_to_target_domain(self, target_data: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]], num_epochs: int = 100):
+        """
+        Adapt the agent's policy to the target domain using knowledge distillation and fine-tuning.
+
+        Args:
+            target_data (List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]): A list of batches
+                from the target domain, where each batch is (states, actions, rewards).
+            num_epochs (int, optional): Number of epochs for adaptation. Defaults to 100.
+        """
         for epoch in range(num_epochs):
             total_loss = 0
 
@@ -127,8 +145,16 @@ class TransferLearningAgent:
                     f"Transfer Learning Epoch {epoch}: Loss = {total_loss / len(target_data):.4f}"
                 )
 
-    def get_action(self, state):
-        """Get action using adapted policy."""
+    def get_action(self, state: torch.Tensor) -> int:
+        """
+        Get an action using the adapted policy for the target domain.
+
+        Args:
+            state (torch.Tensor): Current state observation from the target domain.
+
+        Returns:
+            int: The selected action.
+        """
         with torch.no_grad():
             # Adapt state to source domain
             adapted_state = self.domain_adapter(state.unsqueeze(0))
@@ -144,9 +170,19 @@ class TransferLearningAgent:
 
 
 class CurriculumLearningAgent:
-    """Curriculum Learning Agent with progressive difficulty."""
+    """
+    Curriculum Learning Agent with progressive difficulty.
 
-    def __init__(self, state_dim, action_dim, lr=3e-4):
+    This agent learns by progressively increasing the difficulty of the task
+    based on its performance, allowing for more efficient learning.
+
+    Args:
+        state_dim (int): Dimension of the observation space.
+        action_dim (int): Dimension of the action space.
+        lr (float, optional): Learning rate for the optimizer. Defaults to 3e-4.
+    """
+
+    def __init__(self, state_dim: int, action_dim: int, lr: float = 3e-4):
         self.state_dim = state_dim
         self.action_dim = action_dim
 
@@ -174,8 +210,13 @@ class CurriculumLearningAgent:
 
         self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
 
-    def update_curriculum(self, performance):
-        """Update curriculum based on performance."""
+    def update_curriculum(self, performance: float):
+        """
+        Update the curriculum level based on the agent's recent performance.
+
+        Args:
+            performance (float): The recent performance metric (e.g., average reward).
+        """
         self.level_performance.append(performance)
 
         if len(self.level_performance) >= 50:
@@ -190,12 +231,25 @@ class CurriculumLearningAgent:
                 print(f"Curriculum advanced to level {self.current_level}")
                 self.level_performance.clear()
 
-    def get_current_difficulty(self):
-        """Get current difficulty level."""
+    def get_current_difficulty(self) -> float:
+        """
+        Get the current difficulty level of the curriculum.
+
+        Returns:
+            float: The current difficulty factor.
+        """
         return self.curriculum_levels[self.current_level]["difficulty"]
 
-    def get_action(self, state):
-        """Get action from policy."""
+    def get_action(self, state: np.ndarray) -> int:
+        """
+        Get an action from the current policy.
+
+        Args:
+            state (np.ndarray): Current state observation.
+
+        Returns:
+            int: The selected action.
+        """
         with torch.no_grad():
             state_tensor = torch.FloatTensor(state).unsqueeze(0)
             action_probs = self.policy(state_tensor)
@@ -203,8 +257,17 @@ class CurriculumLearningAgent:
             action = action_dist.sample()
             return action.item()
 
-    def update(self, trajectories):
-        """Update policy."""
+    def update(self, trajectories: List[List[Tuple[np.ndarray, int, float]]]) -> Optional[float]:
+        """
+        Update the agent's policy using collected trajectories, weighted by the current curriculum difficulty.
+
+        Args:
+            trajectories (List[List[Tuple[np.ndarray, int, float]]]): A list of trajectories,
+                where each trajectory is a list of (state, action, reward) tuples.
+
+        Returns:
+            Optional[float]: The total loss value if update occurs, otherwise None.
+        """
         if not trajectories:
             return None
 
@@ -236,9 +299,21 @@ class CurriculumLearningAgent:
 
 
 class MultiTaskLearningAgent:
-    """Multi-Task Learning Agent."""
+    """
+    Multi-Task Learning Agent.
 
-    def __init__(self, state_dim, action_dim, num_tasks, lr=3e-4):
+    This agent learns to solve multiple related tasks simultaneously by sharing
+    a common feature extractor and using task-specific heads for each task.
+    It can also auto-select tasks if not specified.
+
+    Args:
+        state_dim (int): Dimension of the observation space.
+        action_dim (int): Dimension of the action space.
+        num_tasks (int): Number of tasks the agent is expected to solve.
+        lr (float, optional): Learning rate for the optimizer. Defaults to 3e-4.
+    """
+
+    def __init__(self, state_dim: int, action_dim: int, num_tasks: int, lr: float = 3e-4):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.num_tasks = num_tasks
@@ -275,8 +350,18 @@ class MultiTaskLearningAgent:
 
         self.task_performances = {i: deque(maxlen=100) for i in range(num_tasks)}
 
-    def get_action(self, state, task_id=None):
-        """Get action for specific task."""
+    def get_action(self, state: np.ndarray, task_id: Optional[int] = None) -> Tuple[int, int]:
+        """
+        Get an action for a specific task, or auto-select a task if not provided.
+
+        Args:
+            state (np.ndarray): Current state observation.
+            task_id (Optional[int], optional): The identifier of the task for which to get an action.
+                                               If None, the agent selects a task. Defaults to None.
+
+        Returns:
+            Tuple[int, int]: A tuple containing the selected action and the task_id for which the action was taken.
+        """
         with torch.no_grad():
             state_tensor = torch.FloatTensor(state).unsqueeze(0)
 
@@ -295,8 +380,17 @@ class MultiTaskLearningAgent:
 
             return action.item(), task_id
 
-    def update(self, task_data):
-        """Update multi-task agent."""
+    def update(self, task_data: Dict[int, List[List[Tuple[np.ndarray, int, float]]]]) -> float:
+        """
+        Update the multi-task agent using data from multiple tasks.
+
+        Args:
+            task_data (Dict[int, List[List[Tuple[np.ndarray, int, float]]]]): A dictionary where keys are task_ids
+                and values are lists of trajectories for that task.
+
+        Returns:
+            float: The total loss across all tasks.
+        """
         total_loss = 0
 
         for task_id, trajectories in task_data.items():
@@ -336,9 +430,19 @@ class MultiTaskLearningAgent:
 
 
 class ContinualLearningAgent:
-    """Continual Learning Agent with catastrophic forgetting prevention."""
+    """
+    Continual Learning Agent with catastrophic forgetting prevention.
 
-    def __init__(self, state_dim, action_dim, lr=3e-4):
+    This agent learns a sequence of tasks while retaining knowledge from previous tasks,
+    using techniques like experience replay and Elastic Weight Consolidation (EWC).
+
+    Args:
+        state_dim (int): Dimension of the observation space.
+        action_dim (int): Dimension of the action space.
+        lr (float, optional): Learning rate for the optimizer. Defaults to 3e-4.
+    """
+
+    def __init__(self, state_dim: int, action_dim: int, lr: float = 3e-4):
         self.state_dim = state_dim
         self.action_dim = action_dim
 
@@ -364,8 +468,16 @@ class ContinualLearningAgent:
 
         self.task_count = 0
 
-    def compute_fisher_information(self, task_data):
-        """Compute Fisher Information Matrix for EWC."""
+    def compute_fisher_information(self, task_data: List[List[Tuple[np.ndarray, int, float]]]) -> Dict[str, torch.Tensor]:
+        """
+        Compute the Fisher Information Matrix for Elastic Weight Consolidation (EWC).
+
+        Args:
+            task_data (List[List[Tuple[np.ndarray, int, float]]]): Trajectories from the current task.
+
+        Returns:
+            Dict[str, torch.Tensor]: A dictionary containing Fisher information for each parameter.
+        """
         fisher_info = {}
 
         for name, param in self.policy.named_parameters():
@@ -399,8 +511,14 @@ class ContinualLearningAgent:
 
         return fisher_info
 
-    def consolidate_knowledge(self, task_data):
-        """Consolidate knowledge using EWC."""
+    def consolidate_knowledge(self, task_data: List[List[Tuple[np.ndarray, int, float]]]):
+        """
+        Consolidate knowledge after learning a task by computing and storing Fisher information
+        and optimal parameters for EWC.
+
+        Args:
+            task_data (List[List[Tuple[np.ndarray, int, float]]]): Trajectories from the task just learned.
+        """
         # Compute Fisher information
         self.fisher_information = self.compute_fisher_information(task_data)
 
@@ -412,8 +530,13 @@ class ContinualLearningAgent:
         self.task_count += 1
         print(f"Knowledge consolidated for task {self.task_count}")
 
-    def ewc_loss(self):
-        """Compute EWC regularization loss."""
+    def ewc_loss(self) -> torch.Tensor:
+        """
+        Compute the Elastic Weight Consolidation (EWC) regularization loss.
+
+        Returns:
+            torch.Tensor: The EWC loss.
+        """
         ewc_loss = 0
 
         for name, param in self.policy.named_parameters():
@@ -425,8 +548,16 @@ class ContinualLearningAgent:
 
         return self.ewc_lambda * ewc_loss
 
-    def get_action(self, state):
-        """Get action from policy."""
+    def get_action(self, state: np.ndarray) -> int:
+        """
+        Get an action from the current policy.
+
+        Args:
+            state (np.ndarray): Current state observation.
+
+        Returns:
+            int: The selected action.
+        """
         with torch.no_grad():
             state_tensor = torch.FloatTensor(state).unsqueeze(0)
             action_probs = self.policy(state_tensor)
@@ -434,8 +565,17 @@ class ContinualLearningAgent:
             action = action_dist.sample()
             return action.item()
 
-    def update(self, trajectories):
-        """Update continual learning agent."""
+    def update(self, trajectories: List[List[Tuple[np.ndarray, int, float]]]) -> Optional[float]:
+        """
+        Update the continual learning agent's policy, incorporating experience replay and EWC regularization.
+
+        Args:
+            trajectories (List[List[Tuple[np.ndarray, int, float]]]): A list of trajectories
+                from the current task, where each trajectory is a list of (state, action, reward) tuples.
+
+        Returns:
+            Optional[float]: The total loss value if update occurs, otherwise None.
+        """
         if not trajectories:
             return None
 
@@ -481,9 +621,19 @@ class ContinualLearningAgent:
 
 
 class ExplainableRLAgent:
-    """Explainable RL Agent with attention mechanisms."""
+    """
+    Explainable RL Agent with attention mechanisms.
 
-    def __init__(self, state_dim, action_dim, lr=3e-4):
+    This agent incorporates attention mechanisms to provide insights into its
+    decision-making process, generating explanations alongside actions.
+
+    Args:
+        state_dim (int): Dimension of the observation space.
+        action_dim (int): Dimension of the action space.
+        lr (float, optional): Learning rate for the optimizer. Defaults to 3e-4.
+    """
+
+    def __init__(self, state_dim: int, action_dim: int, lr: float = 3e-4):
         self.state_dim = state_dim
         self.action_dim = action_dim
 
@@ -517,8 +667,17 @@ class ExplainableRLAgent:
 
         self.attention_weights_history = []
 
-    def get_action_with_explanation(self, state):
-        """Get action with attention-based explanation."""
+    def get_action_with_explanation(self, state: np.ndarray) -> Tuple[int, np.ndarray, float]:
+        """
+        Get an action along with attention weights and state value for explanation.
+
+        Args:
+            state (np.ndarray): Current state observation.
+
+        Returns:
+            Tuple[int, np.ndarray, float]: A tuple containing the selected action, attention weights,
+                                         and the estimated state value.
+        """
         with torch.no_grad():
             state_tensor = (
                 torch.FloatTensor(state).unsqueeze(0).unsqueeze(0)
@@ -549,13 +708,31 @@ class ExplainableRLAgent:
                 value.item(),
             )
 
-    def get_action(self, state):
-        """Get action without explanation."""
+    def get_action(self, state: np.ndarray) -> int:
+        """
+        Get an action without providing detailed explanation components.
+
+        Args:
+            state (np.ndarray): Current state observation.
+
+        Returns:
+            int: The selected action.
+        """
         action, _, _ = self.get_action_with_explanation(state)
         return action
 
-    def generate_explanation(self, state, action):
-        """Generate explanation for action choice."""
+    def generate_explanation(self, state: np.ndarray, action: int) -> Dict[str, Any]:
+        """
+        Generate a comprehensive explanation for a given state-action pair.
+
+        Args:
+            state (np.ndarray): The state for which to generate an explanation.
+            action (int): The action taken in that state.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing various explanation components,
+                            such as action probability, attention weights, and state value.
+        """
         action_probs, attention_weights, value = self.get_action_with_explanation(state)
 
         explanation = {
@@ -569,8 +746,17 @@ class ExplainableRLAgent:
 
         return explanation
 
-    def update(self, trajectories):
-        """Update explainable agent."""
+    def update(self, trajectories: List[List[Tuple[np.ndarray, int, float]]]) -> Optional[float]:
+        """
+        Update the explainable agent's policy, attention mechanism, and value function.
+
+        Args:
+            trajectories (List[List[Tuple[np.ndarray, int, float]]]): A list of trajectories,
+                where each trajectory is a list of (state, action, reward) tuples.
+
+        Returns:
+            Optional[float]: The total loss value if update occurs, otherwise None.
+        """
         if not trajectories:
             return None
 
@@ -625,9 +811,22 @@ class ExplainableRLAgent:
 
 
 class AdaptiveMetaLearningAgent:
-    """Adaptive Meta-Learning Agent with dynamic adaptation."""
+    """
+    Adaptive Meta-Learning Agent with dynamic adaptation.
 
-    def __init__(self, state_dim, action_dim, meta_lr=3e-4, inner_lr=0.01):
+    This agent extends MAML by learning an adaptive learning rate for the inner loop,
+    allowing for more flexible and efficient adaptation to diverse tasks.
+
+    Args:
+        state_dim (int): Dimension of the observation space.
+        action_dim (int): Dimension of the action space.
+        meta_lr (float, optional): Learning rate for the outer loop (meta-update).
+                                   Defaults to 3e-4.
+        inner_lr (float, optional): Base learning rate for the inner loop, which is
+                                    scaled by an adaptive factor. Defaults to 0.01.
+    """
+
+    def __init__(self, state_dim: int, action_dim: int, meta_lr: float = 3e-4, inner_lr: float = 0.01):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.meta_lr = meta_lr
@@ -656,8 +855,19 @@ class AdaptiveMetaLearningAgent:
         self.task_networks = {}
         self.adaptation_history = []
 
-    def adapt_to_task(self, task_id, support_data, num_steps=5):
-        """Adapt to task with adaptive learning rate."""
+    def adapt_to_task(self, task_id: Any, support_data: List[List[Tuple[np.ndarray, int, float]]], num_steps: int = 5) -> nn.Module:
+        """
+        Adapt the network to a specific task with an adaptively determined learning rate.
+
+        Args:
+            task_id (Any): Unique identifier for the task.
+            support_data (List[List[Tuple[np.ndarray, int, float]]]): A list of trajectories
+                for the support set, where each trajectory is a list of (state, action, reward) tuples.
+            num_steps (int, optional): Number of inner loop gradient steps. Defaults to 5.
+
+        Returns:
+            nn.Module: The task-adapted policy network.
+        """
         if task_id not in self.task_networks:
             self.task_networks[task_id] = copy.deepcopy(self.meta_network)
 
@@ -704,8 +914,18 @@ class AdaptiveMetaLearningAgent:
 
         return task_network
 
-    def meta_update(self, tasks_data):
-        """Meta-update with adaptive learning rates."""
+    def meta_update(self, tasks_data: Dict[Any, Tuple[List[List[Tuple[np.ndarray, int, float]]], Tuple[np.ndarray, np.ndarray, np.ndarray]]]) -> float:
+        """
+        Perform a meta-update across multiple tasks with adaptive inner loop learning rates.
+
+        Args:
+            tasks_data (Dict[Any, Tuple[List[List[Tuple[np.ndarray, int, float]]], Tuple[np.ndarray, np.ndarray, np.ndarray]]]):
+                A dictionary where keys are task_ids and values are tuples of (support_data, query_data).
+                support_data is a list of trajectories. query_data is a tuple of (states, actions, rewards).
+
+        Returns:
+            float: The meta-loss value.
+        """
         meta_loss = 0
 
         for task_id, (support_data, query_data) in tasks_data.items():
@@ -734,8 +954,18 @@ class AdaptiveMetaLearningAgent:
 
         return meta_loss.item()
 
-    def get_action(self, state, task_id=None):
-        """Get action from meta-network or task-specific network."""
+    def get_action(self, state: np.ndarray, task_id: Optional[Any] = None) -> int:
+        """
+        Get an action from the meta-network or a task-specific network.
+
+        Args:
+            state (np.ndarray): Current state observation.
+            task_id (Optional[Any], optional): If provided, action is taken from this task's adapted policy.
+                                             Otherwise, the meta-network's policy is used. Defaults to None.
+
+        Returns:
+            int: The selected action.
+        """
         with torch.no_grad():
             state_tensor = torch.FloatTensor(state).unsqueeze(0)
 
@@ -750,15 +980,26 @@ class AdaptiveMetaLearningAgent:
 
 
 class AdvancedRLExperimentManager:
-    """Advanced RL Experiment Manager for complex experiments."""
+    """
+    Advanced RL Experiment Manager for complex experiments.
+
+    This class provides tools to create, manage, run, save, load, and compare
+    multiple reinforcement learning experiments with various agents and environments.
+    """
 
     def __init__(self):
-        self.experiments = {}
-        self.results = {}
-        self.configurations = {}
+        self.experiments: Dict[str, Any] = {}
+        self.results: Dict[str, Any] = {}
+        self.configurations: Dict[str, Any] = {}
 
-    def create_experiment(self, experiment_name, config):
-        """Create new experiment."""
+    def create_experiment(self, experiment_name: str, config: Dict[str, Any]):
+        """
+        Create a new experiment with a given name and configuration.
+
+        Args:
+            experiment_name (str): Unique name for the experiment.
+            config (Dict[str, Any]): Configuration dictionary for the experiment.
+        """
         self.experiments[experiment_name] = {
             "config": config,
             "agents": {},
@@ -768,8 +1009,16 @@ class AdvancedRLExperimentManager:
         }
         self.configurations[experiment_name] = config
 
-    def add_agent(self, experiment_name, agent_name, agent_class, agent_params):
-        """Add agent to experiment."""
+    def add_agent(self, experiment_name: str, agent_name: str, agent_class: Any, agent_params: Dict[str, Any]):
+        """
+        Add an agent to a specified experiment.
+
+        Args:
+            experiment_name (str): Name of the experiment to add the agent to.
+            agent_name (str): Unique name for the agent within the experiment.
+            agent_class (Any): The class of the agent (not an instance).
+            agent_params (Dict[str, Any]): Parameters to initialize the agent class.
+        """
         if experiment_name in self.experiments:
             self.experiments[experiment_name]["agents"][agent_name] = {
                 "class": agent_class,
@@ -777,8 +1026,16 @@ class AdvancedRLExperimentManager:
                 "instance": None,
             }
 
-    def add_environment(self, experiment_name, env_name, env_class, env_params):
-        """Add environment to experiment."""
+    def add_environment(self, experiment_name: str, env_name: str, env_class: Any, env_params: Dict[str, Any]):
+        """
+        Add an environment to a specified experiment.
+
+        Args:
+            experiment_name (str): Name of the experiment to add the environment to.
+            env_name (str): Unique name for the environment within the experiment.
+            env_class (Any): The class of the environment (not an instance).
+            env_params (Dict[str, Any]): Parameters to initialize the environment class.
+        """
         if experiment_name in self.experiments:
             self.experiments[experiment_name]["environments"][env_name] = {
                 "class": env_class,
@@ -786,8 +1043,21 @@ class AdvancedRLExperimentManager:
                 "instance": None,
             }
 
-    def run_experiment(self, experiment_name, num_episodes=1000):
-        """Run experiment."""
+    def run_experiment(self, experiment_name: str, num_episodes: int = 1000) -> Dict[str, Any]:
+        """
+        Run a specified experiment, training agents in environments for a given number of episodes.
+
+        Args:
+            experiment_name (str): Name of the experiment to run.
+            num_episodes (int, optional): Number of episodes to run for each agent-environment pair.
+                                        Defaults to 1000.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the results of the experiment.
+
+        Raises:
+            ValueError: If the experiment name is not found.
+        """
         if experiment_name not in self.experiments:
             raise ValueError(f"Experiment {experiment_name} not found")
 
@@ -860,14 +1130,28 @@ class AdvancedRLExperimentManager:
 
         return results
 
-    def save_experiment(self, experiment_name, filepath):
-        """Save experiment results."""
+    def save_experiment(self, experiment_name: str, filepath: str):
+        """
+        Save the results and configuration of a specified experiment to a file.
+
+        Args:
+            experiment_name (str): Name of the experiment to save.
+            filepath (str): Path to the file where the experiment data will be saved.
+        """
         if experiment_name in self.experiments:
             with open(filepath, "wb") as f:
                 pickle.dump(self.experiments[experiment_name], f)
 
-    def load_experiment(self, filepath):
-        """Load experiment results."""
+    def load_experiment(self, filepath: str) -> str:
+        """
+        Load an experiment from a file.
+
+        Args:
+            filepath (str): Path to the file containing the saved experiment data.
+
+        Returns:
+            str: The name of the loaded experiment.
+        """
         with open(filepath, "rb") as f:
             experiment_data = pickle.load(f)
 
@@ -876,8 +1160,16 @@ class AdvancedRLExperimentManager:
 
         return experiment_name
 
-    def compare_experiments(self, experiment_names):
-        """Compare multiple experiments."""
+    def compare_experiments(self, experiment_names: List[str]) -> Dict[str, Any]:
+        """
+        Compare the results of multiple experiments.
+
+        Args:
+            experiment_names (List[str]): A list of experiment names to compare.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the results for each specified experiment.
+        """
         comparison_results = {}
 
         for exp_name in experiment_names:
@@ -886,8 +1178,19 @@ class AdvancedRLExperimentManager:
 
         return comparison_results
 
-    def generate_report(self, experiment_name):
-        """Generate comprehensive experiment report."""
+    def generate_report(self, experiment_name: str) -> Dict[str, Any]:
+        """
+        Generate a comprehensive report for a specified experiment, including summary statistics.
+
+        Args:
+            experiment_name (str): Name of the experiment to generate a report for.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the detailed report of the experiment.
+
+        Raises:
+            ValueError: If the experiment name is not found.
+        """
         if experiment_name not in self.experiments:
             raise ValueError(f"Experiment {experiment_name} not found")
 
@@ -923,8 +1226,19 @@ class AdvancedRLExperimentManager:
 
         return report
 
-    def _find_convergence_episode(self, rewards, window=100, threshold=0.95):
-        """Find episode where performance converges."""
+    def _find_convergence_episode(self, rewards: List[float], window: int = 100, threshold: float = 0.95) -> int:
+        """
+        Helper function to find the episode at which performance converges.
+
+        Args:
+            rewards (List[float]): List of episode rewards.
+            window (int, optional): Window size for moving average. Defaults to 100.
+            threshold (float, optional): Percentage of overall performance to consider as convergence.
+                                       Defaults to 0.95.
+
+        Returns:
+            int: The episode index where convergence is detected, or total episodes if not converged.
+        """
         if len(rewards) < window:
             return len(rewards)
 
@@ -937,8 +1251,19 @@ class AdvancedRLExperimentManager:
 
         return len(rewards)
 
-    def _calculate_success_rate(self, rewards, success_threshold=None):
-        """Calculate success rate."""
+    def _calculate_success_rate(self, rewards: List[float], success_threshold: Optional[float] = None) -> float:
+        """
+        Helper function to calculate the success rate based on rewards.
+
+        Args:
+            rewards (List[float]): List of episode rewards.
+            success_threshold (Optional[float], optional): The reward value above which an episode
+                                                          is considered successful. If None, it's calculated
+                                                          as mean + std of rewards. Defaults to None.
+
+        Returns:
+            float: The calculated success rate.
+        """
         if success_threshold is None:
             success_threshold = np.mean(rewards) + np.std(rewards)
 

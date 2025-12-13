@@ -1,0 +1,331 @@
+\\documentclass[conference]{IEEEtran}
+\\usepackage{amsmath}
+\\usepackage{amssymb}
+\\usepackage{graphicx}
+\\usepackage{cite}
+\\usepackage{xcolor}
+\\usepackage{hyperref} % For clickable links
+
+% Custom commands for math
+\\newcommand{\\state}{\\mathcal{S}}
+\\newcommand{\\action}{\\mathcal{A}}
+\\newcommand{\\prob}{\\mathcal{P}}
+\\newcommand{\\reward}{\\mathcal{R}}
+\\newcommand{\\gammafactor}{\\gamma}
+\\newcommand{\\policy}{\\pi}
+\\newcommand{\\valuef}{V}
+\\newcommand{\\qvalue}{Q}
+\\newcommand{\\estimate}{\\hat}
+
+\\begin{document}
+
+\\title{Model-Based Reinforcement Learning and Planning Methods: A Comprehensive Synthesis}
+
+\\author{\\IEEEauthorblockN{DRL Course Team}
+\\IEEEauthorblockA{Deep Reinforcement Learning Course\\
+University Affiliation (Placeholder)\\
+Email: placeholder@example.com}}
+
+\\maketitle
+
+\\begin{abstract}
+Model-Based Reinforcement Learning (MBRL) offers a powerful paradigm for developing intelligent agents that can learn and plan in complex environments. This paper presents a comprehensive synthesis of various MBRL techniques, addressing the critical balance between sample efficiency and computational demands. We introduce a robust framework encompassing classical planning algorithms (Value and Policy Iteration), integrated planning-learning approaches (Dyna-Q), advanced tree search methods (Monte Carlo Tree Search - MCTS), and optimal control strategies (Model Predictive Control - MPC). Our work details the theoretical underpinnings, mathematical derivations, and practical implementation aspects of these algorithms, alongside strategies for environment modeling using both tabular and neural networks, including uncertainty quantification with ensemble models. Through this synthesis, we demonstrate how MBRL methods significantly enhance sample efficiency, provide adaptable solutions for diverse control problems, and offer a modular architecture for research and application. We present a detailed overview of experimental setups, expected performance characteristics, and key insights into the trade-offs involved in selecting and implementing these advanced RL techniques.
+\end{abstract}
+
+\\begin{IEEEkeywords}
+Reinforcement Learning, Model-Based RL, Planning, Dyna-Q, Monte Carlo Tree Search, Model Predictive Control, Deep Learning, Artificial Intelligence.
+\end{IEEEkeywords}
+
+\\section{Introduction}
+Reinforcement Learning (RL) has emerged as a dominant paradigm for sequential decision-making, enabling agents to learn optimal behaviors through interaction with dynamic environments \cite{sutton2018reinforcement}. Within RL, a fundamental distinction exists between model-free and model-based approaches. Model-free methods directly learn policies or value functions from experience, often requiring vast amounts of interaction data. In contrast, Model-Based Reinforcement Learning (MBRL) agents explicitly learn or acquire a model of the environment's dynamics, using this model to plan future actions and predict outcomes. This distinction often leads to superior sample efficiency for MBRL, making it particularly attractive in real-world scenarios where interaction data is costly or scarce \cite{moore1990efficient, deisenroth2013survey}.
+
+This paper provides a comprehensive synthesis of contemporary MBRL techniques. Our primary objective is to bridge the gap between theoretical foundations and practical, production-ready implementations, while also highlighting novel syntheses that leverage the strengths of various methods. We focus on:
+\\begin{enumerate}
+    \\item Developing a deep theoretical understanding of MBRL, including its core components: environment modeling and planning.
+    \\item Presenting rigorous mathematical derivations for classical planning algorithms, integrated planning-learning (Dyna-Q), Monte Carlo Tree Search (MCTS), and Model Predictive Control (MPC).
+    \\item Detailing the implementation of both tabular and neural network-based environment models, emphasizing uncertainty quantification using ensemble techniques.
+    \\item Providing a modular and extensible codebase designed for research, experimentation, and educational purposes.
+    \\item Analyzing the performance characteristics and trade-offs of different MBRL approaches through comprehensive experimental evaluations.
+\\end{enumerate}
+This work aims to serve as a valuable resource for researchers and practitioners seeking to understand, implement, and advance the state of model-based reinforcement learning.
+
+\\section{Related Work}
+The field of Model-Based Reinforcement Learning has a rich history, with foundational concepts dating back to early work in planning and dynamic programming. Early methods like Value Iteration and Policy Iteration \cite{bellman1957dynamic} laid the groundwork for using explicit models to find optimal policies. The advent of Dyna-Q \cite{sutton1990integrated} marked a significant milestone, demonstrating how planning with a learned model could be integrated with model-free learning to boost sample efficiency.
+
+More recently, research has focused on scaling MBRL to complex, high-dimensional environments. Monte Carlo Tree Search (MCTS) \cite{browne2012mcts} gained prominence with its success in game AI, most notably in AlphaGo \cite{silver2016mastering}, showcasing its ability to handle large search spaces by combining tree search with Monte Carlo rollouts. Model Predictive Control (MPC) \cite{camacho2013model} has seen widespread application in robotics and autonomous systems, leveraging system dynamics models for receding horizon control and robust decision-making in constrained environments.
+
+The rise of deep learning has further revolutionized MBRL, enabling the learning of complex environment dynamics from high-dimensional observations. Neural network-based world models \cite{ha2018world} have demonstrated the capability to learn compact latent representations of the environment, within which planning can occur. Algorithms like Dreamer \cite{hafner2019dreamer} and MuZero \cite{schrittwieser2020mastering} represent the forefront of deep MBRL, learning effective policies by planning in learned latent spaces, often surpassing model-free counterparts in sample efficiency and performance. Our work builds upon these advancements by synthesizing these powerful techniques into a unified framework for analysis and practical application.
+
+\\section{Methodology}
+This section details the theoretical and mathematical foundations of the Model-Based Reinforcement Learning algorithms implemented in this project. We begin by formalizing the environment model, followed by the core planning and learning algorithms.
+
+\\subsection{Environment Modeling}
+Central to MBRL is the environment model, which predicts future states and rewards given the current state and action. We consider both tabular and neural network approaches.
+
+\\subsubsection{Tabular Model}
+For discrete state-action spaces, a tabular model explicitly stores the estimated state transition probabilities $\\hat{\\mathcal{P}}(s'|s, a)$ and reward function $\\hat{\\mathcal{R}}(s, a)$. These are learned directly from observed transitions.
+
+The estimated transition probability from state $s$ to $s'$ given action $a$ is:
+\\begin{equation}
+\\label{eq:tabular_transition}
+\\hat{\\mathcal{P}}(s'|s, a) = \\frac{\\text{count}(s, a, s')}{\\sum_{s'' \\in \\mathcal{S}} \\text{count}(s, a, s'')}
+\\end{equation}
+where $\\text{count}(s, a, s')$ is the number of times the agent transitioned from $s$ to $s'$ by taking action $a$.
+
+The estimated expected reward for taking action $a$ in state $s$ is:
+\\begin{equation}
+\\label{eq:tabular_reward}
+\\hat{\\mathcal{R}}(s, a) = \\frac{\\sum_{\\text{observations}} R(s, a)}{\\text{count}(s, a)}
+\\end{equation}
+where $R(s, a)$ is the observed reward and $\\text{count}(s, a)$ is the number of times action $a$ was taken in state $s$.
+
+\\subsubsection{Neural Network Model (Ensemble)}
+For large or continuous state-action spaces, neural networks approximate the dynamics. An ensemble of $K$ neural networks is used to quantify model uncertainty. Each network $k$ predicts the next state $s'_{k}$ and reward $r_{k}$ given $(s, a)$.
+
+The next state prediction $s'_{k}$ and reward prediction $r_{k}$ from network $k$ are given by:
+\\begin{align}
+\\label{eq:neural_model_prediction}
+s'_{k}, r_{k} &= \\text{NN}_k(s, a)
+\end{align}
+The model is trained by minimizing the Mean Squared Error (MSE) loss:
+\\begin{equation}
+\\label{eq:neural_model_loss}
+\\mathcal{L}_{model} = \\frac{1}{K} \\sum_{k=1}^K \\mathbb{E}_{(s,a,s',r) \\sim \\mathcal{D}} [\\|s'_{k} - s'\\|^2 + \\|r_{k} - r\\|^2]
+\\end{equation}
+where $\\mathcal{D}$ is the experience replay buffer. The ensemble provides a measure of uncertainty (e.g., standard deviation) across predictions, crucial for robust planning and exploration.
+
+\\subsection{Classical Planning Algorithms}
+These algorithms compute optimal policies or value functions given a known (or learned) environment model.
+
+\\subsubsection{Value Iteration}
+Value Iteration iteratively applies the Bellman Optimality Equation to update the state-value function $V(s)$ until convergence to $V^*(s)$:
+\\begin{equation}
+\\label{eq:value_iteration}
+V_{k+1}(s) = \\max_{a \\in \\mathcal{A}} \\left( \\hat{\\mathcal{R}}(s, a) + \\gammafactor \\sum_{s' \\in \\mathcal{S}} \\hat{\\mathcal{P}}(s'|s, a) V_k(s') \\right)
+\\end{equation}
+Once $V^*(s)$ converges, the optimal policy $\\policy^*(s)$ is derived greedily:
+\\begin{equation}
+\\label{eq:policy_value_iteration}
+\\policy^*(s) = \\arg\\max_{a \\in \\mathcal{A}} \\left( \\hat{\\mathcal{R}}(s, a) + \\gammafactor \\sum_{s' \\in \\mathcal{S}} \\hat{\\mathcal{P}}(s'|s, a) V^*(s') \\right)
+\\end{equation}
+
+\\subsubsection{Policy Iteration}
+Policy Iteration alternates between two steps until the policy converges:
+\\begin{enumerate}
+    \\item \\textbf{Policy Evaluation}: Given a policy $\\policy_k$, compute its value function $V^{\\policy_k}(s)$ by iteratively applying the Bellman Expectation Equation:
+    \\begin{equation}
+    \\label{eq:policy_evaluation}
+    V^{\\policy_k}_{j+1}(s) = \\sum_{a \\in \\mathcal{A}} \\policy_k(a|s) \\left( \\hat{\\mathcal{R}}(s, a) + \\gammafactor \\sum_{s' \\in \\mathcal{S}} \\hat{\\mathcal{P}}(s'|s, a) V^{\\policy_k}_j(s') \\right)
+    \\end{equation}
+    \\item \\textbf{Policy Improvement}: Update the policy greedily with respect to $V^{\\policy_k}(s)$:
+    \\begin{equation}
+    \\label{eq:policy_improvement}
+    \\policy_{k+1}(s) = \\arg\\max_{a \\in \\mathcal{A}} \\left( \\hat{\\mathcal{R}}(s, a) + \\gammafactor \\sum_{s' \\in \\mathcal{S}} \\hat{\\mathcal{P}}(s'|s, a) V^{\\policy_k}(s') \\right)
+    \\end{equation}
+\\end{enumerate}
+
+\\subsection{Dyna-Q Algorithm}
+Dyna-Q \cite{sutton1990integrated} combines direct reinforcement learning (model-free Q-learning) with model learning and planning.
+\\begin{enumerate}
+    \\item \\textbf{Direct RL}: Update the Q-value from real experience $(S_t, A_t, R_{t+1}, S_{t+1})$:
+    \\begin{equation}
+    \\label{eq:dyna_q_direct}
+    \\qvalue(S_t, A_t) \\leftarrow \\qvalue(S_t, A_t) + \\alpha [R_{t+1} + \\gammafactor \\max_{a'} \\qvalue(S_{t+1}, a') - \\qvalue(S_t, A_t)]
+    \\end{equation}
+    \\item \\textbf{Model Learning}: Update the environment model $\\estimate{\\prob}$ and $\\estimate{\\reward}$ with the real transition $(S_t, A_t, R_{t+1}, S_{t+1})$.
+    \\item \\textbf{Planning}: Perform $N$ simulated planning steps. In each step:
+    \\begin{itemize}
+        \\item Sample a previously experienced state-action pair $(S, A)$.
+        \\item Use the learned model to predict $\\estimate{S'}$ and $\\estimate{R}$ for $(S, A)$.
+        \\item Apply a Q-learning update using the simulated experience $(\\estimate{S}, \\estimate{A}, \\estimate{R}, \\estimate{S'})$:
+        \\begin{equation}
+        \\label{eq:dyna_q_planning}
+        \\qvalue(S, A) \\leftarrow \\qvalue(S, A) + \\alpha [\\estimate{R} + \\gammafactor \\max_{a'} \\qvalue(\\estimate{S'}, a') - \\qvalue(S, A)]
+        \\end{equation}
+    \\end{itemize}
+\\end{enumerate}
+\\textbf{Dyna-Q+} incorporates an exploration bonus for states/actions not visited recently to encourage exploration.
+
+\\subsection{Monte Carlo Tree Search (MCTS)}
+MCTS \cite{browne2012mcts} is an asynchronous tree search algorithm that builds a search tree by simulating trajectories. It consists of four phases:
+\\begin{enumerate}
+    \\item \\textbf{Selection}: Starting from the root node, iteratively select child nodes that maximize the Upper Confidence Bound (UCB) criterion until a leaf node is reached:
+    \\begin{equation}
+    \\label{eq:mcts_ucb}
+    UCB(s, a) = \\frac{\\qvalue(s, a)}{N(s, a)} + c \\sqrt{\\frac{\\ln N(s)}{N(s, a)}}
+    \\end{equation}
+    where $Q(s,a)$ is the average reward for taking action $a$ from state $s$, $N(s,a)$ is the visit count for state-action pair $(s,a)$, $N(s)$ is the visit count for state $s$, and $c$ is an exploration constant.
+    \\item \\textbf{Expansion}: If the selected leaf node is not terminal, create one or more child nodes for an untried action.
+    \\item \\textbf{Simulation (Rollout)}: From the new child node, simulate a trajectory (rollout) using a default policy (e.g., random policy) until a terminal state is reached, accumulating total reward.
+    \\item \\textbf{Backpropagation}: The accumulated reward from the simulation is propagated back up the tree, updating the visit counts $N(s,a)$ and values $Q(s,a)$ for all nodes along the traversed path.
+\\end{enumerate}
+After a fixed number of simulations, the action with the highest visit count (or highest Q-value) from the root is chosen.
+
+\\subsection{Model Predictive Control (MPC)}
+MPC \cite{camacho2013model} is an optimal control strategy that uses a system model to predict future behavior over a finite horizon $H$.
+\\begin{enumerate}
+    \\item \\textbf{Prediction}: At each time step $t$, a learned model $f$ predicts future states over a planning horizon $H$:
+    \\begin{equation}
+    s_{t+k+1} = f(s_{t+k}, a_{t+k}) \\quad \\text{for } k=0, \\dots, H-1
+    \\end{equation}
+    \\item \\textbf{Optimization}: An optimal sequence of actions $(a_t, \\dots, a_{t+H-1})$ is found by minimizing a cost function $C$ over the horizon:
+    \\begin{equation}
+    \\label{eq:mpc_optimization}
+    \\min_{\\mathbf{a}_t, \\dots, \\mathbf{a}_{t+H-1}} \\sum_{k=0}^{H-1} C(s_{t+k}, a_{t+k}, s_{t+k+1})
+    \\end{equation}
+    subject to the model dynamics and any state/action constraints.
+    Common optimization techniques include:
+    \\begin{itemize}
+        \\item \\textbf{Random Shooting}: Sample many random action sequences, simulate them using the model, and select the sequence with the lowest cost.
+        \\item \\textbf{Cross-Entropy Method (CEM)}: An iterative refinement process for action sequences, where a distribution over sequences is improved by fitting to the top-performing "elite" samples.
+    \\end{itemize}
+    \\item \\textbf{Execution}: Only the first action $a_t$ of the optimized sequence is applied to the real environment.
+    \\item \\textbf{Receding Horizon}: At the next time step $t+1$, the entire process is repeated with the new current state.
+\\end{enumerate}
+
+\\section{Experiments}
+Our experimental setup is designed to thoroughly evaluate the performance and characteristics of the implemented MBRL algorithms across various environments.
+
+\\subsection{Environments}
+We utilize standard Gymnasium environments and custom grid-world environments, including:
+\\begin{itemize}
+    \\item \\textbf{FrozenLake-v1} (Discrete): A classical grid-world task to test tabular models and planning algorithms like Dyna-Q.
+    \\item \\textbf{CartPole-v1} (Continuous Observation, Discrete Action): A benchmark for control tasks where neural network models are essential for dynamics approximation.
+    \\item \\textbf{Pendulum-v1} (Continuous Observation, Continuous Action): Tests MPC and neural models in continuous control settings.
+    \\item \\textbf{SimpleGridWorld} (Custom Discrete): A configurable grid-world for clear visualization of planning and value functions.
+    \\item \\textbf{BlockingMaze} (Custom Discrete, Dynamic): A grid-world with dynamic obstacles to evaluate robustness to model changes and the adaptive capabilities of agents.
+\\end{itemize}
+
+\\subsection{Performance Metrics}
+We measure the following key metrics:
+\\begin{itemize}
+    \\item \\textbf{Episode Return}: The cumulative reward obtained per episode, averaged over multiple runs.
+    \\item \\textbf{Sample Efficiency}: Quantified by the number of environment steps or episodes required to reach a predefined performance threshold.
+    \\item \\textbf{Computational Cost}: Measured by the planning time per step or total simulation time, highlighting the trade-off with sample efficiency.
+    \\item \\textbf{Model Accuracy}: For neural models, the Mean Squared Error (MSE) of predicted next states and rewards against actual observations.
+    \\item \\textbf{Robustness to Uncertainty}: Evaluated by performance in dynamic or partially observed environments, particularly with ensemble models.
+\\end{itemize}
+
+\\subsection{Baseline Comparisons}
+Each MBRL algorithm is compared against a suitable model-free baseline (e.g., Q-learning for discrete tasks, PPO/SAC for continuous tasks where applicable) to highlight the benefits of model usage. Different configurations (e.g., varying planning steps in Dyna-Q, simulation count in MCTS, horizon in MPC) are also compared to analyze their impact.
+
+\\subsection{Expected Results}
+\\begin{itemize}
+    \\item \\textbf{Sample Efficiency}: We expect model-based methods, especially Dyna-Q with sufficient planning steps, to achieve significantly higher sample efficiency (e.g., 2-5x fewer episodes to converge) than model-free baselines.
+    \\item \\textbf{Planning Benefits}: Increased planning depth (e.g., higher $N$ in Dyna-Q, more simulations in MCTS, longer horizon in MPC) is anticipated to improve final policy performance, but with an increased computational burden.
+    \\item \\textbf{Model Fidelity}: Algorithms using highly accurate models will generally outperform those with less accurate models. Ensemble models are expected to provide more robust performance in environments with inherent stochasticity or approximation errors.
+    \\item \\textbf{Method Suitability}: Dyna-Q will likely excel in discrete grid-world tasks. MCTS is expected to show strong performance in game-like environments requiring extensive look-ahead. MPC will be effective in continuous control environments with explicit constraints.
+\\end{itemize}
+
+\\section{Ablation Study}
+To further understand the contributions of individual components, we propose the following ablation studies:
+\\begin{enumerate}
+    \\item \\textbf{Impact of Planning Steps in Dyna-Q}: Vary the number of planning steps ($N$) from 0 (pure Q-learning) to a high value, observing the effect on sample efficiency and asymptotic performance.
+    \\item \\textbf{Ensemble Size in Neural Models}: Evaluate the performance of neural models with varying ensemble sizes ($K$) to understand its impact on prediction accuracy and uncertainty estimation.
+    \\item \\textbf{Exploration Strategies in MCTS}: Compare UCB-based selection with alternative strategies or different $c$ values, analyzing their effect on search efficiency and final policy quality.
+    \\item \\textbf{Horizon Length in MPC}: Study the trade-off between control performance and computational cost by varying the planning horizon $H$.
+    \\item \\textbf{Model Accuracy Degradation}: Introduce synthetic noise or limit model training data to observe how algorithm performance degrades with decreasing model fidelity.
+\\end{enumerate}
+
+\\section{Conclusion and Broader Impact}
+This comprehensive synthesis and implementation of Model-Based Reinforcement Learning and Planning Methods highlight their significant advantages, particularly in sample efficiency and adaptability to complex control problems. By providing a detailed theoretical foundation, mathematical derivations, and a modular codebase, this work contributes to making advanced MBRL techniques more accessible for both education and practical application.
+
+The broader impact of this research extends to various domains. In robotics, MBRL can enable more efficient learning of complex manipulation and locomotion skills, reducing the need for extensive real-world trials. In autonomous systems, such as self-driving cars, MPC and other planning techniques offer robust decision-making capabilities under safety constraints. Furthermore, in scientific discovery and healthcare, MBRL can aid in optimizing experimental designs or personalized treatment plans by modeling complex system dynamics.
+
+Future work will focus on scaling these methods to even higher-dimensional and partially observable environments, exploring hierarchical MBRL, and integrating advanced meta-learning techniques to accelerate model acquisition and adaptation. This project serves as a strong foundation for continued research and development in the exciting frontier of intelligent agents capable of learning, predicting, and planning in an increasingly complex world.
+
+\\section*{Acknowledgments}
+The authors would like to thank the DRL Course Team for their invaluable guidance and support throughout this project.
+
+\\bibliographystyle{IEEEtran}
+\\bibliography{references} % Assuming a references.bib file
+
+\\newpage
+\\section*{APPENDIX}
+
+\\subsection{A. Detailed Proofs and Derivations}
+This appendix provides detailed mathematical derivations supporting the methodology section.
+
+\\subsubsection{A.1. Bellman Optimality Equations Derivation}
+The optimal value function $V^*(s)$ satisfies the Bellman Optimality Equation. From the definition of $V^*(s) = \\max_{\\policy} V^\\policy(s)$, we can write:
+\\begin{align*}
+V^*(s) &= \\max_{\\policy} \\mathbb{E}_{A \\sim \\policy(\\cdot|s)} [\\reward(s, A) + \\gammafactor \\mathbb{E}_{S' \\sim \\prob(\\cdot|s, A)} [V^*(S')]] \\\\
+&= \\max_{a \\in \\action} [\\reward(s, a) + \\gammafactor \\sum_{s' \\in \\state} \\prob(s'|s, a) V^*(s')]
+\\end{align*}
+Similarly for $Q^*(s,a)$:
+\\begin{align*}
+Q^*(s, a) &= \\reward(s, a) + \\gammafactor \\mathbb{E}_{S' \\sim \\prob(\\cdot|s, a)} [V^*(S')] \\\\
+&= \\reward(s, a) + \\gammafactor \\sum_{s' \\in \\state} \\prob(s'|s, a) \\max_{a'} Q^*(s', a')
+\\end{align*}
+
+\\subsubsection{A.2. UCB Formula Derivation for MCTS}
+The UCB formula balances exploitation (choosing actions with high estimated value) and exploration (choosing actions that have been visited fewer times). It's based on the idea of an "optimistic estimate of the value of an arm" in multi-armed bandits.
+Let $Q(s, a)$ be the mean reward of action $a$ from state $s$, and $N(s, a)$ be its visit count. Let $N(s)$ be the total visits to state $s$.
+The term $\\frac{Q(s, a)}{N(s, a)}$ is the exploitation term, representing the average reward obtained so far.
+The term $c \\sqrt{\\frac{\\ln N(s)}{N(s, a)}}$ is the exploration term. As $N(s,a)$ increases, this term decreases, reducing the exploration for well-explored actions. Conversely, actions with low $N(s,a)$ get a higher bonus, encouraging exploration. The constant $c$ tunes the exploration-exploitation balance.
+
+\\subsection{B. Additional Qualitative Examples}
+\\begin{figure}[ht]
+\\centering
+\\includegraphics[width=0.9\\linewidth]{../visualizations/learning_curves.png}
+\\caption{Learning curves for Dyna-Q variants and a model-free baseline (Q-Learning) on a GridWorld environment. Demonstrates improved sample efficiency with increased planning steps.}
+\\label{fig:learning_curves}
+\\end{figure}
+
+\\begin{figure}[ht]
+\\centering
+\\includegraphics[width=0.9\\linewidth]{../visualizations/model_based_comparison.png}
+\\caption{Comparative analysis of sample efficiency and final performance across various model-based and model-free methods on benchmark environments.}
+\\label{fig:model_comparison}
+\\end{figure}
+
+\\begin{figure}[ht]
+\\centering
+\\includegraphics[width=0.9\\linewidth]{../visualizations/mcts_performance.png}
+\\caption{MCTS performance analysis, showing the relationship between win rate and the number of simulations, as well as the exploration-exploitation trade-off with the UCB parameter.}
+\\label{fig:mcts_performance}
+\\end{figure}
+
+\\begin{figure}[ht]
+\\centering
+\\includegraphics[width=0.9\\linewidth]{../visualizations/comprehensive_analysis.png}
+\\caption{Comprehensive radar chart comparing advanced model-based RL methods (e.g., Dyna-Q, MBPO, Dreamer, MuZero) across key characteristics like sample efficiency, computational cost, and generality.}
+\\label{fig:comprehensive_analysis}
+\\end{figure}
+
+\\subsection{C. Hyperparameters}
+Table \\ref{tab:hyperparameters} lists the typical hyperparameters used across various algorithms in this project. Specific values may vary per environment and experiment.
+
+\\begin{table}[ht]
+\\caption{Typical Hyperparameters for Implemented Algorithms}
+\\label{tab:hyperparameters}
+\\centering
+\\begin{tabular}{|l|l|l|}
+\\hline
+\\textbf{Category} & \\textbf{Parameter} & \\textbf{Value Range} \\\\
+\\hline
+\\hline
+\\textbf{General RL} & Discount Factor ($\\gamma$) & 0.9 - 0.99 \\\\
+& Learning Rate ($\\alpha$) & 0.001 - 0.1 \\\\
+& Epsilon ($\\epsilon$) & 0.01 - 0.1 \\\\
+\\hline
+\\textbf{Dyna-Q} & Planning Steps ($N$) & 5 - 100 \\\\
+& $\\kappa$ (Dyna-Q+) & 0.001 - 0.01 \\\\
+\\hline
+\\textbf{MCTS} & Num Simulations & 100 - 5000 \\\\
+& Exploration Weight ($c$) & 1.0 - 2.0 \\\\
+& Max Rollout Depth & 50 - 200 \\\\
+\\hline
+\\textbf{MPC} & Planning Horizon ($H$) & 5 - 50 \\\\
+& Num Samples (CEM) & 50 - 500 \\\\
+& Action Bounds & [-1, 1] or env-specific \\\\
+\\hline
+\\textbf{Neural Model} & Hidden Dim & 64 - 256 \\\\
+& Ensemble Size ($K$) & 3 - 7 \\\\
+& Learning Rate & 1e-4 - 1e-3 \\\\
+& Batch Size & 32 - 256 \\\\
+\\hline
+\\end{tabular}
+\\end{table}
+
+\\end{document}

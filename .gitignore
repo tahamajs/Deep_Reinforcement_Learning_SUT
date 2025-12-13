@@ -128,3 +128,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 __pycache__
+
+# Dreamer-FuN specific ignores
+logs/
+pictures/
+src/__pycache__/

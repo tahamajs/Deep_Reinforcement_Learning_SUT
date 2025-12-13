@@ -50,24 +50,39 @@ run_training_examples() {
 import sys
 sys.path.append('.')
 from training_examples import train_vae_world_model, analyze_world_model_representations, comprehensive_world_models_analysis
+from experiments.config import GLOBAL_CONFIG, VAE_CONFIG, DREAMER_CONFIG, update_config_with_env_dims
+
+# Dynamically update config based on initial environment, if needed
+# For VAE training, we can use a generic env name first.
+update_config_with_env_dims(VAE_CONFIG.env_name)
 
 # Train VAE world model
 print('Training VAE World Model...')
-results = train_vae_world_model(
-    env_name='Pendulum-v1',
-    latent_dim=32,
-    num_episodes=100,
-    batch_size=64,
-    seed=42
+results_vae = train_vae_world_model(
+    env_name=VAE_CONFIG.env_name,
+    latent_dim=VAE_CONFIG.latent_dim,
+    num_episodes=VAE_CONFIG.num_episodes_data_collection,
+    batch_size=VAE_CONFIG.batch_size,
+    seed=GLOBAL_CONFIG.seed
 )
 
-# Analyze representations
+# Train Dreamer Agent
+print('Training Dreamer Agent...')
+update_config_with_env_dims(DREAMER_CONFIG.env_name) # Ensure dreamer config is updated for its specific env
+results_dreamer = train_dreamer_agent(
+    env_name=DREAMER_CONFIG.env_name,
+    num_episodes=DREAMER_CONFIG.num_episodes,
+    max_steps=DREAMER_CONFIG.max_steps,
+    seed=GLOBAL_CONFIG.seed
+)
+
+# Analyze representations (using VAE model from results_vae)
 print('Analyzing world model representations...')
-fig = analyze_world_model_representations(save_path='visualizations/world_model_representations.png')
+fig_representations = analyze_world_model_representations(save_path=f'{GLOBAL_CONFIG.visualizations_dir}/world_model_representations.png')
 
 # Comprehensive analysis
 print('Running comprehensive analysis...')
-analysis_results = comprehensive_world_models_analysis(save_path='visualizations/comprehensive_analysis.png')
+analysis_results = comprehensive_world_models_analysis(save_path=f'{GLOBAL_CONFIG.visualizations_dir}/comprehensive_analysis.png')
 
 print('Training examples completed!')
 " > logs/training_examples.log 2>&1
@@ -110,10 +125,14 @@ import pandas as pd
 from pathlib import Path
 import json
 
+from experiments.config import GLOBAL_CONFIG # Import GLOBAL_CONFIG
+
 # Create summary report
 print('Creating summary report...')
 
 # Collect results from all experiments
+# These should ideally be read from actual experiment logs/results if implemented.
+# For now, keeping mock values consistent with the script's previous logic.
 results_summary = {
     'World Model CartPole': {'status': 'completed', 'performance': '85%'},
     'World Model Pendulum': {'status': 'completed', 'performance': '78%'},
@@ -178,11 +197,11 @@ for bars in [bars1, bars2]:
                 f'{int(height)}%', ha='center', va='bottom')
 
 plt.tight_layout()
-plt.savefig('visualizations/summary_report.png', dpi=300, bbox_inches='tight')
+plt.savefig(f'{GLOBAL_CONFIG.visualizations_dir}/summary_report.png', dpi=300, bbox_inches='tight')
 plt.close()
 
 # Save results summary
-with open('results/summary.json', 'w') as f:
+with open(f'{GLOBAL_CONFIG.results_dir}/summary.json', 'w') as f:
     json.dump(results_summary, f, indent=2)
 
 print('Summary report generated!')

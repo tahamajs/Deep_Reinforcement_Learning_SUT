@@ -20,43 +20,70 @@ import seaborn as sns
 
 plt.style.use("seaborn-v0_8")
 
+# Import config
+from src.config import config
+
 # Add the CA16 modules to path
-sys.path.insert(0, ".")
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import all CA16 modules
-from foundation_models import (
+from src.foundation_models.algorithms import (
     DecisionTransformer,
-    FoundationModelTrainer,
-    ScalingAnalyzer,
 )
-from neurosymbolic import (
+from src.foundation_models.training import (
+    FoundationModelTrainer,
+)
+from src.neurosymbolic.policies import (
     NeurosymbolicAgent,
+)
+from src.neurosymbolic.knowledge_base import (
     SymbolicKnowledgeBase,
     LogicalPredicate,
     LogicalRule,
 )
-from human_ai_collaboration import CollaborativeAgent, PreferenceModel, TrustModel
-from continual_learning import ContinualLearningAgent, MAML, ElasticWeightConsolidation
-from environments import SymbolicGridWorld, CollaborativeGridWorld, ContinualEnv
+from src.human_ai_collaboration.collaborative_agent import (
+    CollaborativeAgent,
+)
+from src.human_ai_collaboration.preference_model import (
+    PreferenceModel,
+)
+from src.human_ai_collaboration.trust_model import (
+    TrustModel,
+)
+from src.continual_learning.continual_agent import (
+    ContinualLearningAgent,
+)
+from src.continual_learning.ewc import (
+    ElasticWeightConsolidation,
+)
+from src.environments.symbolic_env import (
+    SymbolicGridWorld,
+)
+from src.environments.collaborative_env import (
+    CollaborativeGridWorld,
+)
+from src.environments.continual_env import (
+    ContinualEnv,
+)
 
 
 class AgentVideoGenerator:
     """Main class for generating videos of agents learning and reacting."""
 
-    def __init__(self, output_dir: str = "videos"):
+    def __init__(self, output_dir: str = config.VIDEO_OUTPUT_DIR):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
         # Set up common parameters
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.seed = 42
+        self.device = torch.device(config.DEVICE)
+        self.seed = config.SEED
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
 
         # Video settings
-        self.fps = 24
-        self.frame_size = (1920, 1080)  # HD resolution
-        self.dpi = 100
+        self.fps = config.VIDEO_FPS
+        self.frame_size = (config.VIDEO_FRAME_WIDTH, config.VIDEO_FRAME_HEIGHT)  # HD resolution
+        self.dpi = config.VIDEO_DPI
 
         print(f"🎥 Video Generator initialized!")
         print(f"📁 Output directory: {self.output_dir}")
@@ -79,11 +106,11 @@ class AgentVideoGenerator:
         ax1.imshow(env_state, cmap="viridis", aspect="equal")
 
         # Add agent
-        agent_circle = Circle(agent_pos, 0.3, color="red", alpha=0.8)
+        agent_circle = Circle(agent_pos, config.AGENT_RADIUS, color="red", alpha=0.8)
         ax1.add_patch(agent_circle)
 
         # Add goal
-        goal_circle = Circle(goal_pos, 0.3, color="gold", alpha=0.8)
+        goal_circle = Circle(goal_pos, config.GOAL_RADIUS, color="gold", alpha=0.8)
         ax1.add_patch(goal_circle)
 
         ax1.set_title(title, fontsize=16, fontweight="bold")
@@ -144,18 +171,18 @@ class AgentVideoGenerator:
 
         # Initialize model and trainer
         dt_model = DecisionTransformer(
-            state_dim=4, action_dim=4, model_dim=64, num_heads=4, num_layers=2
+            state_dim=config.STATE_DIM, action_dim=config.ACTION_DIM, model_dim=config.TRANSFORMER_DIM, num_heads=config.NUM_HEADS, num_layers=config.NUM_LAYERS
         ).to(self.device)
 
-        trainer = FoundationModelTrainer(dt_model, lr=0.001, device=str(self.device))
+        trainer = FoundationModelTrainer(dt_model, lr=config.LEARNING_RATE, device=str(self.device))
 
         # Create environment
-        env = ContinualEnv(num_tasks=1, state_dim=4, action_dim=4)
+        env = ContinualEnv(num_tasks=1, state_dim=config.STATE_DIM, action_dim=config.ACTION_DIM)
         obs = env.reset()
 
         # Video parameters
-        total_episodes = 50
-        frames_per_episode = 20
+        total_episodes = config.VIDEO_TOTAL_EPISODES
+        frames_per_episode = config.VIDEO_FRAMES_PER_EPISODE
 
         # Initialize video writer
         video_path = self.output_dir / "decision_transformer_learning.mp4"
@@ -172,13 +199,13 @@ class AgentVideoGenerator:
 
             for step in range(frames_per_episode):
                 # Create frame
-                if step_count % 5 == 0:  # Update action every 5 frames
+                if step_count % config.VIDEO_ACTION_UPDATE_FREQ == 0:  # Update action every X frames
                     with torch.no_grad():
                         # Create sequence for DT
-                        state_seq = torch.randn(1, 10, 4).to(self.device)
-                        action_seq = torch.zeros(1, 10, 4).to(self.device)
-                        return_seq = torch.randn(1, 10).to(self.device)
-                        timestep_seq = torch.arange(10).unsqueeze(0).to(self.device)
+                        state_seq = torch.randn(1, config.SEQ_LEN, config.STATE_DIM).to(self.device)
+                        action_seq = torch.zeros(1, config.SEQ_LEN, config.ACTION_DIM).to(self.device)
+                        return_seq = torch.randn(1, config.SEQ_LEN).to(self.device)
+                        timestep_seq = torch.arange(config.SEQ_LEN).unsqueeze(0).to(self.device)
 
                         predictions = dt_model(
                             state_seq, action_seq, return_seq, timestep_seq
@@ -187,7 +214,7 @@ class AgentVideoGenerator:
                         action = torch.multinomial(action_probs, 1).item()
 
                         # Generate attention visualization
-                        attention_pattern = torch.randn(10, 10).numpy()
+                        attention_pattern = torch.randn(config.SEQ_LEN, config.SEQ_LEN).numpy()
                         neural_outputs = {"attention": attention_pattern}
 
                     current_loss = np.random.exponential(1.0) * np.exp(-episode / 20)
@@ -198,9 +225,9 @@ class AgentVideoGenerator:
                     trainer.train_step(state_seq, action_seq, return_seq, timestep_seq)
 
                 # Create environment state
-                env_state = np.random.rand(4, 4)
-                agent_pos = (np.random.randint(3), np.random.randint(3))
-                goal_pos = (3, 3)
+                env_state = np.random.rand(config.ENV_SIZE, config.ENV_SIZE)
+                agent_pos = (np.random.randint(config.ENV_SIZE - 1), np.random.randint(config.ENV_SIZE - 1))
+                goal_pos = (config.ENV_SIZE - 1, config.ENV_SIZE - 1)
 
                 title = f"Decision Transformer - Episode {episode+1} | Loss: {episode_loss/frames_per_episode:.3f}"
 
@@ -280,16 +307,16 @@ class AgentVideoGenerator:
 
         # Initialize agent
         ns_agent = NeurosymbolicAgent(
-            state_dim=4, action_dim=4, knowledge_base=kb, lr=0.001
+            state_dim=config.STATE_DIM, action_dim=config.ACTION_DIM, knowledge_base=kb, lr=config.LEARNING_RATE
         )
 
         # Create environment
-        env = SymbolicGridWorld(size=6)
+        env = SymbolicGridWorld(size=config.ENV_SIZE)
         obs, info = env.reset()
 
         # Video parameters
-        total_episodes = 40
-        frames_per_episode = 15
+        total_episodes = config.VIDEO_TOTAL_EPISODES
+        frames_per_episode = config.VIDEO_FRAMES_PER_EPISODE
 
         video_path = self.output_dir / "neurosymbolic_reasoning.mp4"
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
@@ -305,7 +332,7 @@ class AgentVideoGenerator:
 
             for step in range(frames_per_episode):
                 # Get agent state
-                current_state = obs.copy().flatten()[:4]  # Take first 4 features
+                current_state = obs.copy().flatten()[:config.STATE_DIM]  # Take first X features
 
                 with torch.no_grad():
                     state_tensor = torch.FloatTensor(current_state).unsqueeze(0)
@@ -320,15 +347,15 @@ class AgentVideoGenerator:
 
                     # Generate reasoning visualization
                     reasoning_info = {
-                        "neural_features": neural_feat[:10],  # First 10 features
-                        "symbolic_features": symbolic_feat[:8],  # First 8 features
+                        "neural_features": neural_feat[:config.NEURAL_FEATURES_TO_PLOT],  # First X features
+                        "symbolic_features": symbolic_feat[:config.SYMBOLIC_FEATURES_TO_PLOT],  # First X features
                         "action_probs": action_probs[0].cpu().numpy(),
                         "knowledge_rules": len(kb.rules),
                     }
                     episode_info.append(reasoning_info)
 
                 # Take action
-                action_env = step % 4  # Map to environment actions
+                action_env = step % config.ACTION_DIM  # Map to environment actions
                 obs, reward, done, truncated, info = env.step(action_env)
                 env_rewards.append(reward)
 
@@ -337,26 +364,26 @@ class AgentVideoGenerator:
 
                 # Create frame
                 env_state = obs.copy()
-                agent_pos = (np.random.randint(5), np.random.randint(5))
-                goal_pos = (5, 5)
+                agent_pos = (np.random.randint(config.ENV_SIZE - 1), np.random.randint(config.ENV_SIZE - 1))
+                goal_pos = (config.ENV_SIZE - 1, config.ENV_SIZE - 1)
 
                 # Create visualization
                 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
 
                 # Environment
                 im1 = ax1.imshow(
-                    env_state.reshape(4, 4), cmap="viridis", extent=[0, 4, 0, 4]
+                    env_state.reshape(config.ENV_SIZE, config.ENV_SIZE), cmap="viridis", extent=[0, config.ENV_SIZE, 0, config.ENV_SIZE]
                 )
                 agent_circle = Circle(
-                    (agent_pos[1] / 5 * 4, agent_pos[0] / 5 * 4),
-                    0.3,
+                    (agent_pos[1] / config.ENV_SIZE * config.ENV_SIZE, agent_pos[0] / config.ENV_SIZE * config.ENV_SIZE),
+                    config.AGENT_RADIUS,
                     color="red",
                     alpha=0.8,
                 )
                 ax1.add_patch(agent_circle)
                 goal_circle = Circle(
-                    (goal_pos[1] / 5 * 4, goal_pos[0] / 5 * 4),
-                    0.3,
+                    (goal_pos[1] / config.ENV_SIZE * config.ENV_SIZE, goal_pos[0] / config.ENV_SIZE * config.ENV_SIZE),
+                    config.GOAL_RADIUS,
                     color="gold",
                     alpha=0.8,
                 )
@@ -444,16 +471,16 @@ class AgentVideoGenerator:
 
         # Initialize collaborative agent
         collab_agent = CollaborativeAgent(
-            state_dim=4, action_dim=4, collaboration_threshold=0.7
+            state_dim=config.STATE_DIM, action_dim=config.ACTION_DIM, collaboration_threshold=config.COLLABORATION_THRESHOLD
         )
 
         # Create environment
-        env = CollaborativeGridWorld(size=8)
+        env = CollaborativeGridWorld(size=config.ENV_SIZE)
         obs, info = env.reset()
 
         # Video parameters
-        total_episodes = 45
-        frames_per_episode = 25
+        total_episodes = config.VIDEO_TOTAL_EPISODES
+        frames_per_episode = config.VIDEO_FRAMES_PER_EPISODE
 
         video_path = self.output_dir / "human_ai_collaboration.mp4"
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
@@ -473,12 +500,12 @@ class AgentVideoGenerator:
 
             for step in range(frames_per_episode):
                 # Get current state
-                current_state = torch.randn(4)
+                current_state = torch.randn(config.STATE_DIM)
                 action, confidence = collab_agent.select_action(current_state)
 
                 # Check if human intervention needed
-                human_intervention = confidence < 0.7
-                trust_score = np.random.beta(6, 1)  # High trust distribution
+                human_intervention = confidence < config.COLLABORATION_THRESHOLD
+                trust_score = np.random.beta(config.TRUST_BETA_ALPHA, config.TRUST_BETA_BETA)  # High trust distribution
 
                 episode_data["ai_actions"].append(action)
                 episode_data["confidences"].append(confidence)
@@ -486,7 +513,7 @@ class AgentVideoGenerator:
                 episode_data["trust_scores"].append(trust_score)
 
                 # Execute action in environment
-                env_action = action % 4
+                env_action = action % config.ACTION_DIM
                 obs, reward, done, truncated, info = env.step(env_action)
 
                 if done:
@@ -496,19 +523,19 @@ class AgentVideoGenerator:
                 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(18, 12))
 
                 # Environment visualization
-                env_grid = obs.copy().reshape(6, 6)
-                im1 = ax1.imshow(env_grid, cmap="RdYlBu", extent=[0, 6, 0, 6])
+                env_grid = obs.copy().reshape(config.ENV_SIZE, config.ENV_SIZE)
+                im1 = ax1.imshow(env_grid, cmap="RdYlBu", extent=[0, config.ENV_SIZE, 0, config.ENV_SIZE])
 
                 # Agent position (animated)
-                agent_x = (step * 0.5) % 6
-                agent_y = (step * 0.3) % 6
-                agent_circle = Circle((agent_x, agent_y), 0.4, color="red", alpha=0.8)
+                agent_x = (step * 0.5) % config.ENV_SIZE
+                agent_y = (step * 0.3) % config.ENV_SIZE
+                agent_circle = Circle((agent_x, agent_y), config.AGENT_RADIUS, color="red", alpha=0.8)
                 ax1.add_patch(agent_circle)
 
                 # Human assist indicator
                 if human_intervention:
                     halp_circle = Circle(
-                        (agent_x, agent_y), 0.6, color="gold", alpha=0.5
+                        (agent_x, agent_y), config.GOAL_RADIUS * 2, color="gold", alpha=0.5
                     )
                     ax1.add_patch(halp_circle)
 
@@ -516,12 +543,12 @@ class AgentVideoGenerator:
                 ax1.grid(True, alpha=0.5)
 
                 # Collaboration confidence
-                confidences = episode_data["confidences"][-20:]  # Last 20 steps
+                confidences = episode_data["confidences"][-config.RECENT_STEPS_PLOT:]  # Last N steps
                 ax2.plot(
                     confidences, "b-", linewidth=2, alpha=0.8, marker="o", markersize=4
                 )
                 ax2.axhline(
-                    y=0.7, color="red", linestyle="--", alpha=0.8, label="Threshold"
+                    y=config.COLLABORATION_THRESHOLD, color="red", linestyle="--", alpha=0.8, label="Threshold"
                 )
                 ax2.set_title("AI Confidence", fontsize=14, fontweight="bold")
                 ax2.set_ylabel("Confidence")
@@ -531,7 +558,7 @@ class AgentVideoGenerator:
                 ax2.set_ylim(0, 1)
 
                 # Trust evolution
-                trust_scores = episode_data["trust_scores"][-20:]
+                trust_scores = episode_data["trust_scores"][-config.RECENT_STEPS_PLOT:]
                 ax3.plot(
                     trust_scores, "g-", linewidth=2, alpha=0.8, marker="s", markersize=4
                 )
@@ -545,7 +572,7 @@ class AgentVideoGenerator:
                 ax3.set_ylim(0, 1)
 
                 # Human intervention pattern
-                interventions = episode_data["human_interventions"][-20:]
+                interventions = episode_data["human_interventions"][-config.RECENT_STEPS_PLOT:]
                 intervention_percentage = np.mean(interventions) * 100
 
                 colors = ["lightcoral", "lightgreen"]
@@ -602,15 +629,15 @@ class AgentVideoGenerator:
         print("🎬 Generating Continual Learning video...")
 
         # Initialize continual learning agent
-        cl_agent = ContinualLearningAgent(state_dim=4, action_dim=4, hidden_dim=64)
+        cl_agent = ContinualLearningAgent(state_dim=config.STATE_DIM, action_dim=config.ACTION_DIM, hidden_dim=config.CL_HIDDEN_DIM)
 
         # Create continual environment
-        env = ContinualEnv(num_tasks=4, state_dim=4, action_dim=4)
+        env = ContinualEnv(num_tasks=config.NUM_TASKS, state_dim=config.STATE_DIM, action_dim=config.ACTION_DIM)
 
         # Video parameters
-        total_tasks = 4
-        episodes_per_task = 15
-        frames_per_episode = 10
+        total_tasks = config.NUM_TASKS
+        episodes_per_task = config.CL_EPISODES_PER_TASK
+        frames_per_episode = config.VIDEO_FRAMES_PER_EPISODE
 
         video_path = self.output_dir / "continual_learning.mp4"
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
@@ -635,7 +662,7 @@ class AgentVideoGenerator:
 
                 for frame_idx in range(frames_per_episode):
                     # Agent action
-                    state_tensor = torch.FloatTensor(obs[:4]).unsqueeze(0)
+                    state_tensor = torch.FloatTensor(obs[:config.STATE_DIM]).unsqueeze(0)
                     action, _ = cl_agent.select_action(state_tensor, task_id)
 
                     # Environment step
@@ -652,7 +679,7 @@ class AgentVideoGenerator:
                             # Simulate forgetting measure
                             forgetting_score += np.exp(
                                 -(task_id - prev_task)
-                            ) * np.random.uniform(0, 0.3)
+                            ) * np.random.uniform(0, config.FORGETTING_MAGNITUDE)
 
                     episode_forgetting.append(forgetting_score)
 
@@ -660,7 +687,7 @@ class AgentVideoGenerator:
                     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
 
                     # Current task environment
-                    task_env_state = obs.copy().reshape(4, 4)
+                    task_env_state = obs.copy().reshape(config.ENV_SIZE, config.ENV_SIZE)
                     im1 = ax1.imshow(task_env_state, cmap="plasma", aspect="equal")
                     ax1.set_title(
                         f"Current Task Environment (Task {task_id+1})",
@@ -742,7 +769,7 @@ class AgentVideoGenerator:
                     # Catastrophic forgetting visualization
                     if len(episode_forgetting) > 1:
                         forgetting_smooth = np.convolve(
-                            episode_forgetting, np.ones(5) / 5, mode="valid"
+                            episode_forgetting, np.ones(config.FORGETTING_SMOOTHING_WINDOW) / config.FORGETTING_SMOOTHING_WINDOW, mode="valid"
                         )
                         ax4.plot(
                             forgetting_smooth,
@@ -814,33 +841,33 @@ class AgentVideoGenerator:
         # Initialize all agents
         agents = {
             "Decision Transformer": {
-                "model": DecisionTransformer(state_dim=4, action_dim=4, model_dim=64),
+                "model": DecisionTransformer(state_dim=config.STATE_DIM, action_dim=config.ACTION_DIM, model_dim=config.TRANSFORMER_DIM),
                 "trainer": FoundationModelTrainer(
-                    DecisionTransformer(state_dim=4, action_dim=4, model_dim=64)
+                    DecisionTransformer(state_dim=config.STATE_DIM, action_dim=config.ACTION_DIM, model_dim=config.TRANSFORMER_DIM)
                 ),
                 "color": "#FF6B6B",
             },
             "Neurosymbolic": {
                 "agent": NeurosymbolicAgent(
-                    state_dim=4, action_dim=4, knowledge_base=SymbolicKnowledgeBase()
+                    state_dim=config.STATE_DIM, action_dim=config.ACTION_DIM, knowledge_base=SymbolicKnowledgeBase()
                 ),
                 "color": "#4ECDC4",
             },
             "Human-AI Collab": {
-                "agent": CollaborativeAgent(state_dim=4, action_dim=4),
+                "agent": CollaborativeAgent(state_dim=config.STATE_DIM, action_dim=config.ACTION_DIM),
                 "color": "#45B7D1",
             },
             "Continual Learning": {
-                "agent": ContinualLearningAgent(state_dim=4, action_dim=4),
+                "agent": ContinualLearningAgent(state_dim=config.STATE_DIM, action_dim=config.ACTION_DIM),
                 "color": "#96CEB4",
             },
         }
 
         # Composite environment
-        env = ContinualEnv(num_tasks=1, state_dim=4, action_dim=4)
+        env = ContinualEnv(num_tasks=1, state_dim=config.STATE_DIM, action_dim=config.ACTION_DIM)
         obs = env.reset()
 
-        total_frames = 300  # 12.5 seconds at 24fps
+        total_frames = config.VIDEO_TOTAL_FRAMES  # 12.5 seconds at 24fps
 
         for frame_idx in range(total_frames):
             # Create 2x2 grid showing all agents
@@ -859,7 +886,7 @@ class AgentVideoGenerator:
                 # Agent-specific visualizations
                 if agent_name == "Decision Transformer":
                     # Attention pattern
-                    attention = np.random.rand(8, 8) * performance
+                    attention = np.random.rand(config.SEQ_LEN, config.SEQ_LEN) * performance
                     im = ax.imshow(attention, cmap="hot", aspect="equal")
                     ax.set_title(
                         f"{agent_name}\nPerformance: {performance:.3f}",
@@ -883,8 +910,8 @@ class AgentVideoGenerator:
 
                 elif agent_name == "Human-AI Collab":
                     # Trust and confidence
-                    trust = np.random.beta(performance * 5 + 1, 2)
-                    confidence = np.random.beta(performance * 3 + 1, 2)
+                    trust = np.random.beta(performance * config.TRUST_BETA_ALPHA_MULTIPLIER + 1, config.TRUST_BETA_BETA)
+                    confidence = np.random.beta(performance * config.TRUST_BETA_ALPHA_MULTIPLIER_CONF + 1, config.TRUST_BETA_BETA_CONF)
 
                     ax.scatter([confidence], [trust], s=200, c=color, alpha=0.8)
                     ax.set_xlim(0, 1)
@@ -903,7 +930,7 @@ class AgentVideoGenerator:
                     adaptation_speed = performance
                     tasks = ["T1", "T2", "T3", "T4"]
                     task_perfs = [
-                        performance * np.exp(-i * 0.2) + 0.1 for i in range(4)
+                        performance * np.exp(-i * 0.2) + 0.1 for i in range(config.NUM_TASKS_COMPOSITE_VIDEO)
                     ]
 
                     bars = ax.bar(tasks, task_perfs, color=color, alpha=0.8)

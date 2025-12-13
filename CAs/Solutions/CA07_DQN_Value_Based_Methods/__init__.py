@@ -1,104 +1,58 @@
 """
 CA07: Deep Q-Networks (DQN) and Value-Based Methods
 ===================================================
+
+This package provides a comprehensive set of implementations for Deep Q-Networks (DQN)
+and various advanced value-based reinforcement learning methods. It includes modularized
+components for agents, neural networks, replay buffers, and utility functions,
+facilitating structured development and analysis of DQN algorithms.
 """
 
 __version__ = "1.0.0"
 __author__ = "Deep Reinforcement Learning Course"
 
-# Import main classes
-from .agents.core import DQNAgent, QNetwork, ReplayBuffer
-from .agents.double_dqn import DoubleDQNAgent
-from .agents.dueling_dqn import DuelingDQNAgent, DuelingQNetwork, DuelingDoubleDQNAgent
-from .agents.utils import DQNVisualizer, DQNAnalyzer
+# Import main components from src subpackages
+from .src.agents import DQNAgent, DoubleDQNAgent, DuelingDQNAgent, DuelingDoubleDQNAgent, NoisyDQNAgent, RainbowDQNAgent
+from .src.models import QNetwork, DuelingQNetwork, NoisyLinear, NoisyQNetwork, CategoricalQNetwork
+from .src.data import ReplayBuffer, PrioritizedReplayBuffer
+from .src.utils import set_seed, smooth_curve
+from .src.config import DQNConfig
+from .src.losses import c51_loss
 
-# Import utilities
-from .utils import (
-    set_seed,
-    smooth_curve,
-    calculate_statistics,
-    find_convergence_episode,
-    PerformanceTracker,
-    ExperimentLogger,
-    create_summary_plot,
-    benchmark_agent,
-    save_results,
-    load_results,
-    print_experiment_summary,
-)
-
-# Import environments
-from .environments import (
-    RewardShapingWrapper,
-    StateNormalizationWrapper,
-    ActionRepeatWrapper,
-    EpisodeStatisticsWrapper,
-    create_cartpole_env,
-    create_mountain_car_env,
-    create_acrobot_env,
-    get_environment_info,
-    test_environment,
-)
-
-# Import evaluation tools
-from .evaluation import DQNEvaluator, evaluate_training_progress
-
-# Import models
-from .models import (
-    QNetwork,
-    DuelingQNetwork,
-    NoisyLinear,
-    NoisyQNetwork,
-    CategoricalQNetwork,
-    RainbowQNetwork,
-    create_model,
-    count_parameters,
-)
+# You can also import specific training examples or evaluation tools if desired
+from .training_examples import train_dqn_agent, compare_dqn_variants, plot_dqn_comparison, hyperparameter_optimization_study, robustness_analysis, advanced_dqn_training_demo
 
 __all__ = [
-    # Core agents
+    # Configuration
+    "DQNConfig",
+    # Agents
     "DQNAgent",
     "DoubleDQNAgent",
     "DuelingDQNAgent",
     "DuelingDoubleDQNAgent",
+    "NoisyDQNAgent",
+    "RainbowDQNAgent", # Add RainbowDQNAgent
     # Networks
     "QNetwork",
     "DuelingQNetwork",
+    "NoisyLinear",
     "NoisyQNetwork",
-    "CategoricalQNetwork",
-    "RainbowQNetwork",
-    # Utilities
+    "CategoricalQNetwork", # Add CategoricalQNetwork
+    # Data Structures
     "ReplayBuffer",
-    "DQNVisualizer",
-    "DQNAnalyzer",
-    "DQNEvaluator",
-    # Environment wrappers
-    "RewardShapingWrapper",
-    "StateNormalizationWrapper",
-    "ActionRepeatWrapper",
-    "EpisodeStatisticsWrapper",
-    # Environment creators
-    "create_cartpole_env",
-    "create_mountain_car_env",
-    "create_acrobot_env",
-    # Utility functions
+    "PrioritizedReplayBuffer", # Add PrioritizedReplayBuffer
+    # Utilities
     "set_seed",
     "smooth_curve",
-    "calculate_statistics",
-    "find_convergence_episode",
-    "PerformanceTracker",
-    "ExperimentLogger",
-    "create_summary_plot",
-    "benchmark_agent",
-    "save_results",
-    "load_results",
-    "print_experiment_summary",
-    # Evaluation
-    "evaluate_training_progress",
-    # Model utilities
-    "create_model",
-    "count_parameters",
-    "get_model_info",
+    # Loss functions
+    "c51_loss", # Add c51_loss
+    # Training and Analysis Functions
+    "train_dqn_agent",
+    "compare_dqn_variants",
+    "plot_dqn_comparison",
+    "hyperparameter_optimization_study",
+    "robustness_analysis",
+    "advanced_dqn_training_demo",
 ]
 
 

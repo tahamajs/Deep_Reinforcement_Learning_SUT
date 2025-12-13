@@ -1,0 +1,222 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Dreamer-FuN: Hierarchical World Models for Long-Horizon Sample-Efficient Exploration}
+
+\author{\IEEEauthorblockN{1\textsuperscript{st} Author Name}
+\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+\textit{name of organization (of Aff.)} \\
+City, Country \\
+email address}
+\and
+\IEEEauthorblockN{2\textsuperscript{nd} Author Name}
+\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+\textit{name of organization (of Aff.)} \\
+City, Country \\
+email address}
+\and
+\IEEEauthorblockN{3\textsuperscript{rd} Author Name}
+\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+\textit{name of organization (of Aff.)} \\
+City, Country \\
+email address}
+}
+
+\maketitle
+
+\begin{abstract}
+This paper introduces Dreamer-FuN, a novel reinforcement learning agent that combines the strengths of model-based learning with hierarchical control to achieve sample-efficient exploration and robust performance in long-horizon tasks. Dreamer-FuN integrates the powerful world modeling and imagination capabilities of DreamerV3 with the goal-setting and sub-goal execution architecture of Feudal Networks (FuN). Our approach addresses the research gap in efficiently tackling complex, sparse-reward environments by leveraging a learned world model for low-level planning and an hierarchical manager for strategic, long-term decision-making. We demonstrate how this synthesis enables more effective exploration, improved credit assignment, and enhanced generalization across a range of challenging tasks.
+\end{abstract}
+
+\begin{IEEEkeywords}
+reinforcement learning, model-based RL, hierarchical RL, sample efficiency, DreamerV3, Feudal Networks
+\end{IEEEkeywords}
+
+\section{Introduction}
+Reinforcement Learning (RL) has achieved remarkable success in various domains, yet challenges remain in sample efficiency and handling long-horizon tasks, especially in environments with sparse rewards. Model-based RL (MBRL) agents, such as DreamerV3, learn a world model to predict future states and rewards, enabling efficient planning through imagination. However, their effectiveness can diminish in tasks requiring temporally extended reasoning and hierarchical decomposition. Concurrently, Hierarchical RL (HRL) methods, like Feudal Networks (FuN), decompose complex problems into sub-problems, with a high-level manager setting goals for a low-level worker. While HRL excels at managing long-term dependencies, it often relies on model-free learning, which can be sample-inefficient.
+
+This paper proposes Dreamer-FuN, a novel architecture that synthesizes the strengths of DreamerV3's world-modeling capabilities with FuN's hierarchical control. Dreamer-FuN addresses the critical research gap of combining efficient model-based planning with structured hierarchical goal-setting for improved sample efficiency and robust performance in long-horizon, sparse-reward environments. Our primary contributions are:
+\begin{itemize}
+    \item A novel integrated architecture, Dreamer-FuN, that combines a DreamerV3-like world model for latent imagination with a Feudal Networks-inspired manager-worker hierarchy.
+    \item A mathematical formulation that details the interaction between the world model, the manager's goal-setting policy, and the worker's sub-goal execution, all operating within the learned latent space.
+    \item An experimental framework designed to evaluate Dreamer-FuN's performance against state-of-the-art model-based and hierarchical RL baselines on a suite of challenging long-horizon tasks.
+\end{itemize}
+We hypothesize that Dreamer-FuN will exhibit superior sample efficiency, enhanced exploration capabilities, and more effective credit assignment compared to its constituent parts and other leading methods.
+
+\section{Related Work}
+This section briefly reviews the foundational works that inspire Dreamer-FuN: DreamerV3 and Feudal Networks.
+
+\subsection{DreamerV3: World Models for General Purpose RL}
+DreamerV3 is a prominent model-based reinforcement learning algorithm that learns a compact and predictive world model from high-dimensional observations. This world model consists of a recurrent state-space model that predicts future states, rewards, and observations. Agents then learn policies by planning in the learned latent space, using imagination to generate synthetic trajectories and train an actor-critic without direct interaction with the real environment. Key features include its ability to scale to diverse tasks, high sample efficiency, and robustness to noisy observations. DreamerV3 represents a significant advancement in general-purpose RL by decoupling perception from control.
+
+\subsection{Feudal Networks (FuN): Hierarchical Reinforcement Learning}
+Feudal Networks (FuN) introduced a hierarchical architecture for RL, comprising a "manager" and a "worker." The manager operates at a slower temporal resolution, setting abstract goals in a latent space for the worker. The worker, operating at a faster temporal resolution, learns to execute these goals by generating primitive actions in the environment. This hierarchical decomposition facilitates long-horizon credit assignment and enables the manager to learn higher-level strategies, while the worker focuses on short-term execution. FuN demonstrated improved performance on tasks requiring long-term memory and exploration.
+
+\subsection{Synthesis: Dreamer-FuN}
+Dreamer-FuN builds upon these two paradigms by integrating DreamerV3's powerful world-modeling capabilities into a FuN-like hierarchical structure. The world model provides a rich, latent representation of the environment, which both the manager and worker can leverage for more effective planning and control. The manager will set goals within this learned latent space, and the worker will learn to achieve these goals by planning in the imagined trajectories generated by the world model. This synergy aims to combine the sample efficiency of model-based planning with the structured exploration and long-horizon reasoning of hierarchical control.
+
+\section{Methodology}
+In this section, we detail the proposed Dreamer-FuN architecture, outlining its core components and the mathematical formulations governing its learning and interaction. Our agent comprises a World Model, a Manager, and a Worker, all designed to operate synergistically within a latent space.
+
+\subsection{World Model}
+The World Model is adapted from DreamerV3 and is responsible for learning a compact, predictive representation of the environment from observations. It consists of the following components:
+\begin{itemize}
+    \item \textbf{Encoder:} Maps high-dimensional observations \(o_t\) to a latent representation.
+    \item \textbf{Dynamics Model:} Predicts the next latent state \(s_{t+1}\) given the current latent state \(s_t\) and action \(a_t\).
+    \item \textbf{Reward Model:} Predicts the reward \(r_t\) given \(s_t\).
+    \item \textbf{Observation Model:} Reconstructs observations \(o_t\) from \(s_t\).
+\end{itemize}
+The training objective for the World Model aims to maximize the likelihood of observed transitions:
+\[ \mathcal{L}_{WM} = \mathbb{E}_{p(o_{1:T}, r_{1:T}, a_{1:T})} \left[ \sum_{t=1}^T ( \log p(o_t | s_t) + \log p(r_t | s_t) - D_{KL}[q(s_t|s_{t-1}, a_{t-1}, o_t) || p(s_t|s_{t-1}, a_{t-1})] ) \right] \]
+Where \(D_{KL}\) is the Kullback-Leibler divergence between the posterior and prior latent state distributions.
+
+\subsection{Hierarchical Control: Manager and Worker}
+Inspired by Feudal Networks, Dreamer-FuN employs a manager-worker hierarchy. Both operate in the learned latent space provided by the World Model.
+
+\subsubsection{Manager}
+The Manager operates at a longer temporal scale, setting abstract goals \(g_t\) for the Worker within the latent space. The manager's policy \(\pi_M(g_t | s_t)\) is trained to maximize a discounted sum of intrinsic rewards, which are based on the Worker's progress towards the goals. The intrinsic reward \(r^I_t\) can be defined as the negative distance between the current latent state and the goal:
+\[ r^I_t = -\|s_t - g_t\|^2 \]
+The Manager's objective is to maximize the expected sum of these intrinsic rewards over a longer horizon \(H_M\):
+\[ \mathcal{L}_M = \mathbb{E}_{\pi_M, \pi_W, WM} \left[ \sum_{t=0}^{H_M-1} \gamma^t r^I_t \right] \]
+The Manager uses a value function \(V_M(s_t)\) and a Q-function \(Q_M(s_t, g_t)\) to learn its policy, utilizing imagined trajectories from the World Model to plan.
+
+\subsubsection{Worker}
+The Worker receives a goal \(g_t\) from the Manager and executes low-level actions \(a_t\) for \(N\) steps to achieve that goal. The Worker's policy \(\pi_W(a_t | s_t, g_t)\) is trained to maximize the intrinsic reward provided by the Manager. Additionally, the Worker can also receive extrinsic rewards from the environment. Its objective is to maximize a combination of intrinsic and extrinsic rewards:
+\[ \mathcal{L}_W = \mathbb{E}_{\pi_W, WM} \left[ \sum_{k=0}^{N-1} \gamma^k (\alpha r^I_{t+k} + (1-\alpha) r^E_{t+k}) \right] \]
+Where \(r^E\) is the extrinsic reward from the environment and \(\alpha\) is a weighting factor. The Worker also leverages the World Model for short-horizon planning to achieve its sub-goals.
+
+\subsection{Integrated Training Procedure}
+The training of Dreamer-FuN proceeds in an alternating fashion:
+\begin{enumerate}
+    \item Collect experience from the environment using the current Manager and Worker policies.
+    \item Update the World Model using the collected experience to improve its predictive capabilities.
+    \item Using imagined trajectories from the updated World Model, train the Worker policy to achieve the goals set by the Manager.
+    \item Using imagined trajectories, train the Manager policy to set effective goals that lead to high intrinsic and extrinsic rewards.
+\end{enumerate}
+This iterative process ensures that all components learn synergistically, with the World Model providing a consistent predictive foundation for both hierarchical controllers.
+
+\section{Experiments}
+This section outlines the experimental setup for evaluating Dreamer-FuN. We will compare its performance against strong baselines from both model-based and hierarchical reinforcement learning paradigms.
+
+\subsection{Environments}
+We will evaluate Dreamer-FuN on a suite of challenging long-horizon tasks, focusing on environments where sample efficiency and hierarchical reasoning are crucial.
+\begin{itemize}
+    \item \textbf{DeepMind Control Suite:} Tasks like \textit{Walker.walk} or \textit{Humanoid.run} will test the agent's ability to learn complex motor control policies with rich observations.
+    \item \textbf{Minigrid:} Environments such as \textit{DoorKey-v0} or \textit{LavaGap-v0} will evaluate hierarchical planning and sparse reward handling.
+    \item \textbf{Custom Long-Horizon Grid Worlds:} Designed to specifically highlight the benefits of hierarchical planning and world models in achieving multi-step goals.
+\end{itemize}
+
+\subsection{Baselines}
+We will compare Dreamer-FuN against the following baselines:
+\begin{itemize}
+    \item \textbf{DreamerV3:} To isolate the contribution of the hierarchical control.
+    \item \textbf{Feudal Networks (FuN):} To isolate the contribution of the world model and model-based planning.
+    \item \textbf{State-of-the-art Model-Free HRL Agent (e.g., HIRO, HAC):} For a comprehensive comparison within the HRL domain.
+    \item \textbf{Standard Model-Free Agent (e.g., SAC, PPO):} To highlight sample efficiency gains.
+\end{itemize}
+
+\subsection{Metrics}
+The primary metrics for evaluation will include:
+\begin{itemize}
+    \item \textbf{Episode Return:} Average cumulative reward per episode, reflecting overall task performance.
+    \item \textbf{Sample Efficiency:} Number of environment steps required to reach a certain performance threshold.
+    \item \textbf{Success Rate:} For tasks with clear success conditions.
+    \item \textbf{Intrinsic Reward Magnitude:} To assess the effectiveness of the manager's goal setting.
+    \item \textbf{Goal Attainment Rate:} How often the worker achieves the goals set by the manager.
+\end{itemize}
+
+\subsection{Results}
+We anticipate that Dreamer-FuN will demonstrate superior sample efficiency and achieve higher cumulative rewards in long-horizon tasks compared to both model-free and single-level model-based baselines. We expect to see significant improvements in exploration and credit assignment due to the synergistic combination of hierarchical control and world-model-based planning.
+
+% Placeholder for figures and tables
+\begin{figure}[ht]
+    \centerline{\includegraphics[width=0.9\linewidth]{../pictures/fig_01_results.png}}
+    \caption{Visual comparison of the novel method vs baseline.}
+    \label{fig:results_comparison}
+\end{figure}
+
+\begin{table}[htbp]
+\caption{Performance Comparison on Key Benchmarks}
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Agent} & \textbf{Environment 1} & \textbf{Environment 2} & \textbf{Environment 3} \\
+\hline
+Dreamer-FuN & & & \\
+DreamerV3 & & & \\
+Feudal Networks & & & \\
+HIRO/HAC & & & \\
+SAC/PPO & & & \\
+\hline
+\end{tabular}
+\label{tab:performance_comparison}
+\end{center}
+\end{table}
+
+\section{Conclusion and Broader Impact}
+This paper introduces Dreamer-FuN, a novel framework that integrates model-based learning with hierarchical control, offering a promising avenue for addressing sample efficiency and long-horizon challenges in reinforcement learning. By combining the predictive power of DreamerV3's world model with the structured exploration of Feudal Networks, Dreamer-FuN provides a robust and adaptable agent capable of tackling complex tasks.
+
+The broader impact of Dreamer-FuN extends to several areas. Its enhanced sample efficiency can reduce the computational resources required for training complex RL agents, making advanced RL more accessible. The hierarchical structure allows for more interpretable policies, as the manager's goals provide insight into the agent's high-level reasoning. This work contributes to the development of more intelligent and autonomous systems that can operate effectively in real-world scenarios requiring long-term planning and adaptability.
+
+\section*{References}
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\appendix
+\subsection{Detailed Proofs}
+This section would contain detailed mathematical proofs for the convergence properties, bounds, or specific derivations mentioned in the Methodology section. For instance, proofs related to the objective functions of the World Model, Manager, and Worker, or stability analyses of the overall training procedure.
+
+\subsection{Additional Qualitative Examples}
+This section would present additional visualizations and qualitative results, such as:
+\begin{itemize}
+    \item Rendered trajectories demonstrating the Manager's goal-setting and Worker's execution.
+    \item Visualizations of the learned latent space and how goals are represented within it.
+    \item Heatmaps illustrating attention mechanisms or salient features learned by the World Model.
+    \item Failure cases analysis to understand limitations and future research directions.
+\end{itemize}
+
+\subsection{Hyperparameters}
+This table lists the specific hyperparameters used for Dreamer-FuN and all baseline agents in our experiments. These values would be directly sourced from `src/config.py` and potentially overridden for specific environments or ablations.
+
+\begin{table}[htbp]
+\caption{Key Hyperparameters for Dreamer-FuN}
+\begin{center}
+\begin{tabular}{|c|l|l|}
+\hline
+\textbf{Category} & \textbf{Parameter} & \textbf{Value} \\
+\hline
+\textit{World Model} & Latent State Dim & 256 \\
+& Action Dim & (from env) \\
+& Recurrent Hidden Dim & 512 \\
+& KL Loss Weight & 0.1 \\
+\hline
+\textit{Manager} & Goal Dim & 32 \\
+& Goal Horizon (H_M) & 10 \\
+& Learning Rate & 1e-4 \\
+\hline
+\textit{Worker} & Sub-goal Horizon (N) & 5 \\
+& Extrinsic Reward Weight (1-\alpha) & 0.5 \\
+& Intrinsic Reward Weight (\alpha) & 0.5 \\
+& Learning Rate & 1e-4 \\
+\hline
+\textit{Training} & Batch Size & 50 \\
+& Replay Buffer Size & 1e6 \\
+& Environment Steps & 1e7 \\
+& Seed & 42 \\
+\hline
+\end{tabular}
+\label{tab:hyperparameters}
+\end{center}
+\end{table}
+
+\end{document}

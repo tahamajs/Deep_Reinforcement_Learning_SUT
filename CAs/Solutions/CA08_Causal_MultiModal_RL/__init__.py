@@ -2,7 +2,7 @@
 CA8: Causal Reasoning and Multi-Modal Reinforcement Learning
 """
 
-from .utils.causal_rl_utils import device
+from .config import DEVICE
 from .agents.causal_discovery import CausalGraph, CausalDiscovery
 from .agents.causal_rl_agent import (
     CausalRLAgent,
@@ -31,7 +31,7 @@ from .models.fusion_networks import (
 
 __version__ = "1.0.0"
 __all__ = [
-    "device",
+    "DEVICE",
     "CausalGraph",
     "CausalDiscovery",
     "CausalRLAgent",

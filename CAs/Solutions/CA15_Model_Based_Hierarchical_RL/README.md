@@ -1,275 +1,218 @@
-# CA15: Advanced Deep Reinforcement Learning - Model-Based RL and Hierarchical RL
-
-## 🚀 Quick Start
-
-### Installation
-
-```bash
-# Clone or navigate to the project directory
-cd CA15_Model_Based_Hierarchical_RL
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Make scripts executable
-chmod +x run.sh
-chmod +x run_all_experiments.py
-```
-
-### Run All Experiments
-
-```bash
-# Option 1: Using bash script
-./run.sh
-
-# Option 2: Using Python script
-python3 run_all_experiments.py --all
-
-# Option 3: Run specific experiments
-python3 run_all_experiments.py --model-based
-python3 run_all_experiments.py --hierarchical
-python3 run_all_experiments.py --planning
-```
-
-### Run Jupyter Notebook
-
-```bash
-jupyter notebook CA15.ipynb
-```
-
-## 📁 Project Structure
-
-```
-CA15_Model_Based_Hierarchical_RL/
-├── run.sh                           # Main bash script for all experiments
-├── run_all_experiments.py           # Complete Python experiment runner
-├── CA15.ipynb                       # Main Jupyter notebook
-├── training_examples.py             # Training examples and utilities
-├── requirements.txt                 # Python dependencies
-├── README.md                        # This file
-│
-├── model_based_rl/                  # Model-Based RL implementations
-│   ├── __init__.py
-│   └── algorithms.py                # DynamicsModel, ModelEnsemble, MPC, DynaQ
-│
-├── hierarchical_rl/                 # Hierarchical RL implementations
-│   ├── __init__.py
-│   ├── algorithms.py                # Options, HAC, Goal-Conditioned, Feudal
-│   └── environments.py              # Hierarchical environment wrappers
-│
-├── planning/                        # Advanced planning algorithms
-│   ├── __init__.py
-│   └── algorithms.py                # MCTS, MVE, LatentSpacePlanner, WorldModel
-│
-├── experiments/                     # Experiment runners and evaluation
-│   ├── __init__.py
-│   ├── runner.py                    # Unified experiment runner
-│   ├── hierarchical.py              # Hierarchical RL experiments
-│   └── planning.py                  # Planning algorithm experiments
-│
-├── environments/                    # Custom test environments
-│   ├── __init__.py
-│   └── grid_world.py                # Simple grid world environment
-│
-├── utils/                           # Utility functions and classes
-│   └── __init__.py                  # ReplayBuffer, Logger, VisualizationUtils, etc.
-│
-├── visualizations/                  # Generated plots and analysis (created after running)
-├── results/                         # Experiment results and reports (created after running)
-├── logs/                            # Training logs (created after running)
-└── data/                            # Collected training data (created after running)
-```
-
-## 🧪 Available Experiments
-
-### 1. Model-Based RL Algorithms
-
-- **DynamicsModel**: Neural network for learning environment dynamics
-- **ModelEnsemble**: Ensemble methods for uncertainty quantification
-- **ModelPredictiveController**: MPC using learned dynamics
-- **DynaQAgent**: Combining model-free and model-based learning
-
-### 2. Hierarchical RL Algorithms
-
-- **Option**: Options framework implementation
-- **HierarchicalActorCritic**: Multi-level policies with different time scales
-- **GoalConditionedAgent**: Goal-conditioned RL with Hindsight Experience Replay
-- **FeudalNetwork**: Manager-worker architecture for goal-directed behavior
-
-### 3. Planning Algorithms
-
-- **MonteCarloTreeSearch**: MCTS with neural network guidance
-- **ModelBasedValueExpansion**: Recursive value expansion using learned models
-- **LatentSpacePlanner**: Planning in learned compact representations
-- **WorldModel**: End-to-end models for environment simulation and control
+# CA15: Model-Based Hierarchical Reinforcement Learning
 
-## 📊 Expected Results
+## 1. Introduction: Bridging the Gap in Complex Control
 
-After running the experiments, you'll find:
+Reinforcement Learning (RL) has achieved remarkable successes in various domains, from mastering complex games to controlling robotic systems. However, learning efficient policies in environments with sparse rewards, long horizons, or high-dimensional state-action spaces remains a significant challenge. Traditional model-free RL methods often suffer from sample inefficiency, requiring vast amounts of interaction data to learn effective behaviors. Model-based RL (MBRL) addresses this by learning a forward dynamics model of the environment, enabling agents to simulate future trajectories and plan actions without real-world interaction. Concurrently, Hierarchical Reinforcement Learning (HRL) offers a promising avenue for tackling long-horizon tasks by decomposing them into a hierarchy of sub-problems, with higher-level agents setting goals for lower-level agents.
 
-### Generated Files
+This project proposes a novel synthesis: **Model-Based Hierarchical Reinforcement Learning**. We aim to combine the sample efficiency and planning capabilities of MBRL with the temporal abstraction and goal-conditioned exploration of HRL. Our approach seeks to leverage a learned dynamics model to facilitate efficient goal generation, subgoal achievement, and hierarchical policy learning. The core idea is to enable a high-level manager to learn long-term goals by reasoning over predicted trajectories, while a low-level worker learns to achieve these subgoals using the same learned model for accelerated learning and planning. This synergy addresses the limitations of both paradigms when applied in isolation, paving the way for more robust and scalable RL solutions in complex environments.
 
-- `visualizations/ca15_complete_analysis_*.png`: Comprehensive analysis plots
-- `results/ca15_experiment_report_*.md`: Detailed experiment report
-- `results/`: All experiment outputs and data
-- `logs/`: Training logs and metrics
-- `data/`: Collected training data
+## 2. Theoretical Framework: A Unified Perspective
 
-### Key Metrics
+### 2.1. Foundations of Model-Based Reinforcement Learning
 
-- **Sample Efficiency**: Episodes needed to reach performance threshold
-- **Final Performance**: Average reward in final episodes
-- **Computational Overhead**: Planning time per episode
-- **Success Rate**: Goal achievement rate for hierarchical methods
+Model-Based RL (MBRL) involves learning an explicit model of the environment's dynamics, often represented as a transition function \( T(s' | s, a) \) and a reward function \( R(r | s, a) \). This learned model allows the agent to predict future states and rewards, enabling various planning strategies.
 
-## 🔧 Customization
+#### 2.1.1. Dynamics Model Learning
 
-### Adding New Algorithms
+The dynamics model is typically a neural network that approximates the state transition function. For a deterministic environment, it predicts the next state \( \hat{s}_{t+1} \) given the current state \( s_t \) and action \( a_t \):
 
-1. Create your algorithm class in the appropriate module (`model_based_rl/`, `hierarchical_rl/`, or `planning/`)
-2. Add it to the `__init__.py` file
-3. Include it in the experiment runner (`run_all_experiments.py`)
+\[
+\hat{s}_{t+1} = f_\theta(s_t, a_t)
+\]
 
-### Custom Environments
+where \( f_\theta \) is the neural network with parameters \( \theta \). The model is trained by minimizing the prediction error (e.g., Mean Squared Error) between the predicted next state and the actual next state observed from experience:
 
-1. Create your environment class in `environments/`
-2. Implement the standard RL interface (`reset()`, `step()`)
-3. Update the experiment runners to use your environment
+\[
+\mathcal{L}_{\text{dyn}}(\theta) = \mathbb{E}_{(s_t, a_t, s_{t+1}) \sim \mathcal{D}} [ \| s_{t+1} - f_\theta(s_t, a_t) \|^2 ]
+\]
 
-### Hyperparameter Tuning
+For stochastic environments, the model might predict parameters of a distribution over next states (e.g., mean and variance for a Gaussian distribution).
 
-Modify the hyperparameters in `run_all_experiments.py`:
+#### 2.1.2. Planning with Learned Models
 
-```python
-# Example: Modify Dyna-Q parameters
-dyna_agent = DynaQAgent(
-    env.state_dim,
-    env.action_dim,
-    lr=1e-3,        # Learning rate
-    gamma=0.99,      # Discount factor
-    epsilon=0.1      # Exploration rate
-)
-```
+Once a dynamics model is learned, it can be used for various planning methods:
 
-## 🐛 Troubleshooting
+*   **Model Predictive Control (MPC):** At each time step, the agent plans a sequence of actions by simulating trajectories in the learned model. Only the first action of the planned sequence is executed in the real environment, and the planning process is repeated in the next time step. This often involves optimization over action sequences to maximize cumulative reward.
 
-### Common Issues
+*   **Dyna-Q:** This classic algorithm combines direct RL (learning from real experience) with indirect RL (learning from simulated experience generated by the model). The agent learns a Q-function from real transitions and periodically updates the Q-function using many simulated transitions.
 
-1. **CUDA Out of Memory**
+    The Q-value update rule from real experience:
+    \[
+    Q(s_t, a_t) \leftarrow Q(s_t, a_t) + \alpha [r_t + \gamma \max_{a'} Q(s_{t+1}, a') - Q(s_t, a_t)]
+    \]
+    
+    In Dyna-Q, after each real experience, \( N \) planning steps are performed using the learned model:
+    1.  Sample a previously observed state-action pair \( (s, a) \) from memory.
+    2.  Predict the next state \( s' \) and reward \( r \) using the dynamics model \( \mathcal{M} \): \( s', r = \mathcal{M}(s, a) \).
+    3.  Update the Q-function using this simulated experience:
+        \[
+        Q(s, a) \leftarrow Q(s, a) + \alpha [r + \gamma \max_{a''} Q(s', a'') - Q(s, a)]
+        \]
 
-   ```bash
-   # Reduce batch sizes or use CPU
-   export CUDA_VISIBLE_DEVICES=""
-   ```
+*   **Monte Carlo Tree Search (MCTS):** MCTS builds a search tree by simulating rollouts using the learned dynamics model. It balances exploration and exploitation to find optimal action sequences.
 
-2. **Import Errors**
+### 2.2. Foundations of Hierarchical Reinforcement Learning
 
-   ```bash
-   # Make sure you're in the project directory
-   export PYTHONPATH="${PYTHONPATH}:$(pwd)"
-   ```
+Hierarchical RL (HRL) aims to solve complex tasks by introducing different levels of control. A common structure involves a high-level "manager" and a low-level "worker".
 
-3. **Permission Denied**
+#### 2.2.1. Options Framework
 
-   ```bash
-   # Make scripts executable
-   chmod +x run.sh run_all_experiments.py
-   ```
+The options framework (Sutton et al., 1999) formalizes temporal abstraction. An option \( o \) is a temporally extended action defined by:
+*   An **initiation set** \( I \subseteq \mathcal{S} \): the set of states in which the option can be started.
+*   A **policy** \( \pi_o(a | s) \): a policy that is followed for the duration of the option.
+*   A **termination condition** \( \beta_o(s) \): the probability of the option terminating in state \( s \).
 
-4. **Missing Dependencies**
-   ```bash
-   # Install all requirements
-   pip install -r requirements.txt
-   ```
+The high-level manager selects an option, and the low-level worker executes the option's policy until it terminates. The manager then selects a new option.
 
-### Performance Issues
+#### 2.2.2. Goal-Conditioned Reinforcement Learning (GCRL)
 
-- **Slow Training**: Reduce number of episodes or use smaller networks
-- **High Memory Usage**: Reduce batch sizes or use gradient accumulation
-- **Convergence Issues**: Adjust learning rates or add learning rate scheduling
+In GCRL, the agent learns a policy \( \pi(a | s, g) \) that is conditioned on a desired goal \( g \). The goal can be a state, a feature vector, or a high-level objective. Hindsight Experience Replay (HER) is a technique often used with GCRL to improve sample efficiency by re-labeling past experiences with different goals. Even if the agent fails to reach the intended goal, it might have achieved some other state, which can then be treated as a successful goal for training purposes.
 
-## 📈 Understanding Results
+#### 2.2.3. Feudal Networks
 
-### Learning Curves
+Feudal Networks (Dayan & Hinton, 1993; Vezhnevets et al., 2017) introduce a manager-worker hierarchy where the manager operates at a slower timescale, setting subgoals for the worker. The worker executes primitive actions to achieve these subgoals.
 
-- **Steep Initial Rise**: Good sample efficiency
-- **Plateau**: Algorithm has converged
-- **High Variance**: Unstable training (try reducing learning rate)
+*   **Manager:** Learns a policy \( \pi_{\text{manager}}(g | s) \) over subgoals \( g \). The manager receives extrinsic rewards from the environment.
+*   **Worker:** Learns a policy \( \pi_{\text{worker}}(a | s, g) \) to achieve the subgoal \( g \). The worker receives intrinsic rewards from the manager, often based on progress towards the subgoal.
 
-### Performance Comparison
+### 2.3. Synthesis: Model-Based Hierarchical Reinforcement Learning
 
-- **Model-Based RL**: Best for sample efficiency
-- **Hierarchical RL**: Best for complex multi-goal tasks
-- **Planning**: Best for final performance (with computational cost)
+Our proposed Model-Based Hierarchical RL (MB-HRL) framework aims to integrate the strengths of both MBRL and HRL. The core idea is to use a learned dynamics model to enhance various aspects of hierarchical control, particularly in goal generation, exploration, and efficient subgoal achievement.
 
-### Computational Trade-offs
+#### 2.3.1. Research Gap:
+Existing HRL methods often struggle with:
+1.  **Goal Generation:** How does the high-level manager effectively generate meaningful and achievable subgoals, especially in complex environments?
+2.  **Sample Efficiency:** Learning both manager and worker policies can be very sample inefficient, particularly when workers need to learn from scratch for each new subgoal.
+3.  **Exploration:** Guided exploration within the hierarchical structure is crucial but challenging.
 
-- **MCTS**: Highest computational cost, best performance
-- **MPC**: Moderate cost, good performance
-- **Dyna-Q**: Low cost, good sample efficiency
+MBRL, on the other hand, provides powerful tools for prediction and planning, which can directly address these gaps.
 
-## 🔬 Advanced Usage
+#### 2.3.2. Proposed Synthesis:
+We integrate a learned dynamics model into a feudal-like hierarchical architecture.
 
-### Running Specific Experiments
+**Architecture:**
+*   **Dynamics Model (\( f_\theta \)):** A neural network that learns to predict the next state \( \hat{s}_{t+1} \) and reward \( \hat{r}_t \) given the current state \( s_t \) and action \( a_t \). This model operates at the primitive action level.
+    \[
+    \hat{s}_{t+1}, \hat{r}_t = f_\theta(s_t, a_t)
+    \]
+    The dynamics model is trained using real-world interactions.
 
-```bash
-# Only model-based experiments
-python3 run_all_experiments.py --model-based
+*   **Manager Policy (\( \pi_M \)):** A high-level policy that, at a slower timescale, observes the current state \( s_t \) and outputs a subgoal \( g_t \). The manager utilizes the learned dynamics model for planning. Instead of randomly sampling goals or relying solely on extrinsic rewards, the manager can `dream` trajectories using \( f_\theta \) to evaluate potential subgoals and select those that lead to desirable future states or are within its "reachability" horizon.
+    \[
+    g_t = \pi_M(s_t)
+    \]
+    The manager's learning objective can incorporate expected future returns from simulated trajectories, potentially using techniques like Model Predictive Control over subgoals.
 
-# Only hierarchical experiments
-python3 run_all_experiments.py --hierarchical
+*   **Worker Policy (\( \pi_W \)):** A low-level policy that takes the current state \( s_t \) and the subgoal \( g_t \) provided by the manager, and outputs a primitive action \( a_t \).
+    \[
+    a_t = \pi_W(s_t, g_t)
+    \]
+    The worker is intrinsically rewarded for making progress towards the subgoal \( g_t \). The learned dynamics model can accelerate the worker's learning by generating synthetic experiences for subgoal achievement. For instance, instead of only learning from real interactions, the worker can train on transitions simulated by \( f_\theta \) that lead towards the current subgoal.
 
-# Only planning experiments
-python3 run_all_experiments.py --planning
-```
+**Learning Process:**
 
-### Custom Experiment Configuration
+1.  **Dynamics Model Pre-training/Concurrent Training:** The dynamics model \( f_\theta \) is continuously trained and updated using all available real experiences \( (s_t, a_t, r_t, s_{t+1}) \). This model provides the foundational predictive capability for the hierarchical agents.
 
-Modify `run_all_experiments.py` to:
+2.  **Manager Goal Generation & Planning:**
+    *   At each manager timestep, the manager observes the current state \( s_t \).
+    *   It then queries the dynamics model \( f_\theta \) to *plan* potential subgoal sequences. This can involve MCTS or MPC-like approaches in the latent/state space to identify subgoals that are both achievable and beneficial for long-term extrinsic reward.
+    *   The manager selects a subgoal \( g_t \) and communicates it to the worker.
 
-- Change number of episodes
-- Modify environment parameters
-- Adjust algorithm hyperparameters
-- Add new evaluation metrics
+3.  **Worker Subgoal Achievement:**
+    *   The worker receives \( s_t \) and \( g_t \).
+    *   It executes primitive actions \( a_t \) using its policy \( \pi_W(a_t | s_t, g_t) \).
+    *   The worker receives an intrinsic reward \( r_W \) based on how much progress it makes towards \( g_t \). For example, \( r_W = -\|s_{t+1} - g_t\|_2 + \|s_t - g_t\|_2 \).
+    *   Crucially, the worker can also perform **internal simulations** using \( f_\theta \). If the worker receives a subgoal \( g_t \), it can use \( f_\theta \) to generate many simulated trajectories starting from \( s_t \) and attempting to reach \( g_t \). These simulated experiences can be used to update \( \pi_W \) much more rapidly than relying solely on real-world interactions. This is akin to a Dyna-Q approach at the worker level.
 
-### Integration with Other Projects
+4.  **Hierarchical Credit Assignment:**
+    *   The manager's policy \( \pi_M \) is updated based on extrinsic rewards from the environment, but its value function can be bootstrapped using the predicted success of the worker in achieving subgoals (as estimated by the dynamics model).
+    *   The worker's policy \( \pi_W \) is updated based on the intrinsic rewards and the simulated experiences.
 
-```python
-# Import specific algorithms
-from model_based_rl.algorithms import DynaQAgent
-from hierarchical_rl.algorithms import GoalConditionedAgent
-from planning.algorithms import MonteCarloTreeSearch
+This synthesis offers a powerful framework for agents to learn complex, long-horizon tasks by intelligently decomposing them and leveraging a learned world model for efficient planning and accelerated learning at both hierarchical levels.
 
-# Use in your own experiments
-agent = DynaQAgent(state_dim=4, action_dim=2)
-# ... your training loop
-```
+## 3. Implementation Details: Building the MB-HRL Framework
 
-## 📚 References
+Our implementation will be structured to be modular and extensible, reflecting the clear separation of concerns in the proposed MB-HRL framework. The core components will reside in the `src/` directory, following the principles of a production-grade codebase.
 
-1. **Model-Based RL**: Deisenroth et al. (2011) - PILCO
-2. **Dyna-Q**: Sutton (1990) - Integrated Architectures
-3. **Options Framework**: Sutton et al. (1999) - Between MDPs and Semi-MDPs
-4. **HAC**: Levy et al. (2019) - Hierarchical Actor-Critic
-5. **HER**: Andrychowicz et al. (2017) - Hindsight Experience Replay
-6. **Feudal Networks**: Vezhnevets et al. (2017) - Feudal Networks
-7. **MCTS**: Coulom (2006) - Efficient Selectivity
-8. **World Models**: Ha & Schmidhuber (2018) - World Models
+### 3.1. Core Modules
 
-## 🤝 Contributing
+*   `src/config.py`: This module will centralize all hyperparameters, model dimensions, learning rates, batch sizes, and other configurable parameters. This ensures easy experimentation and reproducibility.
+*   `src/model.py`: This will house the neural network architectures for the dynamics model, manager policy, worker policy, and any associated value networks. Each component will be a `torch.nn.Module` with clear forward passes and type hints.
+*   `src/losses.py`: This module will define the loss functions for training the dynamics model (e.g., MSE loss for state prediction), the manager (e.g., policy gradient or actor-critic loss with intrinsic rewards), and the worker (e.g., goal-conditioned policy loss).
+*   `src/data.py`: This will contain implementations for `torch.utils.data.Dataset` and `torch.utils.data.DataLoader` to handle experience replay buffers (e.g., `ReplayBuffer`, `PrioritizedReplayBuffer`), data preprocessing, and synthetic benchmark environments.
+*   `src/utils.py`: This module will provide utility functions for logging, checkpointing, environment wrappers, seeding, and device management (CPU/GPU).
 
-1. Fork the repository
-2. Create a feature branch
-3. Add your improvements
-4. Test thoroughly
-5. Submit a pull request
+### 3.2. Dynamics Model (`src/model.py`)
 
-## 📄 License
+The `DynamicsModel` will be a multi-layer perceptron (MLP) that takes the current state and action as input and predicts the next state and reward.
+\[
+\text{DynamicsModel}(s_t, a_t) = (\hat{s}_{t+1}, \hat{r}_t)
+\]
+It will be trained with a combined loss:
+\[
+\mathcal{L}_{\text{dynamics}} = \| s_{t+1} - \hat{s}_{t+1} \|^2 + \| r_t - \hat{r}_t \|^2
+\]
+An ensemble of dynamics models (`ModelEnsemble`) can be used to quantify uncertainty in predictions.
 
-This project is part of the Deep Reinforcement Learning course at Sharif University of Technology.
+### 3.3. Manager and Worker Architectures (`src/model.py`)
 
----
+*   **Manager Network:** An actor-critic style network for the manager will output a subgoal based on the current high-level state. The manager's value function will estimate the expected return from a given state when following its policy and delegating to the worker.
+*   **Worker Network:** A goal-conditioned actor-critic network for the worker will take the current low-level state and the manager-provided subgoal as input, outputting primitive actions.
 
-**Happy Learning! 🎓**
+### 3.4. Learning Algorithms (`src/losses.py` and `src/train.py` - conceptual for now)
 
-For questions or issues, please check the troubleshooting section or create an issue in the repository.
+*   **Dynamics Model Training:** Standard supervised learning using collected experience.
+*   **Manager Training:** Policy gradient or Actor-Critic methods, potentially using value expansion from the dynamics model to estimate long-term returns.
+*   **Worker Training:** Goal-conditioned policy learning, enhanced by intrinsic rewards and simulated experiences generated by the dynamics model (Dyna-Q style). Hindsight Experience Replay (HER) can also be incorporated to improve worker learning.
+
+## 4. Dataset Specifications
+
+For initial experimentation and verification, we will utilize established benchmark environments suitable for both model-based and hierarchical RL.
+
+### 4.1. Simple GridWorld Environment (`src/data.py` and `src/environments.py`)
+
+A custom `SimpleGridWorld` environment will be implemented to provide a clear, interpretable testbed.
+*   **State Space:** Discrete 2D grid coordinates (e.g., \( (x, y) \)).
+*   **Action Space:** Discrete actions (e.g., Up, Down, Left, Right).
+*   **Reward:** Sparse rewards for reaching a goal state, with small negative rewards for each step.
+*   **Dynamics:** Deterministic transitions (for initial setup) or simple stochasticity.
+
+This environment allows for straightforward visualization of learned policies, subgoals, and dynamics model accuracy.
+
+### 4.2. Existing Gymnasium Environments
+
+We will also evaluate our framework on more complex continuous control tasks from the Gymnasium library (e.g., `Pendulum-v1`, `MountainCarContinuous-v0`, or a locomotion task).
+*   **State Space:** Continuous, high-dimensional observation vectors.
+*   **Action Space:** Continuous action vectors.
+*   **Reward:** Task-specific rewards.
+*   **Preprocessing:** States will be normalized using `RunningStats` from `src/utils.py`.
+
+## 5. Code Map: Navigating the Project Structure
+
+The project is organized into the following logical components:
+
+*   **`README.md`**: This document – the comprehensive lecture notes for the project.
+*   **`src/`**: Contains all core Python modules.
+    *   `src/config.py`: Centralized configuration and hyperparameters.
+    *   `src/model.py`: Neural network architectures for dynamics, manager, and worker.
+    *   `src/losses.py`: Definitions of all loss functions.
+    *   `src/data.py`: Data handling, replay buffers, and environment wrappers.
+    *   `src/utils.py`: General utilities (logging, seeding, device management).
+*   **`notebooks/main.ipynb`**: The primary execution and visualization notebook.
+*   **`report.tex`**: The formal IEEE-format research paper.
+*   **`pictures/`**: Directory to save all generated plots and figures from `main.ipynb` (e.g., `fig_01_convergence.png`).
+*   **`requirements.txt`**: Python dependencies for the project.
+
+This structure ensures a clear separation of concerns, making the codebase maintainable, testable, and conducive to further research and development.
+
+## 6. References
+
+The theoretical framework draws inspiration from, and builds upon, several foundational and recent works in Model-Based and Hierarchical Reinforcement Learning:
+
+1.  **Sutton, R. S., Precup, D., & Singh, S. (1999). Intra-option learning about courses of action. *Artificial Intelligence*, 112(1-2), 181-211.** (Foundational Options Framework)
+2.  **Hafner, D., Lillicrap, T., Norouzi, M., & van Hasselt, H. (2020). Mastering Atari with Discrete World Models. *International Conference on Learning Representations (ICLR)*.** (World Models, latent space planning)
+3.  **Vezhnevets, A. S., Soyer, H., Mahesch, S., Springenberg, J. T., & Hadsell, R. (2017). Feudal Networks for Hierarchical Reinforcement Learning. *International Conference on Machine Learning (ICML)*.** (Feudal Networks, manager-worker architecture)
+4.  **Andrychowicz, M., Wolski, F., Ray, A., Schneider, J., Fong, R., Welinder, P., ... & Zaremba, W. (2017). Hindsight Experience Replay. *Advances in Neural Information Processing Systems (NeurIPS)*.** (Goal-conditioned learning, HER)
+5.  **Kaiser, L., Babaeizadeh, M., Hinton, G., Chen, Q., Karpathy, A., Kumar, R., & Sutskever, I. (2019). Model-Based Reinforcement Learning for Atari. *International Conference on Learning Representations (ICLR)*.** (Advanced MBRL techniques)
+
+These papers will serve as the primary references for the theoretical and algorithmic components of our novel MB-HRL approach.

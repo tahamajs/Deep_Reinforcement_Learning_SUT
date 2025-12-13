@@ -99,8 +99,8 @@ class TabularModel:
         return np.random.choice(self.num_states, p=probs)
 
 
-class NeuralNetworkModel(nn.Module):
-    """Neural network environment model"""
+class NeuralModel(nn.Module):
+    """Neural network environment model built as an ensemble of MLPs"""
 
     def __init__(
         self,
@@ -130,8 +130,17 @@ class NeuralNetworkModel(nn.Module):
 
         self.optimizer = optim.Adam(self.parameters(), lr=1e-3)
 
-    def forward(self, state: torch.Tensor, action: torch.Tensor) -> List[torch.Tensor]:
-        """Forward pass through ensemble"""
+    def forward(self, state: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
+        """Forward pass through ensemble
+
+        Args:
+            state (torch.Tensor): Current state tensor [batch_size, state_dim].
+            action (torch.Tensor): Action tensor [batch_size, action_dim].
+
+        Returns:
+            torch.Tensor: Stacked predictions from all ensemble models
+                          [ensemble_size, batch_size, state_dim + 1].
+        """
         state_action = torch.cat([state, action], dim=-1)
         predictions = []
 
@@ -139,27 +148,25 @@ class NeuralNetworkModel(nn.Module):
             pred = model(state_action)
             predictions.append(pred)
 
-        return predictions
+        return torch.stack(predictions)
 
     def predict(
         self, state: torch.Tensor, action: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Predict next state and reward with uncertainty"""
-        predictions = self.forward(state, action)
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Predict next state and reward with uncertainty
 
-        # Split predictions into next_state and reward
-        next_states = []
-        rewards = []
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+                - Mean next state prediction [batch_size, state_dim]
+                - Standard deviation of next state prediction [batch_size, state_dim]
+                - Mean reward prediction [batch_size, 1]
+                - Standard deviation of reward prediction [batch_size, 1]
+        """
+        predictions = self.forward(state, action) # [ensemble_size, batch_size, state_dim + 1]
 
-        for pred in predictions:
-            next_state_pred = pred[:, : self.state_dim]
-            reward_pred = pred[:, -1:]
-            next_states.append(next_state_pred)
-            rewards.append(reward_pred)
-
-        # Stack predictions
-        next_states = torch.stack(next_states)  # [ensemble_size, batch_size, state_dim]
-        rewards = torch.stack(rewards)  # [ensemble_size, batch_size, 1]
+        # Split predictions into next_states and rewards
+        next_states = predictions[:, :, : self.state_dim]
+        rewards = predictions[:, :, -1:]
 
         # Compute mean and std
         next_state_mean = next_states.mean(dim=0)
@@ -179,16 +186,17 @@ class NeuralNetworkModel(nn.Module):
         """Update ensemble models"""
         self.optimizer.zero_grad()
 
-        predictions = self.forward(states, actions)
+        predictions = self.forward(states, actions) # [ensemble_size, batch_size, state_dim + 1]
         total_loss = 0
 
-        for pred in predictions:
+        for i in range(self.ensemble_size):
+            pred = predictions[i]
             next_state_pred = pred[:, : self.state_dim]
             reward_pred = pred[:, -1:]
 
             # Compute losses
             next_state_loss = F.mse_loss(next_state_pred, next_states)
-            reward_loss = F.mse_loss(reward_pred, rewards.unsqueeze(-1))
+            reward_loss = F.mse_loss(reward_pred.squeeze(-1), rewards) # Squeeze pred_reward to match rewards shape [batch_size,]
 
             loss = next_state_loss + reward_loss
             total_loss += loss
@@ -296,7 +304,7 @@ class MCTSNode:
         self.children: Dict[int, "MCTSNode"] = {}
         self.visits = 0
         self.value = 0.0
-        self.untried_actions: List[int] = []
+        self.untried_actions: List[int] = []  # Initialize as empty list
 
     def is_fully_expanded(self) -> bool:
         """Check if all actions have been tried"""
@@ -307,10 +315,16 @@ class MCTSNode:
         best_score = -np.inf
         best_child = None
 
+        if not self.children:
+            raise ValueError("Cannot select best child from a node with no children.")
+
+        # Ensure self.visits is not zero for log calculation
+        log_parent_visits = np.log(self.visits + 1e-8)  # Add epsilon to prevent log(0)
+
         for action, child in self.children.items():
             exploitation = child.value / (child.visits + 1e-8)
             exploration = c_puct * np.sqrt(
-                np.log(self.visits + 1) / (child.visits + 1e-8)
+                log_parent_visits / (child.visits + 1e-8)
             )
             score = exploitation + exploration
 
@@ -322,6 +336,8 @@ class MCTSNode:
 
     def most_visited_child(self) -> "MCTSNode":
         """Return child with most visits"""
+        if not self.children:
+            raise ValueError("Cannot select most visited child from a node with no children.")
         return max(self.children.values(), key=lambda x: x.visits)
 
 
@@ -332,22 +348,33 @@ class MCTS:
         self.env = env
         self.num_simulations = num_simulations
         self.c_puct = c_puct
+        self.num_actions = self.env.action_space.n if isinstance(self.env.action_space, gym.spaces.Discrete) else None
+        if self.num_actions is None:
+            raise ValueError("MCTS requires a discrete action space.")
 
     def search(self, root_state: Any) -> MCTSNode:
         """Perform MCTS search"""
         root = MCTSNode(root_state)
-        root.untried_actions = list(range(self.env.action_space.n))
+        root.untried_actions = list(range(self.num_actions))
 
         for _ in range(self.num_simulations):
             node = root
-            state = root_state.copy() if hasattr(root_state, "copy") else root_state
+            # Reset environment for simulation. Gym API often returns (observation, info)
+            current_sim_state, info = self.env.reset()
+            # Ensure we are using the actual root_state for the simulation tree
+            # This requires the environment to be set to the root_state. For simple
+            # environments, current_sim_state might be enough. For complex, requires env.set_state(root_state)
+            # Assuming root_state itself is directly usable as observation or simple enough
+            # to be passed as such. If not, a specific env.set_state() method would be needed.
+
             path = []
 
             # Selection
             while node.is_fully_expanded() and node.children:
                 node = node.best_child(self.c_puct)
                 action = node.action
-                state, _, _, _, _ = self.env.step(action)
+                # Apply action to environment for simulation
+                current_sim_state, _, terminated, truncated, _ = self.env.step(action) # Use current_sim_state for next step
                 path.append(node)
 
             # Expansion
@@ -355,38 +382,48 @@ class MCTS:
                 action = random.choice(node.untried_actions)
                 node.untried_actions.remove(action)
 
-                next_state, reward, terminated, truncated, _ = self.env.step(action)
+                # Apply action to environment for simulation
+                next_sim_state, reward, terminated, truncated, _ = self.env.step(action)
                 done = terminated or truncated
 
-                child = MCTSNode(next_state, parent=node, action=action)
-                child.untried_actions = list(range(self.env.action_space.n))
+                child = MCTSNode(next_sim_state, parent=node, action=action)
+                child.untried_actions = list(range(self.num_actions))
                 node.children[action] = child
 
                 path.append(child)
 
-                # Simulation (rollout)
-                rollout_reward = self._rollout(next_state)
+                # Simulation (rollout) from the newly expanded node
+                rollout_reward = self._rollout(self.env, next_sim_state) # Pass env to rollout
 
                 # Backpropagation
                 for node in reversed(path):
                     node.visits += 1
                     node.value += rollout_reward
+            else: # If node is fully expanded but children is empty, it means it's a terminal node
+                # For terminal nodes, just backpropagate current reward, no rollout
+                # Assuming the reward from last step before terminal is relevant.
+                # This part needs careful consideration based on the environment and reward structure.
+                # For now, let's assume if it's terminal, the rollout reward is 0 (or actual reward).
+                # This can be improved by passing a `terminal_reward` to the MCTSNode.
+                pass
 
         return root
 
-    def _rollout(self, state: Any, max_depth: int = 50) -> float:
-        """Perform random rollout from state"""
+    def _rollout(self, env: gym.Env, state: Any, max_depth: int = 50) -> float:
+        """Perform random rollout from state using the environment"""
         total_reward = 0
         depth = 0
+        current_rollout_state = state # Start rollout from the given state
 
         while depth < max_depth:
-            action = self.env.action_space.sample()
-            next_state, reward, terminated, truncated, _ = self.env.step(action)
+            action = env.action_space.sample()
+            next_state, reward, terminated, truncated, _ = env.step(action)
             total_reward += reward
             depth += 1
 
             if terminated or truncated:
                 break
+            current_rollout_state = next_state
 
         return total_reward
 
@@ -397,7 +434,7 @@ class MCTS:
         visits = np.array(
             [
                 root.children.get(a, MCTSNode(None)).visits
-                for a in range(self.env.action_space.n)
+                for a in range(self.num_actions) # Use self.num_actions
             ]
         )
 
@@ -419,53 +456,85 @@ class MCTS:
 
 
 class MPCController:
-    """Model Predictive Control for continuous control"""
+    """Model Predictive Control for continuous control
+
+    Args:
+        model (Callable): A callable model that takes current state and action,
+                          and returns the next state (and optionally reward).
+                          Expected signature: `model(state: np.ndarray, action: np.ndarray) -> np.ndarray`
+        horizon (int): The planning horizon, i.e., how many future steps to consider.
+        num_samples (int): Number of random action sequences to sample for optimization.
+        action_bounds (Union[Tuple[float, float], np.ndarray]): Bounds for actions.
+                                                            Can be a tuple (min, max) for scalar actions
+                                                            or a (action_dim, 2) numpy array for multi-dimensional actions.
+    """
 
     def __init__(
         self,
-        model: Callable,
+        model: Callable[..., np.ndarray],
         horizon: int = 10,
         num_samples: int = 100,
-        action_bounds: Tuple[float, float] = (-1.0, 1.0),
+        action_bounds: Union[Tuple[float, float], np.ndarray] = (-1.0, 1.0),
     ):
         self.model = model
         self.horizon = horizon
         self.num_samples = num_samples
-        self.action_bounds = action_bounds
+        self.action_bounds = np.array(action_bounds) if isinstance(action_bounds, list) else action_bounds
 
     def optimize(
         self, current_state: np.ndarray, goal_state: Optional[np.ndarray] = None
     ) -> np.ndarray:
-        """Optimize action sequence using MPC"""
+        """Optimize action sequence using MPC (Random Shooting method).
+
+        Args:
+            current_state (np.ndarray): The current state of the environment.
+            goal_state (Optional[np.ndarray]): The target goal state. If None, cost is based on negative L2 norm from origin.
+
+        Returns:
+            np.ndarray: The first action of the optimal sequence found.
+                        Returns a zero-action array if no optimal sequence is found.
+        """
         best_action_sequence = None
         best_cost = np.inf
 
+        state_dim = current_state.shape[-1] if isinstance(current_state, np.ndarray) and current_state.ndim > 0 else 1
+
+        # Determine action_dim based on action_bounds or assume 1 if action_bounds is a tuple
+        if isinstance(self.action_bounds, tuple):
+            action_dim = 1
+            min_action = self.action_bounds[0]
+            max_action = self.action_bounds[1]
+        elif isinstance(self.action_bounds, np.ndarray):
+            action_dim = self.action_bounds.shape[0]
+            min_action = self.action_bounds[:, 0]  # Assuming shape (action_dim, 2)
+            max_action = self.action_bounds[:, 1]
+        else:
+            raise ValueError("action_bounds must be a tuple or a numpy array")
+
         for _ in range(self.num_samples):
-            # Sample random action sequence
+            # Sample random action sequence within bounds
             action_sequence = np.random.uniform(
-                self.action_bounds[0],
-                self.action_bounds[1],
-                (
-                    self.horizon,
-                    len(current_state) if isinstance(current_state, np.ndarray) else 1,
-                ),
+                low=min_action,
+                high=max_action,
+                size=(self.horizon, action_dim)
             )
 
             # Simulate trajectory
             state = current_state.copy()
-            total_cost = 0
+            total_cost = 0.0
 
             for action in action_sequence:
                 # Predict next state using model
-                next_state = self.model(state, action)
-                state = next_state
+                # Model is expected to return np.ndarray, so ensure consistency
+                next_state_prediction = self.model(state, action)
+                state = next_state_prediction # Update state for next step in horizon
 
-                # Compute cost (distance to goal or reward)
+                # Compute cost
                 if goal_state is not None:
                     cost = np.linalg.norm(state - goal_state)
                 else:
-                    # Assume reward is negative distance from origin
-                    cost = -np.linalg.norm(state)
+                    # Default cost: negative reward for being away from origin (positive for being close)
+                    cost = np.linalg.norm(state) # L2 norm as cost, aim for 0
 
                 total_cost += cost
 
@@ -474,12 +543,12 @@ class MPCController:
                 best_cost = total_cost
                 best_action_sequence = action_sequence
 
-        # Return first action
-        return (
-            best_action_sequence[0]
-            if best_action_sequence is not None
-            else np.zeros_like(current_state)
-        )
+        # Return first action of the best sequence, or a zero-action array if no best sequence was found
+        if best_action_sequence is not None:
+            return best_action_sequence[0]
+        else:
+            # Return a zero-action array with correct dimensionality
+            return np.zeros(action_dim, dtype=np.float32)
 
 
 # =============================================================================
@@ -487,113 +556,20 @@ class MPCController:
 # =============================================================================
 
 
-class WorldModel(nn.Module):
-    """World model with encoder, transition model, and decoder"""
-
-    def __init__(
-        self, obs_dim: int, action_dim: int, latent_dim: int = 32, hidden_dim: int = 128
-    ):
-        super().__init__()
-        self.obs_dim = obs_dim
-        self.action_dim = action_dim
-        self.latent_dim = latent_dim
-
-        # Encoder: observation -> latent state
-        self.encoder = nn.Sequential(
-            nn.Linear(obs_dim, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, latent_dim)
-        )
-
-        # Transition model: (latent_state, action) -> next_latent_state
-        self.transition = nn.Sequential(
-            nn.Linear(latent_dim + action_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, latent_dim),
-        )
-
-        # Decoder: latent_state -> observation
-        self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, obs_dim)
-        )
-
-        # Reward predictor
-        self.reward_predictor = nn.Sequential(
-            nn.Linear(latent_dim + action_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1),
-        )
-
-        self.optimizer = optim.Adam(self.parameters(), lr=1e-3)
-
-    def encode(self, obs: torch.Tensor) -> torch.Tensor:
-        """Encode observation to latent space"""
-        return self.encoder(obs)
-
-    def decode(self, latent: torch.Tensor) -> torch.Tensor:
-        """Decode latent state to observation"""
-        return self.decoder(latent)
-
-    def predict_next_state(
-        self, latent: torch.Tensor, action: torch.Tensor
-    ) -> torch.Tensor:
-        """Predict next latent state"""
-        state_action = torch.cat([latent, action], dim=-1)
-        return self.transition(state_action)
-
-    def predict_reward(
-        self, latent: torch.Tensor, action: torch.Tensor
-    ) -> torch.Tensor:
-        """Predict reward"""
-        state_action = torch.cat([latent, action], dim=-1)
-        return self.reward_predictor(state_action)
-
-    def forward(
-        self, obs: torch.Tensor, action: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Full forward pass"""
-        latent = self.encode(obs)
-        next_latent = self.predict_next_state(latent, action)
-        reward = self.predict_reward(latent, action)
-        reconstructed_obs = self.decode(latent)
-
-        return next_latent, reward, reconstructed_obs
-
-    def update(
-        self,
-        obs: torch.Tensor,
-        action: torch.Tensor,
-        next_obs: torch.Tensor,
-        reward: torch.Tensor,
-    ) -> Dict[str, float]:
-        """Update world model"""
-        self.optimizer.zero_grad()
-
-        # Forward pass
-        next_latent, pred_reward, reconstructed_obs = self.forward(obs, action)
-
-        # Compute losses
-        reconstruction_loss = F.mse_loss(reconstructed_obs, obs)
-        reward_loss = F.mse_loss(pred_reward.squeeze(), reward)
-
-        # Predict next observation for transition loss
-        pred_next_obs = self.decode(next_latent)
-        transition_loss = F.mse_loss(pred_next_obs, next_obs)
-
-        total_loss = reconstruction_loss + reward_loss + transition_loss
-
-        total_loss.backward()
-        self.optimizer.step()
-
-        return {
-            "total_loss": total_loss.item(),
-            "reconstruction_loss": reconstruction_loss.item(),
-            "reward_loss": reward_loss.item(),
-            "transition_loss": transition_loss.item(),
-        }
+# Remove the redundant WorldModel class, as NeuralModel in models.py serves this purpose.
+# The WorldModel class here had an encoder-decoder structure which is not strictly
+# used in the current classical_planning.py or train_dyna_q. Instead, NeuralModel
+# directly predicts next state and reward. We will use the NeuralModel from models.py
+# for all neural model needs.
 
 
 # =============================================================================
 # TRAINING UTILITIES
 # =============================================================================
+
+
+# Ensure to import NeuralModel from models.models and ModelTrainer from models.models
+from models.models import NeuralModel, ModelTrainer
 
 
 def train_dyna_q(
@@ -663,20 +639,26 @@ def train_world_model(
     latent_dim: int = 32,
     seed: int = 42,
 ) -> Dict[str, Any]:
-    """Train world model"""
+    """Train world model (using NeuralModel from models.py)"""
 
     set_seed(seed)
 
     env = gym.make(env_name)
     obs_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.shape[0]
+    action_dim = (
+        env.action_space.n
+        if isinstance(env.action_space, gym.spaces.Discrete)
+        else env.action_space.shape[0]
+    )
 
-    world_model = WorldModel(obs_dim, action_dim, latent_dim=latent_dim)
+    # Instantiate NeuralModel from models.models
+    world_model = NeuralModel(obs_dim, action_dim, hidden_dim=latent_dim, ensemble_size=5).to(device)
+    trainer = ModelTrainer(world_model, lr=1e-3)
 
     episode_rewards = []
-    losses = {"total": [], "reconstruction": [], "reward": [], "transition": []}
+    losses = {"model_loss": []}
 
-    print(f"Training World Model on {env_name}")
+    print(f"Training Neural Model on {env_name}")
     print("=" * 35)
 
     for episode in tqdm(range(num_episodes)):
@@ -690,11 +672,18 @@ def train_world_model(
 
         for step in range(max_steps):
             action = env.action_space.sample()  # Random exploration
+            
+            # Handle discrete vs. continuous actions for storage
+            if isinstance(env.action_space, gym.spaces.Discrete):
+                action_to_store = action
+            else:
+                action_to_store = action.astype(np.float32) # Ensure float for continuous actions
+
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
 
             obs_batch.append(state)
-            action_batch.append(action)
+            action_batch.append(action_to_store)
             next_obs_batch.append(next_state)
             reward_batch.append(reward)
 
@@ -706,18 +695,19 @@ def train_world_model(
 
         # Convert to tensors
         obs_tensor = torch.tensor(np.array(obs_batch), dtype=torch.float32)
-        action_tensor = torch.tensor(np.array(action_batch), dtype=torch.float32)
+        action_tensor = (
+            torch.tensor(np.array(action_batch), dtype=torch.long) # Use long for discrete actions
+            if isinstance(env.action_space, gym.spaces.Discrete)
+            else torch.tensor(np.array(action_batch), dtype=torch.float32)
+        )
         next_obs_tensor = torch.tensor(np.array(next_obs_batch), dtype=torch.float32)
         reward_tensor = torch.tensor(np.array(reward_batch), dtype=torch.float32)
 
-        # Update world model
-        loss_dict = world_model.update(
+        # Update world model using ModelTrainer
+        loss = trainer.train_step(
             obs_tensor, action_tensor, next_obs_tensor, reward_tensor
         )
-
-        for key, value in loss_dict.items():
-            if key in losses:
-                losses[key].append(value)
+        losses["model_loss"].append(loss)
 
         episode_rewards.append(episode_reward)
 

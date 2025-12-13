@@ -15,19 +15,15 @@ __version__ = "1.0.0"
 __author__ = "DRL Course Team"
 __description__ = "Advanced Model-Based RL and World Models"
 
-from .models import (
-    VariationalAutoencoder,
-    LatentDynamicsModel,
-    RewardModel,
-    WorldModel,
-    RSSM,
-)
+from .models.vae import VariationalAutoencoder
+from .models.dynamics import LatentDynamicsModel
+from .models.reward_model import RewardModel
+from .models.world_model import WorldModel
+from .models.rssm import RSSM
 
-from .agents import (
-    LatentActor,
-    LatentCritic,
-    DreamerAgent,
-)
+from .agents.latent_actor import LatentActor
+from .agents.latent_critic import LatentCritic
+from .agents.dreamer_agent import DreamerAgent
 
 from .utils import (
     collect_world_model_data,

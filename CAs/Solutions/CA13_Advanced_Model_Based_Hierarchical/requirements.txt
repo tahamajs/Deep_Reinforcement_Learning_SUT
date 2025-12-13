@@ -1,21 +1,22 @@
 # CA13 Advanced Model-Based RL Requirements
 
 # Core ML/DL libraries
-torch>=1.9.0
+torch==2.0.1 # Or your preferred stable version
 torchvision>=0.10.0
-numpy>=1.21.0
+numpy==1.26.2
 scipy>=1.7.0
 
 # RL and environment libraries
-gymnasium>=0.28.0
+gymnasium==0.29.1
 gym>=0.21.0
 stable-baselines3>=1.6.0
 
 # Visualization and analysis
-matplotlib>=3.4.0
-seaborn>=0.11.0
+matplotlib==3.8.2
+seaborn==0.13.0
 plotly>=5.0.0
 pandas>=1.3.0
+Pillow==10.1.0
 
 # Scientific computing
 scikit-learn>=1.0.0

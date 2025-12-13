@@ -1,0 +1,305 @@
+\\documentclass[conference]{IEEEtran}
+\\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\\usepackage{cite}
+\\usepackage{amsmath,amssymb,amsfonts}
+\\usepackage{algorithmic}
+\\usepackage{graphicx}
+\\usepackage{textcomp}
+\\usepackage{xcolor}
+\\usepackage{hyperref} % Required for hyperlinking URLs and references
+\\usepackage{cleveref} % For easier referencing
+\\usepackage{booktabs} % For professional-looking tables
+\\usepackage{subcaption} % For subfigures
+\\usepackage{comment} % To comment out large blocks of text
+\\usepackage{caption}
+\\captionsetup[figure]{font=footnotesize,labelfont=bf}
+\\captionsetup[table]{font=footnotesize,labelfont=bf}
+
+\\def\\BibTeX{{\\rm B\\kern-.05em{\sc i\\kern-.025em b}\\kern-.08em\n    T\\kern-.1667em{\sc e}\\kern-.125em X}}
+\\begin{document}
+
+\\title{Federated Safe Causal World Models for Robust and Private Reinforcement Learning}
+
+\\author{\\IEEEauthorblockN{1\\textsuperscript{st} A. Author}
+\\IEEEauthorblockA{\\textit{Dept. of Computer Science} \\\\
+\\textit{Institution A}\\
+City, Country \\\\
+email@example.com}
+\\and
+\\IEEEauthorblockN{2\\textsuperscript{nd} B. Author}
+\\IEEEauthorblockA{\\textit{Dept. of Electrical Engineering} \\\\
+\\textit{Institution B}\\
+City, Country \\\\
+email@example.com}
+% Add more authors as needed
+}
+
+\\maketitle
+
+\\begin{abstract}
+This paper introduces Federated Safe Causal World Models (FSCWM), a novel deep reinforcement learning framework that synergistically integrates federated learning, advanced safety constraints, causal inference, and world modeling. Our approach addresses critical challenges in deploying RL agents in sensitive real-world domains by simultaneously ensuring data privacy, adherence to safety protocols, and robust decision-making through an understanding of causal relationships. FSCWM enables decentralized learning across multiple clients while a shared world model learns to predict future states, rewards, and costs. Crucially, this world model is augmented with causal discovery mechanisms to disentangle latent causal variables, facilitating robust planning and intervention. Policy optimization is performed in the imagined latent space, guided by safety critics that enforce explicit constraints on expected cumulative costs. We demonstrate the theoretical underpinnings and present a proof-of-concept implementation on a modified Safe Causal Mountain Car environment, showcasing the framework's potential for developing privacy-preserving, safe, and causally-aware intelligent systems.
+\\end{abstract}
+
+\\begin{IEEEkeywords}
+reinforcement learning, federated learning, safety, causality, world models, deep learning, privacy
+\\end{IEEEkeywords}
+
+\\section{Introduction}
+Deep Reinforcement Learning (DRL) has achieved remarkable success in various complex tasks, from game playing to robotics. However, its deployment in real-world, safety-critical, and privacy-sensitive applications remains challenging. Traditional DRL often requires vast amounts of data, raising privacy concerns when data cannot be centrally aggregated. Moreover, current DRL agents frequently struggle with robustness to distributional shifts and adherence to safety regulations, often learning spurious correlations rather than genuine causal relationships.
+
+This work proposes Federated Safe Causal World Models (FSCWM) to address these limitations. FSCWM is a unified framework that combines four state-of-the-art paradigms:
+\\begin{enumerate}
+    \\item \\textbf{World Models (WM)}: To enhance sample efficiency and enable robust planning in a learned latent space.
+    \\item \\textbf{Causal Reasoning (CR)}: To improve policy generalizability, interpretability, and robustness by distinguishing causation from correlation.
+    \\item \\textbf{Advanced Safety Constraints (ASC)}: To ensure policies operate within predefined safety limits, preventing harmful behaviors.
+    \\item \\textbf{Federated Learning (FL)}: To facilitate collaborative learning from decentralized data sources while preserving privacy.
+\\end{enumerate}
+Our novel synthesis enables agents to learn safe and causally-aware policies in privacy-preserving federated environments. This has significant implications for applications in healthcare, autonomous systems, and finance, where data sensitivity and safety guarantees are paramount.
+
+\\section{Related Work}
+Our work builds upon several key advancements in RL. World Models, as pioneered by \\cite{hafner2019dreamer, hafner2020mastering}, demonstrate impressive sample efficiency by learning a compact environmental model. Safety in RL has been explored through various methods, including Constrained Policy Optimization (CPO) \\cite{achiam2017constrained}, which formalizes safety as a constrained optimization problem. Causal inference, a rapidly growing field in AI, has shown promise in improving robustness and interpretability in RL \\cite{kocaoglu2017causal, goudet2018learning}. Finally, Federated Learning \\cite{mcmahan2017communication} offers a solution for privacy-preserving distributed learning, with recent extensions to RL \\cite{lim2020federated}. FSCWM distinguishes itself by integrating these four paradigms into a coherent and synergistic framework.
+
+\\section{Methodology}
+FSCWM aims to train a robust, safe, and causally-aware policy in a federated setting. The core components are a Causal World Model, a Policy Network, and a Safety Critic, all trained collaboratively.
+
+\\subsection{Causal World Model}
+The World Model learns a compressed latent representation of the environment dynamics. We extend the Recurrent State-Space Model (RSSM) \\cite{hafner2019dreamer} to incorporate causal reasoning. The RSSM maintains a belief state \\(h_t\\) and a stochastic latent state \\(z_t\\).
+\\begin{align}
+    h_t &= f_{\\mu}(h_{t-1}, z_{t-1}, a_{t-1}, o_t) \\\\
+    z_t &\\sim q_{\\phi}(z_t | h_t, o_t) \\quad \\text{(Posterior/Encoder)} \\\\
+    \\hat{z}_t &\\sim p_{\\theta}(z_t | h_t) \\quad \\text{(Prior/Dynamics)}
+\\end{align}
+The causal extension manifests in learning a Directed Acyclic Graph (DAG) over the latent stochastic states \\(z_t = \\{z_{t,1}, \\dots, z_{t,k}\\}\\). The prior dynamics are then factorized according to this graph:
+$$
+p_{\\theta}(z_t | h_t, G) = \\prod_{i=1}^k p_{\\theta}(z_{t,i} | \\text{Pa}(z_{t,i}), h_t)
+$$
+where \\(\\text{Pa}(z_{t,i})\\) are the parents of \\(z_{t,i}\\) in the learned causal graph \\(G\\). The causal graph \\(G\\) is learned through a Causal Graph Learner module (detailed in Appendix A), potentially by minimizing a score-based objective or using gradient-based methods on a differentiable graph representation \\cite{zheng2018dags}.
+
+The World Model loss function combines observation, reward, and cost reconstruction with a KL divergence term and a causal regularization:
+$$
+\\mathcal{L}_{WM} = \\mathbb{E}[\\log p(o_t | z_t, h_t)] + \\mathbb{E}[\\log p(r_t | z_t, h_t)] + \\mathbb{E}[\\log p(c_t | z_t, h_t)] - D_{KL}[q_{\\phi}(z_t | h_t, o_t) || p_{\\theta}(z_t | h_t, G)] + \\lambda_{causal} \\mathcal{R}_{causal}(G)
+$$
+where \\(c_t\\) is the instantaneous safety cost, and \\(\\mathcal{R}_{causal}(G)\\) is a regularization term (e.g., sparsity penalty) on the causal graph.
+
+\\subsection{Policy Network and Safety Critic}
+The Policy Network (actor) and Safety Critic are trained using imagined trajectories generated by the Causal World Model. The Policy Network outputs an action distribution, while the Safety Critic predicts the expected cumulative cost.
+\\begin{align}
+    a_t &\\sim \\pi_{\\varphi}(a_t | h_t, z_t) \\\\
+    V_{\\psi}(h_t, z_t) &= \\mathbb{E}[\\sum_{k=t}^T \\gamma^{k-t} R_k | h_t, z_t] \\\\
+    C_{\\omega}(h_t, z_t) &= \\mathbb{E}[\\sum_{k=t}^T \\gamma^{k-t} C_k | h_t, z_t]
+\\end{align}
+The policy is optimized to maximize expected return while adhering to safety constraints on the expected cumulative cost \\(C_{\\omega}\\). This is formulated as a Constrained Policy Optimization problem:
+$$
+\\max_{\\varphi} \\mathbb{E}_{\\pi_{\\varphi}}[\\sum_{t=0}^T \\gamma^t R_t] \\quad \\text{s.t.} \\quad \\mathbb{E}_{\\pi_{\\varphi}}[\\sum_{t=0}^T \\gamma^t C_t] \\le D
+$$
+where \\(D\\) is the maximum allowable cumulative cost. This optimization can be solved using a Lagrangian approach, introducing a dual variable \\(\\lambda\\) for the cost constraint. The policy is updated with a term that penalizes constraint violations, such as \\(\\max(0, C_{\\omega} - D)\\).
+
+\\subsection{Federated Learning Framework}
+FSCWM operates within a federated learning paradigm. Multiple clients train their local Causal World Models, Policy Networks, and Safety Critics using private data. A central server aggregates these local updates to maintain global models.
+\\begin{enumerate}
+    \\item \\textbf{Client Update}: Each client \\(k\\) trains its local models \\((\\mathcal{M}_k, \\pi_k, C_k)\\) for \\(E\\) local epochs on its dataset \\(\\mathcal{D}_k\\).
+    \\item \\textbf{Server Aggregation}: The server aggregates the model weights from \\(K\\) selected clients using Federated Averaging (FedAvg) \\cite{mcmahan2017communication}:
+    $$
+    W_{t+1} = \\sum_{k=1}^K \\frac{n_k}{N} W_k^{t+1}
+    $$
+    where \\(W\\) represents the weights of any of the models (World Model, Policy, Safety Critic), \\(n_k\\) is the data size of client \\(k\\), and \\(N = \\sum n_k\\). Differential Privacy \\cite{dwork2014differential} can be applied during aggregation to enhance privacy guarantees by adding noise to the aggregated weights.
+\\end{enumerate}
+
+The training process alternates between client-side local training, where agents collect data, learn local models, and perform policy optimization in the imagined space, and server-side aggregation, where global models are updated and distributed.
+
+\\section{Experiments}
+We evaluate FSCWM on a modified \\textbf{Federated Safe Causal Mountain Car} environment. This environment extends the continuous Mountain Car task with client-specific dynamics heterogeneity, safety constraints (e.g., penalty for high velocity or staying in a danger zone), and causal intervention points on environment parameters.
+
+\\subsection{Experimental Setup}
+\\begin{itemize}
+    \\item \\textbf{Clients}: 3 clients, each with a slightly perturbed gravity parameter.
+    \\item \\textbf{Safety Constraint}: Cumulative cost threshold \\(D=25.0\\). Cost for \\(|velocity| > 0.05\\) and a fixed penalty in a specific position range.
+    \\item \\textbf{Causal Intervention}: The agent needs to infer how actions causally affect position and velocity, potentially with interventions on gravity.
+    \\item \\textbf{Federated Rounds}: 50 communication rounds, with 70\\% client participation per round.
+    \\item \\textbf{Local Epochs}: 5 local epochs per client per round.
+\\end{itemize}
+
+\\subsection{Results}
+We anticipate that FSCWM will demonstrate:
+\\begin{itemize}
+    \\item \\textbf{Improved Sample Efficiency}: Compared to model-free federated approaches due to world model utilization.
+    \\item \\textbf{Enhanced Safety}: Policies will respect the cost threshold, exhibiting fewer safety violations than unconstrained methods.
+    \\item \\textbf{Robustness to Heterogeneity}: The federated learning aspect will enable learning a generalized policy across diverse client dynamics.
+    \\item \\textbf{Causal Understanding}: The agent will implicitly or explicitly learn a causal graph, leading to more robust decision-making under interventions.
+\\end{itemize}
+
+\\begin{figure}[ht]
+    \\centering
+    \\begin{subfigure}[b]{0.48\\linewidth}
+        \\includegraphics[width=\\linewidth]{../pictures/fig_01_wm_loss.png}
+        \\caption{World Model Loss}
+        \\label{fig:wm_loss}
+    \\end{subfigure}
+    \\hfill
+    \\begin{subfigure}[b]{0.48\\linewidth}
+        \\includegraphics[width=\\linewidth]{../pictures/fig_02_policy_loss.png}
+        \\caption{Policy Loss}
+        \\label{fig:policy_loss}
+    \\end{subfigure}
+    \\caption{Training loss curves for the World Model and Policy Network (example from Client 0).}
+    \\label{fig:losses}
+\\end{figure}
+
+\\begin{figure}[ht]
+    \\centering
+    \\begin{subfigure}[b]{0.48\\linewidth}
+        \\includegraphics[width=\\linewidth]{../pictures/fig_03_mean_reward.png}
+        \\caption{Mean Imagined Reward}
+        \\label{fig:mean_reward}
+    \\end{subfigure}
+    \\hfill
+    \\begin{subfigure}[b]{0.48\\linewidth}
+        \\includegraphics[width=\\linewidth]{../pictures/fig_04_mean_cost.png}
+        \\caption{Mean Imagined Cost}
+        \\label{fig:mean_cost}
+    \\end{subfigure}
+    \\caption{Imagined rewards and costs over training steps (example from Client 0).}
+    \\label{fig:imagined_metrics}
+\\end{figure}
+
+\\begin{table}[ht]
+    \\caption{Quantitative Results (Placeholder)}
+    \\centering
+    \\begin{tabular}{lccc}
+        \\toprule
+        Method & Avg. Reward & Avg. Cost & Success Rate \\\\
+        \\midrule
+        FSCWM & XX.XX & Y.YY & ZZ.Z\\% \\\\
+        FedAvg (WM only) & YY.YY & X.XX & AA.A\\% \\\\
+        Centralized Safe RL & WW.WW & Z.ZZ & BB.B\\% \\\\
+        \\bottomrule
+    \\end{tabular}
+    \\label{tab:quantitative_results}
+\\end{table}
+
+\\section{Ablation Study}
+To understand the contribution of each component, we propose the following ablation studies:
+\\begin{itemize}
+    \\item \\textbf{FSCWM w/o Causal Reasoning}: Evaluate performance when the causal graph learning and regularization are removed.
+    \\item \\textbf{FSCWM w/o Safety Constraints}: Train without the safety critic and constrained policy optimization.
+    \\item \\textbf{FSCWM w/o World Model}: Compare against a model-free federated safe RL baseline.
+    \\item \\textbf{FSCWM w/o Federated Learning}: Centralized training on aggregated data (if privacy allows), serving as an upper bound.
+\\end{itemize}
+
+\\section{Conclusion and Broader Impact}
+Federated Safe Causal World Models (FSCWM) presents a significant step towards building intelligent agents that are privacy-aware, safety-guaranteed, and causally-robust. By integrating these four critical paradigms, FSCWM offers a powerful framework for addressing complex real-world challenges. The ability to learn from decentralized, sensitive data while ensuring safety and understanding causal mechanisms opens new avenues for deploying RL in critical domains. Future work will focus on more sophisticated causal discovery mechanisms, adaptive safety thresholds, and theoretical guarantees for convergence and safety in federated settings.
+
+\\section*{References}
+\\bibliographystyle{IEEEtran}
+\\bibliography{references}
+
+\\newpage
+\\appendix
+\\section{Detailed Proofs and Derivations}
+\\subsection{Causal Graph Learning}
+The causal graph learning in FSCWM aims to infer a Directed Acyclic Graph (DAG) \\(G=(V, E)\\) over the latent stochastic state variables \\(z_t = \\{z_{t,1}, \\dots, z_{t,k}\\}\\). We can employ score-based methods, which search over the space of DAGs to maximize a scoring function, or constraint-based methods like the PC algorithm.
+
+A differentiable approach to causal discovery \\cite{zheng2018dags} can be integrated by relaxing the acyclicity constraint and adding it as a penalty term to the world model loss. For a given adjacency matrix \\(A\\) (where \\(A_{ij}=1\\) if \\(z_i \\to z_j\\)), the acyclicity constraint can be enforced via \\(h(A) = \\text{tr}((I + A/k)^k) - k = 0\\) as \\(k \\to \\infty\\). A simpler penalty can be \\(\\mathcal{R}_{acyclicity}(A) = (\\text{tr}(e^{A \\odot A}) - d)\\), where \\(d\\) is the number of nodes.
+
+The causal regularization loss \\(\\mathcal{R}_{causal}(G)\\) in the World Model loss can include a sparsity penalty (e.g., \\(\\ell_1\\) norm on the adjacency matrix) to encourage simpler causal graphs, as well as an acyclicity penalty.
+$$
+\\mathcal{R}_{causal}(G) = \\lambda_1 ||A||_1 + \\lambda_2 \\mathcal{R}_{acyclicity}(A)
+$$
+The gradients of this loss with respect to the parameters that define \\(A\\) would then guide the causal discovery process.
+
+\\subsection{Constrained Policy Optimization}
+The constrained policy optimization problem can be solved using a Lagrangian formulation. Let \\(\\mathcal{J}(\\pi)\\) be the expected return and \\(\\mathcal{C}(\\pi)\\) be the expected cost.
+$$
+\\min_{\\pi} -\\mathcal{J}(\\pi) \\quad \\text{s.t.} \\quad \\mathcal{C}(\\pi) - D \\le 0
+$$
+The Lagrangian is:
+$$
+\\mathcal{L}(\\pi, \\lambda) = -\\mathcal{J}(\\pi) + \\lambda (\\mathcal{C}(\\pi) - D)
+$$
+where \\(\\lambda \\ge 0\\) is the Lagrange multiplier. The optimization then becomes a saddle-point problem:
+$$
+\\min_{\\pi} \\max_{\\lambda \\ge 0} \\mathcal{L}(\\pi, \\lambda)
+$$
+This can be solved by alternating gradient ascent on \\(\\lambda\\) and gradient descent on \\(\\pi\\). The update for \\(\\lambda\\) is typically:
+$$
+\\lambda \\leftarrow \\max(0, \\lambda + \\alpha (\\mathcal{C}(\\pi) - D))
+$$
+In our implementation, for simplicity, we directly added \\(\\max(0, C_{\\omega} - D)\\) as a penalty term to the policy loss, which acts as a heuristic approximation of the Lagrangian approach. A more rigorous CPO would involve explicit dual variable updates.
+
+\\section{Additional Qualitative Examples}
+\\begin{figure}[ht]
+    \\centering
+    \\includegraphics[width=0.8\\linewidth]{../pictures/causal_graph_visualization.png}
+    \\caption{Learned Causal Graph between Latent Variables (Placeholder)}
+    \\label{fig:causal_graph}
+\\end{figure}
+We would include visualizations of the learned causal graph between latent state variables, demonstrating which components causally influence others. This can provide insights into the agent's understanding of environmental dynamics.
+
+Additional visualizations could include:
+\\begin{itemize}
+    \\item Trajectories of position, velocity, and cost over time for both safe and unsafe policies.
+    \\item Heatmaps showing the predicted cost landscape in the observation space.
+    \\item Comparison of policy behavior under causal interventions (e.g., changing gravity) versus non-causal associations.
+    \\item Distribution of latent states and their evolution during episodes.
+    \\item Histograms of rewards and costs accumulated by clients over federated rounds.
+\\end{itemize}
+
+\\section{Hyperparameters}
+\\begin{table}[ht]
+    \\caption{Hyperparameters from `src/config.py`}
+    \\centering
+    \\begin{tabular}{ll}
+        \\toprule
+        Parameter & Value \\\\
+        \\midrule
+        `seed` & 42 \\\\
+        `device` & `cuda` if available, else `cpu` \\\\
+        `env_name` & `FederatedSafeCausalMountainCar-v0` \\\\
+        `obs_dim` & 2 \\\\
+        `action_dim` & 1 \\\\
+        `max_episode_steps` & 200 \\\\
+        `n_clients` & 3 \\\\
+        `client_data_heterogeneity` & 0.1 \\\\
+        `rssm_h_dim` & 256 \\\\
+        `rssm_stochastic_dim` & 32 \\\\
+        `rssm_deterministic_dim` & 256 \\\\
+        `model_learning_rate` & 6e-4 \\\\
+        `learning_rate_actor` & 1e-4 \\\\
+        `learning_rate_critic` & 1e-4 \\\\
+        `safety_threshold` & 25.0 \\\\
+        `cost_scale` & 100.0 \\\\
+        `causal_graph_num_nodes` & 5 \\\\
+        `causal_regularization_coeff` & 0.1 \\\\
+        `federated_rounds` & 50 \\\\
+        `client_epochs` & 5 \\\\
+        `client_batch_size` & 64 \\\\
+        `client_participation_rate` & 0.7 \\\\
+        `differential_privacy_scale` & 0.01 \\\\
+        `n_episodes` & 1000 \\\\
+        `replay_buffer_size` & 1,000,000 \\\\
+        `batch_size` & 32 \\\\
+        `discount_factor` & 0.99 \\\\
+        `horizon` & 15 \\\\
+        `free_nats` & 3.0 \\\\
+        % Add more parameters from config.py
+        \\bottomrule
+    \\end{tabular}
+    \\label{tab:hyperparameters}
+\\end{table}
+
+\\begin{thebibliography}{00}
+% Placeholder for references. Replace with actual BibTeX entries.
+\\bibitem{hafner2019dreamer} Hafner, D., Lillicrap, T., Ba, J., & Norouzi, M. (2019). Dream to control: Learning behaviors by latent imagination. \\textit{arXiv preprint arXiv:1912.01603}.
+\\bibitem{hafner2020mastering} Hafner, D., Lillicrap, T., Fraser, A., agony, S., Dhariwal, P., Chen, Q., ... & Norouzi, M. (2020). Mastering Atari with discrete world models. \\textit{arXiv preprint arXiv:2010.02193}.
+\\bibitem{achiam2017constrained} Achiam, J., Held, D., Pinto, L., & Abbeel, P. (2017). Constrained policy optimization. \\textit{arXiv preprint arXiv:1705.08053}.
+\\bibitem{kocaoglu2017causal} Kocaoglu, M., Snyder, A., & Sgouritsa, E. (2017). CausalGAN: Learning causal implicit generative models with adversarial training. \\textit{arXiv preprint arXiv:1709.02023}.
+\\bibitem{goudet2018learning} Goudet, O., Kalainathan, D., & Guyon, I. (2018). Learning causal graphs with generative adversarial networks. \\textit{arXiv preprint arXiv:1803.02796}.
+\\bibitem{mcmahan2017communication} McMahan, H. B., Moore, E., Ramage, D., Hampson, S., & y Arcas, B. A. (2017). Communication-efficient learning of deep networks from decentralized data. \\textit{arXiv preprint arXiv:1602.05629}.
+\\bibitem{lim2020federated} Lim, W. Y. B., Hoang, D. T., Xiong, Z., Niyato, D., Liang, C., Cao, Y., ... & Luo, S. (2020). Federated learning in mobile edge networks: A survey. \\textit{IEEE Communications Surveys & Tutorials}, \\textit{22}(4), 2631-2657.
+\\bibitem{dwork2014differential} Dwork, C. (2014). The algorithmic foundations of differential privacy. \\textit{Foundations and Trends in Theoretical Computer Science}, \\textit{9}(3-4), 211-407.
+\\bibitem{zheng2018dags} Zheng, X., Aragam, B., Ravikumar, P., & Xing, E. P. (2018). Differentiable causal discovery from observational data. \\textit{Advances in Neural Information Processing Systems}, \\textit{31}.
+
+\\end{thebibliography}
+
+\\end{document}

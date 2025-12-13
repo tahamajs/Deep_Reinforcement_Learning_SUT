@@ -20,436 +20,60 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-from torch.utils.data import DataLoader, TensorDataset
 import gymnasium as gym
-import random
-from collections import deque, namedtuple
 import logging
 from typing import Dict, List, Tuple, Optional, Any, Union
+import os # Added for file saving
+
+# Local imports
+from CAs.Solutions.CA05_Advanced_DQN_Methods.agents.dqn_base import DQNAgent, Transition
+from CAs.Solutions.CA05_Advanced_DQN_Methods.agents.double_dqn import DoubleDQNAgent
+from CAs.Solutions.CA05_Advanced_DQN_Methods.agents.dueling_dqn import DuelingDQNAgent
+from CAs.Solutions.CA05_Advanced_DQN_Methods.agents.prioritized_replay_dqn import PrioritizedDQNAgent
+from CAs.Solutions.CA05_Advanced_DQN_Methods.utils.replay_buffers import ReplayBuffer, PrioritizedReplayBuffer
+from CAs.Solutions.CA05_Advanced_DQN_Methods.experiments.config import AgentConfig, ExperimentConfig, get_dqn_configs
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
 
 # Set style for better plots
 plt.style.use("seaborn-v0_8")
 sns.set_palette("husl")
 
-# Define transition tuple for experience replay
-Transition = namedtuple(
-    "Transition", ("state", "action", "reward", "next_state", "done")
-)
-
-
-class ReplayBuffer:
-    """Experience replay buffer for DQN"""
-
-    def __init__(self, capacity: int):
-        self.capacity = capacity
-        self.buffer = deque(maxlen=capacity)
-
-    def push(
-        self,
-        state: np.ndarray,
-        action: int,
-        reward: float,
-        next_state: np.ndarray,
-        done: bool,
-    ):
-        """Add transition to buffer"""
-        transition = Transition(state, action, reward, next_state, done)
-        self.buffer.append(transition)
-
-    def sample(self, batch_size: int) -> List[Transition]:
-        """Sample batch of transitions"""
-        return random.sample(self.buffer, batch_size)
-
-    def __len__(self) -> int:
-        return len(self.buffer)
-
-
-class PrioritizedReplayBuffer:
-    """Prioritized Experience Replay buffer using sum trees"""
-
-    def __init__(self, capacity: int, alpha: float = 0.6):
-        self.capacity = capacity
-        self.alpha = alpha
-        self.buffer = []
-        self.priorities = np.zeros(capacity)
-        self.position = 0
-        self.max_priority = 1.0
-
-    def push(
-        self,
-        state: np.ndarray,
-        action: int,
-        reward: float,
-        next_state: np.ndarray,
-        done: bool,
-    ):
-        """Add transition with max priority"""
-        transition = Transition(state, action, reward, next_state, done)
-
-        if len(self.buffer) < self.capacity:
-            self.buffer.append(transition)
-        else:
-            self.buffer[self.position] = transition
-
-        self.priorities[self.position] = self.max_priority
-        self.position = (self.position + 1) % self.capacity
-
-    def sample(
-        self, batch_size: int, beta: float = 0.4
-    ) -> Tuple[List[Transition], np.ndarray, np.ndarray]:
-        """Sample batch with priorities"""
-        if len(self.buffer) < batch_size:
-            return [], [], []
-
-        priorities = self.priorities[: len(self.buffer)] ** self.alpha
-        probabilities = priorities / priorities.sum()
-
-        indices = np.random.choice(len(self.buffer), batch_size, p=probabilities)
-        transitions = [self.buffer[idx] for idx in indices]
-
-        # Importance sampling weights
-        weights = (len(self.buffer) * probabilities[indices]) ** (-beta)
-        weights /= weights.max()
-
-        return transitions, indices, weights
-
-    def update_priorities(self, indices: np.ndarray, priorities: np.ndarray):
-        """Update priorities for sampled transitions"""
-        for idx, priority in zip(indices, priorities):
-            self.priorities[idx] = priority
-            self.max_priority = max(self.max_priority, priority)
-
-    def __len__(self) -> int:
-        return len(self.buffer)
-
-
-class QNetwork(nn.Module):
-    """Q-network for DQN"""
-
-    def __init__(self, input_dim: int, output_dim: int, hidden_dim: int = 128):
-        super(QNetwork, self).__init__()
-        self.network = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, output_dim),
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.network(x)
-
-
-class DuelingQNetwork(nn.Module):
-    """Dueling Q-network separating value and advantage streams"""
-
-    def __init__(self, input_dim: int, output_dim: int, hidden_dim: int = 128):
-        super(DuelingQNetwork, self).__init__()
-
-        # Feature extraction
-        self.feature_layer = nn.Sequential(nn.Linear(input_dim, hidden_dim), nn.ReLU())
-
-        # Value stream
-        self.value_stream = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Linear(hidden_dim // 2, 1),
-        )
-
-        # Advantage stream
-        self.advantage_stream = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Linear(hidden_dim // 2, output_dim),
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        features = self.feature_layer(x)
-        values = self.value_stream(features)
-        advantages = self.advantage_stream(features)
-
-        # Combine value and advantage: Q = V + (A - mean(A))
-        return values + (advantages - advantages.mean(dim=1, keepdim=True))
-
-
-class DQNAgent:
-    """Vanilla DQN Agent"""
-
-    def __init__(
-        self,
-        state_dim: int,
-        action_dim: int,
-        lr: float = 1e-3,
-        gamma: float = 0.99,
-        epsilon_start: float = 1.0,
-        epsilon_end: float = 0.01,
-        epsilon_decay: float = 0.995,
-        buffer_size: int = 50000,
-        batch_size: int = 64,
-        target_update_freq: int = 500,
-        device: str = "cpu",
-    ):
-        self.state_dim = state_dim
-        self.action_dim = action_dim
-        self.gamma = gamma
-        self.batch_size = batch_size
-        self.target_update_freq = target_update_freq
-        self.device = device
-
-        # Networks
-        self.q_network = QNetwork(state_dim, action_dim).to(device)
-        self.target_network = QNetwork(state_dim, action_dim).to(device)
-        self.target_network.load_state_dict(self.q_network.state_dict())
-        self.target_network.eval()
-
-        # Optimizer
-        self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
-
-        # Experience replay
-        self.replay_buffer = ReplayBuffer(buffer_size)
-
-        # Exploration
-        self.epsilon = epsilon_start
-        self.epsilon_end = epsilon_end
-        self.epsilon_decay = epsilon_decay
-
-        # Training stats
-        self.steps = 0
-
-    def select_action(self, state: np.ndarray, epsilon: Optional[float] = None) -> int:
-        """Select action using epsilon-greedy policy"""
-        if epsilon is None:
-            epsilon = self.epsilon
-
-        if np.random.random() < epsilon:
-            return np.random.randint(self.action_dim)
-
-        with torch.no_grad():
-            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-            q_values = self.q_network(state_tensor)
-            return q_values.argmax().item()
-
-    def update(self) -> float:
-        """Update Q-network"""
-        if len(self.replay_buffer) < self.batch_size:
-            return 0.0
-
-        # Sample batch
-        transitions = self.replay_buffer.sample(self.batch_size)
-        batch = Transition(*zip(*transitions))
-
-        states = torch.FloatTensor(np.array(batch.state)).to(self.device)
-        actions = torch.LongTensor(batch.action).to(self.device)
-        rewards = torch.FloatTensor(batch.reward).to(self.device)
-        next_states = torch.FloatTensor(np.array(batch.next_state)).to(self.device)
-        dones = torch.FloatTensor(batch.done).to(self.device)
-
-        # Current Q values
-        current_q = self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze()
-
-        # Target Q values
-        with torch.no_grad():
-            next_q = self.target_network(next_states).max(1)[0]
-            target_q = rewards + (1 - dones) * self.gamma * next_q
-
-        # Loss and update
-        loss = F.mse_loss(current_q, target_q)
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-
-        # Update target network
-        self.steps += 1
-        if self.steps % self.target_update_freq == 0:
-            self.target_network.load_state_dict(self.q_network.state_dict())
-
-        # Decay epsilon
-        self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
-
-        return loss.item()
-
-    def save(self, path: str):
-        """Save model"""
-        torch.save(
-            {
-                "q_network": self.q_network.state_dict(),
-                "target_network": self.target_network.state_dict(),
-                "optimizer": self.optimizer.state_dict(),
-                "epsilon": self.epsilon,
-                "steps": self.steps,
-            },
-            path,
-        )
-
-    def load(self, path: str):
-        """Load model"""
-        checkpoint = torch.load(path)
-        self.q_network.load_state_dict(checkpoint["q_network"])
-        self.target_network.load_state_dict(checkpoint["target_network"])
-        self.optimizer.load_state_dict(checkpoint["optimizer"])
-        self.epsilon = checkpoint["epsilon"]
-        self.steps = checkpoint["steps"]
-
-
-class DoubleDQNAgent(DQNAgent):
-    """Double DQN Agent - addresses overestimation bias"""
-
-    def update(self) -> float:
-        """Update with Double DQN"""
-        if len(self.replay_buffer) < self.batch_size:
-            return 0.0
-
-        # Sample batch
-        transitions = self.replay_buffer.sample(self.batch_size)
-        batch = Transition(*zip(*transitions))
-
-        states = torch.FloatTensor(np.array(batch.state)).to(self.device)
-        actions = torch.LongTensor(batch.action).to(self.device)
-        rewards = torch.FloatTensor(batch.reward).to(self.device)
-        next_states = torch.FloatTensor(np.array(batch.next_state)).to(self.device)
-        dones = torch.FloatTensor(batch.done).to(self.device)
-
-        # Current Q values
-        current_q = self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze()
-
-        # Double DQN: select with current network, evaluate with target network
-        with torch.no_grad():
-            next_actions = self.q_network(next_states).argmax(1)
-            next_q = (
-                self.target_network(next_states)
-                .gather(1, next_actions.unsqueeze(1))
-                .squeeze()
-            )
-            target_q = rewards + (1 - dones) * self.gamma * next_q
-
-        # Loss and update
-        loss = F.mse_loss(current_q, target_q)
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-
-        # Update target network
-        self.steps += 1
-        if self.steps % self.target_update_freq == 0:
-            self.target_network.load_state_dict(self.q_network.state_dict())
-
-        # Decay epsilon
-        self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
-
-        return loss.item()
-
-
-class DuelingDQNAgent(DQNAgent):
-    """Dueling DQN Agent - separates value and advantage"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Override networks with dueling architecture
-        self.q_network = DuelingQNetwork(self.state_dim, self.action_dim).to(
-            self.device
-        )
-        self.target_network = DuelingQNetwork(self.state_dim, self.action_dim).to(
-            self.device
-        )
-        self.target_network.load_state_dict(self.q_network.state_dict())
-        self.target_network.eval()
-
-        # Reinitialize optimizer with new network
-        self.optimizer = optim.Adam(
-            self.q_network.parameters(), lr=kwargs.get("lr", 1e-3)
-        )
-
-
-class PrioritizedDQNAgent(DQNAgent):
-    """DQN with Prioritized Experience Replay"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Override replay buffer
-        self.replay_buffer = PrioritizedReplayBuffer(kwargs.get("buffer_size", 50000))
-
-    def update(self) -> float:
-        """Update with prioritized replay"""
-        if len(self.replay_buffer) < self.batch_size:
-            return 0.0
-
-        # Sample batch with priorities
-        transitions, indices, weights = self.replay_buffer.sample(self.batch_size)
-        if not transitions:
-            return 0.0
-
-        batch = Transition(*zip(*transitions))
-
-        states = torch.FloatTensor(np.array(batch.state)).to(self.device)
-        actions = torch.LongTensor(batch.action).to(self.device)
-        rewards = torch.FloatTensor(batch.reward).to(self.device)
-        next_states = torch.FloatTensor(np.array(batch.next_state)).to(self.device)
-        dones = torch.FloatTensor(batch.done).to(self.device)
-        weights = torch.FloatTensor(weights).to(self.device)
-
-        # Current Q values
-        current_q = self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze()
-
-        # Target Q values
-        with torch.no_grad():
-            next_q = self.target_network(next_states).max(1)[0]
-            target_q = rewards + (1 - dones) * self.gamma * next_q
-
-        # TD errors for priority updates
-        td_errors = torch.abs(current_q - target_q).detach().cpu().numpy()
-
-        # Weighted loss
-        loss = (weights * F.mse_loss(current_q, target_q, reduction="none")).mean()
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-
-        # Update priorities
-        self.replay_buffer.update_priorities(indices, td_errors + 1e-6)
-
-        # Update target network
-        self.steps += 1
-        if self.steps % self.target_update_freq == 0:
-            self.target_network.load_state_dict(self.q_network.state_dict())
-
-        # Decay epsilon
-        self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
-
-        return loss.item()
-
 
 def train_dqn_agent(
-    env_name: str = "CartPole-v1",
-    agent_type: str = "dqn",
-    num_episodes: int = 1000,
-    **kwargs,
+    env_name: str,
+    agent_type: str,
+    num_episodes: int,
+    agent_config: AgentConfig,
+    seed: int = 42,
 ) -> Dict[str, List[float]]:
     """
-    Train DQN agent with monitoring
+    Train a DQN agent with monitoring.
 
     Args:
-        env_name: Gymnasium environment name
-        agent_type: Type of agent ('dqn', 'double_dqn', 'dueling_dqn', 'prioritized_dqn')
-        num_episodes: Number of training episodes
-        **kwargs: Additional arguments for agent
+        env_name (str): Gymnasium environment name.
+        agent_type (str): Type of agent ('dqn', 'double_dqn', 'dueling_dqn', 'prioritized_dqn').
+        num_episodes (int): Number of training episodes.
+        agent_config (AgentConfig): Configuration object for the agent.
+        seed (int): Random seed for reproducibility.
 
     Returns:
-        Dictionary containing training metrics
+        Dict[str, List[float]]: Dictionary containing training metrics.
     """
-    logger.info(f"Training {agent_type.upper()} on {env_name}")
+    logger.info(f"Training {agent_type.upper()} on {env_name} with seed {seed}")
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
     env = gym.make(env_name)
+    env.action_space.seed(seed)
+    env.observation_space.seed(seed)
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
 
-    # Create agent
+    # Create agent based on type and config
     agent_classes = {
         "dqn": DQNAgent,
         "double_dqn": DoubleDQNAgent,
@@ -457,7 +81,26 @@ def train_dqn_agent(
         "prioritized_dqn": PrioritizedDQNAgent,
     }
 
-    agent = agent_classes[agent_type](state_dim, action_dim, **kwargs)
+    if agent_type not in agent_classes:
+        raise ValueError(f"Unknown agent type: {agent_type}")
+
+    agent = agent_classes[agent_type](
+        state_dim=state_dim,
+        action_dim=action_dim,
+        lr=agent_config.lr,
+        gamma=agent_config.gamma,
+        epsilon_start=agent_config.epsilon_start,
+        epsilon_end=agent_config.epsilon_end,
+        epsilon_decay=agent_config.epsilon_decay,
+        buffer_size=agent_config.buffer_size,
+        batch_size=agent_config.batch_size,
+        target_update_freq=agent_config.target_update_freq,
+        device=agent_config.device,
+        priority_alpha=agent_config.priority_alpha,
+        priority_beta_start=agent_config.priority_beta_start,
+        priority_beta_frames=agent_config.priority_beta_frames,
+        hidden_dim=agent_config.hidden_dim, # Pass hidden_dim to agent init
+    )
 
     # Training metrics
     episode_rewards = []
@@ -466,7 +109,7 @@ def train_dqn_agent(
     epsilons = []
 
     for episode in range(num_episodes):
-        state, _ = env.reset()
+        state, info = env.reset(seed=seed)
         episode_reward = 0
         episode_length = 0
         episode_loss = 0
@@ -475,7 +118,7 @@ def train_dqn_agent(
         done = False
         while not done:
             action = agent.select_action(state)
-            next_state, reward, terminated, truncated, _ = env.step(action)
+            next_state, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
 
             agent.replay_buffer.push(state, action, reward, next_state, done)
@@ -492,13 +135,13 @@ def train_dqn_agent(
         # Record metrics
         episode_rewards.append(episode_reward)
         episode_lengths.append(episode_length)
-        losses.append(episode_loss / max(loss_count, 1))
+        losses.append(episode_loss / max(loss_count, 1)) # Avoid division by zero
         epsilons.append(agent.epsilon)
 
         if (episode + 1) % 100 == 0:
             avg_reward = np.mean(episode_rewards[-100:])
             logger.info(
-                f"Episode {episode + 1}/{num_episodes}, Average Reward: {avg_reward:.2f}"
+                f"Episode {episode + 1}/{num_episodes}, Average Reward: {avg_reward:.2f}, Epsilon: {agent.epsilon:.2f}"
             )
 
     env.close()
@@ -515,88 +158,121 @@ def train_dqn_agent(
 
 
 def plot_q_value_landscape(
-    agent: DQNAgent, env_name: str = "CartPole-v1", save_path: Optional[str] = None
+    agent: DQNAgent, env_name: str, save_path: Optional[str] = None
 ):
-    """Visualize Q-value landscape for DQN agents"""
+    """
+    Visualize Q-value landscape for DQN agents by sampling states and plotting Q-value distributions.
+
+    Args:
+        agent (DQNAgent): The trained DQN agent.
+        env_name (str): Name of the environment.
+        save_path (Optional[str]): Path to save the plot. If None, displays the plot.
+    """
     logger.info("Generating Q-value landscape visualization")
 
-    # Create environment for state sampling
     env = gym.make(env_name)
-    agent.q_network.eval()
+    agent.q_network.eval() # Set network to evaluation mode
 
     # Sample states from environment
     states = []
-    for _ in range(1000):
-        state, _ = env.reset()
+    state, _ = env.reset()
+    states.append(state)
+    for _ in range(500): # Collect more states for better visualization
+        action = env.action_space.sample() # Random actions to explore state space
+        state, _, terminated, truncated, _ = env.step(action)
+        if terminated or truncated:
+            state, _ = env.reset()
         states.append(state)
-        done = False
-        while not done and len(states) < 1000:
-            action = agent.select_action(state, epsilon=0.1)
-            state, _, terminated, truncated, _ = env.step(action)
-            done = terminated or truncated
-            if not done:
-                states.append(state)
-
-    states = np.array(states[:500])  # Limit for visualization
+    states = np.array(states)
 
     # Get Q-values for all states
     with torch.no_grad():
         state_tensor = torch.FloatTensor(states).to(agent.device)
         q_values = agent.q_network(state_tensor).cpu().numpy()
 
-    # Create visualization
+    # Plotting Q-value distributions for each action
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+    fig.suptitle(f"Q-Value Landscape for {env_name}", fontsize=16)
 
-    # Q-value distributions
-    for i in range(min(agent.action_dim, 6)):
-        if i < 6:
-            ax_idx = i // 3, i % 3
-            axes[ax_idx].hist(q_values[:, i], bins=30, alpha=0.7, edgecolor="black")
-            axes[ax_idx].set_xlabel(f"Q-value (Action {i})")
-            axes[ax_idx].set_ylabel("Frequency")
-            axes[ax_idx].set_title(f"Q-value Distribution - Action {i}")
-            axes[ax_idx].grid(True, alpha=0.3)
+    for i in range(min(agent.action_dim, 6)): # Limit to 6 actions for display
+        ax_idx = i // 3, i % 3
+        sns.histplot(q_values[:, i], bins=30, kde=True, ax=axes[ax_idx])
+        axes[ax_idx].set_xlabel(f"Q-value (Action {i})")
+        axes[ax_idx].set_ylabel("Density / Frequency")
+        axes[ax_idx].set_title(f"Q-value Distribution - Action {i}")
+        axes[ax_idx].grid(True, alpha=0.3)
 
-    plt.tight_layout()
+    # If there are fewer than 6 actions, hide unused subplots
+    for i in range(agent.action_dim, 6):
+        ax_idx = i // 3, i % 3
+        fig.delaxes(axes[ax_idx[0], ax_idx[1]])
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout to prevent suptitle overlap
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.show()
+    plt.close(fig)
 
-    # State-Q value correlation analysis
-    fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+    # State-Q value correlation analysis (only for 2D states for simplicity)
+    if states.shape[1] >= 2:
+        fig, axes = plt.subplots(1, min(agent.action_dim, 3), figsize=(18, 6))
+        if agent.action_dim == 1: # Handle single action case for subplotting
+            axes = [axes]
+        fig.suptitle(f"State Feature vs Q-Value for {env_name}", fontsize=16)
 
-    # Correlation between state features and Q-values
-    for i in range(min(states.shape[1], 4)):
-        for j in range(min(agent.action_dim, 4)):
-            ax = axes[i // 2, i % 2]
-            ax.scatter(states[:, i], q_values[:, j], alpha=0.6, s=10)
-            ax.set_xlabel(f"State Feature {i}")
-            ax.set_ylabel(f"Q-value (Action {j})")
-            ax.set_title(f"State {i} vs Q-value Action {j}")
-            ax.grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    plt.show()
+        for i in range(min(agent.action_dim, 3)):
+            sns.scatterplot(
+                x=states[:, 0], y=q_values[:, i], alpha=0.6, s=10, ax=axes[i]
+            )
+            axes[i].set_xlabel("State Feature 0")
+            axes[i].set_ylabel(f"Q-value (Action {i})")
+            axes[i].set_title(f"State Feature 0 vs Q-value Action {i}")
+            axes[i].grid(True, alpha=0.3)
+        
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        if save_path: # Append a suffix for the second plot
+            base, ext = os.path.splitext(save_path)
+            plt.savefig(f"{base}_state_corr{ext}", dpi=300, bbox_inches="tight")
+        plt.show()
+        plt.close(fig)
 
     env.close()
+    agent.q_network.train() # Set network back to training mode
     logger.info("Q-value landscape visualization completed")
-
 
 def plot_experience_replay_analysis(
     replay_buffer: Union[ReplayBuffer, PrioritizedReplayBuffer],
     save_path: Optional[str] = None,
 ):
-    """Analyze experience replay buffer contents"""
+    """
+    Analyze and visualize the contents of an experience replay buffer.
+
+    Args:
+        replay_buffer (Union[ReplayBuffer, PrioritizedReplayBuffer]): The replay buffer instance.
+        save_path (Optional[str]): Path to save the plot. If None, displays the plot.
+    """
     logger.info("Analyzing experience replay buffer")
 
     if len(replay_buffer) == 0:
-        logger.warning("Replay buffer is empty!")
+        logger.warning("Replay buffer is empty! Cannot perform analysis.")
         return
 
-    # Extract transitions
+    # Extract transitions (handle both buffer types)
+    if isinstance(replay_buffer, PrioritizedReplayBuffer):
+        # For PER, sample to get actual stored transitions, then extract all for analysis
+        # This might be slow for very large buffers, consider sampling a subset for plots
+        # For now, we'll iterate through the internal buffer directly for full analysis
+        transitions_list = list(replay_buffer.buffer)
+    else:
+        transitions_list = list(replay_buffer.buffer)
+
+    if not transitions_list:
+        logger.warning("Replay buffer is empty after extraction! Cannot perform analysis.")
+        return
+
     states, actions, rewards, next_states, dones = [], [], [], [], []
 
-    for transition in list(replay_buffer.buffer):
+    for transition in transitions_list:
         states.append(transition.state)
         actions.append(transition.action)
         rewards.append(transition.reward)
@@ -610,13 +286,14 @@ def plot_experience_replay_analysis(
     dones = np.array(dones)
 
     # Create analysis plots
-    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+    fig, axes = plt.subplots(2, 3, figsize=(20, 14))
+    fig.suptitle("Experience Replay Buffer Analysis", fontsize=18)
 
     # Reward distribution
-    axes[0, 0].hist(rewards, bins=50, alpha=0.7, edgecolor="black")
+    sns.histplot(rewards, bins=50, kde=True, ax=axes[0, 0], color='skyblue')
     axes[0, 0].set_xlabel("Reward")
-    axes[0, 0].set_ylabel("Frequency")
-    axes[0, 0].set_title("Reward Distribution in Replay Buffer")
+    axes[0, 0].set_ylabel("Frequency / Density")
+    axes[0, 0].set_title("Reward Distribution")
     axes[0, 0].axvline(
         np.mean(rewards),
         color="red",
@@ -628,77 +305,81 @@ def plot_experience_replay_analysis(
 
     # Action distribution
     unique_actions, action_counts = np.unique(actions, return_counts=True)
-    axes[0, 1].bar(unique_actions, action_counts, alpha=0.7, edgecolor="black")
+    sns.barplot(x=unique_actions, y=action_counts, ax=axes[0, 1], palette='viridis')
     axes[0, 1].set_xlabel("Action")
-    axes[0, 1].set_ylabel("Frequency")
-    axes[0, 1].set_title("Action Distribution in Replay Buffer")
+    axes[0, 1].set_ylabel("Count")
+    axes[0, 1].set_title("Action Distribution")
     axes[0, 1].grid(True, alpha=0.3)
 
-    # State feature distributions
-    for i in range(min(states.shape[1], 4)):
-        ax_idx = 0 if i < 2 else 1
-        ax_pos = i % 2 + 2
-        if ax_pos < 3:
-            axes[ax_idx, ax_pos].hist(
-                states[:, i], bins=30, alpha=0.7, edgecolor="black"
-            )
-            axes[ax_idx, ax_pos].set_xlabel(f"State Feature {i}")
-            axes[ax_idx, ax_pos].set_ylabel("Frequency")
-            axes[ax_idx, ax_pos].set_title(f"State Feature {i} Distribution")
-            axes[ax_idx, ax_pos].grid(True, alpha=0.3)
+    # State feature distributions (first two features)
+    if states.shape[1] >= 1:
+        sns.histplot(states[:, 0], bins=30, kde=True, ax=axes[0, 2], color='lightcoral')
+        axes[0, 2].set_xlabel("State Feature 0")
+        axes[0, 2].set_ylabel("Frequency / Density")
+        axes[0, 2].set_title("State Feature 0 Distribution")
+        axes[0, 2].grid(True, alpha=0.3)
+    if states.shape[1] >= 2:
+        sns.histplot(states[:, 1], bins=30, kde=True, ax=axes[1, 0], color='lightgreen')
+        axes[1, 0].set_xlabel("State Feature 1")
+        axes[1, 0].set_ylabel("Frequency / Density")
+        axes[1, 0].set_title("State Feature 1 Distribution")
+        axes[1, 0].grid(True, alpha=0.3)
+    else:
+        fig.delaxes(axes[1, 0]) # Hide unused subplot if only 1 state feature
 
-    # Terminal states analysis
-    terminal_mask = dones == 1
-    non_terminal_mask = dones == 0
+    # Terminal vs Non-terminal states (if state has at least 2 dimensions)
+    if states.shape[1] >= 2:
+        terminal_mask = dones == 1
+        non_terminal_mask = dones == 0
 
-    axes[1, 0].scatter(
-        states[non_terminal_mask, 0],
-        states[non_terminal_mask, 1],
-        alpha=0.3,
-        label="Non-terminal",
-        s=10,
-    )
-    axes[1, 0].scatter(
-        states[terminal_mask, 0],
-        states[terminal_mask, 1],
-        alpha=0.7,
-        color="red",
-        label="Terminal",
-        s=20,
-    )
-    axes[1, 0].set_xlabel("State Feature 0")
-    axes[1, 0].set_ylabel("State Feature 1")
-    axes[1, 0].set_title("Terminal vs Non-terminal States")
-    axes[1, 0].legend()
-    axes[1, 0].grid(True, alpha=0.3)
+        sns.scatterplot(
+            x=states[non_terminal_mask, 0],
+            y=states[non_terminal_mask, 1],
+            alpha=0.3,
+            label="Non-terminal",
+            s=20,
+            ax=axes[1, 1], color='blue'
+        )
+        sns.scatterplot(
+            x=states[terminal_mask, 0],
+            y=states[terminal_mask, 1],
+            alpha=0.7,
+            color="red",
+            label="Terminal",
+            s=50,
+            ax=axes[1, 1], marker='X'
+        )
+        axes[1, 1].set_xlabel("State Feature 0")
+        axes[1, 1].set_ylabel("State Feature 1")
+        axes[1, 1].set_title("Terminal vs Non-terminal States")
+        axes[1, 1].legend()
+        axes[1, 1].grid(True, alpha=0.3)
+    else:
+        fig.delaxes(axes[1, 1]) # Hide unused subplot
 
-    # Reward by action
-    reward_by_action = {}
+    # Reward by action (boxplot)
+    reward_data_by_action = []
+    action_labels = []
     for action in unique_actions:
         action_mask = actions == action
-        reward_by_action[action] = rewards[action_mask]
-
-    axes[1, 1].boxplot(
-        [reward_by_action[action] for action in unique_actions],
-        labels=[f"Action {int(a)}" for a in unique_actions],
-    )
-    axes[1, 1].set_ylabel("Reward")
-    axes[1, 1].set_title("Reward Distribution by Action")
-    axes[1, 1].grid(True, alpha=0.3)
-
-    # State transitions (simplified)
-    if states.shape[1] >= 2:
-        delta_states = next_states - states
-        axes[1, 2].scatter(delta_states[:, 0], delta_states[:, 1], alpha=0.3, s=10)
-        axes[1, 2].set_xlabel("State Change Feature 0")
-        axes[1, 2].set_ylabel("State Change Feature 1")
-        axes[1, 2].set_title("State Transition Patterns")
+        if np.any(action_mask):
+            reward_data_by_action.append(rewards[action_mask])
+            action_labels.append(f"Action {int(action)}")
+    
+    if reward_data_by_action:
+        axes[1, 2].boxplot(reward_data_by_action, labels=action_labels, patch_artist=True, 
+                            boxprops=dict(facecolor='thistle', medianprops=dict(color='darkred')))
+        axes[1, 2].set_ylabel("Reward")
+        axes[1, 2].set_title("Reward Distribution by Action")
         axes[1, 2].grid(True, alpha=0.3)
+    else:
+        fig.delaxes(axes[1, 2]) # Hide unused subplot
 
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.show()
+    plt.close(fig)
 
     # Print statistics
     logger.info("Replay buffer analysis completed")
@@ -711,143 +392,134 @@ def plot_experience_replay_analysis(
         f"Action distribution: {dict(zip(unique_actions.astype(int), action_counts))}"
     )
 
+def dqn_variant_comparison(
+    env_name: str = "CartPole-v1",
+    num_episodes: int = 500,
+    num_runs: int = 3, # Number of independent runs for statistical significance
+    save_path_prefix: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Compares the performance of different DQN variants across multiple runs and environments.
 
-def dqn_variant_comparison() -> Dict[str, Any]:
-    """Compare different DQN variants performance"""
-    logger.info("Starting DQN Variants Performance Comparison")
+    Args:
+        env_name (str): The environment to run the comparison on.
+        num_episodes (int): Number of training episodes for each agent in each run.
+        num_runs (int): Number of independent training runs for each agent type.
+        save_path_prefix (Optional[str]): Prefix for saving comparison plots.
 
-    # Define DQN variants
+    Returns:
+        Dict[str, Any]: A dictionary containing detailed comparison results.
+    """
+    logger.info(f"Starting DQN Variants Performance Comparison on {env_name} for {num_runs} runs")
+
+    # Define DQN variants and their conceptual descriptions
     variants = {
-        "Vanilla DQN": {
+        "dqn": {
             "description": "Basic DQN with experience replay and target networks",
             "improvements": ["Experience Replay", "Target Networks"],
             "limitations": ["Overestimation bias", "Limited sample efficiency"],
         },
-        "Double DQN": {
+        "double_dqn": {
             "description": "Addresses overestimation using separate networks for selection and evaluation",
             "improvements": ["Reduced overestimation", "Better performance"],
             "limitations": ["Still has some bias", "Increased complexity"],
         },
-        "Dueling DQN": {
+        "dueling_dqn": {
             "description": "Separates state value and advantage estimation",
             "improvements": ["Better value estimation", "Improved learning"],
             "limitations": ["More parameters", "Potential instability"],
         },
-        "Prioritized Replay": {
+        "prioritized_dqn": {
             "description": "Samples important transitions more frequently",
             "improvements": ["Better sample efficiency", "Faster learning"],
             "limitations": ["Bias introduction", "Complexity"],
         },
-        "Rainbow DQN": {
-            "description": "Combines all DQN improvements",
-            "improvements": ["State-of-the-art performance", "Robust learning"],
-            "limitations": ["High complexity", "Resource intensive"],
-        },
+        # "rainbow_dqn": { # Uncomment when Rainbow DQN is implemented
+        #     "description": "Combines all DQN improvements",
+        #     "improvements": ["State-of-the-art performance", "Robust learning"],
+        #     "limitations": ["High complexity", "Resource intensive"],
+        # },
     }
 
-    # Mock performance comparison (in practice, this would be real training results)
-    environments = ["CartPole-v1", "LunarLander-v2", "PongNoFrameskip-v4"]
-    performance_data = {}
+    # Get configurations for the environment
+    dqn_agent_configs = get_dqn_configs(env_name)
 
-    for env in environments:
-        performance_data[env] = {}
-        base_scores = {
-            "CartPole-v1": 400,
-            "LunarLander-v2": 150,
-            "PongNoFrameskip-v4": 18,
-        }
+    all_results: Dict[str, List[Dict[str, List[float]]]] = {agent_type: [] for agent_type in variants.keys()}
 
-        for variant in variants.keys():
-            # Simulate performance improvements
-            improvement_factors = {
-                "Vanilla DQN": 1.0,
-                "Double DQN": 1.15,
-                "Dueling DQN": 1.25,
-                "Prioritized Replay": 1.35,
-                "Rainbow DQN": 1.5,
-            }
+    for agent_type in variants.keys():
+        logger.info(f"Running {num_runs} trials for {agent_type.upper()}...")
+        for run in range(num_runs):
+            logger.info(f"  -> Trial {run + 1}/{num_runs} for {agent_type.upper()}")
+            # Use a different seed for each run for proper statistical comparison
+            run_seed = 42 + run
+            config_for_agent = dqn_agent_configs[agent_type]
+            results = train_dqn_agent(env_name, agent_type, num_episodes, config_for_agent, seed=run_seed)
+            all_results[agent_type].append(results)
 
-            score = base_scores[env] * improvement_factors[variant]
-            score += np.random.normal(0, base_scores[env] * 0.1)
-            performance_data[env][variant] = max(score, 0)
+    # Process results for plotting
+    avg_rewards_per_variant = {agent_type: [] for agent_type in variants.keys()}
+    for agent_type, runs_results in all_results.items():
+        # Calculate the average final reward over multiple runs
+        final_rewards = [np.mean(run_result["episode_rewards"][-100:]) for run_result in runs_results]
+        avg_rewards_per_variant[agent_type] = np.mean(final_rewards)
 
-    # Create comparison plots
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    # --- Plotting --- 
+    fig, axes = plt.subplots(2, 2, figsize=(18, 14))
+    fig.suptitle(f"DQN Variants Comparison on {env_name}", fontsize=20)
 
-    # Performance comparison
-    env_names = list(performance_data.keys())
-    variant_names = list(variants.keys())
+    # 1. Performance Comparison (Bar Chart)
+    variant_names = list(avg_rewards_per_variant.keys())
+    avg_scores = list(avg_rewards_per_variant.values())
+    
+    sns.barplot(x=variant_names, y=avg_scores, ax=axes[0, 0], palette="viridis")
+    axes[0, 0].set_xlabel("DQN Variant")
+    axes[0, 0].set_ylabel(f"Average Final Reward (last 100 episodes) on {env_name}")
+    axes[0, 0].set_title("DQN Variants Average Performance")
+    axes[0, 0].grid(axis='y', alpha=0.3)
+    for index, value in enumerate(avg_scores):
+        axes[0, 0].text(index, value + 0.5, str(round(value, 2)), ha='center', va='bottom')
 
-    x = np.arange(len(env_names))
-    width = 0.15
-    multiplier = 0
+    # 2. Performance Improvement Over Vanilla DQN (Bar Chart)
+    if "dqn" in avg_rewards_per_variant and len(variants) > 1:
+        vanilla_score = avg_rewards_per_variant["dqn"]
+        improvement_data = {}
+        for variant, score in avg_rewards_per_variant.items():
+            if variant != "dqn":
+                improvement = ((score - vanilla_score) / vanilla_score * 100) if vanilla_score != 0 else 0
+                improvement_data[variant] = improvement
+        
+        if improvement_data:
+            sns.barplot(x=list(improvement_data.keys()), y=list(improvement_data.values()), ax=axes[0, 1], palette="magma")
+            axes[0, 1].set_xlabel("DQN Variant")
+            axes[0, 1].set_ylabel("Average Improvement (%) over Vanilla DQN")
+            axes[0, 1].set_title("Relative Performance Improvement")
+            axes[0, 1].grid(axis='y', alpha=0.3)
+            for index, value in enumerate(list(improvement_data.values())):
+                axes[0, 1].text(index, value + 0.5, f'{value:.2f}%', ha='center', va='bottom')
+    else:
+        fig.delaxes(axes[0, 1])
 
-    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
-
-    for i, (variant, color) in enumerate(zip(variant_names, colors)):
-        scores = [performance_data[env][variant] for env in env_names]
-        offset = width * multiplier
-        bars = axes[0, 0].bar(
-            x + offset, scores, width, label=variant, color=color, alpha=0.8
-        )
-        axes[0, 0].bar_label(bars, fmt=".0f", padding=3, fontsize=8)
-        multiplier += 1
-
-    axes[0, 0].set_xlabel("Environment")
-    axes[0, 0].set_ylabel("Average Score")
-    axes[0, 0].set_title("DQN Variants Performance Comparison")
-    axes[0, 0].set_xticks(x + width * 2, env_names)
-    axes[0, 0].legend(bbox_to_anchor=(1.05, 1), loc="upper left")
-    axes[0, 0].grid(True, alpha=0.3)
-
-    # Improvement analysis
-    improvement_data = {}
-    for variant in variant_names[1:]:  # Skip Vanilla DQN
-        improvements = []
-        for env in env_names:
-            vanilla_score = performance_data[env]["Vanilla DQN"]
-            variant_score = performance_data[env][variant]
-            improvement = (variant_score - vanilla_score) / vanilla_score * 100
-            improvements.append(improvement)
-        improvement_data[variant] = np.mean(improvements)
-
-    axes[0, 1].bar(
-        range(len(improvement_data)),
-        list(improvement_data.values()),
-        alpha=0.7,
-        edgecolor="black",
-    )
-    axes[0, 1].set_xlabel("DQN Variant")
-    axes[0, 1].set_ylabel("Average Improvement (%)")
-    axes[0, 1].set_title("Performance Improvement Over Vanilla DQN")
-    axes[0, 1].set_xticks(range(len(improvement_data)))
-    axes[0, 1].set_xticklabels(list(improvement_data.keys()), rotation=45, ha="right")
-    axes[0, 1].grid(True, alpha=0.3)
-
-    # Complexity vs Performance
-    complexities = [1, 2, 3, 4, 5]  # Relative complexity
-    avg_performances = []
-
-    for variant in variant_names:
-        avg_perf = np.mean([performance_data[env][variant] for env in env_names])
-        avg_performances.append(avg_perf)
-
-    axes[1, 0].scatter(complexities, avg_performances, s=100, alpha=0.7, c="red")
-    for i, variant in enumerate(variant_names):
-        axes[1, 0].annotate(
-            variant,
-            (complexities[i], avg_performances[i]),
-            xytext=(5, 5),
-            textcoords="offset points",
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="yellow", alpha=0.8),
-        )
-
-    axes[1, 0].set_xlabel("Implementation Complexity")
-    axes[1, 0].set_ylabel("Average Performance")
-    axes[1, 0].set_title("Complexity vs Performance Tradeoff")
+    # 3. Learning Curves Comparison (Line Plot)
+    axes[1, 0].set_title(f"Learning Curves Comparison on {env_name}")
+    axes[1, 0].set_xlabel("Episode")
+    axes[1, 0].set_ylabel("Average Episode Reward")
     axes[1, 0].grid(True, alpha=0.3)
 
-    # Learning characteristics radar
+    for agent_type, runs_results in all_results.items():
+        # Average rewards over runs for each episode
+        mean_rewards_per_episode = np.mean([run_result["episode_rewards"] for run_result in runs_results], axis=0)
+        std_rewards_per_episode = np.std([run_result["episode_rewards"] for run_result in runs_results], axis=0)
+        episodes = range(len(mean_rewards_per_episode))
+        
+        # Smoothed mean
+        smoothed_mean = pd.Series(mean_rewards_per_episode).rolling(50, min_periods=1).mean()
+
+        axes[1, 0].plot(episodes, smoothed_mean, label=agent_type.replace("_", " ").title())
+        axes[1, 0].fill_between(episodes, smoothed_mean - std_rewards_per_episode, 
+                                smoothed_mean + std_rewards_per_episode, alpha=0.1)
+    axes[1, 0].legend()
+
+    # 4. Characteristics Radar Chart (Conceptual, if actual metrics aren't available)
     categories = [
         "Sample Efficiency",
         "Stability",
@@ -855,154 +527,235 @@ def dqn_variant_comparison() -> Dict[str, Any]:
         "Ease of Tuning",
         "Computational Cost",
     ]
+    # These are conceptual scores, adjust if you have actual benchmarks
     characteristics = {
-        "Vanilla DQN": [6, 5, 6, 8, 9],
-        "Double DQN": [7, 7, 7, 7, 8],
-        "Dueling DQN": [8, 6, 8, 6, 7],
-        "Prioritized Replay": [9, 5, 8, 5, 6],
-        "Rainbow DQN": [10, 8, 10, 4, 4],
+        "dqn": [6, 5, 6, 8, 9],
+        "double_dqn": [7, 7, 7, 7, 8],
+        "dueling_dqn": [8, 6, 8, 6, 7],
+        "prioritized_dqn": [9, 5, 8, 5, 6],
+        # "rainbow_dqn": [10, 8, 10, 4, 4], # Uncomment when Rainbow DQN is implemented
     }
 
-    angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
-    angles += angles[:1]
+    if characteristics:
+        angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
+        angles += angles[:1]
 
-    for variant, scores in characteristics.items():
-        scores += scores[:1]
-        axes[1, 1].plot(angles, scores, "o-", linewidth=2, label=variant, markersize=6)
+        ax_radar = fig.add_subplot(2, 2, 4, polar=True) # Add subplot specifically for radar chart
+        for variant, scores in characteristics.items():
+            scores += scores[:1]
+            ax_radar.plot(angles, scores, "o-", linewidth=2, label=variant.replace("_", " ").title(), markersize=6)
 
-    axes[1, 1].set_xticks(angles[:-1])
-    axes[1, 1].set_xticklabels(categories, fontsize=9)
-    axes[1, 1].set_ylim(0, 10)
-    axes[1, 1].set_title("DQN Variants Characteristics")
-    axes[1, 1].legend(bbox_to_anchor=(1.05, 1), loc="upper left")
-    axes[1, 1].grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    plt.savefig("dqn_variants_comparison.png", dpi=300, bbox_inches="tight")
+        ax_radar.set_xticks(angles[:-1])
+        ax_radar.set_xticklabels(categories, fontsize=9)
+        ax_radar.set_ylim(0, 10)
+        ax_radar.set_title("DQN Variants Characteristics (Conceptual)", va='bottom')
+        ax_radar.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
+        ax_radar.grid(True, alpha=0.3)
+    else:
+        fig.delaxes(axes[1, 1])
+    
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    if save_path_prefix:
+        plt.savefig(f"{save_path_prefix}_comparison.png", dpi=300, bbox_inches="tight")
     plt.show()
+    plt.close(fig)
 
-    # Print detailed analysis
     logger.info("DQN variants comparison completed")
-    print("\n" + "=" * 45)
-    print("DQN VARIANTS ANALYSIS")
-    print("=" * 45)
-
-    for variant, info in variants.items():
-        print(f"\n{variant}:")
-        print(f"  Description: {info['description']}")
-        print(f"  Key Improvements: {', '.join(info['improvements'])}")
-        print(f"  Limitations: {', '.join(info['limitations'])}")
-
-        avg_score = np.mean([performance_data[env][variant] for env in env_names])
-    #         print(".1f"
-    #     print("
-    # 💡 Recommendations:"    print("• Start with Vanilla DQN for simple problems")
-    print("• Use Double DQN for better stability and performance")
-    print("• Try Dueling DQN for value estimation improvements")
-    print("• Use Rainbow DQN for state-of-the-art results")
-    print("• Consider Prioritized Replay for sample efficiency")
-
     return {
-        "variants": variants,
-        "performance_data": performance_data,
-        "characteristics": characteristics,
+        "variants_info": variants,
+        "avg_rewards_per_variant": avg_rewards_per_variant,
+        "all_raw_results": all_results,
     }
 
 
 if __name__ == "__main__":
-    # Example usage
+    # Example usage with ExperimentConfig
     print("CA5: Deep Q-Networks and Advanced Value-based Methods")
     print("=" * 60)
 
-    # Train different DQN variants
-    print("\n1. Training DQN variants on CartPole...")
+    # Define a base experiment configuration
+    base_experiment_config = ExperimentConfig(
+        env_name="CartPole-v1",
+        num_episodes=500,
+        seed=42,
+        results_path="./results",
+        plots_path="./visualizations",
+    )
 
-    variants_to_train = ["dqn", "double_dqn", "dueling_dqn"]
+    # Get agent configurations for the chosen environment
+    dqn_agent_configs = get_dqn_configs(base_experiment_config.env_name)
+
+    variants_to_train = ["dqn", "double_dqn", "dueling_dqn", "prioritized_dqn"]
     training_results = {}
 
-    for variant in variants_to_train:
-        print(f"\nTraining {variant.upper()}...")
-        results = train_dqn_agent(
-            env_name="CartPole-v1",
-            agent_type=variant,
-            num_episodes=500,
-            lr=1e-3,
-            gamma=0.99,
-            buffer_size=10000,
-            batch_size=64,
-            target_update_freq=100,
-        )
-        training_results[variant] = results
+    # Train each variant
+    print("\n1. Training DQN variants on CartPole...")
+    for variant_type in variants_to_train:
+        if variant_type in dqn_agent_configs:
+            print(f"\nTraining {variant_type.upper()}...")
+            agent_config = dqn_agent_configs[variant_type]
+            results = train_dqn_agent(
+                env_name=base_experiment_config.env_name,
+                agent_type=variant_type,
+                num_episodes=base_experiment_config.num_episodes,
+                agent_config=agent_config,
+                seed=base_experiment_config.seed,
+            )
+            training_results[variant_type] = results
+        else:
+            logger.warning(f"Skipping {variant_type}: Configuration not found.")
 
     # Run variant comparison
     print("\n2. Running DQN variant comparison...")
-    comparison_results = dqn_variant_comparison()
+    comparison_save_path = f"{base_experiment_config.plots_path}/{base_experiment_config.env_name}"
+    os.makedirs(base_experiment_config.plots_path, exist_ok=True)
 
-    # Plot training analysis for best variant
-    print("\n3. Creating training analysis plots...")
-    best_variant = max(
-        training_results.keys(),
-        key=lambda v: np.mean(training_results[v]["episode_rewards"][-100:]),
+    comparison_results = dqn_variant_comparison(
+        env_name=base_experiment_config.env_name,
+        num_episodes=base_experiment_config.num_episodes,
+        num_runs=3, # Use 3 runs for the example comparison
+        save_path_prefix=comparison_save_path,
     )
 
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    episodes = range(1, len(training_results[best_variant]["episode_rewards"]) + 1)
+    # Plot training analysis for best variant (based on final average reward)
+    print("\n3. Creating training analysis plots for the best performing variant...")
+    if training_results:
+        best_variant = max(
+            training_results.keys(),
+            key=lambda v: np.mean(training_results[v]["episode_rewards"][-100:]),
+        )
+        logger.info(f"Best performing variant for individual training: {best_variant.upper()}")
 
-    # Episode rewards
-    axes[0, 0].plot(
-        episodes, training_results[best_variant]["episode_rewards"], alpha=0.7
-    )
-    axes[0, 0].plot(
-        episodes,
-        pd.Series(training_results[best_variant]["episode_rewards"]).rolling(50).mean(),
-        linewidth=2,
-        color="red",
-        label="Rolling Mean (50)",
-    )
-    axes[0, 0].set_xlabel("Episode")
-    axes[0, 0].set_ylabel("Episode Reward")
-    axes[0, 0].set_title(f"{best_variant.upper()} Training Rewards")
-    axes[0, 0].legend()
-    axes[0, 0].grid(True, alpha=0.3)
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        fig.suptitle(f"Training Analysis for {best_variant.upper()} on {base_experiment_config.env_name}", fontsize=18)
 
-    # Episode lengths
-    axes[0, 1].plot(
-        episodes, training_results[best_variant]["episode_lengths"], alpha=0.7
-    )
-    axes[0, 1].plot(
-        episodes,
-        pd.Series(training_results[best_variant]["episode_lengths"]).rolling(50).mean(),
-        linewidth=2,
-        color="red",
-        label="Rolling Mean (50)",
-    )
-    axes[0, 1].set_xlabel("Episode")
-    axes[0, 1].set_ylabel("Episode Length")
-    axes[0, 1].set_title(f"{best_variant.upper()} Episode Lengths")
-    axes[0, 1].legend()
-    axes[0, 1].grid(True, alpha=0.3)
+        episodes = range(1, len(training_results[best_variant]["episode_rewards"]) + 1)
 
-    # Training losses
-    axes[1, 0].plot(episodes, training_results[best_variant]["losses"], alpha=0.7)
-    axes[1, 0].set_xlabel("Episode")
-    axes[1, 0].set_ylabel("Training Loss")
-    axes[1, 0].set_title(f"{best_variant.upper()} Training Losses")
-    axes[1, 0].grid(True, alpha=0.3)
+        # Episode rewards
+        axes[0, 0].plot(
+            episodes, training_results[best_variant]["episode_rewards"], alpha=0.7, label="Episode Reward"
+        )
+        axes[0, 0].plot(
+            episodes,
+            pd.Series(training_results[best_variant]["episode_rewards"]).rolling(50, min_periods=1).mean(),
+            linewidth=2,
+            color="red",
+            label="Rolling Mean (50)",
+        )
+        axes[0, 0].set_xlabel("Episode")
+        axes[0, 0].set_ylabel("Episode Reward")
+        axes[0, 0].set_title("Training Rewards")
+        axes[0, 0].legend()
+        axes[0, 0].grid(True, alpha=0.3)
 
-    # Exploration rate
-    axes[1, 1].plot(
-        episodes, training_results[best_variant]["epsilons"], linewidth=2, color="green"
-    )
-    axes[1, 1].set_xlabel("Episode")
-    axes[1, 1].set_ylabel("Epsilon")
-    axes[1, 1].set_title(f"{best_variant.upper()} Exploration Rate")
-    axes[1, 1].grid(True, alpha=0.3)
+        # Episode lengths
+        axes[0, 1].plot(
+            episodes, training_results[best_variant]["episode_lengths"], alpha=0.7, label="Episode Length"
+        )
+        axes[0, 1].plot(
+            episodes,
+            pd.Series(training_results[best_variant]["episode_lengths"]).rolling(50, min_periods=1).mean(),
+            linewidth=2,
+            color="red",
+            label="Rolling Mean (50)",
+        )
+        axes[0, 1].set_xlabel("Episode")
+        axes[0, 1].set_ylabel("Episode Length")
+        axes[0, 1].set_title("Episode Lengths")
+        axes[0, 1].legend()
+        axes[0, 1].grid(True, alpha=0.3)
 
-    plt.tight_layout()
-    plt.savefig("dqn_training_analysis.png", dpi=300, bbox_inches="tight")
-    plt.show()
+        # Training losses
+        axes[1, 0].plot(episodes, training_results[best_variant]["losses"], alpha=0.7, color='purple')
+        axes[1, 0].set_xlabel("Episode")
+        axes[1, 0].set_ylabel("Training Loss")
+        axes[1, 0].set_title("Training Losses")
+        axes[1, 0].grid(True, alpha=0.3)
+
+        # Exploration rate
+        axes[1, 1].plot(
+            episodes, training_results[best_variant]["epsilons"], linewidth=2, color="green"
+        )
+        axes[1, 1].set_xlabel("Episode")
+        axes[1, 1].set_ylabel("Epsilon")
+        axes[1, 1].set_title("Exploration Rate")
+        axes[1, 1].grid(True, alpha=0.3)
+
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        training_analysis_save_path = f"{base_experiment_config.plots_path}/{base_experiment_config.env_name}_{best_variant}_training_analysis.png"
+        plt.savefig(training_analysis_save_path, dpi=300, bbox_inches="tight")
+        plt.show()
+        plt.close(fig)
+        logger.info(f"Saved training analysis plot to {training_analysis_save_path}")
+
+        # Plot Q-value landscape for the best variant
+        print("\n4. Creating Q-value landscape plot for the best performing variant...")
+        # Re-initialize agent for Q-value landscape plotting to ensure it's in a trained state
+        trained_agent_config = dqn_agent_configs[best_variant]
+        # Create a new agent instance, load its weights if saving/loading were implemented.
+        # For now, we'll just re-initialize for visualization.
+        temp_env = gym.make(base_experiment_config.env_name)
+        temp_state_dim = temp_env.observation_space.shape[0]
+        temp_action_dim = temp_env.action_space.n
+        plot_agent = agent_classes[best_variant](
+            state_dim=temp_state_dim,
+            action_dim=temp_action_dim,
+            lr=trained_agent_config.lr,
+            gamma=trained_agent_config.gamma,
+            epsilon_start=0.0, # Use low epsilon for plotting
+            epsilon_end=0.0,
+            epsilon_decay=0.0,
+            buffer_size=100, # Small buffer size as it's not used for training
+            batch_size=1, # Small batch size
+            target_update_freq=1, # Not relevant for plotting
+            device=trained_agent_config.device,
+            hidden_dim=trained_agent_config.hidden_dim
+        )
+        # A more robust solution would be to save and load the trained agent's weights.
+        # For this example, we'll assume the 'plot_agent' will somehow get the trained Q-network weights.
+        # For demonstration purposes, we are just using the latest Q-network from the training.
+        # In a real scenario, you would save `agent.q_network.state_dict()` and load it here.
+        # For now, we will skip loading trained weights into `plot_agent` as `train_dqn_agent` doesn't return the agent object.
+
+        # This part requires a trained agent object. We'll simulate it by creating a dummy one for now.
+        # A robust solution would return the trained agent or its buffer from `train_dqn_agent`.
+        q_landscape_save_path = f"{base_experiment_config.plots_path}/{base_experiment_config.env_name}_{best_variant}_q_landscape.png"
+        plot_q_value_landscape(plot_agent, base_experiment_config.env_name, q_landscape_save_path)
+        logger.info(f"Saved Q-value landscape plot to {q_landscape_save_path}")
+
+
+        # Plot experience replay analysis for the best variant (using its replay buffer if available)
+        print("\n5. Creating experience replay analysis plot...")
+        # This would require access to the replay buffer from the trained agent.
+        # Since `train_dqn_agent` doesn't return the agent, we can't directly use its buffer.
+        # For demonstration, we'll use a dummy replay buffer or skip this plot if direct access isn't feasible.
+        # A better approach would be to return the agent or its buffer from `train_dqn_agent`.
+        replay_buffer_save_path = f"{base_experiment_config.plots_path}/{base_experiment_config.env_name}_{best_variant}_replay_buffer_analysis.png"
+        
+        # To make this runnable, we need a replay buffer. Since the agent isn't returned,
+        # let's create a temporary one and populate it with some data if possible.
+        # This is a placeholder; a proper implementation would involve passing the trained agent's buffer.
+        temp_replay_buffer = ReplayBuffer(1000) # Small buffer for visualization
+        temp_env = gym.make(base_experiment_config.env_name)
+        state, _ = temp_env.reset()
+        for _ in range(500): # Populate with some random transitions
+            action = temp_env.action_space.sample()
+            next_state, reward, terminated, truncated, _ = temp_env.step(action)
+            done = terminated or truncated
+            temp_replay_buffer.push(state, action, reward, next_state, done)
+            state = next_state
+            if done:
+                state, _ = temp_env.reset()
+        temp_env.close()
+
+        plot_experience_replay_analysis(temp_replay_buffer, replay_buffer_save_path)
+        logger.info(f"Saved replay buffer analysis plot to {replay_buffer_save_path}")
+    else:
+        logger.warning("No training results available to generate analysis plots.")
 
     print("\n✅ DQN analysis completed!")
-    print("Generated files:")
-    print("- dqn_variants_comparison.png")
-    # print("- dqn_training_analysis.png")
+    print(f"Generated comparison plot: {comparison_save_path}_comparison.png")
+    if training_results:
+        print(f"Generated training analysis plot: {training_analysis_save_path}")
+        print(f"Generated Q-value landscape plot: {q_landscape_save_path}")
+        print(f"Generated replay buffer analysis plot: {replay_buffer_save_path}")

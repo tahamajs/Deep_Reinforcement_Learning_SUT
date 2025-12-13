@@ -19,6 +19,105 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
+class QNetwork(nn.Module):
+    """
+    A basic Q-network for DQN.
+
+    Attributes:
+        network (nn.Sequential): The neural network layers.
+    """
+
+    def __init__(self, input_dim: int, output_dim: int, hidden_dim: int = 128):
+        """
+        Initializes the QNetwork.
+
+        Args:
+            input_dim (int): Dimension of the input state space.
+            output_dim (int): Dimension of the output action space (number of actions).
+            hidden_dim (int): Dimension of the hidden layers.
+        """
+        super(QNetwork, self).__init__()
+        self.network = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Performs a forward pass through the network.
+
+        Args:
+            x (torch.Tensor): Input tensor representing the state.
+
+        Returns:
+            torch.Tensor: Output tensor representing Q-values for each action.
+        """
+        return self.network(x)
+
+
+class DuelingQNetwork(nn.Module):
+    """
+    Dueling Q-network separating value and advantage streams.
+
+    This architecture decomposes the Q-value into state-value (V) and
+    advantage (A) functions, combining them to estimate Q(s,a).
+    Q(s,a) = V(s) + (A(s,a) - mean_a'(A(s,a')))
+
+    Attributes:
+        feature_layer (nn.Sequential): Layers for extracting features from the state.
+        value_stream (nn.Sequential): Layers for estimating the state-value function.
+        advantage_stream (nn.Sequential): Layers for estimating the advantage function.
+    """
+
+    def __init__(self, input_dim: int, output_dim: int, hidden_dim: int = 128):
+        """
+        Initializes the DuelingQNetwork.
+
+        Args:
+            input_dim (int): Dimension of the input state space.
+            output_dim (int): Dimension of the output action space (number of actions).
+            hidden_dim (int): Dimension of the hidden layers.
+        """
+        super(DuelingQNetwork, self).__init__()
+
+        # Feature extraction
+        self.feature_layer = nn.Sequential(nn.Linear(input_dim, hidden_dim), nn.ReLU())
+
+        # Value stream
+        self.value_stream = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim // 2, 1),
+        )
+
+        # Advantage stream
+        self.advantage_stream = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim // 2, output_dim),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Performs a forward pass through the network.
+
+        Args:
+            x (torch.Tensor): Input tensor representing the state.
+
+        Returns:
+            torch.Tensor: Output tensor representing Q-values for each action.
+        """
+        features = self.feature_layer(x)
+        values = self.value_stream(features)
+        advantages = self.advantage_stream(features)
+
+        # Combine value and advantage: Q = V + (A - mean(A))
+        return values + (advantages - advantages.mean(dim=1, keepdim=True))
+
+
 class DQNArchitectureComparison:
     """Compare different DQN architectures and their properties"""
     

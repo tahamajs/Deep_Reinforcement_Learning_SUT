@@ -31,7 +31,17 @@ from dataclasses import dataclass
 
 @dataclass
 class VisualizationConfig:
-    """Configuration for visualizations."""
+    """
+    Configuration for visualizations.
+
+    Attributes:
+        figure_size (Tuple[int, int]): Size of the figures (width, height) in inches. Defaults to (12, 8).
+        dpi (int): Dots per inch for figure resolution. Defaults to 300.
+        style (str): Matplotlib style to use (e.g., "seaborn-v0_8", "ggplot"). Defaults to "seaborn-v0_8".
+        color_palette (str): Seaborn color palette to use. Defaults to "viridis".
+        animation_fps (int): Frames per second for animations. Defaults to 30.
+        real_time_update (bool): Whether to enable real-time updates for monitors. Defaults to True.
+    """
 
     figure_size: Tuple[int, int] = (12, 8)
     dpi: int = 300
@@ -42,17 +52,37 @@ class VisualizationConfig:
 
 
 class Interactive3DVisualizer:
-    """Interactive 3D visualization for RL environments."""
+    """
+    Interactive 3D visualization for RL environments.
+
+    This class provides tools to create static and animated 3D plots of agent
+    trajectories, environment elements (targets, obstacles), and reward landscapes.
+
+    Args:
+        config (VisualizationConfig): Configuration object for visualization settings.
+    """
 
     def __init__(self, config: VisualizationConfig):
         self.config = config
-        self.fig = None
-        self.ax = None
-        self.animation = None
-        self.data_history = deque(maxlen=1000)
+        self.fig: Optional[plt.Figure] = None
+        self.ax: Optional[Axes3D] = None
+        self.animation: Optional[animation.FuncAnimation] = None
+        self.data_history: deque = deque(maxlen=1000)
 
-    def create_3d_environment_plot(self, environment_data):
-        """Create 3D plot of environment."""
+    def create_3d_environment_plot(self, environment_data: Dict[str, Any]) -> plt.Figure:
+        """
+        Create a static 3D plot of the environment, showing agent trajectory, targets, obstacles, and a reward surface.
+
+        Args:
+            environment_data (Dict[str, Any]): A dictionary containing environment data, expected to have keys:
+                "agent_positions" (List[Tuple[float, float, float]]),
+                "target_positions" (List[Tuple[float, float, float]]),
+                "obstacle_positions" (List[Tuple[float, float, float]]),
+                "reward_history" (List[float]).
+
+        Returns:
+            plt.Figure: The generated Matplotlib Figure object.
+        """
         plt.style.use(self.config.style)
         self.fig = plt.figure(figsize=self.config.figure_size, dpi=self.config.dpi)
         self.ax = self.fig.add_subplot(111, projection="3d")
@@ -93,8 +123,13 @@ class Interactive3DVisualizer:
         plt.tight_layout()
         return self.fig
 
-    def _add_reward_surface(self, reward_history):
-        """Add reward surface to 3D plot."""
+    def _add_reward_surface(self, reward_history: List[float]):
+        """
+        Helper function to add a reward surface to the 3D plot.
+
+        Args:
+            reward_history (List[float]): A list of rewards collected over time.
+        """
         # Create grid for surface
         x = np.linspace(0, 10, 20)
         y = np.linspace(0, 10, 20)
@@ -109,8 +144,21 @@ class Interactive3DVisualizer:
         # Plot surface
         self.ax.plot_surface(X, Y, Z, alpha=0.3, cmap="viridis")
 
-    def create_animated_trajectory(self, trajectory_data, save_path=None):
-        """Create animated trajectory visualization."""
+    def create_animated_trajectory(self, trajectory_data: Dict[str, Any], save_path: Optional[str] = None) -> animation.FuncAnimation:
+        """
+        Create an animated 2D trajectory visualization of an agent's movement.
+
+        Args:
+            trajectory_data (Dict[str, Any]): A dictionary containing trajectory data, expected to have keys:
+                "positions" (List[Tuple[float, float]]),
+                "rewards" (List[float]),
+                "actions" (List[Any]).
+            save_path (Optional[str], optional): If provided, the animation will be saved to this path.
+                                                Defaults to None.
+
+        Returns:
+            animation.FuncAnimation: The generated Matplotlib animation object.
+        """
         plt.style.use(self.config.style)
         self.fig, self.ax = plt.subplots(
             figsize=self.config.figure_size, dpi=self.config.dpi
@@ -175,22 +223,36 @@ class Interactive3DVisualizer:
 
 
 class RealTimePerformanceMonitor:
-    """Real-time performance monitoring dashboard."""
+    """
+    Real-time performance monitoring dashboard.
+
+    This class collects and displays various RL training metrics in real-time,
+    providing insights into agent performance, learning progress, and correlations.
+
+    Args:
+        config (VisualizationConfig): Configuration object for visualization settings.
+    """
 
     def __init__(self, config: VisualizationConfig):
         self.config = config
-        self.metrics_history = {
+        self.metrics_history: Dict[str, deque] = {
             "rewards": deque(maxlen=1000),
             "losses": deque(maxlen=1000),
             "exploration_rate": deque(maxlen=1000),
             "success_rate": deque(maxlen=1000),
             "episode_length": deque(maxlen=1000),
         }
-        self.update_thread = None
-        self.running = False
+        self.update_thread: Optional[threading.Thread] = None
+        self.running: bool = False
 
-    def start_monitoring(self, update_callback=None):
-        """Start real-time monitoring."""
+    def start_monitoring(self, update_callback: Optional[callable] = None):
+        """
+        Start the real-time performance monitoring.
+
+        Args:
+            update_callback (Optional[callable], optional): A callback function to be called periodically
+                                                           with the current metrics history. Defaults to None.
+        """
         self.running = True
         if self.config.real_time_update:
             self.update_thread = threading.Thread(
@@ -199,26 +261,43 @@ class RealTimePerformanceMonitor:
             self.update_thread.start()
 
     def stop_monitoring(self):
-        """Stop real-time monitoring."""
+        """
+        Stop the real-time performance monitoring.
+        """
         self.running = False
         if self.update_thread:
             self.update_thread.join()
 
-    def update_metrics(self, metrics):
-        """Update metrics with new data."""
+    def update_metrics(self, metrics: Dict[str, float]):
+        """
+        Update the stored metrics with new data points.
+
+        Args:
+            metrics (Dict[str, float]): A dictionary of metric names and their current values.
+        """
         for key, value in metrics.items():
             if key in self.metrics_history:
                 self.metrics_history[key].append(value)
 
-    def _update_loop(self, update_callback):
-        """Update loop for real-time monitoring."""
+    def _update_loop(self, update_callback: Optional[callable]):
+        """
+        Internal loop for real-time metric updates. Calls the update_callback if provided.
+
+        Args:
+            update_callback (Optional[callable]): The callback function to be executed periodically.
+        """
         while self.running:
             if update_callback:
                 update_callback(self.metrics_history)
             time.sleep(1.0)  # Update every second
 
-    def create_performance_dashboard(self):
-        """Create performance dashboard."""
+    def create_performance_dashboard(self) -> plt.Figure:
+        """
+        Create a static dashboard visualizing various performance metrics over time.
+
+        Returns:
+            plt.Figure: The generated Matplotlib Figure object.
+        """
         plt.style.use(self.config.style)
         fig, axes = plt.subplots(2, 3, figsize=(15, 10), dpi=self.config.dpi)
 
@@ -276,13 +355,30 @@ class RealTimePerformanceMonitor:
 
 
 class MultiDimensionalAnalyzer:
-    """Multi-dimensional analysis and visualization."""
+    """
+    Multi-dimensional analysis and visualization.
+
+    This class provides tools to visualize complex, multi-dimensional data
+    using plots like parallel coordinates, radar charts, and heatmaps.
+
+    Args:
+        config (VisualizationConfig): Configuration object for visualization settings.
+    """
 
     def __init__(self, config: VisualizationConfig):
         self.config = config
 
-    def create_parallel_coordinates_plot(self, data, labels=None):
-        """Create parallel coordinates plot."""
+    def create_parallel_coordinates_plot(self, data: np.ndarray, labels: Optional[List[str]] = None) -> plt.Figure:
+        """
+        Create a parallel coordinates plot for multi-dimensional data.
+
+        Args:
+            data (np.ndarray): A 2D NumPy array where rows are data points and columns are dimensions.
+            labels (Optional[List[str]], optional): List of labels for each dimension. Defaults to None.
+
+        Returns:
+            plt.Figure: The generated Matplotlib Figure object.
+        """
         plt.style.use(self.config.style)
         fig, ax = plt.subplots(figsize=self.config.figure_size, dpi=self.config.dpi)
 
@@ -305,8 +401,18 @@ class MultiDimensionalAnalyzer:
         plt.tight_layout()
         return fig
 
-    def create_radar_chart(self, metrics, labels, title="Performance Radar Chart"):
-        """Create radar chart for multi-dimensional metrics."""
+    def create_radar_chart(self, metrics: List[float], labels: List[str], title: str = "Performance Radar Chart") -> plt.Figure:
+        """
+        Create a radar chart for visualizing multi-dimensional metrics.
+
+        Args:
+            metrics (List[float]): A list of numerical metric values.
+            labels (List[str]): A list of string labels for each metric.
+            title (str, optional): Title of the radar chart. Defaults to "Performance Radar Chart".
+
+        Returns:
+            plt.Figure: The generated Matplotlib Figure object.
+        """
         plt.style.use(self.config.style)
         fig, ax = plt.subplots(
             figsize=self.config.figure_size,
@@ -339,10 +445,19 @@ class MultiDimensionalAnalyzer:
         plt.tight_layout()
         return fig
 
-    def create_heatmap_analysis(
-        self, data, row_labels, col_labels, title="Heatmap Analysis"
-    ):
-        """Create heatmap analysis."""
+    def create_heatmap_analysis(self, data: np.ndarray, row_labels: List[str], col_labels: List[str], title: str = "Heatmap Analysis") -> plt.Figure:
+        """
+        Create a heatmap for analyzing relationships in 2D data.
+
+        Args:
+            data (np.ndarray): A 2D NumPy array representing the data for the heatmap.
+            row_labels (List[str]): Labels for the rows of the heatmap.
+            col_labels (List[str]): Labels for the columns of the heatmap.
+            title (str, optional): Title of the heatmap. Defaults to "Heatmap Analysis".
+
+        Returns:
+            plt.Figure: The generated Matplotlib Figure object.
+        """
         plt.style.use(self.config.style)
         fig, ax = plt.subplots(figsize=self.config.figure_size, dpi=self.config.dpi)
 
@@ -373,13 +488,33 @@ class MultiDimensionalAnalyzer:
 
 
 class CausalGraphVisualizer:
-    """Causal graph visualization tools."""
+    """
+    Causal graph visualization tools.
+
+    This class provides functionality to visualize causal graphs and analyze
+    the effects of interventions.
+
+    Args:
+        config (VisualizationConfig): Configuration object for visualization settings.
+    """
 
     def __init__(self, config: VisualizationConfig):
         self.config = config
 
-    def create_causal_graph(self, causal_graph, interventions=None):
-        """Create causal graph visualization."""
+    def create_causal_graph(self, causal_graph: Dict[str, List[str]], interventions: Optional[List[Tuple[str, Any]]] = None) -> plt.Figure:
+        """
+        Create a visualization of a causal graph, optionally highlighting intervened nodes.
+
+        Args:
+            causal_graph (Dict[str, List[str]]): A dictionary representing the causal graph.
+                                                 Keys are nodes, values are lists of parent nodes.
+            interventions (Optional[List[Tuple[str, Any]]], optional): A list of tuples, where each tuple contains
+                                                                     the name of an intervened node and its value.
+                                                                     Defaults to None.
+
+        Returns:
+            plt.Figure: The generated Matplotlib Figure object.
+        """
         plt.style.use(self.config.style)
         fig, ax = plt.subplots(figsize=self.config.figure_size, dpi=self.config.dpi)
 
@@ -426,8 +561,17 @@ class CausalGraphVisualizer:
         plt.tight_layout()
         return fig
 
-    def create_intervention_analysis(self, intervention_results):
-        """Create intervention analysis visualization."""
+    def create_intervention_analysis(self, intervention_results: Dict[str, Dict[str, Any]]) -> plt.Figure:
+        """
+        Create a visualization analyzing the results of causal interventions.
+
+        Args:
+            intervention_results (Dict[str, Dict[str, Any]]): A dictionary where keys are intervention names
+                and values are dictionaries containing "outcome", "confidence", and optional "distribution".
+
+        Returns:
+            plt.Figure: The generated Matplotlib Figure object.
+        """
         plt.style.use(self.config.style)
         fig, axes = plt.subplots(2, 2, figsize=(12, 10), dpi=self.config.dpi)
 
@@ -484,13 +628,31 @@ class CausalGraphVisualizer:
 
 
 class QuantumStateVisualizer:
-    """Quantum state visualization tools."""
+    """
+    Quantum state visualization tools.
+
+    This class provides tools to visualize quantum-inspired states, such as
+    Bloch spheres for single qubits and quantum circuit diagrams.
+
+    Args:
+        config (VisualizationConfig): Configuration object for visualization settings.
+    """
 
     def __init__(self, config: VisualizationConfig):
         self.config = config
 
-    def create_bloch_sphere(self, quantum_state):
-        """Create Bloch sphere visualization."""
+    def create_bloch_sphere(self, quantum_state: torch.Tensor) -> go.Figure:
+        """
+        Create a Bloch sphere visualization for a single qubit state.
+
+        Args:
+            quantum_state (torch.Tensor): A tensor representing the quantum state amplitudes.
+                                         Assumes a 2-element tensor for a single qubit, or
+                                         at least 2 elements for the first qubit of a multi-qubit system.
+
+        Returns:
+            go.Figure: The generated Plotly Figure object.
+        """
         fig = go.Figure()
 
         # Convert quantum state to Bloch sphere coordinates
@@ -545,8 +707,18 @@ class QuantumStateVisualizer:
 
         return fig
 
-    def create_quantum_circuit_diagram(self, gates, qubits):
-        """Create quantum circuit diagram."""
+    def create_quantum_circuit_diagram(self, gates: List[Dict[str, Any]], qubits: int) -> plt.Figure:
+        """
+        Create a diagram representing a quantum circuit.
+
+        Args:
+            gates (List[Dict[str, Any]]): A list of dictionaries, where each dictionary describes a gate.
+                                         Expected keys: "type" (str), "qubit" (int), "position" (float).
+            qubits (int): The total number of qubits in the circuit.
+
+        Returns:
+            plt.Figure: The generated Matplotlib Figure object.
+        """
         fig, ax = plt.subplots(figsize=(12, 6), dpi=self.config.dpi)
 
         # Draw qubit lines
@@ -618,13 +790,35 @@ class QuantumStateVisualizer:
 
 
 class FederatedLearningDashboard:
-    """Federated learning dashboard."""
+    """
+    Federated learning dashboard.
+
+    This class provides tools to visualize key metrics and processes in a
+    federated learning setup, including client performance, global loss,
+    communication rounds, and data distribution.
+
+    Args:
+        config (VisualizationConfig): Configuration object for visualization settings.
+    """
 
     def __init__(self, config: VisualizationConfig):
         self.config = config
 
-    def create_federated_dashboard(self, federated_data):
-        """Create federated learning dashboard."""
+    def create_federated_dashboard(self, federated_data: Dict[str, Any]) -> go.Figure:
+        """
+        Create a comprehensive dashboard for federated learning metrics.
+
+        Args:
+            federated_data (Dict[str, Any]): A dictionary containing federated learning data,
+                expected to have keys:
+                "client_performance" (Dict[int, List[float]]),
+                "global_loss" (List[float]),
+                "communication_rounds" (Dict[str, int]),
+                "data_distribution" (Dict[str, int]).
+
+        Returns:
+            go.Figure: The generated Plotly Figure object.
+        """
         fig = make_subplots(
             rows=2,
             cols=2,
@@ -698,8 +892,18 @@ class FederatedLearningDashboard:
 
         return fig
 
-    def create_privacy_analysis(self, privacy_metrics):
-        """Create privacy analysis visualization."""
+    def create_privacy_analysis(self, privacy_metrics: Dict[str, Any]) -> plt.Figure:
+        """
+        Create a visualization for analyzing privacy metrics in federated learning.
+
+        Args:
+            privacy_metrics (Dict[str, Any]): A dictionary containing privacy-related data,
+                expected to have keys like "epsilon_values", "privacy_utility_tradeoff",
+                "noise_analysis", "privacy_leakage".
+
+        Returns:
+            plt.Figure: The generated Matplotlib Figure object.
+        """
         plt.style.use(self.config.style)
         fig, axes = plt.subplots(2, 2, figsize=(12, 10), dpi=self.config.dpi)
 
@@ -744,13 +948,32 @@ class FederatedLearningDashboard:
 
 
 class AdvancedMetricsAnalyzer:
-    """Advanced metrics analysis and visualization."""
+    """
+    Advanced metrics analysis and visualization.
+
+    This class provides a comprehensive dashboard for analyzing and comparing
+    various advanced RL metrics across different methods, including performance,
+    efficiency, robustness, and safety.
+
+    Args:
+        config (VisualizationConfig): Configuration object for visualization settings.
+    """
 
     def __init__(self, config: VisualizationConfig):
         self.config = config
 
-    def create_comprehensive_analysis(self, all_results):
-        """Create comprehensive analysis dashboard."""
+    def create_comprehensive_analysis(self, all_results: Dict[str, Dict[str, Any]]) -> plt.Figure:
+        """
+        Create a comprehensive analysis dashboard comparing various advanced RL methods.
+
+        Args:
+            all_results (Dict[str, Dict[str, Any]]): A nested dictionary where the first level keys are
+                method names, and the second level contains various performance metrics (e.g.,
+                "Sample Efficiency", "Asymptotic Performance", "robustness", "safety").
+
+        Returns:
+            plt.Figure: The generated Matplotlib Figure object.
+        """
         plt.style.use(self.config.style)
         fig = plt.figure(figsize=(20, 15), dpi=self.config.dpi)
 
@@ -796,8 +1019,14 @@ class AdvancedMetricsAnalyzer:
         )
         return fig
 
-    def _plot_performance_heatmap(self, results, ax):
-        """Plot performance heatmap."""
+    def _plot_performance_heatmap(self, results: Dict[str, Dict[str, Any]], ax: plt.Axes):
+        """
+        Helper function to plot a performance heatmap.
+
+        Args:
+            results (Dict[str, Dict[str, Any]]): Dictionary of results for different methods.
+            ax (plt.Axes): Matplotlib axes to plot on.
+        """
         methods = list(results.keys())
         metrics = [
             "Sample Efficiency",
@@ -842,8 +1071,14 @@ class AdvancedMetricsAnalyzer:
 
         ax.set_title("Performance Heatmap")
 
-    def _plot_learning_curves(self, results, ax):
-        """Plot learning curves."""
+    def _plot_learning_curves(self, results: Dict[str, Dict[str, Any]], ax: plt.Axes):
+        """
+        Helper function to plot learning curves comparison.
+
+        Args:
+            results (Dict[str, Dict[str, Any]]): Dictionary of results for different methods.
+            ax (plt.Axes): Matplotlib axes to plot on.
+        """
         for method, data in results.items():
             if "learning_curve" in data:
                 ax.plot(data["learning_curve"], label=method, linewidth=2)
@@ -854,8 +1089,14 @@ class AdvancedMetricsAnalyzer:
         ax.legend()
         ax.grid(True)
 
-    def _plot_sample_efficiency(self, results, ax):
-        """Plot sample efficiency analysis."""
+    def _plot_sample_efficiency(self, results: Dict[str, Dict[str, Any]], ax: plt.Axes):
+        """
+        Helper function to plot sample efficiency analysis.
+
+        Args:
+            results (Dict[str, Dict[str, Any]]): Dictionary of results for different methods.
+            ax (plt.Axes): Matplotlib axes to plot on.
+        """
         methods = []
         efficiency_scores = []
 
@@ -879,8 +1120,14 @@ class AdvancedMetricsAnalyzer:
                 va="bottom",
             )
 
-    def _plot_robustness_analysis(self, results, ax):
-        """Plot robustness analysis."""
+    def _plot_robustness_analysis(self, results: Dict[str, Dict[str, Any]], ax: plt.Axes):
+        """
+        Helper function to plot robustness analysis.
+
+        Args:
+            results (Dict[str, Dict[str, Any]]): Dictionary of results for different methods.
+            ax (plt.Axes): Matplotlib axes to plot on.
+        """
         methods = []
         robustness_scores = []
 
@@ -906,8 +1153,14 @@ class AdvancedMetricsAnalyzer:
                 va="bottom",
             )
 
-    def _plot_safety_analysis(self, results, ax):
-        """Plot safety analysis."""
+    def _plot_safety_analysis(self, results: Dict[str, Dict[str, Any]], ax: plt.Axes):
+        """
+        Helper function to plot safety analysis.
+
+        Args:
+            results (Dict[str, Dict[str, Any]]): Dictionary of results for different methods.
+            ax (plt.Axes): Matplotlib axes to plot on.
+        """
         methods = []
         safety_scores = []
         violation_rates = []
@@ -945,8 +1198,14 @@ class AdvancedMetricsAnalyzer:
         ax.legend(loc="upper left")
         ax2.legend(loc="upper right")
 
-    def _plot_coordination_analysis(self, results, ax):
-        """Plot coordination analysis."""
+    def _plot_coordination_analysis(self, results: Dict[str, Dict[str, Any]], ax: plt.Axes):
+        """
+        Helper function to plot multi-agent coordination analysis.
+
+        Args:
+            results (Dict[str, Dict[str, Any]]): Dictionary of results for different methods.
+            ax (plt.Axes): Matplotlib axes to plot on.
+        """
         methods = []
         coordination_scores = []
 
@@ -970,8 +1229,14 @@ class AdvancedMetricsAnalyzer:
                 va="bottom",
             )
 
-    def _plot_computational_cost(self, results, ax):
-        """Plot computational cost analysis."""
+    def _plot_computational_cost(self, results: Dict[str, Dict[str, Any]], ax: plt.Axes):
+        """
+        Helper function to plot computational cost analysis.
+
+        Args:
+            results (Dict[str, Dict[str, Any]]): Dictionary of results for different methods.
+            ax (plt.Axes): Matplotlib axes to plot on.
+        """
         methods = []
         training_times = []
         memory_usage = []
@@ -1011,8 +1276,14 @@ class AdvancedMetricsAnalyzer:
         ax.legend(loc="upper left")
         ax2.legend(loc="upper right")
 
-    def _plot_overall_ranking(self, results, ax):
-        """Plot overall ranking."""
+    def _plot_overall_ranking(self, results: Dict[str, Dict[str, Any]], ax: plt.Axes):
+        """
+        Helper function to plot the overall performance ranking of different methods.
+
+        Args:
+            results (Dict[str, Dict[str, Any]]): Dictionary of results for different methods.
+            ax (plt.Axes): Matplotlib axes to plot on.
+        """
         # Calculate overall scores
         method_scores = {}
 

@@ -16,330 +16,218 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, TensorDataset
 import random
-from collections import deque, namedtuple
-import matplotlib.pyplot as plt
-import warnings
+from collections import namedtuple
+from typing import Optional
 
-warnings.filterwarnings("ignore")
+from CAs.Solutions.CA05_Advanced_DQN_Methods.utils.replay_buffers import ReplayBuffer
+from CAs.Solutions.CA05_Advanced_DQN_Methods.utils.network_architectures import QNetwork
 
-# Set random seeds for reproducibility
-np.random.seed(42)
-torch.manual_seed(42)
-random.seed(42)
-
-# Device configuration
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-class DQN(nn.Module):
-    """Deep Q-Network for discrete action spaces"""
-
-    def __init__(self, state_size, action_size, hidden_sizes=[512, 256], dropout=0.1):
-        super(DQN, self).__init__()
-        self.state_size = state_size
-        self.action_size = action_size
-
-        # Build network layers
-        layers = []
-        input_size = state_size
-
-        for hidden_size in hidden_sizes:
-            layers.extend(
-                [nn.Linear(input_size, hidden_size), nn.ReLU(), nn.Dropout(dropout)]
-            )
-            input_size = hidden_size
-
-        # Output layer (no activation - raw Q-values)
-        layers.append(nn.Linear(input_size, action_size))
-
-        self.network = nn.Sequential(*layers)
-
-        # Initialize weights
-        self.apply(self._init_weights)
-
-    def _init_weights(self, layer):
-        """Initialize network weights"""
-        if isinstance(layer, nn.Linear):
-            nn.init.xavier_uniform_(layer.weight)
-            layer.bias.data.fill_(0.01)
-
-    def forward(self, state):
-        """Forward pass through network"""
-        return self.network(state)
-
-
-class ConvDQN(nn.Module):
-    """Convolutional DQN for image-based observations"""
-
-    def __init__(self, action_size, input_channels=4):
-        super(ConvDQN, self).__init__()
-        self.action_size = action_size
-
-        # Convolutional layers (as in original DQN paper)
-        self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
-
-        # Calculate size after convolutions
-        # For 84x84 input: (84-8)/4+1 = 20, (20-4)/2+1 = 9, (9-3)/1+1 = 7
-        conv_out_size = 64 * 7 * 7
-
-        # Fully connected layers
-        self.fc1 = nn.Linear(conv_out_size, 512)
-        self.fc2 = nn.Linear(512, action_size)
-
-        # Dropout for regularization
-        self.dropout = nn.Dropout(0.1)
-
-    def forward(self, x):
-        """Forward pass through convolutional network"""
-        # Convolutional layers with ReLU
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-
-        # Flatten for fully connected layers
-        x = x.view(x.size(0), -1)
-
-        # Fully connected layers
-        x = F.relu(self.fc1(x))
-        x = self.dropout(x)
-        x = self.fc2(x)
-
-        return x
-
-
-class ReplayBuffer:
-    """Replay buffer for storing and sampling experiences"""
-
-    def __init__(self, capacity):
-        self.capacity = capacity
-        self.buffer = deque(maxlen=capacity)
-        self.experience = namedtuple(
-            "Experience", ["state", "action", "reward", "next_state", "done"]
-        )
-
-    def push(self, state, action, reward, next_state, done):
-        """Store an experience tuple"""
-        experience = self.experience(state, action, reward, next_state, done)
-        self.buffer.append(experience)
-
-    def sample(self, batch_size):
-        """Sample a batch of experiences"""
-        return random.sample(self.buffer, batch_size)
-
-    def __len__(self):
-        return len(self.buffer)
+Transition = namedtuple(
+    "Transition", ("state", "action", "reward", "next_state", "done")
+)
 
 
 class DQNAgent:
-    """Complete DQN agent with experience replay and target networks"""
+    """
+    Base Deep Q-Network (DQN) Agent.
+
+    This class provides the fundamental structure and common functionalities for DQN
+    agents, including network initialization, epsilon-greedy action selection,
+    and handling of experience replay. Subclasses will implement the specific
+    Q-value update rules.
+
+    Attributes:
+        state_dim (int): Dimension of the observation space.
+        action_dim (int): Dimension of the action space.
+        gamma (float): Discount factor for future rewards.
+        batch_size (int): Size of the batch sampled from the replay buffer.
+        target_update_freq (int): Frequency (in steps) to update the target network.
+        device (str): Device to run computations on ('cpu' or 'cuda').
+        q_network (nn.Module): The online Q-network.
+        target_network (nn.Module): The target Q-network.
+        optimizer (torch.optim.Optimizer): Optimizer for the Q-network.
+        replay_buffer (ReplayBuffer): Experience replay buffer.
+        epsilon (float): Current exploration rate.
+        epsilon_end (float): Minimum exploration rate.
+        epsilon_decay (float): Decay rate for epsilon.
+        steps (int): Total number of training steps.
+    """
 
     def __init__(
         self,
-        state_size,
-        action_size,
-        lr=0.0005,
-        gamma=0.99,
-        epsilon=1.0,
-        epsilon_decay=0.995,
-        epsilon_min=0.01,
-        buffer_size=100000,
-        batch_size=32,
-        target_update_freq=1000,
+        state_dim: int,
+        action_dim: int,
+        lr: float = 1e-3,
+        gamma: float = 0.99,
+        epsilon_start: float = 1.0,
+        epsilon_end: float = 0.01,
+        epsilon_decay: float = 0.995,
+        buffer_size: int = 50000,
+        batch_size: int = 64,
+        target_update_freq: int = 500,
+        device: str = "cpu",
     ):
+        """
+        Initializes the DQNAgent.
 
-        self.state_size = state_size
-        self.action_size = action_size
-        self.lr = lr
-        self.agent_type = "DQN"
+        Args:
+            state_dim (int): Dimension of the observation space.
+            action_dim (int): Dimension of the action space.
+            lr (float): Learning rate for the optimizer.
+            gamma (float): Discount factor for future rewards.
+            epsilon_start (float): Initial exploration rate.
+            epsilon_end (float): Minimum exploration rate.
+            epsilon_decay (float): Decay rate for epsilon per step.
+            buffer_size (int): Maximum capacity of the replay buffer.
+            batch_size (int): Size of the batch sampled from the replay buffer.
+            target_update_freq (int): Frequency (in steps) to update the target network.
+            device (str): Device to run computations on ('cpu' or 'cuda').
+        """
+        self.state_dim = state_dim
+        self.action_dim = action_dim
         self.gamma = gamma
-        self.epsilon = epsilon
-        self.epsilon_decay = epsilon_decay
-        self.epsilon_min = epsilon_min
         self.batch_size = batch_size
         self.target_update_freq = target_update_freq
+        self.device = device
 
         # Networks
-        self.q_network = DQN(state_size, action_size).to(device)
-        self.target_network = DQN(state_size, action_size).to(device)
+        self.q_network = QNetwork(state_dim, action_dim).to(device)
+        self.target_network = QNetwork(state_dim, action_dim).to(device)
+        self.target_network.load_state_dict(self.q_network.state_dict())
+        self.target_network.eval()
+
+        # Optimizer
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
 
-        # Initialize target network with same weights
-        self.target_network.load_state_dict(self.q_network.state_dict())
-
         # Experience replay
-        self.memory = ReplayBuffer(buffer_size)
+        self.replay_buffer = ReplayBuffer(buffer_size)
 
-        # Training counters
-        self.step_count = 0
-        self.episode_count = 0
+        # Exploration
+        self.epsilon = epsilon_start
+        self.epsilon_end = epsilon_end
+        self.epsilon_decay = epsilon_decay
 
-        # Training history
-        self.losses = []
-        self.q_values = []
-        self.episode_rewards = []
+        # Training stats
+        self.steps = 0
 
-    def get_action(self, state, training=True):
-        """Select action using epsilon-greedy policy"""
-        if training and random.random() < self.epsilon:
-            return random.randrange(self.action_size)
+    def select_action(self, state: np.ndarray, epsilon: Optional[float] = None) -> int:
+        """
+        Selects an action using an epsilon-greedy policy.
 
-        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
-        q_values = self.q_network(state_tensor)
-        return q_values.argmax().item()
+        Args:
+            state (np.ndarray): Current state from the environment.
+            epsilon (Optional[float]): The exploration rate to use for this step.
+                                       If None, uses the agent's current epsilon.
 
-    def store_experience(self, state, action, reward, next_state, done):
-        """Store experience in replay buffer"""
-        self.memory.push(state, action, reward, next_state, done)
+        Returns:
+            int: The selected action.
+        """
+        if epsilon is None:
+            epsilon = self.epsilon
 
-    def update_target_network(self):
-        """Copy weights from main network to target network"""
-        self.target_network.load_state_dict(self.q_network.state_dict())
+        if random.random() < epsilon:
+            return random.randrange(self.action_dim)
 
-    def train_step(self):
-        """Perform one training step if enough experiences are available"""
-        if len(self.memory) < self.batch_size:
-            return None
-
-        # Sample batch of experiences
-        experiences = self.memory.sample(self.batch_size)
-        batch = self.experience_to_batch(experiences)
-
-        states, actions, rewards, next_states, dones = batch
-
-        # Current Q values
-        current_q_values = self.q_network(states).gather(1, actions)
-
-        # Target Q values
         with torch.no_grad():
-            next_q_values = self.target_network(next_states).max(1)[0].unsqueeze(1)
-            target_q_values = rewards + (self.gamma * next_q_values * (1 - dones))
+            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+            q_values = self.q_network(state_tensor)
+            return q_values.argmax().item()
 
-        # Compute loss
-        loss = F.mse_loss(current_q_values, target_q_values)
+    def update(self) -> float:
+        """
+        Abstract method to update the Q-network.
+        This method must be implemented by subclasses.
 
-        # Optimize
+        Returns:
+            float: The loss value from the update step.
+        """
+        raise NotImplementedError("Update method must be implemented by subclasses")
+
+    def _common_update_step(
+        self,
+        states: torch.Tensor,
+        actions: torch.Tensor,
+        rewards: torch.Tensor,
+        next_states: torch.Tensor,
+        dones: torch.Tensor,
+        importance_weights: Optional[torch.Tensor] = None
+    ) -> float:
+        """
+        Performs a common Q-network update step.
+        This handles loss calculation, backpropagation, and target network update.
+
+        Args:
+            states (torch.Tensor): Batch of states.
+            actions (torch.Tensor): Batch of actions.
+            rewards (torch.Tensor): Batch of rewards.
+            next_states (torch.Tensor): Batch of next states.
+            dones (torch.Tensor): Batch of done flags.
+            importance_weights (Optional[torch.Tensor]): Importance sampling weights for PER.
+
+        Returns:
+            float: The loss value.
+        """
+        # Current Q values
+        current_q = self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze()
+
+        # Target Q values (Vanilla DQN style, can be overridden for Double DQN)
+        with torch.no_grad():
+            next_q = self.target_network(next_states).max(1)[0]
+            target_q = rewards + (1 - dones) * self.gamma * next_q
+
+        # Loss and update
+        loss = F.mse_loss(current_q, target_q, reduction="none")
+        if importance_weights is not None:
+            loss = (loss * importance_weights).mean()
+        else:
+            loss = loss.mean()
+            
         self.optimizer.zero_grad()
         loss.backward()
-
-        # Gradient clipping for stability
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
-
         self.optimizer.step()
 
-        # Update target network periodically
-        self.step_count += 1
-        if self.step_count % self.target_update_freq == 0:
-            self.update_target_network()
+        # Update target network
+        self.steps += 1
+        if self.steps % self.target_update_freq == 0:
+            self.target_network.load_state_dict(self.q_network.state_dict())
 
         # Decay epsilon
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
-
-        # Store training metrics
-        self.losses.append(loss.item())
-        avg_q_value = current_q_values.mean().item()
-        self.q_values.append(avg_q_value)
+        self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
 
         return loss.item()
 
-    def experience_to_batch(self, experiences):
-        """Convert batch of experiences to tensors"""
-        states = torch.FloatTensor([e.state for e in experiences]).to(device)
-        actions = (
-            torch.LongTensor([e.action for e in experiences]).unsqueeze(1).to(device)
+    def save(self, path: str):
+        """
+        Saves the agent's state to a file.
+
+        Args:
+            path (str): The file path to save the state.
+        """
+        torch.save(
+            {
+                "q_network": self.q_network.state_dict(),
+                "target_network": self.target_network.state_dict(),
+                "optimizer": self.optimizer.state_dict(),
+                "epsilon": self.epsilon,
+                "steps": self.steps,
+            },
+            path,
         )
-        rewards = (
-            torch.FloatTensor([e.reward for e in experiences]).unsqueeze(1).to(device)
-        )
-        next_states = torch.FloatTensor([e.next_state for e in experiences]).to(device)
-        dones = torch.FloatTensor([e.done for e in experiences]).unsqueeze(1).to(device)
 
-        return states, actions, rewards, next_states, dones
+    def load(self, path: str):
+        """
+        Loads the agent's state from a file.
 
-    def train(self, env, num_episodes=1000, print_every=100):
-        """Train the DQN agent"""
-        scores = []
-        losses_per_episode = []
-
-        for episode in range(num_episodes):
-            state = env.reset()
-            if isinstance(state, tuple):
-                state = state[0]  # Handle new gym API
-
-            total_reward = 0
-            episode_losses = []
-
-            while True:
-                # Select and perform action
-                action = self.get_action(state, training=True)
-                next_state, reward, done, truncated, _ = env.step(action)
-
-                # Store experience
-                self.store_experience(
-                    state, action, reward, next_state, done or truncated
-                )
-
-                # Train the network
-                loss = self.train_step()
-                if loss is not None:
-                    episode_losses.append(loss)
-
-                state = next_state
-                total_reward += reward
-
-                if done or truncated:
-                    break
-
-            scores.append(total_reward)
-            losses_per_episode.append(np.mean(episode_losses) if episode_losses else 0)
-            self.episode_rewards.append(total_reward)
-
-            # Print progress
-            if (episode + 1) % print_every == 0:
-                avg_score = np.mean(scores[-print_every:])
-                avg_loss = np.mean(losses_per_episode[-print_every:])
-                print(
-                    f"Episode {episode + 1:4d} | "
-                    f"Avg Score: {avg_score:7.2f} | "
-                    f"Avg Loss: {avg_loss:8.4f} | "
-                    f"Epsilon: {self.epsilon:.3f} | "
-                    f"Buffer Size: {len(self.memory)}"
-                )
-
-        return scores, losses_per_episode
-
-
-def create_test_environment():
-    """Create a test environment for DQN"""
-    try:
-        import gym
-
-        env = gym.make("CartPole-v1")
-        return env, env.observation_space.shape[0], env.action_space.n
-    except:
-        print("CartPole environment not available")
-        return None, 4, 2
-
-
-# Example usage and testing
-if __name__ == "__main__":
-    print("DQN Base Implementation")
-    print("=" * 50)
-
-    # Test network creation
-    dqn = DQN(4, 2)
-    print(f"DQN Network: {dqn}")
-
-    # Test convolutional network
-    conv_dqn = ConvDQN(4)
-    print(f"ConvDQN Network: {conv_dqn}")
-
-    # Test replay buffer
-    buffer = ReplayBuffer(1000)
-    print(f"Replay Buffer created with capacity: {buffer.capacity}")
-
-    print("✓ All components initialized successfully")
+        Args:
+            path (str): The file path to load the state from.
+        """
+        checkpoint = torch.load(path, map_location=self.device)
+        self.q_network.load_state_dict(checkpoint["q_network"])
+        self.target_network.load_state_dict(checkpoint["target_network"])
+        self.optimizer.load_state_dict(checkpoint["optimizer"])
+        self.epsilon = checkpoint["epsilon"]
+        self.steps = checkpoint["steps"]
+        self.q_network.to(self.device)
+        self.target_network.to(self.device)
+        self.target_network.eval()
