@@ -97,3 +97,4 @@ class PrioritizedDQNAgent(DQNAgent):
         self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
 
         return loss.item()
+

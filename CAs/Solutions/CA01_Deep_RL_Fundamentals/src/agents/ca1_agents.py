@@ -327,3 +327,4 @@ class ActorCriticAgent(BaseAgent):
         self.critic_optimizer.load_state_dict(checkpoint["critic_optimizer"])
         self.config = checkpoint["config"]
         logger.info(f"Actor-Critic agent loaded from {path}")
+

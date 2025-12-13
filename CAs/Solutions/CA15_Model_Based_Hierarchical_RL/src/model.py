@@ -177,3 +177,4 @@ class FeudalWorker(nn.Module):
     def forward(self, state: torch.Tensor, subgoal: torch.Tensor) -> torch.Tensor:
         x = torch.cat([state, subgoal], dim=-1)
         return self.net(x)
+

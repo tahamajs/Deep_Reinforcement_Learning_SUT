@@ -93,3 +93,4 @@ def generate_dummy_multimodal_data(
     rewards = np.random.randn(num_samples,).astype(np.float32)
     
     return visual_obs, symbolic_obs, actions, rewards
+

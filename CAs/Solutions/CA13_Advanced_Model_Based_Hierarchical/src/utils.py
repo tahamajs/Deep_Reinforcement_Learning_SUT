@@ -78,3 +78,4 @@ def load_checkpoint(model: torch.nn.Module, optimizer: torch.optim.Optimizer, pa
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     print(f"Checkpoint loaded from {path} at step {checkpoint['step']}")
     return checkpoint['step']
+

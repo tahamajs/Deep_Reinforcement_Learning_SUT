@@ -22,3 +22,4 @@ def c51_loss(logits: torch.Tensor, target_probs: torch.Tensor) -> torch.Tensor:
     loss = -torch.sum(target_probs * log_probs, dim=-1) # Sum over atoms for each action
     loss = torch.sum(loss, dim=-1) # Sum over actions
     return loss.mean() # Mean over batch
+

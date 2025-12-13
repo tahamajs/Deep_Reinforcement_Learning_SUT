@@ -76,3 +76,4 @@ def safety_loss(predicted_cost: torch.Tensor, actual_cost: torch.Tensor, safety_
     constraint_violation = F.relu(predicted_cost - safety_threshold).mean()
 
     return safety_critic_loss, constraint_violation
+

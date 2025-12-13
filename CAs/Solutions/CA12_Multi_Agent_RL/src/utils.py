@@ -146,3 +146,4 @@ def plot_multi_agent_performance(
         plt.savefig(save_path, dpi=300)
     # plt.show()
     return fig
+

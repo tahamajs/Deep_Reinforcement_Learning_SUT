@@ -363,3 +363,4 @@ if __name__ == "__main__":
     eval_results = boltzmann_agent.evaluate_policy()
     print(f"Boltzmann Q-Learning Avg Reward: {eval_results['avg_reward']:.2f}")
     env.visualize_values(boltzmann_agent.get_value_function(), title="Boltzmann Q-Learning Value Function", policy=boltzmann_agent.get_policy(), filepath="visualizations/boltzmann_q_values.png")
+

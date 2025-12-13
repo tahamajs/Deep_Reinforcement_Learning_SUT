@@ -84,3 +84,4 @@ def update_config_with_env_dims(env_name: str):
     RSSM_CONFIG.obs_dim = obs_dim
     RSSM_CONFIG.action_dim = action_dim
     AGENT_CONFIG.action_dim = action_dim
+

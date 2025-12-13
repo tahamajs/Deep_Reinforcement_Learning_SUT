@@ -77,3 +77,4 @@ def logic_regularization_loss(
         violation_penalty = torch.zeros(1, device=predicted_actions.device)
 
     return gamma * violation_penalty
+

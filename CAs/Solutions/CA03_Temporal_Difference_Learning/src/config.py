@@ -51,3 +51,4 @@ class VisualizationConfig:
 # Global Seed for reproducibility
 SEED = 42
 np.random.seed(SEED)
+

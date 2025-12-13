@@ -59,3 +59,4 @@ class VisualizationConfig:
 # Global settings
 RANDOM_SEED = 42
 np.random.seed(RANDOM_SEED)
+

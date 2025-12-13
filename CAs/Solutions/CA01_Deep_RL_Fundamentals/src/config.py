@@ -72,3 +72,4 @@ class ExperimentConfig:
     dqn_config: DQNConfig = DQNConfig()
     reinforce_config: REINFORCEConfig = REINFORCEConfig()
     actor_critic_config: ActorCriticConfig = ActorCriticConfig()
+

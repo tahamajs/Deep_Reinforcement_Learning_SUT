@@ -346,3 +346,4 @@ class DreamerFuNAgent:
         self._prev_hidden = torch.zeros(1, self.world_model_config.hidden_dim, device=self.device)
         self._current_manager_goal = torch.zeros(1, self.manager_config.goal_dim, device=self.device)
         self._worker_steps_taken = 0
+

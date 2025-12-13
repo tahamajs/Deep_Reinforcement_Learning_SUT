@@ -124,3 +124,4 @@ class ContinuousPolicyNetwork(nn.Module):
             (action - mean).pow(2) / var + 2 * log_std + np.log(2 * np.pi)
         )
         return log_prob.sum(dim=-1)
+

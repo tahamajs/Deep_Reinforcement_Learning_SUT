@@ -604,3 +604,4 @@ if __name__ == "__main__":
     print(f"SARSA Average Reward: {sarsa_evaluation['avg_reward']:.2f}")
     print(f"SARSA Success Rate: {sarsa_evaluation['success_rate']*100:.1f}%")
     env.visualize_values(sarsa_agent.get_value_function(), title="SARSA Learned Value Function", policy=sarsa_agent.get_policy(), filepath="visualizations/sarsa_v_values.png")
+

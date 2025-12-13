@@ -119,3 +119,4 @@ class CausalGraphLearner:
                         new_adjacency[j, i] = 0.0 # Acyclic
         self.causal_graph = new_adjacency
         return self.causal_graph
+

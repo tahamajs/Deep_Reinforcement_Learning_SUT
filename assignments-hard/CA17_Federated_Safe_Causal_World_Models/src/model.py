@@ -184,3 +184,4 @@ class SafetyCritic(nn.Module):
         latent_features = torch.cat([z, h], dim=-1)
         predicted_cost = self.cost_critic_mlp(latent_features)
         return predicted_cost
+

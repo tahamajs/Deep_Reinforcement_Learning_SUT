@@ -68,3 +68,4 @@ class EnvironmentConfig:
     grayscale: bool = False
     reward_scale: float = 1.0 # Scale rewards
     time_limit: int = 1000 # Max steps per episode
+

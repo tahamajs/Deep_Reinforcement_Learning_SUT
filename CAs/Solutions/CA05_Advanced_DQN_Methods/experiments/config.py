@@ -82,3 +82,4 @@ def get_dqn_configs(env_name: str) -> Dict[str, AgentConfig]:
             config.epsilon_decay = 0.999
 
     return dqn_configs
+

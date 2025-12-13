@@ -70,3 +70,4 @@ class Config:
         # Create directories if they don't exist
         os.makedirs(self.general.results_dir, exist_ok=True)
         os.makedirs(self.general.pictures_dir, exist_ok=True)
+

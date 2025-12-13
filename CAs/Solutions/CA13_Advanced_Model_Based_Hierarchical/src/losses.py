@@ -159,3 +159,4 @@ def worker_loss(
     }
 
     return total_loss, losses_dict
+

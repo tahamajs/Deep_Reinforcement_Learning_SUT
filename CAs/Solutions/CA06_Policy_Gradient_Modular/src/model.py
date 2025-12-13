@@ -62,3 +62,4 @@ class ContinuousPolicyNetwork(nn.Module):
         action = dist.sample()
         log_prob = dist.log_prob(action).sum(dim=-1, keepdim=True)
         return action, log_prob
+

@@ -77,3 +77,4 @@ PLOT_DPI: int = 300
 FIGURE_SIZE_LARGE: Tuple[int, int] = (20, 12)
 FIGURE_SIZE_MEDIUM: Tuple[int, int] = (16, 12)
 FIGURE_SIZE_SMALL: Tuple[int, int] = (12, 10)
+

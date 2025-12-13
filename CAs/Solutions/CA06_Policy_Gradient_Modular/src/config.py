@@ -46,3 +46,4 @@ class Config:
     # Training
     MAX_TIMESTEPS = 500
     PRINT_INTERVAL = 10
+

@@ -106,3 +106,4 @@ def make_env(env_name: str, config: EnvironmentConfig, seed: int = None) -> gym.
         env.observation_space.seed(seed)
     wrapped_env = DreamerFuNEnvWrapper(env, config)
     return wrapped_env
+

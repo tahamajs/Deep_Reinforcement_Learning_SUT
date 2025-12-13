@@ -330,3 +330,4 @@ class WorkerCritic(nn.Module):
     def forward(self, latent_state: torch.Tensor, goal: torch.Tensor) -> torch.Tensor:
         x = torch.cat([latent_state, goal], dim=-1)
         return self.model(x)
+
