@@ -130,6 +130,6 @@ dmypy.json
 __pycache__
 
 # Dreamer-FuN specific ignores
-logs/
-pictures/
+# logs/
+# pictures/
 src/__pycache__/
