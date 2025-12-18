@@ -158,3 +158,4 @@ if __name__ == "__main__":
     print("- fig_01_convergence.png: Training convergence plot")
     print("- fig_02_trajectory_samples.png: Ensemble trajectory visualization")
     print("- fig_03_cost_landscape.png: Cost function landscape")
+

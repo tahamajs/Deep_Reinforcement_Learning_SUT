@@ -129,7 +129,9 @@ class A3C:
         while not done:
             state_tensor = torch.tensor(
                 np.concatenate(list(frames), axis=0), dtype=torch.float32
-            ).unsqueeze(0)  # shape (1,4,84,84)
+            ).unsqueeze(
+                0
+            )  # shape (1,4,84,84)
             policy, _ = model(state_tensor)
             action = torch.argmax(policy).item()
 
@@ -209,7 +211,9 @@ class A3C:
             for t in range(self.args.n):
                 state_tensor = torch.tensor(
                     np.concatenate(list(frames), axis=0), dtype=torch.float32
-                ).unsqueeze(0)  # shape (1,4,84,84)
+                ).unsqueeze(
+                    0
+                )  # shape (1,4,84,84)
                 states.append(state_tensor)
 
                 policy, value = local_model(state_tensor)
