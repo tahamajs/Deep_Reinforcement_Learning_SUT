@@ -6,7 +6,9 @@ import torch.nn.functional as F
 
 
 class MLP(nn.Module):
-    def __init__(self, in_dim: int, out_dim: int, hidden_dim: int = 128, n_layers: int = 2):
+    def __init__(
+        self, in_dim: int, out_dim: int, hidden_dim: int = 128, n_layers: int = 2
+    ):
         super().__init__()
         layers = []
         last = in_dim
@@ -42,7 +44,9 @@ class MLPPolicy(nn.Module):
         logits = self.forward(obs)
         return torch.distributions.Categorical(logits=logits)
 
-    def get_action(self, obs: torch.Tensor, deterministic: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_action(
+        self, obs: torch.Tensor, deterministic: bool = False
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Sample or select action and return logprob.
 
         Returns:

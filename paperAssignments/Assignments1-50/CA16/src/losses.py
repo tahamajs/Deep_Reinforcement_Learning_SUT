@@ -4,7 +4,12 @@ import torch
 import torch.nn.functional as F
 
 
-def policy_loss(log_probs: torch.Tensor, advantages: torch.Tensor, entropy_coeff: float = 0.0, entropies: Optional[torch.Tensor] = None) -> torch.Tensor:
+def policy_loss(
+    log_probs: torch.Tensor,
+    advantages: torch.Tensor,
+    entropy_coeff: float = 0.0,
+    entropies: Optional[torch.Tensor] = None,
+) -> torch.Tensor:
     """Compute policy gradient loss (to minimize).
 
     Args:
