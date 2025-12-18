@@ -43,6 +43,31 @@ pip install -r requirements.txt
 2) Open `HW8_Notebook.ipynb` and run cells top-down. The first code cell centralizes seeds, device, and hyperparameters. A `run_info.json` file is written to capture commit hash, hardware, and config.
 3) Regret plots are saved under `homeworks/pictures/hw8_regret.png` (directory is auto-created).
 
+Command-line helpers
+--------------------
+
+Two utility scripts are provided for running and visualizing the canonical bandit experiments from the notebook:
+
+- `code/run_bandits.py` — run Bernoulli bandit experiments (ε-greedy, UCB1, Thompson), average results over multiple runs, and save cumulative-regret plot.
+- `bandits/compare_algorithms.py` — wrapper that calls the runner, saves compressed results (`.npz`) under `homeworks/HW8_Exploration_Methods/results/`, and invokes the plotting helper.
+- `visualize/generate_plots.py` — loads the `.npz` produced by the previous script and writes `bandit_avg_rewards.png` and `bandit_cum_regret.png` to an output folder (default `homeworks/HW8_Exploration_Methods/pictures/`).
+
+Quick examples:
+
+```bash
+# from repo root
+cd homeworks/HW8_Exploration_Methods
+python code/run_bandits.py --num_arms 10 --steps 5000 --runs 20 --out pictures/bandit_comparison.png
+
+# or use the comparison wrapper (saves results.npz and runs visualizer)
+python bandits/compare_algorithms.py --num_arms 10 --steps 5000 --runs 50 --out_dir results
+
+# generate plots directly from saved .npz
+python visualize/generate_plots.py --results results/bandit_results.npz --out_dir pictures
+```
+
+These commands are optional; the notebook provides the same functionality but the scripts are useful for batch runs or CI.
+
 ### 📝 Report alignment
 
 - `reports/HW8_Report.tex` uses the IEEEtran class and summarizes the notebook’s Bernoulli bandit baselines (ε-greedy, UCB1, Thompson). Compile with `pdflatex` (twice) after running the notebook to refresh figures and tables.
