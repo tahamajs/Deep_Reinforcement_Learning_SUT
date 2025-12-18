@@ -88,7 +88,7 @@ class Agent:
 
         print("Initializing with LQR...")
         # Get an initial state from LQR (short run)
-        U, LQR_X = self.run_LQR(max_steps=200)
+        U, LQR_X = self.run_LQR(max_steps=2000)
 
         # Ensure U matches tN size
         if U.shape[1] >= tN:
