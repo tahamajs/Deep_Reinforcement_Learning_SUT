@@ -1,0 +1,57 @@
+\documentclass{article}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\title{GET-ROPR: Gradient Eligibility Traces for Recurrent Off-Policy RL}
+\author{Auto-generated for Assignment CA7}
+\begin{document}
+\maketitle
+\begin{abstract}
+We propose GET-ROPR, a practical method to incorporate backward-view TD($\lambda$)
+eligibility traces into recurrent off-policy reinforcement learning. This report
+summarizes the algorithm, theoretical motivation, and experimental plan.
+\end{abstract}
+
+\section{Introduction}
+Partial observability requires memory. Recurrent critics trained off-policy suffer
+from stale hidden states and truncated BPTT. GET-ROPR reintroduces long-horizon
+credit assignment via eligibility traces adapted to recurrent architectures.
+
+\section{Method}
+\subsection{Notation}
+Observations \(o_t\), actions \(a_t\), rewards \(r_t\), done \(d_t\). Critic \(Q_\phi(o_t,h_t,a_t)\).
+\subsection{Backward-View Traces}
+We define
+\[
+e_t = \bar{\rho}_t (\lambda \gamma e_{t-1} + \nabla_\phi Q_\phi(o_t,h_t,a_t)),
+\qquad
+\delta_t = r_t + \gamma (1-d_t) Q_{\bar\phi}(o_{t+1},h_{t+1},a_{t+1}) - Q_\phi(o_t,h_t,a_t).
+\]
+The gradient estimate is \(g=\sum_t \delta_t e_t\).
+
+\subsection{Lambda-Returns (Forward View)}
+An equivalent forward-view loss is
+\[
+\mathcal{L}=\frac{1}{2}\sum_t (G_t^\lambda - Q_t)^2,\quad
+G_t^\lambda = Q_t + \sum_{n=1}^{L-t} (\gamma\lambda)^{n-1}\Big(\prod_{i=1}^{n-1}\bar{\rho}_{t+i}\Big)\delta_{t+n-1}.
+\]
+
+\section{Implementation}
+We provide a PyTorch reference implementation with:
+\begin{itemize}
+  \item RecurrentCritic (GRU-based)
+  \item StochasticActor (RNN Gaussian policy with tanh squashing)
+  \item Lambda-return loss and IS clipping
+  \item Minimal SAC-style actor update with entropy term
+\end{itemize}
+
+\section{Experiments}
+Suggested benchmarks: Flicker Atari, DMControl occlusion. Metrics: returns, trace norms, IS stats, staleness.
+
+\section{Conclusion}
+GET-ROPR offers a practical bridge between classical eligibility traces and modern recurrent off-policy deep RL. The codebase accompanying this report provides reproducible smoke tests and an experimentation blueprint.
+
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}
+

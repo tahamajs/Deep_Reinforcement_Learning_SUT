@@ -95,7 +95,7 @@ class StochasticActor(nn.Module):
         obs_dim: int,
         action_dim: int,
         hidden_size: int = 128,
-        log_std: float = -0.5,
+        init_log_std: float = -0.5,
     ):
         super().__init__()
         self.obs_embed = nn.Sequential(nn.Linear(obs_dim, hidden_size), nn.ReLU())
@@ -105,10 +105,8 @@ class StochasticActor(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_size // 2, action_dim),
         )
-        # fixed log_std scalar for simplicity; could be learned per-dim
-        self.log_std = torch.nn.Parameter(
-            torch.ones(1, action_dim) * log_std, requires_grad=False
-        )
+        # per-dimension learned log_std
+        self.log_std = torch.nn.Parameter(torch.ones(1, action_dim) * init_log_std, requires_grad=True)
 
     def forward(
         self, obs: torch.Tensor, h0: Optional[torch.Tensor] = None
@@ -130,20 +128,21 @@ class StochasticActor(nn.Module):
         returns actions [B, L, action_dim], logp [B, L], h
         """
         mean, h = self.forward(obs, h0)
-        std = self.log_std.exp().to(mean.device)
+        std = self.log_std.exp().to(mean.device)  # [1, action_dim]
         if deterministic:
-            actions = torch.tanh(mean)
+            pre_tanh = mean
         else:
             noise = torch.randn_like(mean)
-            actions = mean + noise * std
-            actions = torch.tanh(actions)
-        # compute log_prob under Gaussian before tanh (approximate)
-        var = std**2
-        logp = -0.5 * (((mean - mean) ** 2) / var).sum(
-            -1
-        )  # zeros; placeholder for simple shape
-        # For a proper log_prob we would invert tanh and compute Gaussian logp; simplified here:
-        logp = -0.5 * (((actions - mean) ** 2) / var).sum(-1)
+            pre_tanh = mean + noise * std
+        actions = torch.tanh(pre_tanh)
+        # log probability with tanh squashing correction:
+        # logp = Normal(pre_tanh; mean, std).log_prob(pre_tanh) - sum(log(1 - tanh^2(pre_tanh)))
+        normal_logp = -0.5 * (((pre_tanh - mean) / std) ** 2 + 2 * torch.log(std) + torch.log(2 * torch.pi))
+        # sum over action dim
+        normal_logp = normal_logp.sum(-1)
+        # correction
+        log_det = torch.log(1.0 - actions.pow(2) + 1e-6).sum(-1)
+        logp = normal_logp - log_det
         return actions, logp, h
 
     def log_prob(
@@ -158,9 +157,12 @@ class StochasticActor(nn.Module):
         """
         mean, _ = self.forward(obs, h0)
         std = self.log_std.exp().to(mean.device)
-        var = std**2
-        # simple Gaussian log-prob (ignores tanh correction)
-        logp = -0.5 * (((actions - mean) ** 2) / var).sum(-1) - 0.5 * actions.shape[
-            -1
-        ] * torch.log(2 * torch.pi * var.sum())
+        # invert tanh to get pre-squash values
+        eps = 1e-6
+        clipped = actions.clamp(-1 + eps, 1 - eps)
+        pre_tanh = 0.5 * (torch.log1p(clipped) - torch.log1p(-clipped))
+        normal_logp = -0.5 * (((pre_tanh - mean) / std) ** 2 + 2 * torch.log(std) + torch.log(2 * torch.pi))
+        normal_logp = normal_logp.sum(-1)
+        log_det = torch.log(1.0 - clipped.pow(2) + 1e-6).sum(-1)
+        logp = normal_logp - log_det
         return logp
