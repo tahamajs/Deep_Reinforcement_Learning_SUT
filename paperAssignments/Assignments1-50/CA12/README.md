@@ -455,6 +455,32 @@ This study provides a fair, unified comparison of UniZero and EfficientZero V2. 
 ---
 
 _This README is the complete blueprint for Assignment 12: UniZero vs EfficientZero V2 comparative study in a unified LightZero codebase. Keep math, code, and experiments aligned._
+ 
+---
+
+Running locally (quickstart)
+---------------------------
+
+1. Create a venv and install requirements:
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+2. Run the minimal demo (CPU):
+
+```bash
+python -m paperAssignments.Assignments1-50.CA12.scripts.train_ra_u_obac --steps 2000
+```
+
+Checkpoints and evaluation returns are written to `outputs/ca12_checkpoints/`.
+
+Notes:
+- The demo is minimal and intended for smoke-testing. For full experiments, use a controlled config and GPU device.
+
+----
+
 Adaptive Policy Optimization via Offline-Boosted Actor-Critic: A Comprehensive Analysis of Theory, Implementation, and Retrieval-Augmented Extensions
 
 1. Introduction: The Convergence of Online and Offline Paradigms
