@@ -18,7 +18,9 @@ def one_step_training_and_checkpoint(tmp_path):
     # create dummy images matching downsample assumptions: H,W divisible by 4
     B, C, H, W = 2, 3, 32, 32
     images = torch.randn(B, C, H, W)
-    actions = torch.randn(B, (H // 4) * (W // 4), cfg.d_model)  # not used but shape-compatible
+    actions = torch.randn(
+        B, (H // 4) * (W // 4), cfg.d_model
+    )  # not used but shape-compatible
     pred_obs, pred_reward, recon, indices = model(images, actions=None)
     # compute simple loss and step
     loss = torch.nn.functional.mse_loss(recon, torch.randn_like(recon))
@@ -28,7 +30,9 @@ def one_step_training_and_checkpoint(tmp_path):
 
     # save checkpoint
     ckpt_path = os.path.join(tmp_path, "ckpt.pt")
-    torch.save({"model_state": model.state_dict(), "opt_state": opt.state_dict()}, ckpt_path)
+    torch.save(
+        {"model_state": model.state_dict(), "opt_state": opt.state_dict()}, ckpt_path
+    )
 
     # load into new model
     img_vq2 = ImageVQVAE(codebook_size=16, d_model=cfg.d_model, in_ch=3)
@@ -43,4 +47,3 @@ def one_step_training_and_checkpoint(tmp_path):
 
 def test_one_step_training_and_checkpoint(tmp_path):
     assert one_step_training_and_checkpoint(str(tmp_path))
-

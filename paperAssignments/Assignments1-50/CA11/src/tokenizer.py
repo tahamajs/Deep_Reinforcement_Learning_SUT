@@ -66,7 +66,9 @@ class ImageVQVAE(nn.Module):
     grid is flattened to a sequence of length L = H'*W' with embeddings size d_model.
     """
 
-    def __init__(self, codebook_size: int, d_model: int, in_ch: int = 3, hidden: int = 128):
+    def __init__(
+        self, codebook_size: int, d_model: int, in_ch: int = 3, hidden: int = 128
+    ):
         super().__init__()
         self.codebook_size = codebook_size
         self.d_model = d_model
@@ -80,9 +82,13 @@ class ImageVQVAE(nn.Module):
         )
         # decoder: (B, d_model, H', W') -> (B, C, H, W)
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(d_model, hidden, kernel_size=4, stride=2, padding=1),  # x2
+            nn.ConvTranspose2d(
+                d_model, hidden, kernel_size=4, stride=2, padding=1
+            ),  # x2
             nn.ReLU(),
-            nn.ConvTranspose2d(hidden, hidden, kernel_size=4, stride=2, padding=1),  # x2
+            nn.ConvTranspose2d(
+                hidden, hidden, kernel_size=4, stride=2, padding=1
+            ),  # x2
             nn.ReLU(),
             nn.Conv2d(hidden, in_ch, kernel_size=3, padding=1),
         )
@@ -98,7 +104,11 @@ class ImageVQVAE(nn.Module):
     def quantize(self, seq: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         B, L, D = seq.shape
         flat = seq.reshape(-1, D)
-        dists = flat.pow(2).sum(1, keepdim=True) - 2 * flat @ self.codebook.t() + self.codebook.pow(2).sum(1).unsqueeze(0)
+        dists = (
+            flat.pow(2).sum(1, keepdim=True)
+            - 2 * flat @ self.codebook.t()
+            + self.codebook.pow(2).sum(1).unsqueeze(0)
+        )
         indices = torch.argmin(dists, dim=1)
         codes = self.codebook[indices].view(B, L, D)
         quantized = codes + (seq - seq.detach())
@@ -111,7 +121,9 @@ class ImageVQVAE(nn.Module):
         recon = self.decoder(x)  # (B, C, H, W)
         return recon
 
-    def forward(self, images: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(
+        self, images: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Returns recon_images, quantized_seq (B,L,D), indices (B,L)
         """

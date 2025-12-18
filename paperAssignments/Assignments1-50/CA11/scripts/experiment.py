@@ -14,6 +14,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 try:
     import wandb
+
     _HAS_WANDB = True
 except Exception:
     _HAS_WANDB = False
@@ -51,7 +52,9 @@ def run(cfg, steps: int, save_dir: str):
     dl = DataLoader(ds, batch_size=cfg.batch_size, shuffle=True)
     # Use image tokenizer + image-aware wrapper as optional example
     img_vq = ImageVQVAE(codebook_size=256, d_model=cfg.d_model, in_ch=3)
-    backbone = TWMSSDModel(d_model=cfg.d_model, n_heads=cfg.n_heads, n_layers=cfg.n_layers)
+    backbone = TWMSSDModel(
+        d_model=cfg.d_model, n_heads=cfg.n_heads, n_layers=cfg.n_layers
+    )
     model = TWMSSDImageModel(img_vq, backbone).to(device)
     opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
     tb_writer = SummaryWriter(log_dir=os.path.join(save_dir, "tb"))
@@ -59,7 +62,6 @@ def run(cfg, steps: int, save_dir: str):
     if _HAS_WANDB:
         wandb.init(project="ca11_twm_ssd", config=vars(cfg))
         wandb.watch(model, log="all", log_freq=10)
-
 
     it = 0
     for epoch in range(1000000):
@@ -103,4 +105,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
