@@ -6,7 +6,9 @@ def test_world_model_forward():
     B = 2
     obs_dim = 24
     act_dim = 6
-    wm = WorldModel(obs_dim=obs_dim, act_dim=act_dim, deter_dim=64, stoch_dim=32, morph_dim=16)
+    wm = WorldModel(
+        obs_dim=obs_dim, act_dim=act_dim, deter_dim=64, stoch_dim=32, morph_dim=16
+    )
     device = torch.device("cpu")
     h, z = wm.init_state(B, device)
     a = torch.randn(B, act_dim)

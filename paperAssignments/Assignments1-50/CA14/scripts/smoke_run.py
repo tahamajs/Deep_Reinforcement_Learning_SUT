@@ -1,4 +1,5 @@
 """Minimal smoke run to instantiate models and run a forward pass."""
+
 import torch
 from mamba_core.morph_encoder import MorphEncoder
 from mamba_core.world_model import WorldModel
@@ -10,7 +11,13 @@ def smoke():
     B, T = 2, 8
     obs_dim, act_dim = 24, 6
     morph_dim = 16
-    wm = WorldModel(obs_dim=obs_dim, act_dim=act_dim, deter_dim=64, stoch_dim=32, morph_dim=morph_dim)
+    wm = WorldModel(
+        obs_dim=obs_dim,
+        act_dim=act_dim,
+        deter_dim=64,
+        stoch_dim=32,
+        morph_dim=morph_dim,
+    )
     morph = MorphEncoder(obs_dim=obs_dim, act_dim=act_dim, latent_dim=morph_dim)
     actor = Actor(latent_dim=32, morph_dim=morph_dim, act_dim=act_dim)
     value = ValueNet(latent_dim=32, morph_dim=morph_dim)
