@@ -1,5 +1,14 @@
 import torch
-from paperAssignments.Assignments1_50.CA19.src.model import ActorCriticEnsemble
+import importlib.util
+from pathlib import Path
+
+base = Path(__file__).resolve().parent.parent / "src"
+
+spec = importlib.util.spec_from_file_location('ca19.model', str(base / 'model.py'))
+mod = importlib.util.module_from_spec(spec)
+assert spec and spec.loader
+spec.loader.exec_module(mod)
+ActorCriticEnsemble = mod.ActorCriticEnsemble
 
 
 def test_forward_shapes():

@@ -1,5 +1,16 @@
 import torch
-from paperAssignments.Assignments1_50.CA19.src.losses import actor_loss, critic_loss, value_ensemble_variance
+import importlib.util
+from pathlib import Path
+
+base = Path(__file__).resolve().parent.parent / "src"
+
+spec = importlib.util.spec_from_file_location('ca19.losses', str(base / 'losses.py'))
+mod = importlib.util.module_from_spec(spec)
+assert spec and spec.loader
+spec.loader.exec_module(mod)
+value_ensemble_variance = mod.value_ensemble_variance
+actor_loss = mod.actor_loss
+critic_loss = mod.critic_loss
 
 
 def test_losses_finite():
