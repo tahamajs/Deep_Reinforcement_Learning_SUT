@@ -42,7 +42,7 @@ class Config:
     num_envs: int = 1
     use_vector_env: bool = False
     use_procgen: bool = False
-    use_wandb: bool = False
+    use_wandb: bool = True
     tb_logdir: str = "runs/ca8"
 
     def as_dict(self) -> Dict[str, Any]:
