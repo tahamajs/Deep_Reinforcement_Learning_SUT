@@ -5,6 +5,7 @@ from datetime import datetime
 from collections import deque
 import torch.multiprocessing as mp
 import multiprocessing as _mp
+
 # Use fork start method on macOS/Linux to avoid pickling non-picklable objects
 # (e.g., SummaryWriter file handles) when spawning worker processes.
 try:
@@ -176,10 +177,13 @@ class A3C:
         torch.manual_seed(self.args.random_seed + worker_id)
         np.random.seed(self.args.random_seed + worker_id)
 
-        env = gym.make(args.env_name)
-        local_model = ActorCritic(4, env.action_space.n)
+        # Use a short-lived environment to infer action space for the local model.
+        temp_env = gym.make(self.env_name)
+        local_model = ActorCritic(4, temp_env.action_space.n)
         local_model.load_state_dict(global_model.state_dict())
+        temp_env.close()
 
+        # Each worker should create its own environment for interaction.
         env = gym.make(self.env_name)
         episode_count = 0
 
