@@ -18,7 +18,13 @@ def make_models(cfg: Config) -> Dict[str, Any]:
     return {"policy": policy, "value": value}
 
 
-def train_one_epoch(models: Dict[str, Any], optimizers: Dict[str, Any], dataloader, lagrange: LagrangeMultiplier, cfg: Config) -> Dict[str, float]:
+def train_one_epoch(
+    models: Dict[str, Any],
+    optimizers: Dict[str, Any],
+    dataloader,
+    lagrange: LagrangeMultiplier,
+    cfg: Config,
+) -> Dict[str, float]:
     policy = models["policy"]
     value = models["value"]
     policy_opt = optimizers["policy"]
@@ -81,12 +87,16 @@ def train(cfg: Config | None = None) -> Dict[str, Any]:
     if cfg is None:
         # try to load debug config if present
         try:
-            cfg = Config.from_yaml(os.path.join(os.path.dirname(__file__), "..", "configs", "debug.yaml"))
+            cfg = Config.from_yaml(
+                os.path.join(os.path.dirname(__file__), "..", "configs", "debug.yaml")
+            )
         except Exception:
             cfg = Config()
 
     set_seed(cfg.seed)
-    dataloader = make_dataloader(batch_size=cfg.batch_size, obs_dim=cfg.obs_dim, action_dim=cfg.action_dim)
+    dataloader = make_dataloader(
+        batch_size=cfg.batch_size, obs_dim=cfg.obs_dim, action_dim=cfg.action_dim
+    )
     models = make_models(cfg)
     policy_opt = optim.Adam(models["policy"].parameters(), lr=cfg.lr)
     value_opt = optim.Adam(models["value"].parameters(), lr=cfg.lr)
@@ -94,13 +104,21 @@ def train(cfg: Config | None = None) -> Dict[str, Any]:
 
     metrics = {"history": []}
     for epoch in range(cfg.epochs):
-        m = train_one_epoch(models, {"policy": policy_opt, "value": value_opt}, dataloader, lagrange, cfg)
+        m = train_one_epoch(
+            models,
+            {"policy": policy_opt, "value": value_opt},
+            dataloader,
+            lagrange,
+            cfg,
+        )
         metrics["history"].append(m)
 
     # save a tiny checkpoint
     out = os.path.join(os.path.dirname(__file__), "..", "outputs", "ca20_checkpoint.pt")
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    save_checkpoint(out, models["policy"], policy_opt, extra={"lagrange": lagrange.state_dict()})
+    save_checkpoint(
+        out, models["policy"], policy_opt, extra={"lagrange": lagrange.state_dict()}
+    )
     metrics["checkpoint"] = out
     return metrics
 
@@ -108,10 +126,11 @@ def train(cfg: Config | None = None) -> Dict[str, Any]:
 if __name__ == "__main__":
     cfg = None
     try:
-        cfg = Config.from_yaml(os.path.join(os.path.dirname(__file__), "..", "configs", "debug.yaml"))
+        cfg = Config.from_yaml(
+            os.path.join(os.path.dirname(__file__), "..", "configs", "debug.yaml")
+        )
     except Exception:
         cfg = Config()
     print("Starting debug training with config:", cfg)
     res = train(cfg)
     print("Training finished. Summary:", res)
-
