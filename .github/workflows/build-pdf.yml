@@ -1,0 +1,30 @@
+name: Build PDF (LaTeX)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'paperAssignments/Assignments1-50/CA4/**'
+
+jobs:
+  build-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-pictures texlive-bibtex-extra
+      - name: Build PDF
+        working-directory: paperAssignments/Assignments1-50/CA4
+        run: |
+          pdflatex -interaction=nonstopmode report_neurips.tex
+          bibtex report_neurips || true
+          pdflatex -interaction=nonstopmode report_neurips.tex
+          pdflatex -interaction=nonstopmode report_neurips.tex
+      - name: Upload PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dist-SCAS-paper
+          path: paperAssignments/Assignments1-50/CA4/report_neurips.pdf
+

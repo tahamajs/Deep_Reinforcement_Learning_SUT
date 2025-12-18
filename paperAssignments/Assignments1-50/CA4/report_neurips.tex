@@ -7,6 +7,7 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{caption}
+\usepackage{tikz}
 \usepackage{hyperref}
 \usepackage{geometry}
 \geometry{margin=1in}
@@ -113,6 +114,27 @@ AntMaze-umaze & 12.3$\pm$6.4 & 18.9$\pm$5.3 & \textbf{45.7}$\pm$7.2 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+% Placeholder figures (will be replaced with real plots)
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+  \draw[fill=gray!10] (0,0) rectangle (6,3);
+  \node at (3,1.5) {Quantile fan plot (placeholder)};
+\end{tikzpicture}
+\caption{Quantile fan across training (placeholder).}
+\label{fig:quantile_fan}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+  \draw[fill=gray!10] (0,0) rectangle (6,3);
+  \node at (3,1.5) {AntMaze overlay (placeholder)};
+\end{tikzpicture}
+\caption{AntMaze dataset vs policy rollouts (placeholder).}
+\label{fig:antmaze_overlay}
+\end{figure}
 
 \section{Discussion}
 Dist-SCAS leverages the complementary strengths of distributional pessimism and geometry-aware constraints. The adaptive $\lambda$ couples statistical uncertainty to geometric correction, enforcing stronger state-regularization where return dispersion is high.
