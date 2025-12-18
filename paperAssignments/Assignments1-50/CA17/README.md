@@ -28,3 +28,17 @@ Ask to scaffold code or a notebook template for CA17 and I will add files consis
 ## Notes
 
 Adhere to the repository's CLAUDE.md conventions: import-safe modules, type hints, and deterministic seeding.
+
+## Scaffold provided by assistant
+
+I added a minimal, import-safe implementation to help get started:
+
+- `src/config.py` — dataclass `Config` with default hyperparameters.
+- `src/model.py` — `MLPPolicy` (PyTorch) suitable for discrete action spaces.
+- `src/losses.py` — simple policy gradient and entropy loss helpers.
+- `src/data.py` — episode collection helper (Gym/Gymnasium compatible).
+- `src/utils.py` — deterministic seeding and checkpoint helpers.
+- `src/train.py` — example training loop guarded by `if __name__ == "__main__":`.
+- `tests/test_imports.py` — smoke test for import and forward pass.
+
+Run `python -m pytest paperAssignments/Assignments1-50/CA17/tests` to run the smoke test (ensure the repo root is on PYTHONPATH).

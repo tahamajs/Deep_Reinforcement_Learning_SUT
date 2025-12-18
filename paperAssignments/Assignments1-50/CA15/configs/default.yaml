@@ -1,0 +1,9 @@
+seed: 0
+input_dim: 8
+hidden_dim: 64
+output_dim: 4
+lr: 0.001
+device: cpu
+batch_size: 32
+epochs: 5
+
