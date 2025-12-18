@@ -1,0 +1,6 @@
+numpy
+pyyaml
+matplotlib
+pytest
+# PyTorch is required; install a matching wheel from https://pytorch.org/ for your platform
+# e.g. pip install torch torchvision

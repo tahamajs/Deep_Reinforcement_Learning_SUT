@@ -1,0 +1,11 @@
+train:
+  seed: 123
+  epochs: 5
+  batch_size: 128
+  lr: 0.001
+  device: auto
+  input_dim: 16
+  hidden_dims: [64, 32]
+  output_dim: 1
+  task: regression
+  save_dir: outputs

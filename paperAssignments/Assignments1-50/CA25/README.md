@@ -60,6 +60,43 @@ Appendix: Tasks and padding
 19. Task 19
 20. Task 20
 
+---
+
+## Quickstart ✅
+
+Run the example training script (from repository root):
+
+```bash
+python -m paperAssignments.Assignments1-50.CA25.train --config configs/example.yaml
+```
+
+This will:
+- Load configuration from `configs/example.yaml`.
+- Train a small MLP on synthetic data for a few epochs.
+- Save artifacts in `outputs/` (model checkpoint, `used_config.yaml`, and `pictures/loss.png`).
+
+Run unit tests with:
+
+```bash
+python -m pytest tests -q
+```
+
+**Installation** ⚙️
+
+Create a virtual environment and install requirements (PyTorch must be installed separately following your platform instructions):
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+# install torch separately; example:
+# python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+```
+
+Tips:
+- Edit `configs/example.yaml` to change model size, task type (`regression` or `classification`), and training hyperparameters.
+- The code follows import-safe conventions (no heavy work at import time).
+
 
 
 
