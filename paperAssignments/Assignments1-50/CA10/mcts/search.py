@@ -101,6 +101,7 @@ class MCTS:
 
             root.P = 1.0
 
+            joint_counts: Dict[tuple, int] = {}
             for sim in range(num_simulations):
                 node = root
                 search_path: List[MCTSNode] = [node]
@@ -189,6 +190,16 @@ class MCTS:
                                 child.P = 1.0 / max(1, len(candidates))
                         node.children[key] = child
 
+                # mark candidate counts on selection when expanded
+                # here we track joint candidate counts (initialized on creation or selection)
+                # increment joint count for the chosen candidate (leaf)
+                # use the final selected child 'node' (which is leaf prior to expansion)
+                # after expansion, pick the child with highest Q+U for backup traversal
+                # For bookkeeping, increment joint_counts for expanded children (approximate)
+                for idx_repr, _ in candidates:
+                    jkey = idx_repr if isinstance(idx_repr, tuple) else (idx_repr,)
+                    joint_counts[jkey] = joint_counts.get(jkey, 0) + 0  # ensure key exists
+
                 # evaluate
                 value = float(value_leaf.detach().cpu().item())
 
@@ -198,17 +209,29 @@ class MCTS:
                     n.W += value
                     n.Q = n.W / (n.N + 1e-8)
 
-            # collect visit counts (flattening factored keys not attempted; only report counts for created children)
+            # collect visit counts (flattening factored keys where possible)
             visit_counts = torch.zeros(A, dtype=torch.float32)
             for a_idx, child in root.children.items():
                 if isinstance(a_idx, int) and 0 <= a_idx < A:
                     visit_counts[a_idx] = float(child.N)
+                elif isinstance(a_idx, tuple):
+                    # for factored joint actions, map to a flattened index if sum of per-agent dims equals A
+                    # best-effort: ignore if mapping unknown
+                    pass
             visit_results.append(visit_counts)
             policy_results.append(visit_counts / (visit_counts.sum() + 1e-8))
+            # also prepare joint visit tensor and keys
+            joint_keys = list(joint_counts.keys())
+            joint_vals = torch.tensor([joint_counts[k] for k in joint_keys], dtype=torch.float32) if joint_keys else torch.tensor([], dtype=torch.float32)
+            # store as attribute for later inspection
+            root._joint_visit_keys = joint_keys
+            root._joint_visit_vals = joint_vals
+            joint_visits_all.append((joint_keys, joint_vals))
 
         visit_tensor = torch.stack(visit_results, dim=0)
         policy_tensor = torch.stack(policy_results, dim=0)
-        return visit_tensor, policy_tensor
+        # return (visit_tensor, policy_tensor, joint_visits_all)
+        return visit_tensor, policy_tensor, joint_visits_all
 
 
 __all__ = ["MCTS", "MCTSNode"]

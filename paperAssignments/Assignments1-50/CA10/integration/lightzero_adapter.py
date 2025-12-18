@@ -10,10 +10,14 @@ import torch
 
 from ..policy.efficientzero_v2_ma import EfficientZeroV2Policy
 from ..mcts.search import MCTS
+from .lightzero_base import BaseMuZeroPolicy
 
 
-class LightZeroAdapter:
-    """Adapter that exposes methods similar to LightZero's policy interface."""
+class LightZeroAdapter(BaseMuZeroPolicy):
+    """Adapter that exposes methods similar to LightZero's policy interface.
+
+    Inherits from BaseMuZeroPolicy so it can be used as a drop-in in local LightZero-like loops.
+    """
 
     def __init__(self, cfg: Dict[str, Any], device: str = "cpu"):
         mcfg = cfg.get("model", {})

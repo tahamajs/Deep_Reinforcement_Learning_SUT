@@ -46,9 +46,21 @@ def test_mcts_basic():
     obs = torch.randn(1, obs_dim)
     h0 = net.initial_latent(obs)
     mcts = MCTS(net, c_puct=1.0)
-    visits, policy = mcts.run(h0, num_simulations=20, topk=4)
+    out = mcts.run(h0, num_simulations=20, topk=4)
+    # support both older (visits, policy) and newer (visits, policy, joint) returns
+    if isinstance(out, tuple) and len(out) == 2:
+        visits, policy = out
+        joint = None
+    else:
+        visits, policy, joint = out
     # visits should be non-negative and sum <= sims
     assert visits.sum().item() <= 20 + 1e-6
     assert torch.all(visits >= 0)
     assert abs(float(policy.sum().item()) - 1.0) < 1e-6
+    # if joint provided, it should be a list of (keys, vals)
+    if joint is not None:
+        assert isinstance(joint, list)
+        for keys, vals in joint:
+            assert hasattr(keys, "__iter__")
+            assert isinstance(vals, torch.Tensor)
 
