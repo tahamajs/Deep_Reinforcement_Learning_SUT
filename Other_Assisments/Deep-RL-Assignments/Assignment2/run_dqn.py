@@ -68,10 +68,25 @@ def parse_arguments():
     return parser.parse_args()
 def main():
     args = parse_arguments()
-    gpu_ops = tf.GPUOptions(allow_growth=True)
-    config = tf.ConfigProto(gpu_options=gpu_ops)
-    sess = tf.Session(config=config)
-    keras.backend.tensorflow_backend.set_session(sess)
+    # Configure GPU memory growth for TF2; fallback to TF1 compatibility API if needed.
+    try:
+        gpus = tf.config.list_physical_devices("GPU")
+        if gpus:
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+    except Exception:
+        try:
+            # TF1-style fallback using compat.v1
+            gpu_ops = tf.compat.v1.GPUOptions(allow_growth=True)
+            config = tf.compat.v1.ConfigProto(gpu_options=gpu_ops)
+            sess = tf.compat.v1.Session(config=config)
+            # Try to set session for standalone keras (if present)
+            try:
+                keras.backend.set_session(sess)
+            except Exception:
+                pass
+        except Exception as e:
+            print("Warning: could not configure GPU memory growth:", e)
     q_agent = DQN_Agent(args)
     if args.render:
         test_video(q_agent, args.env, 0)
