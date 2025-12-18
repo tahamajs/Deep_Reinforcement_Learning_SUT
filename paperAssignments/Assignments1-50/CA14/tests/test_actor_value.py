@@ -17,3 +17,4 @@ def test_actor_value_shapes():
     assert std.shape == (B, act_dim)
     v = value(z, z_m)
     assert v.shape == (B,)
+

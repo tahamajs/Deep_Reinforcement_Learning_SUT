@@ -37,3 +37,4 @@ def should_trigger(
         float(entropy) > float(cfg.trigger_ent_high)
     )
     return bool(cond_td or cond_unc or cond_ent)
+

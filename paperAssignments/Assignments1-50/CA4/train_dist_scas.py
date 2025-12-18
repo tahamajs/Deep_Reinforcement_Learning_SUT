@@ -100,3 +100,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     cfg = Config(device=args.device)
     train(cfg)
+

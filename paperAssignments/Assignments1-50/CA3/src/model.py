@@ -80,3 +80,4 @@ class MLPPolicy(nn.Module):
         obs_t = torch.as_tensor(obs_np, dtype=torch.float32)
         action_t, logp_t = self.get_action(obs_t, deterministic=deterministic)
         return _np.asarray(action_t.cpu().numpy()), _np.asarray(logp_t.cpu().numpy())
+

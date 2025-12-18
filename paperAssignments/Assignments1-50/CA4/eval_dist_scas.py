@@ -18,3 +18,4 @@ def evaluate(policy: Callable, env, episodes: int = 5) -> Dict[str, float]:
             ep_reward += float(r)
         scores.append(ep_reward)
     return {"score": float(np.mean(scores)), "score_std": float(np.std(scores))}
+

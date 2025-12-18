@@ -70,3 +70,4 @@ class CrossHQLoss(nn.Module):
         loss_q2 = F.mse_loss(q2_curr, target_q)
         loss = loss_q1 + loss_q2
         return loss
+

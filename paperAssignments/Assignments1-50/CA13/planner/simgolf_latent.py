@@ -117,3 +117,4 @@ def simulate_branches(
         branches.append(Branch(ret, traj))
     branches.sort(key=lambda br: br.ret, reverse=True)
     return branches
+

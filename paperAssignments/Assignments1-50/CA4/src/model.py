@@ -92,3 +92,4 @@ class SCASReg(nn.Module):
     ) -> torch.Tensor:
         pred = self.forward(s, a)
         return F.mse_loss(pred, s_next)
+

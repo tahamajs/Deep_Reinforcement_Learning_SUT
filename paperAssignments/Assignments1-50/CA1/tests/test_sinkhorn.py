@@ -28,3 +28,4 @@ def test_identity_and_symmetry():
 if __name__ == "__main__":
     test_identity_and_symmetry()
     print("tests passed")
+

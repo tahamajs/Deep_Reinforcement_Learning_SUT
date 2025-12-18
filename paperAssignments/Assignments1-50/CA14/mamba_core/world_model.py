@@ -171,3 +171,4 @@ class WorldModel(nn.Module):
         self, h: torch.Tensor, z: torch.Tensor, z_m: torch.Tensor
     ) -> torch.Tensor:
         return self.rssm.predict_discount(h, z, z_m)
+

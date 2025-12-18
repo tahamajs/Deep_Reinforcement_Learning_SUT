@@ -41,3 +41,4 @@ def demo(config_path: str = None):
 
 if __name__ == "__main__":
     demo()
+

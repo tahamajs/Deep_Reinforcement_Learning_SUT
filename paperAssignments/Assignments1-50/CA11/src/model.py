@@ -156,3 +156,4 @@ class TWMSSDModel(nn.Module):
         for layer in self.layers:
             x = layer(x)
         return self.pred_obs(x), self.pred_reward(x)
+

@@ -62,3 +62,4 @@ def test_single_update_shapes_and_gradients():
 if __name__ == "__main__":
     test_single_update_shapes_and_gradients()
     print("train step test passed")
+

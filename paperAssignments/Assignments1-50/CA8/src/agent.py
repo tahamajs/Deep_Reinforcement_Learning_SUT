@@ -144,3 +144,4 @@ class MaxSinkAgent:
         soft_update(self.target_critic, self.critic, self.tau)
 
         return float(loss.item()), float(loss_per_batch.mean().item())
+

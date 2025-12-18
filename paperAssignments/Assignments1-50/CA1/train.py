@@ -421,3 +421,4 @@ def parse_args() -> Config:
 if __name__ == "__main__":
     cfg = parse_args()
     train(cfg)
+

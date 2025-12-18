@@ -23,3 +23,4 @@ def test_world_model_forward():
     assert r.shape == (B,)
     d = wm.predict_discount(h_new, z_new, z_m)
     assert d.shape == (B,)
+

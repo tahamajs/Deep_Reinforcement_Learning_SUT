@@ -95,3 +95,4 @@ if __name__ == "__main__":
     x = torch.randn(2, 4, 84, 84)
     out = net(x)
     print(out.shape)  # (B, A, N, D)
+

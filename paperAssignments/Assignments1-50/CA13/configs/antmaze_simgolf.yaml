@@ -37,3 +37,4 @@ training:
   total_steps: 2000000
   batch_size: 64
   lr: 3e-4
+

@@ -71,3 +71,4 @@ def test_off_policy_correction_shape_and_device():
     toy = ToyPolicy()
     relabeled = off_policy_correction(manager_batch, toy, k=3)
     assert relabeled.shape == (B, a_dim)
+

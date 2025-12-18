@@ -103,3 +103,4 @@ class CheckpointBuffer:
             if self._z_store[i] is not None:
                 self._z_store[i] = self._z_store[i].to(device)
         return self
+

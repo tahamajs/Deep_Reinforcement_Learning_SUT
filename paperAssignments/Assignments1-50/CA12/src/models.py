@@ -85,3 +85,4 @@ class VectorizedCritic(nn.Module):
         qs = [net(sa) for net in self.nets]  # list of (B,1)
         qs = torch.stack(qs, dim=0)  # (ensemble, B, 1)
         return qs
+

@@ -32,3 +32,4 @@ class Config:
 
     # Misc
     device: str = "cpu"
+

@@ -63,3 +63,4 @@ def mlp(
             in_ch = h
     layers.append(torch.nn.Linear(in_ch, output_size))
     return torch.nn.Sequential(*layers)
+

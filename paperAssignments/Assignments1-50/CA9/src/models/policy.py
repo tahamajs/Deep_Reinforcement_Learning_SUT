@@ -32,3 +32,4 @@ class GaussianPolicy(nn.Module):
         mu, std = self.forward(s)
         dist = D.Normal(mu, std)
         return dist.log_prob(a).sum(-1)
+

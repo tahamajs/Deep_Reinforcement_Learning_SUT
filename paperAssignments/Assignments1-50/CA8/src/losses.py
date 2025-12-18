@@ -70,3 +70,4 @@ class SinkhornWrapper(nn.Module):
             k_xy = kernel(x_flat, y_flat).mean(dim=(1, 2))
             mmd = k_xx + k_yy - 2.0 * k_xy
             return mmd
+

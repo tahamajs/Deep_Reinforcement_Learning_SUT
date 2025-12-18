@@ -22,3 +22,4 @@ Notes
 
 - W&B is optional; the trainer falls back to TensorBoard if wandb is not available.
 - For reproducibility, include the `cfg.as_dict()` sent to W&B in your run config.
+

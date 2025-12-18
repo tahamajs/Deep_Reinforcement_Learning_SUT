@@ -150,3 +150,4 @@ if __name__ == "__main__":
     h0 = net.initial_latent(x)
     lj, la, v, z = net.predict_from_latent(h0)
     print("shapes:", lj.shape, v.shape, z.shape)
+

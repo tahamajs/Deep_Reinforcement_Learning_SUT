@@ -94,3 +94,4 @@ def topk_factored(
             joint_indices = joint_indices[batch_idx, ord]
 
     return joint_indices, joint_scores
+

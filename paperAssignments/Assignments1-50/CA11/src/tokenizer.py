@@ -57,3 +57,4 @@ class SimpleVQVAE(nn.Module):
         B, L = indices.shape
         codes = self.codebook[indices.view(-1)].view(B, L, self.d_model)
         return codes
+

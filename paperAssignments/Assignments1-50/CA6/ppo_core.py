@@ -101,3 +101,4 @@ class ActorCritic(nn.Module):
             logp = dist.log_prob(actions)
             entropy = dist.entropy()
         return logp, entropy, value
+

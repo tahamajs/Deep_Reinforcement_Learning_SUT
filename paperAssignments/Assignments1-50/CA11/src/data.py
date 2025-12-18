@@ -22,3 +22,4 @@ class RandomTrajectoryDataset(Dataset):
         obs = torch.randn(self.seq_len, self.d_model, dtype=torch.float32)
         actions = torch.randn(self.seq_len, self.d_model, dtype=torch.float32)
         return obs, actions
+

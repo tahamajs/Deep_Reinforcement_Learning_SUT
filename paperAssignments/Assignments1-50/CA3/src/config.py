@@ -51,3 +51,4 @@ class Config:
             "checkpoint_every": self.checkpoint_every,
             "max_grad_norm": self.max_grad_norm,
         }
+

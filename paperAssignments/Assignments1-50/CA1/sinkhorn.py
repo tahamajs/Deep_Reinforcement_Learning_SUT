@@ -142,3 +142,4 @@ if __name__ == "__main__":
     a = torch.randn(2, 8, 1)
     b = a.clone()
     print("S(a,a) =", loss_fn(a, b).item())
+

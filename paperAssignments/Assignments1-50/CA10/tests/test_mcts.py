@@ -51,3 +51,4 @@ def test_mcts_basic():
     assert visits.sum().item() <= 20 + 1e-6
     assert torch.all(visits >= 0)
     assert abs(float(policy.sum().item()) - 1.0) < 1e-6
+

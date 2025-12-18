@@ -36,3 +36,4 @@ def iqr_from_tensor(x: torch.Tensor) -> torch.Tensor:
 def gaussian_entropy(log_std: torch.Tensor) -> torch.Tensor:
     # log_std: [B, a_dim]
     return 0.5 * (1.0 + torch.log(2 * torch.pi)) + log_std
+

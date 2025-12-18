@@ -57,3 +57,4 @@ class MorphEncoder(nn.Module):
         eps = torch.randn_like(std)
         z = mu + eps * std
         return z, mu, logvar
+

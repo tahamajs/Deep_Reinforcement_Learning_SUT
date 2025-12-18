@@ -70,3 +70,4 @@ class ReplayBuffer:
         buf.size = obs.shape[0]
         buf.ptr = buf.size % buf.capacity
         return buf
+

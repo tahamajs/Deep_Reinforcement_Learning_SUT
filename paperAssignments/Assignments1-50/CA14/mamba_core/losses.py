@@ -73,3 +73,4 @@ def world_model_loss(
     kl_m_clamped = torch.clamp(kl_m - free_bits_m, min=0.0).mean()
     loss = recon_loss + reward_loss + beta_z * kl_z_clamped + beta_m * kl_m_clamped
     return loss
+

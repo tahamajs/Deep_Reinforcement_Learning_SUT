@@ -37,3 +37,4 @@ if __name__ == "__main__":
     else:
         rows = load_metrics(sys.argv[1])
         plot_success_vs_steps(rows, sys.argv[2])
+

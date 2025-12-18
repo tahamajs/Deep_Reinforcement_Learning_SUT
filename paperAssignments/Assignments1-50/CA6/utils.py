@@ -23,3 +23,4 @@ def safe_mean(xs: Iterable[float]) -> float:
     if len(xs) == 0:
         return 0.0
     return float(sum(xs) / len(xs))
+

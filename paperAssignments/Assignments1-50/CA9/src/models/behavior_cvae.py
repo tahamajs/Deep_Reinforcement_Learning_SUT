@@ -74,3 +74,4 @@ class CVAE(nn.Module):
         recon_loss = F.mse_loss(recon, a, reduction="mean")
         kld = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
         return recon_loss + kld
+

@@ -42,3 +42,4 @@ def cvar_tail(quantiles: torch.Tensor, alpha: float = 0.1) -> torch.Tensor:
     q_sorted, _ = torch.sort(quantiles, dim=1)
     k = max(1, int(alpha * q_sorted.size(1)))
     return q_sorted[:, :k].mean(dim=1, keepdim=True)
+
