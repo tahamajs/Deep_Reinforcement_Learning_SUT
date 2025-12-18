@@ -16,9 +16,20 @@ def mlp(sizes, activation=nn.ReLU, output_activation=nn.Identity):
 class GaussianActor(nn.Module):
     """Tanh-squashed Gaussian actor that outputs mean and log_std."""
 
-    def __init__(self, state_dim: int, action_dim: int, hidden_sizes=(256, 256), log_std_min=-20, log_std_max=2):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        hidden_sizes=(256, 256),
+        log_std_min=-20,
+        log_std_max=2,
+    ):
         super().__init__()
-        self.net = mlp([state_dim] + list(hidden_sizes), activation=nn.ReLU, output_activation=nn.ReLU)
+        self.net = mlp(
+            [state_dim] + list(hidden_sizes),
+            activation=nn.ReLU,
+            output_activation=nn.ReLU,
+        )
         last_size = hidden_sizes[-1] if len(hidden_sizes) > 0 else state_dim
         self.mean_layer = nn.Linear(last_size, action_dim)
         self.log_std_layer = nn.Linear(last_size, action_dim)
@@ -47,12 +58,25 @@ class GaussianActor(nn.Module):
 class VectorizedCritic(nn.Module):
     """Ensemble of Q-networks implemented as a single module."""
 
-    def __init__(self, state_dim: int, action_dim: int, hidden_sizes=(256, 256), ensemble_size: int = 4):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        hidden_sizes=(256, 256),
+        ensemble_size: int = 4,
+    ):
         super().__init__()
         self.ensemble_size = ensemble_size
         # each member is a separate MLP
         self.nets = nn.ModuleList(
-            [mlp([state_dim + action_dim] + list(hidden_sizes) + [1], activation=nn.ReLU, output_activation=nn.Identity) for _ in range(ensemble_size)]
+            [
+                mlp(
+                    [state_dim + action_dim] + list(hidden_sizes) + [1],
+                    activation=nn.ReLU,
+                    output_activation=nn.Identity,
+                )
+                for _ in range(ensemble_size)
+            ]
         )
 
     def forward(self, state: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
@@ -61,4 +85,3 @@ class VectorizedCritic(nn.Module):
         qs = [net(sa) for net in self.nets]  # list of (B,1)
         qs = torch.stack(qs, dim=0)  # (ensemble, B, 1)
         return qs
-

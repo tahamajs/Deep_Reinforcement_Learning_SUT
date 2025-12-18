@@ -3,6 +3,7 @@
 This script is intentionally lightweight and safe to run on CPU for small tests.
 It does not perform environment rollouts; instead it demonstrates model, loss, and optimizer integration.
 """
+
 import argparse
 import yaml
 import os
@@ -22,7 +23,9 @@ def make_fake_dataset(obs_dim: int, joint_action_dim: int, n: int = 1024):
     value_targets = torch.randn(n)
     reward_targets = torch.randn(n)
     prefix_targets = torch.randn(n)
-    return TensorDataset(obs, actions, pi_targets, value_targets, reward_targets, prefix_targets)
+    return TensorDataset(
+        obs, actions, pi_targets, value_targets, reward_targets, prefix_targets
+    )
 
 
 def train(cfg_path: str, device: str = "cpu"):
@@ -52,7 +55,9 @@ def train(cfg_path: str, device: str = "cpu"):
             obs, actions, pi_t, v_t, r_t, z_t = [b.to(device) for b in batch]
             # encode
             h0 = policy.net.initial_latent(obs)
-            loss, losses = policy.compute_losses(h0, actions, pi_t, v_t, r_t, z_t, loss_weights)
+            loss, losses = policy.compute_losses(
+                h0, actions, pi_t, v_t, r_t, z_t, loss_weights
+            )
             optim.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(policy.parameters(), 10.0)
@@ -70,7 +75,13 @@ def train(cfg_path: str, device: str = "cpu"):
 
 def cli():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, default=os.path.join(os.path.dirname(__file__), "../configs/ma_ezv2_default.yaml"))
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=os.path.join(
+            os.path.dirname(__file__), "../configs/ma_ezv2_default.yaml"
+        ),
+    )
     parser.add_argument("--device", type=str, default="cpu")
     args = parser.parse_args()
     cfg_path = os.path.abspath(args.config)
@@ -79,4 +90,3 @@ def cli():
 
 if __name__ == "__main__":
     cli()
-

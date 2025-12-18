@@ -2,7 +2,9 @@ from typing import Dict
 import torch
 
 
-def off_policy_correction(manager_batch: Dict[str, torch.Tensor], worker_policy, k: int = 8):
+def off_policy_correction(
+    manager_batch: Dict[str, torch.Tensor], worker_policy, k: int = 8
+):
     """
     Relabel goals in manager_batch using the current worker_policy.
 

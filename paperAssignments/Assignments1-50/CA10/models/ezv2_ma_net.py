@@ -36,7 +36,9 @@ class SimpleDynamics(nn.Module):
         )
         self.reward_head = nn.Linear(latent_dim, 1)
 
-    def forward(self, h: torch.Tensor, a: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, h: torch.Tensor, a: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         # a is assumed one-hot or numeric vector (B, action_dim)
         x = torch.cat([h, a], dim=-1)
         h_next = self.fc(x)
@@ -47,14 +49,25 @@ class SimpleDynamics(nn.Module):
 class PredictionHead(nn.Module):
     """Outputs policy logits (factored) and scalar value from latent."""
 
-    def __init__(self, latent_dim: int, joint_action_dim: int, per_agent_action_dims: Optional[Tuple[int, ...]] = None):
+    def __init__(
+        self,
+        latent_dim: int,
+        joint_action_dim: int,
+        per_agent_action_dims: Optional[Tuple[int, ...]] = None,
+    ):
         super().__init__()
-        self.value_head = nn.Sequential(nn.Linear(latent_dim, latent_dim // 2), nn.ReLU(), nn.Linear(latent_dim // 2, 1))
+        self.value_head = nn.Sequential(
+            nn.Linear(latent_dim, latent_dim // 2),
+            nn.ReLU(),
+            nn.Linear(latent_dim // 2, 1),
+        )
         self.joint_policy = nn.Linear(latent_dim, joint_action_dim)
         # optional per-agent heads (factored)
         self.per_agent_heads = None
         if per_agent_action_dims is not None:
-            self.per_agent_heads = nn.ModuleList([nn.Linear(latent_dim, a) for a in per_agent_action_dims])
+            self.per_agent_heads = nn.ModuleList(
+                [nn.Linear(latent_dim, a) for a in per_agent_action_dims]
+            )
 
     def forward(self, h: torch.Tensor):
         v = self.value_head(h).squeeze(-1)
@@ -70,7 +83,11 @@ class PrefixHead(nn.Module):
 
     def __init__(self, latent_dim: int):
         super().__init__()
-        self.net = nn.Sequential(nn.Linear(latent_dim, latent_dim // 2), nn.ReLU(), nn.Linear(latent_dim // 2, 1))
+        self.net = nn.Sequential(
+            nn.Linear(latent_dim, latent_dim // 2),
+            nn.ReLU(),
+            nn.Linear(latent_dim // 2, 1),
+        )
 
     def forward(self, h: torch.Tensor) -> torch.Tensor:
         return self.net(h).squeeze(-1)
@@ -88,8 +105,17 @@ class MAEZV2Network(nn.Module):
     ):
         super().__init__()
         self.encoder = SimpleEncoder(obs_dim, latent_dim)
-        self.dynamics = SimpleDynamics(latent_dim, joint_action_dim if per_agent_action_dims is None else sum(per_agent_action_dims))
-        self.predict = PredictionHead(latent_dim, joint_action_dim, per_agent_action_dims)
+        self.dynamics = SimpleDynamics(
+            latent_dim,
+            (
+                joint_action_dim
+                if per_agent_action_dims is None
+                else sum(per_agent_action_dims)
+            ),
+        )
+        self.predict = PredictionHead(
+            latent_dim, joint_action_dim, per_agent_action_dims
+        )
         self.prefix = PrefixHead(latent_dim)
 
     def initial_latent(self, obs: torch.Tensor) -> torch.Tensor:
@@ -124,4 +150,3 @@ if __name__ == "__main__":
     h0 = net.initial_latent(x)
     lj, la, v, z = net.predict_from_latent(h0)
     print("shapes:", lj.shape, v.shape, z.shape)
-

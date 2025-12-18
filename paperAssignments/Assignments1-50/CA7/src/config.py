@@ -8,6 +8,7 @@ class Config:
     Training and model hyperparameters for GET-ROPR minimal reference implementation.
     These defaults are conservative and intended for smoke-testing and local development.
     """
+
     # Environment / data
     obs_dim: int = 8
     action_dim: int = 2
@@ -31,4 +32,3 @@ class Config:
 
     # Misc
     device: str = "cpu"
-

@@ -13,7 +13,14 @@ class CrossHQLoss(nn.Module):
     - actor: policy with `rsample_and_logprob(obs)` returning (action, logp).
     """
 
-    def __init__(self, critic, actor, gamma: float = 0.99, alpha: float = 0.0, device: Optional[torch.device] = None):
+    def __init__(
+        self,
+        critic,
+        actor,
+        gamma: float = 0.99,
+        alpha: float = 0.0,
+        device: Optional[torch.device] = None,
+    ):
         super().__init__()
         self.critic = critic
         self.actor = actor
@@ -30,7 +37,14 @@ class CrossHQLoss(nn.Module):
         q2_curr, q2_next = torch.chunk(q2, 2, dim=0)
         return q1_curr, q1_next, q2_curr, q2_next
 
-    def forward(self, obs: torch.Tensor, action: torch.Tensor, reward: torch.Tensor, next_obs: torch.Tensor, mask: torch.Tensor):
+    def forward(
+        self,
+        obs: torch.Tensor,
+        action: torch.Tensor,
+        reward: torch.Tensor,
+        next_obs: torch.Tensor,
+        mask: torch.Tensor,
+    ):
         """Compute CrossQ critic loss. obs/next_obs should be already concatenated (state|goal) or (state) depending on level.
         action/next_action should be primitive action (worker) or goal (manager) vectors accordingly.
         Shapes: all tensors (B, D) except reward (B, 1) mask (B, 1).

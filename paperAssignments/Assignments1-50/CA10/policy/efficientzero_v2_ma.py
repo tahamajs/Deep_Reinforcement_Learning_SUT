@@ -25,7 +25,12 @@ class EfficientZeroV2Policy(nn.Module):
     ):
         super().__init__()
         self.device = torch.device(device)
-        self.net = MAEZV2Network(obs_dim, latent_dim, joint_action_dim, tuple(per_agent_action_dims) if per_agent_action_dims else None).to(self.device)
+        self.net = MAEZV2Network(
+            obs_dim,
+            latent_dim,
+            joint_action_dim,
+            tuple(per_agent_action_dims) if per_agent_action_dims else None,
+        ).to(self.device)
         self.joint_action_dim = joint_action_dim
         self.per_agent_action_dims = per_agent_action_dims
 
@@ -56,7 +61,7 @@ class EfficientZeroV2Policy(nn.Module):
         logits_joint, logits_agents, v0, z0 = self.net.predict_from_latent(h0)
         # policy loss (CE with soft targets)
         logp = F.log_softmax(logits_joint, dim=-1)
-        loss_pi = - (pi_targets * logp).sum(dim=-1).mean()
+        loss_pi = -(pi_targets * logp).sum(dim=-1).mean()
         losses["loss_pi"] = loss_pi.item()
         loss_total = loss_total + alpha.get("pi", 1.0) * loss_pi
         # value loss
@@ -79,7 +84,9 @@ class EfficientZeroV2Policy(nn.Module):
         """Return top-k joint indices and scores using Gumbel top-k."""
         return topk_joint(logits_joint, k)
 
-    def factored_topk_actions(self, logits_agents: Sequence[torch.Tensor], k_each: int = 4, max_beam: int = 64):
+    def factored_topk_actions(
+        self, logits_agents: Sequence[torch.Tensor], k_each: int = 4, max_beam: int = 64
+    ):
         return topk_factored(list(logits_agents), k_each, max_beam)
 
     def save(self, path: str):
@@ -92,8 +99,13 @@ class EfficientZeroV2Policy(nn.Module):
 
 if __name__ == "__main__":
     # demo usage
-    policy = EfficientZeroV2Policy(obs_dim=12, latent_dim=64, joint_action_dim=10, per_agent_action_dims=[5, 5], device="cpu")
+    policy = EfficientZeroV2Policy(
+        obs_dim=12,
+        latent_dim=64,
+        joint_action_dim=10,
+        per_agent_action_dims=[5, 5],
+        device="cpu",
+    )
     obs = torch.randn(2, 12)
     lj, la, v, z = policy.initial_infer(obs)
     print("logits_joint", lj.shape, "value", v.shape, "prefix", z.shape)
-

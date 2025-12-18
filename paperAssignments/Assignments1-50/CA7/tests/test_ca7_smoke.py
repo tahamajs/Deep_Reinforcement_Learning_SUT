@@ -9,7 +9,9 @@ def test_critic_lambda_loss_backward():
     cfg = Config(batch_size=4, seq_len=8, obs_dim=6, action_dim=2, hidden_size=32)
     device = "cpu"
     critic = RecurrentCritic(cfg.obs_dim, cfg.action_dim, cfg.hidden_size).to(device)
-    target_critic = RecurrentCritic(cfg.obs_dim, cfg.action_dim, cfg.hidden_size).to(device)
+    target_critic = RecurrentCritic(cfg.obs_dim, cfg.action_dim, cfg.hidden_size).to(
+        device
+    )
     target_critic.load_state_dict(critic.state_dict())
     actor = StochasticActor(cfg.obs_dim, cfg.action_dim, cfg.hidden_size)
 
@@ -30,7 +32,19 @@ def test_critic_lambda_loss_backward():
 
     batch = buf.sample_batch(cfg.batch_size, device=device)
     obs_b, acts_b, rews_b, dones_b, beh_logp_b = batch
-    loss, returns = critic_loss_lambda(critic, target_critic, obs_b, acts_b, rews_b, dones_b, beh_logp_b, cfg.gamma, cfg.lam, c_rho=cfg.c_rho, policy=actor)
+    loss, returns = critic_loss_lambda(
+        critic,
+        target_critic,
+        obs_b,
+        acts_b,
+        rews_b,
+        dones_b,
+        beh_logp_b,
+        cfg.gamma,
+        cfg.lam,
+        c_rho=cfg.c_rho,
+        policy=actor,
+    )
     loss.backward()
     assert torch.isfinite(loss).item()
     assert returns.shape == (cfg.batch_size, cfg.seq_len)

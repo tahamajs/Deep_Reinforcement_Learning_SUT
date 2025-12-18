@@ -7,6 +7,7 @@ import torch.nn as nn
 
 class LinearAttention(nn.Module):
     """Simple linear attention implementation: phi(x) = elu(x)+1"""
+
     def __init__(self, d_model: int, n_heads: int):
         super().__init__()
         assert d_model % n_heads == 0
@@ -36,7 +37,9 @@ class LinearAttention(nn.Module):
         # accumulate S = kf^T @ v  -> (B, H, Dh, Dh) if done naively; use einsum for simplicity
         # We compute context = (qf @ (kf^T @ v)) per head using associative property
         # Compute K^T V -> (B, H, Dh, Dh) by einsum over sequence
-        KV = torch.einsum("bhld,bhlv->bhlv", kf, v)  # this keeps last dim Dh; it's effectively sum over l
+        KV = torch.einsum(
+            "bhld,bhlv->bhlv", kf, v
+        )  # this keeps last dim Dh; it's effectively sum over l
         # Now attention output per position: out_t = qf_t @ KV_t? For linear attention we use global KV
         # Reduce KV over sequence: sum over l of kf[l] * v[l]
         KV_sum = torch.einsum("bhld,bhlv->bhdv", kf, v)  # (B, H, Dh, Dh)
@@ -52,6 +55,7 @@ class MambaBlock(nn.Module):
     For clarity and import-safety we implement a simple gated recurrent update
     that mimics selective state updates.
     """
+
     def __init__(self, d_model: int):
         super().__init__()
         self.linear = nn.Linear(d_model, d_model)
@@ -98,13 +102,14 @@ class TWMSSDModel(nn.Module):
     Minimal end-to-end model that stacks hybrid blocks and produces
     predicted next-step observations and rewards.
     """
+
     def __init__(self, d_model: int = 256, n_heads: int = 4, n_layers: int = 8):
         super().__init__()
         self.d_model = d_model
         self.embed = nn.Linear(d_model, d_model)
-        self.layers = nn.ModuleList([
-            SSDHybridBlock(d_model, n_heads) for _ in range(n_layers)
-        ])
+        self.layers = nn.ModuleList(
+            [SSDHybridBlock(d_model, n_heads) for _ in range(n_layers)]
+        )
         self.pred_obs = nn.Linear(d_model, d_model)
         self.pred_reward = nn.Linear(d_model, 1)
 
@@ -123,4 +128,3 @@ class TWMSSDModel(nn.Module):
         for layer in self.layers:
             x = layer(x)
         return self.pred_obs(x), self.pred_reward(x)
-

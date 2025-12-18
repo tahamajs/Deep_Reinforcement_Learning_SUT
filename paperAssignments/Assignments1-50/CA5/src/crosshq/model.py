@@ -14,7 +14,13 @@ def _mlp_block(in_dim: int, out_dim: int, bn_momentum: float):
 
 
 class MLP(nn.Module):
-    def __init__(self, input_dim: int, hidden_dim: int = 1024, depth: int = 3, bn_momentum: float = 0.01):
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dim: int = 1024,
+        depth: int = 3,
+        bn_momentum: float = 0.01,
+    ):
         super().__init__()
         layers = []
         curr = input_dim
@@ -38,7 +44,14 @@ class MLP(nn.Module):
 class CrossQCritic(nn.Module):
     """Double critic with BatchNorm and CrossQ-friendly forward."""
 
-    def __init__(self, state_dim: int, action_dim: int, hidden_dim: int = 1024, depth: int = 3, bn_momentum: float = 0.01):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        hidden_dim: int = 1024,
+        depth: int = 3,
+        bn_momentum: float = 0.01,
+    ):
         super().__init__()
         self.input_dim = state_dim + action_dim
         self.q1 = MLP(self.input_dim, hidden_dim, depth, bn_momentum)
@@ -64,7 +77,15 @@ class GaussianPolicy(nn.Module):
     training skeleton. It uses diagonal Gaussian with squashed tanh actions.
     """
 
-    def __init__(self, obs_dim: int, action_dim: int, hidden: int = 512, depth: int = 2, log_std_min: float = -20.0, log_std_max: float = 2.0):
+    def __init__(
+        self,
+        obs_dim: int,
+        action_dim: int,
+        hidden: int = 512,
+        depth: int = 2,
+        log_std_min: float = -20.0,
+        log_std_max: float = 2.0,
+    ):
         super().__init__()
         layers = []
         curr = obs_dim
@@ -89,7 +110,9 @@ class GaussianPolicy(nn.Module):
         std = log_std.exp()
         return torch.distributions.Normal(mu, std)
 
-    def rsample_and_logprob(self, obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def rsample_and_logprob(
+        self, obs: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Return squashed action and its log-probability (sum over action dim)."""
         dist = self.dist(obs)
         x = dist.rsample()

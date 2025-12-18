@@ -23,9 +23,15 @@ class RetrievalBuffer:
         self.action_dim = int(action_dim)
         self.device = device
 
-        self.states = torch.zeros((self.max_size, self.state_dim), dtype=torch.float32, device=self.device)
-        self.actions = torch.zeros((self.max_size, self.action_dim), dtype=torch.float32, device=self.device)
-        self.returns_to_go = torch.full((self.max_size, 1), -float("inf"), dtype=torch.float32, device=self.device)
+        self.states = torch.zeros(
+            (self.max_size, self.state_dim), dtype=torch.float32, device=self.device
+        )
+        self.actions = torch.zeros(
+            (self.max_size, self.action_dim), dtype=torch.float32, device=self.device
+        )
+        self.returns_to_go = torch.full(
+            (self.max_size, 1), -float("inf"), dtype=torch.float32, device=self.device
+        )
 
         # trajectory metadata: list of (start_idx, end_idx, length)
         self.traj_meta = []  # type: ignore
@@ -47,7 +53,13 @@ class RetrievalBuffer:
             rtg[t] = acc
         return rtg.unsqueeze(1)
 
-    def add_trajectory(self, states: torch.Tensor, actions: torch.Tensor, rewards: torch.Tensor, gamma: float = 0.99) -> None:
+    def add_trajectory(
+        self,
+        states: torch.Tensor,
+        actions: torch.Tensor,
+        rewards: torch.Tensor,
+        gamma: float = 0.99,
+    ) -> None:
         """Add a whole trajectory to the circular buffer.
 
         states: (T, state_dim)
@@ -58,7 +70,10 @@ class RetrievalBuffer:
         T = states.shape[0]
         rtg = self.compute_rtg(rewards, gamma=gamma)  # (T,1)
 
-        indices = (torch.arange(self.ptr, self.ptr + T, device=self.states.device) % self.max_size).long()
+        indices = (
+            torch.arange(self.ptr, self.ptr + T, device=self.states.device)
+            % self.max_size
+        ).long()
         self.states[indices] = states.to(self.device)
         self.actions[indices] = actions.to(self.device)
         self.returns_to_go[indices] = rtg.to(self.device)
@@ -67,7 +82,9 @@ class RetrievalBuffer:
         self.ptr = int((self.ptr + T) % self.max_size)
         self.size = min(self.size + T, self.max_size)
 
-    def retrieve_best_k(self, query_state: torch.Tensor, k: int = 10, nn: int = 50) -> torch.Tensor:
+    def retrieve_best_k(
+        self, query_state: torch.Tensor, k: int = 10, nn: int = 50
+    ) -> torch.Tensor:
         """Retrieve best-k actions near query_state by L2 + RTG ranking.
 
         Returns tensor of shape (k, action_dim).
@@ -90,7 +107,9 @@ class RetrievalBuffer:
 
         return self.actions[best_global_idxs]
 
-    def sample_batch(self, batch_size: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def sample_batch(
+        self, batch_size: int
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Uniform sample transitions for critic/actor updates.
 
         Returns (states, actions, returns_to_go)
@@ -99,4 +118,3 @@ class RetrievalBuffer:
             raise RuntimeError("Buffer is empty")
         idxs = torch.randint(0, self.size, (batch_size,), device=self.device)
         return self.states[idxs], self.actions[idxs], self.returns_to_go[idxs]
-

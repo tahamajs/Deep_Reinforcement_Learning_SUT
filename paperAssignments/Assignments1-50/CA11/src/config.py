@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from typing import Optional
 
+
 @dataclass
 class Config:
     """Hyperparameters and architecture configuration for TWM-SSD (Assignment CA11)."""
+
     d_model: int = 256
     n_heads: int = 4
     n_layers: int = 8
@@ -15,6 +17,6 @@ class Config:
     ssm_ratio: float = 0.5  # fraction of blocks that are SSM/Mamba
     device: Optional[str] = None
 
+
 def get_default_config() -> Config:
     return Config()
-

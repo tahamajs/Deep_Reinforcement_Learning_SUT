@@ -40,7 +40,7 @@ class AnnealedSinkhornLoss(nn.Module):
         if self.eps_start <= 0 or self.eps_end <= 0:
             return max(self.eps_end, self.clamp_eps_min)
         alpha = self.eps_end / self.eps_start
-        eps = self.eps_start * (alpha ** progress)
+        eps = self.eps_start * (alpha**progress)
         return float(max(eps, self.clamp_eps_min))
 
     def step_annealing(self, n: int = 1) -> None:
@@ -62,7 +62,9 @@ class AnnealedSinkhornLoss(nn.Module):
         diff = x.unsqueeze(2) - y.unsqueeze(1)
         return torch.sum(diff * diff, dim=-1)
 
-    def sinkhorn_log_potentials(self, C: torch.Tensor, eps: float) -> Tuple[torch.Tensor, torch.Tensor]:
+    def sinkhorn_log_potentials(
+        self, C: torch.Tensor, eps: float
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute log-potentials f and g via fixed-point iterations in log-domain.
 
         C: (B, N, M)

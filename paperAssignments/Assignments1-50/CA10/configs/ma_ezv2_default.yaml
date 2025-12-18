@@ -3,7 +3,7 @@ model:
   obs_dim: 24
   latent_dim: 128
   joint_action_dim: 16
-  per_agent_action_dims: [4,4]
+  per_agent_action_dims: [4, 4]
 
 training:
   batch_size: 32
@@ -22,4 +22,3 @@ loss_weights:
   v: 1.0
   r: 1.0
   z: 0.5
-

@@ -19,22 +19,36 @@ class RAUOBACAgent:
 
         # networks
         self.actor = GaussianActor(state_dim, action_dim).to(device)
-        self.critic = VectorizedCritic(state_dim, action_dim, ensemble_size=cfg.critic_ensemble_size).to(device)
-        self.critic_target = VectorizedCritic(state_dim, action_dim, ensemble_size=cfg.critic_ensemble_size).to(device)
+        self.critic = VectorizedCritic(
+            state_dim, action_dim, ensemble_size=cfg.critic_ensemble_size
+        ).to(device)
+        self.critic_target = VectorizedCritic(
+            state_dim, action_dim, ensemble_size=cfg.critic_ensemble_size
+        ).to(device)
         self.critic_target.load_state_dict(self.critic.state_dict())
 
         # offline actor (parametric baseline) - optional; we keep a clone for completeness
         self.offline_actor = GaussianActor(state_dim, action_dim).to(device)
 
         # optimizers
-        self.actor_opt = optim.Adam(self.actor.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
-        self.critic_opt = optim.Adam(self.critic.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
-        self.offline_opt = optim.Adam(self.offline_actor.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
+        self.actor_opt = optim.Adam(
+            self.actor.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay
+        )
+        self.critic_opt = optim.Adam(
+            self.critic.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay
+        )
+        self.offline_opt = optim.Adam(
+            self.offline_actor.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay
+        )
 
         # buffer
-        self.retrieval_buffer = RetrievalBuffer(cfg.buffer_size, state_dim, action_dim, device=str(device))
+        self.retrieval_buffer = RetrievalBuffer(
+            cfg.buffer_size, state_dim, action_dim, device=str(device)
+        )
 
-    def update_critic(self, states: torch.Tensor, actions: torch.Tensor, returns: torch.Tensor) -> float:
+    def update_critic(
+        self, states: torch.Tensor, actions: torch.Tensor, returns: torch.Tensor
+    ) -> float:
         """Update ensemble critics using MSE to return-to-go as a simple target."""
         states = states.to(self.device)
         actions = actions.to(self.device)
@@ -57,14 +71,23 @@ class RAUOBACAgent:
             tp.data.add_(self.cfg.tau * p.data)
         return float(loss.item())
 
-    def update_offline_actor(self, states: torch.Tensor, actions: torch.Tensor, advantages: Optional[torch.Tensor] = None) -> float:
+    def update_offline_actor(
+        self,
+        states: torch.Tensor,
+        actions: torch.Tensor,
+        advantages: Optional[torch.Tensor] = None,
+    ) -> float:
         """AWR-style update: weighted behavior cloning towards high-advantage actions."""
         states = states.to(self.device)
         actions = actions.to(self.device)
         if advantages is None:
             weights = torch.ones((states.shape[0], 1), device=self.device)
         else:
-            weights = torch.exp(torch.clamp(advantages, max=50.0)).unsqueeze(1).to(self.device)
+            weights = (
+                torch.exp(torch.clamp(advantages, max=50.0))
+                .unsqueeze(1)
+                .to(self.device)
+            )
 
         mean, log_std = self.offline_actor(states)
         # Gaussian MLE loss (squared error on means as proxy)
@@ -74,7 +97,9 @@ class RAUOBACAgent:
         self.offline_opt.step()
         return float(loss.item())
 
-    def compute_uncertainty_penalized_value(self, state: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
+    def compute_uncertainty_penalized_value(
+        self, state: torch.Tensor, action: torch.Tensor
+    ) -> torch.Tensor:
         """Compute ensemble mean minus beta * std across critics for a single (state,action)."""
         qs = self.critic(state.unsqueeze(0), action.unsqueeze(0)).squeeze(-1)  # (E, 1)
         mean = qs.mean(dim=0)  # (1,)
@@ -107,7 +132,9 @@ class RAUOBACAgent:
         masks = []
         for i in range(batch_size):
             s = states[i].detach().cpu()
-            retrieved_actions = self.retrieval_buffer.retrieve_best_k(s, k=self.cfg.retrieval_k, nn=self.cfg.retrieval_nn)
+            retrieved_actions = self.retrieval_buffer.retrieve_best_k(
+                s, k=self.cfg.retrieval_k, nn=self.cfg.retrieval_nn
+            )
             if retrieved_actions.shape[0] == 0:
                 masks.append(0.0)
                 boost_losses.append(torch.tensor(0.0, device=self.device))
@@ -125,7 +152,9 @@ class RAUOBACAgent:
             # online value estimate: use min ensemble Q for actor action
             with torch.no_grad():
                 a_online, _ = self.actor.sample(states[i].unsqueeze(0))
-                q_online = self.critic(states[i].unsqueeze(0), a_online).squeeze(-1)  # (E,1)
+                q_online = self.critic(states[i].unsqueeze(0), a_online).squeeze(
+                    -1
+                )  # (E,1)
                 v_online = (q_online.min(dim=0)[0]).squeeze(0)
 
             mask = 1.0 if (v_target.item() > v_online.item()) else 0.0
@@ -138,7 +167,11 @@ class RAUOBACAgent:
             else:
                 boost_losses.append(torch.tensor(0.0, device=self.device))
 
-        boost_loss = torch.stack(boost_losses).mean() if len(boost_losses) > 0 else torch.tensor(0.0, device=self.device)
+        boost_loss = (
+            torch.stack(boost_losses).mean()
+            if len(boost_losses) > 0
+            else torch.tensor(0.0, device=self.device)
+        )
         masks_mean = sum(masks) / max(len(masks), 1)
         total_loss = sac_loss + self.cfg.lambda_blend * boost_loss
 
@@ -146,4 +179,3 @@ class RAUOBACAgent:
         total_loss.backward()
         self.actor_opt.step()
         return float(total_loss.item())
-

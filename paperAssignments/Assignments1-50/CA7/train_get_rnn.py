@@ -16,12 +16,16 @@ from src.losses import critic_loss_lambda
 import numpy as np
 
 
-def build_dummy_buffer(cfg: Config, actor=None, n_sequences: int = 200, device: str = "cpu") -> SequenceReplayBuffer:
+def build_dummy_buffer(
+    cfg: Config, actor=None, n_sequences: int = 200, device: str = "cpu"
+) -> SequenceReplayBuffer:
     buf = SequenceReplayBuffer(cfg.obs_dim, cfg.action_dim, cfg.seq_len, max_size=10000)
     for _ in range(n_sequences):
         obs = np.random.randn(cfg.seq_len, cfg.obs_dim).astype(np.float32)
         if actor is None:
-            acts = np.random.uniform(-1.0, 1.0, size=(cfg.seq_len, cfg.action_dim)).astype(np.float32)
+            acts = np.random.uniform(
+                -1.0, 1.0, size=(cfg.seq_len, cfg.action_dim)
+            ).astype(np.float32)
             beh_logp = None
         else:
             # sample actions and behavior logp from actor

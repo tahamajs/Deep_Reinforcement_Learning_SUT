@@ -77,7 +77,12 @@ class ParticleQNetwork(nn.Module):
     ) -> None:
         super().__init__()
         self.encoder = NatureCNN(in_channels=in_channels, out_dim=512)
-        self.head = ParticleHead(in_dim=512, num_actions=num_actions, num_particles=num_particles, particle_dim=particle_dim)
+        self.head = ParticleHead(
+            in_dim=512,
+            num_actions=num_actions,
+            num_particles=num_particles,
+            particle_dim=particle_dim,
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         feats = self.encoder(x)

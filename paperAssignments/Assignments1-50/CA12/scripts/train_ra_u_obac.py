@@ -1,4 +1,5 @@
 """Minimal training script for RA-U-OBAC (guarded main)."""
+
 from argparse import ArgumentParser
 import random
 import time
@@ -43,13 +44,17 @@ def run_demo(cfg: Config, steps: int = 1000):
             states = torch.stack(episode_states)
             actions = torch.stack(episode_actions)
             rewards = torch.stack(episode_rewards)
-            agent.retrieval_buffer.add_trajectory(states, actions, rewards, gamma=cfg.gamma)
+            agent.retrieval_buffer.add_trajectory(
+                states, actions, rewards, gamma=cfg.gamma
+            )
             episode_states, episode_actions, episode_rewards = [], [], []
             obs = env.reset()
 
         # periodic updates (very small, demo-only)
         if agent.retrieval_buffer.size >= 32 and total_steps % 10 == 0:
-            s_batch, a_batch, rtg_batch = agent.retrieval_buffer.sample_batch(min(cfg.batch_size, 32))
+            s_batch, a_batch, rtg_batch = agent.retrieval_buffer.sample_batch(
+                min(cfg.batch_size, 32)
+            )
             agent.update_critic(s_batch, a_batch, rtg_batch.squeeze(1))
             agent.update_online_actor(s_batch)
 
@@ -63,4 +68,3 @@ if __name__ == "__main__":
     args = p.parse_args()
     cfg = Config()
     run_demo(cfg, steps=args.steps)
-

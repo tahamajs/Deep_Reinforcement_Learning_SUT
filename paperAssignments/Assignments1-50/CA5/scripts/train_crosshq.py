@@ -3,6 +3,7 @@
 This script provides a ready-to-run training loop skeleton that integrates the modules
 implemented in `src/crosshq`. It is intentionally non-destructive and import-safe.
 """
+
 import argparse
 import time
 import torch
@@ -51,8 +52,16 @@ def train_loop(cfg):
     s_dim = 32
     a_dim = 6
     # Build networks
-    q_lo = CrossQCritic(s_dim + cfg.hidden * 0, a_dim, hidden=cfg.hidden, depth=3, bn_momentum=cfg.bn_momentum).to(device)
-    q_hi = CrossQCritic(s_dim, a_dim, hidden=cfg.hidden, depth=3, bn_momentum=cfg.bn_momentum).to(device)
+    q_lo = CrossQCritic(
+        s_dim + cfg.hidden * 0,
+        a_dim,
+        hidden=cfg.hidden,
+        depth=3,
+        bn_momentum=cfg.bn_momentum,
+    ).to(device)
+    q_hi = CrossQCritic(
+        s_dim, a_dim, hidden=cfg.hidden, depth=3, bn_momentum=cfg.bn_momentum
+    ).to(device)
     pi_lo = GaussianPolicy(s_dim + a_dim, a_dim, hidden=512).to(device)
     pi_hi = GaussianPolicy(s_dim, a_dim, hidden=512).to(device)
 
@@ -63,8 +72,12 @@ def train_loop(cfg):
 
     replay = DummyReplay(cfg.batch, s_dim, a_dim, cfg.c)
 
-    loss_worker = CrossHQLoss(q_lo, pi_lo, gamma=cfg.gamma, alpha=cfg.entropy_beta, device=device)
-    loss_manager = CrossHQLoss(q_hi, pi_hi, gamma=cfg.gamma ** cfg.c, alpha=0.0, device=device)
+    loss_worker = CrossHQLoss(
+        q_lo, pi_lo, gamma=cfg.gamma, alpha=cfg.entropy_beta, device=device
+    )
+    loss_manager = CrossHQLoss(
+        q_hi, pi_hi, gamma=cfg.gamma**cfg.c, alpha=0.0, device=device
+    )
 
     steps = 10  # skeleton small number; user will configure
     for step in range(steps):
@@ -120,7 +133,9 @@ def train_loop(cfg):
         opt_pi_hi.step()
 
         if step % 1 == 0:
-            print(f"step={step} loss_q_lo={loss_q_lo.item():.4f} loss_q_hi={loss_q_hi.item():.4f} time={time.time()-t0:.3f}")
+            print(
+                f"step={step} loss_q_lo={loss_q_lo.item():.4f} loss_q_hi={loss_q_hi.item():.4f} time={time.time()-t0:.3f}"
+            )
 
 
 def main():
