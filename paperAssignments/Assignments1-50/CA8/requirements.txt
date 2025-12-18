@@ -2,4 +2,5 @@ torch>=1.13
 numpy
 gymnasium
 geomloss>=0.2.0; extra == "geomloss"
+wandb
 
