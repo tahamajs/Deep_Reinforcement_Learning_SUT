@@ -1,0 +1,9 @@
+# HW14 Safe RL - Python dependencies
+# Install with: python -m pip install -r requirements.txt
+
+torch>=2.0.0
+numpy>=1.24.0
+gymnasium>=0.29.0
+matplotlib>=3.6.0
+imageio>=2.25.0
+tqdm>=4.64.0
