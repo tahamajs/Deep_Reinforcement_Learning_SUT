@@ -41,11 +41,38 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--env", type=str, default="antmaze-medium-diverse-v2")
     parser.add_argument("--episodes", type=int, default=5)
+    parser.add_argument("--ckpt", type=str, default=None)
     args = parser.parse_args()
     cfg = default_config()
-    # instantiate a fresh policy (user can modify to load weights)
-    policy = GaussianPolicy(s_dim=cfg.latent_dim, a_dim=2)
     try:
+        if args.ckpt:
+            # load checkpoint and restore AUDMG/policy if available
+            import torch
+            from ..src.algos.au_dmg import AUDMG
+
+            data = torch.load(args.ckpt, map_location="cpu")
+            # infer a_dim from policy state, infer input dim from q state
+            policy_state = data.get("policy_state", None)
+            q_state = data.get("q_state", None)
+            if policy_state is not None and q_state is not None:
+                a_dim = policy_state["mu_head.weight"].shape[0]
+                # find first q weight to get input dim
+                first_q_key = next(k for k in q_state.keys() if "qs.0.net.0.weight" in k)
+                input_dim = q_state[first_q_key].shape[1]
+                s_dim = input_dim - a_dim
+                audmg = AUDMG(s_dim=s_dim, a_dim=a_dim, cfg=cfg)
+                audmg.load_checkpoint(args.ckpt, map_location="cpu")
+                policy = audmg.policy
+            else:
+                # fallback: instantiate default policy and try to load policy_state
+                a_dim = 2
+                policy = GaussianPolicy(s_dim=cfg.latent_dim, a_dim=a_dim)
+                if policy_state is not None:
+                    policy.load_state_dict(policy_state)
+        else:
+            # instantiate a fresh policy (user can modify to load weights)
+            policy = GaussianPolicy(s_dim=cfg.latent_dim, a_dim=2)
+
         avg = evaluate_policy(policy, args.env, episodes=args.episodes)
         print(f"Average return over {args.episodes} episodes: {avg:.3f}")
     except Exception as e:
