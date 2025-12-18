@@ -3,6 +3,7 @@
 This file provides a small set of wrappers suitable for Gym/Gymnasium Atari environments.
 It's intentionally minimal — adapt to your gym version (Gym vs Gymnasium) as needed.
 """
+
 from collections import deque
 import cv2
 import numpy as np
@@ -43,7 +44,11 @@ class MaxAndSkipEnv(gym.Wrapper):
             if done:
                 break
         # take max over last two frames (for flickering)
-        max_frame = np.maximum(self._obs_buffer[-1], self._obs_buffer[-2]) if len(self._obs_buffer) >= 2 else self._obs_buffer[-1]
+        max_frame = (
+            np.maximum(self._obs_buffer[-1], self._obs_buffer[-2])
+            if len(self._obs_buffer) >= 2
+            else self._obs_buffer[-1]
+        )
         return max_frame, total_reward, done, info
 
     def reset(self, **kwargs):
@@ -64,7 +69,9 @@ class WarpFrame(gym.ObservationWrapper):
         obs_space = env.observation_space
         if len(obs_space.shape) == 3:
             c = 1 if grayscale else obs_space.shape[2]
-            self.observation_space = gym.spaces.Box(low=0, high=255, shape=(self.height, self.width, c), dtype=np.uint8)
+            self.observation_space = gym.spaces.Box(
+                low=0, high=255, shape=(self.height, self.width, c), dtype=np.uint8
+            )
 
     def observation(self, obs):
         if isinstance(obs, tuple):
@@ -82,7 +89,9 @@ class ClipRewardEnv(gym.RewardWrapper):
         return np.sign(reward)
 
 
-def make_atari_env(env_id: str, noop_max: int = 30, skip: int = 4, frame_stack: int = 4):
+def make_atari_env(
+    env_id: str, noop_max: int = 30, skip: int = 4, frame_stack: int = 4
+):
     env = gym.make(env_id)
     env = NoopResetEnv(env, noop_max=noop_max)
     env = MaxAndSkipEnv(env, skip=skip)
