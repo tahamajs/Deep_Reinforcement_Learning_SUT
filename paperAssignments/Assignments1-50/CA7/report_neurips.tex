@@ -82,6 +82,28 @@ Figures generated during training are saved to \texttt{pictures/}. Example plott
   \label{fig:metrics}
 \end{figure}
 
+\subsection{Visualizations}
+We provide supplementary visualizations to analyze credit assignment and staleness:
+\begin{itemize}
+  \item Trace norm heatmap (episodes × timesteps) saved as \texttt{fig_trace_heatmap.png}.
+  \item IS-ratio histogram saved as \texttt{fig_rho_hist.png}.
+  \item Hidden-state staleness curve saved as \texttt{fig_staleness.png}.
+\end{itemize}
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.48\linewidth]{../pictures/fig_trace_heatmap.png}
+  \includegraphics[width=0.48\linewidth]{../pictures/fig_rho_hist.png}
+  \caption{Left: trace norm heatmap showing how trace magnitudes evolve across timesteps and episodes. Right: distribution of importance-sampling ratios with clip line.}
+  \label{fig:heat_rho}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.7\linewidth]{../pictures/fig_staleness.png}
+  \caption{Hidden-state staleness over replayed timesteps: recomputed vs stored hidden similarity (mean ± std).}
+  \label{fig:staleness}
+\end{figure}
+
 \subsection{Results (placeholder tables)}
 \begin{table}[ht]
   \centering
