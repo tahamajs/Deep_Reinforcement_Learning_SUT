@@ -71,21 +71,39 @@ The repository follows a hierarchical organization designed to support systemati
 
 ```
 
-DRL_SUT/
+DRL/
 
-├── requirements.txt              # Global Python dependencies
+├── AGENTS.md                     # Agent-specific guidelines for each area
 
-├── CAs/                          # Computer Assignments (Primary focus)
+├── archive/                      # Archived assignments and solutions (CA1-CA19)
 
-├── Assisments/                   # Additional assignment collections
+├── course_notes/                 # Lecture notes organized by topic
 
-├── notes_related/                # Supplementary course notes
+├── guests/                       # Guest lecturer materials and interviews
 
-├── QuestionsAndNotes/            # Session-specific materials
+├── homeworks/                    # Homework assignments (HW1-HW14) and solutions
 
-├── Slides/                       # Lecture presentation materials
+├── notes_related/                # Additional notes and resources
 
-├── Other_RES/                    # Miscellaneous resources
+├── Other_Assisments/             # Miscellaneous assignments collections
+
+├── paperAssignments/             # Paper-based assignments (CA23-CA31)
+
+├── prompts/                      # Prompts for assignments
+
+├── QuestionsAndNotes/            # Q&A and additional notes
+
+├── quizzes/                      # Quiz materials
+
+├── Slides/                       # Lecture slides
+
+├── summaries/                    # Summary documents
+
+├── Workshops/                    # Workshop materials
+
+├── LICENSE                       # License information
+
+├── CLAUDE.md                     # Claude-specific documentation
 
 └── README.md                     # This documentation
 
@@ -111,93 +129,60 @@ The organization follows several key principles:
 
 ### Computer Assignments (CAs)
 
-The core component of the repository consists of nineteen computer assignments, each focusing on specific reinforcement learning concepts and techniques.
+The repository contains a comprehensive collection of computer assignments covering fundamental to advanced reinforcement learning concepts. The assignments are organized into several categories:
 
-#### CA1: Introduction to Reinforcement Learning Fundamentals
+#### Archived Assignments (CA1-CA19)
 
-**Location:**`CAs/Solutions/CA1/`
+Located in `archive/Solutions/` and `archive/No Answer/`, these assignments provide complete solutions and problem statements for core RL topics including:
 
-**Core Concepts:**
+- Basic RL fundamentals (CA1-CA3)
+- Value-based methods (CA4-CA6)
+- Policy-based methods (CA7-CA9)
+- Model-based RL (CA10-CA12)
+- Advanced topics (CA13-CA19)
 
-- Markov Decision Processes (MDPs)
-- Value Functions and Bellman Equations
-- Basic RL terminology and notation
-- Environment-agent interaction framework
+Each assignment includes:
+- Complete implementation in Python
+- Jupyter notebooks for experimentation
+- Theoretical analysis and derivations
+- Performance evaluation and visualization
 
-**Learning Objectives:**
+#### Homework Assignments (HW1-HW14)
 
-- Understand fundamental RL components
-- Implement basic value iteration
-- Analyze simple gridworld environments
-- Develop intuition for RL problem formulation
+Located in `homeworks/`, these assignments cover practical implementations of RL algorithms:
 
-**Technical Implementation:**
+- HW1: CartPole with basic RL
+- HW2: Value-based methods
+- HW3: Policy gradients
+- HW4: Actor-critic methods
+- HW5: Model-based RL
+- HW6-HW9: Advanced topics
+- HW10: Multi-agent RL
+- HW11: Meta-learning
+- HW12: Hierarchical RL
+- HW13: Offline RL
+- HW14: Safe RL
 
-- Custom gridworld environment implementation
-- Value iteration algorithm
-- Policy evaluation and improvement
-- Visualization of value functions and policies
+#### Paper Assignments (CA23-CA31)
 
-#### CA2: Exploration Strategies in Reinforcement Learning
+Located in `paperAssignments/Assignments1-50/`, these advanced assignments focus on implementing state-of-the-art RL algorithms from research papers:
 
-**Location:**`CAs/Solutions/CA2/`
+- CA23: [Specific algorithm/topic]
+- CA24: [Specific algorithm/topic]
+- CA25: [Specific algorithm/topic]
+- CA26: [Specific algorithm/topic]
+- CA27: Meta-learning (MAML and RL²)
+- CA28: Deep Q-Networks (DQN)
+- CA29: Soft Actor-Critic (SAC)
+- CA30: [Specific algorithm/topic]
+- CA31: Actor-Critic methods and bandits
 
-**Core Concepts:**
-
-- Exploration vs. Exploitation dilemma
-- Epsilon-greedy strategies
-- Upper Confidence Bound (UCB) algorithm
-- Thompson Sampling
-- Multi-armed bandit problems
-
-**Learning Objectives:**
-
-- Analyze exploration strategies mathematically
-- Implement various exploration algorithms
-- Compare performance across different strategies
-- Understand regret minimization
-
-**Technical Implementation:**
-
-- Multi-armed bandit environment
-- Implementation of exploration algorithms
-- Regret analysis and visualization
-- Statistical performance comparison
-
-#### CA3: Function Approximation in Reinforcement Learning
-
-**Location:**`CAs/Solutions/CA3/`
-
-**Core Concepts:**
-
-- Linear function approximation
-- Feature engineering for RL
-- Gradient descent in value function learning
-- Approximation errors and bias-variance tradeoff
-
-**Learning Objectives:**
-
-- Understand limitations of tabular methods
-- Implement linear value function approximation
-- Design effective feature representations
-- Analyze approximation quality
-
-**Technical Implementation:**
-
-- Linear approximation for value functions
-- Feature extraction from state representations
-- Gradient-based optimization
-- Error analysis and visualization
-
-#### CA4: Deep Q-Networks (DQN)
-
-**Location:**`CAs/Solutions/CA4/`
-
-**Core Concepts:**
-
-- Experience replay mechanism
-- Target networks for stability
-- Deep neural networks for Q-function approximation
+Each paper assignment includes:
+- Complete algorithm implementation
+- Configuration management
+- Training scripts and notebooks
+- Unit tests and documentation
+- Research paper references
 - Temporal difference learning with function approximation
 
 **Learning Objectives:**
