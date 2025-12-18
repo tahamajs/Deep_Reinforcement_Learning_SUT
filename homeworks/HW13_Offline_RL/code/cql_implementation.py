@@ -165,3 +165,4 @@ class CQL:
 if __name__ == "__main__":
     print("cql_implementation module: define CQL, import in notebooks to train.")
 
+

@@ -14,3 +14,4 @@ def test_qp_project_simple_box():
     expected = np.array([0.5, -0.5])
     assert np.allclose(proj, expected, atol=1e-3)
 
+

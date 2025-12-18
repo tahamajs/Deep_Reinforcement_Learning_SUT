@@ -18,3 +18,4 @@ Notes:
 - The template uses the `markdown` LaTeX package to import `../HW7_Complete_Solutions.md`. Ensure your TeX distribution has this package, or replace the markdown import with converted LaTeX.
 - The repository does not include a pre-built PDF because `pdflatex` was not found in the environment where this step was attempted.
 
+

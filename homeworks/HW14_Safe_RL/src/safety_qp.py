@@ -67,3 +67,4 @@ def qp_project_action(action: np.ndarray, G: np.ndarray, h: np.ndarray, solver: 
     sol = np.array(a.value).reshape(action.shape)
     return sol
 
+
