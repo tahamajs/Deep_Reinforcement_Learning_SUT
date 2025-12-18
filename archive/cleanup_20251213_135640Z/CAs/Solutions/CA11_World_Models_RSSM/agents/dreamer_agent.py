@@ -65,6 +65,8 @@ class DreamerAgent:
         self.latent_dim = global_config.dreamer_config.agent_config.latent_dim
         self.imagination_horizon = global_config.dreamer_config.agent_config.imagination_horizon
         self.device = global_config.device
+        # simple global step counter (used by planner hooks)
+        self.step = 0
 
         # World model components
         self.rssm = RSSM(
@@ -91,6 +93,36 @@ class DreamerAgent:
         self.critic_optimizer = optim.Adam(
             self.actor_critic.critic.parameters(), lr=global_config.dreamer_config.agent_config.critic_lr
         )
+        # Planner integration (optional)
+        self.planner_available = False
+        self.checkpoint_buffer = None
+        self.last_planner_trigger = None
+        try:
+            # try importing planner package (CA13)
+            from planner import CheckpointBuffer, simulate_branches, should_trigger, TriggerConfig  # type: ignore
+
+            self.planner_available = True
+            # planner configuration may live on global_config.planner or use defaults
+            planner_cfg = getattr(global_config, "planner", {}) or {}
+            buffer_size = int(planner_cfg.get("buffer_size", 1024))
+            self.checkpoint_buffer = CheckpointBuffer(capacity=buffer_size, device=self.device)
+            # simple TriggerConfig instance for thresholding; user can replace with richer config
+            self._planner_trigger_cfg = TriggerConfig(
+                cooldown=int(planner_cfg.get("cooldown", 8)),
+                trigger_td=float(planner_cfg.get("trigger_td", 0.7)),
+                trigger_unc=float(planner_cfg.get("trigger_unc", 0.2)),
+                trigger_ent_low=float(planner_cfg.get("trigger_entropy_low", 0.3)),
+                trigger_ent_high=float(planner_cfg.get("trigger_entropy_high", 2.0)),
+            )
+            # keep references to functions
+            self._simulate_branches = simulate_branches
+            self._should_trigger = should_trigger
+        except Exception:
+            # planner not available in PYTHONPATH
+            self.planner_available = False
+            self.checkpoint_buffer = None
+            self._simulate_branches = None
+            self._should_trigger = None
 
     def select_action(
         self, obs: torch.Tensor, deterministic: bool = False
@@ -120,6 +152,8 @@ class DreamerAgent:
                 "done": done,
             }
         )
+        # advance global step counter for planner bookkeeping
+        self.step += 1
 
     def update_world_model(self, batch_size: int) -> Dict[str, float]:
         """Update world model using data from buffer"""
@@ -177,6 +211,45 @@ class DreamerAgent:
             "kl_loss": kl_loss.item(),
             "total_world_loss": total_loss.item(),
         }
+        # Planner hook: compute simple TD-like signal (reward prediction error)
+        # and add latent checkpoints for high-error samples. This block is intentionally
+        # lightweight and robust to missing planner modules.
+        try:
+            if self.planner_available and self.checkpoint_buffer is not None:
+                # reward_pred: [batch, 1], reward_batch: [batch]
+                td_vec = torch.abs(reward_pred.squeeze() - reward_batch).detach()
+                # threshold can be configured via global_config.planner.threshold; fallback 0.5
+                td_thresh = float(getattr(global_config, "planner", {}).get("trigger_td", 0.7))
+                # post_latent corresponds to per-sample posterior latent (batch x latent_dim)
+                for i, td in enumerate(td_vec):
+                    if float(td) >= td_thresh:
+                        z_i = post_latent[i].detach()
+                        self.checkpoint_buffer.push(z_i, score=float(td), step=self.step)
+                # Optionally trigger planner immediately if condition met on mean td
+                td_mean = float(td_vec.mean().item())
+                if self._should_trigger is not None and self._simulate_branches is not None:
+                    if self._should_trigger(td_mean, 0.0, 0.0, self._planner_trigger_cfg, self.last_planner_trigger, self.step):
+                        # sample a checkpoint and run simulated branches (non-blocking, no-grad)
+                        samples = self.checkpoint_buffer.sample(k=1, prioritized=True) if len(self.checkpoint_buffer) > 0 else []
+                        if samples:
+                            z_saved = samples[0]["z"]
+                            # value function wrapper
+                            def value_fn(z):
+                                with torch.no_grad():
+                                    v = self.actor_critic.critic(z.view(z.shape[0], -1))
+                                    # return scalar for bootstrap; if batch, take mean
+                                    return v.mean()
+
+                            branches = self._simulate_branches(self.rssm, self.actor_critic.actor, value_fn, z_saved, planner_cfg if 'planner_cfg' in locals() else planner_cfg)
+                            # store metadata and update last trigger
+                            self.last_planner_trigger = self.step
+                            # For now, just log top branch return (user should integrate imagined updates)
+                            if branches:
+                                top_ret = branches[0].ret
+                                print(f\"[Planner] step={self.step} triggered. top_branch_return={top_ret:.3f}\")
+        except Exception:
+            # swallow planner exceptions to avoid breaking world-model training
+            pass
 
     def _kl_divergence(
         self,
