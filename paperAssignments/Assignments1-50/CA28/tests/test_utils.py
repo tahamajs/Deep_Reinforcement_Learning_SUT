@@ -21,10 +21,7 @@ def test_replay_buffer():
     buffer.push(state, action, reward, next_state, done)
     assert len(buffer) == 1
 
-    # Test sample when buffer is small
-    buffer.optimize_model = lambda: None  # Mock
-    # Since batch_size > len, it should not sample
-    # But in test, we can add more
+    # Add a few more items and test sampling
     for i in range(5):
         buffer.push(state, action, reward, next_state, done)
     assert len(buffer) == 6

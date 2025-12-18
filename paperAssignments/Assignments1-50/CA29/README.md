@@ -305,6 +305,21 @@ Follow these steps to set up the SAC implementation on your system:
 - **Slow training**: Reduce `batch_size` or `num_steps` for faster iteration during development
 - **Memory errors**: Decrease `buffer_size` or use CPU if GPU memory is insufficient
 
+## Results & Report 📊
+
+After running experiments, collect results and populate the `REPORT.md` file with tables, plots, and commentary. The repository includes a `REPORT.md` template with sections for an abstract, implementation summary, experimental protocol, and an example table for final performance. Use the notebook `notebooks/experiment_template.ipynb` to load logs and generate plots.
+
+Example steps to capture and report results:
+1. Run an experiment and save outputs:
+   ```bash
+   python -m src.cli --config configs/default.yaml --log-dir results/run1
+   ```
+2. Use the notebook to generate learning curves and entropies for each seed and configuration.
+3. Fill `REPORT.md` with mean ± std tables and attach figures (PNG/PDF) to the `results/` directory.
+4. Save the config YAML and git commit hash alongside results for reproducibility.
+
+The `REPORT.md` includes a sample table and figure templates to help standardize reporting across experiments. Please include the full experimental setup (config, seeds, environment versions) when adding final results.
+
 
 
 

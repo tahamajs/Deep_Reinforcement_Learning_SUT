@@ -1,0 +1,9 @@
+# Default config for CA24 experiments
+seed: 42
+device: "cpu"
+input_dim: 10
+output_dim: 1
+hidden_dims: [64, 64]
+lr: 0.001
+batch_size: 32
+epochs: 5

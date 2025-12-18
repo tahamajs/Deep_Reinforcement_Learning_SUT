@@ -1,85 +1,99 @@
-# CA31 — Advantage Actor-Critic (A2C) Implementation
+# CA31 — Advantage Actor-Critic (A2C) Implementation ✅
 
 ## Overview
 
-This assignment implements the Advantage Actor-Critic (A2C) algorithm, a synchronous variant of A3C that stabilizes training by using multiple parallel environments. The project demonstrates turning RL theory into clean, testable code with reproducible experiments.
+This assignment implements the Advantage Actor-Critic (A2C) algorithm in PyTorch and includes a small, fully-tested, reproducible bandit example for quick sanity checks. The project is organized for reproducible experiments, unit testing, and clear results reporting.
 
-## Learning Objectives
+---
 
-- Implement A2C from scratch with PyTorch.
-- Build modular, import-safe code with type hints and docstrings.
-- Conduct experiments with baselines, ablations, and seed sweeps.
-- Produce publication-quality figures and analysis.
+## Quick start 🔧
 
-## Repository Layout
-
-- `src/` — Core algorithm modules (model, agent, config, utils).
-- `notebooks/` — Training, evaluation, and visualization notebooks.
-- `configs/` — YAML configuration files for hyperparameters.
-- `tests/` — Unit tests for all modules.
-- `results/` — Saved experiment outputs and figures.
-
-## Problem Framing
-
-**Hypothesis**: A2C converges faster and achieves higher sample efficiency than vanilla policy gradient methods (e.g., REINFORCE) on continuous control tasks like CartPole-v1, due to its use of a learned value function for advantage estimation and entropy regularization.
-
-**Experiments**:
-1. **Baseline Comparison**: Train A2C vs. REINFORCE on CartPole-v1, measuring episode rewards over 50k environment steps.
-2. **Ablation Study**: Compare A2C with/without entropy bonus and value function clipping.
-3. **Seed Sweeps**: Run 5 random seeds to assess variance and statistical significance.
-4. **Hyperparameter Sensitivity**: Vary learning rate and entropy coefficient.
-
-## Implementation Notes
-
-- Centralized hyperparameters in YAML configs for reproducibility.
-- Training loops contained in Jupyter notebooks for interactive experimentation.
-- Vectorized environments using Gym's `VectorEnv` for parallel rollouts.
-- Gradient clipping and entropy regularization for stable training.
-
-## Experiments & Evaluation
-
-- **Metrics**: Episode rewards, training loss components (policy, value, entropy), convergence speed.
-- **Baselines**: REINFORCE implementation for comparison.
-- **Evaluation**: Deterministic policy evaluation on 100 episodes post-training.
-- **Figures**: Learning curves, loss breakdowns, ablation plots.
-
-## Setup
+1. Create a virtual environment and install the requirements:
 
 ```bash
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python -m pytest tests/ -v  # Run tests
-jupyter notebook notebooks/a2c_training.ipynb  # Train and evaluate
 ```
-## Small reproducible bandit example 🔧
 
-A minimal, numpy-only example is available under `src/ca31/` demonstrating
-reproducible experiments with explicit seeding and CSV output. This is useful
-for quick sanity checks and deterministic tests.
+2. Run the unit tests (fast and recommended before experimenting):
 
-Usage examples:
+```bash
+python -m pytest tests/ -v
+```
 
-- Run the example experiment with the included config:
+3. Run the small bandit experiment (deterministic with `seed`):
 
 ```bash
 python -m ca31.train --config configs/experiment.yaml
 ```
 
-- Programmatic usage inside notebooks or tests:
+4. Explore the A2C notebook for training and evaluation:
 
-```python
-from ca31.utils import load_config, set_seed
-from ca31.train import run_experiment
-
-cfg = load_config("configs/experiment.yaml")
-rng = set_seed(cfg.get("seed", None))
-results = run_experiment(cfg, rng)
+```bash
+jupyter notebook notebooks/a2c_training.ipynb
 ```
 
-The helper `set_seed` returns a `numpy.random.Generator` for deterministic runs
-and centralizes seeding.
-## Results Summary
+---
 
-A2C achieves mean reward of ~450 on CartPole-v1 after 50k steps, outperforming REINFORCE (~200). Entropy regularization prevents premature convergence, while the critic reduces variance in policy updates.
+## Reproducibility & Determinism 🎯
+
+- All experiments use explicit seeding. The helper `set_seed` returns a
+  `numpy.random.Generator` for per-run determinism (see `src/ca31/utils.py`).
+- Configs are YAML files under `configs/` (e.g. `a2c.yaml`, `experiment.yaml`).
+- Results and CSV exports are saved under `results/` when requested by config.
+
+---
+
+## Experiments & Results 📊
+
+Included experiments and expected behavior:
+
+- Bandit example (`src/ca31/`) — deterministic runs, shows eps-greedy learning.
+- A2C on CartPole-v1 (not fully executed in CI) — typical results in this repo
+  showed mean rewards ≈450 after 50k steps (with the example hyperparameters).
+
+For full experimental details and a short paper-style report, see `REPORT.md`.
+
+---
+
+## Project structure 🔍
+
+- `src/` — Core library: `agent.py`, `model.py`, `config.py`, `utils.py` and a
+  small deterministic bandit module under `src/ca31/`.
+- `configs/` — Example YAML configs for bandit and A2C experiments.
+- `notebooks/` — Notebook for interactive training and visualization.
+- `tests/` — Unit tests (determinism, small units, and API checks).
+- `results/` — Place to store CSVs and figures produced by runs.
+
+---
+
+## Development notes & style 🔧
+
+- Python 3.10+, typed functions and small, import-safe modules.
+- Keep experiments reproducible by passing RNGs explicitly (see `ca31.train`).
+- Avoid heavy side effects on import — notebooks and training scripts are entry points.
+
+---
+
+## How to cite / credit 🙏
+
+This repository is a pedagogical implementation used for coursework and research
+examples. If you reuse code or results, please cite the project and include a
+short note in your README or paper.
+
+---
+
+## Report
+
+A compact report is included as `REPORT.md` (summary, methods, experiments,
+results and reproducibility information). See it for exact metrics, plots,
+hyperparameter tables and implementation details.
+
+---
+
+If you want, I can also add example figures, CI hooks, or a small `Makefile` to
+automate running experiments and generating the report.
+
 
 
 

@@ -1,64 +1,104 @@
 # CA26 — Curriculum Assignment 26
 
-## Overview
+## Overview ✅
 
-CA26 is a research-oriented assignment scaffold designed to help students implement and evaluate a novel algorithmic idea. This README provides a long-form template including theory, implementation mapping, experiments, and deliverables.
+This repository is a compact, reproducible scaffold for a synthetic regression experiment. It includes an MLP model, loss implementations (MSE and Huber), utilities for deterministic experiments and plotting, a simple training script, and unit tests.
 
-## Learning Objectives
+## Highlights
 
-- Turn mathematical derivations into testable code.
-- Maintain import-safety and clear APIs.
-- Run reproducible experiments with organized outputs.
-- Create publication-quality figures saved programmatically.
+- Small, import-safe Python package under `src/` designed for learning and reproducible experiments.
+- Example CLI training script (`scripts/run_experiment.py`) that saves model checkpoints and loss plots.
+- Unit tests to ensure correctness and shape checks.
+- `REPORT.md` contains a paper-style write-up and reproducibility instructions.
 
-## Code Layout
+---
 
-- `src/` with `config.py`, `model.py`, `data.py`, `losses.py`, `utils.py`.
-- `notebooks/` for demos and experiments.
-- `configs/` for debug/default YAMLs.
-- `tests/` for pytest tests.
+## Quickstart ⚡
 
-Problem statement template
+1. Create and activate a virtual environment (Python 3.10+):
 
-State a clear hypothesis and specify the experiments to validate it.
+```bash
+python -m venv .venv && source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
-Theory & mapping
+2. Run tests (fast and recommended before experiments):
 
-- Derive working equations and implement corresponding functions in `src/losses.py`.
-- Validate shapes and types in unit tests.
+```bash
+python -m pytest -q
+```
 
-Implementation notes
+3. Run the example experiment (writes `model.pt` and a loss plot):
 
-- Centralize hyperparameters and use dataclasses.
-- Ensure deterministic seeding across runs.
+```bash
+python -m scripts.run_experiment --config configs/default.yaml --out outputs
+```
 
-Experiments
+---
 
-- Baseline comparisons and ablations.
-- Report mean and std across seeds.
+## Project structure 🔧
 
-Appendix: Padding list
+- `configs/default.yaml` — example experiment config (hyperparameters).
+- `scripts/run_experiment.py` — example training loop and CLI.
+- `src/` — core code:
+  - `config.py` — dataclasses and `load_config` helper.
+  - `data.py` — `SyntheticRegressionDataset` and `get_dataloader`.
+  - `model.py` — `MLP` and activation helper.
+  - `losses.py` — `mse_loss` and `huber_loss` (with shape checks).
+  - `utils.py` — seeding, dir helpers, plotting, and `FitResult` dataclass.
+- `tests/` — unit tests for components and training pipeline.
+- `REPORT.md` — paper-style report and experiment suggestions.
 
-1. Pad 1
-2. Pad 2
-3. Pad 3
-4. Pad 4
-5. Pad 5
-6. Pad 6
-7. Pad 7
-8. Pad 8
-9. Pad 9
-10. Pad 10
-11. Pad 11
-12. Pad 12
-13. Pad 13
-14. Pad 14
-15. Pad 15
-16. Pad 16
-17. Pad 17
-18. Pad 18
-19. Pad 19
-20. Pad 20
+---
+
+## Reproducibility & Running Experiments 🔁
+
+- The code uses deterministic seeds (`src/utils.set_seed`). For real experiments, run multiple seeds and average results.
+- Use the CLI for single-run experiments. For sweeps, write a small loop or use hydra/other sweep tools.
+
+Example command:
+
+```bash
+python -m scripts.run_experiment --config configs/default.yaml --out outputs/seed-42
+```
+
+Expected outputs in `outputs/`:
+- `model.pt` — PyTorch state dict
+- `loss/loss_curve.png` — training loss per epoch
+
+---
+
+## Tests and CI ✅
+
+- A test suite is included; run with `pytest`.
+- Tests added cover losses, model shapes, config loading, utils, and a short run of `fit()`.
+
+---
+
+## How to prepare a report / deliverables 📄
+
+Include the following in your submission:
+
+1. `REPORT.md` (this repo includes an initial draft) with:
+   - Abstract, methods, experiments, results, and reproducibility details.
+2. `outputs/` directory with example artifacts (`model.pt`, `loss_curve.png`).
+3. A small notebook in `notebooks/` summarizing aggregated results (mean ± std across seeds).
+
+---
+
+## Contribution & Notes ✍️
+
+- Keep the repo import-safe: modules should not execute heavy work on import.
+- Tests should be fast and deterministic.
+- If adding external dependencies, document them in `requirements.txt`.
+
+---
+
+## License
+
+MIT
+
 
 
 

@@ -1,5 +1,6 @@
 """Tests for utility functions."""
 
+import pytest
 import torch
 
 from src.utils import get_device, set_seed
@@ -41,4 +42,14 @@ class TestSeeding:
         # Basic test that it doesn't crash
         set_seed(42)
         # Could test reproducibility, but for simplicity, just call it
+        assert True
+
+    def test_set_env_seed(self):
+        # Only run this test if gymnasium is available
+        gym = pytest.importorskip('gymnasium')
+        env = gym.make('CartPole-v1')
+        # Should not raise
+        from src.utils import set_env_seed
+        set_env_seed(env, 123)
+        env.close()
         assert True

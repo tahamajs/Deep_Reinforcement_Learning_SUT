@@ -44,3 +44,21 @@ def entropy_from_logits(logits: torch.Tensor) -> torch.Tensor:
     """Compute entropy loss from raw logits in a numerically stable way."""
     probs = torch.softmax(logits, dim=-1)
     return entropy_from_probs(probs)
+
+
+def entropy_loss(x: torch.Tensor) -> torch.Tensor:
+    """Compatibility wrapper used in tests: accepts either probabilities or logits.
+
+    If the input appears to be a probability vector (non-negative and rows sum
+    to ~1) it is treated as probabilities; otherwise it is treated as raw logits
+    and softmax is applied internally. The returned value is a scalar tensor
+    (negative mean entropy), so it can be minimized directly by optimizers.
+    """
+    # Ensure at least 2D for consistent checks
+    if x.dim() == 1:
+        x = x.unsqueeze(0)
+    # Heuristic: non-negative entries and row sums close to 1 -> probs
+    row_sums = x.sum(dim=-1)
+    if torch.all(x >= 0) and torch.allclose(row_sums, torch.ones_like(row_sums), atol=1e-4):
+        return entropy_from_probs(x)
+    return entropy_from_logits(x)

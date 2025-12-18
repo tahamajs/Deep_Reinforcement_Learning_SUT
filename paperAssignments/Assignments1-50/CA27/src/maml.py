@@ -48,10 +48,17 @@ class MAML:
         return loss
 
     def collect_trajectory(self, env, policy: nn.Module, max_steps: int = 200) -> Dict[str, torch.Tensor]:
-        """Collect one trajectory."""
+        """Collect one trajectory using a policy network.
+
+        This method handles different Gym APIs for ``reset()`` and ``step()`` and
+        returns a dictionary of tensors suitable for computing policy gradients.
+        """
         states, actions, rewards, log_probs = [], [], [], []
 
         state = env.reset()
+        if isinstance(state, tuple):
+            state = state[0]
+
         for _ in range(max_steps):
             state_tensor = torch.FloatTensor(state).unsqueeze(0)
 
@@ -61,11 +68,22 @@ class MAML:
             action = dist.sample()
             log_prob = dist.log_prob(action)
 
-            next_state, reward, done, _ = env.step(action.item())
+            # Support different step() return signatures
+            step_result = env.step(action.item())
+            if len(step_result) == 4:
+                next_state, reward, done, _ = step_result
+            elif len(step_result) == 5:
+                next_state, reward, terminated, truncated, _ = step_result
+                done = bool(terminated or truncated)
+            else:
+                next_state, reward, done = step_result[0], step_result[1], bool(step_result[2])
+
+            if isinstance(next_state, tuple):
+                next_state = next_state[0]
 
             states.append(state)
             actions.append(action)
-            rewards.append(reward)
+            rewards.append(float(reward))
             log_probs.append(log_prob)
 
             state = next_state

@@ -1,0 +1,6 @@
+seed: 123
+input_dim: 8
+hidden_dim: 64
+output_dim: 2
+epochs: 1
+batch_size: 16

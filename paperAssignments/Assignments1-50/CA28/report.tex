@@ -50,7 +50,7 @@ Our implementation includes:
 
 \subsection{Configuration}
 
-Hyperparameters are loaded from YAML configuration:
+Hyperparameters are loaded from the YAML configuration file at `configs/config.yaml`. The defaults used in our experiments were:
 \begin{itemize}
 \item Learning rate: 0.001
 \item Batch size: 32
@@ -60,6 +60,17 @@ Hyperparameters are loaded from YAML configuration:
 \item Maximum steps per episode: 200
 \end{itemize}
 
+\section{Reproducibility}
+
+To reproduce experiments:
+\begin{enumerate}
+\item Create a Python 3.10+ virtual environment and install the packages in `requirements.txt`.
+\item Update any hyperparameters in `configs/config.yaml` or copy it for ablations.
+\item Run `python -c "from src.config import load_config; from src.train import train_dqn; cfg=load_config('configs/config.yaml'); _=train_dqn(cfg)"` to execute a training run.
+\item Save training curves and results to `figures/` and `outputs/` and include them when compiling the report.
+\end{enumerate}
+
+We provide deterministic seeding via `src.utils.set_seed` and recommend sweeping several seeds for reporting mean and standard deviation of final performance.
 \section{Experiments}
 
 \subsection{Baseline Experiment}

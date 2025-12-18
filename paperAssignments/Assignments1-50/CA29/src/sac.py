@@ -17,11 +17,12 @@ class ReplayBuffer:
         self.size = size
         self.ptr = 0
         self.full = False
-        self.states = np.zeros((size, state_dim))
-        self.actions = np.zeros((size, action_dim))
-        self.rewards = np.zeros(size)
-        self.next_states = np.zeros((size, state_dim))
-        self.dones = np.zeros(size)
+        # Use float32 for efficient storage and torch compatibility
+        self.states = np.zeros((size, state_dim), dtype=np.float32)
+        self.actions = np.zeros((size, action_dim), dtype=np.float32)
+        self.rewards = np.zeros((size, 1), dtype=np.float32)
+        self.next_states = np.zeros((size, state_dim), dtype=np.float32)
+        self.dones = np.zeros((size, 1), dtype=np.float32)
 
     def add(self, state: np.ndarray, action: np.ndarray, reward: float,
             next_state: np.ndarray, done: bool) -> None:
@@ -42,11 +43,11 @@ class ReplayBuffer:
         idxs = np.random.randint(0, max_idx, batch_size)
 
         return (
-            torch.FloatTensor(self.states[idxs]),
-            torch.FloatTensor(self.actions[idxs]),
-            torch.FloatTensor(self.rewards[idxs]),
-            torch.FloatTensor(self.next_states[idxs]),
-            torch.FloatTensor(self.dones[idxs])
+            torch.from_numpy(self.states[idxs]).float(),
+            torch.from_numpy(self.actions[idxs]).float(),
+            torch.from_numpy(self.rewards[idxs]).float(),
+            torch.from_numpy(self.next_states[idxs]).float(),
+            torch.from_numpy(self.dones[idxs]).float()
         )
 
     def __len__(self) -> int:
@@ -213,8 +214,9 @@ class SAC:
             'critic1_optimizer': self.critic1_optimizer.state_dict(),
             'critic2_optimizer': self.critic2_optimizer.state_dict(),
             'alpha_optimizer': self.alpha_optimizer.state_dict(),
-            'log_alpha': self.log_alpha,
-            'alpha': self.alpha
+            # Save log_alpha as a plain float for portability
+            'log_alpha': float(self.log_alpha.detach().cpu().item()),
+            'alpha': float(self.alpha)
         }, path)
 
     def load(self, path: str) -> None:
@@ -229,5 +231,8 @@ class SAC:
         self.critic1_optimizer.load_state_dict(checkpoint['critic1_optimizer'])
         self.critic2_optimizer.load_state_dict(checkpoint['critic2_optimizer'])
         self.alpha_optimizer.load_state_dict(checkpoint['alpha_optimizer'])
-        self.log_alpha = checkpoint['log_alpha']
-        self.alpha = checkpoint['alpha']
+        # Restore log_alpha (stored as float) as a tensor with grad enabled on the correct device
+        log_alpha_val = float(checkpoint.get('log_alpha', np.log(self.alpha)))
+        self.log_alpha = torch.tensor(log_alpha_val, requires_grad=True, device=self.device)
+        # Also restore alpha if present
+        self.alpha = float(checkpoint.get('alpha', self.log_alpha.exp().item()))

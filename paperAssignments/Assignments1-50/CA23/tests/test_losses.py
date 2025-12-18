@@ -18,3 +18,8 @@ def test_losses_shapes_and_values():
     probs = torch.tensor([[0.5, 0.5], [0.8, 0.2]])
     ent = entropy_loss(probs)
     assert ent.shape == ()
+
+    # Also accept raw logits
+    logits = torch.tensor([[1.0, 0.0], [2.0, -1.0]])
+    ent_logits = entropy_loss(logits)
+    assert ent_logits.shape == ()

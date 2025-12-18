@@ -130,8 +130,14 @@ class RL2Trainer:
         self.optimizer = optim.Adam(self.policy.parameters(), lr=config.lr)
 
     def collect_trajectory_rl2(self, env, max_steps: int = 200) -> Dict[str, torch.Tensor]:
-        """Collect trajectory with recurrent policy."""
+        """Collect trajectory with recurrent policy.
+
+        Compatible with different Gym APIs for ``reset`` and ``step``.
+        """
         obs = env.reset()
+        if isinstance(obs, tuple):
+            obs = obs[0]
+
         hidden = self.policy.init_hidden()
 
         states, actions, rewards, log_probs, values, dones = [], [], [], [], [], []
@@ -150,14 +156,24 @@ class RL2Trainer:
                 obs_tensor, prev_action_tensor, prev_reward_tensor, done_tensor, hidden
             )
 
-            next_obs, reward, done, _ = env.step(action.item())
+            step_result = env.step(action.item())
+            if len(step_result) == 4:
+                next_obs, reward, done, _ = step_result
+            elif len(step_result) == 5:
+                next_obs, reward, terminated, truncated, _ = step_result
+                done = bool(terminated or truncated)
+            else:
+                next_obs, reward, done = step_result[0], step_result[1], bool(step_result[2])
+
+            if isinstance(next_obs, tuple):
+                next_obs = next_obs[0]
 
             states.append(obs)
             actions.append(action)
-            rewards.append(reward)
+            rewards.append(float(reward))
             log_probs.append(log_prob)
             values.append(value)
-            dones.append(done)
+            dones.append(bool(done))
 
             obs = next_obs
             prev_action = F.one_hot(action, self.config.action_dim).float()

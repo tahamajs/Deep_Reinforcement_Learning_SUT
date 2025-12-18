@@ -59,4 +59,5 @@ class ActorCritic(nn.Module):
         dist = Categorical(logits=action_logits)
         actions = dist.sample()
         log_probs = dist.log_prob(actions)
-        return actions, log_probs, values.squeeze(-1)
+        # Return values in (batch, 1) shape to keep the same format as `forward`
+        return actions, log_probs, values
