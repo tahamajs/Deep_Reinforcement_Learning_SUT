@@ -157,3 +157,21 @@ class TWMSSDModel(nn.Module):
             x = layer(x)
         return self.pred_obs(x), self.pred_reward(x)
 
+
+class TWMSSDImageModel(nn.Module):
+    """
+    Wrapper that accepts images, runs them through an ImageVQVAE to get token embeddings,
+    then forwards through the TWMSSDModel backbone.
+    """
+    def __init__(self, image_vq, backbone: TWMSSDModel):
+        super().__init__()
+        self.vq = image_vq
+        self.backbone = backbone
+
+    def forward(self, images: torch.Tensor, actions: Optional[torch.Tensor] = None):
+        # images: (B, C, H, W)
+        recon, quantized, indices = self.vq(images)
+        # quantized: (B, L, D)
+        pred_obs, pred_reward = self.backbone(quantized, actions)
+        return pred_obs, pred_reward, recon, indices
+

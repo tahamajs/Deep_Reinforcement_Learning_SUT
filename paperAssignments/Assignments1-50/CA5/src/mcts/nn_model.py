@@ -17,8 +17,12 @@ class SmallDiscreteModel(nn.Module):
         super().__init__()
         # embed scalar state to vector
         self.embed = nn.Sequential(nn.Linear(1, hidden), nn.ReLU())
-        self.policy_head = nn.Sequential(nn.Linear(hidden, hidden), nn.ReLU(), nn.Linear(hidden, n_actions))
-        self.value_head = nn.Sequential(nn.Linear(hidden, hidden), nn.ReLU(), nn.Linear(hidden, 1))
+        self.policy_head = nn.Sequential(
+            nn.Linear(hidden, hidden), nn.ReLU(), nn.Linear(hidden, n_actions)
+        )
+        self.value_head = nn.Sequential(
+            nn.Linear(hidden, hidden), nn.ReLU(), nn.Linear(hidden, 1)
+        )
 
     def forward(self, state: torch.Tensor):
         # state shape (B,) or (B,1)
@@ -50,4 +54,3 @@ class SmallDiscreteModel(nn.Module):
                 state = torch.tensor([state], dtype=torch.float32)
             _, v = self.forward(state)
             return float(v[0].item())
-

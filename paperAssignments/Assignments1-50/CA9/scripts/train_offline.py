@@ -57,7 +57,17 @@ def main():
     os.makedirs(args.logdir, exist_ok=True)
     log_path = os.path.join(args.logdir, f"train_{int(time.time())}.csv")
     with open(log_path, "w", newline="") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=["step", "v_loss", "critic_loss", "policy_loss", "lam_mean", "std_mild_mean"])
+        writer = csv.DictWriter(
+            csvfile,
+            fieldnames=[
+                "step",
+                "v_loss",
+                "critic_loss",
+                "policy_loss",
+                "lam_mean",
+                "std_mild_mean",
+            ],
+        )
         writer.writeheader()
         step = 0
         for epoch in range(args.epochs):
@@ -69,11 +79,12 @@ def main():
                 stats_row.update(stats)
                 writer.writerow(stats_row)
                 if step % 100 == 0:
-                    print(f"step={step} v_loss={stats['v_loss']:.4f} critic={stats['critic_loss']:.4f} lam={stats['lam_mean']:.3f}")
+                    print(
+                        f"step={step} v_loss={stats['v_loss']:.4f} critic={stats['critic_loss']:.4f} lam={stats['lam_mean']:.3f}"
+                    )
                 step += 1
     print(f"Training finished. Logs saved to {log_path}")
 
 
 if __name__ == "__main__":
     main()
-

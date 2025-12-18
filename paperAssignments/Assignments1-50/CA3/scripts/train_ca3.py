@@ -5,6 +5,7 @@ python paperAssignments/Assignments1-50/CA3/scripts/train_ca3.py
 
 This script runs a small number of episodes (default=20) suitable for CI or smoke tests.
 """
+
 import argparse
 import os
 import torch
@@ -28,9 +29,11 @@ def main(args):
 
     returns_history = []
     for ep in range(cfg.max_episodes):
-        ep_data = collect_episode(env, policy, device='cpu', max_steps=cfg.max_steps_per_episode)
-        rewards = ep_data['rewards']
-        log_probs = torch.as_tensor(ep_data['log_probs'], dtype=torch.float32)
+        ep_data = collect_episode(
+            env, policy, device="cpu", max_steps=cfg.max_steps_per_episode
+        )
+        rewards = ep_data["rewards"]
+        log_probs = torch.as_tensor(ep_data["log_probs"], dtype=torch.float32)
         G = discounted_returns(rewards, cfg.gamma)
         G_tensor = returns_to_tensor(G)
         loss = reinforce_loss(log_probs, G_tensor)
@@ -39,17 +42,21 @@ def main(args):
         optimizer.step()
         returns_history.append(sum(rewards))
         if (ep + 1) % 10 == 0:
-            print(f'Episode {ep+1}\tReturn: {returns_history[-1]:.2f}')
+            print(f"Episode {ep+1}\tReturn: {returns_history[-1]:.2f}")
 
     # save a lightweight checkpoint
     ensure_dir(cfg.save_dir)
-    ckpt_path = os.path.join(cfg.save_dir, 'checkpoint_smoke.pth')
-    torch.save({'policy_state': policy.state_dict(), 'returns': returns_history}, ckpt_path)
-    print('Saved checkpoint to', ckpt_path)
+    ckpt_path = os.path.join(cfg.save_dir, "checkpoint_smoke.pth")
+    torch.save(
+        {"policy_state": policy.state_dict(), "returns": returns_history}, ckpt_path
+    )
+    print("Saved checkpoint to", ckpt_path)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--episodes', type=int, default=20, help='Number of episodes to run')
+    parser.add_argument(
+        "--episodes", type=int, default=20, help="Number of episodes to run"
+    )
     args = parser.parse_args()
     main(args)

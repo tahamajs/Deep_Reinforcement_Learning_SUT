@@ -2,6 +2,7 @@ import math
 import torch
 import sys
 import os
+
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, ROOT)
 from ..src.config import default_config  # type: ignore
@@ -32,12 +33,12 @@ def test_gate_monotonicity_formula():
     cfg = default_config()
     k = cfg.kappa
     b = cfg.beta
+
     def gate(std):
         return 1.0 / (1.0 + math.exp(-((k / (std + 1e-6)) - b)))
 
     stds = [0.0, 0.01, 0.1, 0.2, 0.5, 1.0]
     gates = [gate(s) for s in stds]
     # gate should be non-increasing as std increases
-    for i in range(len(gates)-1):
-        assert gates[i] >= gates[i+1]
-
+    for i in range(len(gates) - 1):
+        assert gates[i] >= gates[i + 1]

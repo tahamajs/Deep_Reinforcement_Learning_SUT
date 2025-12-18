@@ -49,8 +49,16 @@ class LightZeroAdapter(BaseMuZeroPolicy):
         self, obs: torch.Tensor, sims: int = 100, topk: int = 8
     ) -> Dict[str, torch.Tensor]:
         h0 = self.policy.net.initial_latent(obs)
-        visits, policy = self.mcts.run(h0, num_simulations=sims, topk=topk)
-        return {"visits": visits, "policy": policy}
+        out = self.mcts.run(h0, num_simulations=sims, topk=topk)
+        if isinstance(out, tuple) and len(out) == 3:
+            visits, policy, joint = out
+            return {"visits": visits, "policy": policy, "joint_visits": joint}
+        elif isinstance(out, tuple) and len(out) == 2:
+            visits, policy = out
+            return {"visits": visits, "policy": policy}
+        else:
+            # fallback: assume dict-like
+            return {"visits": out.get("visits"), "policy": out.get("policy")}
 
     def training_step(
         self,

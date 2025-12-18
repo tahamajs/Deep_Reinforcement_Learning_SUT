@@ -1,0 +1,20 @@
+env: CartPole-v1
+seed: 0
+steps: 20000
+batch_size: 64
+replay_size: 50000
+warmup_steps: 1000
+update_every: 1
+update_start: 1000
+gamma: 0.99
+lr: 1e-4
+num_particles: 64
+particle_dim: 1
+sinkhorn:
+  iters: 20
+  eps_start: 1.0
+  eps_end: 0.01
+  decay_steps: 100000
+target_update_every: 1000
+eval_interval: 5000
+save_dir: runs/ca1

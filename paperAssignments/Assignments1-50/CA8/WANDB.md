@@ -24,8 +24,8 @@ Notes
 - For reproducibility, include the `cfg.as_dict()` sent to W&B in your run config.
 
 Sweeps
+
 - Example sweep config: `paperAssignments/Assignments1-50/CA8/wandb_sweep.yaml`
 - Start a sweep:
   1. wandb sweep paperAssignments/Assignments1-50/CA8/wandb_sweep.yaml
   2. wandb agent <SWEEP_ID>
-

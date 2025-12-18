@@ -1,5 +1,6 @@
 import torch
 from paperAssignments.Assignments1_50.CA2.src.optim.sophia import Sophia  # type: ignore
+from paperAssignments.Assignments1_50.CA2.src.agent import build_optimizer  # type: ignore
 
 
 def test_sophia_reduces_quadratic_loss():
@@ -36,4 +37,27 @@ def test_sophia_state_contains_m_and_h():
     assert "m" in st and "h" in st
     assert st["m"].shape == p.data.shape
     assert st["h"].shape == p.data.shape
+
+
+def test_hutchinson_step_runs():
+    # small linear model
+    model = torch.nn.Linear(3, 1)
+    opt = build_optimizer(model, optim_name="sophia", lr=1e-2, hessian_estimator="hutchinson", hutchinson_samples=1)
+
+    # random batch
+    obs = torch.randn(4, 3)
+    target = torch.randn(4, 1)
+
+    def closure():
+        opt.zero_grad()
+        out = model(obs)
+        loss = torch.nn.functional.mse_loss(out, target)
+        loss.backward(create_graph=True)
+        return loss
+
+    # Should run without errors and update state
+    loss_before = float(torch.nn.functional.mse_loss(model(obs), target).item())
+    opt.step(closure)
+    loss_after = float(torch.nn.functional.mse_loss(model(obs), target).item())
+    assert "m" in opt.state[next(iter(model.parameters()))]
 
