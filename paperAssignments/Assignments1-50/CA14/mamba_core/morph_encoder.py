@@ -3,6 +3,7 @@
 Provides a GRU-based encoder that consumes sequences of (obs, act, rew, done)
 and returns a reparameterized latent z_morph with (mu, logvar).
 """
+
 from typing import Tuple
 
 import torch
@@ -19,13 +20,21 @@ class MorphEncoder(nn.Module):
         hidden: hidden size of GRU
     """
 
-    def __init__(self, obs_dim: int, act_dim: int, latent_dim: int, hidden: int = 256) -> None:
+    def __init__(
+        self, obs_dim: int, act_dim: int, latent_dim: int, hidden: int = 256
+    ) -> None:
         super().__init__()
         self.rnn = nn.GRU(obs_dim + act_dim + 2, hidden, batch_first=True)
         self.mu = nn.Linear(hidden, latent_dim)
         self.logvar = nn.Linear(hidden, latent_dim)
 
-    def forward(self, obs: torch.Tensor, act: torch.Tensor, rew: torch.Tensor, done: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(
+        self,
+        obs: torch.Tensor,
+        act: torch.Tensor,
+        rew: torch.Tensor,
+        done: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Encode a batch of sequences into morphology latent.
 
         Shapes:

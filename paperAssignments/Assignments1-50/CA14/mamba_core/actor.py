@@ -1,5 +1,5 @@
-"""Actor network with FiLM conditioning from morphology latent.
-"""
+"""Actor network with FiLM conditioning from morphology latent."""
+
 from typing import Tuple
 
 import torch
@@ -25,7 +25,9 @@ class Actor(nn.Module):
         action = mu + std * eps
     """
 
-    def __init__(self, latent_dim: int, morph_dim: int, hidden: int = 256, act_dim: int = 6) -> None:
+    def __init__(
+        self, latent_dim: int, morph_dim: int, hidden: int = 256, act_dim: int = 6
+    ) -> None:
         super().__init__()
         self.fc1 = nn.Linear(latent_dim + morph_dim, hidden)
         self.fc2 = nn.Linear(hidden, hidden)
@@ -33,7 +35,9 @@ class Actor(nn.Module):
         self.mu = nn.Linear(hidden, act_dim)
         self.logstd = nn.Linear(hidden, act_dim)
 
-    def forward(self, z: torch.Tensor, z_m: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, z: torch.Tensor, z_m: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         x = torch.cat([z, z_m], -1)
         x = F.elu(self.fc1(x))
         x = F.elu(self.fc2(x))
@@ -43,12 +47,16 @@ class Actor(nn.Module):
         std = torch.exp(logstd)
         return mu, std
 
-    def sample(self, z: torch.Tensor, z_m: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def sample(
+        self, z: torch.Tensor, z_m: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         mu, std = self.forward(z, z_m)
         eps = torch.randn_like(std)
         return mu + eps * std, mu
 
-    def act(self, z: torch.Tensor, z_m: torch.Tensor, deterministic: bool = False) -> torch.Tensor:
+    def act(
+        self, z: torch.Tensor, z_m: torch.Tensor, deterministic: bool = False
+    ) -> torch.Tensor:
         mu, std = self.forward(z, z_m)
         if deterministic:
             return mu

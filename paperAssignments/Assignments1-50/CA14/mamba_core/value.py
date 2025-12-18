@@ -1,5 +1,5 @@
-"""Value network conditioned on morphology latent.
-"""
+"""Value network conditioned on morphology latent."""
+
 from typing import Tuple
 
 import torch
