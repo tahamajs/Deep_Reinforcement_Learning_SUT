@@ -29,6 +29,42 @@ class AUDMG:
         self.opt_value = optim.Adam(self.value.parameters(), lr=cfg.lr)
         self.opt_policy = optim.Adam(self.policy.parameters(), lr=cfg.lr)
         self.opt_cvae = optim.Adam(self.cvae.parameters(), lr=cfg.lr)
+        self._optimers = {
+            "opt_q": self.opt_q,
+            "opt_value": self.opt_value,
+            "opt_policy": self.opt_policy,
+            "opt_cvae": self.opt_cvae,
+        }
+
+    def save_checkpoint(self, path: str) -> None:
+        """Save model and optimizer states to a checkpoint file."""
+        payload = {
+            "q_state": self.q.state_dict(),
+            "q_targ_state": self.q_targ.state_dict(),
+            "value_state": self.value.state_dict(),
+            "policy_state": self.policy.state_dict(),
+            "cvae_state": self.cvae.state_dict(),
+            "optimizers": {k: v.state_dict() for k, v in self._optimers.items()},
+        }
+        torch.save(payload, path)
+
+    def load_checkpoint(self, path: str, map_location: Optional[str] = None) -> None:
+        """Load checkpoint and restore states."""
+        map_loc = map_location or self.device
+        data = torch.load(path, map_location=map_loc)
+        self.q.load_state_dict(data["q_state"])
+        self.q_targ.load_state_dict(data["q_targ_state"])
+        self.value.load_state_dict(data["value_state"])
+        self.policy.load_state_dict(data["policy_state"])
+        self.cvae.load_state_dict(data["cvae_state"])
+        opt_states = data.get("optimizers", {})
+        for k, st in opt_states.items():
+            if k in self._optimers:
+                try:
+                    self._optimers[k].load_state_dict(st)
+                except Exception:
+                    # optimizer state may be incompatible across devices; skip if it fails
+                    pass
 
     def _compute_targets(
         self, s_next: torch.Tensor, r: torch.Tensor, done: torch.Tensor

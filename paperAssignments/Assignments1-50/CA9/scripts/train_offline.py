@@ -20,6 +20,8 @@ def main():
     parser.add_argument("--env", type=str, default="antmaze-medium-diverse-v2")
     parser.add_argument("--logdir", type=str, default="outputs/ca9")
     parser.add_argument("--steps", type=int, default=1000)
+    parser.add_argument("--save-interval", type=int, default=1000)
+    parser.add_argument("--resume", type=str, default=None)
     args = parser.parse_args()
     cfg = default_config()
     set_seed(cfg.seed)
@@ -56,6 +58,14 @@ def main():
 
     os.makedirs(args.logdir, exist_ok=True)
     log_path = os.path.join(args.logdir, f"train_{int(time.time())}.csv")
+    ckpt_dir = os.path.join(args.logdir, "checkpoints")
+    os.makedirs(ckpt_dir, exist_ok=True)
+    if args.resume:
+        try:
+            agent.load_checkpoint(args.resume)
+            print(f"Resumed checkpoint from {args.resume}")
+        except Exception as e:
+            print("Failed to load checkpoint:", e)
     with open(log_path, "w", newline="") as csvfile:
         writer = csv.DictWriter(
             csvfile,
@@ -83,6 +93,13 @@ def main():
                         f"step={step} v_loss={stats['v_loss']:.4f} critic={stats['critic_loss']:.4f} lam={stats['lam_mean']:.3f}"
                     )
                 step += 1
+                if args.save_interval > 0 and (step % args.save_interval == 0):
+                    ckpt_path = os.path.join(ckpt_dir, f"ckpt_{step}.pth")
+                    try:
+                        agent.save_checkpoint(ckpt_path)
+                        print(f"Saved checkpoint: {ckpt_path}")
+                    except Exception as e:
+                        print("Failed to save checkpoint:", e)
     print(f"Training finished. Logs saved to {log_path}")
 
 
