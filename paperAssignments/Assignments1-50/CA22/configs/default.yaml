@@ -1,0 +1,13 @@
+# Default experimental config
+seed: 42
+device: cpu
+obs_dim: 8
+action_dim: 4
+hidden_size: 64
+lr: 3e-4
+batch_size: 32
+epochs: 50
+gamma: 0.99
+constraint_threshold: 0.5
+lagrange_lr: 1e-2
+max_mu: 1000.0
