@@ -33,7 +33,9 @@ def policy_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
        Returns optimal policy, value function, number of policy
        improvement iterations, and number of value iterations.
     """
-    policy = np.zeros(env.nS, dtype="int")
+    nS = getattr(env, "nS", None) or getattr(env.observation_space, "n", None)
+    nA = getattr(env, "nA", None) or getattr(env.action_space, "n", None)
+    policy = np.zeros(nS, dtype="int")
     display_policy_letters(env, policy)
     policy_stable = False
     value_iters = 0
@@ -78,7 +80,9 @@ def policy_iteration_async_ordered(env, gamma, max_iterations=int(1e3), tol=1e-3
        Returns optimal policy, value function, number of policy
        improvement iterations, and number of value iterations.
     """
-    policy = np.zeros(env.nS, dtype="int")
+    nS = getattr(env, "nS", None) or getattr(env.observation_space, "n", None)
+    nA = getattr(env, "nA", None) or getattr(env.action_space, "n", None)
+    policy = np.zeros(nS, dtype="int")
     display_policy_letters(env, policy)
     policy_stable = False
     value_iters = 0
@@ -123,7 +127,9 @@ def policy_iteration_async_randperm(env, gamma, max_iterations=int(1e3), tol=1e-
        Returns optimal policy, value function, number of policy
        improvement iterations, and number of value iterations.
     """
-    policy = np.zeros(env.nS, dtype="int")
+    nS = getattr(env, "nS", None) or getattr(env.observation_space, "n", None)
+    nA = getattr(env, "nA", None) or getattr(env.action_space, "n", None)
+    policy = np.zeros(nS, dtype="int")
     display_policy_letters(env, policy)
     policy_stable = False
     value_iters = 0

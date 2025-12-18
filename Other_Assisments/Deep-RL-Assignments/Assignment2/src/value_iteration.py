@@ -21,23 +21,32 @@ def value_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
     np.ndarray, iteration
       The value function and the number of iterations it took to converge.
     """
-    value_func = np.zeros(env.nS)
-    next_value_func = np.zeros(env.nS)
+    nS = getattr(env, "nS", None) or getattr(env.observation_space, "n", None)
+    nA = getattr(env, "nA", None) or getattr(env.action_space, "n", None)
+    value_func = np.zeros(nS)
+    next_value_func = np.zeros(nS)
     iters = 0
-    delta = np.ones(env.nS)
+    delta = np.ones(nS)
     while iters < max_iterations and np.any((delta > tol)):
-        delta = np.zeros(env.nS)
-        for state in range(env.nS):
+        delta = np.zeros(nS)
+        for state in range(nS):
             max_value = -np.inf
-            for action in range(env.nA):
-
+            for action in range(nA):
                 new_value = 0
-                for prob, nextstate, reward, is_terminal in env.P[state][action]:
-                    prob = env.T[state, action, nextstate]
-                    reward = env.R[state, action, nextstate]
-                    new_value += prob * (
-                        reward + gamma * (1 - int(is_terminal)) * value_func[nextstate]
-                    )
+                if getattr(env, "T", None) is not None and getattr(env, "R", None) is not None:
+                    T = env.T
+                    R = env.R
+                    for nextstate in range(nS):
+                        prob = T[state, action, nextstate]
+                        if prob == 0:
+                            continue
+                        reward = R[state, action, nextstate]
+                        new_value += prob * (reward + gamma * value_func[nextstate])
+                else:
+                    for prob, nextstate, reward, is_terminal in env.P[state][action]:
+                        new_value += prob * (
+                            reward + gamma * (1 - int(is_terminal)) * value_func[nextstate]
+                        )
 
                 if max_value < new_value:
                     max_value = new_value
@@ -74,22 +83,31 @@ def value_iteration_async_ordered(env, gamma, max_iterations=int(1e3), tol=1e-3)
     np.ndarray, iteration
       The value function and the number of iterations it took to converge.
     """
-    value_func = np.zeros(env.nS)
+    nS = getattr(env, "nS", None) or getattr(env.observation_space, "n", None)
+    nA = getattr(env, "nA", None) or getattr(env.action_space, "n", None)
+    value_func = np.zeros(nS)
     iters = 0
-    delta = np.ones(env.nS)
+    delta = np.ones(nS)
     while iters < max_iterations and np.any((delta > tol)):
-        delta = np.zeros(env.nS)
-        for state in range(env.nS):
+        delta = np.zeros(nS)
+        for state in range(nS):
             max_value = -np.inf
-            for action in range(env.nA):
-
+            for action in range(nA):
                 new_value = 0
-                for prob, nextstate, reward, is_terminal in env.P[state][action]:
-                    prob = env.T[state, action, nextstate]
-                    reward = env.R[state, action, nextstate]
-                    new_value += prob * (
-                        reward + gamma * (1 - int(is_terminal)) * value_func[nextstate]
-                    )
+                if getattr(env, "T", None) is not None and getattr(env, "R", None) is not None:
+                    T = env.T
+                    R = env.R
+                    for nextstate in range(nS):
+                        prob = T[state, action, nextstate]
+                        if prob == 0:
+                            continue
+                        reward = R[state, action, nextstate]
+                        new_value += prob * (reward + gamma * value_func[nextstate])
+                else:
+                    for prob, nextstate, reward, is_terminal in env.P[state][action]:
+                        new_value += prob * (
+                            reward + gamma * (1 - int(is_terminal)) * value_func[nextstate]
+                        )
 
                 if max_value < new_value:
                     max_value = new_value
@@ -125,24 +143,33 @@ def value_iteration_async_randperm(env, gamma, max_iterations=int(1e3), tol=1e-3
     np.ndarray, iteration
       The value function and the number of iterations it took to converge.
     """
-    value_func = np.zeros(env.nS)
+    nS = getattr(env, "nS", None) or getattr(env.observation_space, "n", None)
+    nA = getattr(env, "nA", None) or getattr(env.action_space, "n", None)
+    value_func = np.zeros(nS)
     iters = 0
-    delta = np.ones(env.nS)
+    delta = np.ones(nS)
     while iters < max_iterations and np.any((delta > tol)):
-        delta = np.zeros(env.nS)
-        states = np.random.choice(env.nS, env.nS, replace=False)
+        delta = np.zeros(nS)
+        states = np.random.choice(nS, nS, replace=False)
 
         for state in states:
             max_value = -np.inf
-            for action in range(env.nA):
-
+            for action in range(nA):
                 new_value = 0
-                for prob, nextstate, reward, is_terminal in env.P[state][action]:
-                    prob = env.T[state, action, nextstate]
-                    reward = env.R[state, action, nextstate]
-                    new_value += prob * (
-                        reward + gamma * (1 - int(is_terminal)) * value_func[nextstate]
-                    )
+                if getattr(env, "T", None) is not None and getattr(env, "R", None) is not None:
+                    T = env.T
+                    R = env.R
+                    for nextstate in range(nS):
+                        prob = T[state, action, nextstate]
+                        if prob == 0:
+                            continue
+                        reward = R[state, action, nextstate]
+                        new_value += prob * (reward + gamma * value_func[nextstate])
+                else:
+                    for prob, nextstate, reward, is_terminal in env.P[state][action]:
+                        new_value += prob * (
+                            reward + gamma * (1 - int(is_terminal)) * value_func[nextstate]
+                        )
 
                 if max_value < new_value:
                     max_value = new_value
