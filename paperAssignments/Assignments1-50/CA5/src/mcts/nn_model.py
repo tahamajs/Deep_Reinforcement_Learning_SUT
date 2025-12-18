@@ -55,3 +55,4 @@ class SmallDiscreteModel(nn.Module):
             _, v = self.forward(state)
             return float(v[0].item())
 
+

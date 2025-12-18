@@ -9,3 +9,4 @@ total_steps: 500000
 device: "cuda" # set to cuda if available
 tb_logdir: "runs/ca8/procgen"
 
+

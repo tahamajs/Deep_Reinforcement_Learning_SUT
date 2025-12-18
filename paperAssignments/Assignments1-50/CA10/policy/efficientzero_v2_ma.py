@@ -110,3 +110,4 @@ if __name__ == "__main__":
     lj, la, v, z = policy.initial_infer(obs)
     print("logits_joint", lj.shape, "value", v.shape, "prefix", z.shape)
 
+

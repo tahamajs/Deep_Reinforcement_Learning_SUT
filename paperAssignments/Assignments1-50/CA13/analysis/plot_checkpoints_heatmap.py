@@ -39,3 +39,4 @@ if __name__ == "__main__":
     ckpts = load_checkpoints(sys.argv[1])
     plot_checkpoint_tsne(ckpts, sys.argv[2])
 
+

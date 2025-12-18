@@ -27,3 +27,4 @@ def test_losses_finite():
     assert torch.isfinite(a_loss)
     assert torch.isfinite(c_loss)
 
+

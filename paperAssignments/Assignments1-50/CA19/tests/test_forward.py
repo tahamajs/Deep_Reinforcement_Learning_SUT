@@ -27,3 +27,4 @@ def test_forward_shapes():
     assert logp.shape == (B,)
     assert mean_v.shape == (B,)
 
+

@@ -98,3 +98,4 @@ class CrossHQMuZeroAdapter:
             next_state = hidden_state
         return self.initial_inference(next_state)
 
+

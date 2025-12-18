@@ -27,3 +27,4 @@ def get_default_config() -> Config:
     """Return a frozen default configuration instance."""
     return Config()
 
+

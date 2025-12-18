@@ -46,3 +46,4 @@ def test_sinkhorn_fallback():
     assert torch.isfinite(out).all()
 
 
+

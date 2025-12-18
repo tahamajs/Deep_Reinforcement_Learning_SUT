@@ -32,3 +32,4 @@ def test_experiment_resume(tmp_path):
     path2 = run(cfg, steps=2, save_dir=save_dir2)
     assert os.path.exists(path2)
 
+

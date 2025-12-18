@@ -27,3 +27,4 @@ def value_mse_loss(values: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         raise ValueError("values and targets must have same shape")
     return torch.mean((values - targets) ** 2)
 
+

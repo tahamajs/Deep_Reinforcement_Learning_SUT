@@ -43,3 +43,4 @@ def test_gate_monotonicity_formula():
     for i in range(len(gates) - 1):
         assert gates[i] >= gates[i + 1]
 
+

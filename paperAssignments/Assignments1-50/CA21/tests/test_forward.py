@@ -31,3 +31,4 @@ def test_model_forward_shapes():
     values = value(x)
     assert values.shape == (batch,)
 
+

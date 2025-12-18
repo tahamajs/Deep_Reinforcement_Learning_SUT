@@ -58,3 +58,4 @@ def test_network_shapes():
         assert h.shape[1] == latent_dim
         assert isinstance(r.item(), float)
 
+

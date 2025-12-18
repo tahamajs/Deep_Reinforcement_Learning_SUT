@@ -33,3 +33,4 @@ def test_crosshq_adapter_runs():
     visits = sum(child.visits for child in root.children.values())
     assert visits == 10
 
+

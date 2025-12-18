@@ -58,3 +58,4 @@ def write_json(obj: Dict[str, Any], path: str) -> None:
         json.dump(obj, f, indent=2)
 
 
+

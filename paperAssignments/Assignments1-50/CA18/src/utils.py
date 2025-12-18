@@ -36,3 +36,4 @@ def assert_shape(tensor: torch.Tensor, expected: Tuple[int, ...]) -> None:
     if tensor.shape != expected:
         raise AssertionError(f"Expected shape {expected} but got {tuple(tensor.shape)}")
 
+

@@ -25,3 +25,4 @@ def test_world_model_forward():
     assert d.shape == (B,)
 
 
+

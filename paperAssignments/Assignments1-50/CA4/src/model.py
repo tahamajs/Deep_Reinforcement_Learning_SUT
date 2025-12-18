@@ -94,3 +94,4 @@ class SCASReg(nn.Module):
         return F.mse_loss(pred, s_next)
 
 
+

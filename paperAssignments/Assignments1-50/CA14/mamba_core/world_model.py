@@ -164,3 +164,4 @@ class WorldModel(nn.Module):
     ) -> torch.Tensor:
         return self.rssm.predict_discount(h, z, z_m)
 
+

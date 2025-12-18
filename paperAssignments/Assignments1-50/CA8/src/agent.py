@@ -153,3 +153,4 @@ class MaxSinkAgent:
 
         return float(loss.item()), float(loss_per_batch.mean().item()), x_np, y_np
 
+

@@ -25,3 +25,4 @@ def get_default_config() -> Config:
     """Return the default Config instance."""
     return Config()
 
+

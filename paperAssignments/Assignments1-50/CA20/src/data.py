@@ -42,3 +42,4 @@ def make_dataloader(batch_size: int = 64, **kwargs) -> DataLoader:
     ds = SyntheticBanditDataset(**kwargs)
     return DataLoader(ds, batch_size=batch_size, shuffle=True)
 
+

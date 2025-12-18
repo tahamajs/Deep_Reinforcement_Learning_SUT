@@ -53,3 +53,4 @@ class MLPPolicy(nn.Module):
         probs = F.softmax(logits, dim=-1)
         return torch.distributions.Categorical(probs)
 
+

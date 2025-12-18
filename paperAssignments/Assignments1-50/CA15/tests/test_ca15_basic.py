@@ -23,3 +23,4 @@ def test_import_and_forward():
     v = value(x)
     assert v.shape == (2,)
 
+

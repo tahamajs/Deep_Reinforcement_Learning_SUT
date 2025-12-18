@@ -73,3 +73,4 @@ class MLPValue(nn.Module):
         # returns shape (B,)
         return self.value_net(obs).squeeze(-1)
 
+

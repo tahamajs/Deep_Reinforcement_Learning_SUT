@@ -59,3 +59,4 @@ class MorphEncoder(nn.Module):
         return z, mu, logvar
 
 
+

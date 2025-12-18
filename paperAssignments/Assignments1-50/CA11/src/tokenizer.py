@@ -137,3 +137,4 @@ class ImageVQVAE(nn.Module):
         recon = self.decode_from_codes(quantized, Hp, Wp)
         return recon, quantized, indices
 
+

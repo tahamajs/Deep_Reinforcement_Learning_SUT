@@ -81,3 +81,4 @@ def test_hutchinson_step_runs():
     loss_after = float(torch.nn.functional.mse_loss(model(obs), target).item())
     assert "m" in opt.state[next(iter(model.parameters()))]
 
+

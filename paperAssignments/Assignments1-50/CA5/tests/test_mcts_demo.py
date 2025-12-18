@@ -28,3 +28,4 @@ def test_visit_counts_sum_to_simulations():
     total = sum(visits.values())
     assert total == sims
 
+

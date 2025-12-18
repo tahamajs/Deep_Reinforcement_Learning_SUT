@@ -47,3 +47,4 @@ def test_losses_and_dataset():
     combined = lag(pg, torch.from_numpy(constraints))
     assert combined.shape == ()
 
+

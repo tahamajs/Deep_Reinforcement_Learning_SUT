@@ -28,3 +28,4 @@ def test_discounted_returns_and_loss():
     loss = reinforce_loss(log_probs, Gt)
     assert torch.isfinite(loss)
 
+

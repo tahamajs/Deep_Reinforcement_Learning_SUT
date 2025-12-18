@@ -30,3 +30,4 @@ def test_lagrangian_loss_and_multiplier_step():
     assert updated >= 0.0
     assert lam.value >= 0.0
 
+

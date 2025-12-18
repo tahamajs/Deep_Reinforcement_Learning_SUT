@@ -36,3 +36,4 @@ def value_loss(values: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     """
     return F.mse_loss(values, targets)
 
+

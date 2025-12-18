@@ -18,3 +18,4 @@ def test_imports():
         spec.loader.exec_module(module)  # type: ignore
         assert module is not None
 
+

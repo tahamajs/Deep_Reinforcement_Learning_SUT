@@ -24,3 +24,4 @@ Notes:
   adapt the adapter to match the target project's exact API (initial_inference/recurrent_inference signatures,
   hidden state formats, embedding pipeline).
 
+

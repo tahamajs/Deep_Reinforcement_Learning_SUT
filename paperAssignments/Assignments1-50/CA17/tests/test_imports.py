@@ -18,3 +18,4 @@ def test_imports_and_forward():
     logits = model(x)
     assert logits.shape == (3, 2)
 
+

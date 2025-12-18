@@ -12,3 +12,4 @@ def test_train_runs_quickly(tmp_path):
     assert len(res["history"]) == cfg.epochs
     assert "checkpoint" in res
 
+

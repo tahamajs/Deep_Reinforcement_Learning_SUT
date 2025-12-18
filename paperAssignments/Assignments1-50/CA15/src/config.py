@@ -30,3 +30,4 @@ class Config:
             data = yaml.safe_load(f)
         return Config.from_dict(data or {})
 
+

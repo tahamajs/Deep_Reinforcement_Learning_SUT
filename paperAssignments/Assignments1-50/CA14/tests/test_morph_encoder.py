@@ -15,3 +15,4 @@ def test_morph_encoder_shapes():
     assert logvar.shape == (B, 16)
 
 
+

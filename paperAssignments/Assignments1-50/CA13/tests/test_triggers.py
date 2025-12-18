@@ -18,3 +18,4 @@ def test_cooldown_and_thresholds():
     assert should_trigger(0.6, 0.0, 0.5, cfg, last_trigger=last, step=16)
 
 
+

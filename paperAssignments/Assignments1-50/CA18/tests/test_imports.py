@@ -27,3 +27,4 @@ def test_imports_and_forward():
     v = net.get_value(batch)
     assert v.shape == (batch.shape[0],)
 
+

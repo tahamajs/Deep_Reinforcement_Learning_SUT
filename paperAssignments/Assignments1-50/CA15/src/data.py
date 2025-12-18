@@ -36,3 +36,4 @@ class SyntheticDataset:
             v = torch.from_numpy(self.values[batch_idx])
             yield s, a, v
 
+

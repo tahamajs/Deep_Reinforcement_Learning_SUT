@@ -28,3 +28,4 @@ def load_checkpoint(path: str) -> Dict[str, Any]:
         raise FileNotFoundError(f"Checkpoint not found: {path}")
     return torch.load(path, map_location="cpu")
 
+

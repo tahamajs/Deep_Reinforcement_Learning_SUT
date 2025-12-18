@@ -58,3 +58,4 @@ class CrossHQMCTSAdapter:
                 qs.append(q1)
         return float(sum(qs) / max(1, len(qs)))
 
+
