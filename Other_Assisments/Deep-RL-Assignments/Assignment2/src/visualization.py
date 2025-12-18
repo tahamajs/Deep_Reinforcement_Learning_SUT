@@ -10,13 +10,17 @@ import seaborn as sns
 try:
     import deeprl_hw2q2.lake_envs as lake_env
 except ModuleNotFoundError:
-    pkg_root = pathlib.Path(__file__).resolve().parents[1] / "hw2-VI-PI-DQN" / "Q2-VI-PI"
+    pkg_root = (
+        pathlib.Path(__file__).resolve().parents[1] / "hw2-VI-PI-DQN" / "Q2-VI-PI"
+    )
     if pkg_root.exists():
         sys.path.insert(0, str(pkg_root))
         import deeprl_hw2q2.lake_envs as lake_env
     else:
         # Re-raise with helpful message
         raise
+
+
 def display_policy_letters(env, policy):
     """Displays a policy as letters, as required by problem 2.2 & 2.6
 
@@ -33,6 +37,8 @@ def display_policy_letters(env, policy):
 
     for row in range(env.nrow):
         print("".join(policy_letters[row, :]))
+
+
 def value_func_heatmap(env, value_func):
     """Visualize a policy as a heatmap, as required by problem 2.3 & 2.5
 
