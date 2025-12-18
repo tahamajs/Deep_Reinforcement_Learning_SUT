@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 
 # --------------------------- Utilities ---------------------------------
 
+
 def set_seed(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
@@ -56,14 +57,17 @@ class ReplayBuffer:
 
     def sample_batch(self, batch_size: int = 256):
         idxs = np.random.randint(0, self.size, size=batch_size)
-        return dict(obs=self.obs_buf[idxs],
-                    act=self.acts_buf[idxs],
-                    rew=self.rews_buf[idxs],
-                    next_obs=self.next_obs_buf[idxs],
-                    done=self.done_buf[idxs])
+        return dict(
+            obs=self.obs_buf[idxs],
+            act=self.acts_buf[idxs],
+            rew=self.rews_buf[idxs],
+            next_obs=self.next_obs_buf[idxs],
+            done=self.done_buf[idxs],
+        )
 
 
 # --------------------------- Networks ----------------------------------
+
 
 def mlp(sizes: List[int], activation=nn.ReLU, output_activation=nn.Identity):
     layers = []
@@ -78,7 +82,13 @@ LOG_STD_MAX = 2
 
 
 class GaussianPolicy(nn.Module):
-    def __init__(self, obs_dim: int, act_dim: int, hidden_sizes=(256, 256), act_limit: float = 2.0):
+    def __init__(
+        self,
+        obs_dim: int,
+        act_dim: int,
+        hidden_sizes=(256, 256),
+        act_limit: float = 2.0,
+    ):
         super().__init__()
         self.net = mlp([obs_dim] + list(hidden_sizes), activation=nn.ReLU)
         self.mu_head = nn.Linear(hidden_sizes[-1], act_dim)
@@ -100,7 +110,9 @@ class GaussianPolicy(nn.Module):
         y_t = torch.tanh(x_t)
         action = y_t * self.act_limit
         # log prob correction
-        log_prob = pi_dist.log_prob(x_t).sum(axis=-1) - (2 * (math.log(2) - x_t - F.softplus(-2 * x_t))).sum(axis=-1)
+        log_prob = pi_dist.log_prob(x_t).sum(axis=-1) - (
+            2 * (math.log(2) - x_t - F.softplus(-2 * x_t))
+        ).sum(axis=-1)
         return action, log_prob
 
     def act(self, obs: np.ndarray) -> np.ndarray:
@@ -122,6 +134,7 @@ class QNetwork(nn.Module):
 
 
 # --------------------------- Training ---------------------------------
+
 
 @dataclass
 class Config:
@@ -157,7 +170,9 @@ def train(config: Config):
     critic2_target = copy.deepcopy(critic2)
 
     actor_optim = torch.optim.Adam(actor.parameters(), lr=config.lr)
-    critic_optim = torch.optim.Adam(list(critic1.parameters()) + list(critic2.parameters()), lr=config.lr)
+    critic_optim = torch.optim.Adam(
+        list(critic1.parameters()) + list(critic2.parameters()), lr=config.lr
+    )
 
     replay = ReplayBuffer(obs_dim, act_dim, size=200000)
 
@@ -188,11 +203,21 @@ def train(config: Config):
         if t >= config.update_after and t % config.update_every == 0:
             for _ in range(config.update_every):
                 batch = replay.sample_batch(config.batch_size)
-                obs_b = torch.as_tensor(batch['obs'], dtype=torch.float32).to(config.device)
-                act_b = torch.as_tensor(batch['act'], dtype=torch.float32).to(config.device)
-                rew_b = torch.as_tensor(batch['rew'], dtype=torch.float32).to(config.device)
-                next_obs_b = torch.as_tensor(batch['next_obs'], dtype=torch.float32).to(config.device)
-                done_b = torch.as_tensor(batch['done'], dtype=torch.float32).to(config.device)
+                obs_b = torch.as_tensor(batch["obs"], dtype=torch.float32).to(
+                    config.device
+                )
+                act_b = torch.as_tensor(batch["act"], dtype=torch.float32).to(
+                    config.device
+                )
+                rew_b = torch.as_tensor(batch["rew"], dtype=torch.float32).to(
+                    config.device
+                )
+                next_obs_b = torch.as_tensor(batch["next_obs"], dtype=torch.float32).to(
+                    config.device
+                )
+                done_b = torch.as_tensor(batch["done"], dtype=torch.float32).to(
+                    config.device
+                )
 
                 with torch.no_grad():
                     # target actions
@@ -200,7 +225,9 @@ def train(config: Config):
                     q1_target = critic1_target(next_obs_b, next_a)
                     q2_target = critic2_target(next_obs_b, next_a)
                     q_target_min = torch.min(q1_target, q2_target)
-                    backup = rew_b + config.gamma * (1 - done_b) * (q_target_min - config.alpha * next_logp)
+                    backup = rew_b + config.gamma * (1 - done_b) * (
+                        q_target_min - config.alpha * next_logp
+                    )
 
                 # current Q estimates
                 q1 = critic1(obs_b, act_b)
@@ -212,12 +239,21 @@ def train(config: Config):
 
                 # CQL conservative regularizer (continuous actions)
                 # Sample random actions uniformly from action space
-                sample_actions = torch.rand((config.batch_size, 10, act_dim), device=config.device) * 2 * act_limit - act_limit
+                sample_actions = (
+                    torch.rand((config.batch_size, 10, act_dim), device=config.device)
+                    * 2
+                    * act_limit
+                    - act_limit
+                )
                 sample_actions = sample_actions.view(-1, act_dim)
                 obs_repeat = obs_b.unsqueeze(1).repeat(1, 10, 1).view(-1, obs_dim)
 
-                q1_rand = critic1(obs_repeat, sample_actions).view(config.batch_size, -1)
-                q2_rand = critic2(obs_repeat, sample_actions).view(config.batch_size, -1)
+                q1_rand = critic1(obs_repeat, sample_actions).view(
+                    config.batch_size, -1
+                )
+                q2_rand = critic2(obs_repeat, sample_actions).view(
+                    config.batch_size, -1
+                )
 
                 # policy actions sampled for data states
                 pi_actions, _ = actor.sample(obs_b)
@@ -250,18 +286,22 @@ def train(config: Config):
 
                 # soft updates
                 for p, p_targ in zip(critic1.parameters(), critic1_target.parameters()):
-                    p_targ.data.copy_(config.polyak * p_targ.data + (1 - config.polyak) * p.data)
+                    p_targ.data.copy_(
+                        config.polyak * p_targ.data + (1 - config.polyak) * p.data
+                    )
                 for p, p_targ in zip(critic2.parameters(), critic2_target.parameters()):
-                    p_targ.data.copy_(config.polyak * p_targ.data + (1 - config.polyak) * p.data)
+                    p_targ.data.copy_(
+                        config.polyak * p_targ.data + (1 - config.polyak) * p.data
+                    )
 
         # end update loop
 
     # training finished: save a plot of average reward
     plt.figure()
     plt.plot(np.arange(len(avg_rew_hist)), avg_rew_hist)
-    plt.xlabel('Completed episodes (approx)')
-    plt.ylabel('Moving average reward (100)')
-    plt.title('CQL-SAC on ' + config.env_name)
+    plt.xlabel("Completed episodes (approx)")
+    plt.ylabel("Moving average reward (100)")
+    plt.title("CQL-SAC on " + config.env_name)
     plt.grid(True)
     plt.tight_layout()
     plt.savefig(config.save_fig, dpi=200)
@@ -288,15 +328,19 @@ def train(config: Config):
         return np.mean(returns)
 
     mean_agent = evaluate_policy(actor, n_eval_episodes=5, deterministic=True)
-    mean_random = evaluate_policy(env, n_eval_episodes=5, deterministic=False) if False else None
+    mean_random = (
+        evaluate_policy(env, n_eval_episodes=5, deterministic=False) if False else None
+    )
     print(f"Mean agent return (deterministic): {mean_agent}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--steps-per-epoch', type=int, default=1000)
-    parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--steps-per-epoch", type=int, default=1000)
+    parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
-    cfg = Config(epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, seed=args.seed)
+    cfg = Config(
+        epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, seed=args.seed
+    )
     train(cfg)
