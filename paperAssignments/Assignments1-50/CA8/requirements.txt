@@ -1,12 +1,13 @@
 torch>=1.13
 numpy
 gymnasium
-geomloss>=0.2.0; extra == "geomloss"
+geomloss>=0.2.0
 wandb
 pyyaml
 matplotlib
 seaborn
 scikit-learn
+
 
 
 

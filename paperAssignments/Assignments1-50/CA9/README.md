@@ -269,6 +269,62 @@ Used for the stable in-sample anchor.
 
 **Phase 3: Online Fine-Tuning** **For** step **t**=**1** to OnlineSteps: Execute **a**∼**π**ϕ(**s**) (with exploration noise). Store **(**s**,**a**,**r**,**s**′**) in **D**. Repeat Training Loop (Steps 1-5). _Note: As **D** expands, **σ**mi**l**d decreases, **Λ**→**1**._
 
+---
+
+## Getting Started (Quickstart) ✅
+
+This repository is self-contained and provides a reference implementation of AU-DMG suitable for experiments, unit tests, and reproducibility checks. The following steps will get you running locally (no GPU required for smoke tests):
+
+### Installation
+
+- Create and activate a virtualenv (recommended):
+
+  ```bash
+  python -m venv .venv && source .venv/bin/activate
+  python -m pip install --upgrade pip
+  python -m pip install torch numpy matplotlib gymnasium
+  # Optional (for D4RL datasets and AntMaze):
+  python -m pip install d4rl
+  ```
+
+> Note: If you are using a GPU, install the appropriate `torch` build for your CUDA version per https://pytorch.org.
+
+### Quick smoke test (synthetic dataset)
+
+- Run the offline training script with default settings using a synthetic dataset (no D4RL required):
+
+  ```bash
+  python scripts/train_offline.py --epochs 1 --steps 100
+  ```
+
+- Run unit tests:
+
+  ```bash
+  python -m pytest tests -q
+  ```
+
+### Training with D4RL (recommended benchmarks)
+
+- Install `d4rl` and ensure `gymnasium` is available.
+- Train on AntMaze:
+
+  ```bash
+  python scripts/train_offline.py --env antmaze-medium-diverse-v2 --steps 50000 --logdir outputs/ca9
+  ```
+
+- Evaluate a saved checkpoint:
+
+  ```bash
+  python scripts/eval.py --env antmaze-medium-diverse-v2 --ckpt outputs/ca9/checkpoints/ckpt_50000.pth
+  ```
+
+### Reproducibility & outputs
+
+- Training logs (CSV), checkpoints and plots are written to `outputs/ca9/` by default.
+- Visualizations and diagnostic plotting are provided in `scripts/generate_placeholder_figs.py` and `notebooks/demo.ipynb`.
+
+---
+
 ### 4.3 Loss Function Derivations
 
 The loss function for the critic ensemble in AU-DMG is a weighted combination of standard Bellman error and the adaptive regularization implicit in the target construction.
@@ -667,6 +723,25 @@ AU-DMG equips offline RL with an adaptive, uncertainty-aware trust mechanism tha
 ---
 
 _This README is the complete blueprint for Assignment 9: Adaptive Uncertainty-Regularized Doubly Mild Generalization (AU-DMG) with offline-to-online evaluation. Ensure code, math, and experiments remain aligned._
+
+---
+
+## Repository status & quick checks ✅
+
+- **Status:** Ready for review. Core modules are implemented (critics, CVAE, value net, policy, training / eval scripts). The polyak soft-update formula has been corrected for target networks.
+- **Unit tests:** Run `python -m pytest tests -q`. The tests exercise basic shapes / numerical sanity checks and a gate monotonicity check.
+- **Smoke runs:** If `d4rl` is unavailable the training script falls back to a synthetic dataset for quick verification: `python scripts/train_offline.py --epochs 1 --steps 100`.
+
+## License & Citation
+
+- **License:** See the repository `LICENSE` file for licensing details (MIT-style by default in this workspace).
+- **How to cite:** If you use AU-DMG in research, please cite the accompanying NeurIPS-style report and reference the authors when available.
+
+## Contact / Contributions
+
+- For questions or contributions, please open an issue or pull request on the project repository. If you prefer direct contact, add your email in the `report.tex` author field.
+
+---
 
 ---
 

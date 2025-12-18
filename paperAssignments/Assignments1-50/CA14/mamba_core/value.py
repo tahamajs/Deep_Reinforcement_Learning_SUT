@@ -10,6 +10,9 @@ import torch.nn.functional as F
 class ValueNet(nn.Module):
     def __init__(self, latent_dim: int, morph_dim: int, hidden: int = 256) -> None:
         super().__init__()
+        # expose sizes
+        self.latent_dim = latent_dim
+        self.morph_dim = morph_dim
         self.fc1 = nn.Linear(latent_dim + morph_dim, hidden)
         self.fc2 = nn.Linear(hidden, hidden)
         self.out = nn.Linear(hidden, 1)
@@ -19,6 +22,7 @@ class ValueNet(nn.Module):
         x = F.elu(self.fc1(x))
         x = F.elu(self.fc2(x))
         return self.out(x).squeeze(-1)
+
 
 
 

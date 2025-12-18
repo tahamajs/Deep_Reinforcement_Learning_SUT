@@ -7,15 +7,23 @@ import torch
 
 
 def set_seed(seed: int) -> None:
-    """Set Python, NumPy and PyTorch seeds for reproducibility."""
+    """Set Python, NumPy and PyTorch seeds for reproducibility.
+
+    This helper sets Python `random`, NumPy, and PyTorch seeds. It also sets
+    `torch.backends.cudnn.deterministic = True` when CUDA is available to favor
+    deterministic behavior for small examples (note: may slow performance).
+    """
     import numpy as np
 
-    random.seed(seed)
-    np.random.seed(seed)
+    random.seed(int(seed))
+    np.random.seed(int(seed))
     try:
-        torch.manual_seed(seed)
+        torch.manual_seed(int(seed))
         if torch.cuda.is_available():
-            torch.cuda.manual_seed_all(seed)
+            torch.cuda.manual_seed_all(int(seed))
+            # Favor deterministic behavior where possible
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
     except Exception:
         pass
 
@@ -67,6 +75,7 @@ def update_lagrange(
     new_mu = max(0.0, new_mu)
     new_mu = min(new_mu, float(max_mu))
     return new_mu
+
 
 
 

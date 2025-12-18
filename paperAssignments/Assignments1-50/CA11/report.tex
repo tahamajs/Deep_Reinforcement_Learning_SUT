@@ -165,9 +165,18 @@ Default config (file: \\texttt{configs/default.yaml}):
 \\section{Appendix E: Reproducibility checklist}
 Seed logging, config save, checkpoints (model+tokenizer+optimizer), and environment versions must be recorded. The experiment runner saves checkpoints and logs to TensorBoard; W&B integration supports run names and resume.
 
+To reproduce basic checks and smoke runs locally (examples):
+\begin{verbatim}
+python -m pip install -U torch torchvision pytest
+pytest -q
+python train.py --steps 20
+python scripts/experiment.py --steps 100 --save-dir runs/ca11
+\end{verbatim}
+
 \\bibliographystyle{plain}
 \\bibliography{references}
 \\end{document}
+
 
 
 

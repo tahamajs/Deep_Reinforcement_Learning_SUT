@@ -1,89 +1,130 @@
-# CA24 — Curriculum Assignment 24
+# CA24 — Curriculum Assignment 24 ✅
 
 ## Overview
 
-CA24 is a curriculum assignment brief following the repository's long-format CA template. It includes guidance for problem framing, theory-to-code mapping, experiment design, and deliverables for reproducible research projects.
+CA24 is a short reproducible experiment template designed to teach how to map theory to tidy, import-safe code. The project includes:
 
-## Learning Objectives
+- A small, import-safe Python package under `src/` with dataclass-driven config, model, data, losses, utilities, and an experiment runner ✅
+- A `notebooks/demo.ipynb` showing how to run the experiment without executing heavy training ✅
+- Tests and GitHub Actions to verify import-safety and basic behaviour ✅
 
-- Translate theoretical objectives into testable code.
-- Build import-safe modules with clear APIs.
-- Construct reproducible experiments and logging pipelines.
-- Produce figures and reports programmatically.
+---
 
-## Folder Layout
+## Quick Start 🔧
 
-- `src/`: `config.py`, `model.py`, `data.py`, `losses.py`, `utils.py`.
-- `notebooks/`: demo and experiments.
-- `configs/`: debug/default YAMLs.
-- `tests/`: unit and smoke tests.
+1. Create a virtual environment and activate it:
 
-Problem Statement
+```bash
+python -m venv .venv && source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
-Define a focused research question, derive the relevant equations, and outline experiments to test the hypothesis.
+2. Run the demo experiment (CPU-friendly):
 
-Theory & Mapping
+```bash
+python -m src.experiment
+```
 
-- Provide derivations for any new loss terms.
-- Map each mathematical symbol to function arguments and tensor shapes in code.
+3. Run tests:
 
-Implementation Notes
+```bash
+pytest -q
+```
 
-- Use dataclasses for configs; centralize defaults.
-- Implement seed management and device helpers in `src/utils.py`.
-- Keep notebooks light; heavy runs should be optional.
+---
 
-Experiments
+## Project Layout 📁
 
-- Baseline vs method, ablations, and seed repeats are recommended.
-- Save metrics and figures for reproducibility.
+- `src/` — core package
+  - `config.py` — dataclass `Config` and `load_from_yaml`
+  - `model.py` — `SimpleMLP` network
+  - `data.py` — `SyntheticRegressionDataset` and `get_dataloader`
+  - `losses.py` — `WeightedMSE` example loss
+  - `utils.py` — `set_seed`, `get_device`, helpers
+  - `experiment.py` — `run_experiment` and a small CLI demo
+- `configs/` — YAML configs (see `default.yaml`)
+- `notebooks/` — demo notebook
+- `tests/` — minimal unit tests
+- `.github/workflows/` — CI to run tests
+- `requirements.txt` — pinned, minimal dependencies
 
-Testing & Validation
+---
 
-- Include pytest tests for imports and forward passes.
+## Reproducibility & Experimental Design 💡
 
-Appendix: Padding lines
+- Use `Config` dataclass and YAMLs to record experimental settings. Save the YAML alongside outputs for traceability.
+- Controls: use the seed field to run repeated seeds for variance estimation.
+- Baselines and ablations: the simple model and synthetic data make it easy to add and document ablations.
 
-1. Pad 1
-2. Pad 2
-3. Pad 3
-4. Pad 4
-5. Pad 5
-6. Pad 6
-7. Pad 7
-8. Pad 8
-9. Pad 9
-10. Pad 10
-11. Pad 11
-12. Pad 12
-13. Pad 13
-14. Pad 14
-15. Pad 15
-16. Pad 16
-17. Pad 17
-18. Pad 18
-19. Pad 19
-20. Pad 20
-21. Pad 21
-22. Pad 22
-23. Pad 23
-24. Pad 24
-25. Pad 25
-26. Pad 26
-27. Pad 27
-28. Pad 28
-29. Pad 29
-30. Pad 30
-31. Pad 31
-32. Pad 32
-33. Pad 33
-34. Pad 34
-35. Pad 35
-36. Pad 36
-37. Pad 37
-38. Pad 38
-39. Pad 39
-40. Pad 40
+---
+
+## Report (for submission) 📝
+
+This section provides a ready-to-use report template that you can adapt for CA24. It is written as a ready-to-copy `report.md` which includes the required sections for a curriculum assignment: Abstract, Introduction, Methods, Experiments, Results, Reproducibility, and Conclusion.
+
+### report.md
+
+```markdown
+# CA24 Report
+
+## Abstract
+
+We present a concise reproducible experiment demonstrating how to map a simple regression problem to an MLP model with configurable components. The repository includes import-safe modules, YAML-based configs, and testing scaffolding to ensure reproducibility and ease of extension.
+
+## Introduction
+
+Outline the problem and the theoretical motivation. For this CA we use a synthetic linear regression task to validate the training pipeline and measurement logging.
+
+## Methods
+
+- Data: synthetic regression with known linear ground truth and additive Gaussian noise.
+- Model: MLP with ReLU activations.
+- Loss: Mean Squared Error (MSE), implemented via `WeightedMSE` to show how custom loss terms can be included.
+- Optimization: Adam with configurable learning rate.
+
+### Mathematical details
+
+Given inputs x in R^d, target y in R, assume y = w^T x + epsilon where epsilon ~ N(0, sigma^2). Model approximates y_hat = f_theta(x). The MSE loss is L = E[(y - y_hat)^2].
+
+## Experiments
+
+1. Baseline experiment with default config (`configs/default.yaml`).
+2. Ablation: vary hidden layer sizes and learning rate to demonstrate sensitivity.
+3. Repeats: run 5 seeds for each setting and report mean ± std of final validation loss.
+
+## Results
+
+Include figures showing training loss curves across epochs and a table summarizing final losses across hyperparameter settings and seeds.
+
+## Reproducibility
+
+- All code is provided under `src/` and import safe.
+- Configs are YAML; record which config file produced which output.
+- Use the GitHub Actions CI to verify basic imports and tests; heavy runs should be documented in notebooks and not run in CI.
+
+## Conclusion
+
+Summarize key findings and possible extensions (more complex datasets, additional loss terms, etc.).
+
+## Appendix
+
+Provide exact command lines, seed lists, and data generation details so results can be re-run easily.
+```
+
+---
+
+## Notes & Next steps ✨
+
+- Extend `src/model.py` with more architectures for an actual research project.
+- Add evaluation scripts, figure generation, and experiment logging backend (e.g., `tensorboard`, `wandb`) as needed.
+
+---
+
+## License
+
+This CA example is released under the project license (see `LICENSE`).
+
 
 
 

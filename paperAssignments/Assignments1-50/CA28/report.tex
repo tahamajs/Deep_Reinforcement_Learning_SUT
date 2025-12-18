@@ -94,16 +94,23 @@ To evaluate robustness, we run experiments with multiple random seeds (42, 123, 
 
 \subsection{Training Performance}
 
-The agent achieves an average reward of approximately 195 after 300-400 episodes, solving the environment.
+This section is reserved for experimental results produced from running the training scripts. To reproduce and fill in the results:
+\begin{enumerate}
+\item Run training using the configuration in `configs/config.yaml` and save the episode rewards to `outputs/rewards.npy`.
+\item Generate a training plot and save to `figures/training_curve.png`.
+\item Replace the placeholder figure below with your generated file.
+\end{enumerate}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\textwidth]{training_curve.png}
-\caption{Training curve showing episode rewards over time.}
+\includegraphics[width=0.8\textwidth]{figures/training_curve.png}
+\caption{Training curve showing episode rewards over time (placeholder; replace with experimental output).}
 \label{fig:training}
 \end{figure}
 
 \subsection{Ablation Results}
+
+Tabulated ablation results should be added here after running the specified sweeps. Below is a templated table you can fill in with your own numbers:
 
 \begin{table}[H]
 \centering
@@ -111,22 +118,22 @@ The agent achieves an average reward of approximately 195 after 300-400 episodes
 \hline
 Hyperparameter & Average Final Reward \\
 \hline
-Learning Rate 0.0001 & 180.5 \\
-Learning Rate 0.001 & 195.2 \\
-Learning Rate 0.01 & 150.3 \\
+Learning Rate 0.0001 & -- \\
+Learning Rate 0.001 & -- \\
+Learning Rate 0.01 & -- \\
 \hline
-Batch Size 16 & 185.7 \\
-Batch Size 32 & 195.2 \\
-Batch Size 64 & 190.1 \\
+Batch Size 16 & -- \\
+Batch Size 32 & -- \\
+Batch Size 64 & -- \\
 \hline
 \end{tabular}
-\caption{Ablation study results.}
+\caption{Ablation study results (to be filled with experiment output).}
 \label{tab:ablation}
 \end{table}
 
 \subsection{Seed Variability}
 
-Across seeds, the final average reward has a mean of 194.8 with standard deviation of 3.2, indicating stable performance.
+Report mean and standard deviation across seeds here after running seed sweeps (e.g., 42, 123, 456). Example placeholder format: mean $= \mu$, std $= \sigma$.
 
 \section{Discussion}
 

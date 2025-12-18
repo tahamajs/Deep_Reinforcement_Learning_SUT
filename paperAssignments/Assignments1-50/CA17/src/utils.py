@@ -30,7 +30,12 @@ def ensure_dir(path: Optional[Path]) -> Path:
 
 
 def save_checkpoint(state: dict, path: os.PathLike) -> None:
-    """Save a model checkpoint using torch.save if torch is available."""
+    """Save a model checkpoint using torch.save if torch is available.
+
+    Args:
+        state: a serializable dictionary (model_state, optimizer_state, steps,...)
+        path: destination path for the checkpoint
+    """
     try:
         import torch
 
@@ -43,6 +48,11 @@ def save_checkpoint(state: dict, path: os.PathLike) -> None:
 
 
 def load_checkpoint(path: os.PathLike):
+    """Load checkpoint saved with `save_checkpoint`.
+
+    Returns:
+        The deserialized object (dict).
+    """
     try:
         import torch
 
@@ -51,6 +61,7 @@ def load_checkpoint(path: os.PathLike):
         import numpy as _np
 
         return _np.load(path, allow_pickle=True).item()
+
 
 
 

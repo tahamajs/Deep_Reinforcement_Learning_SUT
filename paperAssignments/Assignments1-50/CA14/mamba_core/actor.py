@@ -29,6 +29,9 @@ class Actor(nn.Module):
         self, latent_dim: int, morph_dim: int, hidden: int = 256, act_dim: int = 6
     ) -> None:
         super().__init__()
+        # expose sizes for external code (easier, safer than probing layers)
+        self.latent_dim = latent_dim
+        self.morph_dim = morph_dim
         self.fc1 = nn.Linear(latent_dim + morph_dim, hidden)
         self.fc2 = nn.Linear(hidden, hidden)
         self.film = FilmLayer(hidden, morph_dim)
@@ -62,6 +65,7 @@ class Actor(nn.Module):
             return mu
         eps = torch.randn_like(std)
         return mu + eps * std
+
 
 
 

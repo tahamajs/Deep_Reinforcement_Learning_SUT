@@ -326,6 +326,74 @@ Detailed task list (padding for completeness)
 
 (End of CA18 README)
 
+---
+
+## Quickstart ✅
+
+Follow these steps to run the small demo and tests locally.
+
+1. Create and activate a virtual environment:
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+python -m pip install --upgrade pip
+```
+
+2. Install minimal dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+3. Run tests (recommended):
+
+```bash
+pytest -q
+```
+
+4. Open the demo notebook (non-executed, contains runnable cells):
+
+```bash
+jupyter notebook notebooks/demo.ipynb
+```
+
+---
+
+## Report & Figures 📝
+
+A LaTeX template `report.tex` is included in this folder. To compile locally (requires a LaTeX installation):
+
+```bash
+pdflatex report.tex
+# or, with latexmk installed:
+latexmk -pdf report.tex
+```
+
+The report is a template with sections for abstract, methods, experiments, and placeholder figures — fill the placeholders with your results and figures saved under `pictures/`.
+
+---
+
+## Files added in this fork 🔧
+
+- `report.tex` — LaTeX report template for CA18 deliverables.
+- `notebooks/demo.ipynb` — non-executed demo notebook showing a minimal run using `debug.yaml`.
+- `requirements.txt` — minimal dependencies for running tests and demos.
+- Additional unit tests under `tests/` to validate losses, data shapes and config loading.
+
+---
+
+## Contributing & Style 💡
+
+- Keep modules import-safe (no side effects at import-time).
+- Write type hints and docstrings for public functions/classes.
+- Add tests when you modify behavior.
+
+---
+
+## License
+
+This assignment follows the repository license in `LICENSE`. Please do not include secrets or private data in commits.
+
 
 
 

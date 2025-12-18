@@ -23,6 +23,16 @@ Single run with seed 123, 5 epochs (short smoke test). No hyperparameter sweep p
 ## 4 Results
 Loss curve saved to `outputs/<run>/pictures/loss.png` (example placeholder). Final validation loss (example): 0.08.
 
+Figures used in this example can be generated using the included script:
+
+```bash
+python scripts/make_placeholder_figures.py --out outputs/example_run/pictures
+```
+
+Example figure captions to include in your final report:
+- `loss.png`: "Training and validation loss across epochs; config `configs/example.yaml` (epochs=5, lr=1e-3)."
+- `predictions.png`: "True vs predicted (regression) with dashed $y=x$ reference; RMSE=0.XX."
+
 > Replace the above numbers with actual metrics from your run.
 
 ## 5 Discussion

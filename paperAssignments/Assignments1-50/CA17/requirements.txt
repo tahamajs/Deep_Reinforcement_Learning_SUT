@@ -1,0 +1,4 @@
+torch
+numpy
+gymnasium>=0.26
+pytest

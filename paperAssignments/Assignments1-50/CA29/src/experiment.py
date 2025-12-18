@@ -47,6 +47,12 @@ class Experiment:
         )
         self.logger = logging.getLogger(__name__)
 
+        # Simple CSV metrics file to store evaluation summaries (step, avg, std)
+        self.metrics_file = self.log_dir / 'metrics.csv'
+        if not self.metrics_file.exists():
+            with open(self.metrics_file, 'w') as f:
+                f.write('step,avg_reward,std_reward\n')
+
     def train(self) -> None:
         """Run the training loop.
 
@@ -119,6 +125,12 @@ class Experiment:
         avg_reward = np.mean(rewards)
         std_reward = np.std(rewards)
         self.logger.info(f"Step {step}: Eval Avg Reward {avg_reward:.2f} ± {std_reward:.2f}")
+        # Append to CSV for easy plotting
+        try:
+            with open(self.metrics_file, 'a') as f:
+                f.write(f"{step},{avg_reward:.6f},{std_reward:.6f}\n")
+        except Exception:
+            self.logger.exception("Failed to write metrics file")
         return avg_reward
 
     def run_experiment(self) -> None:

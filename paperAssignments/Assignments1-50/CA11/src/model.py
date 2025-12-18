@@ -34,17 +34,10 @@ class LinearAttention(nn.Module):
         qf = self.feature_map(q)
         kf = self.feature_map(k)
 
-        # accumulate S = kf^T @ v  -> (B, H, Dh, Dh) if done naively; use einsum for simplicity
-        # We compute context = (qf @ (kf^T @ v)) per head using associative property
-        # Compute K^T V -> (B, H, Dh, Dh) by einsum over sequence
-        KV = torch.einsum(
-            "bhld,bhlv->bhlv", kf, v
-        )  # this keeps last dim Dh; it's effectively sum over l
-        # Now attention output per position: out_t = qf_t @ KV_t? For linear attention we use global KV
-        # Reduce KV over sequence: sum over l of kf[l] * v[l]
+        # Compute KV_sum = sum_l kf[..., l, d1] * v[..., l, d2] -> (B, H, Dh, Dh)
         KV_sum = torch.einsum("bhld,bhlv->bhdv", kf, v)  # (B, H, Dh, Dh)
         # Now multiply qf (B,H,L,Dh) with KV_sum (B,H,Dh,Dh) -> (B,H,L,Dh)
-        out = torch.einsum("bhld,bhdz->bhlz", qf, KV_sum)
+        out = torch.einsum("bhld,bhdv->bhlv", qf, KV_sum)
         out = out.transpose(1, 2).contiguous().view(B, L, D)
         return self.out(out)
 
@@ -175,6 +168,7 @@ class TWMSSDImageModel(nn.Module):
         # quantized: (B, L, D)
         pred_obs, pred_reward = self.backbone(quantized, actions)
         return pred_obs, pred_reward, recon, indices
+
 
 
 

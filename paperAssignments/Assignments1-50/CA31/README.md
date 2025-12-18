@@ -86,13 +86,58 @@ short note in your README or paper.
 ## Report
 
 A compact report is included as `REPORT.md` (summary, methods, experiments,
-results and reproducibility information). See it for exact metrics, plots,
-hyperparameter tables and implementation details.
+results and reproducibility information) and a full LaTeX source `report.tex`.
+
+### Figures and illustrative results
+
+- Placeholder figures are provided in `results/figures/`:
+  - `a2c_learning_curve.svg` — illustrative A2C learning curve (replace with your run output).
+  - `bandit_rewards.svg` — illustrative bandit reward curve.
+
+- To generate publication-quality figures from experiment CSVs, use the helper script:
+
+```bash
+python scripts/plot_examples.py --rewards_csv results/ca31_rewards.csv --out_dir results/figures/
+```
+
+This will produce PNGs suitable for inclusion in `report.tex`.
+
+### Build & CI (PDF report)
+
+- `report.tex` contains a full LaTeX report with equations, pseudocode, hyperparameter tables, and placeholders for figures.
+
+Build locally (recommended):
+
+```bash
+# convert SVG figures to PDF (if needed) and build report
+make report
+```
+
+Requirements:
+- A TeX engine that provides `pdflatex` (e.g. TeX Live: `texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended`)
+- `rsvg-convert` (from `librsvg2-bin`) or `inkscape` (for converting SVG figures to PDF)
+
+Notes:
+- The included `Makefile` automates conversion of `results/figures/*.svg` to
+  `results/figures/*.pdf` using `rsvg-convert` (fallback to `inkscape`), then
+  runs `pdflatex` to build `report.pdf`.
+- If you prefer manual conversion, convert SVGs to PDF or PNG and place them
+  in `results/figures/` before building.
+
+Continuous Integration:
+
+- A GitHub Actions workflow is included at `.github/workflows/build-report.yml`.
+  It runs on `ubuntu-latest`, installs minimal TeX packages and `librsvg2-bin`,
+  builds `report.pdf`, and uploads it as a build artifact named `report`.
 
 ---
 
-If you want, I can also add example figures, CI hooks, or a small `Makefile` to
-automate running experiments and generating the report.
+If you'd like, I can also: (a) add example figures generated from a small deterministic
+A2C run (I will create reproducible example runs and add their generated
+figures into `results/`), (b) add a bibliography file to the LaTeX report, or
+(c) set up a GitHub Action step to commit generated figures into a `gh-pages`
+branch for easy viewing. Tell me which option to proceed with.
+
 
 
 

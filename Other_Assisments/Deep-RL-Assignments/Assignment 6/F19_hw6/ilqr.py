@@ -6,6 +6,8 @@ import pdb
 import scipy.linalg
 
 from controllers import approximate_A, approximate_B
+
+
 def simulate_dynamics_next(env, x, u, dt=1e-5):
     """Step simulator to see how state changes.
 
@@ -23,10 +25,17 @@ def simulate_dynamics_next(env, x, u, dt=1e-5):
     next_x: np.array
     """
 
-    env.state = x.copy()
-    next_state, _, _, _ = env.step(u, dt)
-
+    real_env = getattr(env, "unwrapped", env)
+    real_env.state = x.copy()
+    res = real_env.step(u, dt)
+    # support both gym and gymnasium return signatures
+    if isinstance(res, (list, tuple)):
+        next_state = res[0]
+    else:
+        next_state = res
     return next_state
+
+
 def cost_inter(env, x, u):
     """intermediate cost function
 
@@ -45,14 +54,17 @@ def cost_inter(env, x, u):
     corresponding variables, ex: (1) l_x is the first order derivative d l/d x (2) l_xx is the second order derivative
     d^2 l/d x^2
     """
-    l = u.T @ env.R @ u
+    real_env = getattr(env, "unwrapped", env)
+    l = u.T @ real_env.R @ u
     l_x = np.zeros((x.shape[0]))
     l_xx = np.zeros((x.shape[0], x.shape[0]))
-    l_u = 2 * u.T @ env.R
-    l_uu = 2 * env.R
+    l_u = 2 * u.T @ real_env.R
+    l_uu = 2 * real_env.R
     l_ux = np.zeros((u.shape[0], x.shape[0]))
 
     return l, l_x, l_xx, l_u, l_uu, l_ux
+
+
 def cost_final(env, x):
     """cost function of the last step
 
@@ -68,61 +80,89 @@ def cost_final(env, x):
     l, l_x, l_xx The first term is the loss, where the remaining terms are derivatives respect to the
     corresponding variables
     """
-    Qf = 1e4 * np.eye(env.observation_space.shape[0])
-    l = (x - env.goal).T @ Qf.copy() @ (x - env.goal)
-    l_x = 2 * (x - env.goal).T @ Qf.copy()
+    real_env = getattr(env, "unwrapped", env)
+    Qf = 1e4 * np.eye(real_env.observation_space.shape[0])
+    l = (x - real_env.goal).T @ Qf.copy() @ (x - real_env.goal)
+    l_x = 2 * (x - real_env.goal).T @ Qf.copy()
     l_xx = 2 * Qf.copy()
 
     return l, l_x, l_xx
+
 
 def get_total_cost(env, X, U, tN):
     l_total = 0
     l, l_x, l_xx = cost_final(env, X[:, -1])
     l_total += l
-    for i in range(tN-2,-1,-1):
+    for i in range(tN - 2, -1, -1):
 
         l, l_x, l_xx, l_u, l_uu, l_ux = cost_inter(env, X[:, i].copy(), U[:, i].copy())
         l_total += l
     return l_total
 
+
 def simulate(env, x0, U):
-    env.state = x0.copy()
+    real_env = getattr(env, "unwrapped", env)
+    real_env.state = x0.copy()
 
     states, rewards = [x0.copy()], []
 
     count = 0
     while U.shape[1] > count:
-        state, reward, done, info = env.step(U[:, count])
+        res = real_env.step(U[:, count])
+        if isinstance(res, (list, tuple)) and len(res) == 5:
+            state, reward, terminated, truncated, info = res
+            done = terminated or truncated
+        else:
+            state, reward, done, info = res
 
         states.append(state)
         rewards.append(reward)
 
-        if done: break
+        if done:
+            break
         count += 1
 
     return np.array(states).T
 
+
 def forward_pass(env, X, U, k, K):
-    env.state = X[:, 0].copy()
+    real_env = getattr(env, "unwrapped", env)
+    real_env.state = X[:, 0].copy()
 
     states, rewards, actions = [X[:, 0].copy()], [], []
     last_state = X[:, 0].copy()
 
     count = 0
     while U.shape[1] > count:
-        action = U[:, count] + K[:, :, count] @ (states[count] - last_state) + k[:, count]
-        state, reward, done, info = env.step(action)
+        action = (
+            U[:, count] + K[:, :, count] @ (states[count] - last_state) + k[:, count]
+        )
+        res = real_env.step(action)
+        if isinstance(res, (list, tuple)) and len(res) == 5:
+            state, reward, terminated, truncated, info = res
+            done = terminated or truncated
+        else:
+            state, reward, done, info = res
 
         states.append(state)
         rewards.append(reward)
         actions.append(action)
         last_state = state.copy()
 
-        if done: break
+        if done:
+            break
         count += 1
 
-    return np.array(states).T.copy(), np.array(actions).T.copy(), -np.sum(rewards).copy()
-def calc_ilqr_input(env, sim_env, old_actions, tN=50, max_iters=1e6, tol=1e-3, lamb_factor=3.0):
+    return (
+        np.array(states).T.copy(),
+        np.array(actions).T.copy(),
+        -np.sum(rewards).copy(),
+    )
+
+
+def calc_ilqr_input(
+    env, sim_env, old_actions, tN=50, max_iters=1e6, tol=1e-3, lamb_factor=3.0
+):
     """Calculate the optimal control input for the given state.
 
     Parameters
@@ -142,14 +182,14 @@ def calc_ilqr_input(env, sim_env, old_actions, tN=50, max_iters=1e6, tol=1e-3, l
     U: np.array
       The SEQUENCE of commands to execute. The size should be (tN, #parameters)
     """
-    x_0 = env.state.copy()
-
+    real_env = getattr(env, "unwrapped", env)
+    x_0 = real_env.state.copy()
     U = old_actions.copy()
 
     X = simulate(sim_env, x_0, U)
     J_old = sys.float_info.max
     lamb = 1.0
-    max_lamb=100000000
+    max_lamb = 100000000
     J_store = []
 
     print("New Iteration")
@@ -165,7 +205,7 @@ def calc_ilqr_input(env, sim_env, old_actions, tN=50, max_iters=1e6, tol=1e-3, l
             lamb /= lamb_factor
             X = X_new.copy()
             U = U_new.copy()
-            if (abs(J_old - J_new) < tol):
+            if abs(J_old - J_new) < tol:
                 print("Tolerance reached")
                 break
             J_old = J_new
@@ -180,6 +220,7 @@ def calc_ilqr_input(env, sim_env, old_actions, tN=50, max_iters=1e6, tol=1e-3, l
     print("Returning Actions: iterations {} cost {}".format(i, J_old))
     return U, J_store
 
+
 def backward_pass(env, X, U, tN=50, lamb=1):
 
     l, l_x, l_xx = cost_final(env, X[:, -1])
@@ -189,10 +230,14 @@ def backward_pass(env, X, U, tN=50, lamb=1):
     k = np.zeros((env.action_space.shape[0], tN))
     K = np.zeros((env.action_space.shape[0], env.observation_space.shape[0], tN))
 
-    for i in range(tN-2,-1,-1):
+    for i in range(tN - 2, -1, -1):
 
-        df_dx = approximate_A(env, X[:, i].copy(), U[:, i].copy(), simulate_dynamics_next)
-        df_du = approximate_B(env, X[:, i].copy(), U[:, i].copy(), simulate_dynamics_next)
+        df_dx = approximate_A(
+            env, X[:, i].copy(), U[:, i].copy(), simulate_dynamics_next
+        )
+        df_du = approximate_B(
+            env, X[:, i].copy(), U[:, i].copy(), simulate_dynamics_next
+        )
         l, l_x, l_xx, l_u, l_uu, l_ux = cost_inter(env, X[:, i].copy(), U[:, i].copy())
 
         Q_x = l_x + df_dx.T @ V_x
@@ -203,11 +248,11 @@ def backward_pass(env, X, U, tN=50, lamb=1):
         Q_uu_evals, Q_uu_evecs = np.linalg.eig(Q_uu)
         Q_uu_evals[Q_uu_evals < 0] = 0.0
         Q_uu_evals += lamb
-        Q_uu_inv = Q_uu_evecs @ np.diag(1.0/Q_uu_evals) @ Q_uu_evecs.T
-        k[:,i] = -Q_uu_inv @ Q_u
-        K[:,:,i] = -Q_uu_inv @ Q_ux
+        Q_uu_inv = Q_uu_evecs @ np.diag(1.0 / Q_uu_evals) @ Q_uu_evecs.T
+        k[:, i] = -Q_uu_inv @ Q_u
+        K[:, :, i] = -Q_uu_inv @ Q_ux
 
-        V_x = (Q_x - K[:,:,i].T @ Q_uu @ k[:,i]).copy()
-        V_xx = (Q_xx - K[:,:,i].T @ Q_uu @ K[:,:,i]).copy()
+        V_x = (Q_x - K[:, :, i].T @ Q_uu @ k[:, i]).copy()
+        V_xx = (Q_xx - K[:, :, i].T @ Q_uu @ K[:, :, i]).copy()
 
     return k, K

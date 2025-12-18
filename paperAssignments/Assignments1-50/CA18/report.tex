@@ -1,0 +1,48 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\title{CA18 — Assignment Report Template}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+A short abstract summarizing the problem, proposed method, and main results (fill this in after experiments).
+\end{abstract}
+
+\section{Introduction}
+Describe the research question and motivation. Reference relevant literature.
+
+\section{Method}
+Summarize the algorithm, model architecture, losses and any modifications made for the assignment. Include equations as needed.
+
+\section{Experimental Setup}
+\subsection{Configs}
+Describe `debug` and `default` config choices (learning rate, batch size, seeds).
+\subsection{Evaluation Protocol}
+Describe metrics (cumulative reward, sample efficiency) and the number of seeds.
+
+\section{Results}
+Place your tables and figures here. Example figure placeholder:
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{pictures/fig_rewards.png}
+\caption{Reward curves (placeholder).}
+\end{figure}
+
+\section{Discussion}
+Interpret results and discuss limitations and future work.
+
+\section{Reproducibility}
+List commands to run the demo and reproduce the main figures. Include seed sweep instructions.
+
+\section*{Acknowledgments}
+Optional.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

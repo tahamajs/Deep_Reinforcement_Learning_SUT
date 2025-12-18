@@ -326,6 +326,30 @@ _This README is the complete blueprint for Assignment 11: Transformer-Based Worl
 
 ---
 
+## How to run (Quick) ✅
+
+- Prereqs: Python 3.10+, PyTorch (torch & torchvision), and developer deps (install with `pip install -r requirements.txt` if provided).
+
+- Run unit tests:
+
+```bash
+pytest -q
+```
+
+- Run a quick smoke training run:
+
+```bash
+python train.py --steps 20
+```
+
+- Run the experiment runner (saves checkpoints and TB logs):
+
+```bash
+python scripts/experiment.py --steps 100 --save-dir runs/ca11
+```
+
+These are small smoke checks; large-scale experiments require GPUs and additional config tuning.
+
 ## 47. Additional Mathematical Notes
 
 - **Rotary + SSM**: rotary encodings preserve relative phase; SSM can align with continuous-time frequencies—test combined.
@@ -367,8 +391,27 @@ def test_ssd_block_shapes():
     assert y.shape == x.shape
 
 def test_linear_attn_equiv_ssm():
-    # small synthetic sequence; compare linear attn vs running state update
-    pass
+    # small synthetic sequence; compare linear attn forward to a manual linear-attention computation
+    import torch
+    torch.manual_seed(0)
+    B, L, D = 2, 5, 16
+    attn = LinearAttention(d_model=D, n_heads=4)
+    x = torch.randn(B, L, D)
+    out1 = attn(x)
+
+    # Manual computation using the same qkv projections and feature map
+    qkv = attn.qkv(x)
+    q, k, v = torch.chunk(qkv, 3, dim=-1)
+    q = q.view(B, L, attn.n_heads, attn.head_dim).transpose(1, 2)
+    k = k.view(B, L, attn.n_heads, attn.head_dim).transpose(1, 2)
+    v = v.view(B, L, attn.n_heads, attn.head_dim).transpose(1, 2)
+    qf = attn.feature_map(q)
+    kf = attn.feature_map(k)
+    KV_sum = torch.einsum("bhld,bhlv->bhdv", kf, v)
+    out = torch.einsum("bhld,bhdv->bhlv", qf, KV_sum)
+    out = out.transpose(1, 2).contiguous().view(B, L, D)
+    out2 = attn.out(out)
+    assert torch.allclose(out1, out2, atol=1e-6)
 ```
 
 ---

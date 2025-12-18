@@ -29,7 +29,9 @@ def simulate_dynamics(env, x, u, dt=1e-5):
     """
 
     env.state = x.copy()
-    next_state, _, _, _ = env.step(u, dt)
+    res = env.step(u, dt)
+    # gym/gymnasium step compatibility: new API may return (obs, reward, terminated, truncated, info)
+    next_state = res[0] if isinstance(res, (list, tuple)) else res
     diff = next_state - x
     xdot = diff / dt
 
@@ -125,15 +127,19 @@ def calc_lqr_input(env, sim_env, tN=None, max_iter=None):
       The command to execute at this point.
     """
 
-    x = env.state.copy()
-    u = np.zeros(env.action_space.shape[0])
-    A = approximate_A(sim_env, x, u, simulate_dynamics)
-    B = approximate_B(sim_env, x, u, simulate_dynamics)
-    Q = env.Q.copy()
-    R = env.R.copy()
+    # unwrap gymnasium wrappers to access the underlying environment attributes
+    real_env = getattr(env, 'unwrapped', env)
+    real_sim = getattr(sim_env, 'unwrapped', sim_env)
+
+    x = real_env.state.copy()
+    u = np.zeros(real_env.action_space.shape[0])
+    A = approximate_A(real_sim, x, u, simulate_dynamics)
+    B = approximate_B(real_sim, x, u, simulate_dynamics)
+    Q = real_env.Q.copy()
+    R = real_env.R.copy()
     P = solve_continuous_are(A, B, Q, R)
     K = np.linalg.inv(R) @ B.T @ P
-    u = -K @ (x - env.goal)
-    u = np.clip(u, env.action_space.low, env.action_space.high)
+    u = -K @ (x - real_env.goal)
+    u = np.clip(u, real_env.action_space.low, real_env.action_space.high)
 
     return u

@@ -14,20 +14,38 @@ def set_seed(seed: int) -> None:
     """
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
+    try:
+        import torch
+
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
+    except Exception:
+        # If torch is not available (e.g., during lightweight static checks), skip CUDA seeding.
+        pass
 
 
-def get_device(prefer_gpu: bool = False) -> torch.device:
-    """Return a torch.device based on availability and preference.
+def get_device(prefer_gpu: bool = False):
+    """Return a device-like object based on availability and preference.
 
-    Returns 'cpu' if CUDA is unavailable or prefer_gpu is False.
+    When `torch` is unavailable, returns a string fallback ('cpu' or 'cuda').
     """
-    if prefer_gpu and torch.cuda.is_available():
-        return torch.device("cuda")
-    return torch.device("cpu")
+    try:
+        import torch
+
+        if prefer_gpu and torch.cuda.is_available():
+            return torch.device("cuda")
+        return torch.device("cpu")
+    except Exception:
+        return "cpu" if not prefer_gpu else "cuda"
 
 
-def cpu_float(t: torch.Tensor) -> float:
-    return float(t.detach().cpu())
+def cpu_float(t) -> float:
+    """Return a Python float from a tensor-like object.
+
+    Works with torch tensors or numeric scalars.
+    """
+    try:
+        return float(t.detach().cpu())
+    except Exception:
+        return float(t)

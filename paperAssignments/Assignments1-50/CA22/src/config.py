@@ -33,6 +33,7 @@ class ExperimentConfig:
                 cfg = yaml.safe_load(f) or {}
         else:
             # very small fallback parser for simple key: value YAML-like files
+            # This keeps the module import-safe even when PyYAML is not installed.
             cfg = {}
             with p.open("r") as f:
                 for line in f:
@@ -62,6 +63,7 @@ def _simple_parse(val: str) -> Any:
 
 def _dataclass_defaults(dc) -> Dict[str, Any]:
     return {f.name: f.default for f in dc.__dataclass_fields__.values()}
+
 
 
 

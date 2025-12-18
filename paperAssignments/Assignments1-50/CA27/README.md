@@ -89,10 +89,14 @@ Tips:
 
 ---
 
-## Tests & quality checks
+## Tests & quality checks ✅
 
 - Tests are located in `tests/` and are run with `pytest`.
 - The unit tests cover package initialization, policy forward passes, hidden state shapes, and utility behaviours (including Gym API compatibility).
+
+CI: a minimal GitHub Actions workflow is included at `.github/workflows/ci.yml` to run the test suite on pushes and pull requests.
+
+Makefile: use `make test` to run tests locally or `./scripts/run_tests.sh` for a quick runner.
 
 ---
 

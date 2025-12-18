@@ -246,6 +246,22 @@ class MaxSinkAgent:
 - Save checkpoints (policy, dist, target).
 - Version pin: torch≥2.2, geomloss, gymnasium/Fetch, Minigrid, mujoco-py.
 
+## 16. Testing ✅
+
+- Run unit tests with pytest:
+
+  python -m pip install -r paperAssignments/Assignments1-50/CA8/test-requirements.txt
+  pytest paperAssignments/Assignments1-50/CA8/tests
+
+- Tests included:
+  - `test_imports.py`: basic import and fallback checks (geomloss fallback) 
+  - `test_config_loader.py`: verify YAML configs update `cfg` and unknown keys are ignored
+
+## 17. Citation / Paper
+
+If you use MaxSink or parts of this assignment in your work, please cite this assignment and the original references (Bellemare et al., Dabney et al., Feydy et al.). For questions about reproducing the experiments, open an issue or contact the assignment maintainers.
+
+
 ---
 
 ## 16. Logging Schema

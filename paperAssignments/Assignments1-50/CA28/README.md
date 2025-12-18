@@ -33,6 +33,14 @@ This README describes how to set up, run, test, and reproduce experiments and ho
 
    python -c "from src.config import load_config; from src.train import train_dqn; cfg=load_config('configs/config.yaml'); cfg.num_episodes=10; _=train_dqn(cfg)"
 
+5. Run the demo script (saves outputs/ and figures/):
+
+   python scripts/run_demo.py
+
+6. Build the report PDF (if LaTeX is installed):
+
+   make report
+
 > Note: The repository is import-safe: importing `src` does not run training by default.
 
 ---

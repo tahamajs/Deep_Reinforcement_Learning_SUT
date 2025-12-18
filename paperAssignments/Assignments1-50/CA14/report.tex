@@ -167,8 +167,17 @@ Gradient clip & 40 \\
 Implementation details, config YAML, and training scripts are included in the repository. Fix random seeds, log env versions, and save checkpoints to ensure reproducibility.
 
 \section{References}
-% Add BibTeX entries for Dreamer, PEAC, FiLM, etc.
+% Bibliography: create refs.bib in the same folder and compile with pdflatex/bibtex or latexmk.
+\bibliographystyle{apalike}
+\bibliography{refs}
+
+% Example compile sequence (from project root):
+% pdflatex report.tex
+% bibtex report
+% pdflatex report.tex
+% pdflatex report.tex
 \end{document}
+
 
 
 

@@ -19,7 +19,35 @@ This README documents CA17. It follows the pattern of other CA folders in this r
 
 ## Getting Started
 
-Ask to scaffold code or a notebook template for CA17 and I will add files consistent with the project's coding standards.
+1. Create and activate a virtual environment:
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+python -m pip install --upgrade pip
+```
+
+2. Install dependencies:
+
+```bash
+pip install -r paperAssignments/Assignments1-50/CA17/requirements.txt
+```
+
+3. Run training (from repo root):
+
+```bash
+python -m paperAssignments.Assignments1_50.CA17.src.train
+```
+
+4. Run tests:
+
+```bash
+python -m pytest paperAssignments/Assignments1-50/CA17/tests
+```
+
+5. Quick notebook: open `paperAssignments/Assignments1-50/CA17/notebooks/CA17_experiment_template.ipynb` and reduce `total_timesteps` for quick experiments.
+
+
+
 
 ## References
 
@@ -42,6 +70,7 @@ I added a minimal, import-safe implementation to help get started:
 - `tests/test_imports.py` — smoke test for import and forward pass.
 
 Run `python -m pytest paperAssignments/Assignments1-50/CA17/tests` to run the smoke test (ensure the repo root is on PYTHONPATH).
+
 
 
 

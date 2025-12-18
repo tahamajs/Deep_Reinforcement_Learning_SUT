@@ -767,45 +767,79 @@ class SinusoidalPosEmb(nn.Module):
         emb = torch.cat((emb.sin(), emb.cos()), dim=-1)
         return emb
 
-class ConditionalUnet1D(nn.Module):
-    def __init__(self, input_dim, local_cond_dim, global_cond_dim, diffusion_step_embed_dim=256, down_dims=, kernel_size=5, n_groups=8):
-        super().__init__()
-        all_dims = [input_dim] + list(down_dims)
-        start_dim = down_dims
+## MA-EZV2 (CA10) — Multi-Agent EfficientZero V2
 
-        dsed = diffusion_step_embed_dim
-        self.diffusion_step_encoder = nn.Sequential(
-            SinusoidalPosEmb(dsed),
-            nn.Linear(dsed, dsed * 4),
-            nn.Mish(),
-            nn.Linear(dsed * 4, dsed),
-        )
+This folder contains code and documentation for MA-EZV2, a LightZero-compatible multi-agent adaptation of EfficientZero V2 integrating Gumbel top-k search and a value-prefix loss for stabilizing training in cooperative multi-agent environments.
 
-        # Condensed block structure for report brevity
-        # In full implementation: Residual Blocks + Downsample + Upsample
-        self.mid_block1 = nn.Conv1d(down_dims[-1], down_dims[-1], kernel_size, padding=kernel_size//2)
-        self.mid_block2 = nn.Conv1d(down_dims[-1], down_dims[-1], kernel_size, padding=kernel_size//2)
+### Contents
+- `models/` — network implementations (`MAEZV2Network`) with encoder, dynamics, prediction and prefix heads.
+- `mcts/` — latent-space MCTS with support for joint/factored Gumbel top-k expansions.
+- `policy/` — a thin `EfficientZeroV2Policy` adapter combining the model and search helpers.
+- `integration/` — LightZero-style adapter classes to plug into higher-level training pipelines.
+- `configs/` — default YAML configuration for experiments.
+- `scripts/` — small demo and training skeletons.
+- `tests/` — unit tests for network shapes, policy losses, and basic MCTS behavior.
+- `report.tex` / `report_neurips.tex` — LaTeX manuscript drafts describing the algorithm and experiments.
 
-        self.final_conv = nn.Sequential(
-            nn.Conv1d(start_dim, start_dim, 1),
-            nn.Mish(),
-            nn.Conv1d(start_dim, input_dim, 1)
-        )
+---
 
-    def forward(self, sample, timestep, local_cond=None):
-        # sample: (B, T, input_dim) -> (B, input_dim, T)
-        sample = sample.transpose(1, 2)
+## Installation
 
-        # Timestep embedding
-        timesteps = timestep
-        if not torch.is_tensor(timesteps):
-            timesteps = torch.tensor([timesteps], dtype=torch.long, device=sample.device)
-        global_feature = self.diffusion_step_encoder(timesteps)
+Requirements (tested on Python 3.10+):
 
-        # Forward pass through U-Net blocks (Down -> Mid -> Up)
-        # Condition injected via FiLM or simple concatenation at bottleneck
+- torch
+- numpy
 
-        return self.final_conv(x).transpose(1, 2)
+Create and activate a venv, then install required packages:
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install torch numpy
+```
+
+No other heavy dependencies are required to run the code in this folder (it is deliberately lightweight for assignment/demonstration purposes).
+
+## Quick usage
+
+Run the small demo script which exercises network inference and a short MCTS run:
+
+```bash
+python scripts/demo_run_ma_ezv2.py
+```
+
+Run unit tests (recommended before modifying code):
+
+```bash
+python -m pytest -q
+```
+
+## Design notes
+
+- The network uses a centralized encoder with optional per-agent policy heads (factored outputs). Dynamics consumes concatenated per-agent one-hot segments when using factored action spaces.
+- MCTS supports both joint enumeration (when joint action spaces are small) and a factored beam approximation using per-agent Gumbel top-k followed by beam merging.
+- The value-prefix head predicts cumulative prefix returns and is included as an auxiliary stabilization loss.
+
+## Reproducibility & report
+
+- The folder contains LaTeX sources `report.tex` and `report_neurips.tex` suitable for editing and compiling with your local LaTeX installation.
+- The README and configs include hyperparameter suggestions; experimental scripts are lightweight skeletons that need to be adapted and scaled for full benchmarks (SMACv2, MPE).
+
+## Contributing
+
+If you want to extend MA-EZV2:
+
+1. Add unit tests under `tests/` for new components.
+2. Keep modules import-safe (no side-effects at import time).
+3. Update `report.tex` with new experiments and add reproducibility details (seeds, hardware, runtime).
+
+## Citation
+
+If you use MA-EZV2 in research, please cite the accompanying technical report and supporting references in `references.bib` provided in this directory.
+
+---
+
+_For questions or issues, open a PR or email the maintainer listed in the repo._
 ```
 
 #### 6.1.2 The Federated Client

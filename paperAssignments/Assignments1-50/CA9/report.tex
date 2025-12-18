@@ -187,6 +187,42 @@ Conservative methods (CQL~\cite{kumar2020cql}), expectile-based IQL~\cite{kostri
 \section{Conclusion}
 AU-DMG provides a practical and theoretically motivated mechanism to open local generalization where epistemic uncertainty is low, and remain conservative elsewhere. The method bridges offline stability and online adaptability with minimal hand-tuning.
 
+\section{Reproducibility}
+We designed the codebase to be runnable and reproducible. Key commands to reproduce the main experiments and figures are below (run from the project root):
+\begin{enumerate}
+  \item Create and activate a Python environment and install core deps:
+  \begin{verbatim}
+  python -m venv .venv && source .venv/bin/activate
+  python -m pip install --upgrade pip
+  python -m pip install torch numpy matplotlib gymnasium
+  # optional for D4RL
+  python -m pip install d4rl
+  \end{verbatim}
+  \item Run a smoke training run (uses synthetic data if D4RL is unavailable):
+  \begin{verbatim}
+  python scripts/train_offline.py --epochs 1 --steps 200 --logdir outputs/ca9
+  \end{verbatim}
+  \item Train a full experiment (example):
+  \begin{verbatim}
+  python scripts/train_offline.py --env antmaze-medium-diverse-v2 --steps 50000 --logdir outputs/ca9
+  \end{verbatim}
+  \item Evaluate a checkpoint:
+  \begin{verbatim}
+  python scripts/eval.py --env antmaze-medium-diverse-v2 --ckpt outputs/ca9/checkpoints/ckpt_50000.pth
+  \end{verbatim}
+  \item Generate diagnostic plots (examples provided):
+  \begin{verbatim}
+  python scripts/generate_placeholder_figs.py --logdir outputs/ca9
+  \end{verbatim}
+  \item Compile the LaTeX report (requires pdflatex):
+  \begin{verbatim}
+  pdflatex report.tex
+  pdflatex report.tex
+  \end{verbatim}
+\end{enumerate}
+
+These steps are deliberately minimal; the codebase includes unit tests (`python -m pytest tests`) and a `notebooks/demo.ipynb` for quick visualization runs.
+
 \section*{Acknowledgments}
 We thank contributors and prior work that inspired the design.
 
@@ -285,6 +321,7 @@ plt.colorbar(hb); plt.title('Gate heatmap (mean Lambda)'); plt.savefig('plots/ga
 These recipes are a starting point; extend `notebooks/demo.ipynb` to generate publication-ready figures using the same saved artifacts.
 
 \end{document}
+
 
 
 

@@ -1,0 +1,74 @@
+% rep.tex — LaTeX report template for CA25
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,graphicx,booktabs}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{float}
+\title{Toy MLP Experiment — CA25}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+A concise 3–5 sentence summary describing the problem, the method (MLP on synthetic data), and the main outcome (e.g., convergence behavior, final metrics).
+\end{abstract}
+
+\section{Introduction}
+Brief motivation and a one-sentence hypothesis.
+
+\section{Methods}
+\subsection{Model}
+We use a fully connected multilayer perceptron (MLP) with ReLU activations. For an input $x\in\mathbb{R}^{D}$, layer computations are:
+\begin{align}
+    h^{(0)} &= x, \\
+    z^{(l)} &= W^{(l)} h^{(l-1)} + b^{(l)}, \\
+    h^{(l)} &= \phi(z^{(l)}) \quad (\phi=\mathrm{ReLU})
+\end{align}
+The final output is linear $y = W^{(L)} h^{(L-1)} + b^{(L)}$. For classification we interpret $y$ as logits and apply softmax.
+
+\subsection{Loss Functions}
+Mean squared error (MSE) for regression:
+\begin{equation}
+    \mathcal{L}_{\mathrm{MSE}} = \frac{1}{N} \sum_{i=1}^N (y_i - \hat{y}_i)^2
+\end{equation}
+Cross-entropy for classification (logits $z$):
+\begin{equation}
+    \mathcal{L}_{\mathrm{CE}} = -\frac{1}{N} \sum_{i=1}^N \log \frac{e^{z_{i,c_i}}}{\sum_{c} e^{z_{i,c}}}
+\end{equation}
+
+\subsection{Data}
+Synthetic datasets are generated as described in `src/data.py`. For regression: $y = X w + \epsilon$ with Gaussian noise $\epsilon\sim\mathcal{N}(0,\sigma^2)$.
+
+\section{Experimental Setup}
+List config values and number of trials here. Example: 5 epochs, lr=1e-3, batch size=128, seed=123.
+
+\section{Results}
+Include figures with captions and short interpretations.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{outputs/example_run/pictures/loss.png}
+    \caption{Training and validation loss across epochs. Caption should include hyperparameters used and number of seeds.}
+    \label{fig:loss}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{outputs/example_run/pictures/predictions.png}
+    \caption{True vs predicted values on validation set (regression). Include RMSE or R$^2$ in the caption.}
+    \label{fig:pred}
+\end{figure}
+
+\section{Discussion}
+Summarize whether results support hypothesis, limitations, and next steps.
+
+\section{Reproducibility}
+Provide commands and list artifact files (used_config.yaml, model.pt, pictures/*). Mention software versions.
+
+\section*{Appendix}
+Place extended tables or additional plots here.
+
+\end{document}

@@ -15,6 +15,13 @@ Quick start (local)
 
    python paperAssignments/Assignments1-50/CA8/scripts/run.py --config paperAssignments/Assignments1-50/CA8/configs/procgen.yaml
 
+Testing
+
+- Install test requirements and run pytest:
+
+  python -m pip install -r paperAssignments/Assignments1-50/CA8/test-requirements.txt
+  pytest paperAssignments/Assignments1-50/CA8/tests
+
 Logging
 
 - TensorBoard logs are saved to `cfg.tb_logdir` (default `runs/ca8`). Start TensorBoard:
@@ -37,6 +44,7 @@ Notes
 
 - For MuJoCo/Procgen, ensure the appropriate packages are installed (mujoco, procgen).
 - Use `python -m pip install -r paperAssignments/Assignments1-50/CA8/requirements.txt` to install everything.
+
 
 
 

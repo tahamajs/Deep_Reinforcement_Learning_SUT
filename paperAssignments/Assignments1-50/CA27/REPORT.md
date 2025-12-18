@@ -41,7 +41,12 @@ Provide a concise summary (150–250 words) of the problem, proposed baselines, 
 - Present your main results with figures and short captions.
 - Include tables summarizing average final returns and sample efficiency.
 
-> NOTE: This repository includes a notebook `notebooks/meta_learning_experiment.ipynb` to reproduce the figures. The notebook is intentionally non-executed in the repo—execute locally with the environment specified in `requirements.txt`.
+Example (placeholder):
+
+- Average return after 5 adaptation steps (MAML): **X.XX** ± **Y.YY** (placeholder — run experiments to fill in)
+- Average return after 5 adaptation steps (RL²): **A.AA** ± **B.BB** (placeholder — run experiments to fill in)
+
+> NOTE: This repository includes a notebook `notebooks/meta_learning_experiment.ipynb` to reproduce the figures. The notebook is intentionally non-executed in the repo—execute locally with the environment specified in `requirements.txt` and replace the placeholders above with real experimental numbers and plots saved to `pictures/`.
 
 ## 6. Discussion
 - Interpret the results relative to your hypotheses.

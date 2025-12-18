@@ -51,9 +51,16 @@ class QEnsemble(nn.Module):
 
     @torch.no_grad()
     def soft_update_from(self, other: "QEnsemble", tau: float):
-        """Polyak average parameters from other ensemble."""
+        """Polyak average parameters from other ensemble.
+
+        Note: we perform the standard polyak update
+        target_param <- (1 - tau) * target_param + tau * source_param
+        where `other` is the source (live network) and `self` is the target.
+        """
         for p, q in zip(self.parameters(), other.parameters()):
-            p.data.copy_(tau * p.data + (1.0 - tau) * q.data)
+            # Polyak update (target <- (1 - tau)*target + tau*source)
+            p.data.copy_((1.0 - tau) * p.data + tau * q.data)
+
 
 
 

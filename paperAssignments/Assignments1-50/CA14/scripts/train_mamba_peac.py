@@ -89,22 +89,13 @@ def collect_episode(
     obs, _ = env.reset()
     for _ in range(max_steps):
         obs_arr = np.array(obs, dtype=np.float32)
-        # simple zero morph conditioning for collection; actor expects torch input
-        z = torch.zeros(
-            1, actor.fc1.in_features - actor.film.scale.in_features, device=device
-        )
-        z = torch.randn(1, actor.film.scale.in_features, device=device) * 0.0  # zeros
+        # simple zero morph conditioning for collection
+        z = torch.zeros(1, actor.morph_dim, device=device)
         obs_t = torch.from_numpy(obs_arr).float().unsqueeze(0).to(device)
-        # sample random action initially (exploration)
+        # sample random action initially (exploration): sample a random latent and use actor
         with torch.no_grad():
-            a = actor.act(
-                torch.randn(
-                    1,
-                    actor.fc1.in_features - actor.film.scale.in_features,
-                    device=device,
-                ),
-                z,
-            )
+            latent = torch.randn(1, actor.latent_dim, device=device)
+            a = actor.act(latent, z)
             a = a.squeeze(0).cpu().numpy()
         next_obs, reward, terminated, truncated, info = env.step(a)
         done = bool(terminated or truncated)
@@ -324,6 +315,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 

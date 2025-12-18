@@ -1,5 +1,5 @@
-import pytest
 import numpy as np
+import pytest
 from src.utils import set_seed, ReplayBuffer
 
 def test_set_seed():
@@ -33,3 +33,11 @@ def test_replay_buffer():
     assert rewards.shape == (3,)
     assert next_states.shape == (3, 4)
     assert dones.shape == (3,)
+
+def test_replay_buffer_sample_too_large():
+    buffer = ReplayBuffer(3)
+    state = np.zeros(4)
+    for _ in range(2):
+        buffer.push(state, 0, 0.0, state, False)
+    with pytest.raises(ValueError):
+        buffer.sample(4)

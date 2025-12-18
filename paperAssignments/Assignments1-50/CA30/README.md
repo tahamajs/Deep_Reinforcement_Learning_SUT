@@ -67,6 +67,21 @@ Run tests and linters locally (CI runs these same checks):
 pytest -q
 ```
 
+CI-friendly quick checks:
+
+- Run a subset of the tests that excludes long experiments:
+
+```
+pytest -q -k "not slow"
+```
+
+- To run a quick smoke experiment from the notebook (fast/deterministic):
+
+```
+# in repo root
+python -c "from ca30.config import ExperimentConfig; from ca30.utils import set_seed, make_rng; from ca30.model import BaseModel; from ca30.train import train; cfg=ExperimentConfig.load('configs/example.yaml'); set_seed(cfg.seed); rng=make_rng(cfg.seed); m=BaseModel(cfg.input_dim, cfg.hidden_dim, cfg.output_dim, seed=cfg.seed); train(cfg, m, rng, max_steps=5, out_dir='results/demo')"
+```
+
 ---
 
 ## How to use the notebook template

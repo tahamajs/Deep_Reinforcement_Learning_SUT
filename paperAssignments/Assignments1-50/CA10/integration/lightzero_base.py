@@ -30,12 +30,13 @@ class BaseMuZeroPolicy(ABC):
     ) -> Any: ...
 
     def save(self, path: str) -> None:
-        """Optional: save policy weights."""
-        raise NotImplementedError
+        """Optional: save policy weights. Default no-op for base class."""
+        return None
 
     def load(self, path: str) -> None:
-        """Optional: load policy weights."""
-        raise NotImplementedError
+        """Optional: load policy weights. Default no-op for base class."""
+        return None
+
 
 
 

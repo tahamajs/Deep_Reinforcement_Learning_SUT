@@ -37,9 +37,12 @@ def load_config_from_yaml(path: str) -> Dict[str, Any]:
                 # replace module-level cfg variable
                 globals()["cfg"] = Config(**new_vals)  # type: ignore
         else:
-            # ignore unknown keys
-            pass
+            # ignore unknown keys, but log them for visibility
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning("Unknown config key '%s' in %s; ignoring.", k, path)
     return data
+
 
 
 

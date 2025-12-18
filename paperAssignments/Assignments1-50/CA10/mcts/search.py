@@ -81,11 +81,12 @@ class MCTS:
         device = h0.device
         visit_results = []
         policy_results = []
+        joint_visits_all = []
 
         for b in range(batch):
             root = MCTSNode(h0[b : b + 1])
             # get root policy and value
-            logits_joint, logits_agents, v = self.net.predict_from_latent(root.h)
+            logits_joint, logits_agents, v, _ = self.net.predict_from_latent(root.h)
             probs = F.softmax(logits_joint, dim=-1).squeeze(0)  # (A,)
             A = logits_joint.shape[-1]
 
@@ -241,6 +242,7 @@ class MCTS:
 
 
 __all__ = ["MCTS", "MCTSNode"]
+
 
 
 

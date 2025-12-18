@@ -1,15 +1,48 @@
-# UniZero vs EfficientZero V2: A Rigorous Comparative Study in a Unified Codebase
+# RA-U-OBAC (CA12) — Retrieval-Augmented Uncertainty-aware OBAC
+
+## Quickstart ✅
+
+A small, self-contained implementation of RA-U-OBAC (Retrieval-Augmented, Uncertainty-aware Offline-Boosted Actor-Critic) with utilities to run a lightweight demo, reproduce figures, and compile the report.
+
+Installation (recommended inside a virtualenv):
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Run the lightweight demo (guarded main):
+
+```bash
+python -m paperAssignments.Assignments1-50.CA12.scripts.train_ra_u_obac --steps 2000
+```
+
+Run tests:
+
+```bash
+python -m pytest -q
+```
+
+Generate visualizations (see `VISUALIZATION.md` for details):
+
+```bash
+python paperAssignments/Assignments1-50/CA12/analysis/plot_results.py --ckpt_dir outputs/ca12_checkpoints --out_dir paperAssignments/Assignments1-50/CA12/pictures
+```
+
+Build the report PDF (requires LaTeX):
+
+```bash
+make report
+```
+
+---
 
 ## 1. Executive Summary
 
-Monte Carlo Tree Search (MCTS) variants such as UniZero and EfficientZero V2 (EZ-V2) represent the current apex of sample-efficient model-based reinforcement learning on Atari 100k and challenging control domains. However, published comparisons are confounded by divergent codebases, preprocessing, network sizes, and hyperparameter choices. This assignment proposes a controlled, head-to-head evaluation of UniZero and EZ-V2 within the **same** LightZero-based codebase, normalizing architecture, replay, and data pipelines. Goals:
+This directory implements RA-U-OBAC (Retrieval-Augmented, Uncertainty-aware Offline-Boosted Actor-Critic), an approach that accelerates online actor improvement by retrieving high-return actions from a trajectory buffer and applying an uncertainty-gated boosting loss. The implementation is minimal and focused on clarity and reproducibility (see `src/` for the implementation and `report.tex` for the paper write-up).
 
-- Implement UniZero and EZ-V2 faithfully in LightZero with shared backbones and identical preprocessing.
-- Provide a reproducible benchmark suite across Atari (10 games) and DMControl (5 tasks).
-- Deliver rigorous statistical analysis (median, IQM, bootstrap CIs) using `rliable`.
-- Diagnose where gains arise: search policy, value prefix, Gumbel corrections, representation, and planning budget.
-
-We supply a 1000+ line blueprint: theory, algorithmic details, unified configs, PyTorch-style pseudocode, hyperparameters, ablations, metrics, logging, and reproducibility steps.
+**Note:** The long blueprint for a separate UniZero vs EZ-V2 assignment is included below as a design document (kept for reference) but the runnable code in this folder implements RA-U-OBAC. If your intention was to run the UniZero/EZ-V2 experiments, see the top of this file for pointers and contact the maintainer for the dedicated branch.
 
 ---
 

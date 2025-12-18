@@ -74,11 +74,19 @@ python -m pytest tests -q
 
 A `REPORT.md` template is included — clone it and fill in the sections (title, abstract, methods, experiments, results, discussion, reproducibility). Export to PDF for submission via `pandoc` or your preferred LaTeX tool.
 
-Suggested export command:
+Suggested export commands:
 
 ```bash
-# Convert markdown report to PDF (requires pandoc and LaTeX/Roadmap)
+# Convert markdown report to PDF (requires pandoc and LaTeX)
 pandoc REPORT.md -o report.pdf --pdf-engine=xelatex
+# Or compile the LaTeX template directly (requires a TeX installation):
+pdflatex rep.tex && pdflatex rep.tex
+```
+
+Tip: run the included script to create placeholder figures used by the LaTeX report:
+
+```bash
+python scripts/make_placeholder_figures.py --out outputs/example_run/pictures
 ```
 
 ## Notes & Best Practices 💡
@@ -89,6 +97,59 @@ pandoc REPORT.md -o report.pdf --pdf-engine=xelatex
 
 ---
 
+## Mathematical Details & Formulas ✏️
+
+Below are the canonical equations used in the example included in this repo. Include these in your report when discussing methods.
+
+### MLP forward pass
+For input x \in R^{B×D} and an L-layer MLP with weights W^{(l)} and biases b^{(l)}, the hidden states are defined by
+
+\begin{align}
+    h^{(0)} &= x, \
+    z^{(l)} &= W^{(l)} h^{(l-1)} + b^{(l)}, \
+    h^{(l)} &= \phi(z^{(l)}) \quad \textrm{for } l = 1,\dots,L-1, \
+    y &= W^{(L)} h^{(L-1)} + b^{(L)}
+\end{align}
+
+where \phi(·) is the elementwise ReLU (ReLU(z) = max(0, z)). For classification, apply softmax to logits to get class probabilities.
+
+### Loss functions
+- Mean squared error (regression):
+
+\begin{equation}
+    \mathcal{L}_{\mathrm{MSE}} = \frac{1}{N} \sum_{i=1}^N (y_i - \hat{y}_i)^2
+\end{equation}
+
+- Cross-entropy (classification logits):
+
+\begin{equation}
+    \mathcal{L}_{\mathrm{CE}} = -\frac{1}{N} \sum_{i=1}^N \log \frac{e^{z_{i,c_i}}}{\sum_{c} e^{z_{i,c}}}
+\end{equation}
+
+### Evaluation metrics
+- For regression: report MSE or RMSE.
+- For classification: report accuracy (\frac{1}{N} \sum_i \mathbf{1}[\hat{y}_i = y_i]) and optionally precision/recall.
+
+---
+
+## Figures & Captions (what to save and include) 🖼️
+
+Save clear figure files in `outputs/<run>/pictures/` and reference them in your report. Recommended figures:
+
+- `loss.png` — training and validation loss vs epoch. Caption: "Training and validation loss across epochs (mean ± std across seeds if available)." Include axis labels, legend, and a short caption in your report describing hyperparameters used.
+- `predictions.png` — (regression) true vs predicted scatter plot. Caption: "True vs predicted values on validation set; ideal line y=x plotted for reference." Include an R^2 or RMSE summary in the caption.
+- `confusion_matrix.png` — (classification) normalized confusion matrix. Caption: "Normalized confusion matrix on validation/test set; rows = true, columns = predicted."
+
+Figure best-practices:
+
+- Export at least 150–300 dpi for raster images (PNG) or use vector formats (PDF/SVG) for plots.
+- Label axes clearly with units (if applicable) and include legends where needed.
+- Add a brief caption (1–2 sentences) that states what is shown and any key numbers (final metric, RMSE, accuracy).
+
+Include for each figure: file path, short caption, and a sentence interpreting the plot.
+
+---
+
 ## Contact & Support
 
 If you use or adapt this template, please keep the import-safe structure and add tests for new functionality. For questions about grading or specific assignment requirements, consult the course staff or your instructor.
@@ -96,7 +157,8 @@ If you use or adapt this template, please keep the import-safe structure and add
 
 ---
 
-**Author**: CA25 template (course staff) — updated with report template and reproducibility checklist
+**Author**: CA25 template (course staff) — updated with report template, mathematical details, and figure guidance
+
 
 
 

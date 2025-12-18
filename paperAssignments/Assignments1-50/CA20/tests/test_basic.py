@@ -31,6 +31,25 @@ def test_lagrangian_loss_and_multiplier_step():
     assert lam.value >= 0.0
 
 
+def test_checkpoint_and_config_loading(tmp_path):
+    cfg = config.Config()
+    cfg.epochs = 1
+    cfg.batch_size = 8
+    # run a tiny train to produce checkpoint
+    from paperAssignments.Assignments1_50.CA20.src import train, utils as utils_mod
+
+    res = train.train(cfg)
+    assert "checkpoint" in res
+    ckpt_path = res["checkpoint"]
+    assert os.path.exists(ckpt_path)
+    # load checkpoint into a fresh model and ensure state loaded
+    models = train.make_models(cfg)
+    opt = torch.optim.Adam(models["policy"].parameters(), lr=cfg.lr)
+    extra = utils_mod.load_checkpoint(ckpt_path, models["policy"], opt)
+    assert isinstance(extra, dict)
+
+
+
 
 
 

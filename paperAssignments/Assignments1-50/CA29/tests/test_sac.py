@@ -23,9 +23,10 @@ def test_replay_buffer_add_and_sample():
     s, a, r, ns, d = buf.sample(4)
     assert s.shape == (4, state_dim)
     assert a.shape == (4, action_dim)
-    assert r.shape == (4,)
+    # rewards and dones are column vectors
+    assert r.shape == (4, 1)
     assert ns.shape == (4, state_dim)
-    assert d.shape == (4,)
+    assert d.shape == (4, 1)
 
 
 def test_actor_critic_shapes():

@@ -1,20 +1,29 @@
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, Sequence
 import numpy as np
+from .utils import make_rng
 
 
 class BaseModel:
-    """A minimal model with a numpy-first implementation and an optional Torch backend.
+    """A minimal numpy MLP with deterministic initialization.
 
-    This keeps the package import-safe when Torch is not installed.
+    Parameters
+    ----------
+    input_dim: int
+    hidden_dim: int
+    output_dim: int
+    seed: Optional[int] - if provided, used for deterministic init
+    backend: str - "numpy" or "torch" (torch optional)
     """
 
-    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int, backend: Optional[str] = None):
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        self.output_dim = output_dim
+    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int, seed: Optional[int] = None, backend: Optional[str] = None):
+        self.input_dim = int(input_dim)
+        self.hidden_dim = int(hidden_dim)
+        self.output_dim = int(output_dim)
         self.backend = backend or "numpy"
+        self.seed = seed
 
+        # Prefer torch backend only if explicitly requested
         if self.backend == "torch":
             try:
                 import torch
@@ -32,10 +41,10 @@ class BaseModel:
                     def forward(self, x):
                         return self.net(x)
 
-                self.model = MLP(input_dim, hidden_dim, output_dim)
+                self.model = MLP(self.input_dim, self.hidden_dim, self.output_dim)
                 self._forward = self._forward_torch
             except Exception:
-                # fallback to numpy implementation
+                # torch not available; fallback to numpy
                 self.backend = "numpy"
                 self._init_numpy_weights()
                 self._forward = self._forward_numpy
@@ -44,14 +53,16 @@ class BaseModel:
             self._forward = self._forward_numpy
 
     def _init_numpy_weights(self):
-        # deterministic small random weights; real experiments should use better initialization
-        rng = np.random.RandomState(0)
+        # deterministic small random weights; use provided seed when present
+        rng = make_rng(self.seed)
         self.W1 = rng.normal(scale=0.1, size=(self.input_dim, self.hidden_dim))
         self.b1 = np.zeros((self.hidden_dim,))
         self.W2 = rng.normal(scale=0.1, size=(self.hidden_dim, self.output_dim))
         self.b2 = np.zeros((self.output_dim,))
 
     def _forward_numpy(self, x: np.ndarray) -> np.ndarray:
+        x = np.asarray(x)
+        assert x.ndim == 2 and x.shape[1] == self.input_dim, "Input must be (batch, input_dim)"
         h = x.dot(self.W1) + self.b1
         h = np.maximum(h, 0.0)  # ReLU
         out = h.dot(self.W2) + self.b2
@@ -60,7 +71,8 @@ class BaseModel:
     def _forward_torch(self, x):
         import torch
 
-        return self.model(x)
+        with torch.no_grad():
+            return self.model(torch.as_tensor(x))
 
     def forward(self, x):
         return self._forward(x)

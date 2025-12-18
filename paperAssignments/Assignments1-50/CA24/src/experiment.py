@@ -51,7 +51,8 @@ def run_experiment(config: Config) -> Dict[str, float]:
 
     # Return a compact summary
     summary = {
-        "final_train_loss": logs[f"train/loss_epoch_{config.epochs-1}"]
+        "final_train_loss": logs[f"train/loss_epoch_{config.epochs-1}"] if config.epochs > 0 else None,
+        "config": asdict(config),
     }
     return summary
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 import yaml
-from typing import Any
+from typing import Any, Dict
 
 
 @dataclass
@@ -17,7 +17,16 @@ class ExperimentConfig:
     def load(cls, path: str | Path) -> "ExperimentConfig":
         path = Path(path)
         with path.open("r") as f:
-            data = yaml.safe_load(f)
+            data = yaml.safe_load(f) or {}
+        # Validate keys and apply defaults via dataclass instantiation
+        allowed = {f.name for f in cls.__dataclass_fields__.values()}
+        data = {k: v for k, v in data.items() if k in allowed}
+        return cls(**data)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ExperimentConfig":
+        allowed = {f.name for f in cls.__dataclass_fields__.values()}
+        data = {k: v for k, v in data.items() if k in allowed}
         return cls(**data)
 
     def save(self, path: str | Path) -> None:

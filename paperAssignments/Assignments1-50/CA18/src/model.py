@@ -1,4 +1,8 @@
 from __future__ import annotations
+"""Model definitions for CA18 assignment.
+
+Provides simple MLP-based policy and value networks and an ActorCritic wrapper.
+"""
 from typing import Sequence, Optional, Tuple
 import torch
 import torch.nn as nn
@@ -83,6 +87,7 @@ class ActorCritic(nn.Module):
         entropy = dist.entropy()
         value = self.value(obs)
         return logp, entropy, value
+
 
 
 

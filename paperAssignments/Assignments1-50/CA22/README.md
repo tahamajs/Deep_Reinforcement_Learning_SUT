@@ -99,6 +99,7 @@ If you find issues or want to extend the scaffold, open a PR or contact the cour
 ## Changes made in this fork
 
 - Added `reports/REPORT_TEMPLATE.md` with a report template and submission checklist
+- Added `reports/EXAMPLE_REPORT.md` showing an example short report
 - Added `requirements.txt` and `tests/test_complete.py` with additional unit tests covering config parsing, checkpointing, seed determinism, and Lagrange updates
 - Added `notebooks/README.md` with usage guidance for the demo notebook
 
