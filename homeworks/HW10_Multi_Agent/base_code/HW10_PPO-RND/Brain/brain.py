@@ -52,11 +52,14 @@ class Brain:
 
         norm_obs = torch.tensor(norm_obs).to(self.device)
 
-        # === TODO: Intrinsic Reward ===
-        # Use predictor_model and target_model to extract features
-        # Compute squared error (MSE) between predicted and target features
-        # Take mean over feature dimension (dim=1)
-        int_reward = None  # Replace this with prediction error computation
+        # Compute target and predicted features and return MSE per sample
+        with torch.no_grad():
+            target_features = self.target_model(norm_obs)
+        pred_features = self.predictor_model(norm_obs)
+
+        prediction_error = torch.mean((pred_features - target_features) ** 2, dim=1)
+
+        int_reward = prediction_error.cpu().numpy()
 
         return int_reward  # → np.array
 
@@ -131,7 +134,7 @@ class Brain:
             v_int_loss = self.mse_loss(int_val.squeeze(), int_returns)
             critic_loss = 0.5 * (v_ext_loss + v_int_loss)
 
-            # --- TODO: RND Loss ---
+            # RND loss
             rnd_loss = self.calculate_rnd_loss(next_obs)
 
             # Total Loss and Backprop
@@ -151,15 +154,31 @@ class Brain:
         return pg_losses, ext_v_losses, int_v_losses, rnd_losses, entropies, int_values, int_returns, ext_values, ext_returns
 
     def calculate_rnd_loss(self, obs):
-        # === TODO: RND Loss Computation ===
-        # Use predictor_model and target_model on obs to compute prediction error
-        # Compute squared error, apply dropout mask using config["predictor_proportion"]
-        # Reduce the loss to a scalar value
-        target = None
-        pred = None
-        loss = None
-        mask = None
-        final_loss = None
+        # Normalize observations
+        norm_obs = np.clip(
+            (obs.cpu().numpy() - self.state_rms.mean) / (self.state_rms.var ** 0.5), -5, 5
+        ).astype(np.float32)
+        norm_obs = torch.tensor(norm_obs).to(self.device)
+
+        # Get target features (fixed random network)
+        with torch.no_grad():
+            target = self.target_model(norm_obs)
+
+        # Get predicted features (trainable network)
+        pred = self.predictor_model(norm_obs)
+
+        # Compute squared error between predicted and target features
+        loss = torch.mean((pred - target) ** 2, dim=1)
+
+        # Apply dropout mask using predictor_proportion
+        # This randomly selects a fraction of samples for training the predictor
+        mask = torch.rand_like(loss) < self.config.get("predictor_proportion", 1.0)
+        masked_loss = loss * mask.float()
+
+        # Compute final loss as mean of masked losses
+        active = mask.float().sum().clamp(min=1.0)
+        final_loss = masked_loss.sum() / active
+
         return final_loss
 
     def set_from_checkpoint(self, checkpoint):

@@ -1,21 +1,31 @@
 # ppo_rnd_agent.py
 # Core module for PPO policy, Random Network Distillation (RND), and training logic.
 
-import torch
+from __future__ import annotations
+
+from typing import Tuple
+
 import numpy as np
+import torch
 from torch.optim.adam import Adam
+
 from Core.model import PolicyModel, PredictorModel, TargetModel
-from Common.utils import mean_of_list, RunningMeanStd
+from Common.utils import RunningMeanStd, mean_of_list
 
 torch.backends.cudnn.benchmark = True  # Optional performance boost for CNNs
 
+
 class Brain:
-    def __init__(self, **config):
+    """Combined PPO + RND agent."""
+
+    def __init__(self, **config) -> None:
         self.config = config
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # --- Models ---
-        self.current_policy = PolicyModel(config["state_shape"], config["n_actions"]).to(self.device)
+        self.current_policy = PolicyModel(
+            config["state_shape"], config["n_actions"]
+        ).to(self.device)
         self.predictor_model = PredictorModel(config["obs_shape"]).to(self.device)
         self.target_model = TargetModel(config["obs_shape"]).to(self.device)
         for param in self.target_model.parameters():
@@ -23,8 +33,9 @@ class Brain:
 
         # --- Optimizer ---
         self.optimizer = Adam(
-            list(self.current_policy.parameters()) + list(self.predictor_model.parameters()),
-            lr=config["lr"]
+            list(self.current_policy.parameters())
+            + list(self.predictor_model.parameters()),
+            lr=config["lr"],
         )
 
         # --- Normalization buffers ---
@@ -32,35 +43,54 @@ class Brain:
         self.int_reward_rms = RunningMeanStd(shape=(1,))
         self.mse_loss = torch.nn.MSELoss()
 
-    def get_actions_and_values(self, obs_tensor, hidden_state):
+    def get_actions_and_values(
+        self, obs_tensor: torch.Tensor, hidden_state: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         obs_tensor = obs_tensor.to(self.device)
         hidden_state = hidden_state.to(self.device)
         with torch.no_grad():
-            dist, int_val, ext_val, probs, new_hidden = self.current_policy(obs_tensor, hidden_state)
+            dist, int_val, ext_val, probs, new_hidden = self.current_policy(
+                obs_tensor, hidden_state
+            )
             action = dist.sample()
             log_prob = dist.log_prob(action)
-        return action.cpu(), int_val.cpu(), ext_val.cpu(), log_prob.cpu(), probs.cpu(), new_hidden.cpu()
+        return (
+            action.cpu(),
+            int_val.cpu(),
+            ext_val.cpu(),
+            log_prob.cpu(),
+            probs.cpu(),
+            new_hidden.cpu(),
+        )
 
-    def calculate_int_rewards(self, next_obs, batch=True):
+    def calculate_int_rewards(
+        self, next_obs: np.ndarray, batch: bool = True
+    ) -> np.ndarray:
         if not batch:
             next_obs = np.expand_dims(next_obs, axis=0)
 
         norm_obs = np.clip(
-            (next_obs - self.state_rms.mean) / (self.state_rms.var ** 0.5),
-            -5, 5
+            (next_obs - self.state_rms.mean) / (self.state_rms.var**0.5), -5, 5
         ).astype(np.float32)
 
         norm_obs = torch.tensor(norm_obs).to(self.device)
 
-        # === TODO: Intrinsic Reward ===
-        # Use predictor_model and target_model to extract features
-        # Compute squared error (MSE) between predicted and target features
-        # Take mean over feature dimension (dim=1)
-        int_reward = None  # Replace this with prediction error computation
+        with torch.no_grad():
+            # Get target features (fixed random network)
+            target_features = self.target_model(norm_obs)
+
+        # Get predicted features (trainable network)
+        pred_features = self.predictor_model(norm_obs)
+
+        # Compute squared error between predicted and target features
+        prediction_error = torch.mean((pred_features - target_features) ** 2, dim=1)
+
+        # Convert to numpy array
+        int_reward = prediction_error.cpu().numpy()
 
         return int_reward  # → np.array
 
-    def normalize_int_rewards(self, int_rewards):
+    def normalize_int_rewards(self, int_rewards: np.ndarray) -> np.ndarray:
         gamma = self.config["int_gamma"]
         returns = []
         for rewards in int_rewards:
@@ -75,7 +105,14 @@ class Brain:
 
         return int_rewards / (np.sqrt(self.int_reward_rms.var) + 1e-8)
 
-    def get_gae(self, rewards, values, next_values, dones, gamma):
+    def get_gae(
+        self,
+        rewards: np.ndarray,
+        values: np.ndarray,
+        next_values: np.ndarray,
+        dones: np.ndarray,
+        gamma: float,
+    ) -> np.ndarray:
         lam = self.config["lambda"]
         advantages = []
 
@@ -90,16 +127,41 @@ class Brain:
         return np.array(advantages)
 
     @mean_of_list
-    def train(self, states, actions, int_rewards, ext_rewards, dones,
-              int_values, ext_values, log_probs, next_int_values,
-              next_ext_values, total_next_obs, hidden_states):
+    def train(
+        self,
+        states,
+        actions,
+        int_rewards,
+        ext_rewards,
+        dones,
+        int_values,
+        ext_values,
+        log_probs,
+        next_int_values,
+        next_ext_values,
+        total_next_obs,
+        hidden_states,
+    ):
 
         # --- Advantage Calculation ---
-        int_returns = self.get_gae([int_rewards], [int_values], [next_int_values], [np.zeros_like(dones)], self.config["int_gamma"])[0]
-        ext_returns = self.get_gae([ext_rewards], [ext_values], [next_ext_values], [dones], self.config["ext_gamma"])[0]
+        int_returns = self.get_gae(
+            [int_rewards],
+            [int_values],
+            [next_int_values],
+            [np.zeros_like(dones)],
+            self.config["int_gamma"],
+        )[0]
+        ext_returns = self.get_gae(
+            [ext_rewards],
+            [ext_values],
+            [next_ext_values],
+            [dones],
+            self.config["ext_gamma"],
+        )[0]
 
-        advs = (ext_returns - ext_values) * self.config["ext_adv_coeff"] + \
-               (int_returns - int_values) * self.config["int_adv_coeff"]
+        advs = (ext_returns - ext_values) * self.config["ext_adv_coeff"] + (
+            int_returns - int_values
+        ) * self.config["int_adv_coeff"]
 
         advs = torch.tensor(advs, dtype=torch.float32, device=self.device)
         ext_returns = torch.tensor(ext_returns, dtype=torch.float32, device=self.device)
@@ -113,7 +175,13 @@ class Brain:
         next_obs = torch.tensor(total_next_obs, dtype=torch.float32).to(self.device)
 
         # --- PPO Training ---
-        pg_losses, ext_v_losses, int_v_losses, rnd_losses, entropies = [], [], [], [], []
+        pg_losses, ext_v_losses, int_v_losses, rnd_losses, entropies = (
+            [],
+            [],
+            [],
+            [],
+            [],
+        )
 
         for _ in range(self.config["n_epochs"]):
             dist, int_val, ext_val, _, _ = self.current_policy(states, hidden_states)
@@ -123,7 +191,12 @@ class Brain:
 
             # PPO objective
             surr1 = ratio * advs
-            surr2 = torch.clamp(ratio, 1 - self.config["clip_range"], 1 + self.config["clip_range"]) * advs
+            surr2 = (
+                torch.clamp(
+                    ratio, 1 - self.config["clip_range"], 1 + self.config["clip_range"]
+                )
+                * advs
+            )
             pg_loss = -torch.min(surr1, surr2).mean()
 
             # Value losses
@@ -131,14 +204,15 @@ class Brain:
             v_int_loss = self.mse_loss(int_val.squeeze(), int_returns)
             critic_loss = 0.5 * (v_ext_loss + v_int_loss)
 
-            # --- TODO: RND Loss ---
             rnd_loss = self.calculate_rnd_loss(next_obs)
 
             # Total Loss and Backprop
             loss = pg_loss + critic_loss + rnd_loss - self.config["ent_coeff"] * entropy
             self.optimizer.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.current_policy.parameters(), self.config["max_grad_norm"])
+            torch.nn.utils.clip_grad_norm_(
+                self.current_policy.parameters(), self.config["max_grad_norm"]
+            )
             self.optimizer.step()
 
             # Logging
@@ -148,18 +222,44 @@ class Brain:
             rnd_losses.append(rnd_loss.item())
             entropies.append(entropy.item())
 
-        return pg_losses, ext_v_losses, int_v_losses, rnd_losses, entropies, int_values, int_returns, ext_values, ext_returns
+        return (
+            pg_losses,
+            ext_v_losses,
+            int_v_losses,
+            rnd_losses,
+            entropies,
+            int_values,
+            int_returns,
+            ext_values,
+            ext_returns,
+        )
 
-    def calculate_rnd_loss(self, obs):
-        # === TODO: RND Loss Computation ===
-        # Use predictor_model and target_model on obs to compute prediction error
-        # Compute squared error, apply dropout mask using config["predictor_proportion"]
-        # Reduce the loss to a scalar value
-        target = None
-        pred = None
-        loss = None
-        mask = None
-        final_loss = None
+    def calculate_rnd_loss(self, obs: torch.Tensor) -> torch.Tensor:
+        # Normalize observations
+        norm_obs = np.clip(
+            (obs.cpu().numpy() - self.state_rms.mean) / (self.state_rms.var**0.5), -5, 5
+        ).astype(np.float32)
+        norm_obs = torch.tensor(norm_obs).to(self.device)
+
+        # Get target features (fixed random network)
+        with torch.no_grad():
+            target = self.target_model(norm_obs)
+
+        # Get predicted features (trainable network)
+        pred = self.predictor_model(norm_obs)
+
+        # Compute squared error between predicted and target features
+        loss = torch.mean((pred - target) ** 2, dim=1)
+
+        # Apply dropout mask using predictor_proportion
+        # This randomly selects a fraction of samples for training the predictor
+        mask = torch.rand_like(loss) < self.config.get("predictor_proportion", 1.0)
+        masked_loss = loss * mask.float()
+
+        # Compute final loss as mean of masked losses
+        active = mask.float().sum().clamp(min=1.0)
+        final_loss = masked_loss.sum() / active
+
         return final_loss
 
     def set_from_checkpoint(self, checkpoint):
