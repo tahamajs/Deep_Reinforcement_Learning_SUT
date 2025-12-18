@@ -8,4 +8,3 @@ hidden_sizes: [64, 64]
 entropy_coef: 0.01
 value_coef: 0.5
 max_grad_norm: 0.5
-

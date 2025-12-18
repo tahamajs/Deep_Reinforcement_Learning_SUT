@@ -7,6 +7,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 import torch
 
+
 def test_imports_and_forward():
     import config as cfg  # type: ignore
     import model as m  # type: ignore
@@ -25,4 +26,3 @@ def test_imports_and_forward():
     assert logp.shape[0] == batch.shape[0]
     v = net.get_value(batch)
     assert v.shape == (batch.shape[0],)
-

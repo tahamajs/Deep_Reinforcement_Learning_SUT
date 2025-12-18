@@ -19,7 +19,9 @@ def mlp(in_dim: int, hidden_sizes: Sequence[int], out_dim: int) -> nn.Sequential
 class PolicyNetwork(nn.Module):
     """Simple MLP policy for discrete actions that returns logits."""
 
-    def __init__(self, obs_dim: int, hidden_sizes: Sequence[int], action_dim: int) -> None:
+    def __init__(
+        self, obs_dim: int, hidden_sizes: Sequence[int], action_dim: int
+    ) -> None:
         super().__init__()
         self.net = mlp(obs_dim, hidden_sizes, action_dim)
         self._init_weights()
@@ -54,7 +56,9 @@ class ValueNetwork(nn.Module):
 
 
 class ActorCritic(nn.Module):
-    def __init__(self, obs_dim: int, action_dim: int, hidden_sizes: Sequence[int] = (64, 64)) -> None:
+    def __init__(
+        self, obs_dim: int, action_dim: int, hidden_sizes: Sequence[int] = (64, 64)
+    ) -> None:
         super().__init__()
         self.policy = PolicyNetwork(obs_dim, hidden_sizes, action_dim)
         self.value = ValueNetwork(obs_dim, hidden_sizes)
@@ -70,11 +74,12 @@ class ActorCritic(nn.Module):
     def get_value(self, obs: torch.Tensor) -> torch.Tensor:
         return self.value(obs)
 
-    def evaluate_actions(self, obs: torch.Tensor, actions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def evaluate_actions(
+        self, obs: torch.Tensor, actions: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         logits = self.policy(obs)
         dist = torch.distributions.Categorical(logits=logits)
         logp = dist.log_prob(actions)
         entropy = dist.entropy()
         value = self.value(obs)
         return logp, entropy, value
-

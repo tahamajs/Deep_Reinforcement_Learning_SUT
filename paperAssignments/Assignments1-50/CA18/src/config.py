@@ -29,4 +29,3 @@ class Config:
         if not isinstance(data, dict):
             raise ValueError("Config yaml must contain a mapping at the top level")
         return Config.from_dict(data)
-

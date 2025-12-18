@@ -14,7 +14,9 @@ class RandomMDPDataset(Dataset):
       reward: float
     """
 
-    def __init__(self, num_transitions: int = 1024, obs_dim: int = 4, action_dim: int = 2) -> None:
+    def __init__(
+        self, num_transitions: int = 1024, obs_dim: int = 4, action_dim: int = 2
+    ) -> None:
         super().__init__()
         self.num_transitions = num_transitions
         self.obs_dim = obs_dim
@@ -37,4 +39,3 @@ class RandomMDPDataset(Dataset):
             "done": self.dones[idx],
             "next_obs": self.next_obs[idx],
         }
-
