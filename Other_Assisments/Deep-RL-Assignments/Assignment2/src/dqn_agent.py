@@ -238,7 +238,8 @@ class DQN_Agent:
                 else:
                     self.train_dqn()
 
-        return rewards, np.mean(td_error)
+        mean_td = np.mean(td_error) if len(td_error) > 0 else 0.0
+        return rewards, mean_td
 
     def plots(self):
         """
