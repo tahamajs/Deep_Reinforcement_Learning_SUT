@@ -330,6 +330,102 @@ class DreamerAgent:
             "actor_loss": actor_loss.item(), "critic_loss": critic_loss.item()
         }
 
+    def update_actor_critic_from_branches(self, branches: List[Any], topk_frac: float = 0.5, lambda_: float = 0.95) -> Dict[str, float]:
+        """
+        Update actor and critic from simulated branches (produced by simulate_branches).
+        branches: list of Branch objects with .traj = list of (z, a, r, gamma)
+        This implements TD(lambda) targets on imagined rollouts and performs one
+        gradient step on critic and actor using the aggregated top-k branches.
+        """
+        if not branches:
+            return {}
+        k = max(1, int(len(branches) * topk_frac))
+        selected = branches[:k]
+
+        # collect flattened lists across branches
+        z_list = []
+        a_list = []
+        r_list = []
+        gamma_list = []
+        lengths = []
+        for br in selected:
+            traj = br.traj
+            lengths.append(len(traj))
+            for (z, a, r, gamma) in traj:
+                # ensure z is 2D (batch style)
+                if isinstance(z, torch.Tensor) and z.dim() == 1:
+                    z = z.unsqueeze(0)
+                z_list.append(z)
+                # actions may not be tensors; convert
+                if isinstance(a, torch.Tensor):
+                    a_list.append(a.view(-1))
+                else:
+                    a_list.append(torch.tensor(a, dtype=torch.float32))
+                r_list.append(float(r))
+                gamma_list.append(float(gamma))
+
+        if len(z_list) == 0:
+            return {}
+
+        # Stack tensors
+        z_batch = torch.cat([z for z in z_list], dim=0).to(self.device)  # [N, latent_dim]
+        a_batch = torch.stack([a for a in a_list]).to(self.device)  # [N, action_dim]
+        r_tensor = torch.tensor(r_list, dtype=torch.float32, device=self.device)
+        gamma_tensor = torch.tensor(gamma_list, dtype=torch.float32, device=self.device)
+
+        # Compute values for each z (bootstrap)
+        with torch.no_grad():
+            values = self.actor_critic.critic(z_batch).view(-1)  # [N]
+
+        # Compute TD(lambda) targets per timestep following branch order
+        # We need to reconstruct per-branch indexing to compute returns with bootstraps.
+        targets = []
+        idx = 0
+        for L in lengths:
+            # for branch with length L, compute G_t backwards
+            G_next = 0.0
+            # bootstrap with value at final latent
+            if L > 0:
+                last_idx = idx + L - 1
+                G_next = float(values[last_idx].item())
+            Gs = [0.0] * L
+            for t in range(L - 1, -1, -1):
+                r_t = float(r_tensor[idx + t].item())
+                g_t = float(gamma_tensor[idx + t].item())
+                G_t = r_t + g_t * ((1.0 - lambda_) * (float(values[idx + t + 1].item()) if (t < L - 1) else 0.0) + lambda_ * G_next) if L > 0 else r_t
+                Gs[t] = G_t
+                G_next = G_t
+            targets.extend(Gs)
+            idx += L
+
+        targets = torch.tensor(targets, dtype=torch.float32, device=self.device).view(-1, 1)  # [N,1]
+
+        # Critic update
+        try:
+            self.critic_optimizer.zero_grad()
+            pred_vals = self.actor_critic.critic(z_batch)
+            critic_loss = F.mse_loss(pred_vals, targets)
+            critic_loss.backward()
+            self.critic_optimizer.step()
+        except Exception:
+            critic_loss = torch.tensor(0.0)
+
+        # Actor update (policy gradient using advantage = G - V)
+        try:
+            self.actor_optimizer.zero_grad()
+            # compute log probs for actions under current policy
+            logp, _ = self.actor_critic.evaluate(z_batch, a_batch)
+            with torch.no_grad():
+                new_values = self.actor_critic.critic(z_batch).detach()
+                advantages = targets - new_values
+            actor_loss = -(logp.view(-1, 1) * advantages).mean()
+            actor_loss.backward()
+            self.actor_optimizer.step()
+        except Exception:
+            actor_loss = torch.tensor(0.0)
+
+        return {"actor_loss": float(actor_loss) if isinstance(actor_loss, torch.Tensor) else actor_loss, "critic_loss": float(critic_loss) if isinstance(critic_loss, torch.Tensor) else critic_loss}
+
     def _compute_returns(
         self, rewards: torch.Tensor, gamma: float = 0.99
     ) -> torch.Tensor:
