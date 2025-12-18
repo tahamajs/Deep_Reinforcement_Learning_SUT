@@ -21,12 +21,16 @@ def set_seed(seed: int):
 def run_demo(cfg: Config, steps: int = 1000):
     set_seed(cfg.seed)
     env = gym.make("Hopper-v2")
+    # handle gym / gymnasium API differences for reset/step returning tuples
+    obs = env.reset()
+    if isinstance(obs, tuple):
+        obs = obs[0]
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
 
     agent = RAUOBACAgent(state_dim, action_dim, cfg)
 
-    obs = env.reset()
+    obs = obs
     episode_states = []
     episode_actions = []
     episode_rewards = []
@@ -34,7 +38,13 @@ def run_demo(cfg: Config, steps: int = 1000):
     start = time.time()
     while total_steps < steps:
         action = env.action_space.sample()
-        next_obs, reward, done, _ = env.step(action)
+        step_ret = env.step(action)
+        # support (obs, reward, done, info) and (obs, reward, terminated, truncated, info)
+        if len(step_ret) == 4:
+            next_obs, reward, done, _ = step_ret
+        else:
+            next_obs, reward, terminated, truncated, _ = step_ret
+            done = terminated or truncated
         episode_states.append(torch.tensor(obs, dtype=torch.float32))
         episode_actions.append(torch.tensor(action, dtype=torch.float32))
         episode_rewards.append(torch.tensor(float(reward), dtype=torch.float32))
@@ -49,6 +59,8 @@ def run_demo(cfg: Config, steps: int = 1000):
             )
             episode_states, episode_actions, episode_rewards = [], [], []
             obs = env.reset()
+            if isinstance(obs, tuple):
+                obs = obs[0]
 
         # periodic updates (very small, demo-only)
         if agent.retrieval_buffer.size >= 32 and total_steps % 10 == 0:

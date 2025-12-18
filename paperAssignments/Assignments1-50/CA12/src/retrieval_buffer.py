@@ -21,7 +21,8 @@ class RetrievalBuffer:
         self.max_size = int(max_size)
         self.state_dim = int(state_dim)
         self.action_dim = int(action_dim)
-        self.device = device
+        # accept either a string or a torch.device and normalize
+        self.device = torch.device(device) if not isinstance(device, torch.device) else device
 
         self.states = torch.zeros(
             (self.max_size, self.state_dim), dtype=torch.float32, device=self.device
@@ -91,6 +92,7 @@ class RetrievalBuffer:
         """
         assert query_state.shape == (self.state_dim,)
         if self.size == 0:
+            # return empty tensor on correct device
             return torch.zeros((0, self.action_dim), device=self.device)
 
         # compute L2 distances to all stored states

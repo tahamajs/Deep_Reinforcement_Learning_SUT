@@ -42,8 +42,9 @@ class RAUOBACAgent:
         )
 
         # buffer
+        # pass a torch.device to the buffer (it normalizes internally)
         self.retrieval_buffer = RetrievalBuffer(
-            cfg.buffer_size, state_dim, action_dim, device=str(device)
+            cfg.buffer_size, state_dim, action_dim, device=device
         )
 
     def update_critic(
