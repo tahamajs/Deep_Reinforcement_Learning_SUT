@@ -10,6 +10,8 @@ from datetime import datetime
 from tensorboardX import SummaryWriter
 from src.q_network import QNetwork
 from src.replay_memory import Replay_Memory
+
+
 class DQN_Agent:
     def __init__(self, args):
         self.args = args
@@ -46,9 +48,7 @@ class DQN_Agent:
             action_dim = int(np.prod(a_shape)) if a_shape is not None else 1
 
         self.q_network = QNetwork(args, obs_dim, action_dim, self.learning_rate)
-        self.target_q_network = QNetwork(
-            args, obs_dim, action_dim, self.learning_rate
-        )
+        self.target_q_network = QNetwork(args, obs_dim, action_dim, self.learning_rate)
         self.memory = Replay_Memory(
             obs_dim, action_dim, memory_size=self.args.memory_size
         )
