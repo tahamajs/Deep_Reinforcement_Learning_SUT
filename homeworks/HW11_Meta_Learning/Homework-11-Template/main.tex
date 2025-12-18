@@ -1884,6 +1884,38 @@ class RL2Policy(nn.Module):
 				\item \textbf{Generalization:} Performance on held-out tasks
 			\end{enumerate}
 			
+			\subsection{Reproducibility and Running Experiments}
+			
+			For full reproducibility, we provide a simple helper script and detailed instructions in the repository. The recommended workflow is:
+			
+			\begin{enumerate}
+			\item Execute the notebook (runs experiments and saves outputs):
+			\begin{lstlisting}[language=bash]
+			jupyter nbconvert --to notebook --execute code/HW11_Meta_Learning_Complete.ipynb --ExecutePreprocessor.timeout=600 --output code/executed.ipynb
+			\end{lstlisting}
+			\item Convert executed notebook to HTML (optional):
+			\begin{lstlisting}[language=bash]
+			jupyter nbconvert --to html code/executed.ipynb --output code/executed.html
+			\end{lstlisting}
+			\item Compile the LaTeX report (requires a TeX installation):
+			\begin{lstlisting}[language=bash]
+			cd Homework-11-Template
+			latexmk -pdf -quiet main.tex    # preferred
+			# or
+			pdflatex -interaction=nonstopmode main.tex
+			\end{lstlisting}
+			\end{enumerate}
+			
+			See `EXPERIMENTS.md` and `compile_and_run.sh` in the homework root for full details, example plotting snippets, and troubleshooting tips (e.g., installing MacTeX on macOS if `pdflatex` is not available).
+			
+			
+			\begin{enumerate}
+				\item \textbf{Success Rate:} Percentage of episodes achieving task success
+				\item \textbf{Sample Efficiency:} Number of samples needed to reach target performance
+				\item \textbf{Adaptation Speed:} Performance improvement per adaptation step
+				\item \textbf{Generalization:} Performance on held-out tasks
+			\end{enumerate}
+			
 			\begin{algorithm}[H]
 			\caption{Meta-World Evaluation Protocol}
 			\begin{algorithmic}[1]
