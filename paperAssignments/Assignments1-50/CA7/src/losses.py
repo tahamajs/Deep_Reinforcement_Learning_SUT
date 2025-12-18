@@ -2,7 +2,15 @@ from typing import Optional, Tuple
 import torch
 
 
-def lambda_returns(rewards: torch.Tensor, values: torch.Tensor, dones: torch.Tensor, gamma: float, lam: float, rhos: Optional[torch.Tensor] = None, c_rho: Optional[float] = None) -> torch.Tensor:
+def lambda_returns(
+    rewards: torch.Tensor,
+    values: torch.Tensor,
+    dones: torch.Tensor,
+    gamma: float,
+    lam: float,
+    rhos: Optional[torch.Tensor] = None,
+    c_rho: Optional[float] = None,
+) -> torch.Tensor:
     """
     Compute lambda-returns (forward-view) for a batch of sequences.
 
@@ -36,7 +44,20 @@ def lambda_returns(rewards: torch.Tensor, values: torch.Tensor, dones: torch.Ten
     return returns
 
 
-def critic_loss_lambda(critic, target_critic, obs: torch.Tensor, acts: torch.Tensor, rewards: torch.Tensor, dones: torch.Tensor, behavior_logp: Optional[torch.Tensor], gamma: float, lam: float, c_rho: Optional[float] = None, recompute_hidden: bool = True) -> Tuple[torch.Tensor, torch.Tensor]:
+def critic_loss_lambda(
+    critic,
+    target_critic,
+    obs: torch.Tensor,
+    acts: torch.Tensor,
+    rewards: torch.Tensor,
+    dones: torch.Tensor,
+    behavior_logp: Optional[torch.Tensor],
+    gamma: float,
+    lam: float,
+    c_rho: Optional[float] = None,
+    recompute_hidden: bool = True,
+    policy=None,
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Computes critic MSE loss using lambda-returns. This is the forward-view approach
     described in the README and avoids manual per-parameter trace accumulation while
@@ -72,15 +93,21 @@ def critic_loss_lambda(critic, target_critic, obs: torch.Tensor, acts: torch.Ten
     # values needs to be [B, L+1] with last column being bootstrap next value after last step
     values = torch.cat([q_vals, next_q[:, -1:].detach()], dim=1)
 
-    # compute IS ratios if behavior_logp provided; for this minimal impl we set rhos=1
+    # compute IS ratios if behavior_logp provided and policy given
     rhos = None
-    if behavior_logp is not None:
-        # placeholder: user should provide policy logp to compute ratios
-        # here we assume equality (offline/demo) and set rhos to ones
+    if behavior_logp is not None and policy is not None:
+        # compute current policy logp for the actions under current policy
+        # policy.log_prob returns [B, L]
+        with torch.no_grad():
+            pi_logp = policy.log_prob(obs, acts)
+        rhos = torch.exp(pi_logp - behavior_logp)
+        if c_rho is not None:
+            rhos = torch.clamp(rhos, max=c_rho)
+    elif behavior_logp is not None:
+        # behavior logp provided but no policy; fall back to ones to avoid crashing
         rhos = torch.ones_like(rewards)
 
     returns = lambda_returns(rewards, values, dones, gamma, lam, rhos=rhos, c_rho=c_rho)
     # MSE between returns and current Q estimates
     loss = 0.5 * (returns - q_vals).pow(2).mean()
     return loss, returns
-
