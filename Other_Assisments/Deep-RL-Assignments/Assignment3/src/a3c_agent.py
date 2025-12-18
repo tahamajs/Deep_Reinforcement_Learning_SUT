@@ -121,18 +121,21 @@ class A3C:
         """Generate a test episode"""
         env = gym.make(self.env_name)
         state, _ = env.reset()
+        # Initialize frame stack (4 frames) as required by the network
+        first_frame = preprocess(state)  # shape (1,84,84)
+        frames = deque([first_frame.copy() for _ in range(4)], maxlen=4)
         total_reward = 0
         done = False
-
         while not done:
             state_tensor = torch.tensor(
-                preprocess(state), dtype=torch.float32
-            ).unsqueeze(0)
+                np.concatenate(list(frames), axis=0), dtype=torch.float32
+            ).unsqueeze(0)  # shape (1,4,84,84)
             policy, _ = model(state_tensor)
             action = torch.argmax(policy).item()
 
             state, reward, done, _, _ = env.step(action)
             total_reward += reward
+            frames.append(preprocess(state))
 
         env.close()
         return total_reward
@@ -141,13 +144,15 @@ class A3C:
         """Test the loaded model with rendering"""
         env = gym.make(self.env_name, render_mode="human")
         state, _ = env.reset()
+        first_frame = preprocess(state)
+        frames = deque([first_frame.copy() for _ in range(4)], maxlen=4)
         total_reward = 0
         done = False
         step_count = 0
 
         while not done and step_count < 10000:
             state_tensor = torch.tensor(
-                preprocess(state), dtype=torch.float32
+                np.concatenate(list(frames), axis=0), dtype=torch.float32
             ).unsqueeze(0)
             policy, _ = self.global_model(state_tensor)
             action = torch.argmax(policy).item()
@@ -155,7 +160,7 @@ class A3C:
             state, reward, done, _, _ = env.step(action)
             total_reward += reward
             step_count += 1
-
+            frames.append(preprocess(state))
             env.render()
 
         print(f"Test completed. Total reward: {total_reward}")
@@ -193,13 +198,18 @@ class A3C:
             episode_reward = 0
             done = False
             state, _ = env.reset()
+
+            # Initialize frame stack for this episode
+            first_frame = preprocess(state)
+            frames = deque([first_frame.copy() for _ in range(4)], maxlen=4)
+
             states, actions, rewards, log_probs, values = [], [], [], [], []
 
-            # Generate episode
+            # Generate up to n steps (or until done)
             for t in range(self.args.n):
                 state_tensor = torch.tensor(
-                    preprocess(state), dtype=torch.float32
-                ).unsqueeze(0)
+                    np.concatenate(list(frames), axis=0), dtype=torch.float32
+                ).unsqueeze(0)  # shape (1,4,84,84)
                 states.append(state_tensor)
 
                 policy, value = local_model(state_tensor)
@@ -213,17 +223,18 @@ class A3C:
                 values.append(value.item())
 
                 episode_reward += reward
+                frames.append(preprocess(next_state))
                 state = next_state
 
                 if done:
                     break
 
-            # Calculate returns and advantages
+            # Calculate returns and advantages (bootstrap if not done)
             if done:
                 R = 0
             else:
                 state_tensor = torch.tensor(
-                    preprocess(state), dtype=torch.float32
+                    np.concatenate(list(frames), axis=0), dtype=torch.float32
                 ).unsqueeze(0)
                 _, value = local_model(state_tensor)
                 R = value.item()
