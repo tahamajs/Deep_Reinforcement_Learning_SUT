@@ -1,37 +1,50 @@
-%!TEX program = pdflatex
-\documentclass[10pt]{article}
+% NeurIPS-style paper generated from CA1 report
+\documentclass{article}
+% Use the official NeurIPS style. Options: final, preprint, nonatbib
+\usepackage[preprint]{neurips_2024}
+
+% Recommended packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
 \usepackage{amsmath,amsfonts,amssymb}
 \usepackage{graphicx}
-\usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{enumitem}
-\usepackage{geometry}
-\geometry{margin=1in}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{subcaption}
+
 \title{Geometric Foundations of Distributional Reinforcement Learning: Annealed Implicit Sinkhorn (AIS-DRL)}
-\author{Auto-generated — CA1}
-\date{\today}
+
+\author{Auto-generated — CA1\\
+    Department of Synthetic Research \\
+    \texttt{ca1@example.org}}
 
 \begin{document}
+
 \maketitle
 
 \begin{abstract}
-We present Annealed Implicit Sinkhorn (AIS-DRL), a practical, stable distributional reinforcement learning algorithm that minimizes a debiased entropically-regularized optimal-transport divergence between predicted and Bellman target return particles. AIS-DRL uses a log-domain Sinkhorn solver with implicit differentiation to avoid unrolling, and an epsilon-annealing schedule to transition from smooth to sharp geometry. We describe the method, provide theoretical motivations, and give an implementation mapping to the provided codebase (\texttt{src}/ and \texttt{train.py}).
+We present Annealed Implicit Sinkhorn (AIS-DRL), a practical, stable distributional reinforcement learning algorithm that minimizes a debiased entropically-regularized optimal-transport divergence between predicted and Bellman target return particles. AIS-DRL uses a log-domain Sinkhorn solver with implicit differentiation to avoid unrolling, and an epsilon-annealing schedule to transition from smooth to sharp geometry. We describe the method, provide theoretical motivations, and give an implementation mapping to the provided codebase.
 \end{abstract}
 
 \section{Introduction}
-Distributional Reinforcement Learning (DRL) models the full distribution of returns rather than only the expectation. This richer representation improves stability, exploration, and risk-sensitive decisions. We build on entropic optimal transport (Sinkhorn) to design a differentiable, geometry-aware loss suitable for deep RL. Our contributions: (1) a memory-efficient implicit Sinkhorn implementation, (2) an epsilon-annealing schedule for stability, and (3) an open-source reference implementation and evaluation plan.
+Distributional Reinforcement Learning (DRL) models the full distribution of returns rather than only the expectation. This richer representation improves stability, exploration, and risk-sensitive decisions. We build on entropic optimal transport (Sinkhorn) to design a differentiable, geometry-aware loss suitable for deep RL. Our contributions are: (1) a memory-efficient implicit Sinkhorn implementation, (2) an epsilon-annealing schedule for stability, and (3) an open-source reference implementation and evaluation plan.
 
 \section{Background}
 Let $Z^{\pi}(s,a)$ denote the random return under policy $\pi$. The distributional Bellman operator defines the target distribution
-\[ T^{\pi}Z(s,a) \stackrel{d}{=} R(s,a)+\gamma Z(s',\pi(s')). \]
+\begin{equation}
+T^{\pi}Z(s,a) \stackrel{d}{=} R(s,a)+\gamma Z(s',\pi(s')).
+\end{equation}
 Measuring discrepancy between distributions requires a metric. We adopt the entropically-regularized OT cost (Cuturi, 2013):
-\begin{align}
+\begin{equation}
 W_{c,\varepsilon}(\mu,\nu)=\min_{\pi\in\Pi(\mu,\nu)}\langle C,\pi\rangle-\varepsilon H(\pi),
-\end{align}
-where $C$ is the cost matrix and $H(\pi)$ is the entropy of $\pi$. The Sinkhorn divergence debiases this quantity:
-\begin{align}
+\end{equation}
+where $C$ is the cost matrix and $H(\pi)$ the entropy of $\pi$. The Sinkhorn divergence debiases this quantity:
+\begin{equation}
 S_{c,\varepsilon}(\mu,\nu)=W_{c,\varepsilon}(\mu,\nu)-\tfrac{1}{2}W_{c,\varepsilon}(\mu,\mu)-\tfrac{1}{2}W_{c,\varepsilon}(\nu,\nu).
-\end{align}
+\end{equation}
 
 \section{Method}
 \subsection{Particle representation}
@@ -39,17 +52,21 @@ We represent the distribution at $(s,a)$ by $N$ deterministic particles $\{x_i\}
 
 \subsection{Cost and Sinkhorn solver}
 We use squared Euclidean cost
-\[ C_{ij}=\|x_i-y_j\|_2^2. \]
+\begin{equation}
+C_{ij}=\lVert x_i-y_j\rVert_2^2.
+\end{equation}
 To compute $W_{c,\varepsilon}$ we solve in log-domain for potentials $f,g$ via fixed-point iterations:
 \begin{align}
-f^{(t+1)}&=\varepsilon\left(\log a - \mathrm{LSE}\left( (g^{(t)}-C)/\varepsilon\right)\right),\\
-g^{(t+1)}&=\varepsilon\left(\log b - \mathrm{LSE}\left( (f^{(t+1)}-C)/\varepsilon\right)\right),
+f^{(t+1)}&=\varepsilon\left(\log a - \mathrm{LSE}\left(\frac{g^{(t)}-C}{\varepsilon}\right)\right),\\
+g^{(t+1)}&=\varepsilon\left(\log b - \mathrm{LSE}\left(\frac{f^{(t+1)}-C}{\varepsilon}\right)\right),
 \end{align}
 where $\mathrm{LSE}(u)=\log\sum\exp(u)$ and $a,b$ are marginal weights (uniform here).
 
 \subsection{Implicit differentiation}
 Rather than backpropagating through the Sinkhorn iterations, we run the fixed-point in \texttt{torch.no\_grad()} and reconstruct the transport plan
-\[ \pi^*=\mathrm{diag}(u)\,K\,\mathrm{diag}(v),\qquad K=\exp(-C/\varepsilon),\]
+\begin{equation}
+\pi^*=\mathrm{diag}(u)\,K\,\mathrm{diag}(v),\qquad K=\exp(-C/\varepsilon),
+\end{equation}
 with $u=\exp(f/\varepsilon),\ v=\exp(g/\varepsilon)$. The gradient of $W_{c,\varepsilon}$ w.r.t. $C$ equals $\pi^*$ (Envelope theorem), therefore we compute the primal cost $\langle\pi^*,C\rangle$ and let autograd propagate through $C$ (which depends on particle locations). This reduces memory from $O(LN)$ to $O(N)$.
 
 \subsection{Epsilon annealing}
@@ -67,7 +84,7 @@ The repository includes:
 We recommend smoke tests on CartPole and small-scale Atari transfers using wrappers in \texttt{wrappers.py}. Evaluation measures: mean return, W1 distance to MC returns, particle support width, and CVaR performance for risk-aware variants. Run multiple seeds (recommended 5) and report IQM and bootstrap CIs.
 
 \section{Ablation study}
-Evaluate sensitivity to: particle count $N$, Sinkhorn iters $L$, $\varepsilon_{min}$, and annealing length. Compare against QR-DQN and MMD-based particle methods.
+Evaluate sensitivity to: particle count $N$, Sinkhorn iters $L$, $\varepsilon_{\min}$, and annealing length. Compare against QR-DQN and MMD-based particle methods.
 
 \section{Conclusion}
 AIS-DRL provides a practical route to geometry-aware distributional RL with manageable memory via implicit differentiation and robust optimisation via annealing. The provided codebase enables reproduction and extension.
@@ -94,7 +111,7 @@ Cost matrix: implemented in \texttt{sinkhorn.compute_cost_matrix} as squared Euc
 \section{Reproducibility}
 Include \texttt{config.yaml} and run scripts. Use the provided \texttt{setup.sh} to create a venv and install minimal dependencies.
 
-\bibliographystyle{plain}
+\bibliographystyle{unsrtnat}
 \bibliography{references}
 
 \end{document}
