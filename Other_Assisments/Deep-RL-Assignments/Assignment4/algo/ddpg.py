@@ -135,7 +135,7 @@ class DDPG(object):
         plt.figure(figsize=(12, 12))
         for i in range(num_episodes):
             s_vec = []
-            state = self.env.reset()
+            state, _ = self.env.reset()
             s_t = np.array(state)
             total_reward = 0.0
             done = False
@@ -145,8 +145,9 @@ class DDPG(object):
                 s_vec.append(s_t)
                 with torch.no_grad():
                     a_t = self.actor.policy(torch.tensor(s_t, device=self.device).float())
-                new_s, r_t, done, info = self.env.step(a_t.cpu().numpy())
-                if done and "goal" in info["done"]:
+                new_s, r_t, terminated, truncated, info = self.env.step(a_t.cpu().numpy())
+                done = terminated or truncated
+                if done:
                     success = True
                 new_s = np.array(new_s)
                 total_reward += r_t
@@ -184,7 +185,7 @@ class DDPG(object):
             num_episodes: (int) Number of training episodes.
         """
         for i in range(num_episodes):
-            state = self.env.reset()
+            state, _ = self.env.reset()
             total_reward = 0.0
             done = False
             step = 0
@@ -198,7 +199,8 @@ class DDPG(object):
                     env_action = self.action_selector(action.cpu().numpy())
                     action = torch.tensor(env_action, device=self.device).float()
 
-                next_state, reward, done, info = self.env.step(env_action)
+                next_state, reward, terminated, truncated, info = self.env.step(env_action)
+                done = terminated or truncated
                 next_state = torch.tensor(next_state, device=self.device).float()
 
                 self.memory.add(state, action, torch.tensor(reward, device=self.device),
