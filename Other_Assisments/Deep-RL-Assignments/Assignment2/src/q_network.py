@@ -15,12 +15,13 @@ class QNetwork:
         )
         if args.model_file is None:
 
+            # Use explicit Input layer to avoid input_dim deprecation warnings
             self.model = keras.models.Sequential()
+            self.model.add(keras.Input(shape=(input,)))
             self.model.add(
                 Dense(
                     128,
                     activation="relu",
-                    input_dim=input,
                     kernel_initializer=keras.initializers.VarianceScaling(scale=2.0),
                 )
             )
@@ -45,7 +46,8 @@ class QNetwork:
                     kernel_initializer=keras.initializers.VarianceScaling(scale=2.0),
                 )
             )
-            adam = keras.optimizers.Adam(lr=learning_rate)
+            # Use 'learning_rate' kwarg for compatibility with modern Keras
+            adam = keras.optimizers.Adam(learning_rate=learning_rate)
             self.model.compile(
                 loss="mean_squared_error", optimizer=adam, metrics=["accuracy"]
             )
