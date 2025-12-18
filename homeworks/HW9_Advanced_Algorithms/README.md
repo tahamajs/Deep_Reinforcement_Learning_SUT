@@ -399,3 +399,19 @@ where ρt = π(at|st) / μ(at|st)
 
 **Course:** Deep Reinforcement Learning  
 **Last Updated:** 2024
+ 
+## Added code and notebook
+
+I've added a lightweight, import-safe `src/` package and a notebook scaffold for HW9:
+
+- `src/config.py` - configuration dataclass (hyperparameters)  
+- `src/c51.py` - C51 categorical network + projection helper  
+- `src/qr_dqn.py` - QR-DQN network + quantile Huber loss  
+- `src/rainbow.py` - Rainbow skeleton (NoisyNet + dueling + distributional)  
+- `src/td3.py` - TD3 actor/critic and training step (import-safe agent)  
+- `src/trpo.py` - TRPO utilities (FVP, conjugate gradient, line search)  
+- `src/retrace.py` - Retrace(lambda) target computation  
+- `requirements.txt` - minimal deps  
+- `notebooks/HW9_Notebook.ipynb` - notebook scaffold with instructions and plotting cells (cells are non-executed)
+
+Use the notebook to run experiments and visualize results. All implementations are designed to be used from the notebook and are import-safe (no side-effects on import).
