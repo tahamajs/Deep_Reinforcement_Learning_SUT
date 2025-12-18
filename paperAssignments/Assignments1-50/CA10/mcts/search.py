@@ -128,7 +128,7 @@ class MCTS:
                     search_path.append(node)
 
                 # expand leaf
-                logits_joint, logits_agents, value_leaf = self.net.predict_from_latent(
+                logits_joint, logits_agents, value_leaf, _ = self.net.predict_from_latent(
                     node.h
                 )
                 logits_joint = logits_joint.detach()
