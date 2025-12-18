@@ -193,7 +193,13 @@ class DQN_Agent:
         Collects one rollout from the policy in an environment.
         """
         done = False
-        state = self.env.reset()
+        # gymnasium reset may return (obs, info) tuple — handle both APIs
+        reset_ret = self.env.reset()
+        if isinstance(reset_ret, tuple) and len(reset_ret) >= 1:
+            state = reset_ret[0]
+        else:
+            state = reset_ret
+        state = np.asarray(state)
         rewards = 0
         q_values = self.q_network.model.predict(state.reshape(1, -1))
         td_error = []
@@ -201,7 +207,15 @@ class DQN_Agent:
             action = policy(q_values, epsilon)
             i = 0
             while (i < frameskip) and not done:
-                next_state, reward, done, info = self.env.step(action)
+                step_ret = self.env.step(action)
+                # gymnasium step may return 4-tuple (obs, reward, done, info)
+                # or 5-tuple (obs, reward, terminated, truncated, info)
+                if len(step_ret) == 4:
+                    next_state, reward, done, info = step_ret
+                else:
+                    next_state, reward, terminated, truncated, info = step_ret
+                    done = bool(terminated or truncated)
+                next_state = np.asarray(next_state)
                 rewards += reward
                 i += 1
             next_q_values = self.q_network.model.predict(next_state.reshape(1, -1))

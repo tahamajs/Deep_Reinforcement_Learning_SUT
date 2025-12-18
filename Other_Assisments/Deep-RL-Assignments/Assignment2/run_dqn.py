@@ -39,7 +39,12 @@ def test_video(agent, env_name, episodes):
         os.makedirs(save_path)
     env = gym.wrappers.Monitor(agent.env, save_path, force=True)
     reward_total = []
-    state = env.reset()
+    reset_ret = env.reset()
+    if isinstance(reset_ret, tuple) and len(reset_ret) >= 1:
+        state = reset_ret[0]
+    else:
+        state = reset_ret
+    state = np.asarray(state)
     done = False
     print("Video recording the agent with epsilon {0:.4f}".format(agent.epsilon))
     while not done:
@@ -48,7 +53,12 @@ def test_video(agent, env_name, episodes):
         i = 0
         while (i < agent.args.frameskip) and not done:
             env.render()
-            next_state, reward, done, info = env.step(action)
+            step_ret = env.step(action)
+            if len(step_ret) == 4:
+                next_state, reward, done, info = step_ret
+            else:
+                next_state, reward, terminated, truncated, info = step_ret
+                done = bool(terminated or truncated)
             reward_total.append(reward)
             i += 1
         state = next_state
