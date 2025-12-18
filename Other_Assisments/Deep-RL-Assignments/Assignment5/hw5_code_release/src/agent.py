@@ -13,18 +13,19 @@ class Agent:
           policy: the policy that the agent will use for actions
         """
         rewards = []
-        states, actions, reward_sum, done = [self.env.reset()], [], 0, False
+        state, _ = self.env.reset()
+        states, actions, reward_sum, done = [state], [], 0, False
         policy.goal = states[0][-2:]
         policy.reset()
         for t in range(horizon):
             actions.append(policy.act(states[t], t))
 
-            state, reward, done, info = self.env.step(actions[t])
+            state, reward, terminated, truncated, info = self.env.step(actions[t])
+            done = terminated or truncated
             states.append(state)
             reward_sum += reward
             rewards.append(reward)
             if done:
-                print(info['done'])
                 break
         return {
             "obs": np.array(states),
