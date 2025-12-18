@@ -50,7 +50,33 @@ pip install -r requirements.txt
 python -m pytest tests/ -v  # Run tests
 jupyter notebook notebooks/a2c_training.ipynb  # Train and evaluate
 ```
+## Small reproducible bandit example 🔧
 
+A minimal, numpy-only example is available under `src/ca31/` demonstrating
+reproducible experiments with explicit seeding and CSV output. This is useful
+for quick sanity checks and deterministic tests.
+
+Usage examples:
+
+- Run the example experiment with the included config:
+
+```bash
+python -m ca31.train --config configs/experiment.yaml
+```
+
+- Programmatic usage inside notebooks or tests:
+
+```python
+from ca31.utils import load_config, set_seed
+from ca31.train import run_experiment
+
+cfg = load_config("configs/experiment.yaml")
+rng = set_seed(cfg.get("seed", None))
+results = run_experiment(cfg, rng)
+```
+
+The helper `set_seed` returns a `numpy.random.Generator` for deterministic runs
+and centralizes seeding.
 ## Results Summary
 
 A2C achieves mean reward of ~450 on CartPole-v1 after 50k steps, outperforming REINFORCE (~200). Entropy regularization prevents premature convergence, while the critic reduces variance in policy updates.
