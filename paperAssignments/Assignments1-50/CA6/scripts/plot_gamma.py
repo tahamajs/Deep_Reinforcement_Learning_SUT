@@ -2,6 +2,7 @@
 Simple plotting utility for gamma/variance trajectories saved as CSV logs.
 This script is non-executing by default and intended as a helper for reproduction.
 """
+
 import argparse
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -31,4 +32,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

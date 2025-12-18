@@ -1,0 +1,39 @@
+planner:
+  enabled: true
+  B: 16
+  H: 12
+  trigger_td: 0.7
+  trigger_unc: 0.2
+  trigger_entropy_low: 0.3
+  trigger_entropy_high: 2.0
+  buffer_size: 1024
+  branch_select: true
+  branch_topk: 0.5
+  cooldown: 8
+
+training:
+  total_steps: 200000
+  batch_size: 64
+  lr: 3e-4
+  seed: 1
+
+planner:
+  enabled: true
+  B: 16
+  H: 12
+  trigger_td: 0.7
+  trigger_unc: 0.2
+  trigger_entropy_low: 0.3
+  buffer_size: 1024
+  branch_select: true
+  branch_topk: 0.5
+  cem:
+    enabled: false
+    pop: 64
+    elite: 8
+    iters: 3
+warmup_steps: 10000
+training:
+  total_steps: 2000000
+  batch_size: 64
+  lr: 3e-4

@@ -26,13 +26,19 @@ def test_update_gamma_direction_and_clamp():
     gmin = 0.9
     gmax = 0.99
     # if varA < target -> gamma increases
-    g_new = update_gamma(g, varA=0.5, sigma_target=sigma_target, alpha=alpha, gmin=gmin, gmax=gmax)
+    g_new = update_gamma(
+        g, varA=0.5, sigma_target=sigma_target, alpha=alpha, gmin=gmin, gmax=gmax
+    )
     assert g_new > g
     # if varA > target -> gamma decreases
-    g_new2 = update_gamma(g, varA=2.0, sigma_target=sigma_target, alpha=alpha, gmin=gmin, gmax=gmax)
+    g_new2 = update_gamma(
+        g, varA=2.0, sigma_target=sigma_target, alpha=alpha, gmin=gmin, gmax=gmax
+    )
     assert g_new2 < g
     # clamping
-    g_high = update_gamma(g, varA=-1000.0, sigma_target=sigma_target, alpha=alpha, gmin=gmin, gmax=gmax)
+    g_high = update_gamma(
+        g, varA=-1000.0, sigma_target=sigma_target, alpha=alpha, gmin=gmin, gmax=gmax
+    )
     assert g_high <= gmax + 1e-12
 
 
@@ -44,9 +50,26 @@ def test_update_gamma_with_ema_behavior():
     sigma_target = 1.0
     gmin = 0.9
     gmax = 0.99
-    g, ema = update_gamma_with_ema(g, varA=0.5, ema_varA=None, alpha=alpha, beta=beta, sigma_target=sigma_target, gmin=gmin, gmax=gmax)
+    g, ema = update_gamma_with_ema(
+        g,
+        varA=0.5,
+        ema_varA=None,
+        alpha=alpha,
+        beta=beta,
+        sigma_target=sigma_target,
+        gmin=gmin,
+        gmax=gmax,
+    )
     assert ema == 0.5
-    g2, ema2 = update_gamma_with_ema(g, varA=0.6, ema_varA=ema, alpha=alpha, beta=beta, sigma_target=sigma_target, gmin=gmin, gmax=gmax)
+    g2, ema2 = update_gamma_with_ema(
+        g,
+        varA=0.6,
+        ema_varA=ema,
+        alpha=alpha,
+        beta=beta,
+        sigma_target=sigma_target,
+        gmin=gmin,
+        gmax=gmax,
+    )
     # ema should be between 0.5 and 0.6
     assert 0.5 <= ema2 <= 0.6
-

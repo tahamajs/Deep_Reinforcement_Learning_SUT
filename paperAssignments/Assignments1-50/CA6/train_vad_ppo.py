@@ -2,6 +2,7 @@
 Minimal training script for VAD-PPO (Variance-Adaptive Discount PPO).
 This file is import-safe (no training on import). Run as a script to start training.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -32,7 +33,14 @@ def collect_rollout(
     Collect a single rollout of length `rollout_steps` using the current policy.
     Returns a dict with tensors: obs, actions, rewards, dones, logp_old, values
     """
-    obs_list, act_list, rew_list, done_list, logp_list, val_list = [], [], [], [], [], []
+    obs_list, act_list, rew_list, done_list, logp_list, val_list = (
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+    )
     obs, _ = env.reset()
     for _ in range(rollout_steps):
         obs_t = torch.as_tensor(obs, dtype=torch.float32, device=device).unsqueeze(0)
@@ -56,12 +64,24 @@ def collect_rollout(
     val_list.append(float(last_val.cpu().numpy()))
 
     batch = {
-        "obs": torch.as_tensor(np.asarray(obs_list), dtype=torch.float32, device=device),
-        "actions": torch.as_tensor(np.asarray(act_list), dtype=torch.float32, device=device),
-        "rewards": torch.as_tensor(np.asarray(rew_list), dtype=torch.float32, device=device),
-        "dones": torch.as_tensor(np.asarray(done_list), dtype=torch.float32, device=device),
-        "logp_old": torch.as_tensor(np.asarray(logp_list), dtype=torch.float32, device=device),
-        "values": torch.as_tensor(np.asarray(val_list), dtype=torch.float32, device=device),
+        "obs": torch.as_tensor(
+            np.asarray(obs_list), dtype=torch.float32, device=device
+        ),
+        "actions": torch.as_tensor(
+            np.asarray(act_list), dtype=torch.float32, device=device
+        ),
+        "rewards": torch.as_tensor(
+            np.asarray(rew_list), dtype=torch.float32, device=device
+        ),
+        "dones": torch.as_tensor(
+            np.asarray(done_list), dtype=torch.float32, device=device
+        ),
+        "logp_old": torch.as_tensor(
+            np.asarray(logp_list), dtype=torch.float32, device=device
+        ),
+        "values": torch.as_tensor(
+            np.asarray(val_list), dtype=torch.float32, device=device
+        ),
     }
     return batch
 
@@ -155,19 +175,40 @@ def main(argv=None):
     for update in range(args.total_updates):
         t0 = time.time()
         batch = collect_rollout(env, actor_critic, args.rollout_steps, device)
-        adv, returns = compute_advantages(batch["rewards"], batch["values"], batch["dones"], gamma, args.lam)
+        adv, returns = compute_advantages(
+            batch["rewards"], batch["values"], batch["dones"], gamma, args.lam
+        )
         varA = float(adv.var(unbiased=True).item())
-        gamma, ema_varA = update_gamma_with_ema(gamma, varA, ema_varA, args.alpha_gamma, beta, args.sigma_target, args.gamma_min, args.gamma_max)
+        gamma, ema_varA = update_gamma_with_ema(
+            gamma,
+            varA,
+            ema_varA,
+            args.alpha_gamma,
+            beta,
+            args.sigma_target,
+            args.gamma_min,
+            args.gamma_max,
+        )
         adv_norm = (adv - adv.mean()) / (adv.std() + 1e-8)
         # run multiple PPO epochs (simple full-batch updates here)
         stats = {}
         for _ in range(args.ppo_epochs):
-            s = ppo_update(actor_critic, optimizer, batch, returns, adv_norm, args.clip_ratio, vf_coef=0.5, ent_coef=0.0)
+            s = ppo_update(
+                actor_critic,
+                optimizer,
+                batch,
+                returns,
+                adv_norm,
+                args.clip_ratio,
+                vf_coef=0.5,
+                ent_coef=0.0,
+            )
             stats.update(s)
         t1 = time.time()
-        print(f"Update {update+1}/{args.total_updates}  gamma={gamma:.5f} varA={varA:.5f} time={t1-t0:.2f}s  stats={stats}")
+        print(
+            f"Update {update+1}/{args.total_updates}  gamma={gamma:.5f} varA={varA:.5f} time={t1-t0:.2f}s  stats={stats}"
+        )
 
 
 if __name__ == "__main__":
     main()
-

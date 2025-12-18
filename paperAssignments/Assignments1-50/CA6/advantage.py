@@ -75,4 +75,3 @@ def update_gamma_with_ema(
         ema_varA_new = float(beta * ema_varA + (1.0 - beta) * float(varA))
     gamma_new = update_gamma(gamma, ema_varA_new, sigma_target, alpha, gmin, gmax)
     return gamma_new, ema_varA_new
-

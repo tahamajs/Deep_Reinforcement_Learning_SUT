@@ -56,7 +56,9 @@ class ActorCritic(nn.Module):
             logits = self.logits(h)
             return logits, value
 
-    def get_action(self, obs: torch.Tensor, deterministic: bool = False) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def get_action(
+        self, obs: torch.Tensor, deterministic: bool = False
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Sample action and return (action, logp, value)
         """
@@ -81,7 +83,9 @@ class ActorCritic(nn.Module):
                 entropy = dist.entropy()
         return action, logp, value
 
-    def evaluate_actions(self, obs: torch.Tensor, actions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def evaluate_actions(
+        self, obs: torch.Tensor, actions: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Evaluate log probabilities, entropy and value for given (obs, actions) - used in PPO updates.
         Returns (logp, entropy, value)
@@ -97,4 +101,3 @@ class ActorCritic(nn.Module):
             logp = dist.log_prob(actions)
             entropy = dist.entropy()
         return logp, entropy, value
-
