@@ -1,0 +1,31 @@
+\\documentclass{article}
+\\usepackage{amsmath}
+\\usepackage{graphicx}
+\\begin{document}
+\\title{Transformer-Based World Models with State-Space Duality (TWM-SSD)}
+\\author{Assignment CA11}
+\\maketitle
+
+\\begin{abstract}
+We present TWM-SSD, a hybrid world model that interleaves linear-attention Transformers with SSM-inspired recurrent blocks. The report sketches the key equations and how they map to code in \\texttt{src/model.py}.
+\\end{abstract}
+
+\\section{Model}
+Linear attention (feature map $\\phi$) computes:
+\\[
+\\mathrm{Attn}(q_t,K,V)=\\phi(q_t)\\left(\\sum_{i\\le t}\\phi(k_i)^\\top v_i\\right).
+\\]
+An SSM update is written as:
+\\[
+h_{t+1}=A h_t + B x_t,\\quad y_t = C h_t.
+\\]
+TWM-SSD interleaves blocks that implement both updates; see \\texttt{src/model.py}.
+
+\\section{Training}
+Use reconstruction and reward MSE losses. Code mapping: \\texttt{src/losses.py}.
+
+\\section{Conclusion}
+This report is a compact companion to the README and code.
+
+\\end{document}
+
