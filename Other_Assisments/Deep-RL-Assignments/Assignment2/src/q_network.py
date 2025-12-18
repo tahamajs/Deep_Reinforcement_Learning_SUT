@@ -6,7 +6,10 @@ import numpy as np
 import tensorflow as tf
 from datetime import datetime
 from keras.layers import Dense
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
+
 class QNetwork:
     def __init__(self, args, input, output, learning_rate):
         self.weights_path = "models/%s/%s" % (
