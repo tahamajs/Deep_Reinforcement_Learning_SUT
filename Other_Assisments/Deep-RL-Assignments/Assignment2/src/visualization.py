@@ -1,7 +1,22 @@
+import os
+import sys
+import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import deeprl_hw2q2.lake_envs as lake_env
+
+# Try to import the helper package used by the assignment. If it's not on sys.path
+# (e.g., running from the src/ folder), add the Q2-VI-PI folder to sys.path as a fallback.
+try:
+    import deeprl_hw2q2.lake_envs as lake_env
+except ModuleNotFoundError:
+    pkg_root = pathlib.Path(__file__).resolve().parents[1] / "hw2-VI-PI-DQN" / "Q2-VI-PI"
+    if pkg_root.exists():
+        sys.path.insert(0, str(pkg_root))
+        import deeprl_hw2q2.lake_envs as lake_env
+    else:
+        # Re-raise with helpful message
+        raise
 def display_policy_letters(env, policy):
     """Displays a policy as letters, as required by problem 2.2 & 2.6
 
