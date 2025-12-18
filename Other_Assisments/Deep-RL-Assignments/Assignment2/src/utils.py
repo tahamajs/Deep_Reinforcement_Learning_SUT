@@ -1,5 +1,7 @@
 import numpy as np
 import gymnasium as gym
+
+
 def print_policy(policy, action_names):
     """Print the policy in human-readable format.
 
@@ -15,6 +17,8 @@ def print_policy(policy, action_names):
         np.place(str_policy, policy == action_num, action_name)
 
     print(str_policy)
+
+
 def value_function_to_policy(env, gamma, value_func):
     """Output action numbers for each state in value_function.
 
@@ -43,7 +47,9 @@ def value_function_to_policy(env, gamma, value_func):
             nS = env.T.shape[0]
             nA = env.T.shape[1]
         else:
-            raise RuntimeError("Cannot determine nS/nA to derive policy from value function")
+            raise RuntimeError(
+                "Cannot determine nS/nA to derive policy from value function"
+            )
 
     policy = np.zeros(nS, dtype="int")
     for state in range(nS):
@@ -51,7 +57,10 @@ def value_function_to_policy(env, gamma, value_func):
         best_action = -1
         for action in range(nA):
             value = 0
-            if getattr(env, "T", None) is not None and getattr(env, "R", None) is not None:
+            if (
+                getattr(env, "T", None) is not None
+                and getattr(env, "R", None) is not None
+            ):
                 T = env.T
                 R = env.R
                 for nextstate in range(nS):
