@@ -111,3 +111,7 @@ if __name__ == "__main__":
     print("logits_joint", lj.shape, "value", v.shape, "prefix", z.shape)
 
 
+
+
+
+

@@ -30,3 +30,7 @@ This README is intentionally minimal. If you want me to scaffold code (e.g. `src
 Follow repository conventions: keep modules import-safe, use type hints, and place all runnable training loops inside notebooks or scripts guarded by `if __name__ == "__main__"`.
 
 
+
+
+
+

@@ -34,3 +34,7 @@ def test_crosshq_adapter_runs():
     assert visits == 10
 
 
+
+
+
+

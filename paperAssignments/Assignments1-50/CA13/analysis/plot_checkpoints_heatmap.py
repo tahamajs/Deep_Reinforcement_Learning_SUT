@@ -40,3 +40,7 @@ if __name__ == "__main__":
     plot_checkpoint_tsne(ckpts, sys.argv[2])
 
 
+
+
+
+
