@@ -21,7 +21,7 @@ except ModuleNotFoundError:
         raise
 
 
-def display_policy_letters(env, policy):
+def display_policy_letters(env, policy, save_path=None):
     """Displays a policy as letters, as required by problem 2.2 & 2.6
 
     Parameters
@@ -38,8 +38,24 @@ def display_policy_letters(env, policy):
     for row in range(env.nrow):
         print("".join(policy_letters[row, :]))
 
+    # Optionally save a simple image of the policy letters
+    if save_path is not None:
+        import matplotlib.pyplot as plt
 
-def value_func_heatmap(env, value_func):
+        fig, ax = plt.subplots(figsize=(env.ncol, env.nrow))
+        ax.axis("off")
+        table = ax.table(
+            cellText=policy_letters.tolist(),
+            loc="center",
+            cellLoc="center",
+        )
+        table.scale(1, 1)
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        fig.savefig(save_path, bbox_inches="tight", dpi=200)
+        plt.close(fig)
+
+
+def value_func_heatmap(env, value_func, save_path=None):
     """Visualize a policy as a heatmap, as required by problem 2.3 & 2.5
 
     Note that you might need:
@@ -61,5 +77,13 @@ def value_func_heatmap(env, value_func):
         yticklabels=np.arange(1, env.nrow + 1)[::-1],
         xticklabels=np.arange(1, env.nrow + 1),
     )
-    plt.show()
-    return None
+    # Save image if requested (default pictures/ inside assignment folder)
+    if save_path is None:
+        pics_dir = pathlib.Path(__file__).resolve().parents[1] / "pictures"
+        pics_dir.mkdir(exist_ok=True)
+        save_path = str(pics_dir / f"value_func_heatmap_{env.nrow}x{env.ncol}.png")
+
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    fig.savefig(save_path, bbox_inches="tight", dpi=200)
+    plt.close(fig)
+    return save_path
