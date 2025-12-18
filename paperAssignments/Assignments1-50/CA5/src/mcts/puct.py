@@ -36,11 +36,13 @@ class PUCT:
         action_space: Sequence[int],
         c_puct: float = 1.0,
         dirichlet_alpha: Optional[float] = None,
+        invert_value: bool = False,
     ):
         self.model = model
         self.action_space = list(action_space)
         self.c_puct = c_puct
         self.dirichlet_alpha = dirichlet_alpha
+        self.invert_value = invert_value
 
     def search(self, root_state: Any, num_simulations: int = 100) -> Node:
         root = Node(state=root_state)
@@ -101,6 +103,8 @@ class PUCT:
     def _backup(self, path: List[Node], value: float):
         for node in reversed(path):
             node.visits += 1
-            node.value_sum += value
-            # optionally invert value for two-player games; here assume single-agent returns same value
+            if self.invert_value:
+                node.value_sum += -value
+            else:
+                node.value_sum += value
 
