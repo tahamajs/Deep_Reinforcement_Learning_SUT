@@ -38,7 +38,7 @@ class SimpleVQVAE(nn.Module):
         B, L, D = x.shape
         # conv1d expects (B, C, L)
         z = self.encoder(x.transpose(1, 2)).transpose(1, 2)  # (B, L, D)
-        flat = z.view(-1, D)  # (B*L, D)
+        flat = z.reshape(-1, D)  # (B*L, D)
         # compute squared distances to codebook
         # (N, K) = (B*L, codebook_size)
         dists = (
