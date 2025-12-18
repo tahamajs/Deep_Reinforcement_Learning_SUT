@@ -6,6 +6,7 @@ import torch
 
 def load_module_from_path(path: str, name: str):
     import sys
+
     # ensure repo root is on sys.path
     repo_root = pathlib.Path(__file__).resolve().parents[4]
     if str(repo_root) not in sys.path:
@@ -70,4 +71,3 @@ def test_mcts_basic():
         for keys, vals in joint:
             assert hasattr(keys, "__iter__")
             assert isinstance(vals, torch.Tensor)
-

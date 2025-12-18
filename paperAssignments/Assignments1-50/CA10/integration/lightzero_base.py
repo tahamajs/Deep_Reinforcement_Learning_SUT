@@ -14,16 +14,20 @@ class BaseMuZeroPolicy(ABC):
     """
 
     @abstractmethod
-    def infer(self, obs: torch.Tensor) -> Dict[str, torch.Tensor]:
-        ...
+    def infer(self, obs: torch.Tensor) -> Dict[str, torch.Tensor]: ...
 
     @abstractmethod
-    def search(self, obs: torch.Tensor, sims: int = 100, topk: int = 8) -> Dict[str, torch.Tensor]:
-        ...
+    def search(
+        self, obs: torch.Tensor, sims: int = 100, topk: int = 8
+    ) -> Dict[str, torch.Tensor]: ...
 
     @abstractmethod
-    def training_step(self, batch: Dict[str, torch.Tensor], loss_weights: Dict[str, float], optimizer: Any) -> Any:
-        ...
+    def training_step(
+        self,
+        batch: Dict[str, torch.Tensor],
+        loss_weights: Dict[str, float],
+        optimizer: Any,
+    ) -> Any: ...
 
     def save(self, path: str) -> None:
         """Optional: save policy weights."""
@@ -32,4 +36,3 @@ class BaseMuZeroPolicy(ABC):
     def load(self, path: str) -> None:
         """Optional: load policy weights."""
         raise NotImplementedError
-

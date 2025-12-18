@@ -1,4 +1,5 @@
 """Plot heatmap / embedding of checkpoint latents."""
+
 from __future__ import annotations
 from pathlib import Path
 from typing import List, Any
@@ -18,7 +19,9 @@ def plot_checkpoint_tsne(checkpoints: List[Any], out: str, perplexity: int = 30)
     if len(zs) < 2:
         return
     zs = np.stack(zs)
-    emb = TSNE(n_components=2, perplexity=perplexity, init="pca", random_state=0).fit_transform(zs)
+    emb = TSNE(
+        n_components=2, perplexity=perplexity, init="pca", random_state=0
+    ).fit_transform(zs)
     plt.figure(figsize=(6, 5))
     plt.scatter(emb[:, 0], emb[:, 1], s=8, alpha=0.8)
     plt.title("t-SNE of checkpoint latents")
@@ -29,9 +32,9 @@ def plot_checkpoint_tsne(checkpoints: List[Any], out: str, perplexity: int = 30)
 
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) < 3:
         print("Usage: plot_checkpoints_heatmap.py checkpoints.json out.png")
         raise SystemExit(1)
     ckpts = load_checkpoints(sys.argv[1])
     plot_checkpoint_tsne(ckpts, sys.argv[2])
-

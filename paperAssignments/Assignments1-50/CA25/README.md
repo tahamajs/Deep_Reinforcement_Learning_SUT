@@ -59,4 +59,3 @@ Appendix: Tasks and padding
 18. Task 18
 19. Task 19
 20. Task 20
-

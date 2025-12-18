@@ -5,6 +5,7 @@ import torch
 
 def load_module_from_path(path: str, name: str):
     import sys
+
     repo_root = pathlib.Path(__file__).resolve().parents[4]
     if str(repo_root) not in sys.path:
         sys.path.insert(0, str(repo_root))
@@ -56,4 +57,3 @@ def test_network_shapes():
     for h, r in outputs:
         assert h.shape[1] == latent_dim
         assert isinstance(r.item(), float)
-

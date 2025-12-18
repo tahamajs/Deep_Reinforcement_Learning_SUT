@@ -36,7 +36,12 @@ class CrossHQMuZeroAdapter:
                 a_t = a.to(self.device).unsqueeze(0).float()
                 lp = dist.log_prob(a_t).sum(-1).item()
                 logps.append(lp)
-        probs = F.softmax(torch.tensor(logps, dtype=torch.float32), dim=0).cpu().numpy().tolist()
+        probs = (
+            F.softmax(torch.tensor(logps, dtype=torch.float32), dim=0)
+            .cpu()
+            .numpy()
+            .tolist()
+        )
         return probs
 
     def _value_from_action_set(self, state: Any) -> float:
@@ -62,7 +67,9 @@ class CrossHQMuZeroAdapter:
             try:
                 with torch.no_grad():
                     if not isinstance(observation, torch.Tensor):
-                        s = torch.tensor([observation], dtype=torch.float32, device=self.device)
+                        s = torch.tensor(
+                            [observation], dtype=torch.float32, device=self.device
+                        )
                     else:
                         s = observation.unsqueeze(0).float().to(self.device)
                     emb = self.actor.backbone(s)
@@ -77,7 +84,11 @@ class CrossHQMuZeroAdapter:
             else:
                 s = observation.unsqueeze(0).float().to(self.device)
             mu, log_std = self.actor.forward(s)
-            return {"policy_mu": mu.squeeze(0).cpu(), "policy_logstd": log_std.squeeze(0).cpu(), "value": None}
+            return {
+                "policy_mu": mu.squeeze(0).cpu(),
+                "policy_logstd": log_std.squeeze(0).cpu(),
+                "value": None,
+            }
 
     def recurrent_inference(self, hidden_state: Any, action: int) -> Dict[str, Any]:
         # For toy environments we interpret hidden_state as integer state
@@ -86,4 +97,3 @@ class CrossHQMuZeroAdapter:
         except Exception:
             next_state = hidden_state
         return self.initial_inference(next_state)
-

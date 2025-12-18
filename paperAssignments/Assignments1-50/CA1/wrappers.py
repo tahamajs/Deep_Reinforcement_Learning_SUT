@@ -3,6 +3,7 @@
 This file provides a small set of wrappers suitable for Gym/Gymnasium Atari environments.
 It uses the active gym module from `env_utils` to remain compatible with both libraries.
 """
+
 from collections import deque
 import cv2
 import numpy as np

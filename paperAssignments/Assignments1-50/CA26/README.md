@@ -59,4 +59,3 @@ Appendix: Padding list
 18. Pad 18
 19. Pad 19
 20. Pad 20
-

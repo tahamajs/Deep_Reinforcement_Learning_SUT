@@ -25,10 +25,10 @@ Pick a specific conceptual focus for CA22 (e.g., robust RL, imitation learning, 
 
 Notation & example objective
 
-- Let \pi_\theta(a|s) be a stochastic policy.
+- Let \pi\_\theta(a|s) be a stochastic policy.
 - The target objective is to maximize expected return under a constraint C(\pi) \leq c (e.g., safety constraint).
 - Use Lagrangian relaxation to form augmented objective:
-  L(\theta, \mu) = E_{\tau\sim\pi\theta}[\sum_t \gamma^t r_t] - \mu (E_{\tau}[C(\tau)] - c)
+  L(\theta, \mu) = E*{\tau\sim\pi\theta}[\sum_t \gamma^t r_t] - \mu (E*{\tau}[C(\tau)] - c)
 
 Mapping to code
 
@@ -97,4 +97,3 @@ Appendix: Implementation checklist
 10. Create a brief `report.tex` (optional).
 
 Detailed Appendix: Micro-tasks (padding section)
-

@@ -17,14 +17,17 @@ class StubActor:
 def test_advanced_simulator_and_distill():
     rssm = StubRSSM()
     actor = StubActor()
+
     def value_fn(z):
         return torch.tensor(0.0, device=z.device)
 
     z_saved = torch.zeros((1, 8))
+
     class Cfg:
         B = 2
         H = 3
         kappa = 0.1
+
         class cem:
             enabled = False
 
@@ -35,4 +38,3 @@ def test_advanced_simulator_and_distill():
     assert actions is not None and probs is not None
     a = select_branch_action(branches)
     assert a is not None
-

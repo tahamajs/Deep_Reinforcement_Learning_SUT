@@ -16,6 +16,7 @@ Quick start (local)
    python paperAssignments/Assignments1-50/CA8/scripts/run.py --config paperAssignments/Assignments1-50/CA8/configs/procgen.yaml
 
 Logging
+
 - TensorBoard logs are saved to `cfg.tb_logdir` (default `runs/ca8`). Start TensorBoard:
   tensorboard --logdir runs/ca8
 - W&B: set up and login (`pip install wandb` && `wandb login`). W&B is enabled by default in cfg.
@@ -30,9 +31,9 @@ W&B sweeps
 
 Or use the provided helper:
 
-   python paperAssignments/Assignments1-50/CA8/scripts/wandb_sweep_agent.py --count 1
+python paperAssignments/Assignments1-50/CA8/scripts/wandb_sweep_agent.py --count 1
 
 Notes
+
 - For MuJoCo/Procgen, ensure the appropriate packages are installed (mujoco, procgen).
 - Use `python -m pip install -r paperAssignments/Assignments1-50/CA8/requirements.txt` to install everything.
-

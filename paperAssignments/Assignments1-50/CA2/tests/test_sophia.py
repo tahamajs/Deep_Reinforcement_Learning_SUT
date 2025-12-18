@@ -1,6 +1,20 @@
+import importlib.util
+from pathlib import Path
 import torch
-from paperAssignments.Assignments1_50.CA2.src.optim.sophia import Sophia  # type: ignore
-from paperAssignments.Assignments1_50.CA2.src.agent import build_optimizer  # type: ignore
+
+# Dynamically load local CA2 src modules (avoids relying on package import names)
+base = Path(__file__).resolve().parents[1]  # CA2 folder
+spec = importlib.util.spec_from_file_location(
+    "sophia", str(base / "src" / "optim" / "sophia.py")
+)
+sophia_mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(sophia_mod)  # type: ignore
+Sophia = sophia_mod.Sophia
+
+spec2 = importlib.util.spec_from_file_location("agent", str(base / "src" / "agent.py"))
+agent_mod = importlib.util.module_from_spec(spec2)
+spec2.loader.exec_module(agent_mod)  # type: ignore
+build_optimizer = agent_mod.build_optimizer
 
 
 def test_sophia_reduces_quadratic_loss():
@@ -42,7 +56,13 @@ def test_sophia_state_contains_m_and_h():
 def test_hutchinson_step_runs():
     # small linear model
     model = torch.nn.Linear(3, 1)
-    opt = build_optimizer(model, optim_name="sophia", lr=1e-2, hessian_estimator="hutchinson", hutchinson_samples=1)
+    opt = build_optimizer(
+        model,
+        optim_name="sophia",
+        lr=1e-2,
+        hessian_estimator="hutchinson",
+        hutchinson_samples=1,
+    )
 
     # random batch
     obs = torch.randn(4, 3)
@@ -60,4 +80,3 @@ def test_hutchinson_step_runs():
     opt.step(closure)
     loss_after = float(torch.nn.functional.mse_loss(model(obs), target).item())
     assert "m" in opt.state[next(iter(model.parameters()))]
-

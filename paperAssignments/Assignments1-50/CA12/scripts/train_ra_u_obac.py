@@ -4,14 +4,26 @@ from argparse import ArgumentParser
 import random
 import time
 
-import gym
+# prefer gymnasium if available (Gym is unmaintained)
+try:
+    import gymnasium as gym
+except Exception:
+    import gym
+
 import numpy as np
 import torch
 import os
+import sys
 from typing import Dict
 
-from ..src.config import Config
-from ..src.agent import RAUOBACAgent
+# allow running script directly by adding the package parent directory to sys.path
+THIS_DIR = os.path.dirname(__file__)
+PARENT_DIR = os.path.normpath(os.path.join(THIS_DIR, ".."))
+if PARENT_DIR not in sys.path:
+    sys.path.insert(0, PARENT_DIR)
+
+from src.config import Config
+from src.agent import RAUOBACAgent
 
 
 def set_seed(seed: int):
@@ -135,4 +147,3 @@ if __name__ == "__main__":
     args = p.parse_args()
     cfg = Config()
     run_demo(cfg, steps=args.steps)
-

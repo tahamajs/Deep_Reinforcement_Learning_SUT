@@ -157,15 +157,31 @@ def main():
     # save history plots and config snapshot
     try:
         from ..src.utils.logger import plot_series
+
         out_dir = os.path.join(args.logdir, "plots")
         os.makedirs(out_dir, exist_ok=True)
         if len(hist_steps) > 0:
-            plot_series(hist_steps, {"v_loss": hist_v, "critic_loss": hist_critic, "policy_loss": hist_policy}, os.path.join(out_dir, "losses.png"), title="Losses")
-            plot_series(hist_steps, {"lam_mean": hist_lam, "std_mild_mean": hist_std}, os.path.join(out_dir, "lam_std.png"), title="Lambda and Std")
+            plot_series(
+                hist_steps,
+                {
+                    "v_loss": hist_v,
+                    "critic_loss": hist_critic,
+                    "policy_loss": hist_policy,
+                },
+                os.path.join(out_dir, "losses.png"),
+                title="Losses",
+            )
+            plot_series(
+                hist_steps,
+                {"lam_mean": hist_lam, "std_mild_mean": hist_std},
+                os.path.join(out_dir, "lam_std.png"),
+                title="Lambda and Std",
+            )
     except Exception:
         pass
     try:
         import json
+
         cfg_path = os.path.join(args.logdir, "config.json")
         with open(cfg_path, "w") as f:
             json.dump(cfg.__dict__, f, indent=2)

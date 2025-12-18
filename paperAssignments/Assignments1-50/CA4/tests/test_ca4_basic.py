@@ -1,4 +1,11 @@
-import torch
+import pytest
+
+try:
+    import torch
+except Exception:
+    torch = None
+    pytest.skip("torch not available — skipping CA4 tests", allow_module_level=True)
+
 from src.losses import quantile_huber_loss, cvar_tail
 from src.model import SCASReg, QuantileMLP
 

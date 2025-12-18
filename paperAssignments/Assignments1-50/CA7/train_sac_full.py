@@ -6,6 +6,7 @@ Full SAC-style training loop (development/demo) integrating:
 
 This is intended as a reproducible baseline for CA7 experiments.
 """
+
 import argparse
 import time
 import os
@@ -59,31 +60,46 @@ def train(cfg: Config, out_dir: str):
 
     buf = build_buffer(cfg, actor, device, n=1000)
 
-    logger = CSVLogger(os.path.join(out_dir, "train_log.csv"), header={
-        "step": "step",
-        "critic1_loss": "critic1_loss",
-        "critic2_loss": "critic2_loss",
-        "actor_loss": "actor_loss",
-        "alpha": "alpha",
-    })
+    logger = CSVLogger(
+        os.path.join(out_dir, "train_log.csv"),
+        header={
+            "step": "step",
+            "critic1_loss": "critic1_loss",
+            "critic2_loss": "critic2_loss",
+            "actor_loss": "actor_loss",
+            "alpha": "alpha",
+        },
+    )
 
     step = 0
     max_steps = 500
     for epoch in range(0, max_steps):
         batch = buf.sample_batch(cfg.batch_size, device=str(device))
-        loss_c1, returns = critic_loss_lambda(critic1, target1, *batch, cfg.gamma, cfg.lam, c_rho=cfg.c_rho, policy=actor)
+        loss_c1, returns = critic_loss_lambda(
+            critic1, target1, *batch, cfg.gamma, cfg.lam, c_rho=cfg.c_rho, policy=actor
+        )
         opt_c1.zero_grad()
         loss_c1.backward()
         nn.utils.clip_grad_norm_(critic1.parameters(), cfg.grad_clip)
         opt_c1.step()
 
-        loss_c2, _ = critic_loss_lambda(critic2, target2, *batch, cfg.gamma, cfg.lam, c_rho=cfg.c_rho, policy=actor)
+        loss_c2, _ = critic_loss_lambda(
+            critic2, target2, *batch, cfg.gamma, cfg.lam, c_rho=cfg.c_rho, policy=actor
+        )
         opt_c2.zero_grad()
         loss_c2.backward()
         nn.utils.clip_grad_norm_(critic2.parameters(), cfg.grad_clip)
         opt_c2.step()
 
-        a_loss = sac_update([critic1, critic2], [target1, target2], actor, [opt_c1, opt_c2], opt_a, batch, cfg)
+        a_loss = sac_update(
+            [critic1, critic2],
+            [target1, target2],
+            actor,
+            [opt_c1, opt_c2],
+            opt_a,
+            batch,
+            cfg,
+        )
 
         # alpha update
         with torch.no_grad():
@@ -95,9 +111,19 @@ def train(cfg: Config, out_dir: str):
         opt_alpha.step()
 
         if epoch % 10 == 0:
-            print(f"epoch={epoch} c1={loss_c1.item():.6f} c2={loss_c2.item():.6f} a={a_loss:.6f} alpha={alpha.item():.4f}")
+            print(
+                f"epoch={epoch} c1={loss_c1.item():.6f} c2={loss_c2.item():.6f} a={a_loss:.6f} alpha={alpha.item():.4f}"
+            )
 
-        logger.log({"step": epoch, "critic1_loss": float(loss_c1.item()), "critic2_loss": float(loss_c2.item()), "actor_loss": float(a_loss), "alpha": float(alpha.item())})
+        logger.log(
+            {
+                "step": epoch,
+                "critic1_loss": float(loss_c1.item()),
+                "critic2_loss": float(loss_c2.item()),
+                "actor_loss": float(a_loss),
+                "alpha": float(alpha.item()),
+            }
+        )
 
         # checkpoint periodically
         if epoch % 100 == 0:
@@ -114,11 +140,14 @@ def train(cfg: Config, out_dir: str):
             save_checkpoint(os.path.join(out_dir, f"checkpoint_{epoch}.pt"), state)
 
     # final save
-    save_checkpoint(os.path.join(out_dir, "final_checkpoint.pt"), {
-        "critic1": critic1.state_dict(),
-        "critic2": critic2.state_dict(),
-        "actor": actor.state_dict(),
-    })
+    save_checkpoint(
+        os.path.join(out_dir, "final_checkpoint.pt"),
+        {
+            "critic1": critic1.state_dict(),
+            "critic2": critic2.state_dict(),
+            "actor": actor.state_dict(),
+        },
+    )
 
 
 def main():
@@ -132,4 +161,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

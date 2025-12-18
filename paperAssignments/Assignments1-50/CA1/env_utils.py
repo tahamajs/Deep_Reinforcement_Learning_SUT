@@ -5,18 +5,23 @@ It exposes the active "gym" module as `gym` and a boolean `IS_GYMNASIUM`.
 Additionally it provides `reset_env` and `step_env` helpers that normalize different
 reset/step return signatures across gym/gymnasium versions.
 """
+
 from typing import Any, Tuple
 
 # Attempt robust import: prefer gymnasium, fall back to gym
 try:
     import gymnasium as gym  # type: ignore
+
     IS_GYMNASIUM = True
 except Exception:
     try:
         import gym  # type: ignore
+
         IS_GYMNASIUM = False
     except Exception:
-        raise ImportError("Neither gymnasium nor gym could be imported. Please install one of them.")
+        raise ImportError(
+            "Neither gymnasium nor gym could be imported. Please install one of them."
+        )
 
 
 def reset_env(env: Any, seed: int | None = None) -> Any:

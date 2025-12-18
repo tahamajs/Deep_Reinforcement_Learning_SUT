@@ -6,6 +6,7 @@ import torch
 
 def load_module_from_path(path: str, name: str):
     import sys
+
     repo_root = pathlib.Path(__file__).resolve().parents[4]
     if str(repo_root) not in sys.path:
         sys.path.insert(0, str(repo_root))
@@ -62,4 +63,3 @@ def test_policy_loss_computation():
     loss, losses = policy.compute_losses(h0, actions, pi_t, v_t, r_t, z_t, loss_weights)
     assert isinstance(loss.item(), float)
     assert "loss_pi" in losses and "loss_v" in losses
-

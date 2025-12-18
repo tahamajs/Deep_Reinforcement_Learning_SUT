@@ -52,5 +52,4 @@ class Config:
         return {k: getattr(self, k) for k in self.__dict__.keys()}
 
 
-
 cfg = Config()

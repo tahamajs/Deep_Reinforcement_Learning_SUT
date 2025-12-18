@@ -8,6 +8,9 @@ class Config:
 
     seed: int = 42
     env_name: str = "Hopper-v2"
+    # For quick local demos default to a lightweight env
+    # (overridden in experiments to use MuJoCo / D4RL datasets)
+    env_name: str = "CartPole-v1"
     max_steps: int = 500_000
     batch_size: int = 256
     lr: float = 3e-4
@@ -45,4 +48,3 @@ class Config:
 
     def device_str(self) -> str:
         return self.device
-

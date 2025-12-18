@@ -1,0 +1,192 @@
+\documentclass{article}
+\usepackage[preprint]{neurips_2024}
+\usepackage{times}
+\usepackage{hyperref}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{authblk}
+\usepackage{geometry}
+\geometry{margin=0.75in}
+
+\title{MaxSink: ``To the Max'' Reward Transformation with Sinkhorn Distributional RL}
+\author{Assignment 8: MaxSink \\ Draft for internal review}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We propose MaxSink, a synthesis of the ``To the Max'' reward transformation and Sinkhorn-based distributional reinforcement learning. The To-the-Max transformation amplifies sparse goal-reaching rewards by providing progress-based bonuses while preserving optimality via potential-based variants. Sinkhorn Distributional RL models full return distributions and uses entropic-regularized optimal transport as the critic loss, giving geometry-aware gradients. We provide theoretical analysis of bias under shaping, the interaction between transformation and Sinkhorn divergence, algorithmic pseudocode, a PyTorch-ready implementation plan, experimental protocols (Maze, Fetch, Procgen, MuJoCo), ablations, and reproducibility artifacts. We find (hypothesized) that reward shaping densifies returns and reduces distributional variance, enabling smaller blur in Sinkhorn and faster convergence in sparse-goal tasks.
+\end{abstract}
+
+\section{Introduction}
+Sparse-reward goal-reaching is a long-standing challenge in reinforcement learning: sparse episodic success signals make exploration and credit assignment difficult. Reward shaping can densify learning signals, but naive shaping often biases optimal policies. Distributional RL \cite{bellemare2017distributional} captures return uncertainty and can produce stronger gradients by matching distributions rather than scalars. We combine a principled reward shaping family, ``To the Max,'' with Sinkhorn-distributional critics \cite{feydy2019interpolating,genevay2018learning,delon2019fast} to produce MaxSink: a pipeline that densifies rewards and aligns full return distributions using entropic OT.
+
+\paragraph{Contributions.}
+\begin{itemize}
+  \item We formalize the To-the-Max transform and show how to embed it into a distributional Bellman update.
+  \item We derive bias bounds for non-potential transforms and show conditions under which potential-based shaping preserves optimality.
+  \item We present a robust, import-safe PyTorch implementation skeleton (released with this assignment) with Sinkhorn fallback and a minibatch trainer with optional W\&B/TensorBoard logging and vectorized env support.
+  \item We propose a comprehensive experimental design (Maze, Fetch, Procgen, MuJoCo) and ablation studies to measure the interaction between shaping and OT.
+\end{itemize}
+
+\section{Related Work}
+Reward shaping: potential-based shaping \cite{ng1999policy} preserves optimality. Recent works propose domain-specific shaping to accelerate goal-reaching. Distributional RL: quantile-regression (QR-DQN) \cite{dabney2018distributional}, C51 \cite{bellemare2017distributional}, and particle-based methods. Optimal transport \& Sinkhorn: entropic-regularized OT provides stable gradients and an interpolation between Wasserstein and kernel losses \cite{feydy2019interpolating}.
+
+\section{Preliminaries}
+We consider an MDP $(\mathcal{S},\mathcal{A},P,r,\gamma)$ with episodic horizon $T$. Trajectories $\tau$ produce returns $G=\sum_{t=0}^{T-1}\gamma^t r_t$. In distributional RL we model the return random variable $Z^\pi(s,a)$; a parameterized critic produces samples/particles approximating this distribution.
+
+\subsection{To-the-Max Reward Transformation}
+Let $r(s,a)$ be the environment reward (often sparse: $r\in\{0,1\}$). The To-the-Max family is a monotone transformation $T$ producing $r'(s,a)=T(r(s,a),\text{progress},\ldots)$ which amplifies goal-reaching signals. A simple instantiation used in our experiments:
+\begin{equation}
+r'(s,a) = \max\big(r(s,a),\ \beta\cdot \mathbf{1}[\text{progress}(s,a)>0]\big),
+\label{eq:to_max}
+\end{equation}
+where $\beta\in[0,1]$ is a progress bonus and $\text{progress}(s,a)$ measures decrease in distance-to-goal between consecutive states. Potential-based variant:
+\begin{equation}
+r'_{\Phi}(s,a) = r(s,a) + \gamma\Phi(s') - \Phi(s)
+\label{eq:potential_shaping}
+\end{equation}
+ensures optimal policy invariance \cite{ng1999policy} when $\Phi$ is bounded.
+
+\subsection{Sinkhorn Divergence}
+Given two empirical measures supported on particles $X=\{x_i\}_{i=1}^N$ and $Y=\{y_j\}_{j=1}^M$, the entropic OT cost (regularized Wasserstein) with blur $\varepsilon$ is:
+\begin{equation}
+W_\varepsilon(X,Y) = \min_{P\in\Pi}\sum_{i,j} P_{ij}C_{ij} + \varepsilon H(P),
+\end{equation}
+where $C_{ij}=\|x_i-y_j\|^p$ and $H(P)=-\sum_{ij}P_{ij}\log P_{ij}$. The Sinkhorn divergence (debiased) is
+\begin{equation}
+S_\varepsilon(X,Y) = 2W_\varepsilon(X,Y) - W_\varepsilon(X,X) - W_\varepsilon(Y,Y).
+\label{eq:sinkhorn}
+\end{equation}
+We use $S_\varepsilon$ as the critic loss between predicted particles $X=Z_\theta(s,a)$ and target particles $Y=r' + \gamma Z_{\theta'}(s',a^*)$.
+
+\section{MaxSink: Algorithm}
+\subsection{Distributional Bellman with Transform}
+We replace scalar targets with particle-wise targets:
+\begin{align}
+Y &= r'(s,a) + \gamma (1-d)\, Z_{\theta'}(s', a^*),\\
+a^*&=\arg\max_{a'}\mathbb{E}[Z_{\theta'}(s',a')],
+\end{align}
+where $d$ indicates termination. The loss minimized is:
+\begin{equation}
+\mathcal{L}(\theta) = \mathbb{E}_{(s,a,r,s')\sim\mathcal{D}}\left[S_\varepsilon\big(Z_\theta(s,a),\,Y\big)\right].
+\end{equation}
+Optimization uses minibatch updates and soft target updates.
+
+\subsection{Policy Improvement}
+We extract expected value from particles: $\mathbb{E}[Z]=\frac{1}{N}\sum_i z_i$ and choose actions maximizing mean (or CVaR for risk-sensitive variants).
+
+\subsection{Implementation Notes}
+Our reference implementation outputs $N$ scalar particles per action per state: shape $[B,A,N,1]$. We use geomloss.SamplesLoss when available; fallback to a Gaussian-kernel MMD when not, to ensure import safety. Gradient clipping and target networks stabilize training.
+
+\section{Theoretical Analysis}
+\subsection{Bias from Non-Potential Shaping}
+If $T$ is arbitrary, policy optimality can change. For bounded transformation error $\Delta_r(s,a)=T(r)-r$ with $\|\Delta_r\|_\infty \le \delta$, the value perturbation is bounded:
+\begin{equation}
+|V'^\pi(s)-V^\pi(s)| \le \frac{\delta}{1-\gamma},
+\label{eq:bias_bound}
+\end{equation}
+which follows from standard geometric series on Bellman sums.
+
+\subsection{Contraction Properties}
+If $T$ is $L_T$-Lipschitz, TD targets contract with factor at most $\gamma L_T$. If $L_T\le1$ then contraction is not worsened by shaping. Sinkhorn operator with blur $\varepsilon$ is Lipschitz w.r.t.\ input measures; combined operator remains contractive under bounded costs (sketch / appendix).
+
+\subsection{Variance Reduction Intuition}
+Shaping that moves mass upward and trims long negative tails reduces return variance $\mathrm{Var}(G)$. Lower variance of targets reduces Sinkhorn cost variance and stabilizes OT gradient estimation, enabling smaller $\varepsilon$ and fewer particles.
+
+\section{Experimental Setup}
+\subsection{Environments and Metrics}
+We evaluate on:
+\begin{itemize}
+  \item Maze navigation (grid-world with sparse goal).
+  \item Fetch robotics tasks (FetchReach, FetchPush) with sparse success reward.
+  \item Procgen (CoinRun) for procedurally generated challenges.
+  \item MuJoCo continuous control (Hopper, Walker) as rapid sanity checks.
+\end{itemize}
+Metrics: success rate vs environment steps, steps to 80\% success, mean/std of returns, CVaR, Sinkhorn loss curves, reward histograms pre/post transform.
+
+\subsection{Hyperparameters}
+We provide a default recommended set (see code/config.py). Key values:
+\begin{table}[h!]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Parameter & Default & Notes \\
+\midrule
+Particles $N$ & 32 & try 16,32,64\\
+Blur $\varepsilon$ & 0.01 & try 0.005–0.02 \\
+Scaling & 0.9 & geomloss scaling \\
+Beta (progress bonus) & 0.4 & 0.2–0.6 \\
+Batch & 256 & minibatch splits supported \\
+$\gamma$ & 0.99 & env dependent \\
+Tau & 0.005 & soft target update \\
+\bottomrule
+\end{tabular}
+\caption{Default hyperparameters (see code for full set).}
+\end{table}
+
+\subsection{Ablations}
+Compare four core configurations:
+\begin{enumerate}
+  \item Std reward + scalar loss (Huber)
+  \item Std reward + Sinkhorn loss
+  \item Max reward + scalar loss
+  \item Max reward + Sinkhorn loss (MaxSink)
+\end{enumerate}
+Explore particle counts, blur, and beta.
+
+\section{Practical Considerations}
+\subsection{Numerical Stability}
+Sinkhorn uses exponentials; keep loss computation in float32. If NaNs appear: increase blur, reduce LR, clip gradients, or use the MMD fallback.
+\subsection{Compute}
+OT scales roughly $O(BN^2)$ per loss call; KeOps or geomloss implementations help for larger $N$.
+
+\section{Discussion and Expected Findings}
+We hypothesize MaxSink yields multiplicative benefits in hard sparse tasks: the reward transform densifies signal and the Sinkhorn loss aligns particle supports for more informative gradients. If shaping fully collapses distributions (near-deterministic returns), OT advantage diminishes; this informs a practical regime where both tools are valuable.
+
+\section{Conclusion}
+MaxSink combines To-the-Max reward transformation and Sinkhorn distributional critics to accelerate sparse-goal learning while maintaining rich uncertainty estimates. We release a complete blueprint: code skeleton, training loop, logging, vectorized env support, sweep configs, and experimental protocols to reproduce the study.
+
+\paragraph{Acknowledgments}
+Assignment skeleton and derivative work prepared for educational use.
+
+\bibliographystyle{plain}
+\begin{thebibliography}{9}
+\bibitem{bellemare2017distributional}
+Marc G. Bellemare, Will Dabney, and others.
+Distributional Reinforcement Learning with Quantile Regression. 2017.
+
+\bibitem{dabney2018distributional}
+Will Dabney et al. A Distributional Perspective on Reinforcement Learning. 2018.
+
+\bibitem{ng1999policy}
+Andrew Y. Ng, Daishi Harada, Stuart Russell. Policy invariance under reward transformations: Theory and application to reward shaping. ICML 1999.
+
+\bibitem{feydy2019interpolating}
+J.-F. Feydy et al. Interpolating between Optimal Transport and MMD using Sinkhorn Divergences. ICML 2019.
+
+\bibitem{genevay2018learning}
+Antoine Genevay et al. Learning Generative Models with Sinkhorn Divergences. AISTATS 2018.
+
+\end{thebibliography}
+
+\appendix
+\section{Appendix: Proof Sketch of Bias Bound}
+From Bellman sums, let $\Delta_r(s,a)=T(r)-r$ and $|\Delta_r(s,a)|\le\delta$. Then for any policy $\pi$:
+\begin{align}
+|V'^\pi(s)-V^\pi(s)| &= \left|\mathbb{E}_\pi\sum_{t\ge0}\gamma^t \Delta_r(s_t,a_t)\right|\nonumber\\
+&\le \sum_{t\ge0}\gamma^t \delta = \frac{\delta}{1-\gamma},
+\end{align}
+which establishes Eq.~\ref{eq:bias_bound}.
+
+\section{Appendix: Sinkhorn Sensitivity}
+Sinkhorn potentials satisfy log-domain fixed point equations; decreasing variance in inputs reduces pairwise cost variance and yields smaller optimal plans entropy. For precise Lipschitz constants see \cite{feydy2019interpolating}.
+
+\section{Appendix: Experimental Details and Hyperparameters}
+We reproduce the default config in code: blur=0.01, particles=32, beta=0.4, batch=256, lr=3e-4, tau=0.005. Seeds: use 5 independent seeds for statistical reporting. Report 95\% CI via bootstrap.
+
+\end{document}
+

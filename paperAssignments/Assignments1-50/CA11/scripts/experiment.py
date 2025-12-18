@@ -98,14 +98,37 @@ def run(cfg, steps: int, save_dir: str):
                 try:
                     if isinstance(model, TWMSSDImageModel):
                         # create a random image batch to visualize reconstructions
-                        img_batch = torch.randn(cfg.batch_size, 3, getattr(cfg, "image_size", 32), getattr(cfg, "image_size", 32)).to(device)
+                        img_batch = torch.randn(
+                            cfg.batch_size,
+                            3,
+                            getattr(cfg, "image_size", 32),
+                            getattr(cfg, "image_size", 32),
+                        ).to(device)
                         recon, quantized, indices = model.vq(img_batch)
-                        grid_orig = vutils.make_grid(img_batch.cpu(), normalize=True, scale_each=True)
-                        grid_rec = vutils.make_grid(recon.cpu().clamp(-1, 1), normalize=True, scale_each=True)
+                        grid_orig = vutils.make_grid(
+                            img_batch.cpu(), normalize=True, scale_each=True
+                        )
+                        grid_rec = vutils.make_grid(
+                            recon.cpu().clamp(-1, 1), normalize=True, scale_each=True
+                        )
                         tb_writer.add_image("images/orig", grid_orig, it)
                         tb_writer.add_image("images/recon", grid_rec, it)
                         if _HAS_WANDB:
-                            wandb.log({"images/orig": [wandb.Image(grid_orig.numpy(), caption=f"iter_{it}")], "images/recon": [wandb.Image(grid_rec.numpy(), caption=f"iter_{it}")], "iter": it})
+                            wandb.log(
+                                {
+                                    "images/orig": [
+                                        wandb.Image(
+                                            grid_orig.numpy(), caption=f"iter_{it}"
+                                        )
+                                    ],
+                                    "images/recon": [
+                                        wandb.Image(
+                                            grid_rec.numpy(), caption=f"iter_{it}"
+                                        )
+                                    ],
+                                    "iter": it,
+                                }
+                            )
                 except Exception:
                     # logging should not interrupt training
                     logger.exception("Failed to log images")

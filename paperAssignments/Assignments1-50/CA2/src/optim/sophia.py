@@ -4,11 +4,11 @@ import math
 from typing import Iterable, List, Optional, Sequence, Tuple, Dict, Any
 
 import torch
-from torch.optim.optimizer import Optimizer, _params_if_cuda
+from torch.optim.optimizer import Optimizer
 
 
 class Sophia(Optimizer):
-    """
+    r"""
     A lightweight implementation of the Sophia-style diagonal Hessian
     preconditioner described in ICLR 2024 (diagonal Hessian EMA + clip).
 
@@ -85,11 +85,15 @@ class Sophia(Optimizer):
             # If using Hutchinson estimator we need the loss/graph; require closure
             if estimator == "hutchinson":
                 if closure is None:
-                    raise RuntimeError("Hutchinson estimator requires a closure that returns the loss (for second-order computation)")
+                    raise RuntimeError(
+                        "Hutchinson estimator requires a closure that returns the loss (for second-order computation)"
+                    )
                 # evaluate closure to get loss with create_graph True
                 loss = closure()
                 # compute gradients with create_graph for Hutchinson
-                grads = torch.autograd.grad(loss, params, create_graph=True, allow_unused=True)
+                grads = torch.autograd.grad(
+                    loss, params, create_graph=True, allow_unused=True
+                )
             else:
                 grads = [p.grad.data if p.grad is not None else None for p in params]
 
@@ -119,9 +123,25 @@ class Sophia(Optimizer):
                     # perform Hutchinson diag estimate: Hv * v elementwise with random v
                     hv_acc = torch.zeros_like(p.data)
                     for _ in range(max(1, hutchinson_samples)):
-                        v = torch.randint(0, 2, p.data.shape, device=p.data.device, dtype=p.data.dtype) * 2 - 1
+                        v = (
+                            torch.randint(
+                                0,
+                                2,
+                                p.data.shape,
+                                device=p.data.device,
+                                dtype=p.data.dtype,
+                            )
+                            * 2
+                            - 1
+                        )
                         # compute Hessian-vector product Hv via autograd: grad_outputs = v
-                        Hv = torch.autograd.grad(grad, p, grad_outputs=v, retain_graph=True, allow_unused=True)
+                        Hv = torch.autograd.grad(
+                            grad,
+                            p,
+                            grad_outputs=v,
+                            retain_graph=True,
+                            allow_unused=True,
+                        )
                         if Hv is None or Hv[0] is None:
                             # fallback to squared grad if Hv unavailable
                             hv_est = grad * grad
@@ -136,7 +156,9 @@ class Sophia(Optimizer):
                     h.mul_(beta2).addcmul_(grad, grad, value=(1.0 - beta2))
 
                 # Denominator: scaled Hessian estimate with numerical floor
-                denom = torch.maximum(gamma * h, torch.tensor(eps, device=h.device, dtype=h.dtype))
+                denom = torch.maximum(
+                    gamma * h, torch.tensor(eps, device=h.device, dtype=h.dtype)
+                )
                 # Normalized step
                 step = m.div(denom)
                 # Clip step magnitude and scale by lr
@@ -149,4 +171,3 @@ class Sophia(Optimizer):
     def load_state_dict(self, state_dict):
         # Use default loader but ensure tensors map correctly to device
         super().load_state_dict(state_dict)
-

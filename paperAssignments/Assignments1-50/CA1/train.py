@@ -128,7 +128,9 @@ def preprocess_obs(o):
     return o
 
 
-def select_action_from_particles(particles: torch.Tensor, epsilon: float = 0.0) -> np.ndarray:
+def select_action_from_particles(
+    particles: torch.Tensor, epsilon: float = 0.0
+) -> np.ndarray:
     # particles: (B, A, N, D) -> compute mean over particles and last dim -> (B, A)
     with torch.no_grad():
         means = particles.mean(dim=2).mean(dim=-1)  # (B, A)
@@ -169,7 +171,11 @@ def train(cfg: Config):
     if obs_example.ndim == 3:
         # pixel obs (H,W,C) or (C,H,W) - convert to C,H,W
         if obs_example.shape[-1] in (1, 3):
-            obs_shape = (obs_example.shape[2], obs_example.shape[0], obs_example.shape[1])
+            obs_shape = (
+                obs_example.shape[2],
+                obs_example.shape[0],
+                obs_example.shape[1],
+            )
         else:
             obs_shape = obs_example.shape
         pixel = True
@@ -182,17 +188,27 @@ def train(cfg: Config):
     if hasattr(env.action_space, "n"):
         num_actions = env.action_space.n
     else:
-        raise NotImplementedError("Only discrete action spaces supported in this minimal trainer")
+        raise NotImplementedError(
+            "Only discrete action spaces supported in this minimal trainer"
+        )
 
     if pixel:
         model = ParticleQNetwork(
-            in_channels=obs_shape[0], num_actions=num_actions, num_particles=cfg.num_particles, particle_dim=cfg.particle_dim
+            in_channels=obs_shape[0],
+            num_actions=num_actions,
+            num_particles=cfg.num_particles,
+            particle_dim=cfg.particle_dim,
         )
         target_model = copy.deepcopy(model)
     else:
         obs_dim = obs_shape[0]
         enc = MLPEncoder(obs_dim, out_dim=512)
-        head = ParticleHead(in_dim=512, num_actions=num_actions, num_particles=cfg.num_particles, particle_dim=cfg.particle_dim)
+        head = ParticleHead(
+            in_dim=512,
+            num_actions=num_actions,
+            num_particles=cfg.num_particles,
+            particle_dim=cfg.particle_dim,
+        )
 
         class LowDimParticleNet(nn.Module):
             def __init__(self, enc, head):
@@ -212,7 +228,12 @@ def train(cfg: Config):
 
     opt = optim.Adam(model.parameters(), lr=cfg.lr)
 
-    loss_fn = AnnealedSinkhornLoss(n_iters=cfg.sinkhorn_iters, eps_start=cfg.sinkhorn_eps_start, eps_end=cfg.sinkhorn_eps_end, decay_steps=cfg.sinkhorn_decay_steps)
+    loss_fn = AnnealedSinkhornLoss(
+        n_iters=cfg.sinkhorn_iters,
+        eps_start=cfg.sinkhorn_eps_start,
+        eps_end=cfg.sinkhorn_eps_end,
+        decay_steps=cfg.sinkhorn_decay_steps,
+    )
     loss_fn.to(device)
 
     replay = ReplayBuffer(obs_shape, size=cfg.replay_size)
@@ -294,7 +315,9 @@ def train(cfg: Config):
                 next_best = torch.argmax(next_means, dim=-1)
                 idx_n = next_best.view(-1, 1, 1, 1).expand(-1, 1, N, D)
                 targ_sel = next_particles.gather(1, idx_n).squeeze(1)
-                y = r_t.view(-1, 1, 1) + cfg.gamma * targ_sel * (1.0 - d_t.view(-1, 1, 1))
+                y = r_t.view(-1, 1, 1) + cfg.gamma * targ_sel * (
+                    1.0 - d_t.view(-1, 1, 1)
+                )
 
             loss = loss_fn(pred_sel, y)
 
@@ -333,11 +356,14 @@ def train(cfg: Config):
                 eval_returns.append(ep_ret_eval)
             mean_eval = float(np.mean(eval_returns))
             print(f"Eval returns (3 episodes): mean={mean_eval:.2f}")
-            torch.save({
-                "model_state": model.state_dict(),
-                "opt_state": opt.state_dict(),
-                "step": step,
-            }, os.path.join(cfg.save_dir, f"ckpt_step_{step}.pt"))
+            torch.save(
+                {
+                    "model_state": model.state_dict(),
+                    "opt_state": opt.state_dict(),
+                    "step": step,
+                },
+                os.path.join(cfg.save_dir, f"ckpt_step_{step}.pt"),
+            )
 
     env.close()
     eval_env.close()
@@ -359,7 +385,9 @@ def parse_args() -> Config:
     cfg = Config()
     if args.config is not None:
         if yaml is None:
-            raise RuntimeError("PyYAML is required to load config files. Install with `pip install pyyaml`." )
+            raise RuntimeError(
+                "PyYAML is required to load config files. Install with `pip install pyyaml`."
+            )
         with open(args.config, "r") as f:
             data = yaml.safe_load(f)
         # shallow map
@@ -368,7 +396,9 @@ def parse_args() -> Config:
                 cfg.sinkhorn_iters = v.get("iters", cfg.sinkhorn_iters)
                 cfg.sinkhorn_eps_start = v.get("eps_start", cfg.sinkhorn_eps_start)
                 cfg.sinkhorn_eps_end = v.get("eps_end", cfg.sinkhorn_eps_end)
-                cfg.sinkhorn_decay_steps = v.get("decay_steps", cfg.sinkhorn_decay_steps)
+                cfg.sinkhorn_decay_steps = v.get(
+                    "decay_steps", cfg.sinkhorn_decay_steps
+                )
             elif hasattr(cfg, k):
                 setattr(cfg, k, v)
 

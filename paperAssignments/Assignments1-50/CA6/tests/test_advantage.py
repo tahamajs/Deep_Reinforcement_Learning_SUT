@@ -2,7 +2,7 @@ import math
 
 import torch
 
-from advantage import compute_advantages, update_gamma, update_gamma_with_ema
+from ..advantage import compute_advantages, update_gamma, update_gamma_with_ema
 
 
 def test_compute_advantages_simple():
@@ -73,4 +73,3 @@ def test_update_gamma_with_ema_behavior():
     )
     # ema should be between 0.5 and 0.6
     assert 0.5 <= ema2 <= 0.6
-

@@ -5,8 +5,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from paperAssignments.Assignments1_50.CA10.models.ezv2_ma_net import MAEZV2Network
-from paperAssignments.Assignments1_50.CA10.mcts.gumbel_topk import topk_joint, topk_factored
+from ..models.ezv2_ma_net import MAEZV2Network
+from ..mcts.gumbel_topk import topk_joint, topk_factored
 
 
 class EfficientZeroV2Policy(nn.Module):
@@ -109,4 +109,3 @@ if __name__ == "__main__":
     obs = torch.randn(2, 12)
     lj, la, v, z = policy.initial_infer(obs)
     print("logits_joint", lj.shape, "value", v.shape, "prefix", z.shape)
-

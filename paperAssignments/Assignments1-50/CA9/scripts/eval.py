@@ -88,18 +88,39 @@ def main():
         os.makedirs(out_dir, exist_ok=True)
         try:
             from ..src.utils.logger import plot_series
+
             # save returns plot
-            plot_series([0, 1], {"returns": [avg, avg]}, os.path.join(out_dir, "returns.png"), title="Eval returns")
+            plot_series(
+                [0, 1],
+                {"returns": [avg, avg]},
+                os.path.join(out_dir, "returns.png"),
+                title="Eval returns",
+            )
             # save trajectories and per-episode reward plots
             import numpy as _np
+
             for i, traj in enumerate(trajectories):
                 ep_dir = os.path.join(out_dir, f"ep_{i}")
                 os.makedirs(ep_dir, exist_ok=True)
-                _np.save(os.path.join(ep_dir, "obs.npy"), _np.array(traj["obs"], dtype=object))
-                _np.save(os.path.join(ep_dir, "acts.npy"), _np.array(traj["acts"], dtype=object))
-                _np.save(os.path.join(ep_dir, "rews.npy"), _np.array(traj["rews"], dtype=float))
+                _np.save(
+                    os.path.join(ep_dir, "obs.npy"),
+                    _np.array(traj["obs"], dtype=object),
+                )
+                _np.save(
+                    os.path.join(ep_dir, "acts.npy"),
+                    _np.array(traj["acts"], dtype=object),
+                )
+                _np.save(
+                    os.path.join(ep_dir, "rews.npy"),
+                    _np.array(traj["rews"], dtype=float),
+                )
                 # plot rewards over steps
-                plot_series(list(range(len(traj["rews"]))), {"rewards": traj["rews"]}, os.path.join(ep_dir, "rewards.png"), title=f"Episode {i} rewards")
+                plot_series(
+                    list(range(len(traj["rews"]))),
+                    {"rewards": traj["rews"]},
+                    os.path.join(ep_dir, "rewards.png"),
+                    title=f"Episode {i} rewards",
+                )
         except Exception:
             pass
     except Exception as e:

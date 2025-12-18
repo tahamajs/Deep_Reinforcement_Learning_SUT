@@ -6,6 +6,7 @@ Usage examples (script):
 This script expects a JSON file containing a list of branches where each branch
 is a dict with keys: 'ret' and 'traj' (traj is list of [z, a, r, gamma]; z/a may be lists).
 """
+
 from __future__ import annotations
 import json
 from pathlib import Path
@@ -86,6 +87,7 @@ def plot_branch_latent_pca(branches: List[Any], out: str, max_samples: int = 200
 
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) < 3:
         print("Usage: visualize_branches.py branches.json out_prefix")
         sys.exit(1)
@@ -94,4 +96,3 @@ if __name__ == "__main__":
     plot_branch_returns(branches, out_prefix.replace(".png", "_returns.png"))
     plot_topk_actions(branches, out_prefix.replace(".png", "_actions.png"))
     plot_branch_latent_pca(branches, out_prefix.replace(".png", "_pca.png"))
-

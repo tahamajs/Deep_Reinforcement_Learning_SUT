@@ -31,4 +31,3 @@ def test_checkpoint_roundtrip():
             assert torch.allclose(before[k], after[k], atol=1e-6, rtol=1e-4)
     finally:
         os.remove(path)
-

@@ -29,7 +29,7 @@ Math & Objective (example)
 
 Policy-gradient sketch
 
-\nabla_\theta J(\theta) = E_{s,a}[\nabla_\theta \log \pi_\theta(a|s) A(s,a)] - \lambda \nabla_\theta R(\pi_\theta)
+\nabla*\theta J(\theta) = E*{s,a}[\nabla_\theta \log \pi_\theta(a|s) A(s,a)] - \lambda \nabla*\theta R(\pi*\theta)
 
 Mapping to code
 
@@ -87,4 +87,3 @@ Appendix: Microtasks and padding
 28. Micro-task 28
 29. Micro-task 29
 30. Micro-task 30
-

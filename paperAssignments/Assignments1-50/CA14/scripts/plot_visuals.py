@@ -10,6 +10,7 @@ produce the following figures and save them to ../pictures/:
 The functions are ready-to-run; they do not execute upon import. Fill the data-loading
 parts to point to your actual logs/checkpoints.
 """
+
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,7 +21,11 @@ PICS_DIR = Path(__file__).resolve().parents[1] / "pictures"
 PICS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def plot_tsne_z_morph(z_morph: np.ndarray, morph_ids: np.ndarray, filename: str = "fig_01_tsne_z_morph.png") -> None:
+def plot_tsne_z_morph(
+    z_morph: np.ndarray,
+    morph_ids: np.ndarray,
+    filename: str = "fig_01_tsne_z_morph.png",
+) -> None:
     """Plot 2D t-SNE of morphology latents.
 
     Args:
@@ -30,7 +35,9 @@ def plot_tsne_z_morph(z_morph: np.ndarray, morph_ids: np.ndarray, filename: str 
     tsne = TSNE(n_components=2, perplexity=30, random_state=0)
     z2 = tsne.fit_transform(z_morph)
     plt.figure(figsize=(6, 5))
-    sns.scatterplot(x=z2[:, 0], y=z2[:, 1], hue=morph_ids, palette="tab10", s=20, linewidth=0)
+    sns.scatterplot(
+        x=z2[:, 0], y=z2[:, 1], hue=morph_ids, palette="tab10", s=20, linewidth=0
+    )
     plt.title("t-SNE of inferred morphology latents")
     plt.axis("off")
     out = PICS_DIR / filename
@@ -38,7 +45,9 @@ def plot_tsne_z_morph(z_morph: np.ndarray, morph_ids: np.ndarray, filename: str 
     plt.close()
 
 
-def plot_adaptation_curve(returns: np.ndarray, labels: list, filename: str = "fig_02_adaptation_curve.png") -> None:
+def plot_adaptation_curve(
+    returns: np.ndarray, labels: list, filename: str = "fig_02_adaptation_curve.png"
+) -> None:
     """Plot adaptation curves.
 
     Args:
@@ -62,7 +71,12 @@ def plot_adaptation_curve(returns: np.ndarray, labels: list, filename: str = "fi
     plt.close()
 
 
-def plot_reconstruction(obs: np.ndarray, recon: np.ndarray, n: int = 5, filename: str = "fig_03_reconstruction.png") -> None:
+def plot_reconstruction(
+    obs: np.ndarray,
+    recon: np.ndarray,
+    n: int = 5,
+    filename: str = "fig_03_reconstruction.png",
+) -> None:
     """Plot side-by-side reconstructions for proprio/state vectors (line plots).
 
     Args:
@@ -83,7 +97,9 @@ def plot_reconstruction(obs: np.ndarray, recon: np.ndarray, n: int = 5, filename
     plt.close()
 
 
-def plot_kl_trends(kl_z: np.ndarray, kl_m: np.ndarray, filename: str = "fig_04_kl_trends.png") -> None:
+def plot_kl_trends(
+    kl_z: np.ndarray, kl_m: np.ndarray, filename: str = "fig_04_kl_trends.png"
+) -> None:
     plt.figure(figsize=(6, 4))
     plt.plot(kl_z, label="KL z")
     plt.plot(kl_m, label="KL z_morph")
@@ -97,4 +113,6 @@ def plot_kl_trends(kl_z: np.ndarray, kl_m: np.ndarray, filename: str = "fig_04_k
 
 
 if __name__ == "__main__":
-    print("plot_visuals.py: library of plotting functions. Import and call functions with real data.")
+    print(
+        "plot_visuals.py: library of plotting functions. Import and call functions with real data."
+    )

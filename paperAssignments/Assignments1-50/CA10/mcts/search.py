@@ -7,7 +7,7 @@ import heapq
 import torch
 import torch.nn.functional as F
 
-from paperAssignments.Assignments1_50.CA10.mcts.gumbel_topk import topk_joint, topk_factored
+from ..mcts.gumbel_topk import topk_joint, topk_factored
 
 
 class MCTSNode:
@@ -198,7 +198,9 @@ class MCTS:
                 # For bookkeeping, increment joint_counts for expanded children (approximate)
                 for idx_repr, _ in candidates:
                     jkey = idx_repr if isinstance(idx_repr, tuple) else (idx_repr,)
-                    joint_counts[jkey] = joint_counts.get(jkey, 0) + 0  # ensure key exists
+                    joint_counts[jkey] = (
+                        joint_counts.get(jkey, 0) + 0
+                    )  # ensure key exists
 
                 # evaluate
                 value = float(value_leaf.detach().cpu().item())
@@ -222,7 +224,11 @@ class MCTS:
             policy_results.append(visit_counts / (visit_counts.sum() + 1e-8))
             # also prepare joint visit tensor and keys
             joint_keys = list(joint_counts.keys())
-            joint_vals = torch.tensor([joint_counts[k] for k in joint_keys], dtype=torch.float32) if joint_keys else torch.tensor([], dtype=torch.float32)
+            joint_vals = (
+                torch.tensor([joint_counts[k] for k in joint_keys], dtype=torch.float32)
+                if joint_keys
+                else torch.tensor([], dtype=torch.float32)
+            )
             # store as attribute for later inspection
             root._joint_visit_keys = joint_keys
             root._joint_visit_vals = joint_vals
@@ -235,4 +241,3 @@ class MCTS:
 
 
 __all__ = ["MCTS", "MCTSNode"]
-

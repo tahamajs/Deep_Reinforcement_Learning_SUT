@@ -59,7 +59,11 @@ class ReplayBuffer:
         reward = stack("reward").squeeze(-1)
         # reward_raw may be missing if older data; fill with reward when absent
         if "reward_raw" in batch[0]:
-            reward_raw = torch.from_numpy(np.stack([b["reward_raw"] for b in batch])).float().squeeze(-1)
+            reward_raw = (
+                torch.from_numpy(np.stack([b["reward_raw"] for b in batch]))
+                .float()
+                .squeeze(-1)
+            )
         else:
             reward_raw = reward.clone()
         next_state = stack("next_state")
@@ -276,10 +280,21 @@ def main():
                 if plot_sinkhorn_loss is not None:
                     # naive: save the mean_loss curve up to this point (append)
                     # here we just plot a single-point series for demonstration
-                    plot_sinkhorn_loss([mean_loss], save_path=os.path.join(picdir, f"sinkhorn_step_{step}.png"))
+                    plot_sinkhorn_loss(
+                        [mean_loss],
+                        save_path=os.path.join(picdir, f"sinkhorn_step_{step}.png"),
+                    )
                 # particle PCA
-                if plot_particle_pca is not None and last_x is not None and last_y is not None:
-                    plot_particle_pca(last_x, last_y, save_path=os.path.join(picdir, f"particles_step_{step}.png"))
+                if (
+                    plot_particle_pca is not None
+                    and last_x is not None
+                    and last_y is not None
+                ):
+                    plot_particle_pca(
+                        last_x,
+                        last_y,
+                        save_path=os.path.join(picdir, f"particles_step_{step}.png"),
+                    )
             if cfg.use_wandb and wandb is not None:
                 wandb.log({"train/sinkhorn_loss": mean_loss, "step": step})
             if step % 1000 == 0:
@@ -293,4 +308,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'paperAssignments/Assignments1-50/CA4/**'
+      - "paperAssignments/Assignments1-50/CA4/**"
 
 jobs:
   build-pdf:
@@ -27,4 +27,3 @@ jobs:
         with:
           name: Dist-SCAS-paper
           path: paperAssignments/Assignments1-50/CA4/report_neurips.pdf
-

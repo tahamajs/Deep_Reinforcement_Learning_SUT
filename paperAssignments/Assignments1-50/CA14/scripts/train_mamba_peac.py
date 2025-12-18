@@ -7,6 +7,7 @@ This script implements a compact training loop that:
 
 The implementation is intentionally simple to be readable and easy to extend.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -33,7 +34,9 @@ from mamba_core.replay import ReplayBuffer
 def build_models(cfg: Dict, obs_dim: int, act_dim: int):
     morph_dim = cfg.get("morph", {}).get("latent_dim", 16)
     wm_latent = cfg.get("world_model", {}).get("latent_dim", 64)
-    wm = WorldModel(obs_dim=obs_dim, act_dim=act_dim, stoch_dim=wm_latent, morph_dim=morph_dim)
+    wm = WorldModel(
+        obs_dim=obs_dim, act_dim=act_dim, stoch_dim=wm_latent, morph_dim=morph_dim
+    )
     morph = MorphEncoder(obs_dim=obs_dim, act_dim=act_dim, latent_dim=morph_dim)
     actor = Actor(latent_dim=wm_latent, morph_dim=morph_dim, act_dim=act_dim)
     value = ValueNet(latent_dim=wm_latent, morph_dim=morph_dim)
@@ -45,14 +48,27 @@ def parse_args():
     p.add_argument("--config", type=str, default="configs/mamba_peac.yaml")
     p.add_argument("--env", type=str, default="Walker2d-v4")
     p.add_argument("--steps", type=int, default=20000)
-    p.add_argument("--train_morphs", nargs="+", default=["walker2d-v4", "hopper-v4", "halfcheetah-v4"])
+    p.add_argument(
+        "--train_morphs",
+        nargs="+",
+        default=["walker2d-v4", "hopper-v4", "halfcheetah-v4"],
+    )
     p.add_argument("--heldout_morph", type=str, default="ant-v4")
     p.add_argument("--eval_only", action="store_true")
-    p.add_argument("--smoke", action="store_true", help="run a very short smoke training loop")
+    p.add_argument(
+        "--smoke", action="store_true", help="run a very short smoke training loop"
+    )
     return p.parse_args()
 
 
-def infer_morph_from_history(morph_encoder: MorphEncoder, obs_seq: np.ndarray, act_seq: np.ndarray, rew_seq: np.ndarray, done_seq: np.ndarray, device: torch.device):
+def infer_morph_from_history(
+    morph_encoder: MorphEncoder,
+    obs_seq: np.ndarray,
+    act_seq: np.ndarray,
+    rew_seq: np.ndarray,
+    done_seq: np.ndarray,
+    device: torch.device,
+):
     # obs_seq: (B, L, D)
     obs_t = torch.from_numpy(obs_seq).float().to(device)
     act_t = torch.from_numpy(act_seq).float().to(device)
@@ -62,18 +78,33 @@ def infer_morph_from_history(morph_encoder: MorphEncoder, obs_seq: np.ndarray, a
     return z_m, mu_m, logvar_m
 
 
-def collect_episode(env, actor: Actor, morph_enc: MorphEncoder, device: torch.device, max_steps: int = 1000):
+def collect_episode(
+    env,
+    actor: Actor,
+    morph_enc: MorphEncoder,
+    device: torch.device,
+    max_steps: int = 1000,
+):
     obs_list, act_list, rew_list, done_list = [], [], [], []
     obs, _ = env.reset()
     for _ in range(max_steps):
         obs_arr = np.array(obs, dtype=np.float32)
         # simple zero morph conditioning for collection; actor expects torch input
-        z = torch.zeros(1, actor.fc1.in_features - actor.film.scale.in_features, device=device)
+        z = torch.zeros(
+            1, actor.fc1.in_features - actor.film.scale.in_features, device=device
+        )
         z = torch.randn(1, actor.film.scale.in_features, device=device) * 0.0  # zeros
         obs_t = torch.from_numpy(obs_arr).float().unsqueeze(0).to(device)
         # sample random action initially (exploration)
         with torch.no_grad():
-            a = actor.act(torch.randn(1, actor.fc1.in_features - actor.film.scale.in_features, device=device), z)
+            a = actor.act(
+                torch.randn(
+                    1,
+                    actor.fc1.in_features - actor.film.scale.in_features,
+                    device=device,
+                ),
+                z,
+            )
             a = a.squeeze(0).cpu().numpy()
         next_obs, reward, terminated, truncated, info = env.step(a)
         done = bool(terminated or truncated)
@@ -94,15 +125,30 @@ def train_loop(cfg: Dict, env_name: str, steps: int = 20000, smoke: bool = False
     act_dim = env.action_space.shape[0]
 
     wm, morph, actor, value = build_models(cfg, obs_dim, act_dim)
-    wm.to(device); morph.to(device); actor.to(device); value.to(device)
+    wm.to(device)
+    morph.to(device)
+    actor.to(device)
+    value.to(device)
 
     # optimizers
     wm_opt = optim.Adam(wm.parameters(), lr=cfg.get("world_model", {}).get("lr", 3e-4))
-    morph_opt = optim.Adam(morph.parameters(), lr=cfg.get("morph", {}).get("lr", 3e-4) if cfg.get("morph", {}).get("lr") else 3e-4)
+    morph_opt = optim.Adam(
+        morph.parameters(),
+        lr=(
+            cfg.get("morph", {}).get("lr", 3e-4)
+            if cfg.get("morph", {}).get("lr")
+            else 3e-4
+        ),
+    )
     actor_opt = optim.Adam(actor.parameters(), lr=cfg.get("actor", {}).get("lr", 3e-4))
     value_opt = optim.Adam(value.parameters(), lr=cfg.get("value", {}).get("lr", 3e-4))
 
-    replay = ReplayBuffer(obs_dim=obs_dim, act_dim=act_dim, capacity=10000, seq_len=cfg.get("morph", {}).get("history_len", 50))
+    replay = ReplayBuffer(
+        obs_dim=obs_dim,
+        act_dim=act_dim,
+        capacity=10000,
+        seq_len=cfg.get("morph", {}).get("history_len", 50),
+    )
 
     # warmup: collect a few random episodes
     warmup_eps = 5 if not smoke else 1
@@ -158,17 +204,26 @@ def train_loop(cfg: Dict, env_name: str, steps: int = 20000, smoke: bool = False
                 r_pred = wm.predict_reward(h, z, z_m)
                 recon_losses.append(((recon - obs_t) ** 2).mean())
                 reward_losses.append(((r_pred - rews_b[:, t]) ** 2).mean())
-                kl_z_terms.append(kl_normal(mu_post, logvar_post, mu_prior, logvar_prior))
+                kl_z_terms.append(
+                    kl_normal(mu_post, logvar_post, mu_prior, logvar_prior)
+                )
             recon_loss = torch.stack(recon_losses).mean()
             reward_loss = torch.stack(reward_losses).mean()
             kl_z = torch.stack(kl_z_terms).mean()
 
-            wm_loss = recon_loss + reward_loss + beta_z * torch.clamp(kl_z - free_bits_z, min=0.0).mean() + beta_m * torch.clamp(kl_m - free_bits_m, min=0.0).mean()
+            wm_loss = (
+                recon_loss
+                + reward_loss
+                + beta_z * torch.clamp(kl_z - free_bits_z, min=0.0).mean()
+                + beta_m * torch.clamp(kl_m - free_bits_m, min=0.0).mean()
+            )
 
             wm_opt.zero_grad()
             morph_opt.zero_grad()
             wm_loss.backward()
-            torch.nn.utils.clip_grad_norm_(wm.parameters(), cfg.get("train", {}).get("grad_clip", 40))
+            torch.nn.utils.clip_grad_norm_(
+                wm.parameters(), cfg.get("train", {}).get("grad_clip", 40)
+            )
             wm_opt.step()
             morph_opt.step()
 
@@ -193,7 +248,9 @@ def train_loop(cfg: Dict, env_name: str, steps: int = 20000, smoke: bool = False
                     a_mu, a_std = actor(z_input, z_m_imagine)
                     a = a_mu + a_std * torch.randn_like(a_std)
                 # imagine one step
-                h_curr, z_curr, mu_prior, logvar_prior = wm.imagine(h_curr, a, z_m_imagine)
+                h_curr, z_curr, mu_prior, logvar_prior = wm.imagine(
+                    h_curr, a, z_m_imagine
+                )
                 r_pred = wm.predict_reward(h_curr, z_curr, z_m_imagine)
                 gamma = wm.predict_discount(h_curr, z_curr, z_m_imagine)
                 v = value(z_curr, z_m_imagine)
@@ -213,14 +270,18 @@ def train_loop(cfg: Dict, env_name: str, steps: int = 20000, smoke: bool = False
 
             value_opt.zero_grad()
             value_loss.backward()
-            torch.nn.utils.clip_grad_norm_(value.parameters(), cfg.get("train", {}).get("grad_clip", 40))
+            torch.nn.utils.clip_grad_norm_(
+                value.parameters(), cfg.get("train", {}).get("grad_clip", 40)
+            )
             value_opt.step()
 
             # actor loss: negative imagined return (policy gradient through imagined model not implemented here)
             # We use a simple surrogate: maximize sum of predicted rewards minus value baseline
             returns = targets
             actor_loss = 0.0
-            for a_step, r_step, v_step in zip(range(len(returns)), imag_rewards, imag_values):
+            for a_step, r_step, v_step in zip(
+                range(len(returns)), imag_rewards, imag_values
+            ):
                 adv = (returns[a_step].detach() - v_step).mean()
                 # encourage actions that lead to higher advantage via simple negated advantage times action magnitude
                 actor_loss = actor_loss - adv
@@ -228,11 +289,15 @@ def train_loop(cfg: Dict, env_name: str, steps: int = 20000, smoke: bool = False
 
             actor_opt.zero_grad()
             actor_loss.backward()
-            torch.nn.utils.clip_grad_norm_(actor.parameters(), cfg.get("train", {}).get("grad_clip", 40))
+            torch.nn.utils.clip_grad_norm_(
+                actor.parameters(), cfg.get("train", {}).get("grad_clip", 40)
+            )
             actor_opt.step()
 
         if total_steps % 1000 == 0:
-            print(f"steps={total_steps}, wm_loss={wm_loss.item():.4f}, value_loss={value_loss.item():.4f}, actor_loss={actor_loss.item():.4f}")
+            print(
+                f"steps={total_steps}, wm_loss={wm_loss.item():.4f}, value_loss={value_loss.item():.4f}, actor_loss={actor_loss.item():.4f}"
+            )
 
         if smoke:
             break

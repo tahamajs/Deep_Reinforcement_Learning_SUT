@@ -3,10 +3,10 @@ name: CI - CA4 (Dist-SCAS)
 on:
   push:
     paths:
-      - 'paperAssignments/Assignments1-50/CA4/**'
+      - "paperAssignments/Assignments1-50/CA4/**"
   pull_request:
     paths:
-      - 'paperAssignments/Assignments1-50/CA4/**'
+      - "paperAssignments/Assignments1-50/CA4/**"
 
 jobs:
   test-ca4:
@@ -38,4 +38,3 @@ jobs:
       - name: Run CA4 tests
         run: |
           pytest -q paperAssignments/Assignments1-50/CA4/tests
-

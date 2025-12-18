@@ -1,4 +1,5 @@
 from typing import Tuple, Optional
+import math
 import torch
 from torch import nn
 
@@ -139,10 +140,9 @@ class StochasticActor(nn.Module):
         actions = torch.tanh(pre_tanh)
         # log probability with tanh squashing correction:
         # logp = Normal(pre_tanh; mean, std).log_prob(pre_tanh) - sum(log(1 - tanh^2(pre_tanh)))
+        const_term = torch.log(torch.tensor(2 * math.pi, device=std.device))
         normal_logp = -0.5 * (
-            ((pre_tanh - mean) / std) ** 2
-            + 2 * torch.log(std)
-            + torch.log(2 * torch.pi)
+            ((pre_tanh - mean) / std) ** 2 + 2 * torch.log(std) + const_term
         )
         # sum over action dim
         normal_logp = normal_logp.sum(-1)
@@ -167,13 +167,11 @@ class StochasticActor(nn.Module):
         eps = 1e-6
         clipped = actions.clamp(-1 + eps, 1 - eps)
         pre_tanh = 0.5 * (torch.log1p(clipped) - torch.log1p(-clipped))
+        const_term = torch.log(torch.tensor(2 * math.pi, device=std.device))
         normal_logp = -0.5 * (
-            ((pre_tanh - mean) / std) ** 2
-            + 2 * torch.log(std)
-            + torch.log(2 * torch.pi)
+            ((pre_tanh - mean) / std) ** 2 + 2 * torch.log(std) + const_term
         )
         normal_logp = normal_logp.sum(-1)
         log_det = torch.log(1.0 - clipped.pow(2) + 1e-6).sum(-1)
         logp = normal_logp - log_det
         return logp
-

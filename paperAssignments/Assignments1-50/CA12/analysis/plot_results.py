@@ -8,6 +8,7 @@ Produces publication-quality figures (matplotlib / seaborn) from demo outputs:
 Usage:
     python analysis/plot_results.py --ckpt_dir outputs/ca12_checkpoints --out_dir pictures
 """
+
 from __future__ import annotations
 import argparse
 import os
@@ -27,11 +28,17 @@ def plot_eval_returns(csv_path: Path, out_dir: Path) -> Path:
         raise RuntimeError(f"No eval data at {csv_path}")
 
     # smooth with rolling median for visual clarity
-    df["smoothed"] = df["avg_return"].rolling(window=max(1, int(len(df) / 10)), min_periods=1).median()
+    df["smoothed"] = (
+        df["avg_return"]
+        .rolling(window=max(1, int(len(df) / 10)), min_periods=1)
+        .median()
+    )
 
     plt.figure(figsize=(6.4, 4.0))
     plt.plot(df["steps"], df["avg_return"], color="#1f77b4", alpha=0.25, label="raw")
-    plt.plot(df["steps"], df["smoothed"], color="#1f77b4", lw=2.0, label="smoothed (median)")
+    plt.plot(
+        df["steps"], df["smoothed"], color="#1f77b4", lw=2.0, label="smoothed (median)"
+    )
     plt.xlabel("Environment Steps")
     plt.ylabel("Average Return")
     plt.title("RA-U-OBAC: Eval Return vs Steps")
@@ -57,7 +64,9 @@ def plot_loss_csv(loss_csv: Path, out_dir: Path, col_prefix: str = "loss"):
 
     plt.figure(figsize=(7, 4))
     for c in cols:
-        plt.plot(df["step"] if "step" in df.columns else np.arange(len(df)), df[c], label=c)
+        plt.plot(
+            df["step"] if "step" in df.columns else np.arange(len(df)), df[c], label=c
+        )
     plt.xlabel("Update Step")
     plt.ylabel("Loss")
     plt.yscale("log")
@@ -74,8 +83,14 @@ def plot_loss_csv(loss_csv: Path, out_dir: Path, col_prefix: str = "loss"):
 def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("--ckpt_dir", type=Path, default=Path("outputs/ca12_checkpoints"))
-    p.add_argument("--out_dir", type=Path, default=Path("paperAssignments/Assignments1-50/CA12/pictures"))
-    p.add_argument("--loss_csv", type=Path, default=None, help="Optional training loss CSV")
+    p.add_argument(
+        "--out_dir",
+        type=Path,
+        default=Path("paperAssignments/Assignments1-50/CA12/pictures"),
+    )
+    p.add_argument(
+        "--loss_csv", type=Path, default=None, help="Optional training loss CSV"
+    )
     args = p.parse_args(argv)
 
     eval_csv = args.ckpt_dir / "eval_returns.csv"
@@ -95,4 +110,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
-

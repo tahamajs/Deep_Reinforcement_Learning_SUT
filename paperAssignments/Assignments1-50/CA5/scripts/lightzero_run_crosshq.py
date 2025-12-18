@@ -3,6 +3,7 @@
 Produces a visualization of priors, visit counts and estimated Q-values for the root action set.
 Enhanced plots: priors, visits, estimated Q per action, and BN running stats where available.
 """
+
 import argparse
 import random
 import os
@@ -25,7 +26,9 @@ def make_action_set(action_dim: int, n: int = 5):
     return actions
 
 
-def run_crosshq_planning(seed: int = 0, sims: int = 200, horizon: int = 3, out_dir: str = "pictures"):
+def run_crosshq_planning(
+    seed: int = 0, sims: int = 200, horizon: int = 3, out_dir: str = "pictures"
+):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -41,7 +44,12 @@ def run_crosshq_planning(seed: int = 0, sims: int = 200, horizon: int = 3, out_d
     action_set = make_action_set(a_dim, n=6)
 
     adapter = CrossHQMCTSAdapter(critic, actor, action_set)
-    puct = PUCT(adapter, action_space=list(range(len(action_set))), c_puct=1.0, dirichlet_alpha=0.25)
+    puct = PUCT(
+        adapter,
+        action_space=list(range(len(action_set))),
+        c_puct=1.0,
+        dirichlet_alpha=0.25,
+    )
 
     state = torch.zeros(s_dim)  # demo initial state
 
@@ -57,7 +65,9 @@ def run_crosshq_planning(seed: int = 0, sims: int = 200, horizon: int = 3, out_d
 
         # combined plot: priors (bar), visits (line), q_est (line)
         x = list(map(str, actions))
-        fig, (ax_top, ax_bot) = plt.subplots(nrows=2, ncols=1, figsize=(7, 6), gridspec_kw={"height_ratios": [2, 1]})
+        fig, (ax_top, ax_bot) = plt.subplots(
+            nrows=2, ncols=1, figsize=(7, 6), gridspec_kw={"height_ratios": [2, 1]}
+        )
 
         ax_top.bar(x, priors, alpha=0.7, label="priors")
         ax_top.set_ylabel("prior")
@@ -116,4 +126,6 @@ if __name__ == "__main__":
     p.add_argument("--horizon", type=int, default=3)
     p.add_argument("--out", type=str, default="pictures")
     args = p.parse_args()
-    run_crosshq_planning(seed=args.seed, sims=args.sims, horizon=args.horizon, out_dir=args.out)
+    run_crosshq_planning(
+        seed=args.seed, sims=args.sims, horizon=args.horizon, out_dir=args.out
+    )
