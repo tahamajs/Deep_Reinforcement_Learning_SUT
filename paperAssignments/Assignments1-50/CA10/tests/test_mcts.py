@@ -5,8 +5,15 @@ import torch
 
 
 def load_module_from_path(path: str, name: str):
+    import sys
+    # ensure repo root is on sys.path
+    repo_root = pathlib.Path(__file__).resolve().parents[4]
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
+    # set package so relative imports work inside the module
+    mod.__package__ = "paperAssignments.Assignments1_50.CA10"
     spec.loader.exec_module(mod)  # type: ignore
     return mod
 
