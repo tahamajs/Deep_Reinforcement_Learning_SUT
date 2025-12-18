@@ -31,22 +31,26 @@ class DQN_Agent:
             self.num_episodes = 10000
         else:
             raise Exception("Unknown Environment")
-        self.q_network = QNetwork(
-            args,
-            self.env.observation_space.shape[0],
-            self.env.action_space.shape[0],
-            self.learning_rate,
-        )
+        # Determine observation and action dimensions robustly for Box/Discrete spaces
+        obs_shape = self.env.observation_space.shape
+        if obs_shape is None:
+            obs_dim = 1
+        else:
+            obs_dim = int(np.prod(obs_shape))
+
+        if isinstance(self.env.action_space, gym.spaces.Discrete):
+            action_dim = int(self.env.action_space.n)
+        else:
+            # For Box or MultiDiscrete, take product of shape
+            a_shape = getattr(self.env.action_space, "shape", None)
+            action_dim = int(np.prod(a_shape)) if a_shape is not None else 1
+
+        self.q_network = QNetwork(args, obs_dim, action_dim, self.learning_rate)
         self.target_q_network = QNetwork(
-            args,
-            self.env.observation_space.shape[0],
-            self.env.action_space.shape[0],
-            self.learning_rate,
+            args, obs_dim, action_dim, self.learning_rate
         )
         self.memory = Replay_Memory(
-            self.env.observation_space.shape[0],
-            self.env.action_space.shape[0],
-            memory_size=self.args.memory_size,
+            obs_dim, action_dim, memory_size=self.args.memory_size
         )
         self.rewards = []
         self.td_error = []
