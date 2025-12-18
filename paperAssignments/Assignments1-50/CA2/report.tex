@@ -1,0 +1,130 @@
+% NeurIPS-style paper for CA2: CrossQ + Sophia
+\documentclass{article}
+% Use neurips style if available; fallback to article formatting
+% \usepackage{neurips_2024}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{tikz}
+\usepackage{siunitx}
+\usepackage{caption}
+\usepackage{subcaption}
+\setlength{\parindent}{0pt}
+\title{CrossQ with Sophia Optimization: High-UTD Continuous Control Without Target Networks}
+\author{Project CA2 — CrossQ+Sophia \thanks{Implementation and report by the CA2 team.}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We propose combining the CrossQ Batch-Normalized target-less critic architecture with the Sophia stochastic second-order optimizer to enable stable high Update-To-Data (UTD) training for continuous control. CrossQ removes target networks by using Batch Normalization over concatenated current/next batches; Sophia provides curvature-aware, diagonal Hessian preconditioning that stabilizes large update magnitudes when the same data are reused many times (UTD $\gg 1$). We present the method, theoretical remarks, practical implementation notes, and an experimental protocol for MuJoCo benchmarks. The code implements an EMA-based diagonal Hessian proxy and an optional Hutchinson estimator to better approximate curvature when needed.
+\end{abstract}
+
+\section{Introduction}
+Modern value-based off-policy RL benefit from reusing batches of transitions, measured by the Update-To-Data ratio (UTD). Increasing UTD improves sample efficiency but often destabilizes bootstrapping: target networks or slow EMAs are traditionally used to stabilize TD updates. CrossQ (ICLR 2024) showed that Batch Normalization (BN) applied to concatenated current/next batches can remove the need for target networks in many cases. However, optimizer step scaling (Adam/AdamW) still causes instability as UTD grows. We hypothesize that a curvature-aware per-parameter scaling (Sophia) reduces aggressive updates and allows stable UTD $\ge 10$ without targets.
+
+\section{Related Work}
+We combine two lines of work: CrossQ's BN-based targetless critics and Sophia's stochastic second-order optimizer (ICLR 2024). We contrast our hybrid approach with standard baselines (Adam, AdamW), target-network methods (DDPG/TD3), and high-UTD ensemble methods (REDQ).
+
+\section{Method}
+\subsection{CrossQ critic objective}
+We consider an off-policy critic $Q_\theta$ trained with an MSE TD objective. For a transition $\tau=(s,a,r,s')$ drawn from replay $\mathcal{D}$, the critic loss is:
+\[
+\mathcal{L}_{\text{CrossQ}}(\theta) = \mathbb{E}_{(s,a,r,s')\sim\mathcal{D}}\Big[\big(Q_\theta(s,a) - y\big)^2\Big],\\
+\text{with}\quad y = r + \gamma \max_{a'} Q_\theta(s',a').
+\]
+CrossQ applies Batch Normalization to concatenated $(s,s')$ batches to align statistics and stabilize scale when the same samples are reused many times.
+
+\subsection{Sophia optimizer (diagonal preconditioning)}
+We implement a diagonal preconditioner that keeps an EMA of gradients and an EMA of a Hessian-diag proxy. Let $g_t = \nabla_\theta \mathcal{L}_t$ denote the gradient at update $t$. The per-parameter recursions implemented are:
+\begin{align}
+m_t &= \beta_1 m_{t-1} + (1-\beta_1) g_t, \\[4pt]
+h_t &= \beta_2 h_{t-1} + (1-\beta_2) \hat{h}_t, \label{eq:hema}
+\end{align}
+where $\hat{h}_t$ is a Hessian-diagonal proxy. In the default cheap estimator we use $\hat{h}_t = g_t^2$ (elementwise square). Optionally, a Hutchinson estimator approximates diagonal Hessian entries by drawing Rademacher probes $v$ and computing $(H v) \odot v$ via vector-Jacobian/Hessian-vector products.
+
+The parameter update uses curvature scaling, a numerical floor, and symmetric clipping:
+\[
+\theta_{t+1} = \theta_t - \eta \cdot \mathrm{clip}\!\left(\frac{m_t}{\max(\gamma h_t, \epsilon)}, -\delta, \delta\right),
+\label{eq:sophia}
+\]
+where $\gamma$ scales the curvature estimate, $\epsilon$ prevents division by zero, and $\delta$ clamps extreme normalized steps. This update corresponds directly to the implementation in \texttt{src/optim/sophia.py} where $m_t$ and $h_t$ are stored per-parameter.
+
+\subsection{Hutchinson Hessian estimator (optional)}
+To get a better diagonal Hessian estimate, we optionally compute for each parameter-vector block an average of $v \odot (H v)$, where $v$ is a Rademacher vector. Using autograd we compute $g = \nabla_\theta \mathcal{L}$ and then compute $\nabla_\theta (g \cdot v)$ to obtain $H v$; elementwise multiply with $v$ gives a diagonal estimate sample.
+
+\section{Implementation details}
+We provide a lightweight PyTorch implementation: \texttt{src/optim/sophia.py}. Key points:
+\begin{itemize}
+  \item Per-parameter state stores $m$ and $h$; optionally per-parameter group options override $\beta_1,\beta_2,\gamma,\delta$ and the Hessian estimator type.
+  \item For BN layers and bias terms we recommend using the cheap estimator (squared gradients) and smaller curvature scaling.
+  \item Hutchinson estimation requires computing gradients with \texttt{create\_graph=True} and therefore needs a closure-based optimizer step. The agent helper \texttt{src/agent.py} demonstrates an AMP-friendly training step and how to pass a closure for Hutchinson.
+  \item Hessian accumulators should be kept in FP32 for stability when using AMP; the implementation keeps accumulators in the parameter dtype but recommends using FP32 for accumulation in large runs.
+\end{itemize}
+
+\section{Experimental protocol}
+We describe the recommended sweep and compute budgets (see README for exhaustive lists). Environments: MuJoCo v4 Humanoid/Ant/Walker2d. Sweep over UTD = {1,5,10,20}, optimizer = {Adam,Sophia}, and Sophia $\gamma$ and $\delta$ grids. Use batch sizes 512–1024 and repeat seeds $\ge 3$.
+
+\section{Ablations and diagnostics}
+We evaluate:
+\begin{itemize}
+\item Adam vs Sophia across UTD values for stability and sample-efficiency.
+\item Hessian estimator: squared-grad vs Hutchinson.
+\item BN on/off and BN momentum.
+\item Clip and gamma sensitivity.
+\end{itemize}
+Logging: gradient norms, Hessian diag statistics, BN running mean/var drift, loss curves, and NaN/divergence counts.
+
+\section{Conclusion and Future Work}
+Sophia's diagonal curvature scaling complements CrossQ's BN-based targetless critic and enables aggressive UTD reuse while keeping updates controlled. Future work: layer-wise gamma, asynchronous Hutchinson, and curvature-aware PER.
+
+\section*{Broader Impact}
+This work focuses on simulated control benchmarks and does not use sensitive data. Running large sweeps consumes compute; we recommend reporting energy usage and following reproducibility best practices.
+
+\appendix
+\section{Appendix: Mapping equations to code}
+Equation~\eqref{eq:hema} maps to the EMA updates in \texttt{src/optim/sophia.py} (lines around the Hessian update). The update in Equation~\eqref{eq:sophia} is implemented with elementwise clipping via \texttt{torch.clamp} and denom flooring by \texttt{eps}.
+
+\section{Appendix: Hyperparameters}
+\begin{tabular}{l l}
+\toprule
+Parameter & Default \\
+\midrule
+UTD & 1 / 5 / 10 / 20 \\
+Batch & 512 / 1024 \\
+BN momentum & 0.05 \\
+Sophia beta1 & 0.965 \\
+Sophia beta2 & 0.99 \\
+Sophia gamma & 0.1 \\
+Sophia eps & $10^{-12}$ \\
+Sophia clip & 1.0 \\
+LR (critic) & 3e-4 \\
+\bottomrule
+\end{tabular}
+
+\section{Appendix: Pseudocode}
+\begin{verbatim}
+for env_step in range(...):
+  store transition
+  for i in range(UTD):
+    batch = replay.sample()
+    compute loss L
+    compute grad g
+    update h_t EMA (squared-grad or Hutchinson)
+    update m_t EMA
+    compute denom = max(gamma * h_t, eps)
+    step = clamp(m_t / denom, -delta, delta) * lr
+    theta -= step
+\end{verbatim}
+
+\bibliographystyle{plain}
+\begin{thebibliography}{9}
+\bibitem{crossq} Aditya B. CrossQ: Batch Normalization in Deep Reinforcement Learning. ICLR 2024.
+\bibitem{sophia} Liuhong et al. Sophia: A Scalable Stochastic Second-Order Optimizer. ICLR 2024.
+\end{thebibliography}
+
+\end{document}
