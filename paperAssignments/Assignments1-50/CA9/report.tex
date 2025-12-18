@@ -223,6 +223,18 @@ We designed the codebase to be runnable and reproducible. Key commands to reprod
 
 These steps are deliberately minimal; the codebase includes unit tests (`python -m pytest tests`) and a `notebooks/demo.ipynb` for quick visualization runs.
 
+\subsection*{Compute environment}
+For reproducibility we recommend the following environment snapshot:
+\begin{itemize}
+  \item Python 3.10+
+  \item torch (install from https://pytorch.org matching your CUDA version) or CPU build
+  \item numpy >= 1.22, matplotlib
+  \item gymnasium (for evaluation), d4rl (for D4RL datasets, optional)
+  \item OS: Linux or macOS (the code is cross-platform; CI tests use CPU builds)
+\end{itemize}
+
+We also provide a minimal `requirements.txt` listing non-torch dependencies for smoke runs and testing.
+
 \section*{Acknowledgments}
 We thank contributors and prior work that inspired the design.
 
@@ -321,6 +333,7 @@ plt.colorbar(hb); plt.title('Gate heatmap (mean Lambda)'); plt.savefig('plots/ga
 These recipes are a starting point; extend `notebooks/demo.ipynb` to generate publication-ready figures using the same saved artifacts.
 
 \end{document}
+
 
 
 

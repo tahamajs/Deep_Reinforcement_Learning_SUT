@@ -27,7 +27,7 @@ class Agent:
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
 
-    def run_LQR(self, max_steps=600):  # Added max_steps to prevent infinite loop
+    def run_LQR(self, max_steps=2000):  # Added max_steps to prevent infinite loop
         rewards = []
         # gymnasium.reset() returns (obs, info)
         init = self.env.reset()
@@ -84,7 +84,7 @@ class Agent:
         return np.array(actions).T, states
 
     def run_iLQR(self):
-        tN = 100
+        tN = 1000
 
         print("Initializing with LQR...")
         # Get an initial state from LQR (short run)
@@ -207,5 +207,5 @@ class Agent:
 
 
 if __name__ == "__main__":
-    agent = Agent(policy="LQR")
+    agent = Agent(policy="iLQR")
     agent.run()

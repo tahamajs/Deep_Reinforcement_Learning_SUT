@@ -1,0 +1,10 @@
+# Minimal requirements for AU-DMG smoke runs and testing
+numpy
+matplotlib
+gymnasium
+pytest
+# Optional (recommended for experiments)
+# torch should be installed according to your CUDA version: see https://pytorch.org
+# d4rl needed for D4RL benchmarks
+# torch
+# d4rl

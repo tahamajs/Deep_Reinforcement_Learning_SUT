@@ -1,5 +1,4 @@
 import torch
-import pytest
 from src.model import QNetwork
 
 def test_q_network():

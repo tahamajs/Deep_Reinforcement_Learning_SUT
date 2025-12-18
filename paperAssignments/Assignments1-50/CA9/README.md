@@ -273,6 +273,15 @@ Used for the stable in-sample anchor.
 
 ## Getting Started (Quickstart) ✅
 
+---
+
+## Paper / Report 📄
+
+The accompanying technical report is `report.tex` and can be compiled with `pdflatex` as described in the Reproducibility section of the report. We also provide placeholder figures and a small demo notebook (`notebooks/demo.ipynb`) to reproduce the visualizations used in the paper.
+
+---
+
+
 This repository is self-contained and provides a reference implementation of AU-DMG suitable for experiments, unit tests, and reproducibility checks. The following steps will get you running locally (no GPU required for smoke tests):
 
 ### Installation

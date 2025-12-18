@@ -144,7 +144,12 @@ class TwoLinkArmEnv(gym.core.Env):
         H2 = 1 / 2.0 * self.K2 * S2 * self.dq[0] ** 2.0
 
         ddq1 = (H2 * M11 - H1 * M21 - M11 * u[1] + M21 * u[0]) / (M12**2.0 - M11 * M22)
-        ddq0 = (-H2 + u[1] - M22 * ddq1) / M21
+        epsilon = 1e-9
+        denominator = M21
+        if abs(denominator) < epsilon:
+            denominator = epsilon if denominator >= 0 else -epsilon
+
+        ddq0 = (-H2 + u[1] - M22 * ddq1) / denominator
         self.dq += np.array([ddq0, ddq1]) * dt
         self.q += self.dq * dt
         self.t += dt

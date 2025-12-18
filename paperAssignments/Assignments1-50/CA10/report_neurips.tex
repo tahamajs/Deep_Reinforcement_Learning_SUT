@@ -89,6 +89,15 @@ We recommend SMACv2 maps (2s3z, 3s5z) and MPE cooperative navigation. For each m
   \item Run ablations: Gumbel on/off, prefix on/off, factored vs joint.
 \end{itemize}
 
+\subsection{Reproducibility and Running the Code}
+The accompanying codebase contains lightweight unit tests and demo scripts to validate core functionality. Basic steps to verify locally (Python 3.10+):
+\begin{enumerate}
+  \item Create a virtual environment and install requirements: \texttt{python -m venv .venv && source .venv/bin/activate && python -m pip install -U pip torch numpy}
+  \item Run tests: \texttt{python -m pytest tests/ -q} to validate shapes, losses and a small MCTS smoke run.
+  \item Run the demo: \texttt{python scripts/demo_run_ma_ezv2.py} to exercise inference and a short tree search.
+\end{enumerate}
+
+For scaling to full experiments, use the configuration in \texttt{configs/ma_ezv2_default.yaml} and document seeds, runtime, hardware and any modifications to ensure reproducibility.
 \subsection{Metrics}
 Win rate, episode return, sample efficiency (steps to threshold), MCTS statistics (visit distributions), and prefix MAE.
 
@@ -176,6 +185,7 @@ We sketch notes on Sinkhorn-based regularization and a bias bound relevant to re
 Sinkhorn iterations produce the optimal coupling \pi_\epsilon and the Sinkhorn divergence can be used as an auxiliary loss for aligning latent projections across clients or unroll steps.
 \paragraph{Bias bound (intuition).} With entropic regularization \epsilon>0, OT estimators suffer bias O(\epsilon \log n) but gain computational stability. In practice, choose \epsilon small enough to retain geometric fidelity but large enough for numeric stability; cross-validate on held-out reconstruction tasks.
 \end{document}
+
 
 
 

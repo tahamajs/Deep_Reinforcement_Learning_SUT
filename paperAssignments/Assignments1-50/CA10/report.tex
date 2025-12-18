@@ -85,6 +85,15 @@ We recommend SMACv2 maps (2s3z, 3s5z) and MPE cooperative navigation. For each m
   \item Run ablations: Gumbel on/off, prefix on/off, factored vs joint.
 \end{itemize}
 
+\subsection{Reproducibility and Running the Code}
+The repository includes lightweight scripts and unit tests to validate core components. To reproduce basic checks locally (Python 3.10+):
+\begin{enumerate}
+  \item Create and activate a virtual environment and install dependencies: \texttt{python -m venv .venv && source .venv/bin/activate && python -m pip install -U pip torch numpy}
+  \item Run unit tests: \texttt{python -m pytest tests/ -q} to verify network shapes, policy losses and a short MCTS smoke test.
+  \item Run a small demo which exercises the policy and a short MCTS run: \texttt{python scripts/demo_run_ma_ezv2.py}.
+\end{enumerate}
+
+For full-scale experiments (SMAC, MPE), please adapt the configuration in \texttt{configs/ma_ezv2_default.yaml} and scale the search budget, seeds and runtime to match available compute. Always save checkpoints, configs and random seeds to ensure reproducibility.
 \subsection{Metrics}
 Win rate, episode return, sample efficiency (steps to threshold), MCTS statistics (visit distributions), and prefix MAE.
 
@@ -154,6 +163,7 @@ Consistency weight $\alpha_c$ & 0.25 & 0.0--0.5 \\
 \end{table}
 
 \end{document}
+
 
 
 
