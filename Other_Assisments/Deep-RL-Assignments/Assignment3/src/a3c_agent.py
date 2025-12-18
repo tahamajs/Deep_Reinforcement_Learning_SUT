@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime
 from collections import deque
 import torch.multiprocessing as mp
+import multiprocessing as _mp
 # Use fork start method on macOS/Linux to avoid pickling non-picklable objects
 # (e.g., SummaryWriter file handles) when spawning worker processes.
 try:
@@ -329,8 +330,11 @@ class A3C:
         lock = mp.Lock()
 
         workers = []
+        # Use a fork-based context for spawning worker processes to avoid
+        # pickling the A3C instance (SummaryWriter, file handles, etc.).
+        ctx = _mp.get_context("fork")
         for worker_id in range(num_workers):
-            p = mp.Process(
+            p = ctx.Process(
                 target=self.worker,
                 args=(
                     worker_id,
