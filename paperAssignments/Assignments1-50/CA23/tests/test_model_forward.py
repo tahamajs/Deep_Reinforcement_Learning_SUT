@@ -19,5 +19,10 @@ def test_policy_and_value_forward_shapes():
     assert actions.shape[0] == batch
     assert logp.shape[0] == batch
 
+    # single observation should also work and return squeezed tensors/scalars
+    a_single, lp_single = policy.get_action(x[0])
+    assert (isinstance(a_single, torch.Tensor) and a_single.ndim == 0) or isinstance(a_single, int)
+    assert (isinstance(lp_single, torch.Tensor) and lp_single.ndim == 0) or isinstance(lp_single, float)
+
     v = value(x)
     assert v.shape == (batch,)
