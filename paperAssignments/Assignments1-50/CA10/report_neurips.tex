@@ -1,0 +1,138 @@
+\documentclass{article}
+\usepackage[final]{neurips_2024}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{wrapfig}
+\usepackage{tikz}
+\usepackage{bm}
+\usepackage{cleveref}
+\title{MA-EZV2: Multi-Agent EfficientZero V2 \\ Integrating Gumbel MCTS and Value-Prefix Stabilization}
+\author{Author Name \\ Institution \\ \texttt{email@example.com}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We propose MA-EZV2, a multi-agent extension of EfficientZero V2 that brings Gumbel-corrected MCTS, value-prefix supervision, and factored joint-action search into a LightZero-compatible training stack. MA-EZV2 targets cooperative and mixed cooperative-competitive settings where joint action combinatorics and credit-assignment impede planning-based sample efficiency. Our contributions are: (i) a practical factored Gumbel top-k beam for scalable joint expansion; (ii) a value-prefix loss to stabilize centralized value learning under partial unrolls; (iii) a LightZero adapter and latent-space PUCT MCTS implementation enabling distributed training and evaluation. We provide derivations for the losses, pseudocode, and an empirical protocol to reproduce benchmarks on SMAC and MPE.
+\end{abstract}
+
+\section{Introduction}
+Planning with learned dynamics (MuZero and derivatives) has improved sample efficiency in many single-agent tasks. EfficientZero V2 (EZ-V2) advanced this line via Gumbel-based search corrections, value-prefix supervision and improved latent dynamics. Multi-agent environments (SMAC, MPE, Hanabi) present additional challenges: the joint action space grows exponentially with the number of agents; coordination and credit assignment complicate value learning; and search budgets become a limiting factor. We introduce MA-EZV2, a synthesis of EZ-V2 algorithmic improvements with a LightZero-style modular MCTS stack adapted for multi-agent CTDE (centralized training, decentralized execution).
+
+\paragraph{Key ideas.} MA-EZV2 uses (1) factored policy heads producing per-agent logits, (2) a factored Gumbel top-k beam that approximates top-k joint actions efficiently, (3) a centralized value head with a value-prefix loss to stabilize partial-unroll training, and (4) latent-space PUCT MCTS that runs on compact representations for efficiency.
+
+\section{Related Work}
+MuZero and variants \cite{schrittwieser2019mastering,wang2024efficientzero}. Multi-agent planning: centralized vs factored search \cite{bellemare2024multiagent,madz2020}. Gumbel-MCTS and top-k corrections: \cite{wang2024efficientzero}. Value-prefix stabilization aligns with temporal-difference auxiliary supervision \cite{hafner2023dreamer}.
+
+\section{Problem Setup and Notation}
+We consider $N$ agents acting in a discrete-time Markov game with joint observation $o_t=(o_t^1,\dots,o_t^N)$ and joint action $a_t=(a_t^1,\dots,a_t^N)$. Rewards may be shared; primary exposition assumes shared team reward $r_t$. Discount factor $\gamma\in(0,1)$. We learn a parametric model $\theta$ composed of:
+\begin{itemize}[noitemsep]
+  \item encoder $f_\theta: o \mapsto h_0$,
+  \item dynamics $g_\theta: (h_k,a_k)\mapsto (h_{k+1}, \hat r_k)$,
+  \item prediction head $p_\theta: h \mapsto (\pi,\hat v)$,
+  \item prefix head $u_\theta: h \mapsto \hat z$ (cumulative prefix predictor).
+\end{itemize}
+
+\section{Method}
+\subsection{Gumbel Top-k and Factored Beam}
+For joint action enumeration we either compute top-k over joint logits (small action spaces) or approximate via factored beam search: sample agent-wise Gumbel noise and take per-agent top-$k_i$, then combine via a beam capping total combinations to $B$. Let logits per agent be $\ell^i(a^i|h)$. We perturb with Gumbel noise $g^i\sim\text{Gumbel}(0,1)$ and compute scores $s^i=\ell^i+g^i$. Per-agent top-k indices are combined into candidate joint actions via greedy beam merging. This yields a set $\mathcal{A}_{top}$ of candidate joint actions used for expansion.
+
+\subsection{PUCT with Priors and Dirichlet Root Noise}
+At node state $s$ with latent $h$, for child action $a$:
+\begin{equation}
+U(s,a) = c_{\text{puct}} \cdot P(s,a)\frac{\sqrt{\sum_b N(s,b)}}{1+N(s,a)} .
+\end{equation}
+Selection maximizes $Q+U$. Root priors $P(s,\cdot)$ incorporate policy logits (factored product when using per-agent policies). Dirichlet noise is injected at root to encourage exploration.
+
+\subsection{Losses}
+For an unroll of length $K$ from encoded $h_0$ and actions $a_{0:K-1}$, we predict $(\hat v_k,\hat r_k,\pi_k,\hat z_k)$ and compute:
+\begin{align}
+L_\pi &= -\sum_{k=0}^{K-1}\sum_a \pi^{\text{target}}_k(a)\log \pi_k(a),\\
+L_v &= \sum_{k=0}^{K-1} \|\hat v_k - G_k^{(n)}\|^2,\\
+L_r &= \sum_{k=0}^{K-1} \|\hat r_k - r_k\|^2,\\
+L_z &= \sum_{k=0}^{K-1} \|\hat z_k - z^{\text{true}}_k\|^2,
+\end{align}
+where $G_k^{(n)}=\sum_{t=0}^{n-1}\gamma^t r_{k+t}+\gamma^n v_{k+n}$ is the $n$-step bootstrap value and $z^{\text{true}}_k=\sum_{t=0}^{k-1}\gamma^t r_t$ is the prefix (or undiscounted prefix depending on design).
+Total loss:
+\begin{equation}
+L = \alpha_\pi L_\pi + \alpha_v L_v + \alpha_r L_r + \alpha_z L_z + \alpha_c L_c .
+\end{equation}
+Consistency loss $L_c$ enforces projected latent agreement across unrolled steps as in EZ-V2:
+\begin{equation}
+L_c = \sum_{k}\|\mathrm{sg}(h_{k+1}) - \mathrm{proj}(h_k)\|^2 + \|h_{k+1} - \mathrm{sg}(\mathrm{proj}(h_k))\|^2.
+\end{equation}
+
+\subsection{Targets and Search Supervision}
+Policy targets $\pi^{\text{target}}$ are normalized visit counts from MCTS root. Value targets use $n$-step returns computed from trajectories or search leaf evaluations.
+
+\section{Implementation Details}
+\subsection{Network}
+We implement a centralized encoder with optional per-agent policy heads. Dynamics is a small MLP taking concatenated latent and joint action (or concatenated per-agent one-hot segments for factored actions). Prediction head returns joint logits and scalar value; prefix head is another scalar regressor.
+
+\subsection{MCTS and Search Budget}
+To keep search tractable, MA-EZV2 defaults to factored search with per-agent top-$k$ and beam cap $B$ (e.g., $k=5$, $B=64$). This allows scaling to $N=4\text{--}8$ agents in small discrete action spaces. For small action spaces (e.g., MPE), joint top-k enumeration remains feasible.
+
+\section{Experimental Protocol}
+\subsection{Benchmarks}
+We recommend SMACv2 maps (2s3z, 3s5z) and MPE cooperative navigation. For each map:
+\begin{itemize}
+  \item 3 seeds, report mean $\pm$ std win rate.
+  \item Run ablations: Gumbel on/off, prefix on/off, factored vs joint.
+\end{itemize}
+
+\subsection{Metrics}
+Win rate, episode return, sample efficiency (steps to threshold), MCTS statistics (visit distributions), and prefix MAE.
+
+\section{Ablation Study}
+We propose the following experiments:
+\begin{enumerate}
+  \item Gumbel vs. standard PUCT priors.
+  \item Value-prefix loss ablation: remove $L_z$.
+  \item Factored vs joint expansion (vary $B$).
+  \item Consistency loss ablation.
+\end{enumerate}
+
+\section{Conclusion}
+MA-EZV2 brings EZ-V2 stability and search corrections into the multi-agent domain with pragmatic design choices: factored Gumbel beam, centralized value with prefix supervision, and a LightZero-compatible adapter. Future work includes improved credit assignment (per-agent value heads), continuous action extensions, and population self-play for competitive settings.
+
+\section*{Acknowledgements}
+This work synthesizes ideas from EfficientZero V2 and LightZero; thanks to the original authors.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\appendix
+\section{Appendix A: Prefix Loss Derivation}
+We define prefix target at step $t$ as $z_t=\sum_{k=0}^{t-1}\gamma^k r_k$. The prefix head $u_\theta(h_t)$ regresses to $z_t$. Gradient flows only into representation and prefix head; we use stop-gradient on targets computed from trajectory.
+
+\section{Appendix B: Hyperparameters}
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Component & Default & Range \\
+\midrule
+Unroll $K$ & 5 & 5--10 \\
+Gumbel top-k & 8 & 5--20 \\
+Beam $B$ & 64 & 32--256 \\
+$c_{\text{puct}}$ & 2.0 & 1.0--3.0 \\
+Batch size & 256 & 64--512 \\
+LR (Adam) & 1e-3 & 1e-4--3e-3 \\
+Prefix weight $\alpha_z$ & 0.5 & 0.0--1.0 \\
+Consistency weight $\alpha_c$ & 0.25 & 0.0--0.5 \\
+\bottomrule
+\end{tabular}
+\caption{Recommended hyperparameters (small sanity defaults in configs).}
+\end{table}
+
+\end{document}
+
