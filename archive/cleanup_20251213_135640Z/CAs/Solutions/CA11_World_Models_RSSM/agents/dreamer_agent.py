@@ -104,6 +104,7 @@ class DreamerAgent:
             self.planner_available = True
             # planner configuration may live on global_config.planner or use defaults
             planner_cfg = getattr(global_config, "planner", {}) or {}
+            self._planner_cfg = planner_cfg
             buffer_size = int(planner_cfg.get("buffer_size", 1024))
             self.checkpoint_buffer = CheckpointBuffer(capacity=buffer_size, device=self.device)
             # simple TriggerConfig instance for thresholding; user can replace with richer config
@@ -240,13 +241,19 @@ class DreamerAgent:
                                     # return scalar for bootstrap; if batch, take mean
                                     return v.mean()
 
-                            branches = self._simulate_branches(self.rssm, self.actor_critic.actor, value_fn, z_saved, planner_cfg if 'planner_cfg' in locals() else planner_cfg)
+                            branches = self._simulate_branches(self.rssm, self.actor_critic.actor, value_fn, z_saved, self._planner_cfg)
                             # store metadata and update last trigger
                             self.last_planner_trigger = self.step
-                            # For now, just log top branch return (user should integrate imagined updates)
-                            if branches:
-                                top_ret = branches[0].ret
-                                print(f\"[Planner] step={self.step} triggered. top_branch_return={top_ret:.3f}\")
+                            # Update actor/critic from branches (uses TD(lambda) aggregator)
+                            try:
+                                losses = self.update_actor_critic_from_branches(branches)
+                                if losses:
+                                    print(f\"[Planner] step={self.step} planner update actor_loss={losses.get('actor_loss'):.4f} critic_loss={losses.get('critic_loss'):.4f}\")
+                            except Exception:
+                                # fallback logging if update fails
+                                if branches:
+                                    top_ret = branches[0].ret
+                                    print(f\"[Planner] step={self.step} triggered. top_branch_return={top_ret:.3f}\")
         except Exception:
             # swallow planner exceptions to avoid breaking world-model training
             pass
