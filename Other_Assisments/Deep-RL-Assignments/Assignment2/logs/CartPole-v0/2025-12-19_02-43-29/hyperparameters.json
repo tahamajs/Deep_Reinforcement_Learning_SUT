@@ -1,0 +1,15 @@
+{
+    "env": "CartPole-v0",
+    "render": false,
+    "train": 1,
+    "double_dqn": 0,
+    "frameskip": 1,
+    "network_update_freq": 10,
+    "log_freq": 25,
+    "test_freq": 100,
+    "save_freq": 500,
+    "learning_rate": 0.001,
+    "memory_size": 50000,
+    "epsilon": 1.0,
+    "model_file": null
+}

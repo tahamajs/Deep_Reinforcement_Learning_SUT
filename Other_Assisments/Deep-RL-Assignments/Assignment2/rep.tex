@@ -1,0 +1,176 @@
+% Rep.tex - Deep Q-Network implementation report
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,graphicx,hyperref,booktabs}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{geometry}
+\geometry{margin=1in}
+\title{Deep Q-Networks for Classical Control (CartPole) \\ Implementation Report}
+\author{Author: Student / Repository: Deep-RL-Assignments/Assignment2}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report describes the implementation and experimental evaluation of a Deep
+Q-Network (DQN) agent implemented for classic control problems (CartPole-v0 / v1)
+using Keras/TensorFlow and Gymnasium. We document the algorithm, network
+architecture, replay buffer, training loop, hyperparameters, and empirical
+results collected while debugging and running the agent. The code for this
+project lives in \texttt{src/} and the main entrypoint is \texttt{run\_dqn.py}.
+\end{abstract}
+
+\section{Introduction}
+Deep Q-Networks (Mnih et al., 2015) combine Q-learning with deep function
+approximation using neural networks and experience replay. This assignment's
+goal is to implement a stable, library-style DQN with:
+\begin{itemize}
+  \item A fully-connected Q-network implemented in Keras (\texttt{src/q\_network.py}).
+  \item A replay memory buffer (\texttt{src/replay\_memory.py}).
+  \item An agent wrapper orchestrating interaction, training and evaluation (\texttt{src/dqn\_agent.py}).
+  \item A runnable script \texttt{run\_dqn.py} that configures GPU, parses arguments and starts training / evaluation.
+\end{itemize}
+
+\section{Related Work}
+The DQN algorithm (Mnih et al., 2015) introduces two stabilizing components:
+\begin{enumerate}
+  \item Experience replay to break sample correlations.
+  \item A target network to stabilize bootstrap targets.
+\end{enumerate}
+Our implementation follows the canonical design with minor engineering for
+modern TensorFlow compatibility and Gymnasium API handling.
+
+\section{Method}
+\subsection{Q-Learning with Function Approximation}
+We approximate the action-value function \(Q(s,a;\theta)\) with a neural network
+parameterized by \(\theta\). The DQN loss for a minibatch is:
+\[
+L(\theta) = \mathbb{E}_{(s,a,r,s')\sim\mathcal{D}}\left[\left(y - Q(s,a;\theta)\right)^2\right],
+\qquad y = r + \gamma \max_{a'} Q_{\text{target}}(s',a';\theta^-),
+\]
+where \(\theta^-\) are parameters of the frozen target network and \(\mathcal{D}\)
+is the replay buffer distribution.
+
+\subsection{Policy}
+We use an epsilon-greedy policy:
+\[
+\pi(a|s) =
+\begin{cases}
+\text{uniform random} & \text{with probability }\epsilon\\
+\arg\max_a Q(s,a;\theta) & \text{with probability } 1-\epsilon
+\end{cases}
+\]
+Epsilon decays linearly in the provided code (see \texttt{epsilon\_decay}).
+
+\section{Implementation Details}
+\subsection{Network (src/q\_network.py)}
+The Q-network is a Keras Sequential model with three hidden Dense layers of 128 units (ReLU),
+and a linear output layer sized to the action dimension. The optimizer uses Adam with a
+`learning\_rate` keyword (compatibility fix).
+
+\subsection{Agent (src/dqn\_agent.py)}
+Key responsibilities:
+\begin{itemize}
+  \item Environment creation and detection of discrete vs continuous action spaces.
+  \item Creating Q-network, target network and replay buffer with computed input/output dims.
+  \item Collecting rollouts (handles Gym / Gymnasium reset and step tuple APIs).
+  \item Training minibatches from replay buffer, supporting standard DQN and Double-DQN paths.
+\end{itemize}
+
+\subsection{Replay Buffer (src/replay\_memory.py)}
+A simple ring buffer storing numpy arrays (states, next\_states, actions, rewards, dones)
+and returning random minibatches for training.
+
+\subsection{Compatibility Fixes}
+During development the code was updated to:
+\begin{enumerate}
+  \item Use TF2 memory-growth API with a TF1 compat.v1 fallback in \texttt{run\_dqn.py}.
+  \item Use explicit Keras Input layer and `learning\_rate` kwarg in optimizers.
+  \item Handle Gymnasium's (obs, info) reset and (obs, reward, terminated, truncated, info) step signatures.
+  \item Compute observation and action dimensions robustly for Discrete and Box spaces.
+\end{enumerate}
+
+\section{Hyperparameters}
+The default hyperparameters (as used in runs) are:
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+Environment & CartPole-v0 (CartPole-v1 recommended) \\
+Learning rate & 0.001 \\
+Memory size & 50000 \\
+Batch size & 32 \\
+Gamma (discount) & 0.99 (CartPole) \\
+Epsilon (initial) & 1.0 \\
+Epsilon final & 0.05 \\
+Network update freq (target) & 10 \\
+Num episodes & 5000 (for CartPole-v0 default branch) \\
+\bottomrule
+\end{tabular}
+
+\section{Experiments}
+\subsection{Setup}
+We ran the agent on CartPole-v0 with the defaults. Training and TensorBoard logs are written under:
+\texttt{Other\_Assisments/Deep-RL-Assignments/Assignment2/logs/CartPole-v0/}.
+
+\subsection{Observed Behaviour}
+Early in training (burn-in) the agent records zero TD-error (no training yet). The provided
+implementation includes safeguards to avoid NaNs when no TD data exists. Training proceeds,
+and periodic test evaluations are logged.
+
+\section{Results}
+Representative outputs and TensorBoard scalars were generated during runs (see \texttt{logs/}).
+For CartPole, DQN typically learns to keep the pole balanced for hundreds of timesteps when the
+network and hyperparameters are reasonable; you should run longer experiments and average across seeds
+for robust evaluation.
+
+\section{How to Reproduce}
+From the assignment directory:
+\begin{enumerate}
+  \item Create and activate the virtualenv (optional but recommended).
+  \item Install requirements (see \texttt{src/requirements.txt} or project-level \texttt{requirements.txt}).
+  \item Run:
+  \begin{verbatim}
+  python run_dqn.py --env CartPole-v0
+  \end{verbatim}
+  \item For rendering/video recording:
+  \begin{verbatim}
+  python run_dqn.py --env CartPole-v0 --render
+  \end{verbatim}
+\end{enumerate}
+
+\section{Code map}
+\begin{itemize}
+  \item \texttt{run\_dqn.py} — argument parsing, GPU config, entrypoint.
+  \item \texttt{src/dqn\_agent.py} — agent logic, training loop, env interaction.
+  \item \texttt{src/q\_network.py} — Keras model definition for Q(s,a).
+  \item \texttt{src/replay\_memory.py} — simple numpy replay buffer.
+  \item \texttt{src/} — other utilities and modules used by the agent.
+\end{itemize}
+
+\section{Conclusion}
+This project implements a standard DQN with engineering updates to run correctly on modern
+TensorFlow/Keras and Gymnasium. The repository is ready for extended experiments (sweeps over
+learning rate, architecture size, replay capacity, target update frequency, and epsilon schedules).
+
+\appendix
+\section{Hyperparameters JSON}
+The agent writes hyperparameters to the logs directory as JSON during runs. Example path:
+\texttt{logs/CartPole-v0/<timestamp>/hyperparameters.json}.
+
+\section{Selected Code References}
+See these source files for the exact implementation:
+\begin{itemize}
+  \item \texttt{src/q\_network.py}
+  \item \texttt{src/dqn\_agent.py}
+  \item \texttt{src/replay\_memory.py}
+  \item \texttt{run\_dqn.py}
+\end{itemize}
+
+\section{Acknowledgements}
+Based on standard DQN algorithms and course homework templates. Thanks to Gymnasium and Keras.
+
+\end{document}
+
