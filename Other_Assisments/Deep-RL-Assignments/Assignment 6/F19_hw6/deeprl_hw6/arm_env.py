@@ -6,7 +6,7 @@ import gymnasium as gym
 
 class TwoLinkArmEnv(gym.core.Env):
     DOF = 2
-    metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 15}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 15}
 
     def __init__(
         self,
@@ -93,7 +93,10 @@ class TwoLinkArmEnv(gym.core.Env):
         self.dq = self.init_dq.copy()
         self.t = 0.0
 
-        return np.hstack((self.q, self.dq)), {}
+        obs = np.hstack((self.q, self.dq))
+        # Ensure observation is within bounds and cast to float32
+        obs = np.clip(obs, self.observation_space.low, self.observation_space.high)
+        return obs.astype(np.float32), {}
 
     @property
     def position(self):
@@ -157,14 +160,15 @@ class TwoLinkArmEnv(gym.core.Env):
         # Gymnasium step API: return (obs, reward, terminated, truncated, info)
         terminated = bool(is_done)
         truncated = False
-        return np.hstack((self.q, self.dq)), reward, terminated, truncated, {}
+        obs = np.hstack((self.q, self.dq))
+        # Ensure observation is within bounds and cast to float32
+        obs = np.clip(obs, self.observation_space.low, self.observation_space.high)
+        return obs.astype(np.float32), reward, terminated, truncated, {}
 
-    def render(self, mode="human", close=False):
-        if close:
-            if self.viewer is not None:
-                self.viewer.close()
-                self.viewer = None
-            return
+    def render(self, mode="human"):
+        """Gymnasium-compatible render method."""
+        if mode is None:
+            mode = "human"
 
         from gymnasium.envs.classic_control import rendering
 
@@ -175,6 +179,11 @@ class TwoLinkArmEnv(gym.core.Env):
             max_arm_length = 2 * self.l1 + self.l2
             bounds = 1.5 * max_arm_length
             self.viewer.set_bounds(-bounds, bounds, -bounds, bounds)
+
+        # Clear previous onetime objects
+        self.viewer.onetime_geoms = []
+
+        # Draw goal position (red, transparent)
         link1_goal = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
         link1_goal_transform = rendering.Transform(rotation=self.goal_q[0])
         link1_goal.add_attr(link1_goal_transform)
@@ -194,6 +203,7 @@ class TwoLinkArmEnv(gym.core.Env):
         link2_goal._color.vec4 = (0.0, 0.0, 1.0, 0.25)
         self.viewer.add_onetime(link2_goal)
 
+        # Draw current arm position
         p1 = [2 * self.l1 * np.cos(self.q[0]), 2 * self.l1 * np.sin(self.q[0])]
         link1 = self.viewer.draw_polygon([(l, b), (l, t), (r, t), (r, b)])
         link1_transform = rendering.Transform(rotation=self.q[0])
@@ -207,7 +217,19 @@ class TwoLinkArmEnv(gym.core.Env):
         link2.add_attr(link2_transform)
         link2.set_color(0.0, 0.0, 1.0)
 
-        return self.viewer.render(return_rgb_array=(mode == "rgb_array"))
+        if mode == "rgb_array":
+            return self.viewer.render(return_rgb_array=True)
+        elif mode == "human":
+            self.viewer.render(return_rgb_array=False)
+            return None
+        else:
+            raise ValueError(f"Unsupported render mode: {mode}")
+
+    def close(self):
+        """Close the viewer."""
+        if self.viewer is not None:
+            self.viewer.close()
+            self.viewer = None
 
 
 class LimitedTorqueTwoLinkArmEnv(TwoLinkArmEnv):
