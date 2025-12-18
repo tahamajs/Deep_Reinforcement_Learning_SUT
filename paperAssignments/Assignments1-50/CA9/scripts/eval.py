@@ -15,7 +15,7 @@ from ..src.utils.logger import plot_series
 import torch
 
 
-def evaluate_policy(policy: GaussianPolicy, env_name: str, episodes: int = 5) -> float:
+def evaluate_policy(policy: GaussianPolicy, env_name: str, episodes: int = 5):
     if gym is None:
         raise RuntimeError("gymnasium not available")
     env = gym.make(env_name)
@@ -40,7 +40,7 @@ def evaluate_policy(policy: GaussianPolicy, env_name: str, episodes: int = 5) ->
             steps += 1
         returns.append(ep_ret)
         trajectories.append(traj)
-    return mean(returns)
+    return mean(returns), trajectories
 
 
 def main():
@@ -81,15 +81,25 @@ def main():
             # instantiate a fresh policy (user can modify to load weights)
             policy = GaussianPolicy(s_dim=cfg.latent_dim, a_dim=2)
 
-        avg = evaluate_policy(policy, args.env, episodes=args.episodes)
+        avg, trajectories = evaluate_policy(policy, args.env, episodes=args.episodes)
         print(f"Average return over {args.episodes} episodes: {avg:.3f}")
         # save a simple plot of returns (single point repeated) and placeholder trajectory file
         out_dir = os.path.join("outputs", "ca9", "eval")
         os.makedirs(out_dir, exist_ok=True)
         try:
             from ..src.utils.logger import plot_series
-
+            # save returns plot
             plot_series([0, 1], {"returns": [avg, avg]}, os.path.join(out_dir, "returns.png"), title="Eval returns")
+            # save trajectories and per-episode reward plots
+            import numpy as _np
+            for i, traj in enumerate(trajectories):
+                ep_dir = os.path.join(out_dir, f"ep_{i}")
+                os.makedirs(ep_dir, exist_ok=True)
+                _np.save(os.path.join(ep_dir, "obs.npy"), _np.array(traj["obs"], dtype=object))
+                _np.save(os.path.join(ep_dir, "acts.npy"), _np.array(traj["acts"], dtype=object))
+                _np.save(os.path.join(ep_dir, "rews.npy"), _np.array(traj["rews"], dtype=float))
+                # plot rewards over steps
+                plot_series(list(range(len(traj["rews"]))), {"rewards": traj["rews"]}, os.path.join(ep_dir, "rewards.png"), title=f"Episode {i} rewards")
         except Exception:
             pass
     except Exception as e:

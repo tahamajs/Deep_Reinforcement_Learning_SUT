@@ -103,6 +103,13 @@ def main():
         )
         writer.writeheader()
         step = 0
+        # histories for plotting
+        hist_steps = []
+        hist_v = []
+        hist_critic = []
+        hist_policy = []
+        hist_lam = []
+        hist_std = []
         for epoch in range(args.epochs):
             iters = args.steps
             for it in range(iters):
@@ -111,12 +118,21 @@ def main():
                 stats_row = {"step": step}
                 stats_row.update(stats)
                 writer.writerow(stats_row)
+                # record histories
+                hist_steps.append(step)
+                hist_v.append(stats["v_loss"])
+                hist_critic.append(stats["critic_loss"])
+                hist_policy.append(stats["policy_loss"])
+                hist_lam.append(stats["lam_mean"])
+                hist_std.append(stats["std_mild_mean"])
                 # tensorboard
                 if tb_writer is not None:
                     tb_writer.add_scalar("loss/v_loss", stats["v_loss"], step)
                     tb_writer.add_scalar("loss/critic_loss", stats["critic_loss"], step)
                     tb_writer.add_scalar("misc/lam_mean", stats["lam_mean"], step)
-                    tb_writer.add_scalar("misc/std_mild_mean", stats["std_mild_mean"], step)
+                    tb_writer.add_scalar(
+                        "misc/std_mild_mean", stats["std_mild_mean"], step
+                    )
                 # wandb
                 if args.use_wandb:
                     try:
@@ -138,6 +154,23 @@ def main():
                     except Exception as e:
                         print("Failed to save checkpoint:", e)
     print(f"Training finished. Logs saved to {log_path}")
+    # save history plots and config snapshot
+    try:
+        from ..src.utils.logger import plot_series
+        out_dir = os.path.join(args.logdir, "plots")
+        os.makedirs(out_dir, exist_ok=True)
+        if len(hist_steps) > 0:
+            plot_series(hist_steps, {"v_loss": hist_v, "critic_loss": hist_critic, "policy_loss": hist_policy}, os.path.join(out_dir, "losses.png"), title="Losses")
+            plot_series(hist_steps, {"lam_mean": hist_lam, "std_mild_mean": hist_std}, os.path.join(out_dir, "lam_std.png"), title="Lambda and Std")
+    except Exception:
+        pass
+    try:
+        import json
+        cfg_path = os.path.join(args.logdir, "config.json")
+        with open(cfg_path, "w") as f:
+            json.dump(cfg.__dict__, f, indent=2)
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
