@@ -1,4 +1,5 @@
 """Simple plotting utilities for planner analysis (uses matplotlib)."""
+
 from __future__ import annotations
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -30,9 +31,9 @@ def plot_success_vs_steps(metrics: List[dict], out: str):
 
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) < 3:
         print("Usage: plot_planner_effect.py metrics.csv out.png")
     else:
         rows = load_metrics(sys.argv[1])
         plot_success_vs_steps(rows, sys.argv[2])
-

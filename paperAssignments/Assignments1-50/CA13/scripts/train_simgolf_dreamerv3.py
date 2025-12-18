@@ -32,12 +32,15 @@ def load_config(path: str) -> Any:
 
 class DummyWorldModel:
     """Minimal RSSM-like stub implementing imagine step for testing planner integration."""
+
     def __init__(self, z_dim=32):
         self.z_dim = z_dim
 
     def step(self, z, a):
         # deterministic linear transition for stub testing
-        z_next = z + 0.01 * (a.reshape(z.shape) if isinstance(a, torch.Tensor) else torch.zeros_like(z))
+        z_next = z + 0.01 * (
+            a.reshape(z.shape) if isinstance(a, torch.Tensor) else torch.zeros_like(z)
+        )
         r = 0.0
         gamma = 1.0
         return z_next, r, gamma
@@ -72,7 +75,9 @@ def main():
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    buffer = CheckpointBuffer(capacity=int(planner_cfg.buffer_size or 1024), device=device)
+    buffer = CheckpointBuffer(
+        capacity=int(planner_cfg.buffer_size or 1024), device=device
+    )
 
     # These would normally be loaded/trained DreamerV3 components
     rssm = DummyWorldModel(z_dim=32)
@@ -84,7 +89,9 @@ def main():
     total_steps = int(cfg.get("training", {}).get("total_steps", 200000))
     z = torch.zeros((1, 32), device=device)
 
-    print(f"Starting training scaffold for {total_steps} steps. Planner enabled={planner_cfg.enabled}")
+    print(
+        f"Starting training scaffold for {total_steps} steps. Planner enabled={planner_cfg.enabled}"
+    )
     start_time = time.time()
     while step < total_steps:
         # Simulate environment interaction (user should replace with real env loop)
@@ -102,25 +109,32 @@ def main():
             buffer.push(z.detach().clone(), score=score, step=step)
 
         # check trigger
-        if planner_cfg.enabled and should_trigger(td_err, unc, entropy, trig_cfg, last_trigger, step):
+        if planner_cfg.enabled and should_trigger(
+            td_err, unc, entropy, trig_cfg, last_trigger, step
+        ):
             last_trigger = step
             samples = buffer.sample(k=1, prioritized=True) if len(buffer) > 0 else []
             if samples:
                 z_saved = samples[0]["z"]
-                branches = simulate_branches(rssm, actor, value_fn, z_saved, planner_cfg)
+                branches = simulate_branches(
+                    rssm, actor, value_fn, z_saved, planner_cfg
+                )
                 # user should update actor/critic from branches here
                 top_return = branches[0].ret if branches else 0.0
-                print(f"[step {step}] Planner ran: branches={len(branches)}, top_return={top_return:.3f}")
+                print(
+                    f"[step {step}] Planner ran: branches={len(branches)}, top_return={top_return:.3f}"
+                )
         # advance
         z = z_next
         step += 1
         if step % 10000 == 0:
             elapsed = time.time() - start_time
-            print(f"Step {step}/{total_steps} elapsed {elapsed:.1f}s buffer_size={len(buffer)}")
+            print(
+                f"Step {step}/{total_steps} elapsed {elapsed:.1f}s buffer_size={len(buffer)}"
+            )
 
     print("Training scaffold finished.")
 
 
 if __name__ == "__main__":
     main()
-
