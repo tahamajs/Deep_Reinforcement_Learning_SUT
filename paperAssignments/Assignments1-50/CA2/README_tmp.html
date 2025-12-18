@@ -378,23 +378,23 @@ code {
 <h2 id="3-mathematical-formulation">3. Mathematical Formulation</h2>
 <h3 id="31-crossq-critic-loss-single-critic-extend-to-twin-critics-if-desired">3.1 CrossQ Critic Loss (single critic; extend to twin critics if desired)</h3>
 <p>[
-\mathcal{L}<em>{\text{CrossQ}}(\theta)
-= \mathbb{E}</em>{(s,a,r,s')\sim \mathcal{D}}
+\mathcal{L}{\text{CrossQ}}(\theta)
+= \mathbb{E}{(s,a,r,s')\sim \mathcal{D}}
 \Big[\big(Q_\theta(s,a)-y\big)^2\Big],
 \
 y = r + \gamma \max_{a'} Q_\theta(s', a')
 ]
 BN is applied to concatenated current/next batches to share statistics.</p>
 <h3 id="32-sophia-g-update-per-parameter">3.2 Sophia-G Update (per-parameter)</h3>
-<p>Let (g_t = \nabla_\theta \mathcal{L}<em>t), (h_t \approx \text{diag Hessian}) (EMA).
+<p>Let (g_t = \nabla_\theta \mathcal{L}t), (h_t \approx \text{diag Hessian}) (EMA).
 [
-m_t = \beta_1 m</em>{t-1} + (1-\beta_1) g_t,
+m_t = \beta_1 m{t-1} + (1-\beta_1) g_t,
 \quad
-h_t = \beta_2 h_{t-1} + (1-\beta_2) \hat{h}<em>t
+h_t = \beta_2 h_{t-1} + (1-\beta_2) \hat{h}t
 ]
 [
-\theta</em>{t+1} = \theta_t - \eta \cdot
-\text{clip}!\left(\frac{m_t}{\max(\gamma h_t, \epsilon)}, \delta\right)
+\theta{t+1} = \theta_t - \eta \cdot
+\text{clip}!\left(\frac{m_t}{\max(\gamma h_t, \epsilon)}, -\delta, \delta\right)
 ]
 where (\hat{h}_t) is a mini-batch Hessian-diagonal estimator (e.g., squared gradients), (\gamma) scales curvature, and (\delta) clips extreme steps. BN stats must stay consistent during Hessian estimation; freeze or synchronize running means during (\hat{h}_t) computation.</p>
 <h3 id="33-utd-and-bn-stability">3.3 UTD and BN Stability</h3>
@@ -408,7 +408,7 @@ where (\hat{h}_t) is a mini-batch Hessian-diagonal estimator (e.g., squared grad
 <li>Critic forward → (Q_\theta(s,a)), target (y).</li>
 <li>Compute loss (\mathcal{L}); backprop to get (g_t).</li>
 <li>Update Hessian diag estimate (\hat{h}_t); apply Sophia step.</li>
-<li>Actor (TD3-style): delay policy update; policy loss (-\mathbb{E}<em>{s} Q</em>\theta(s, \pi_\phi(s))).</li>
+<li>Actor (TD3-style): delay policy update; policy loss (-\mathbb{E}{s} Q\theta(s, \pi_\phi(s))).</li>
 <li>Repeat <code>UTD</code> times per env step; periodically update BN running stats from mixed (s, s') mini-batches.</li>
 </ol>
 <h2 id="5-implementation-blueprint-pytorch">5. Implementation Blueprint (PyTorch)</h2>

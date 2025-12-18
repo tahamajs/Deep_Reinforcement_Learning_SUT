@@ -22,23 +22,23 @@ CrossQ stabilizes bootstrapping without target networks via BN, but Adam gradien
 = \mathbb{E}_{(s,a,r,s')\sim \mathcal{D}}
 \Big[\big(Q_\theta(s,a)-y\big)^2\Big],
 \\
-y = r + \gamma \max*{a'} Q*\theta(s', a')
+y = r + \gamma \\max_{a'} Q_\theta(s', a')
 \]
 BN is applied to concatenated current/next batches to share statistics.
 
 ### 3.2 Sophia-G Update (per-parameter)
 
-Let \(g*t = \nabla*\theta \mathcal{L}_t\), \(h_t \approx \text{diag Hessian}\) (EMA).
+Let \(g_t = \nabla_\theta \mathcal{L}_t\), \(h_t \approx \text{diag Hessian}\) (EMA).
 \[
-m_t = \beta_1 m_{t-1} + (1-\beta*1) g_t,
+m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t,
 \quad
-h_t = \beta_2 h*{t-1} + (1-\beta*2) \hat{h}\_t
+h_t = \beta_2 h_{t-1} + (1-\beta_2) \hat{h}_t
 \]
 \[
-\theta*{t+1} = \theta_t - \eta \cdot
+\theta_{t+1} = \theta_t - \eta \cdot
 \text{clip}\!\left(\frac{m_t}{\max(\gamma h_t, \epsilon)}, \delta\right)
 \]
-where \(\hat{h}\_t\) is a mini-batch Hessian-diagonal estimator (e.g., squared gradients), \(\gamma\) scales curvature, and \(\delta\) clips extreme steps. BN stats must stay consistent during Hessian estimation; freeze or synchronize running means during \(\hat{h}\_t\) computation.
+where \(\hat{h}_t\) is a mini-batch Hessian-diagonal estimator (e.g., squared gradients), \(\gamma\) scales curvature, and \(\delta\) clips extreme steps. BN stats must stay consistent during Hessian estimation; freeze or synchronize running means during \(\hat{h}_t\) computation.
 
 ### 3.3 UTD and BN Stability
 
@@ -50,7 +50,7 @@ where \(\hat{h}\_t\) is a mini-batch Hessian-diagonal estimator (e.g., squared g
 2. Build concatenated tensors: \(X = [s; s']\) → BN → features.
 3. Critic forward → \(Q\_\theta(s,a)\), target \(y\).
 4. Compute loss \(\mathcal{L}\); backprop to get \(g_t\).
-5. Update Hessian diag estimate \(\hat{h}\_t\); apply Sophia step.
+5. Update Hessian diag estimate \(\hat{h}_t\); apply Sophia step.
 6. Actor (TD3-style): delay policy update; policy loss \(-\mathbb{E}_{s} Q_\theta(s, \pi\_\phi(s))\).
 7. Repeat `UTD` times per env step; periodically update BN running stats from mixed (s, s') mini-batches.
 
@@ -99,7 +99,7 @@ where \(\hat{h}\_t\) is a mini-batch Hessian-diagonal estimator (e.g., squared g
 
 ## 7. Engineering Notes
 
-- **BN + Hessian:** When estimating \(\hat{h}\_t\), run BN in eval or synchronize stats to avoid double-drift.
+- **BN + Hessian:** When estimating \(\hat{h}_t\), run BN in eval or synchronize stats to avoid double-drift.
 - **Mixed precision:** Prefer `torch.cuda.amp` for forward/backward; keep Hessian accumulations in FP32.
 - **Replay freshness:** Large UTD benefits from prioritized or recency-biased sampling; optional.
 - **Target networks:** Keep disabled (CrossQ design); if instability remains at UTD 20, allow a slow-EMA target as a safety fallback.
