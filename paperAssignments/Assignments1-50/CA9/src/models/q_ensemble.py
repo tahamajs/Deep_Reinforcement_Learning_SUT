@@ -30,7 +30,9 @@ class QEnsemble(nn.Module):
         self.num_q = num_q
         self.qs = nn.ModuleList([MLP(state_dim + action_dim) for _ in range(num_q)])
 
-    def forward(self, s: torch.Tensor, a: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, s: torch.Tensor, a: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Evaluate ensemble on (s,a).
         Returns: mean [B,1], std [B,1]
@@ -52,4 +54,3 @@ class QEnsemble(nn.Module):
         """Polyak average parameters from other ensemble."""
         for p, q in zip(self.parameters(), other.parameters()):
             p.data.copy_(tau * p.data + (1.0 - tau) * q.data)
-

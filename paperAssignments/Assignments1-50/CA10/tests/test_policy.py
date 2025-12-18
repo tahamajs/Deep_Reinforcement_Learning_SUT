@@ -13,8 +13,22 @@ def load_module_from_path(path: str, name: str):
 
 def test_policy_loss_computation():
     repo_root = pathlib.Path(__file__).resolve().parents[3]
-    policy_path = str(repo_root / "paperAssignments" / "Assignments1-50" / "CA10" / "policy" / "efficientzero_v2_ma.py")
-    models_path = str(repo_root / "paperAssignments" / "Assignments1-50" / "CA10" / "models" / "ezv2_ma_net.py")
+    policy_path = str(
+        repo_root
+        / "paperAssignments"
+        / "Assignments1-50"
+        / "CA10"
+        / "policy"
+        / "efficientzero_v2_ma.py"
+    )
+    models_path = str(
+        repo_root
+        / "paperAssignments"
+        / "Assignments1-50"
+        / "CA10"
+        / "models"
+        / "ezv2_ma_net.py"
+    )
 
     mod_policy = load_module_from_path(policy_path, "policy_mod")
     mod_models = load_module_from_path(models_path, "ezv2_ma_net")
@@ -24,7 +38,12 @@ def test_policy_loss_computation():
     obs_dim = 6
     latent_dim = 32
     joint_action_dim = 8
-    policy = EfficientZeroV2Policy(obs_dim=obs_dim, latent_dim=latent_dim, joint_action_dim=joint_action_dim, device="cpu")
+    policy = EfficientZeroV2Policy(
+        obs_dim=obs_dim,
+        latent_dim=latent_dim,
+        joint_action_dim=joint_action_dim,
+        device="cpu",
+    )
     policy.eval()
 
     obs = torch.randn(2, obs_dim)
@@ -38,4 +57,3 @@ def test_policy_loss_computation():
     loss, losses = policy.compute_losses(h0, actions, pi_t, v_t, r_t, z_t, loss_weights)
     assert isinstance(loss.item(), float)
     assert "loss_pi" in losses and "loss_v" in losses
-

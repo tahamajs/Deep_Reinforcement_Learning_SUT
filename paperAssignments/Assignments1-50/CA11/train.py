@@ -2,6 +2,7 @@
 Lightweight training loop for CA11 (TWM-SSD).
 This script is intentionally small and import-safe — suitable for quick smoke tests.
 """
+
 import argparse
 import os
 import time
@@ -20,7 +21,9 @@ def train_loop(cfg, steps: int = 10, save_path: str = "ca11_ckpt.pt"):
     device = get_device("cuda" if torch.cuda.is_available() else "cpu")
     ds = RandomTrajectoryDataset(seq_len=cfg.seq_len, d_model=cfg.d_model, size=256)
     dl = DataLoader(ds, batch_size=cfg.batch_size, shuffle=True)
-    model = TWMSSDModel(d_model=cfg.d_model, n_heads=cfg.n_heads, n_layers=cfg.n_layers).to(device)
+    model = TWMSSDModel(
+        d_model=cfg.d_model, n_heads=cfg.n_heads, n_layers=cfg.n_layers
+    ).to(device)
     opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
 
     it = 0
@@ -59,4 +62,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

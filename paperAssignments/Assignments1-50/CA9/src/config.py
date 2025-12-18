@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from typing import Any, Dict
 
+
 @dataclass
 class Config:
     """Hyperparameters and runtime configuration for AU-DMG experiments."""
+
     seed: int = 42
     device: str = "cpu"
     env: str = "antmaze-medium-diverse-v2"
@@ -22,6 +24,6 @@ class Config:
     use_lcb: bool = False
     max_grad_norm: float = 10.0
 
+
 def default_config() -> Config:
     return Config()
-

@@ -113,7 +113,9 @@ def run_demo(cfg: Config, steps: int = 1000):
                     returns.append(ret)
                 avg_ret = float(np.mean(returns))
                 eval_returns.append((total_steps, avg_ret))
-                print(f"[Eval] steps={total_steps} avg_return={avg_ret:.2f} saved_ckpt={ckpt_path}")
+                print(
+                    f"[Eval] steps={total_steps} avg_return={avg_ret:.2f} saved_ckpt={ckpt_path}"
+                )
 
     elapsed = time.time() - start
     print(f"Demo finished: {total_steps} env steps in {elapsed:.2f}s")

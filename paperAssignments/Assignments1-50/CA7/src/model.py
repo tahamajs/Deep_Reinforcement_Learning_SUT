@@ -106,7 +106,9 @@ class StochasticActor(nn.Module):
             nn.Linear(hidden_size // 2, action_dim),
         )
         # per-dimension learned log_std
-        self.log_std = torch.nn.Parameter(torch.ones(1, action_dim) * init_log_std, requires_grad=True)
+        self.log_std = torch.nn.Parameter(
+            torch.ones(1, action_dim) * init_log_std, requires_grad=True
+        )
 
     def forward(
         self, obs: torch.Tensor, h0: Optional[torch.Tensor] = None
@@ -137,7 +139,11 @@ class StochasticActor(nn.Module):
         actions = torch.tanh(pre_tanh)
         # log probability with tanh squashing correction:
         # logp = Normal(pre_tanh; mean, std).log_prob(pre_tanh) - sum(log(1 - tanh^2(pre_tanh)))
-        normal_logp = -0.5 * (((pre_tanh - mean) / std) ** 2 + 2 * torch.log(std) + torch.log(2 * torch.pi))
+        normal_logp = -0.5 * (
+            ((pre_tanh - mean) / std) ** 2
+            + 2 * torch.log(std)
+            + torch.log(2 * torch.pi)
+        )
         # sum over action dim
         normal_logp = normal_logp.sum(-1)
         # correction
@@ -161,7 +167,11 @@ class StochasticActor(nn.Module):
         eps = 1e-6
         clipped = actions.clamp(-1 + eps, 1 - eps)
         pre_tanh = 0.5 * (torch.log1p(clipped) - torch.log1p(-clipped))
-        normal_logp = -0.5 * (((pre_tanh - mean) / std) ** 2 + 2 * torch.log(std) + torch.log(2 * torch.pi))
+        normal_logp = -0.5 * (
+            ((pre_tanh - mean) / std) ** 2
+            + 2 * torch.log(std)
+            + torch.log(2 * torch.pi)
+        )
         normal_logp = normal_logp.sum(-1)
         log_det = torch.log(1.0 - clipped.pow(2) + 1e-6).sum(-1)
         logp = normal_logp - log_det

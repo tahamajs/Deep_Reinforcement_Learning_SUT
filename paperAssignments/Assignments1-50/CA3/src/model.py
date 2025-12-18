@@ -12,7 +12,9 @@ class MLPPolicy(nn.Module):
     and compute log-probabilities for policy-gradient style algorithms.
     """
 
-    def __init__(self, obs_dim: int, action_dim: int, hidden_sizes: Sequence[int] = (64, 64)):
+    def __init__(
+        self, obs_dim: int, action_dim: int, hidden_sizes: Sequence[int] = (64, 64)
+    ):
         super().__init__()
         self.obs_dim = obs_dim
         self.action_dim = action_dim
@@ -39,11 +41,15 @@ class MLPPolicy(nn.Module):
         """
         if obs.dim() == 1:
             obs = obs.unsqueeze(0)
-        assert obs.size(-1) == self.obs_dim, f"Expected obs dim {self.obs_dim}, got {obs.size(-1)}"
+        assert (
+            obs.size(-1) == self.obs_dim
+        ), f"Expected obs dim {self.obs_dim}, got {obs.size(-1)}"
         logits = self.net(obs)
         return logits
 
-    def get_action(self, obs: torch.Tensor, deterministic: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_action(
+        self, obs: torch.Tensor, deterministic: bool = False
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Sample (or choose deterministic) action and return log-probability.
 
         Args:
@@ -70,6 +76,7 @@ class MLPPolicy(nn.Module):
     def act_numpy(self, obs_np, deterministic: bool = False):
         """Utility to accept numpy arrays and return numpy action and logp."""
         import numpy as _np
+
         obs_t = torch.as_tensor(obs_np, dtype=torch.float32)
         action_t, logp_t = self.get_action(obs_t, deterministic=deterministic)
         return _np.asarray(action_t.cpu().numpy()), _np.asarray(logp_t.cpu().numpy())

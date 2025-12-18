@@ -16,15 +16,18 @@ We supply a 1000+ line blueprint: theory, algorithmic details, unified configs, 
 ## 2. Background
 
 ### 2.1 UniZero
+
 - Unified tree search integrating policy, value, and reward heads.
 - Emphasizes architectural simplicity and shared networks.
 - Typically uses standard PUCT without Gumbel top-k.
 
 ### 2.2 EfficientZero V2 (EZ-V2)
+
 - Builds on MuZero/EfficientZero with Gumbel search corrections, value-prefix loss, and improved dynamics consistency.
 - Demonstrates strong performance on Atari 100k with reduced samples.
 
 ### 2.3 Motivation for Unified Comparison
+
 - Different codebases and defaults make comparisons noisy.
 - Normalizing backbone, replay, augmentation, and training loop isolates algorithmic differences.
 
@@ -33,6 +36,7 @@ We supply a 1000+ line blueprint: theory, algorithmic details, unified configs, 
 ## 3. Problem Statement
 
 Conduct a controlled empirical study of UniZero vs EZ-V2 under identical settings:
+
 - Same backbone network size (encoder/dynamics/policy/value heads).
 - Same replay buffer, augmentation (e.g., random shift/crop), optimizer, batch sizes.
 - Same evaluation protocol and logging.
@@ -43,6 +47,7 @@ Conduct a controlled empirical study of UniZero vs EZ-V2 under identical setting
 ## 4. Unified Architecture (LightZero)
 
 ### 4.1 Shared Components
+
 - **Encoder:** CNN for Atari; small ResNet-style for DMControl pixels; MLP for low-dim.
 - **Dynamics:** latent transition with reward prediction.
 - **Prediction head:** policy logits, value.
@@ -50,6 +55,7 @@ Conduct a controlled empirical study of UniZero vs EZ-V2 under identical setting
 - **Normalization:** LayerNorm in latent for stability.
 
 ### 4.2 Algorithm-Specific Components
+
 - UniZero: standard PUCT, no value-prefix loss.
 - EZ-V2: Gumbel top-k search, value-prefix head/loss, consistency tweaks.
 
@@ -58,17 +64,20 @@ Conduct a controlled empirical study of UniZero vs EZ-V2 under identical setting
 ## 5. Search Algorithms
 
 ### 5.1 UniZero Search (Baseline)
+
 - Standard PUCT:
-$$U(s,a)=c_{\text{puct}} P(s,a) \frac{\sqrt{\sum_b N(s,b)}}{1+N(s,a)}.$$
+  $$U(s,a)=c_{\text{puct}} P(s,a) \frac{\sqrt{\sum_b N(s,b)}}{1+N(s,a)}.$$
 - Select child maximizing $Q+U$.
 - Dirichlet noise at root for exploration.
 
 ### 5.2 EZ-V2 Gumbel Search
+
 - Sample top-k via Gumbel noise on priors, then apply corrected selection.
 - Reduces bias from exhaustive argmax; improves exploration of promising actions.
 - Keep same sims per move for fairness; report sims and wall-clock.
 
 ### 5.3 Normalized Search Budget
+
 - Fix simulations per move (e.g., 400 for Atari, 800 for DMControl).
 - Same c_puct, noise, temperature schedules unless ablated.
 
@@ -77,16 +86,19 @@ $$U(s,a)=c_{\text{puct}} P(s,a) \frac{\sqrt{\sum_b N(s,b)}}{1+N(s,a)}.$$
 ## 6. Loss Functions
 
 ### 6.1 Shared Loss Terms
+
 - Policy CE vs visit counts.
 - Value MSE vs n-step/TD targets.
 - Reward MSE.
 - Consistency/representation loss (optional, shared).
 
 ### 6.2 EZ-V2 Value Prefix
+
 - Predict cumulative reward prefix $z_k$ over unroll.
 - Loss: $L_z = \sum_k \|z_k - \hat{z}_k\|^2$.
 
 ### 6.3 UniZero Loss
+
 - No prefix term; otherwise identical losses.
 
 ---
@@ -94,14 +106,17 @@ $$U(s,a)=c_{\text{puct}} P(s,a) \frac{\sqrt{\sum_b N(s,b)}}{1+N(s,a)}.$$
 ## 7. Data and Preprocessing
 
 ### 7.1 Atari
+
 - 84x84 grayscale; frame-stack 4; action repeat 4; clip rewards to [-1,1].
 - Random shift (data aug) if used; must be identical across algorithms.
 
 ### 7.2 DMControl
+
 - 84x84 RGB; frame-stack 3; action repeat per task default.
 - Random crop; same pipeline for both.
 
 ### 7.3 Replay
+
 - Size: 1M for Atari; 500k–1M for DMControl.
 - Uniform sampling (no PER) to avoid confounding; optional PER ablation.
 
@@ -145,20 +160,20 @@ def train_step(batch, model, cfg, algo):
 
 ## 10. Hyperparameters (Default Shared)
 
-| Component | Atari | DMControl |
-| --------- | ----- | --------- |
-| Unroll K | 5 | 5–10 |
-| n-step | 5 | 5 |
-| Sims/move | 400 | 800 |
-| c_puct | 2.0 | 2.0 |
-| Dirichlet α | 0.3 | 0.3 |
-| Noise frac | 0.25 | 0.25 |
-| Batch | 256 | 256–512 |
-| LR | 1e-3 (Adam) | 1e-3 |
-| Weight decay | 1e-4 | 1e-4 |
-| Grad clip | 10.0 | 10.0 |
-| Target τ | 0.01 | 0.01 |
-| Frames | 100k | 500k–1M steps |
+| Component    | Atari       | DMControl     |
+| ------------ | ----------- | ------------- |
+| Unroll K     | 5           | 5–10          |
+| n-step       | 5           | 5             |
+| Sims/move    | 400         | 800           |
+| c_puct       | 2.0         | 2.0           |
+| Dirichlet α  | 0.3         | 0.3           |
+| Noise frac   | 0.25        | 0.25          |
+| Batch        | 256         | 256–512       |
+| LR           | 1e-3 (Adam) | 1e-3          |
+| Weight decay | 1e-4        | 1e-4          |
+| Grad clip    | 10.0        | 10.0          |
+| Target τ     | 0.01        | 0.01          |
+| Frames       | 100k        | 500k–1M steps |
 
 EZ-V2 adds $\alpha_z$ (0.5–1.0) for prefix; UniZero sets $\alpha_z=0$.
 
@@ -166,7 +181,7 @@ EZ-V2 adds $\alpha_z$ (0.5–1.0) for prefix; UniZero sets $\alpha_z=0$.
 
 ## 11. Evaluation Protocol
 
-- **Games:** 10 Atari (diverse difficulty: Pong, Breakout, Qbert, Seaquest, Frostbite, Asterix, MsPacman, KungFuMaster, PrivateEye, Gravitar).  
+- **Games:** 10 Atari (diverse difficulty: Pong, Breakout, Qbert, Seaquest, Frostbite, Asterix, MsPacman, KungFuMaster, PrivateEye, Gravitar).
 - **DMControl:** Walker-walk, Cheetah-run, Reacher-easy, Finger-spin, Hopper-stand.
 - **Seeds:** ≥5 per game/task.
 - **Metrics:** Median HNS, IQM, mean ± CI; use `rliable`.
@@ -260,14 +275,17 @@ EZ-V2 adds $\alpha_z$ (0.5–1.0) for prefix; UniZero sets $\alpha_z=0$.
 ## 20. Extended Theory Notes
 
 ### 20.1 Gumbel Top-k Rationale
+
 - Reduces bias of greedy expansion by sampling top-k actions with stochasticity; improves exploration.
 - Theoretically approximates sampling from $\text{softmax}(\log P + G)$.
 
 ### 20.2 Value Prefix Rationale
+
 - Predicts partial returns to stabilize value across unroll; acts as auxiliary target.
 - Can reduce bootstrap error propagation.
 
 ### 20.3 UniZero Simplification
+
 - Fewer auxiliary heads; potentially faster training; tests whether EZ-V2 gains justify added complexity.
 
 ---
@@ -275,13 +293,13 @@ EZ-V2 adds $\alpha_z$ (0.5–1.0) for prefix; UniZero sets $\alpha_z=0$.
 ## 21. Detailed Target Computation
 
 - Value target (shared):
-$$
-G_t^{(n)} = \sum_{k=0}^{n-1} \gamma^k r_{t+k} + \gamma^n v_{t+n}.
-$$
+  $$
+  G_t^{(n)} = \sum_{k=0}^{n-1} \gamma^k r_{t+k} + \gamma^n v_{t+n}.
+  $$
 - Prefix target (EZ-V2):
-$$
-z_t = \sum_{k=0}^{t-1} \gamma^k r_k.
-$$
+  $$
+  z_t = \sum_{k=0}^{t-1} \gamma^k r_k.
+  $$
 - Policy target: visit counts $\pi_t$ from root MCTS (both).
 
 ---
@@ -297,14 +315,14 @@ $$
 
 ## 23. Ablation Tables (Template)
 
-| Ablation | Score (Median HNS) | IQM | Plan FPS | Notes |
-| -------- | ------------------ | --- | -------- | ----- |
-| UniZero base |  |  |  |  |
-| EZ-V2 base |  |  |  |  |
-| EZ-V2 no Gumbel |  |  |  |  |
-| EZ-V2 no prefix |  |  |  |  |
-| Sims 200 |  |  |  |  |
-| Sims 800 |  |  |  |  |
+| Ablation        | Score (Median HNS) | IQM | Plan FPS | Notes |
+| --------------- | ------------------ | --- | -------- | ----- |
+| UniZero base    |                    |     |          |       |
+| EZ-V2 base      |                    |     |          |       |
+| EZ-V2 no Gumbel |                    |     |          |       |
+| EZ-V2 no prefix |                    |     |          |       |
+| Sims 200        |                    |     |          |       |
+| Sims 800        |                    |     |          |       |
 
 ---
 
@@ -455,11 +473,10 @@ This study provides a fair, unified comparison of UniZero and EfficientZero V2. 
 ---
 
 _This README is the complete blueprint for Assignment 12: UniZero vs EfficientZero V2 comparative study in a unified LightZero codebase. Keep math, code, and experiments aligned._
- 
+
 ---
 
-Running locally (quickstart)
----------------------------
+## Running locally (quickstart)
 
 1. Create a venv and install requirements:
 
@@ -477,9 +494,10 @@ python -m paperAssignments.Assignments1-50.CA12.scripts.train_ra_u_obac --steps 
 Checkpoints and evaluation returns are written to `outputs/ca12_checkpoints/`.
 
 Notes:
+
 - The demo is minimal and intended for smoke-testing. For full experiments, use a controlled config and GPU device.
 
-----
+---
 
 Adaptive Policy Optimization via Offline-Boosted Actor-Critic: A Comprehensive Analysis of Theory, Implementation, and Retrieval-Augmented Extensions
 

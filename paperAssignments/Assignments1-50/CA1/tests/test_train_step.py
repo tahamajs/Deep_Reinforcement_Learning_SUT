@@ -15,7 +15,9 @@ def test_single_update_shapes_and_gradients():
     obs_dim = 4
 
     # simple MLP encoder
-    enc = nn.Sequential(nn.Linear(obs_dim, 64), nn.ReLU(), nn.Linear(64, 128), nn.ReLU())
+    enc = nn.Sequential(
+        nn.Linear(obs_dim, 64), nn.ReLU(), nn.Linear(64, 128), nn.ReLU()
+    )
     head = ParticleHead(in_dim=128, num_actions=A, num_particles=N, particle_dim=D)
 
     class Net(nn.Module):
@@ -29,7 +31,9 @@ def test_single_update_shapes_and_gradients():
             return self.head(feats)
 
     model = Net(enc, head)
-    loss_fn = AnnealedSinkhornLoss(n_iters=5, eps_start=0.5, eps_end=0.1, decay_steps=10)
+    loss_fn = AnnealedSinkhornLoss(
+        n_iters=5, eps_start=0.5, eps_end=0.1, decay_steps=10
+    )
 
     # synthetic batch
     obs = torch.randn(B, obs_dim)

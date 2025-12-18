@@ -3,7 +3,9 @@ import gym
 import torch
 
 
-def collect_episode(env: gym.Env, policy, device: str = "cpu", max_steps: int = 1000) -> Dict[str, Any]:
+def collect_episode(
+    env: gym.Env, policy, device: str = "cpu", max_steps: int = 1000
+) -> Dict[str, Any]:
     """Run a single episode using the provided policy.
 
     Args:
@@ -51,9 +53,13 @@ def collect_episode(env: gym.Env, policy, device: str = "cpu", max_steps: int = 
     }
 
 
-def collect_n_episodes(env: gym.Env, policy, n: int, device: str = "cpu", max_steps: int = 1000) -> List[Dict[str, Any]]:
+def collect_n_episodes(
+    env: gym.Env, policy, n: int, device: str = "cpu", max_steps: int = 1000
+) -> List[Dict[str, Any]]:
     """Collect n episodes and return a list of episode dicts."""
     episodes = []
     for _ in range(n):
-        episodes.append(collect_episode(env, policy, device=device, max_steps=max_steps))
+        episodes.append(
+            collect_episode(env, policy, device=device, max_steps=max_steps)
+        )
     return episodes

@@ -3,6 +3,7 @@
 Provides minimal adapter classes to plug MAEZV2Network and MCTS into a LightZero-style training loop.
 This is a lightweight shim (no external LightZero dependency).
 """
+
 from typing import Any, Dict, Optional, Sequence, Tuple
 
 import torch
@@ -23,18 +24,36 @@ class LightZeroAdapter:
             per_agent_action_dims=mcfg.get("per_agent_action_dims"),
             device=device,
         )
-        self.mcts = MCTS(self.policy.net, c_puct=cfg.get("search", {}).get("c_puct", 1.5), dirichlet_alpha=cfg.get("search", {}).get("dir_alpha", None), dirichlet_frac=cfg.get("search", {}).get("dir_frac", 0.0), factored_search=cfg.get("search", {}).get("factored_search", False))
+        self.mcts = MCTS(
+            self.policy.net,
+            c_puct=cfg.get("search", {}).get("c_puct", 1.5),
+            dirichlet_alpha=cfg.get("search", {}).get("dir_alpha", None),
+            dirichlet_frac=cfg.get("search", {}).get("dir_frac", 0.0),
+            factored_search=cfg.get("search", {}).get("factored_search", False),
+        )
 
     def infer(self, obs: torch.Tensor) -> Dict[str, torch.Tensor]:
         logits_joint, logits_agents, value, prefix = self.policy.initial_infer(obs)
-        return {"logits": logits_joint, "logits_agents": logits_agents, "value": value, "prefix": prefix}
+        return {
+            "logits": logits_joint,
+            "logits_agents": logits_agents,
+            "value": value,
+            "prefix": prefix,
+        }
 
-    def search(self, obs: torch.Tensor, sims: int = 100, topk: int = 8) -> Dict[str, torch.Tensor]:
+    def search(
+        self, obs: torch.Tensor, sims: int = 100, topk: int = 8
+    ) -> Dict[str, torch.Tensor]:
         h0 = self.policy.net.initial_latent(obs)
         visits, policy = self.mcts.run(h0, num_simulations=sims, topk=topk)
         return {"visits": visits, "policy": policy}
 
-    def training_step(self, batch: Dict[str, torch.Tensor], loss_weights: Dict[str, float], optimizer: torch.optim.Optimizer):
+    def training_step(
+        self,
+        batch: Dict[str, torch.Tensor],
+        loss_weights: Dict[str, float],
+        optimizer: torch.optim.Optimizer,
+    ):
         obs = batch["obs"]
         actions = batch["actions"]
         pi_t = batch["pi_target"]
@@ -42,7 +61,9 @@ class LightZeroAdapter:
         r_t = batch["r_target"]
         z_t = batch["z_target"]
         h0 = self.policy.net.initial_latent(obs)
-        loss, losses = self.policy.compute_losses(h0, actions, pi_t, v_t, r_t, z_t, loss_weights)
+        loss, losses = self.policy.compute_losses(
+            h0, actions, pi_t, v_t, r_t, z_t, loss_weights
+        )
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -50,4 +71,3 @@ class LightZeroAdapter:
 
 
 __all__ = ["LightZeroAdapter"]
-

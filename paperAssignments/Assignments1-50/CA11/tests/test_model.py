@@ -39,4 +39,3 @@ def test_vqvae_tokenizer_roundtrip():
     assert indices.shape == (B, L)
     decoded = vq.decode_codes(indices)
     assert decoded.shape == (B, L, D)
-

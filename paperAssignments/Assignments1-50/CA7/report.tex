@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass[twocolumn]{article}
 \usepackage{amsmath,amsfonts,amssymb}
 \usepackage{graphicx}
 \usepackage{hyperref}
@@ -7,49 +7,71 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-We propose GET-ROPR, a practical method to incorporate backward-view TD($\lambda$)
-eligibility traces into recurrent off-policy reinforcement learning. This report
-summarizes the algorithm, theoretical motivation, and experimental plan.
+We introduce GET-ROPR, an off-policy method that integrates backward-view
+TD($\lambda$) eligibility traces into recurrent critics for partially observable
+environments. GET-ROPR combines IS-aware trace accumulation, trace clipping,
+and hidden-state recomputation to enable long-horizon credit assignment while
+maintaining stability with replay buffers.
 \end{abstract}
 
 \section{Introduction}
-Partial observability requires memory. Recurrent critics trained off-policy suffer
-from stale hidden states and truncated BPTT. GET-ROPR reintroduces long-horizon
-credit assignment via eligibility traces adapted to recurrent architectures.
+Partial observability necessitates memory; recurrent architectures (RNN/GRU/LSTM)
+are commonly used. Off-policy replay introduces stale hidden states and truncation
+of credit via limited BPTT. We propose an eligibility-trace based approach that
+operates on replayed sequences to recover long-horizon credit while controlling
+variance via clipped importance sampling.
+
+\section{Background}
+We adopt standard notation: observations \(o_t\), actions \(a_t\), rewards \(r_t\),
+discounts \(\gamma\), done flags \(d_t\). The recurrent critic \(Q_\phi(o_t,h_t,a_t)\)
+produces per-step action-values and evolves hidden states via \(h_{t+1}=f_\phi(o_t,a_t,h_t)\).
 
 \section{Method}
-\subsection{Notation}
-Observations \(o_t\), actions \(a_t\), rewards \(r_t\), done \(d_t\). Critic \(Q_\phi(o_t,h_t,a_t)\).
-\subsection{Backward-View Traces}
-We define
+\subsection{Backward-view traces with IS}
+Define TD error
 \[
-e_t = \bar{\rho}_t (\lambda \gamma e_{t-1} + \nabla_\phi Q_\phi(o_t,h_t,a_t)),
-\qquad
-\delta_t = r_t + \gamma (1-d_t) Q_{\bar\phi}(o_{t+1},h_{t+1},a_{t+1}) - Q_\phi(o_t,h_t,a_t).
+\delta_t = r_t + \gamma(1-d_t)Q_{\bar\phi}(o_{t+1},h_{t+1},a_{t+1}) - Q_\phi(o_t,h_t,a_t).
 \]
-The gradient estimate is \(g=\sum_t \delta_t e_t\).
-
-\subsection{Lambda-Returns (Forward View)}
-An equivalent forward-view loss is
+Backward-view clipped IS eligibility trace:
 \[
-\mathcal{L}=\frac{1}{2}\sum_t (G_t^\lambda - Q_t)^2,\quad
-G_t^\lambda = Q_t + \sum_{n=1}^{L-t} (\gamma\lambda)^{n-1}\Big(\prod_{i=1}^{n-1}\bar{\rho}_{t+i}\Big)\delta_{t+n-1}.
+e_t = \bar{\rho}_t\big(\lambda\gamma(1-d_{t-1})e_{t-1} + \nabla_\phi Q_\phi(o_t,h_t,a_t)\big),
 \]
+where \(\bar{\rho}_t=\min(\rho_t,c_\rho)\) and \(\rho_t=\frac{\pi(a_t|o_t,h_t)}{\mu(a_t|o_t,h_t)}\).
+The update direction is \(g=\sum_t \delta_t e_t\).
 
-\section{Implementation}
-We provide a PyTorch reference implementation with:
+\subsection{Forward-view surrogate (lambda-returns)}
+We use the numerically-stable forward-view surrogate
+\[
+\mathcal{L}=\tfrac12\sum_t (G_t^\lambda - Q_t)^2,\qquad
+G_t^\lambda = Q_t + \sum_{n\ge1} (\gamma\lambda)^{n-1}\Big(\prod_{i=1}^{n-1}\bar{\rho}_{t+i}\Big)\delta_{t+n-1},
+\]
+which yields gradients equivalent to the backward view under exact arithmetic.
+
+\section{Implementation details}
+We provide a compact PyTorch reference (see repository) with:
 \begin{itemize}
-  \item RecurrentCritic (GRU-based)
-  \item StochasticActor (RNN Gaussian policy with tanh squashing)
-  \item Lambda-return loss and IS clipping
-  \item Minimal SAC-style actor update with entropy term
+\item GRU-based recurrent critic and RNN Gaussian policy with tanh-squash and exact log-prob correction.
+\item Lambda-return loss with optional IS clipping and masking for episode ends.
+\item Twin critics (TD3-style) and a minimal SAC actor update with automatic temperature (\(\alpha\)) tuning.
 \end{itemize}
+Key engineering choices: recompute hidden states per batch, clip traces and gradients, and use soft target updates.
 
-\section{Experiments}
-Suggested benchmarks: Flicker Atari, DMControl occlusion. Metrics: returns, trace norms, IS stats, staleness.
+\section{Experiments and Evaluation}
+Benchmarks: Flicker-Atari, DMControl occlusion. Metrics: return curves, trace-norm statistics, IS ratio distributions, hidden-state staleness.
+We provide a reproducible smoke script (`train_sac_get_rnn.py`) and a demo notebook with plotting helpers.
+
+\section{Ablations and Hyperparameters}
+Important ablations include \(\lambda\)-sweep, IS clip \(c_\rho\), trace clip \(c_e\), sequence length and hidden refresh toggles. Default configs are in `src/config.py`.
 
 \section{Conclusion}
-GET-ROPR offers a practical bridge between classical eligibility traces and modern recurrent off-policy deep RL. The codebase accompanying this report provides reproducible smoke tests and an experimentation blueprint.
+GET-ROPR operationalizes eligibility traces for modern recurrent off-policy RL. The reference implementation and experiments in this assignment enable replication and further study.
+
+\appendix
+\section{Derivations}
+We sketch the equivalence between backward-view trace gradient \(g=\sum_t \delta_t e_t\) and the gradient of the lambda-return loss under standard assumptions; full proofs and extended bounds are in the README.
+
+\section{Reproducibility}
+All scripts, configs and a demo notebook are included. Pin PyTorch (>=2.2) and record seeds for exact runs.
 
 \bibliographystyle{plain}
 \bibliography{refs}

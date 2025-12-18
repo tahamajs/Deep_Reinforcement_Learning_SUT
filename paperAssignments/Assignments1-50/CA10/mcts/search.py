@@ -95,7 +95,9 @@ class MCTS:
                 noise = torch.distributions.Dirichlet(
                     torch.ones_like(priors) * self.dirichlet_alpha
                 ).sample()
-                priors = (1 - self.dirichlet_frac) * priors + self.dirichlet_frac * noise
+                priors = (
+                    1 - self.dirichlet_frac
+                ) * priors + self.dirichlet_frac * noise
 
             root.P = 1.0
 
@@ -109,7 +111,12 @@ class MCTS:
                     best_score = -float("inf")
                     best_child = None
                     for child in node.children.values():
-                        U = self.c_puct * child.P * math.sqrt(total_N + 1e-8) / (1 + child.N)
+                        U = (
+                            self.c_puct
+                            * child.P
+                            * math.sqrt(total_N + 1e-8)
+                            / (1 + child.N)
+                        )
                         score = child.Q + U
                         if score > best_score:
                             best_score = score
@@ -119,7 +126,9 @@ class MCTS:
                     search_path.append(node)
 
                 # expand leaf
-                logits_joint, logits_agents, value_leaf = self.net.predict_from_latent(node.h)
+                logits_joint, logits_agents, value_leaf = self.net.predict_from_latent(
+                    node.h
+                )
                 logits_joint = logits_joint.detach()
 
                 if self.factored_search and logits_agents is not None:
@@ -127,7 +136,9 @@ class MCTS:
                     # convert per-agent logits for this node to list
                     per_agent_logits = [la for la in logits_agents]
                     # get joint candidates via factored beam
-                    joint_idx, joint_scores = topk_factored(per_agent_logits, topk, self.max_beam)
+                    joint_idx, joint_scores = topk_factored(
+                        per_agent_logits, topk, self.max_beam
+                    )
                     # joint_idx: (1, beam, N_agents)
                     beam = joint_idx.shape[1]
                     candidates = []
@@ -139,7 +150,9 @@ class MCTS:
                         parts = []
                         for ag_i, ai in enumerate(agent_indices):
                             A_i = per_agent_logits[ag_i].shape[-1]
-                            one = torch.zeros(1, A_i, device=device, dtype=logits_joint.dtype)
+                            one = torch.zeros(
+                                1, A_i, device=device, dtype=logits_joint.dtype
+                            )
                             one[0, ai] = 1.0
                             parts.append(one)
                         a_vec = torch.cat(parts, dim=-1)

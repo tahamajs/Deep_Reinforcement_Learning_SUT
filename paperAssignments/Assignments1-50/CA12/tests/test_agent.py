@@ -23,7 +23,9 @@ def test_agent_update_steps():
     agent.retrieval_buffer.add_trajectory(states, actions, rewards, gamma=cfg.gamma)
 
     # sample a batch for critic update
-    s_batch, a_batch, rtg_batch = agent.retrieval_buffer.sample_batch(min(cfg.batch_size, 8))
+    s_batch, a_batch, rtg_batch = agent.retrieval_buffer.sample_batch(
+        min(cfg.batch_size, 8)
+    )
     loss_c = agent.update_critic(s_batch, a_batch, rtg_batch.squeeze(1))
     assert isinstance(loss_c, float) and loss_c >= 0.0
 
@@ -35,4 +37,3 @@ def test_agent_update_steps():
     # online actor update (should run without error)
     loss_online = agent.update_online_actor(s_batch)
     assert isinstance(loss_online, float)
-

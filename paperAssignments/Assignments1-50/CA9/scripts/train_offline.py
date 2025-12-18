@@ -25,9 +25,10 @@ def main():
     s_dim = 10
     a_dim = 2
     agent = AUDMG(s_dim, a_dim, cfg)
-    print("Initialized AU-DMG agent. Ready to train (offline loop not implemented here).")
+    print(
+        "Initialized AU-DMG agent. Ready to train (offline loop not implemented here)."
+    )
 
 
 if __name__ == "__main__":
     main()
-

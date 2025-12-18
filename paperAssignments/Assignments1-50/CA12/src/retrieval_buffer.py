@@ -22,7 +22,9 @@ class RetrievalBuffer:
         self.state_dim = int(state_dim)
         self.action_dim = int(action_dim)
         # accept either a string or a torch.device and normalize
-        self.device = torch.device(device) if not isinstance(device, torch.device) else device
+        self.device = (
+            torch.device(device) if not isinstance(device, torch.device) else device
+        )
 
         self.states = torch.zeros(
             (self.max_size, self.state_dim), dtype=torch.float32, device=self.device

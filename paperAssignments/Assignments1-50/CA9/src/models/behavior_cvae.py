@@ -52,7 +52,9 @@ class CVAE(nn.Module):
         eps = torch.randn_like(std)
         return mu + eps * std
 
-    def forward(self, s: torch.Tensor, a: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(
+        self, s: torch.Tensor, a: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         mu, logvar = self.enc(s, a)
         z = self.reparameterize(mu, logvar)
         recon = self.dec(s, z)
@@ -72,4 +74,3 @@ class CVAE(nn.Module):
         recon_loss = F.mse_loss(recon, a, reduction="mean")
         kld = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
         return recon_loss + kld
-

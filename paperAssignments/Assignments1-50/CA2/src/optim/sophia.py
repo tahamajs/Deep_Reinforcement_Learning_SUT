@@ -48,7 +48,9 @@ class Sophia(Optimizer):
         if not 0.0 <= beta2 < 1.0:
             raise ValueError("Invalid beta2: {}".format(beta2))
 
-        defaults = dict(lr=lr, beta1=beta1, beta2=beta2, gamma=gamma, eps=eps, clip=clip)
+        defaults = dict(
+            lr=lr, beta1=beta1, beta2=beta2, gamma=gamma, eps=eps, clip=clip
+        )
         super().__init__(params, defaults)
 
     def step(self, closure: Optional[callable] = None):
@@ -90,7 +92,9 @@ class Sophia(Optimizer):
                 h.mul_(beta2).addcmul_(grad, grad, value=(1.0 - beta2))
 
                 # Denominator: scaled Hessian estimate with numerical floor
-                denom = torch.maximum(gamma * h, torch.tensor(eps, device=h.device, dtype=h.dtype))
+                denom = torch.maximum(
+                    gamma * h, torch.tensor(eps, device=h.device, dtype=h.dtype)
+                )
                 # Normalized step
                 step = m.div(denom)
                 # Clip step magnitude and scale by lr
@@ -103,4 +107,3 @@ class Sophia(Optimizer):
     def load_state_dict(self, state_dict):
         # Use default loader but ensure tensors map correctly to device
         super().load_state_dict(state_dict)
-

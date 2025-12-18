@@ -20,7 +20,7 @@ class GaussianPolicy(nn.Module):
     def forward(self, s: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         h = self.net(s)
         mu = self.mu_head(h)
-        std = (self.logstd.exp() + 1e-6)
+        std = self.logstd.exp() + 1e-6
         return mu, std
 
     def sample(self, s: torch.Tensor) -> torch.Tensor:
@@ -32,4 +32,3 @@ class GaussianPolicy(nn.Module):
         mu, std = self.forward(s)
         dist = D.Normal(mu, std)
         return dist.log_prob(a).sum(-1)
-

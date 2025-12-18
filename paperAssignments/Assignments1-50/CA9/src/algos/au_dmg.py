@@ -30,7 +30,9 @@ class AUDMG:
         self.opt_policy = optim.Adam(self.policy.parameters(), lr=cfg.lr)
         self.opt_cvae = optim.Adam(self.cvae.parameters(), lr=cfg.lr)
 
-    def _compute_targets(self, s_next: torch.Tensor, r: torch.Tensor, done: torch.Tensor) -> torch.Tensor:
+    def _compute_targets(
+        self, s_next: torch.Tensor, r: torch.Tensor, done: torch.Tensor
+    ) -> torch.Tensor:
         """Vectorized target computation following README pseudocode."""
         B = s_next.shape[0]
         M = self.cfg.candidate_M
@@ -39,8 +41,15 @@ class AUDMG:
         a_cand = torch.clamp(a_cand + noise, -self.cfg.eps, self.cfg.eps)
         # evaluate target ensemble on candidates
         N = self.cfg.ensemble_size
-        q_stack = torch.stack([qk.forward(s_next.repeat_interleave(M, dim=0), a_cand.reshape(B * M, -1))[0]
-                               for qk in self.q_targ.qs], dim=0)  # [N, B*M, 1]
+        q_stack = torch.stack(
+            [
+                qk.forward(
+                    s_next.repeat_interleave(M, dim=0), a_cand.reshape(B * M, -1)
+                )[0]
+                for qk in self.q_targ.qs
+            ],
+            dim=0,
+        )  # [N, B*M, 1]
         q_stack = q_stack.view(N, B, M, 1)
         q_mean = q_stack.mean(0)  # [B, M, 1]
         q_std = q_stack.std(0, unbiased=False)  # [B, M, 1]
@@ -48,13 +57,21 @@ class AUDMG:
         a_mild = a_cand[torch.arange(B), idx]  # [B, a_dim]
         std_mild = q_std.squeeze(-1)[torch.arange(B), idx]  # [B]
         # compute lambda (sigmoid gate)
-        lam = torch.sigmoid((self.cfg.kappa / (std_mild + 1e-6)) - self.cfg.beta).unsqueeze(-1)  # [B,1]
+        lam = torch.sigmoid(
+            (self.cfg.kappa / (std_mild + 1e-6)) - self.cfg.beta
+        ).unsqueeze(
+            -1
+        )  # [B,1]
         # y_mild from target ensemble mean evaluated at a_mild
-        y_mild_stack = torch.stack([qk.forward(s_next, a_mild)[0] for qk in self.q_targ.qs], dim=0)
+        y_mild_stack = torch.stack(
+            [qk.forward(s_next, a_mild)[0] for qk in self.q_targ.qs], dim=0
+        )
         y_mild = y_mild_stack.mean(0)  # [B,1]
         # y_in via value network
         y_in = self.value(s_next).detach()  # [B,1]
-        y = r.unsqueeze(-1) + self.cfg.gamma * (1.0 - done.unsqueeze(-1)) * (lam * y_mild + (1.0 - lam) * y_in)
+        y = r.unsqueeze(-1) + self.cfg.gamma * (1.0 - done.unsqueeze(-1)) * (
+            lam * y_mild + (1.0 - lam) * y_in
+        )
         return y, lam, std_mild
 
     def update(self, batch: Dict[str, torch.Tensor]):
@@ -67,7 +84,10 @@ class AUDMG:
 
         # 1) Update value network (IQL expectile)
         with torch.no_grad():
-            q_targ_min = torch.min(torch.stack([qk.forward(s, a)[0] for qk in self.q_targ.qs], dim=0), dim=0).values
+            q_targ_min = torch.min(
+                torch.stack([qk.forward(s, a)[0] for qk in self.q_targ.qs], dim=0),
+                dim=0,
+            ).values
         v_loss = expectile_loss(q_targ_min - self.value(s), tau=0.7)
         self.opt_value.zero_grad()
         v_loss.backward()
@@ -89,7 +109,9 @@ class AUDMG:
         with torch.no_grad():
             q_on_a = self.q.forward(s, a)[0].squeeze(-1)
             v_s = self.value(s).squeeze(-1)
-            weights = torch.exp(torch.clamp(1.0 * (q_on_a - v_s), min=-50.0, max=50.0)).unsqueeze(-1)
+            weights = torch.exp(
+                torch.clamp(1.0 * (q_on_a - v_s), min=-50.0, max=50.0)
+            ).unsqueeze(-1)
         logp = self.policy.log_prob(s, a).unsqueeze(-1)
         policy_loss = -(weights * logp).mean()
         self.opt_policy.zero_grad()
@@ -106,4 +128,3 @@ class AUDMG:
             "lam_mean": lam.mean().item(),
             "std_mild_mean": std_mild.mean().item(),
         }
-

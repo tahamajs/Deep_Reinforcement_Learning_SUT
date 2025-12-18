@@ -2,11 +2,13 @@ from typing import Dict, Any
 import numpy as np
 import torch
 
+
 class ReplayBuffer:
     """
     Minimal replay buffer that can be filled from numpy arrays (e.g., D4RL dataset)
     or appended to during training. Designed for offline RL usage.
     """
+
     def __init__(self, capacity: int, obs_dim: int, act_dim: int, device: str = "cpu"):
         self.capacity = capacity
         self.device = device
@@ -49,14 +51,22 @@ class ReplayBuffer:
         next_obs = dataset["next_observations"].astype(np.float32)
         acts = dataset["actions"].astype(np.float32)
         rews = dataset["rewards"].astype(np.float32).reshape(-1, 1)
-        dones = dataset.get("terminals", np.zeros((obs.shape[0], 1))).astype(np.float32).reshape(-1, 1)
-        buf = cls(capacity=obs.shape[0], obs_dim=obs.shape[1], act_dim=acts.shape[1], device=device)
-        buf.obs[:obs.shape[0]] = obs
-        buf.next_obs[:obs.shape[0]] = next_obs
-        buf.acts[:acts.shape[0]] = acts
-        buf.rews[:rews.shape[0]] = rews
-        buf.dones[:dones.shape[0]] = dones
+        dones = (
+            dataset.get("terminals", np.zeros((obs.shape[0], 1)))
+            .astype(np.float32)
+            .reshape(-1, 1)
+        )
+        buf = cls(
+            capacity=obs.shape[0],
+            obs_dim=obs.shape[1],
+            act_dim=acts.shape[1],
+            device=device,
+        )
+        buf.obs[: obs.shape[0]] = obs
+        buf.next_obs[: obs.shape[0]] = next_obs
+        buf.acts[: acts.shape[0]] = acts
+        buf.rews[: rews.shape[0]] = rews
+        buf.dones[: dones.shape[0]] = dones
         buf.size = obs.shape[0]
         buf.ptr = buf.size % buf.capacity
         return buf
-

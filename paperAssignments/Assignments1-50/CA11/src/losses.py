@@ -27,3 +27,10 @@ def total_model_loss(
     loss_obs = reconstruction_loss(pred_obs, obs)
     loss_r = reward_loss(pred_reward, reward)
     return weights[0] * loss_obs + weights[1] * loss_r
+
+
+def vq_reconstruction_loss(recon: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    """
+    Reconstruction loss for VQ-VAE reconstructions (MSE).
+    """
+    return F.mse_loss(recon, target)

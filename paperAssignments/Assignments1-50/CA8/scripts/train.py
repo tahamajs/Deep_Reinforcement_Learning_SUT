@@ -25,6 +25,7 @@ from agent import MaxSinkAgent  # type: ignore
 from utils import set_seed  # type: ignore
 
 from torch.utils.tensorboard import SummaryWriter
+
 try:
     import wandb  # type: ignore
 except Exception:
@@ -106,9 +107,15 @@ def main():
         obs, info = reset_res
         state_dim = np.asarray(obs).ravel().shape[0]
 
-    n_actions = env.action_space.n if hasattr(env.action_space, "n") else env.action_space.shape[0]
+    n_actions = (
+        env.action_space.n
+        if hasattr(env.action_space, "n")
+        else env.action_space.shape[0]
+    )
 
-    agent = MaxSinkAgent(state_dim=state_dim, n_actions=int(n_actions), device=str(device))
+    agent = MaxSinkAgent(
+        state_dim=state_dim, n_actions=int(n_actions), device=str(device)
+    )
     replay = ReplayBuffer()
 
     # logging

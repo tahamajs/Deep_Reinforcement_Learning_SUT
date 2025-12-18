@@ -18,10 +18,10 @@ class ValueNet(nn.Module):
     def forward(self, s: torch.Tensor) -> torch.Tensor:
         return self.net(s)
 
+
 def expectile_loss(diff: torch.Tensor, tau: float = 0.7) -> torch.Tensor:
     """Expectile loss used by IQL-style value updates.
     diff = target - V(s)
     """
     weight = torch.where(diff > 0, tau, (1.0 - tau))
-    return (weight * (diff ** 2)).mean()
-
+    return (weight * (diff**2)).mean()

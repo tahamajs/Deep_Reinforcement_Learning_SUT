@@ -36,4 +36,3 @@ def test_sophia_state_contains_m_and_h():
     assert "m" in st and "h" in st
     assert st["m"].shape == p.data.shape
     assert st["h"].shape == p.data.shape
-

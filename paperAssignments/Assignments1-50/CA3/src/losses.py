@@ -2,7 +2,11 @@ from typing import Optional
 import torch
 
 
-def reinforce_loss(log_probs: torch.Tensor, returns: torch.Tensor, baseline: Optional[torch.Tensor] = None) -> torch.Tensor:
+def reinforce_loss(
+    log_probs: torch.Tensor,
+    returns: torch.Tensor,
+    baseline: Optional[torch.Tensor] = None,
+) -> torch.Tensor:
     """Compute the REINFORCE policy gradient loss.
 
     Args:
@@ -22,7 +26,7 @@ def reinforce_loss(log_probs: torch.Tensor, returns: torch.Tensor, baseline: Opt
     # Ensure shapes match
     if log_probs.shape != advantage.shape:
         log_probs = log_probs.reshape(advantage.shape)
-    loss = - (log_probs * advantage.detach()).mean()
+    loss = -(log_probs * advantage.detach()).mean()
     return loss
 
 

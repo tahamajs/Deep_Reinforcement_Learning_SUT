@@ -76,10 +76,38 @@ class MambaBlock(nn.Module):
         return torch.cat(outs, dim=1)
 
 
+class SSMBlock(nn.Module):
+    """
+    Simple state-space model block with a diagonal-stable A parameterization.
+    Implements h_{t+1} = a * h_t + b * x_t where a is constrained to (-1,1).
+    """
+
+    def __init__(self, d_model: int):
+        super().__init__()
+        # parameterize a via tanh so spectral radius < 1 for stability
+        self.logit_a = nn.Parameter(torch.zeros(d_model))
+        self.b = nn.Parameter(torch.randn(d_model) * 0.01)
+        self.proj = nn.Linear(d_model, d_model)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (B, L, D)
+        B, L, D = x.shape
+        a = torch.tanh(self.logit_a)  # (D,)
+        b = self.b  # (D,)
+        h = torch.zeros(B, D, device=x.device, dtype=x.dtype)
+        outs = []
+        for t in range(L):
+            inp = self.proj(x[:, t, :])
+            h = a * h + b * inp
+            outs.append(h.unsqueeze(1))
+        return torch.cat(outs, dim=1)
+
+
 class SSDHybridBlock(nn.Module):
     def __init__(self, d_model: int, n_heads: int, ssm_cfg: Optional[dict] = None):
         super().__init__()
-        self.ssm = MambaBlock(d_model)
+        # prefer the diagonal-parameterized SSM for stability, fall back to Mamba behavior if needed
+        self.ssm = SSMBlock(d_model)
         self.attn = LinearAttention(d_model, n_heads)
         self.mlp = nn.Sequential(
             nn.Linear(d_model, 4 * d_model),

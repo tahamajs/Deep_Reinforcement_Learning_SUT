@@ -1,6 +1,7 @@
-from typing import Tuple
+from typing import Tuple, Sequence
 import torch
 import torch.nn as nn
+from src.losses import critic_loss_lambda
 
 
 def soft_update(src: nn.Module, tgt: nn.Module, tau: float):
@@ -9,7 +10,15 @@ def soft_update(src: nn.Module, tgt: nn.Module, tau: float):
         q.data.add_(tau * p.data)
 
 
-def sac_update(critic: nn.Module, target_critic: nn.Module, actor: nn.Module, optim_critic, optim_actor, batch: Tuple, cfg):
+def sac_update(
+    critics: Sequence[nn.Module],
+    target_critics: Sequence[nn.Module],
+    actor: nn.Module,
+    optim_critics,
+    optim_actor,
+    batch: Tuple,
+    cfg,
+):
     """
     Minimal SAC-style update: critic MSE to lambda-returns handled elsewhere,
     here we implement the actor update using critic Q estimates and entropy.
@@ -17,14 +26,16 @@ def sac_update(critic: nn.Module, target_critic: nn.Module, actor: nn.Module, op
     obs, acts, rews, dones, beh_logp = batch
     device = obs.device
 
-    # Actor update: sample actions and logp from policy, compute Q and actor loss
-    with torch.no_grad():
-        pass
-
     # compute current policy actions and log probs
     actions_pi, logp_pi, _ = actor.sample(obs)
-    q_pi, _ = critic(obs, actions_pi)
-    q_pi = q_pi.squeeze(-1)
+
+    # query all critics and take min
+    q_vals = []
+    for c in critics:
+        qc, _ = c(obs, actions_pi)
+        q_vals.append(qc.squeeze(-1))
+    q_pi = torch.min(torch.stack(q_vals, dim=0), dim=0).values
+
     # actor loss: minimize alpha * logp - Q
     alpha = getattr(cfg, "alpha", 0.1)
     actor_loss = (alpha * logp_pi - q_pi).mean()
@@ -33,8 +44,8 @@ def sac_update(critic: nn.Module, target_critic: nn.Module, actor: nn.Module, op
     actor_loss.backward()
     optim_actor.step()
 
-    # soft update targets
+    # soft update targets for each critic pair
     tau = getattr(cfg, "tau", 0.005)
-    soft_update(critic, target_critic, tau)
+    for c_src, c_tgt in zip(critics, target_critics):
+        soft_update(c_src, c_tgt, tau)
     return actor_loss.item()
-
