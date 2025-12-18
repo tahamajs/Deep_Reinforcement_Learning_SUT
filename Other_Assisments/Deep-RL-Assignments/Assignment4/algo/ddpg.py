@@ -19,6 +19,8 @@ GAMMA = 0.98
 TAU = 0.05
 LEARNING_RATE_ACTOR = 0.0001
 LEARNING_RATE_CRITIC = 0.001
+
+
 class EpsilonNormalActionNoise(object):
     """A class for adding noise to the actions for exploration."""
 
@@ -48,6 +50,8 @@ class EpsilonNormalActionNoise(object):
             return np.clip(action + np.random.normal(self.mu, self.sigma, 2), -1.0, 1.0)
         else:
             return np.random.uniform(-1.0, 1.0, size=action.shape)
+
+
 class DDPG(object):
     """A class for running the DDPG algorithm."""
 
@@ -65,61 +69,101 @@ class DDPG(object):
         self.env = env
         self.args = args
         self.outfile = outfile_name
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        self.weights_path = 'models/%s' % (self.timestamp)
+        self.timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.weights_path = "models/%s" % (self.timestamp)
         self.rewards_data = []
         self.count = 0
 
         self.action_selector = EpsilonNormalActionNoise(0, 0.05, self.args.epsilon)
-        self.memory = ReplayBuffer(args.buffer_size, args.burn_in, state_dim, action_dim, self.device)
-        self.actor = ActorNetwork(state_dim, action_dim, self.args.batch_size, self.args.tau, self.args.actor_lr, self.device, args.custom_init)
-        if self.args.algorithm == 'ddpg' or self.args.algorithm == 'her':
-            self.critic = CriticNetwork(state_dim, action_dim, self.args.batch_size,  \
-                self.args.tau, self.args.critic_lr, self.args.gamma, self.device, args.custom_init)
-        elif self.args.algorithm == 'td3':
-            self.critic = CriticNetworkTD3(state_dim, action_dim, self.args.batch_size,  \
-                self.args.tau, self.args.critic_lr, self.args.gamma, self.device, args.custom_init)
+        self.memory = ReplayBuffer(
+            args.buffer_size, args.burn_in, state_dim, action_dim, self.device
+        )
+        self.actor = ActorNetwork(
+            state_dim,
+            action_dim,
+            self.args.batch_size,
+            self.args.tau,
+            self.args.actor_lr,
+            self.device,
+            args.custom_init,
+        )
+        if self.args.algorithm == "ddpg" or self.args.algorithm == "her":
+            self.critic = CriticNetwork(
+                state_dim,
+                action_dim,
+                self.args.batch_size,
+                self.args.tau,
+                self.args.critic_lr,
+                self.args.gamma,
+                self.device,
+                args.custom_init,
+            )
+        elif self.args.algorithm == "td3":
+            self.critic = CriticNetworkTD3(
+                state_dim,
+                action_dim,
+                self.args.batch_size,
+                self.args.tau,
+                self.args.critic_lr,
+                self.args.gamma,
+                self.device,
+                args.custom_init,
+            )
 
-        if args.weights_path: self.load_model()
+        if args.weights_path:
+            self.load_model()
 
         if args.train:
 
-            self.logdir = 'logs/%s' % (self.timestamp)
-            self.imgdir = 'imgs/%s' % (self.timestamp)
+            self.logdir = "logs/%s" % (self.timestamp)
+            self.imgdir = "imgs/%s" % (self.timestamp)
             os.makedirs(self.imgdir)
             self.summary_writer = SummaryWriter(self.logdir)
-            with open(self.logdir + '/training_parameters.json', 'w') as f:
+            with open(self.logdir + "/training_parameters.json", "w") as f:
                 json.dump(vars(self.args), f, indent=4)
 
     def save_model(self, epoch):
-        '''Helper function to save model state and weights.'''
-        if not os.path.exists(self.weights_path): os.makedirs(self.weights_path)
-        torch.save({'policy_state_dict': self.actor.policy.state_dict(),
-                    'policy_target_state_dict': self.actor.policy_target.state_dict(),
-                    'policy_optimizer': self.actor.policy_optimizer.state_dict(),
-                    'critic_state_dict': self.critic.critic.state_dict(),
-                    'critic_target_state_dict': self.critic.critic_target.state_dict(),
-                    'critic_optimizer': self.critic.critic_optimizer.state_dict(),
-                    'rewards_data': self.rewards_data,
-                    'epoch': epoch},
-                    os.path.join(self.weights_path, 'model_%d.h5' % epoch))
+        """Helper function to save model state and weights."""
+        if not os.path.exists(self.weights_path):
+            os.makedirs(self.weights_path)
+        torch.save(
+            {
+                "policy_state_dict": self.actor.policy.state_dict(),
+                "policy_target_state_dict": self.actor.policy_target.state_dict(),
+                "policy_optimizer": self.actor.policy_optimizer.state_dict(),
+                "critic_state_dict": self.critic.critic.state_dict(),
+                "critic_target_state_dict": self.critic.critic_target.state_dict(),
+                "critic_optimizer": self.critic.critic_optimizer.state_dict(),
+                "rewards_data": self.rewards_data,
+                "epoch": epoch,
+            },
+            os.path.join(self.weights_path, "model_%d.h5" % epoch),
+        )
 
     def load_model(self):
-        '''Helper function to load model state and weights. '''
+        """Helper function to load model state and weights."""
         if os.path.isfile(self.args.weights_path):
-            print('=> Loading checkpoint', self.args.weights_path)
+            print("=> Loading checkpoint", self.args.weights_path)
             self.checkpoint = torch.load(self.args.weights_path)
-            self.actor.policy.load_state_dict(self.checkpoint['policy_state_dict'])
-            self.actor.policy_target.load_state_dict(self.checkpoint['policy_target_state_dict'])
-            self.actor.policy_optimizer.load_state_dict(self.checkpoint['policy_optimizer'])
-            self.critic.critic.load_state_dict(self.checkpoint['critic_state_dict'])
-            self.critic.critic_target.load_state_dict(self.checkpoint['critic_target_state_dict'])
-            self.critic.critic_optimizer.load_state_dict(self.checkpoint['critic_optimizer'])
-            self.rewards_data = self.checkpoint['rewards_data']
+            self.actor.policy.load_state_dict(self.checkpoint["policy_state_dict"])
+            self.actor.policy_target.load_state_dict(
+                self.checkpoint["policy_target_state_dict"]
+            )
+            self.actor.policy_optimizer.load_state_dict(
+                self.checkpoint["policy_optimizer"]
+            )
+            self.critic.critic.load_state_dict(self.checkpoint["critic_state_dict"])
+            self.critic.critic_target.load_state_dict(
+                self.checkpoint["critic_target_state_dict"]
+            )
+            self.critic.critic_optimizer.load_state_dict(
+                self.checkpoint["critic_optimizer"]
+            )
+            self.rewards_data = self.checkpoint["rewards_data"]
         else:
-            raise Exception('No checkpoint found at %s' % self.args.weights_path)
+            raise Exception("No checkpoint found at %s" % self.args.weights_path)
 
     def evaluate(self, num_episodes):
         """Evaluate the policy. Noise is not added during evaluation.
@@ -144,8 +188,12 @@ class DDPG(object):
             while not done:
                 s_vec.append(s_t)
                 with torch.no_grad():
-                    a_t = self.actor.policy(torch.tensor(s_t, device=self.device).float())
-                new_s, r_t, terminated, truncated, info = self.env.step(a_t.cpu().numpy())
+                    a_t = self.actor.policy(
+                        torch.tensor(s_t, device=self.device).float()
+                    )
+                new_s, r_t, terminated, truncated, info = self.env.step(
+                    a_t.cpu().numpy()
+                )
                 done = terminated or truncated
                 if done:
                     success = True
@@ -156,24 +204,29 @@ class DDPG(object):
             success_vec.append(success)
             test_rewards.append(total_reward)
             if i < 9 and self.args.render:
-                plt.subplot(3, 3, i+1)
+                plt.subplot(3, 3, i + 1)
                 s_vec = np.array(s_vec)
                 pusher_vec = s_vec[:, :2]
                 puck_vec = s_vec[:, 2:4]
                 goal_vec = s_vec[:, 4:]
-                plt.plot(pusher_vec[:, 0], pusher_vec[:, 1], '-o', label='pusher')
-                plt.plot(puck_vec[:, 0], puck_vec[:, 1], '-o', label='puck')
-                plt.plot(goal_vec[:, 0], goal_vec[:, 1], '*', label='goal', markersize=10)
-                plt.plot([0, 5, 5, 0, 0], [0, 0, 5, 5, 0], 'k-', linewidth=3)
-                plt.fill_between([-1, 6], [-1, -1], [6, 6], alpha=0.1,
-                                 color='g' if success else 'r')
+                plt.plot(pusher_vec[:, 0], pusher_vec[:, 1], "-o", label="pusher")
+                plt.plot(puck_vec[:, 0], puck_vec[:, 1], "-o", label="puck")
+                plt.plot(
+                    goal_vec[:, 0], goal_vec[:, 1], "*", label="goal", markersize=10
+                )
+                plt.plot([0, 5, 5, 0, 0], [0, 0, 5, 5, 0], "k-", linewidth=3)
+                plt.fill_between(
+                    [-1, 6], [-1, -1], [6, 6], alpha=0.1, color="g" if success else "r"
+                )
                 plt.xlim([-1, 6])
                 plt.ylim([-1, 6])
                 if i == 0:
-                    plt.legend(loc='lower left', fontsize=28, ncol=3, bbox_to_anchor=(0.1, 1.0))
+                    plt.legend(
+                        loc="lower left", fontsize=28, ncol=3, bbox_to_anchor=(0.1, 1.0)
+                    )
                 if i == 8:
 
-                    plt.savefig(os.path.join(self.imgdir,str(self.count)))
+                    plt.savefig(os.path.join(self.imgdir, str(self.count)))
                     self.count += 1
 
         return np.mean(success_vec), np.mean(test_rewards), np.std(test_rewards)
@@ -199,15 +252,29 @@ class DDPG(object):
                     env_action = self.action_selector(action.cpu().numpy())
                     action = torch.tensor(env_action, device=self.device).float()
 
-                next_state, reward, terminated, truncated, info = self.env.step(env_action)
+                next_state, reward, terminated, truncated, info = self.env.step(
+                    env_action
+                )
                 done = terminated or truncated
                 next_state = torch.tensor(next_state, device=self.device).float()
 
-                self.memory.add(state, action, torch.tensor(reward, device=self.device),
-                    next_state, torch.tensor(done, device=self.device))
-                if self.args.algorithm == 'her':
-                    trajectory_data.append([state.detach().cpu().numpy(), action.detach().cpu().numpy(),
-                        reward, next_state.detach().cpu().numpy(), done])
+                self.memory.add(
+                    state,
+                    action,
+                    torch.tensor(reward, device=self.device),
+                    next_state,
+                    torch.tensor(done, device=self.device),
+                )
+                if self.args.algorithm == "her":
+                    trajectory_data.append(
+                        [
+                            state.detach().cpu().numpy(),
+                            action.detach().cpu().numpy(),
+                            reward,
+                            next_state.detach().cpu().numpy(),
+                            done,
+                        ]
+                    )
 
                 total_reward += reward
                 step += 1
@@ -215,35 +282,42 @@ class DDPG(object):
                 if not done:
                     state = next_state.clone().detach()
 
-            if self.args.algorithm == 'her':
+            if self.args.algorithm == "her":
 
                 self.add_hindsight_replay_experience(trajectory_data)
 
             if self.memory.burned_in:
-                if self.args.algorithm in ['ddpg', 'her']:
+                if self.args.algorithm in ["ddpg", "her"]:
                     critic_loss, policy_loss, new_metric = self.train_DDPG()
-                    self.summary_writer.add_scalar('train/policy_loss', policy_loss, i)
-                    self.summary_writer.add_scalar('train/new_metric', new_metric.mean(), i)
+                    self.summary_writer.add_scalar("train/policy_loss", policy_loss, i)
+                    self.summary_writer.add_scalar(
+                        "train/new_metric", new_metric.mean(), i
+                    )
 
-                elif self.args.algorithm == 'td3':
+                elif self.args.algorithm == "td3":
                     critic_loss, policy_loss = self.train_TD3(i)
                     if i % self.args.policy_update_frequency == 0:
-                        self.summary_writer.add_scalar('train/policy_loss', policy_loss, i)
+                        self.summary_writer.add_scalar(
+                            "train/policy_loss", policy_loss, i
+                        )
             if self.memory.burned_in and i % self.args.log_interval == 0:
                 print("Episode %d: Total reward = %d" % (i, total_reward))
                 print("\tTD loss = %.2f" % (critic_loss / step,))
-                self.summary_writer.add_scalar('train/trajectory_length', step, i)
-                self.summary_writer.add_scalar('train/critic_loss', critic_loss, i)
+                self.summary_writer.add_scalar("train/trajectory_length", step, i)
+                self.summary_writer.add_scalar("train/critic_loss", critic_loss, i)
 
             if i % self.args.test_interval == 0:
                 successes, mean_rewards, std_rewards = self.evaluate(10)
                 self.rewards_data.append([i, mean_rewards, std_rewards])
 
-                self.summary_writer.add_scalar('test/success', successes, i)
-                self.summary_writer.add_scalar('test/rewards_mean', mean_rewards, i)
-                self.summary_writer.add_scalar('test/rewards_std', std_rewards, i)
+                self.summary_writer.add_scalar("test/success", successes, i)
+                self.summary_writer.add_scalar("test/rewards_mean", mean_rewards, i)
+                self.summary_writer.add_scalar("test/rewards_std", std_rewards, i)
 
-                print('Evaluation: success = %.2f; return = %.2f' % (successes, mean_rewards))
+                print(
+                    "Evaluation: success = %.2f; return = %.2f"
+                    % (successes, mean_rewards)
+                )
                 with open(self.outfile, "a") as f:
                     f.write("%.2f, %.2f,\n" % (successes, mean_rewards))
 
@@ -266,22 +340,29 @@ class DDPG(object):
             state[-2:] = goal.copy()
             next_state[-2:] = goal.copy()
             reward = self.env._HER_calc_reward(state)
-            if reward == 0: done = True
+            if reward == 0:
+                done = True
 
             self.memory.add(
                 torch.tensor(state, device=self.device),
                 torch.tensor(action, device=self.device),
                 torch.tensor(reward, device=self.device),
                 torch.tensor(next_state, device=self.device),
-                torch.tensor(done, device=self.device))
+                torch.tensor(done, device=self.device),
+            )
 
-            if reward == 0: break
+            if reward == 0:
+                break
 
     def train_DDPG(self):
         for j in range(self.args.num_update_iters):
-            states, actions, rewards, next_states, dones = self.memory.get_batch(self.args.batch_size)
+            states, actions, rewards, next_states, dones = self.memory.get_batch(
+                self.args.batch_size
+            )
             next_actions = self.actor.policy_target(next_states).detach()
-            critic_loss = self.critic.train(states, actions, rewards, next_states, dones, next_actions)
+            critic_loss = self.critic.train(
+                states, actions, rewards, next_states, dones, next_actions
+            )
             new_Q_value = self.critic.critic(states, self.actor.policy(states))
             policy_loss = self.actor.train(new_Q_value)
 
@@ -292,15 +373,25 @@ class DDPG(object):
 
     def train_TD3(self, i):
         for j in range(self.args.num_update_iters):
-            states, actions, rewards, next_states, dones = self.memory.get_batch(self.args.batch_size)
-            next_actions = self.noise_regularization(self.actor.policy_target(next_states).detach().cpu().numpy())
+            states, actions, rewards, next_states, dones = self.memory.get_batch(
+                self.args.batch_size
+            )
+            next_actions = self.noise_regularization(
+                self.actor.policy_target(next_states).detach().cpu().numpy()
+            )
             next_actions = torch.tensor(next_actions, device=self.device).float()
 
-            critic_loss = self.critic.train(states, actions, rewards, next_states, dones, next_actions)
+            critic_loss = self.critic.train(
+                states, actions, rewards, next_states, dones, next_actions
+            )
 
             policy_loss = 0
-            if (i*self.args.num_update_iters + j)%self.args.policy_update_frequency == 0:
-                policy_loss = self.actor.train(self.critic.critic.get_Q(states, self.actor.policy(states)))
+            if (
+                i * self.args.num_update_iters + j
+            ) % self.args.policy_update_frequency == 0:
+                policy_loss = self.actor.train(
+                    self.critic.critic.get_Q(states, self.actor.policy(states))
+                )
 
                 self.critic.update_target()
                 self.actor.update_target()
@@ -308,17 +399,41 @@ class DDPG(object):
         return critic_loss, policy_loss
 
     def noise_regularization(self, next_actions):
-        return np.clip(next_actions + np.clip(np.random.normal(0, self.args.target_action_sigma, (self.args.batch_size, 2)), -self.args.clip, self.args.clip), -1.0, 1.0)
+        return np.clip(
+            next_actions
+            + np.clip(
+                np.random.normal(
+                    0, self.args.target_action_sigma, (self.args.batch_size, 2)
+                ),
+                -self.args.clip,
+                self.args.clip,
+            ),
+            -1.0,
+            1.0,
+        )
+
     def plot(self):
 
-        filename = os.path.join('plots', *self.args.weights_path.split('/')[-2:]).replace('.h5', '.png')
-        if not os.path.exists(os.path.dirname(filename)): os.makedirs(os.path.dirname(filename))
+        filename = os.path.join(
+            "plots", *self.args.weights_path.split("/")[-2:]
+        ).replace(".h5", ".png")
+        if not os.path.exists(os.path.dirname(filename)):
+            os.makedirs(os.path.dirname(filename))
         data = np.asarray(self.rewards_data)
-        plt.errorbar(data[:, 0], data[:, 1], data[:, 2], lw=2.5, elinewidth=1.5,
-            ecolor='grey', barsabove=True, capthick=2, capsize=3)
-        plt.title('Cumulative Rewards (Mean/Std) Plot for A2C Algorithm')
-        plt.xlabel('Number of Episodes')
-        plt.ylabel('Cumulative Rewards')
+        plt.errorbar(
+            data[:, 0],
+            data[:, 1],
+            data[:, 2],
+            lw=2.5,
+            elinewidth=1.5,
+            ecolor="grey",
+            barsabove=True,
+            capthick=2,
+            capsize=3,
+        )
+        plt.title("Cumulative Rewards (Mean/Std) Plot for A2C Algorithm")
+        plt.xlabel("Number of Episodes")
+        plt.ylabel("Cumulative Rewards")
         plt.grid()
         plt.savefig(filename, dpi=300)
         plt.show()
