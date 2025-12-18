@@ -1,4 +1,6 @@
 import numpy as np
+
+
 def improve_policy(env, gamma, value_func, policy):
     """Performs policy improvement.
 
@@ -39,7 +41,10 @@ def improve_policy(env, gamma, value_func, policy):
         for action in range(nA):
             value = 0
             # prefer T/R arrays if available
-            if getattr(env, "T", None) is not None and getattr(env, "R", None) is not None:
+            if (
+                getattr(env, "T", None) is not None
+                and getattr(env, "R", None) is not None
+            ):
                 T = env.T
                 R = env.R
                 for nextstate in range(nS):

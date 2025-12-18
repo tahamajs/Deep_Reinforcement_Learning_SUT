@@ -43,7 +43,9 @@ def env_wrapper(env_name):
                     desc = lake_envs.MAPS.get("8x8")
                 is_slippery = "Stochastic" in env_name
                 # Build a new FrozenLakeEnv instance which exposes P/nS/nA
-                new_base = lake_envs.frozen_lake.FrozenLakeEnv(desc=desc, is_slippery=is_slippery)
+                new_base = lake_envs.frozen_lake.FrozenLakeEnv(
+                    desc=desc, is_slippery=is_slippery
+                )
                 base = new_base
                 nS = getattr(base, "nS", None)
                 nA = getattr(base, "nA", None)
