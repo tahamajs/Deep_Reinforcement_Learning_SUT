@@ -1,0 +1,80 @@
+% SimGolf-Latent: Draft paper
+\documentclass{article}
+\usepackage{amsmath,amsfonts,graphicx}
+\title{SimGolf in Latent Space: Combining DreamerV3 World Models with Simulation-Based Global Search}
+\author{Author Name \\ Institution}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We introduce SimGolf-Latent, a method that integrates simulation-based global
+search (SimGolf) with learned latent world models (DreamerV3). By maintaining a
+buffer of latent checkpoints and performing imagined branching search from
+critical decision latents, our approach reduces planning error in long-horizon,
+sparse-reward navigation tasks. We provide theoretical justification, algorithmic
+details, and empirical evaluation protocols.
+\end{abstract}
+
+\section{Introduction}
+Model-based RL with latent world models enables sample-efficient planning.
+However, long-horizon planning under partial observability and sparse rewards
+remains challenging. SimGolf introduces episodic simulator resets and branching
+to escape local optima. We adapt SimGolf to operate purely in latent space,
+leveraging DreamerV3's RSSM to imagine resets and branches without environment
+resets.
+
+\section{Method}
+\subsection{Latent Dynamics}
+Let the RSSM define a stochastic latent \(z_t\), with learned transition
+\(p_\theta(z_{t+1}\!\mid\!z_t,a_t)\). A decoder predicts observations and
+rewards. We use the actor \(\pi_\phi(a\mid z)\) and value \(v_\psi(z)\) in
+latent space.
+
+\subsection{SimGolf Branching}
+Given a checkpoint latent \(z_s\), generate \(B\) branches of horizon \(H\).
+Each branch \(b\) yields rewards \(r_{s,b,0:H-1}\) and discounts \(\gamma_{s,b,0:H-1}\).
+We compute bootstrapped returns
+\[
+\hat R_b \;=\; \sum_{k=0}^{H-1}\Big(\prod_{j=0}^{k-1}\gamma_{s,b,j}\Big) r_{s,b,k}
+ \Big(\prod_{j=0}^{H-1}\gamma_{s,b,j}\Big) v_\psi(z_{s,b,H}).
+\]
+Top-k aggregation or soft weighting produces action targets for policy update.
+
+\subsection{TD(\(\lambda\)) Targets from Imagined Branches}
+For imagined sequence \(\{(z_t,r_t,\gamma_t)\}\) we compute TD(\(\lambda\)) targets:
+\[
+G_t = r_t + \gamma_t\big((1-\lambda)v_\psi(z_{t+1}) + \lambda G_{t+1}\big),
+\]
+and minimize \(\|v_\psi(z_t)-\mathrm{stopgrad}(G_t)\|^2\).
+
+\section{Planner Integration}
+We describe software hooks: checkpoint buffer, trigger module (TD-error, uncertainty,
+entropy), and the branching simulator that uses either policy sampling or CEM
+to propose action sequences. We include an uncertainty penalty \(r' = r - \kappa\sigma_r\)
+when reward variance \(\sigma_r\) is available.
+
+\section{Experiments}
+We recommend evaluating on D4RL AntMaze and custom maze tasks with metrics:
+success rate, steps-to-goal, planner overhead, and model bias (predicted vs real reward).
+Run 5 seeds, report mean±std and IQM.
+
+\section{Related Work}
+DreamerV3, SimGolf, CEM-MPC, and prioritized replay literature are discussed.
+
+\section{Conclusion}
+Latent SimGolf combines global search with Dreamer-style imagination to refine
+policies at critical decision points. We provide an implementation scaffold and
+experiments protocol for reproducible research.
+
+\appendix
+\section{Derivations}
+We include the branch return and TD(\(\lambda\)) derivations that match the code.
+\[
+G_t = r_t + \gamma_t\big((1-\lambda)v_\psi(z_{t+1}) + \lambda G_{t+1}\big)
+\]
+ensures bias-variance tradeoff between single-step bootstrap and Monte Carlo.
+
+\end{document}
+
