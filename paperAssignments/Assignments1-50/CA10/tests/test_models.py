@@ -15,7 +15,7 @@ def test_network_shapes():
     latent_dim = 32
     joint_action_dim = 8
     per_agent = (4, 4)
-    repo_root = pathlib.Path(__file__).resolve().parents[3]
+    repo_root = pathlib.Path(__file__).resolve().parents[4]
     module_path = str(
         repo_root
         / "paperAssignments"

@@ -12,7 +12,7 @@ def load_module_from_path(path: str, name: str):
 
 
 def test_mcts_basic():
-    repo_root = pathlib.Path(__file__).resolve().parents[3]
+    repo_root = pathlib.Path(__file__).resolve().parents[4]
     models_path = str(
         repo_root
         / "paperAssignments"

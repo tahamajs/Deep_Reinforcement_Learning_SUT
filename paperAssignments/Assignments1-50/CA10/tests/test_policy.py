@@ -12,7 +12,7 @@ def load_module_from_path(path: str, name: str):
 
 
 def test_policy_loss_computation():
-    repo_root = pathlib.Path(__file__).resolve().parents[3]
+    repo_root = pathlib.Path(__file__).resolve().parents[4]
     policy_path = str(
         repo_root
         / "paperAssignments"
