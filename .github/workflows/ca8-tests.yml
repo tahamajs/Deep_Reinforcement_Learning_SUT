@@ -1,0 +1,26 @@
+name: CA8 Unit Tests
+
+on:
+  push:
+    paths:
+      - 'paperAssignments/Assignments1-50/CA8/**'
+  pull_request:
+    paths:
+      - 'paperAssignments/Assignments1-50/CA8/**'
+
+jobs:
+  test-ca8:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install test requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r paperAssignments/Assignments1-50/CA8/test-requirements.txt
+      - name: Run CA8 tests
+        run: |
+          pytest -q paperAssignments/Assignments1-50/CA8
