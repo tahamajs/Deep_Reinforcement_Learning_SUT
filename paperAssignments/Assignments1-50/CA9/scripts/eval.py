@@ -20,11 +20,13 @@ def evaluate_policy(policy: GaussianPolicy, env_name: str, episodes: int = 5) ->
         raise RuntimeError("gymnasium not available")
     env = gym.make(env_name)
     returns = []
+    trajectories = []
     for _ in range(episodes):
         obs, _ = env.reset()
         done = False
         ep_ret = 0.0
         steps = 0
+        traj = {"obs": [], "acts": [], "rews": []}
         while not done and steps < 1000:
             obs_t = torch.from_numpy(obs).float().unsqueeze(0)
             with torch.no_grad():
@@ -32,8 +34,12 @@ def evaluate_policy(policy: GaussianPolicy, env_name: str, episodes: int = 5) ->
             obs, r, terminated, truncated, info = env.step(a)
             done = terminated or truncated
             ep_ret += float(r)
+            traj["obs"].append(obs)
+            traj["acts"].append(a)
+            traj["rews"].append(float(r))
             steps += 1
         returns.append(ep_ret)
+        trajectories.append(traj)
     return mean(returns)
 
 
@@ -57,7 +63,9 @@ def main():
             if policy_state is not None and q_state is not None:
                 a_dim = policy_state["mu_head.weight"].shape[0]
                 # find first q weight to get input dim
-                first_q_key = next(k for k in q_state.keys() if "qs.0.net.0.weight" in k)
+                first_q_key = next(
+                    k for k in q_state.keys() if "qs.0.net.0.weight" in k
+                )
                 input_dim = q_state[first_q_key].shape[1]
                 s_dim = input_dim - a_dim
                 audmg = AUDMG(s_dim=s_dim, a_dim=a_dim, cfg=cfg)
@@ -75,6 +83,15 @@ def main():
 
         avg = evaluate_policy(policy, args.env, episodes=args.episodes)
         print(f"Average return over {args.episodes} episodes: {avg:.3f}")
+        # save a simple plot of returns (single point repeated) and placeholder trajectory file
+        out_dir = os.path.join("outputs", "ca9", "eval")
+        os.makedirs(out_dir, exist_ok=True)
+        try:
+            from ..src.utils.logger import plot_series
+
+            plot_series([0, 1], {"returns": [avg, avg]}, os.path.join(out_dir, "returns.png"), title="Eval returns")
+        except Exception:
+            pass
     except Exception as e:
         print("Evaluation failed:", e)
 

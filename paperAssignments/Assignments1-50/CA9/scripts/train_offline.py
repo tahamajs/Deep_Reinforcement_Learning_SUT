@@ -22,6 +22,9 @@ def main():
     parser.add_argument("--steps", type=int, default=1000)
     parser.add_argument("--save-interval", type=int, default=1000)
     parser.add_argument("--resume", type=str, default=None)
+    parser.add_argument("--tb-logdir", type=str, default=None)
+    parser.add_argument("--use-wandb", action="store_true")
+    parser.add_argument("--wandb-project", type=str, default="au_dmg")
     args = parser.parse_args()
     cfg = default_config()
     set_seed(cfg.seed)
@@ -60,6 +63,26 @@ def main():
     log_path = os.path.join(args.logdir, f"train_{int(time.time())}.csv")
     ckpt_dir = os.path.join(args.logdir, "checkpoints")
     os.makedirs(ckpt_dir, exist_ok=True)
+    # optional TensorBoard
+    tb_writer = None
+    if args.tb_logdir:
+        try:
+            from torch.utils.tensorboard import SummaryWriter
+
+            tb_writer = SummaryWriter(log_dir=args.tb_logdir)
+        except Exception as e:
+            print("TensorBoard SummaryWriter unavailable:", e)
+            tb_writer = None
+    # optional wandb
+    wandb = None
+    if args.use_wandb:
+        try:
+            import wandb
+
+            wandb.init(project=args.wandb_project, config=cfg.__dict__)
+        except Exception as e:
+            print("wandb init failed:", e)
+            wandb = None
     if args.resume:
         try:
             agent.load_checkpoint(args.resume)
@@ -88,6 +111,20 @@ def main():
                 stats_row = {"step": step}
                 stats_row.update(stats)
                 writer.writerow(stats_row)
+                # tensorboard
+                if tb_writer is not None:
+                    tb_writer.add_scalar("loss/v_loss", stats["v_loss"], step)
+                    tb_writer.add_scalar("loss/critic_loss", stats["critic_loss"], step)
+                    tb_writer.add_scalar("misc/lam_mean", stats["lam_mean"], step)
+                    tb_writer.add_scalar("misc/std_mild_mean", stats["std_mild_mean"], step)
+                # wandb
+                if args.use_wandb:
+                    try:
+                        import wandb as _wandb
+
+                        _wandb.log({"step": step, **stats})
+                    except Exception:
+                        pass
                 if step % 100 == 0:
                     print(
                         f"step={step} v_loss={stats['v_loss']:.4f} critic={stats['critic_loss']:.4f} lam={stats['lam_mean']:.3f}"

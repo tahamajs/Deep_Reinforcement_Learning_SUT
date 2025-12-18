@@ -37,6 +37,7 @@ from paperAssignments.Assignments1_50.CA1.model import (
     NatureCNN,
 )
 from paperAssignments.Assignments1_50.CA1.wrappers import make_atari_env
+from paperAssignments.Assignments1_50.CA1.env_utils import reset_env, step_env
 
 
 # optional YAML loader
@@ -139,7 +140,11 @@ def train(cfg: Config):
     os.makedirs(cfg.save_dir, exist_ok=True)
 
     # For Atari-like env ids use wrappers; detect by name heuristic
-    use_atari = isinstance(cfg.env, str) and ("NoFrameskip" in cfg.env or "Atari" in cfg.env or cfg.env.lower() in ["pong", "breakout", "seaquest"])
+    use_atari = isinstance(cfg.env, str) and (
+        "NoFrameskip" in cfg.env
+        or "Atari" in cfg.env
+        or cfg.env.lower() in ["pong", "breakout", "seaquest"]
+    )
 
     if use_atari:
         env = make_atari_env(cfg.env)
@@ -150,16 +155,14 @@ def train(cfg: Config):
 
     np.random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)
+    # use reset_env to support gym/gymnasium
     try:
-        env.reset(seed=cfg.seed)
-        eval_env.reset(seed=cfg.seed + 1)
-    except TypeError:
-        # older gym API
+        reset_env(env, seed=cfg.seed)
+        reset_env(eval_env, seed=cfg.seed + 1)
+    except Exception:
         pass
 
-    obs_example = env.reset()
-    if isinstance(obs_example, tuple):
-        obs_example = obs_example[0]
+    obs_example = reset_env(env)
     obs_example = preprocess_obs(obs_example)
 
     # Decide encoder type
@@ -182,7 +185,9 @@ def train(cfg: Config):
         raise NotImplementedError("Only discrete action spaces supported in this minimal trainer")
 
     if pixel:
-        model = ParticleQNetwork(in_channels=obs_shape[0], num_actions=num_actions, num_particles=cfg.num_particles, particle_dim=cfg.particle_dim)
+        model = ParticleQNetwork(
+            in_channels=obs_shape[0], num_actions=num_actions, num_particles=cfg.num_particles, particle_dim=cfg.particle_dim
+        )
         target_model = copy.deepcopy(model)
     else:
         obs_dim = obs_shape[0]
@@ -212,9 +217,7 @@ def train(cfg: Config):
 
     replay = ReplayBuffer(obs_shape, size=cfg.replay_size)
 
-    obs = env.reset()
-    if isinstance(obs, tuple):
-        obs = obs[0]
+    obs = reset_env(env)
     obs = preprocess_obs(obs)
     if pixel and obs.shape[-1] in (1, 3):
         obs = np.transpose(obs, (2, 0, 1))
@@ -240,12 +243,7 @@ def train(cfg: Config):
             best = select_action_from_particles(particles)
             a = int(best[0])
 
-        out = env.step(a)
-        if len(out) == 5:
-            next_obs, r, term, trunc, info = out
-            done = term or trunc
-        else:
-            next_obs, r, done, info = out
+        next_obs, r, done, info = step_env(env, a)
 
         next_obs = preprocess_obs(next_obs)
         if pixel and next_obs.shape[-1] in (1, 3):
@@ -259,9 +257,7 @@ def train(cfg: Config):
         step += 1
 
         if done:
-            obs = env.reset()
-            if isinstance(obs, tuple):
-                obs = obs[0]
+            obs = reset_env(env)
             obs = preprocess_obs(obs)
             if pixel and obs.shape[-1] in (1, 3):
                 obs = np.transpose(obs, (2, 0, 1))
@@ -317,9 +313,7 @@ def train(cfg: Config):
             eval_returns = []
             for _ in range(3):
                 ep_ret_eval = 0.0
-                obs_e = eval_env.reset()
-                if isinstance(obs_e, tuple):
-                    obs_e = obs_e[0]
+                obs_e = reset_env(eval_env)
                 obs_e = preprocess_obs(obs_e)
                 if pixel and obs_e.shape[-1] in (1, 3):
                     obs_e = np.transpose(obs_e, (2, 0, 1))
@@ -331,12 +325,7 @@ def train(cfg: Config):
                     obs_tensor = torch.from_numpy(obs_t).to(device)
                     particles = model(obs_tensor)
                     action = int(select_action_from_particles(particles)[0])
-                    out = eval_env.step(action)
-                    if len(out) == 5:
-                        obs_e, r_e, term, trunc, info = out
-                        done_e = term or trunc
-                    else:
-                        obs_e, r_e, done_e, info = out
+                    obs_e, r_e, done_e, info = step_env(eval_env, action)
                     obs_e = preprocess_obs(obs_e)
                     if pixel and obs_e.shape[-1] in (1, 3):
                         obs_e = np.transpose(obs_e, (2, 0, 1))
@@ -370,7 +359,7 @@ def parse_args() -> Config:
     cfg = Config()
     if args.config is not None:
         if yaml is None:
-            raise RuntimeError("PyYAML is required to load config files. Install with `pip install pyyaml`.")
+            raise RuntimeError("PyYAML is required to load config files. Install with `pip install pyyaml`." )
         with open(args.config, "r") as f:
             data = yaml.safe_load(f)
         # shallow map
