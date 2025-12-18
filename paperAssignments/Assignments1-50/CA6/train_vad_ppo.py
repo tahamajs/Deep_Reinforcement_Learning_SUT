@@ -33,6 +33,7 @@ def collect_rollout(
     Collect a single rollout of length `rollout_steps` using the current policy.
     Returns a dict with tensors: obs, actions, rewards, dones, logp_old, values
     """
+    # Support vectorized envs: env.reset() / step() may return arrays with shape (num_envs, ...).
     obs_list, act_list, rew_list, done_list, logp_list, val_list = (
         [],
         [],
@@ -41,47 +42,86 @@ def collect_rollout(
         [],
         [],
     )
-    obs, _ = env.reset()
+    obs = env.reset()
+    # gymnasium returns (obs, info) for reset
+    if isinstance(obs, tuple) or (isinstance(obs, list) and len(obs) == 2):
+        obs = obs[0]
     for _ in range(rollout_steps):
-        obs_t = torch.as_tensor(obs, dtype=torch.float32, device=device).unsqueeze(0)
+        obs_t = torch.as_tensor(np.asarray(obs), dtype=torch.float32, device=device)
+        # get_action supports batched observations
         action, logp, value = actor_critic.get_action(obs_t)
-        # to numpy for env
-        action_np = action.cpu().numpy()[0]
-        next_obs, reward, terminated, truncated, info = env.step(action_np)
-        done = float(terminated or truncated)
-        obs_list.append(obs)
-        act_list.append(action.cpu().numpy()[0])
-        rew_list.append(float(reward))
-        done_list.append(done)
-        logp_list.append(float(logp.cpu().numpy()))
-        val_list.append(float(value.cpu().numpy()))
+        action_np = action.cpu().numpy()
+        step_out = env.step(action_np)
+        # step may return (next_obs, rewards, terminations, truncations, infos) or the 4-tuple older API
+        if len(step_out) == 5:
+            next_obs, rewards, terminated, truncated, infos = step_out
+            dones = np.logical_or(terminated, truncated).astype(float)
+        else:
+            next_obs, rewards, dones, infos = step_out
+            dones = np.asarray(dones).astype(float)
+        obs_list.append(np.asarray(obs))
+        act_list.append(action_np)
+        rew_list.append(np.asarray(rewards, dtype=np.float32))
+        done_list.append(np.asarray(dones, dtype=np.float32))
+        logp_list.append(logp.cpu().numpy())
+        val_list.append(value.cpu().numpy())
         obs = next_obs
-        if done:
-            obs, _ = env.reset()
-    # append last value bootstrap
-    obs_t = torch.as_tensor(obs, dtype=torch.float32, device=device).unsqueeze(0)
+        # Vectorized envs handle resets internally; no manual reset needed
+    # bootstrap last values
+    obs_t = torch.as_tensor(np.asarray(obs), dtype=torch.float32, device=device)
     _, last_val = actor_critic.get_action(obs_t)
-    val_list.append(float(last_val.cpu().numpy()))
+    last_val_np = last_val.cpu().numpy()
+    val_list.append(last_val_np)
 
+    # Convert lists to numpy arrays: shapes -> [T, num_envs, ...]
+    obs_arr = np.asarray(obs_list)
+    actions_arr = np.asarray(act_list)
+    rewards_arr = np.asarray(rew_list)
+    dones_arr = np.asarray(done_list)
+    logp_arr = np.asarray(logp_list)
+    values_arr = np.asarray(val_list)  # shape [T+1, num_envs]
+
+    # Flatten time and env dims for batch usage: [T * N, ...]
+    T = obs_arr.shape[0]
+    if rewards_arr.ndim == 1:
+        # non-vectorized env (single env) -> keep shapes consistent
+        batch = {
+            "obs": torch.as_tensor(obs_arr, dtype=torch.float32, device=device),
+            "actions": torch.as_tensor(actions_arr, dtype=torch.float32, device=device),
+            "rewards": torch.as_tensor(rewards_arr, dtype=torch.float32, device=device),
+            "dones": torch.as_tensor(dones_arr, dtype=torch.float32, device=device),
+            "logp_old": torch.as_tensor(logp_arr, dtype=torch.float32, device=device),
+            "values": torch.as_tensor(values_arr, dtype=torch.float32, device=device),
+        }
+        return batch
+
+    # vectorized: rewards_arr shape [T, N]
+    N = rewards_arr.shape[1]
+    # flatten with order 'C' (time major then env)
     batch = {
         "obs": torch.as_tensor(
-            np.asarray(obs_list), dtype=torch.float32, device=device
+            obs_arr.reshape(T * N, *obs_arr.shape[2:]),
+            dtype=torch.float32,
+            device=device,
         ),
         "actions": torch.as_tensor(
-            np.asarray(act_list), dtype=torch.float32, device=device
+            actions_arr.reshape(T * N, *actions_arr.shape[2:]),
+            dtype=torch.float32,
+            device=device,
         ),
         "rewards": torch.as_tensor(
-            np.asarray(rew_list), dtype=torch.float32, device=device
+            rewards_arr.reshape(T * N), dtype=torch.float32, device=device
         ),
         "dones": torch.as_tensor(
-            np.asarray(done_list), dtype=torch.float32, device=device
+            dones_arr.reshape(T * N), dtype=torch.float32, device=device
         ),
         "logp_old": torch.as_tensor(
-            np.asarray(logp_list), dtype=torch.float32, device=device
+            logp_arr.reshape(T * N), dtype=torch.float32, device=device
         ),
-        "values": torch.as_tensor(
-            np.asarray(val_list), dtype=torch.float32, device=device
-        ),
+        # keep values as numpy [T+1, N] converted to tensor
+        "values": torch.as_tensor(values_arr, dtype=torch.float32, device=device),
+        "env_T": T,
+        "env_N": N,
     }
     return batch
 
@@ -131,6 +171,12 @@ def make_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser()
     p.add_argument("--env", type=str, default="CartPole-v1")
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--num-envs", type=int, default=1)
+    p.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Run a short smoke test (small rollouts/updates)",
+    )
     p.add_argument("--gamma-init", type=float, default=0.95)
     p.add_argument("--gamma-min", type=float, default=0.90)
     p.add_argument("--gamma-max", type=float, default=0.999)
@@ -142,6 +188,10 @@ def make_parser() -> argparse.ArgumentParser:
     p.add_argument("--clip-ratio", type=float, default=0.2)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--total-updates", type=int, default=10)
+    p.add_argument(
+        "--save-ckpt", action="store_true", help="Save checkpoint after each update"
+    )
+    p.add_argument("--ckpt-path", type=str, default="ckpt_vadppo.pt")
     return p
 
 
@@ -150,7 +200,25 @@ def main(argv=None):
     args = parser.parse_args(argv)
     set_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env = gym.make(args.env)
+    # create (vectorized) envs if requested
+    if args.num_envs > 1:
+
+        def make_one(i):
+            def _thunk():
+                env = gym.make(args.env)
+                env.reset(seed=args.seed + i)
+                return env
+
+            return _thunk
+
+        env_fns = [make_one(i) for i in range(args.num_envs)]
+        try:
+            env = gym.vector.SyncVectorEnv(env_fns)
+        except Exception:
+            # fallback: create single env
+            env = gym.make(args.env)
+    else:
+        env = gym.make(args.env)
 
     obs_space = env.observation_space
     act_space = env.action_space
@@ -171,13 +239,44 @@ def main(argv=None):
     gamma = float(args.gamma_init)
     ema_varA = None
     beta = 0.9
+    if args.smoke:
+        args.rollout_steps = min(64, args.rollout_steps)
+        args.total_updates = min(3, args.total_updates)
 
     for update in range(args.total_updates):
         t0 = time.time()
         batch = collect_rollout(env, actor_critic, args.rollout_steps, device)
-        adv, returns = compute_advantages(
-            batch["rewards"], batch["values"], batch["dones"], gamma, args.lam
-        )
+        # If vectorized, values are shape [T+1, N] and rewards/dones were flattened
+        if "env_T" in batch and "env_N" in batch:
+            T = int(batch["env_T"])
+            N = int(batch["env_N"])
+            # compute per-env advantages then flatten
+            adv_list = []
+            ret_list = []
+            rewards_np = batch["rewards"].cpu().numpy().reshape(T, N)
+            dones_np = batch["dones"].cpu().numpy().reshape(T, N)
+            values_np = batch["values"].cpu().numpy()  # shape [T+1, N]
+            for i in range(N):
+                rew_i = torch.as_tensor(
+                    rewards_np[:, i], dtype=torch.float32, device=device
+                )
+                vals_i = torch.as_tensor(
+                    values_np[:, i], dtype=torch.float32, device=device
+                )
+                dones_i = torch.as_tensor(
+                    dones_np[:, i], dtype=torch.float32, device=device
+                )
+                adv_i, ret_i = compute_advantages(
+                    rew_i, vals_i, dones_i, gamma, args.lam
+                )
+                adv_list.append(adv_i)
+                ret_list.append(ret_i)
+            adv = torch.cat(adv_list, dim=0)
+            returns = torch.cat(ret_list, dim=0)
+        else:
+            adv, returns = compute_advantages(
+                batch["rewards"], batch["values"], batch["dones"], gamma, args.lam
+            )
         varA = float(adv.var(unbiased=True).item())
         gamma, ema_varA = update_gamma_with_ema(
             gamma,
@@ -208,8 +307,83 @@ def main(argv=None):
         print(
             f"Update {update+1}/{args.total_updates}  gamma={gamma:.5f} varA={varA:.5f} time={t1-t0:.2f}s  stats={stats}"
         )
+        # logging
+        try:
+            import os, csv
+
+            os.makedirs("logs", exist_ok=True)
+            log_path = "logs/vadppo_log.csv"
+            header = [
+                "update",
+                "gamma",
+                "varA",
+                "varA_ema",
+                "return_mean",
+                "loss_pi",
+                "loss_v",
+                "loss_ent",
+                "approx_kl",
+            ]
+            return_mean = (
+                float(returns.mean().item())
+                if isinstance(returns, torch.Tensor)
+                else float(np.mean(returns))
+            )
+            row = [
+                update,
+                gamma,
+                varA,
+                ema_varA if ema_varA is not None else "",
+                return_mean,
+                stats.get("loss_pi", ""),
+                stats.get("loss_v", ""),
+                stats.get("loss_ent", ""),
+                stats.get("approx_kl", ""),
+            ]
+            write_header = not os.path.exists(log_path)
+            with open(log_path, "a", newline="") as f:
+                writer = csv.writer(f)
+                if write_header:
+                    writer.writerow(header)
+                writer.writerow(row)
+        except Exception:
+            pass
+        if args.save_ckpt:
+            ckpt = {
+                "model": actor_critic.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "gamma": gamma,
+                "ema_varA": ema_varA,
+                "update": update,
+            }
+            torch.save(ckpt, args.ckpt_path)
+            print(f"Saved checkpoint to {args.ckpt_path}")
+
+        # smoke eval: run a short deterministic episode on single env
+        if args.smoke:
+            try:
+                eval_env = gym.make(args.env)
+                obs, _ = eval_env.reset()
+                done = False
+                ep_ret = 0.0
+                steps = 0
+                while not done and steps < 1000:
+                    obs_t = torch.as_tensor(
+                        np.asarray(obs), dtype=torch.float32, device=device
+                    ).unsqueeze(0)
+                    action, _, _ = actor_critic.get_action(obs_t, deterministic=True)
+                    action_np = action.cpu().numpy()[0]
+                    next_obs, reward, terminated, truncated, info = eval_env.step(
+                        action_np
+                    )
+                    done = bool(terminated or truncated)
+                    ep_ret += float(reward)
+                    obs = next_obs
+                    steps += 1
+                print(f"Smoke eval return: {ep_ret:.2f} steps: {steps}")
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
     main()
-
