@@ -1,0 +1,11 @@
+{
+  "assignment": "HW7 Value-Based Theory",
+  "seed": 0,
+  "device": "cpu",
+  "torch_version": "not_installed",
+  "numpy_version": "2.3.3",
+  "python_version": "3.13.1",
+  "timestamp": "2025-12-18T16:49:33.737434Z",
+  "commit": "37a50a7",
+  "notes": "Generated run metadata programmatically"
+}
