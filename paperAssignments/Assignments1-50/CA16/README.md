@@ -15,3 +15,4 @@ Notes:
 
 - Per repository conventions, modules are import-safe and contain no training loops on import.
 - The tests are lightweight and meant as smoke tests; training code belongs in notebooks or scripts outside `src/`.
+

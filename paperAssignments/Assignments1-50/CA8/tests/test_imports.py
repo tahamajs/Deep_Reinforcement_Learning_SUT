@@ -45,3 +45,4 @@ def test_sinkhorn_fallback():
     assert out.shape[0] == 2
     assert torch.isfinite(out).all()
 
+

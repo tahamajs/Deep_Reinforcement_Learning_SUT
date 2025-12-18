@@ -27,3 +27,4 @@ def test_discounted_returns_and_loss():
     log_probs = torch.tensor([0.0, -0.1, -0.2], dtype=torch.float32)
     loss = reinforce_loss(log_probs, Gt)
     assert torch.isfinite(loss)
+

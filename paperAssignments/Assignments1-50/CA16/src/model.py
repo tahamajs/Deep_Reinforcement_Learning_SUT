@@ -72,3 +72,4 @@ class MLPValue(nn.Module):
     def forward(self, obs: torch.Tensor) -> torch.Tensor:
         # returns shape (B,)
         return self.value_net(obs).squeeze(-1)
+

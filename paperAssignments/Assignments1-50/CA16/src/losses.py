@@ -35,3 +35,4 @@ def value_loss(values: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         targets: (B,) bootstrap targets
     """
     return F.mse_loss(values, targets)
+

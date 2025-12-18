@@ -51,3 +51,4 @@ def load_checkpoint(path: os.PathLike):
         import numpy as _np
 
         return _np.load(path, allow_pickle=True).item()
+

@@ -71,3 +71,4 @@ class ActorCriticEnsemble(nn.Module):
         # return actions and mean value across ensemble
         mean_value = values.mean(0)
         return actions, chosen_logp, mean_value
+

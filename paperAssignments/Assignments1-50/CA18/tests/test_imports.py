@@ -26,3 +26,4 @@ def test_imports_and_forward():
     assert logp.shape[0] == batch.shape[0]
     v = net.get_value(batch)
     assert v.shape == (batch.shape[0],)
+

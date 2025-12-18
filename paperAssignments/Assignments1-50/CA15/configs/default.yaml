@@ -6,3 +6,4 @@ lr: 0.001
 device: cpu
 batch_size: 32
 epochs: 5
+

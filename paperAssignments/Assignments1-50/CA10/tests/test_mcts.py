@@ -71,3 +71,4 @@ def test_mcts_basic():
         for keys, vals in joint:
             assert hasattr(keys, "__iter__")
             assert isinstance(vals, torch.Tensor)
+

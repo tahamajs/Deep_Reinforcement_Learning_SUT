@@ -17,3 +17,4 @@ class CAConfig:
     max_steps_per_episode: int = 500
     total_steps: int = 2000
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
+

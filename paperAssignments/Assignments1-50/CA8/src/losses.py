@@ -71,3 +71,4 @@ class SinkhornWrapper(nn.Module):
             mmd = k_xx + k_yy - 2.0 * k_xy
             return mmd
 
+

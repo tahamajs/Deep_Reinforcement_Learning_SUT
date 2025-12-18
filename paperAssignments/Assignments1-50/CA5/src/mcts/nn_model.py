@@ -54,3 +54,4 @@ class SmallDiscreteModel(nn.Module):
                 state = torch.tensor([state], dtype=torch.float32)
             _, v = self.forward(state)
             return float(v[0].item())
+

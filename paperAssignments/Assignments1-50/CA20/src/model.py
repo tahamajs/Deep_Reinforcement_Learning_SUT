@@ -59,3 +59,4 @@ class ValueNet(nn.Module):
 
     def forward(self, obs: torch.Tensor) -> torch.Tensor:
         return self.net(obs).squeeze(-1)
+

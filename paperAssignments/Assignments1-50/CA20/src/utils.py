@@ -65,3 +65,4 @@ class LagrangeMultiplier:
         self.value = float(d.get("value", self.value))
         self.lr = float(d.get("lr", self.lr))
         self.clip = float(d.get("clip", self.clip))
+

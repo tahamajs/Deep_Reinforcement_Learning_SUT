@@ -31,3 +31,4 @@ def load_checkpoint(
     if not os.path.exists(path):
         raise FileNotFoundError(path)
     return torch.load(path, map_location=device)
+

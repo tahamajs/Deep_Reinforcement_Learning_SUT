@@ -37,3 +37,4 @@ def compute_constraint(batch_constraints: torch.Tensor) -> torch.Tensor:
     E.g., mean constraint violation across episodes/samples.
     """
     return batch_constraints.mean()
+

@@ -76,3 +76,4 @@ def update_gamma_with_ema(
     gamma_new = update_gamma(gamma, ema_varA_new, sigma_target, alpha, gmin, gmax)
     return gamma_new, ema_varA_new
 
+

@@ -73,3 +73,4 @@ def test_update_gamma_with_ema_behavior():
     )
     # ema should be between 0.5 and 0.6
     assert 0.5 <= ema2 <= 0.6
+

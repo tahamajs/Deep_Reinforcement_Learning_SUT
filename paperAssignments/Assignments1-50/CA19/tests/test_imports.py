@@ -19,3 +19,4 @@ def test_imports():
     _load("utils.py", "ca19.utils")
     _load("data.py", "ca19.data")
     assert True
+

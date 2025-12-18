@@ -81,3 +81,4 @@ class MLPPolicy(nn.Module):
         action_t, logp_t = self.get_action(obs_t, deterministic=deterministic)
         return _np.asarray(action_t.cpu().numpy()), _np.asarray(logp_t.cpu().numpy())
 
+

@@ -32,3 +32,4 @@ def test_crosshq_adapter_runs():
     root = puct.search(0, num_simulations=10)
     visits = sum(child.visits for child in root.children.values())
     assert visits == 10
+

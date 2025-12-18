@@ -38,3 +38,4 @@ if __name__ == "__main__":
         raise SystemExit(1)
     ckpts = load_checkpoints(sys.argv[1])
     plot_checkpoint_tsne(ckpts, sys.argv[2])
+

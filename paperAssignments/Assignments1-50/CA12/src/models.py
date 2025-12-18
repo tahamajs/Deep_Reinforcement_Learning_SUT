@@ -86,3 +86,4 @@ class VectorizedCritic(nn.Module):
         qs = torch.stack(qs, dim=0)  # (ensemble, B, 1)
         return qs
 
+

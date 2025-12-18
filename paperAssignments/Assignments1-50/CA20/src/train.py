@@ -134,3 +134,4 @@ if __name__ == "__main__":
     print("Starting debug training with config:", cfg)
     res = train(cfg)
     print("Training finished. Summary:", res)
+

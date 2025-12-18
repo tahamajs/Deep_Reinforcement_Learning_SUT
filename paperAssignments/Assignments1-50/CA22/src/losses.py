@@ -48,3 +48,4 @@ class LagrangianLoss:
 
     def set_mu(self, new_mu: float) -> None:
         self.mu = float(new_mu)
+

@@ -95,3 +95,4 @@ class ReplayBuffer:
         rb = ReplayBuffer(max_size=max_size or obs.shape[0])
         rb.load_from_arrays(obs, acts, rews, next_obs, dones)
         return rb
+

@@ -101,3 +101,4 @@ def test_dreamer_agent_planner_integration_smoke(tmp_path):
     out = agent.update_actor_critic_from_branches(branches, topk_frac=0.5, lambda_=0.9)
     assert isinstance(out, dict)
     assert "actor_loss" in out and "critic_loss" in out
+

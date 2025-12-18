@@ -39,3 +39,4 @@ def test_scas_loss_zero_when_matches():
     s_next = scas(s, a).detach()  # make next exactly the model's forward
     loss = scas.loss(s, a, s_next)
     assert torch.allclose(loss, torch.tensor(0.0), atol=1e-6)
+

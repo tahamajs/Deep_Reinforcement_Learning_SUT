@@ -26,3 +26,4 @@ def test_losses_finite():
     c_loss = critic_loss(values, targets)
     assert torch.isfinite(a_loss)
     assert torch.isfinite(c_loss)
+

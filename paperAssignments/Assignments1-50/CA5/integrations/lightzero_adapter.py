@@ -44,3 +44,4 @@ class MuZeroAdapter:
             "next_state": next_state,
             "hidden_state": next_state,
         }
+

@@ -24,3 +24,4 @@ jobs:
       - name: Run CA8 tests
         run: |
           pytest -q paperAssignments/Assignments1-50/CA8
+

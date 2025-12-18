@@ -55,3 +55,4 @@ class QEnsemble(nn.Module):
         for p, q in zip(self.parameters(), other.parameters()):
             p.data.copy_(tau * p.data + (1.0 - tau) * q.data)
 
+

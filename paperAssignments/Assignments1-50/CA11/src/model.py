@@ -175,3 +175,4 @@ class TWMSSDImageModel(nn.Module):
         # quantized: (B, L, D)
         pred_obs, pred_reward = self.backbone(quantized, actions)
         return pred_obs, pred_reward, recon, indices
+

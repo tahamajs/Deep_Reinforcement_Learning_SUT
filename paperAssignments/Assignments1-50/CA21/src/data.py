@@ -45,3 +45,4 @@ class SyntheticDataset(Dataset):
             self.next_observations[idx],
             self.dones[idx],
         )
+

@@ -38,3 +38,4 @@ class CSVLogger:
     def flush(self):
         # no-op for simple file-based logging
         return
+

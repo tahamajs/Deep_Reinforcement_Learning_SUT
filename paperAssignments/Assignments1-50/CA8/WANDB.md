@@ -29,3 +29,4 @@ Sweeps
 - Start a sweep:
   1. wandb sweep paperAssignments/Assignments1-50/CA8/wandb_sweep.yaml
   2. wandb agent <SWEEP_ID>
+

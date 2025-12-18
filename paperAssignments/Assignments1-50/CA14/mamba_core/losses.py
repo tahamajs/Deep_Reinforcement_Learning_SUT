@@ -74,3 +74,4 @@ def world_model_loss(
     loss = recon_loss + reward_loss + beta_z * kl_z_clamped + beta_m * kl_m_clamped
     return loss
 
+

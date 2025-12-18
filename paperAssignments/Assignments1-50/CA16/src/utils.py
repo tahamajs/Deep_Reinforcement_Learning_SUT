@@ -23,3 +23,4 @@ def to_tensor(x: Any, device: str = "cpu") -> torch.Tensor:
 
 def count_parameters(module) -> int:
     return sum(p.numel() for p in module.parameters())
+

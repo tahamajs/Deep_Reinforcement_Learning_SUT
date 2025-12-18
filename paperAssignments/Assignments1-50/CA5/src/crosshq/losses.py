@@ -71,3 +71,4 @@ class CrossHQLoss(nn.Module):
         loss = loss_q1 + loss_q2
         return loss
 
+

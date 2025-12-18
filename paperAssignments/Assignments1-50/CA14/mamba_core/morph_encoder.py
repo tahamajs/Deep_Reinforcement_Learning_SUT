@@ -58,3 +58,4 @@ class MorphEncoder(nn.Module):
         z = mu + eps * std
         return z, mu, logvar
 
+

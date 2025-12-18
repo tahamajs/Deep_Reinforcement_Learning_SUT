@@ -93,3 +93,4 @@ class SCASReg(nn.Module):
         pred = self.forward(s, a)
         return F.mse_loss(pred, s_next)
 
+

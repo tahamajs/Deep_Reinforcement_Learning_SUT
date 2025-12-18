@@ -27,3 +27,4 @@ def test_visit_counts_sum_to_simulations():
     visits = run_search_with_seed(7, sims=sims)
     total = sum(visits.values())
     assert total == sims
+

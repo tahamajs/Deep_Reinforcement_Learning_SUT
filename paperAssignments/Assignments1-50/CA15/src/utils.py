@@ -40,3 +40,4 @@ def load_checkpoint(
     if optimizer is not None and "optimizer_state" in payload:
         optimizer.load_state_dict(payload["optimizer_state"])
     return payload.get("extra", {})
+

@@ -28,3 +28,4 @@ class Config:
 def default_config() -> Config:
     return Config()
 
+

@@ -29,3 +29,4 @@ def test_add_and_retrieve():
     assert a.shape == (4, 2)
     assert rtg.shape == (4, 1)
 
+

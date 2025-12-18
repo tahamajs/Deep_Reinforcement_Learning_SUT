@@ -20,3 +20,4 @@ class ValueNet(nn.Module):
         x = F.elu(self.fc2(x))
         return self.out(x).squeeze(-1)
 
+

@@ -67,3 +67,4 @@ def update_lagrange(
     new_mu = max(0.0, new_mu)
     new_mu = min(new_mu, float(max_mu))
     return new_mu
+

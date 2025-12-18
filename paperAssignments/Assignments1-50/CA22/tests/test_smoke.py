@@ -46,3 +46,4 @@ def test_losses_and_dataset():
     lag = LagrangianLoss(mu=0.0, constraint_threshold=cfg.constraint_threshold)
     combined = lag(pg, torch.from_numpy(constraints))
     assert combined.shape == ()
+

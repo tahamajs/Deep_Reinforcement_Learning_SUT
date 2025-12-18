@@ -38,3 +38,4 @@ Files included in this assignment scaffold:
 - `tests/test_smoke.py` – quick smoke tests for import and forward pass.
 
 Feel free to expand the scaffold with training loops and notebooks following the guidelines in the original brief.
+

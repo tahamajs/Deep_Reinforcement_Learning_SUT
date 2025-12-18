@@ -38,3 +38,4 @@ def test_advanced_simulator_and_distill():
     assert actions is not None and probs is not None
     a = select_branch_action(branches)
     assert a is not None
+

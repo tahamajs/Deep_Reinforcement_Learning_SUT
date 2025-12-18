@@ -17,3 +17,4 @@ def test_imports_and_forward():
     x = torch.randn(3, 4)
     logits = model(x)
     assert logits.shape == (3, 2)
+

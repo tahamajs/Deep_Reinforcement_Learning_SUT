@@ -116,3 +116,4 @@ if __name__ == "__main__":
     pred = rng.normal(size=(200, 32, 1))
     targ = pred + rng.normal(scale=0.3, size=pred.shape)
     plot_particle_pca(pred, targ, save_path="pictures/demo_particles_pca.png")
+

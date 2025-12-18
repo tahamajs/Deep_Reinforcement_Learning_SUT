@@ -175,3 +175,4 @@ class StochasticActor(nn.Module):
         log_det = torch.log(1.0 - clipped.pow(2) + 1e-6).sum(-1)
         logp = normal_logp - log_det
         return logp
+

@@ -43,3 +43,4 @@ def entropy_loss_from_logits(logits: torch.Tensor, coeff: float = 0.0) -> torch.
     entropy = -(probs * logp).sum(dim=-1).mean()
     return -coeff * entropy
 
+

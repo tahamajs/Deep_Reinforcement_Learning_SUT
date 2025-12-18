@@ -36,3 +36,4 @@ class BaseMuZeroPolicy(ABC):
     def load(self, path: str) -> None:
         """Optional: load policy weights."""
         raise NotImplementedError
+

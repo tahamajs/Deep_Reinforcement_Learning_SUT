@@ -96,3 +96,4 @@ if __name__ == "__main__":
     out = net(x)
     print(out.shape)  # (B, A, N, D)
 
+

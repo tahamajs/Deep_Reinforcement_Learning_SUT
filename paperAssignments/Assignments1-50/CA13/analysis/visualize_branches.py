@@ -96,3 +96,4 @@ if __name__ == "__main__":
     plot_branch_returns(branches, out_prefix.replace(".png", "_returns.png"))
     plot_topk_actions(branches, out_prefix.replace(".png", "_actions.png"))
     plot_branch_latent_pca(branches, out_prefix.replace(".png", "_pca.png"))
+

@@ -147,3 +147,4 @@ if __name__ == "__main__":
     args = p.parse_args()
     cfg = Config()
     run_demo(cfg, steps=args.steps)
+

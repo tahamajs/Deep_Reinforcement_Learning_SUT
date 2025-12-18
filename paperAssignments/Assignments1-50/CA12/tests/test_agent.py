@@ -38,3 +38,4 @@ def test_agent_update_steps():
     loss_online = agent.update_online_actor(s_batch)
     assert isinstance(loss_online, float)
 
+

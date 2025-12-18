@@ -104,3 +104,4 @@ class CheckpointBuffer:
                 self._z_store[i] = self._z_store[i].to(device)
         return self
 
+

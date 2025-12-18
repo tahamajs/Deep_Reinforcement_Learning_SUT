@@ -45,3 +45,4 @@ def select_branch_action(branches: List[Any], topk_frac: float = 0.5, tau: float
         return None
     idx = torch.multinomial(probs, 1).item()
     return actions[idx]
+

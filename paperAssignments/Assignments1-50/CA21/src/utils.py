@@ -27,3 +27,4 @@ def load_checkpoint(path: str) -> Dict[str, Any]:
     if not os.path.exists(path):
         raise FileNotFoundError(f"Checkpoint not found: {path}")
     return torch.load(path, map_location="cpu")
+

@@ -35,3 +35,4 @@ If you prefer a Jupyter workflow, create a notebook that:
 5. Including figures in the paper
 
 Place the generated PNG files in `paperAssignments/Assignments1-50/CA12/pictures/` and reference them in `report.tex` (placeholders are already present).
+

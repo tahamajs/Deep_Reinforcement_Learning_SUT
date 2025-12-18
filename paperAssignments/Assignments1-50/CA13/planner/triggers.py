@@ -38,3 +38,4 @@ def should_trigger(
     )
     return bool(cond_td or cond_unc or cond_ent)
 
+

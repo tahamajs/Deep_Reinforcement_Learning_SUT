@@ -83,3 +83,4 @@ class ActorCritic(nn.Module):
         entropy = dist.entropy()
         value = self.value(obs)
         return logp, entropy, value
+

@@ -57,3 +57,4 @@ class CrossHQMCTSAdapter:
                 q1 = self.critic.q1_forward(x).item()
                 qs.append(q1)
         return float(sum(qs) / max(1, len(qs)))
+

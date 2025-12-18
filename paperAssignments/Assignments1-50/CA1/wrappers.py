@@ -101,3 +101,4 @@ def make_atari_env(
     # frame stack using Gym's FrameStack wrapper
     env = gym.wrappers.FrameStack(env, num_stack=frame_stack)
     return env
+

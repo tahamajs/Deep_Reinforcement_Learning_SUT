@@ -34,3 +34,4 @@ def test_simulate_branches_returns():
     rets = [b.ret for b in branches]
     assert sorted(rets, reverse=True) == rets
 
+

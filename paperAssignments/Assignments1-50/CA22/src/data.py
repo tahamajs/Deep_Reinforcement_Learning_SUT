@@ -57,3 +57,4 @@ class SyntheticDataset:
         rewards = np.concatenate([b[2] for b in batch], axis=0)
         constraints = np.concatenate([b[3] for b in batch], axis=0)
         return states, actions, rewards, constraints
+

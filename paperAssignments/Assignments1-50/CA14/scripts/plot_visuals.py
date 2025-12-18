@@ -116,3 +116,4 @@ if __name__ == "__main__":
     print(
         "plot_visuals.py: library of plotting functions. Import and call functions with real data."
     )
+

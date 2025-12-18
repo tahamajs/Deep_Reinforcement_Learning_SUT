@@ -129,3 +129,4 @@ if __name__ == "__main__":
     run_crosshq_planning(
         seed=args.seed, sims=args.sims, horizon=args.horizon, out_dir=args.out
     )
+

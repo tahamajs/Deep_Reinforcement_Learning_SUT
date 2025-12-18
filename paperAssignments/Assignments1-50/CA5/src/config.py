@@ -19,3 +19,4 @@ class Config:
 def default_config():
     return Config()
 
+

@@ -48,3 +48,4 @@ class Config:
 
     def device_str(self) -> str:
         return self.device
+

@@ -30,3 +30,4 @@ def test_policy_and_value_forward():
     targets = torch.randn(batch)
     v_loss = value_loss(vals, targets)
     assert v_loss.shape == ()
+
