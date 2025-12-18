@@ -25,13 +25,13 @@ MAPS = {
 
 register(
     id="Deterministic-4x4-FrozenLake-v0",
-    entry_point="gym.envs.toy_text.frozen_lake:FrozenLakeEnv",
+    entry_point="gymnasium.envs.toy_text.frozen_lake:FrozenLakeEnv",
     kwargs={"map_name": None, "is_slippery": False, "desc": MAPS["4x4"]},
 )
 
 register(
     id="Deterministic-8x8-FrozenLake-v0",
-    entry_point="gym.envs.toy_text.frozen_lake:FrozenLakeEnv",
+    entry_point="gymnasium.envs.toy_text.frozen_lake:FrozenLakeEnv",
     kwargs={
         "map_name": None,
         "is_slippery": False,
@@ -41,7 +41,7 @@ register(
 
 register(
     id="Stochastic-4x4-FrozenLake-v0",
-    entry_point="gym.envs.toy_text.frozen_lake:FrozenLakeEnv",
+    entry_point="gymnasium.envs.toy_text.frozen_lake:FrozenLakeEnv",
     kwargs={
         "map_name": "4x4",
         "is_slippery": True,
@@ -51,7 +51,7 @@ register(
 
 register(
     id="Stochastic-8x8-FrozenLake-v0",
-    entry_point="gym.envs.toy_text.frozen_lake:FrozenLakeEnv",
+    entry_point="gymnasium.envs.toy_text.frozen_lake:FrozenLakeEnv",
     kwargs={"map_name": "8x8", "is_slippery": True, "desc": MAPS["8x8"]},
 )
 
@@ -79,13 +79,13 @@ class NegRewardFrozenLake(frozen_lake.FrozenLakeEnv):
 
 register(
     id="Deterministic-4x4-neg-reward-FrozenLake-v0",
-    entry_point="deeprl_hw1.lake_envs:NegRewardFrozenLake",
+    entry_point="deeprl_hw2q2.lake_envs:NegRewardFrozenLake",
     kwargs={"map_name": None, "is_slippery": False, "desc": MAPS["4x4"]},
 )
 
 register(
     id="Stochastic-4x4-neg-reward-FrozenLake-v0",
-    entry_point="deeprl_hw1.lake_envs:NegRewardFrozenLake",
+    entry_point="deeprl_hw2q2.lake_envs:NegRewardFrozenLake",
     kwargs={
         "map_name": None,
         "is_slippery": True,
@@ -95,7 +95,7 @@ register(
 
 register(
     id="Deterministic-8x8-neg-reward-FrozenLake-v0",
-    entry_point="deeprl_hw1.lake_envs:NegRewardFrozenLake",
+    entry_point="deeprl_hw2q2.lake_envs:NegRewardFrozenLake",
     kwargs={
         "map_name": None,
         "is_slippery": False,
@@ -105,6 +105,6 @@ register(
 
 register(
     id="Stochastic-8x8-neg-reward-FrozenLake-v0",
-    entry_point="deeprl_hw1.lake_envs:NegRewardFrozenLake",
+    entry_point="deeprl_hw2q2.lake_envs:NegRewardFrozenLake",
     kwargs={"map_name": None, "is_slippery": True, "desc": MAPS["8x8"]},
 )
