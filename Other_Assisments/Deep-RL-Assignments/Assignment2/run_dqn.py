@@ -2,6 +2,8 @@ import argparse
 import tensorflow as tf
 import keras
 from src.dqn_agent import DQN_Agent
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Deep Q Network Argument Parser")
     parser.add_argument("--env", dest="env", type=str, default="CartPole-v0")
@@ -20,6 +22,8 @@ def parse_arguments():
     parser.add_argument("--epsilon", dest="epsilon", type=float, default=1.0)
     parser.add_argument("--model", dest="model_file", type=str)
     return parser.parse_args()
+
+
 import argparse
 import os
 import numpy as np
@@ -27,6 +31,8 @@ import tensorflow as tf
 import keras
 import gymnasium as gym
 from src.dqn_agent import DQN_Agent
+
+
 def test_video(agent, env_name, episodes):
     save_path = "%s/video-%s" % (env_name, episodes)
     if not os.path.exists(save_path):
@@ -48,6 +54,8 @@ def test_video(agent, env_name, episodes):
         state = next_state
     print("reward_total: {}".format(np.sum(reward_total)))
     env.close()
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Deep Q Network Argument Parser")
     parser.add_argument("--env", dest="env", type=str, default="CartPole-v0")
@@ -66,6 +74,8 @@ def parse_arguments():
     parser.add_argument("--epsilon", dest="epsilon", type=float, default=1.0)
     parser.add_argument("--model", dest="model_file", type=str)
     return parser.parse_args()
+
+
 def main():
     args = parse_arguments()
     # Configure GPU memory growth for TF2; fallback to TF1 compatibility API if needed.
@@ -92,6 +102,8 @@ def main():
         test_video(q_agent, args.env, 0)
     else:
         q_agent.train()
+
+
 if __name__ == "__main__":
     main()
 

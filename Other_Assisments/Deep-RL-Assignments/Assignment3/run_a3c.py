@@ -118,6 +118,7 @@ def main():
 if __name__ == "__main__":
     import torch.multiprocessing as mp
 
+    # Force 'spawn' instead of 'fork' to avoid macOS GPU driver issues
     try:
         mp.set_start_method("spawn", force=True)
     except RuntimeError:
