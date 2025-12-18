@@ -18,9 +18,17 @@ CA28 is a comprehensive assignment template for research and coursework. This RE
 - `configs/` for YAML configurations.
 - `tests/` for pytest tests.
 
-Problem description
+## Problem Description
 
-Choose a focused research question and outline experiments to test the hypothesis.
+Implement Deep Q-Network (DQN) to solve the CartPole environment from OpenAI Gym. The goal is to train an agent that can balance a pole on a cart by applying appropriate forces to the cart.
+
+### Research Question
+Can DQN effectively learn a policy to balance the CartPole for at least 195 steps on average over 100 consecutive episodes?
+
+### Experiments
+- **Baseline**: Train DQN with the default hyperparameters.
+- **Ablations**: Vary learning rate, batch size, and epsilon decay to see their impact.
+- **Seed Sweeps**: Run multiple seeds to assess variance in performance.
 
 Implementation notes
 
