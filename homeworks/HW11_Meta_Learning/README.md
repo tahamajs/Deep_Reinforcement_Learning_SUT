@@ -22,10 +22,13 @@ Meta-learning, or "learning to learn," enables agents to quickly adapt to new ta
 ```
 HW11_Meta_Learning/
 ├── code/
-│   └── HW11_Notebook.ipynb        # Meta-RL implementations
-├── answers/                        # (No solutions provided yet)
+│   └── HW11_Notebook.ipynb        # Meta-RL implementations (student solutions)
+├── base_code/
+│   └── HW11_Notebook.ipynb        # Reference / starter notebook
+├── answers/
+│   └── HW11_Complete_Solutions.md # Completed theoretical solutions and code explanations
 ├── reports/
-│   └── HW11_Questions.pdf         # Assignment questions
+│   └── HW11_Questions.pdf         # Assignment questions (original PDF, if available)
 └── README.md
 ```
 
