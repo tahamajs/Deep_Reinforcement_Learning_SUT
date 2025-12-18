@@ -23,4 +23,3 @@ def entropy_loss(logits: Tensor, coeff: float = 0.01) -> Tensor:
     probs = torch.softmax(logits, dim=-1)
     ent = -(probs * torch.log(probs + 1e-8)).sum(dim=-1).mean()
     return -coeff * ent
-

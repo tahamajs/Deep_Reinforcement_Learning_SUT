@@ -10,6 +10,7 @@ class Config:
     Keep all hyperparameters here so other modules import this file
     and remain import-safe.
     """
+
     env_name: str = "CartPole-v1"
     seed: int = 42
     lr: float = 1e-3
@@ -25,4 +26,3 @@ class Config:
 def get_default_config() -> Config:
     """Return a frozen default configuration instance."""
     return Config()
-

@@ -36,7 +36,9 @@ def train_once(config=None):
         obs = obs[0]
     input_dim = int(np.array(obs).shape[0])
     output_dim = env.action_space.n
-    policy = MLPPolicy(input_dim=input_dim, output_dim=output_dim, hidden_size=cfg.hidden_size).to(device)
+    policy = MLPPolicy(
+        input_dim=input_dim, output_dim=output_dim, hidden_size=cfg.hidden_size
+    ).to(device)
     optimizer = optim.Adam(policy.parameters(), lr=cfg.lr)
     save_dir = ensure_dir(cfg.save_dir)
 
@@ -49,7 +51,9 @@ def train_once(config=None):
         if isinstance(obs, tuple):
             obs = obs[0]
         while not done and total_steps < cfg.total_timesteps:
-            obs_tensor = torch.tensor(np.asarray(obs), dtype=torch.float32, device=device)
+            obs_tensor = torch.tensor(
+                np.asarray(obs), dtype=torch.float32, device=device
+            )
             dist = policy.get_action_dist(obs_tensor)
             action = dist.sample().item()
             lp = dist.log_prob(torch.tensor(action, device=device))
@@ -71,16 +75,31 @@ def train_once(config=None):
         log_probs_tensor = torch.stack(log_probs)
         advantages = returns - returns.mean()
         pg_loss = policy_gradient_loss(log_probs_tensor, advantages)
-        ent_loss = entropy_loss(policy.forward(torch.tensor(np.asarray(observations), dtype=torch.float32, device=device)))
+        ent_loss = entropy_loss(
+            policy.forward(
+                torch.tensor(
+                    np.asarray(observations), dtype=torch.float32, device=device
+                )
+            )
+        )
         loss = pg_loss + ent_loss
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        print(f"Steps: {total_steps}\tEpisode return: {returns.sum():.2f}\tLoss: {loss.item():.4f}")
+        print(
+            f"Steps: {total_steps}\tEpisode return: {returns.sum():.2f}\tLoss: {loss.item():.4f}"
+        )
         # checkpoint
         ckpt_path = save_dir / f"ca17_step_{total_steps}.pt"
-        save_checkpoint({"model_state": policy.state_dict(), "optimizer": optimizer.state_dict(), "steps": total_steps}, ckpt_path)
+        save_checkpoint(
+            {
+                "model_state": policy.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "steps": total_steps,
+            },
+            ckpt_path,
+        )
 
 
 def main():
@@ -95,4 +114,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
