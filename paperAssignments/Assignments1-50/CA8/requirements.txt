@@ -3,5 +3,6 @@ numpy
 gymnasium
 geomloss>=0.2.0; extra == "geomloss"
 wandb
+pyyaml
 
 
