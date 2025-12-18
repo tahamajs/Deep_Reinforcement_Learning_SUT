@@ -8,9 +8,9 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 
 import torch
 
-from ..policy.efficientzero_v2_ma import EfficientZeroV2Policy
-from ..mcts.search import MCTS
-from .lightzero_base import BaseMuZeroPolicy
+from paperAssignments.Assignments1_50.CA10.policy.efficientzero_v2_ma import EfficientZeroV2Policy
+from paperAssignments.Assignments1_50.CA10.mcts.search import MCTS
+from paperAssignments.Assignments1_50.CA10.integration.lightzero_base import BaseMuZeroPolicy
 
 
 class LightZeroAdapter(BaseMuZeroPolicy):

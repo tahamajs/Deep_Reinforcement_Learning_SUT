@@ -7,7 +7,7 @@ import heapq
 import torch
 import torch.nn.functional as F
 
-from ..mcts.gumbel_topk import topk_joint, topk_factored
+from paperAssignments.Assignments1_50.CA10.mcts.gumbel_topk import topk_joint, topk_factored
 
 
 class MCTSNode:
