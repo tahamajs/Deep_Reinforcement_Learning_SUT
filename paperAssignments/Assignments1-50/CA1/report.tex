@@ -1,0 +1,100 @@
+%!TEX program = pdflatex
+\documentclass[10pt]{article}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{geometry}
+\geometry{margin=1in}
+\title{Geometric Foundations of Distributional Reinforcement Learning: Annealed Implicit Sinkhorn (AIS-DRL)}
+\author{Auto-generated — CA1}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present Annealed Implicit Sinkhorn (AIS-DRL), a practical, stable distributional reinforcement learning algorithm that minimizes a debiased entropically-regularized optimal-transport divergence between predicted and Bellman target return particles. AIS-DRL uses a log-domain Sinkhorn solver with implicit differentiation to avoid unrolling, and an epsilon-annealing schedule to transition from smooth to sharp geometry. We describe the method, provide theoretical motivations, and give an implementation mapping to the provided codebase (\texttt{src}/ and \texttt{train.py}).
+\end{abstract}
+
+\section{Introduction}
+Distributional Reinforcement Learning (DRL) models the full distribution of returns rather than only the expectation. This richer representation improves stability, exploration, and risk-sensitive decisions. We build on entropic optimal transport (Sinkhorn) to design a differentiable, geometry-aware loss suitable for deep RL. Our contributions: (1) a memory-efficient implicit Sinkhorn implementation, (2) an epsilon-annealing schedule for stability, and (3) an open-source reference implementation and evaluation plan.
+
+\section{Background}
+Let $Z^{\pi}(s,a)$ denote the random return under policy $\pi$. The distributional Bellman operator defines the target distribution
+\[ T^{\pi}Z(s,a) \stackrel{d}{=} R(s,a)+\gamma Z(s',\pi(s')). \]
+Measuring discrepancy between distributions requires a metric. We adopt the entropically-regularized OT cost (Cuturi, 2013):
+\begin{align}
+W_{c,\varepsilon}(\mu,\nu)=\min_{\pi\in\Pi(\mu,\nu)}\langle C,\pi\rangle-\varepsilon H(\pi),
+\end{align}
+where $C$ is the cost matrix and $H(\pi)$ is the entropy of $\pi$. The Sinkhorn divergence debiases this quantity:
+\begin{align}
+S_{c,\varepsilon}(\mu,\nu)=W_{c,\varepsilon}(\mu,\nu)-\tfrac{1}{2}W_{c,\varepsilon}(\mu,\mu)-\tfrac{1}{2}W_{c,\varepsilon}(\nu,\nu).
+\end{align}
+
+\section{Method}
+\subsection{Particle representation}
+We represent the distribution at $(s,a)$ by $N$ deterministic particles $\{x_i\}_{i=1}^N$ with uniform weights, giving empirical measure $\mu=\tfrac{1}{N}\sum_i\delta_{x_i}$. Similarly target particles $\{y_j\}$ form $\nu$.
+
+\subsection{Cost and Sinkhorn solver}
+We use squared Euclidean cost
+\[ C_{ij}=\|x_i-y_j\|_2^2. \]
+To compute $W_{c,\varepsilon}$ we solve in log-domain for potentials $f,g$ via fixed-point iterations:
+\begin{align}
+f^{(t+1)}&=\varepsilon\left(\log a - \mathrm{LSE}\left( (g^{(t)}-C)/\varepsilon\right)\right),\\
+g^{(t+1)}&=\varepsilon\left(\log b - \mathrm{LSE}\left( (f^{(t+1)}-C)/\varepsilon\right)\right),
+\end{align}
+where $\mathrm{LSE}(u)=\log\sum\exp(u)$ and $a,b$ are marginal weights (uniform here).
+
+\subsection{Implicit differentiation}
+Rather than backpropagating through the Sinkhorn iterations, we run the fixed-point in \texttt{torch.no\_grad()} and reconstruct the transport plan
+\[ \pi^*=\mathrm{diag}(u)\,K\,\mathrm{diag}(v),\qquad K=\exp(-C/\varepsilon),\]
+with $u=\exp(f/\varepsilon),\ v=\exp(g/\varepsilon)$. The gradient of $W_{c,\varepsilon}$ w.r.t. $C$ equals $\pi^*$ (Envelope theorem), therefore we compute the primal cost $\langle\pi^*,C\rangle$ and let autograd propagate through $C$ (which depends on particle locations). This reduces memory from $O(LN)$ to $O(N)$.
+
+\subsection{Epsilon annealing}
+We anneal $\varepsilon$ from $\varepsilon_{\mathrm{start}}$ to $\varepsilon_{\mathrm{end}}$ (exponential schedule) to ease optimization: large $\varepsilon$ yields smooth MMD-like gradients early, small $\varepsilon$ sharpens to Wasserstein later.
+
+\section{Implementation details}
+The repository includes:
+\begin{itemize}
+\item \texttt{paperAssignments/Assignments1-50/CA1/sinkhorn.py}: implementation of \texttt{AnnealedSinkhornLoss} (log-domain solver, implicit potentials, annealing).
+\item \texttt{paperAssignments/Assignments1-50/CA1/model.py}: \texttt{NatureCNN} and \texttt{ParticleQNetwork} producing per-action particle clouds (shape B$\times$A$\times$N$\times$d).
+\item \texttt{paperAssignments/Assignments1-50/CA1/train.py}: compact training loop building Bellman particle targets, computing AIS loss, optimizer steps, and checkpointing. Config in \texttt{config.yaml}.
+\end{itemize}
+
+\section{Experiments}
+We recommend smoke tests on CartPole and small-scale Atari transfers using wrappers in \texttt{wrappers.py}. Evaluation measures: mean return, W1 distance to MC returns, particle support width, and CVaR performance for risk-aware variants. Run multiple seeds (recommended 5) and report IQM and bootstrap CIs.
+
+\section{Ablation study}
+Evaluate sensitivity to: particle count $N$, Sinkhorn iters $L$, $\varepsilon_{min}$, and annealing length. Compare against QR-DQN and MMD-based particle methods.
+
+\section{Conclusion}
+AIS-DRL provides a practical route to geometry-aware distributional RL with manageable memory via implicit differentiation and robust optimisation via annealing. The provided codebase enables reproduction and extension.
+
+\appendix
+\section{Hyperparameters (example)}
+The default config is in \texttt{config.yaml}. Key values used in code:
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+particles $N$ & 64 \\
+sinkhorn iters $L$ & 20 \\
+$\varepsilon_{start}$ & 1.0 \\
+$\varepsilon_{end}$ & 0.01 \\
+batch size & 64 \\
+learning rate & 1e-4 \\
+\bottomrule
+\end{tabular}
+
+\section{Mapping equations to code}
+Cost matrix: implemented in \texttt{sinkhorn.compute_cost_matrix} as squared Euclidean distances. Sinkhorn loop: \texttt{sinkhorn.sinkhorn_log_potentials}. Implicit gradient: \texttt{sinkhorn.get_transport_cost} reconstructs $\pi^*$ under \texttt{torch.no\_grad()} and returns $\langle\pi^*,C\rangle$.
+
+\section{Reproducibility}
+Include \texttt{config.yaml} and run scripts. Use the provided \texttt{setup.sh} to create a venv and install minimal dependencies.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

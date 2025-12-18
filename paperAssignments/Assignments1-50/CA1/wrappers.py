@@ -1,13 +1,13 @@
 """Common Atari / pixel preprocessing wrappers (lightweight).
 
 This file provides a small set of wrappers suitable for Gym/Gymnasium Atari environments.
-It's intentionally minimal — adapt to your gym version (Gym vs Gymnasium) as needed.
+It uses the active gym module from `env_utils` to remain compatible with both libraries.
 """
-
 from collections import deque
 import cv2
 import numpy as np
-import gym
+
+from paperAssignments.Assignments1_50.CA1.env_utils import gym
 
 
 class NoopResetEnv(gym.Wrapper):

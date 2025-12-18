@@ -1,9 +1,22 @@
-"""Environment compatibility helpers for Gym and Gymnasium.
+"""Environment compatibility & gym detection helpers.
 
-Provides unified reset_env and step_env functions that hide API differences between
-`gym` and `gymnasium` (different return signatures for reset/step).
+This module attempts to import "gymnasium" first (preferred), falling back to "gym".
+It exposes the active "gym" module as `gym` and a boolean `IS_GYMNASIUM`.
+Additionally it provides `reset_env` and `step_env` helpers that normalize different
+reset/step return signatures across gym/gymnasium versions.
 """
 from typing import Any, Tuple
+
+# Attempt robust import: prefer gymnasium, fall back to gym
+try:
+    import gymnasium as gym  # type: ignore
+    IS_GYMNASIUM = True
+except Exception:
+    try:
+        import gym  # type: ignore
+        IS_GYMNASIUM = False
+    except Exception:
+        raise ImportError("Neither gymnasium nor gym could be imported. Please install one of them.")
 
 
 def reset_env(env: Any, seed: int | None = None) -> Any:
@@ -32,14 +45,15 @@ def step_env(env: Any, action: Any) -> Tuple[Any, float, bool, dict]:
       - (obs, reward, terminated, truncated, info) -> done = terminated or truncated
     """
     out = env.step(action)
-    if len(out) == 5:
+    # gymnasium may return (obs, reward, terminated, truncated, info)
+    if isinstance(out, tuple) and len(out) == 5:
         obs, reward, terminated, truncated, info = out
         done = bool(terminated or truncated)
-    elif len(out) == 4:
+    elif isinstance(out, tuple) and len(out) == 4:
         obs, reward, done, info = out
         done = bool(done)
     else:
-        # Unexpected signature: try to unpack safely
+        # catch-all: try to coerce
         try:
             obs = out[0]
             reward = float(out[1])
