@@ -150,9 +150,9 @@
 			{\color{RoyalPurple} { \small By:} } \\
 			\vspace{10pt}
 			
-			{\color{Blue} { \LARGE [Full Name] } } \\
+			{\color{Blue} { \LARGE Student Name } } \\
 			\vspace{5pt}
-			{\color{RoyalBlue} { \Large [Student Number] } }
+			{\color{RoyalBlue} { \Large Student ID: 12345678 } }
 			
 			
 			\vspace*{\fill}
@@ -681,6 +681,303 @@
 			The choice between MAML variants depends on the trade-off between computational resources and performance requirements. For most practical applications, FOMAML provides the best balance.
 			\end{remark}
 			
+			\subsection{Question 4: MAML Implementation}
+			
+			\textbf{Q4.1:} Implement the MAML algorithm for a simple RL task (e.g., navigation with varying goals).
+			
+			\textbf{Solution:}
+			
+			\begin{lstlisting}[language=Python, caption=MAML Implementation for RL]
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+import gym
+
+class PolicyNetwork(nn.Module):
+    """Simple MLP policy for MAML"""
+    def __init__(self, obs_dim, action_dim, hidden_dim=64):
+        super().__init__()
+        self.network = nn.Sequential(
+            nn.Linear(obs_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, action_dim)
+        )
+
+    def forward(self, x):
+        return self.network(x)
+
+class MAML_RL:
+    """Model-Agnostic Meta-Learning for RL"""
+    def __init__(
+        self,
+        obs_dim,
+        action_dim,
+        inner_lr=0.1,
+        meta_lr=0.001,
+        inner_steps=1,
+        gamma=0.99
+    ):
+        self.policy = PolicyNetwork(obs_dim, action_dim)
+        self.meta_optimizer = optim.Adam(
+            self.policy.parameters(), lr=meta_lr
+        )
+
+        self.inner_lr = inner_lr
+        self.inner_steps = inner_steps
+        self.gamma = gamma
+
+    def compute_returns(self, rewards, gamma):
+        """Compute discounted returns"""
+        returns = []
+        R = 0
+        for r in reversed(rewards):
+            R = r + gamma * R
+            returns.insert(0, R)
+        returns = torch.tensor(returns)
+        return (returns - returns.mean()) / (returns.std() + 1e-8)
+
+    def collect_trajectory(self, env, policy, max_steps=200):
+        """Collect one trajectory"""
+        states, actions, rewards, log_probs = [], [], [], []
+
+        state = env.reset()
+        for _ in range(max_steps):
+            state_tensor = torch.FloatTensor(state).unsqueeze(0)
+
+            # Get action logits
+            logits = policy(state_tensor)
+            dist = torch.distributions.Categorical(logits=logits)
+            action = dist.sample()
+            log_prob = dist.log_prob(action)
+
+            next_state, reward, done, _ = env.step(action.item())
+
+            states.append(state)
+            actions.append(action)
+            rewards.append(reward)
+            log_probs.append(log_prob)
+
+            state = next_state
+            if done:
+                break
+
+        returns = self.compute_returns(rewards, self.gamma)
+
+        return {
+            'states': torch.FloatTensor(states),
+            'actions': torch.stack(actions),
+            'returns': returns,
+            'log_probs': torch.stack(log_probs)
+        }
+
+    def compute_policy_loss(self, trajectory, policy):
+        """Compute policy gradient loss"""
+        states = trajectory['states']
+        actions = trajectory['actions']
+        returns = trajectory['returns']
+
+        logits = policy(states)
+        dist = torch.distributions.Categorical(logits=logits)
+        log_probs = dist.log_prob(actions)
+
+        loss = -(log_probs * returns).mean()
+        return loss
+
+    def inner_loop_update(self, task_env, policy):
+        """Perform inner loop adaptation"""
+        # Clone current parameters
+        adapted_policy = PolicyNetwork(
+            policy.network[0].in_features,
+            policy.network[-1].out_features
+        )
+        adapted_policy.load_state_dict(policy.state_dict())
+
+        for step in range(self.inner_steps):
+            # Collect trajectories
+            trajectories = [
+                self.collect_trajectory(task_env, adapted_policy)
+                for _ in range(5)  # 5 trajectories per inner step
+            ]
+
+            # Compute loss
+            total_loss = sum(
+                self.compute_policy_loss(traj, adapted_policy)
+                for traj in trajectories
+            ) / len(trajectories)
+
+            # Compute gradients
+            grads = torch.autograd.grad(
+                total_loss, adapted_policy.parameters(),
+                create_graph=True  # Enable second-order derivatives
+            )
+
+            # Manual SGD update
+            with torch.no_grad():
+                for param, grad in zip(adapted_policy.parameters(), grads):
+                    param.data = param.data - self.inner_lr * grad.data
+
+        return adapted_policy
+
+    def meta_train_step(self, task_envs):
+        """One meta-training step"""
+        meta_loss = 0
+
+        for task_env in task_envs:
+            # Inner loop: adapt to task
+            adapted_policy = self.inner_loop_update(task_env, self.policy)
+
+            # Collect test trajectories with adapted policy
+            test_trajectories = [
+                self.collect_trajectory(task_env, adapted_policy)
+                for _ in range(10)  # More trajectories for meta-loss
+            ]
+
+            # Compute meta-loss
+            task_loss = sum(
+                self.compute_policy_loss(traj, adapted_policy)
+                for traj in test_trajectories
+            ) / len(test_trajectories)
+
+            meta_loss += task_loss
+
+        meta_loss = meta_loss / len(task_envs)
+
+        # Meta-optimization step
+        self.meta_optimizer.zero_grad()
+        meta_loss.backward()
+        self.meta_optimizer.step()
+
+        return meta_loss.item()
+
+    def adapt_to_new_task(self, task_env, num_adapt_steps=5):
+        """Adapt to new task at test time"""
+        # Clone current policy
+        adapted_policy = PolicyNetwork(
+            self.policy.network[0].in_features,
+            self.policy.network[-1].out_features
+        )
+        adapted_policy.load_state_dict(self.policy.state_dict())
+
+        optimizer = optim.SGD(
+            adapted_policy.parameters(), lr=self.inner_lr
+        )
+
+        for _ in range(num_adapt_steps):
+            trajectories = [
+                self.collect_trajectory(task_env, adapted_policy)
+                for _ in range(3)
+            ]
+
+            loss = sum(
+                self.compute_policy_loss(traj, adapted_policy)
+                for traj in trajectories
+            ) / len(trajectories)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        return adapted_policy
+
+# Example usage
+if __name__ == "__main__":
+    # Create task distribution (e.g., navigation with different goals)
+    def create_task_env(goal_position):
+        env = gym.make('CartPole-v1')  # Placeholder
+        env.goal = goal_position
+        return env
+
+    # Training
+    maml = MAML_RL(
+        obs_dim=4,
+        action_dim=2,
+        inner_lr=0.1,
+        meta_lr=0.001,
+        inner_steps=1
+    )
+
+    for meta_iter in range(100):
+        # Sample batch of tasks
+        task_envs = [
+            create_task_env(np.random.uniform(-1, 1))
+            for _ in range(20)
+        ]
+
+        meta_loss = maml.meta_train_step(task_envs)
+
+        if meta_iter % 10 == 0:
+            print(f"Meta-iteration {meta_iter}, Loss: {meta_loss:.4f}")
+\end{lstlisting}
+			
+			\textbf{Q4.2:} Compare MAML with first-order MAML (FOMAML). What are the trade-offs?
+			
+			\textbf{Solution:}
+			
+			First-Order MAML (FOMAML) simplifies MAML by ignoring second-order derivatives.
+			
+			\textbf{Key Modification:}
+			
+			In standard MAML:
+			\begin{equation}
+			\nabla_\theta \mathcal{L}(\phi_i) = \nabla_\theta \mathcal{L}(\theta - \alpha \nabla_\theta \mathcal{L}_{\text{train}}(\theta))
+			\end{equation}
+			
+			In FOMAML:
+			\begin{equation}
+			\nabla_\theta \mathcal{L}(\phi_i) \approx \nabla_{\phi_i} \mathcal{L}(\phi_i)
+			\end{equation}
+			
+			\textbf{Implementation Difference:}
+			
+			\begin{lstlisting}[language=Python]
+# MAML
+grads = torch.autograd.grad(
+    loss, policy.parameters(),
+    create_graph=True  # Enable second-order derivatives
+)
+
+# FOMAML
+grads = torch.autograd.grad(
+    loss, policy.parameters(),
+    create_graph=False  # Disable second-order derivatives
+)
+\end{lstlisting}
+			
+			\textbf{Comparative Analysis:}
+			
+			\begin{table}[H]
+			\centering
+			\caption{MAML vs FOMAML Comparison}
+			\begin{tabular}{|l|c|c|}
+			\hline
+			\textbf{Aspect} & \textbf{MAML} & \textbf{FOMAML} \\
+			\hline
+			Computation Time & High (2nd order) & Low (1st order only) \\
+			\hline
+			Memory Usage & High & Low \\
+			\hline
+			Gradient Accuracy & Exact & Approximation \\
+			\hline
+			Convergence & Potentially faster & May need more iterations \\
+			\hline
+			Implementation & Complex & Simple \\
+			\hline
+			Performance & Slightly better & Often comparable \\
+			\hline
+			\end{tabular}
+			\end{table}
+			
+			\textbf{Trade-Offs:}
+			
+			\begin{enumerate}
+				\item \textbf{Computational Cost:} FOMAML is typically 2-3x faster than MAML
+				\item \textbf{Performance:} FOMAML achieves 80-95\% of MAML's performance in most tasks
+				\item \textbf{Scalability:} FOMAML scales better to larger networks and deeper architectures
+			\end{enumerate}
+			
 	}}
 	
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -835,6 +1132,159 @@
 			\begin{remark}
 			RL² represents a paradigm shift from explicit optimization-based adaptation to implicit learning-based adaptation. While it sacrifices some sample efficiency, it offers advantages in terms of test-time speed and simplicity.
 			\end{remark}
+			
+			\subsection{Question 5: RL² Implementation}
+			
+			\textbf{Q5.1:} Design an RL² architecture for a continuous control task. Specify the input/output dimensions and network architecture.
+			
+			\textbf{Solution:}
+			
+			\begin{lstlisting}[language=Python, caption=RL² Architecture for Continuous Control]
+import torch
+import torch.nn as nn
+
+class RL2Policy(nn.Module):
+    """RL² Policy for continuous control"""
+    def __init__(
+        self,
+        obs_dim=17,        # HalfCheetah observation
+        action_dim=6,      # HalfCheetah action
+        hidden_dim=256,
+        num_lstm_layers=2
+    ):
+        super().__init__()
+
+        # Input dimension: obs + prev_action + prev_reward + done
+        input_dim = obs_dim + action_dim + 1 + 1
+
+        # Recurrent encoder
+        self.lstm = nn.LSTM(
+            input_size=input_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_lstm_layers,
+            batch_first=True
+        )
+
+        # Policy head (Gaussian policy for continuous actions)
+        self.policy_mean = nn.Sequential(
+            nn.Linear(hidden_dim, 256),
+            nn.ReLU(),
+            nn.Linear(256, action_dim)
+        )
+
+        self.policy_logstd = nn.Parameter(
+            torch.zeros(action_dim)
+        )
+
+        # Value head
+        self.value = nn.Sequential(
+            nn.Linear(hidden_dim, 256),
+            nn.ReLU(),
+            nn.Linear(256, 1)
+        )
+
+    def forward(self, obs, prev_action, prev_reward, done, hidden):
+        """
+        Args:
+            obs: (batch, obs_dim)
+            prev_action: (batch, action_dim)
+            prev_reward: (batch,)
+            done: (batch,)
+            hidden: tuple of (h, c) each (num_layers, batch, hidden_dim)
+
+        Returns:
+            action_mean: (batch, action_dim)
+            action_std: (batch, action_dim)
+            value: (batch, 1)
+            hidden_new: updated hidden state
+        """
+        batch_size = obs.shape[0]
+
+        # Concatenate inputs
+        x = torch.cat([
+            obs,
+            prev_action,
+            prev_reward.unsqueeze(-1),
+            done.unsqueeze(-1).float()
+        ], dim=-1)
+
+        # LSTM forward
+        x = x.unsqueeze(1)  # Add sequence dimension
+        output, hidden_new = self.lstm(x, hidden)
+        output = output.squeeze(1)
+
+        # Policy outputs
+        action_mean = self.policy_mean(output)
+        action_std = torch.exp(self.policy_logstd).expand_as(action_mean)
+
+        # Value output
+        value = self.value(output)
+
+        return action_mean, action_std, value, hidden_new
+
+    def init_hidden(self, batch_size=1, device='cpu'):
+        """Initialize hidden state for new task"""
+        return (
+            torch.zeros(self.lstm.num_layers, batch_size,
+                       self.lstm.hidden_size).to(device),
+            torch.zeros(self.lstm.num_layers, batch_size,
+                       self.lstm.hidden_size).to(device)
+        )
+
+    def sample_action(self, obs, prev_action, prev_reward, done, hidden):
+        """Sample action from policy"""
+        mean, std, value, hidden_new = self.forward(
+            obs, prev_action, prev_reward, done, hidden
+        )
+
+        dist = torch.distributions.Normal(mean, std)
+        action = dist.sample()
+        log_prob = dist.log_prob(action).sum(-1)
+
+        return action, log_prob, value, hidden_new
+\end{lstlisting}
+			
+			\textbf{Input/Output Specifications:}
+			
+			\begin{table}[H]
+			\centering
+			\caption{RL² Architecture Specifications}
+			\begin{tabular}{|l|l|l|}
+			\hline
+			\textbf{Component} & \textbf{Dimension} & \textbf{Description} \\
+			\hline
+			Observation & 17 & Joint angles, velocities \\
+			\hline
+			Previous Action & 6 & Torques applied in previous step \\
+			\hline
+			Previous Reward & 1 & Scalar reward \\
+			\hline
+			Done Flag & 1 & Episode termination \\
+			\hline
+			\textbf{Total Input} & \textbf{25} & Concatenated \\
+			\hline
+			Hidden State (h) & (2, batch, 256) & LSTM hidden \\
+			\hline
+			Cell State (c) & (2, batch, 256) & LSTM cell \\
+			\hline
+			Action Mean & 6 & Policy mean \\
+			\hline
+			Action Std & 6 & Policy standard deviation \\
+			\hline
+			Value & 1 & State value estimate \\
+			\hline
+			\end{tabular}
+			\end{table}
+			
+			\textbf{Training Details:}
+			
+			\begin{itemize}
+				\item Episodes per Task: 20-50
+				\item Reset Hidden State: Only between tasks, not between episodes
+				\item Optimization: PPO with 10-20 epochs per meta-batch
+				\item Meta-Batch Size: 20-40 tasks
+				\item Horizon: 200 steps per episode
+			\end{itemize}
 			
 			\subsection{Question 4: Context-Based Meta-RL}
 			
@@ -999,6 +1449,292 @@
 	}}
 	
 	
+	
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	% PEARL Implementation Section
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
+	\subsection{PEARL Implementation}
+	
+	The following code implements the complete PEARL algorithm with probabilistic task embeddings:
+	
+	\begin{lstlisting}[language=Python, caption=PEARL Algorithm Implementation]
+	import torch
+	import torch.nn as nn
+	import torch.optim as optim
+	import numpy as np
+	from torch.distributions import Normal
+	
+	class ContextEncoder(nn.Module):
+	    """Variational encoder for task embeddings"""
+	    def __init__(self, obs_dim, action_dim, context_dim):
+	        super().__init__()
+	        input_dim = obs_dim + action_dim + 1  # s, a, r
+	        
+	        self.encoder = nn.Sequential(
+	            nn.Linear(input_dim, 128),
+	            nn.ReLU(),
+	            nn.Linear(128, 128),
+	            nn.ReLU()
+	        )
+	        
+	        self.mean_head = nn.Linear(128, context_dim)
+	        self.logstd_head = nn.Linear(128, context_dim)
+	        
+	    def forward(self, context):
+	        """
+	        Args:
+	            context: (batch, context_size, obs_dim + action_dim + 1)
+	        Returns:
+	            mean: (batch, context_dim)
+	            std: (batch, context_dim)
+	        """
+	        # Encode each transition
+	        encoded = self.encoder(context)  # (batch, context_size, 128)
+	        
+	        # Aggregate (permutation invariant)
+	        aggregated = encoded.mean(dim=1)  # (batch, 128)
+	        
+	        mean = self.mean_head(aggregated)
+	        std = torch.exp(self.logstd_head(aggregated))
+	        
+	        return mean, std
+	
+	class ContextPolicy(nn.Module):
+	    """Policy conditioned on task embedding"""
+	    def __init__(self, obs_dim, action_dim, context_dim):
+	        super().__init__()
+	        
+	        self.network = nn.Sequential(
+	            nn.Linear(obs_dim + context_dim, 256),
+	            nn.ReLU(),
+	            nn.Linear(256, 256),
+	            nn.ReLU(),
+	            nn.Linear(256, action_dim)
+	        )
+	        
+	    def forward(self, obs, context):
+	        """
+	        Args:
+	            obs: (batch, obs_dim)
+	            context: (batch, context_dim)
+	        Returns:
+	            action_logits: (batch, action_dim)
+	        """
+	        x = torch.cat([obs, context], dim=-1)
+	        return self.network(x)
+	        
+	    def sample_action(self, obs, context, deterministic=False):
+	        """Sample action from policy"""
+	        logits = self.forward(obs, context)
+	        
+	        if deterministic:
+	            return torch.argmax(logits, dim=-1)
+	        else:
+	            dist = torch.distributions.Categorical(logits=logits)
+	            return dist.sample()
+	
+	class ContextQFunction(nn.Module):
+	    """Q-function conditioned on task embedding"""
+	    def __init__(self, obs_dim, action_dim, context_dim):
+	        super().__init__()
+	        
+	        self.network = nn.Sequential(
+	            nn.Linear(obs_dim + action_dim + context_dim, 256),
+	            nn.ReLU(),
+	            nn.Linear(256, 256),
+	            nn.ReLU(),
+	            nn.Linear(256, 1)
+	        )
+	        
+	    def forward(self, obs, action, context):
+	        """
+	        Args:
+	            obs: (batch, obs_dim)
+	            action: (batch, action_dim)
+	            context: (batch, context_dim)
+	        Returns:
+	            q_value: (batch, 1)
+	        """
+	        x = torch.cat([obs, action, context], dim=-1)
+	        return self.network(x)
+	
+	class PEARL:
+	    """Probabilistic Embeddings for Actor-Critic RL"""
+	    def __init__(self, obs_dim, action_dim, context_dim, lr=3e-4, beta=0.1):
+	        self.obs_dim = obs_dim
+	        self.action_dim = action_dim
+	        self.context_dim = context_dim
+	        self.beta = beta  # KL regularization coefficient
+	        
+	        # Networks
+	        self.context_encoder = ContextEncoder(obs_dim, action_dim, context_dim)
+	        self.policy = ContextPolicy(obs_dim, action_dim, context_dim)
+	        self.q_func1 = ContextQFunction(obs_dim, action_dim, context_dim)
+	        self.q_func2 = ContextQFunction(obs_dim, action_dim, context_dim)
+	        self.target_q1 = ContextQFunction(obs_dim, action_dim, context_dim)
+	        self.target_q2 = ContextQFunction(obs_dim, action_dim, context_dim)
+	        
+	        # Initialize target networks
+	        self.target_q1.load_state_dict(self.q_func1.state_dict())
+	        self.target_q2.load_state_dict(self.q_func2.state_dict())
+	        
+	        # Optimizers
+	        self.policy_optimizer = optim.Adam(self.policy.parameters(), lr=lr)
+	        self.q_optimizer = optim.Adam(
+	            list(self.q_func1.parameters()) + list(self.q_func2.parameters()), lr=lr
+	        )
+	        self.encoder_optimizer = optim.Adam(self.context_encoder.parameters(), lr=lr)
+	        
+	        # Replay buffers (one per task)
+	        self.replay_buffers = {}
+	        
+	    def collect_context(self, task_id, env, num_transitions=10):
+	        """Collect context transitions for a task"""
+	        if task_id not in self.replay_buffers:
+	            self.replay_buffers[task_id] = []
+	            
+	        transitions = []
+	        obs = env.reset()
+	        
+	        for _ in range(num_transitions):
+	            # Random exploration for context collection
+	            action = env.action_space.sample()
+	            next_obs, reward, done, _ = env.step(action)
+	            
+	            transition = np.concatenate([obs, [action], [reward], next_obs])
+	            transitions.append(transition)
+	            
+	            if done:
+	                obs = env.reset()
+	            else:
+	                obs = next_obs
+	                
+	        self.replay_buffers[task_id].extend(transitions)
+	        return np.array(transitions)
+	        
+	    def sample_context(self, task_id, context_size):
+	        """Sample context batch from task buffer"""
+	        buffer = self.replay_buffers[task_id]
+	        if len(buffer) < context_size:
+	            return np.array(buffer)
+	            
+	        indices = np.random.choice(len(buffer), context_size, replace=False)
+	        return np.array(buffer)[indices]
+	        
+	    def compute_q_loss(self, batch, context):
+	        """Compute Q-function loss (SAC-style)"""
+	        obs, actions, rewards, next_obs, dones = batch
+	        
+	        # Current Q values
+	        q1 = self.q_func1(obs, actions, context)
+	        q2 = self.q_func2(obs, actions, context)
+	        
+	        # Target Q values
+	        with torch.no_grad():
+	            next_actions = self.policy.sample_action(next_obs, context)
+	            next_q1 = self.target_q1(next_obs, next_actions, context)
+	            next_q2 = self.target_q2(next_obs, next_actions, context)
+	            next_q = torch.min(next_q1, next_q2)
+	            target_q = rewards + 0.99 * (1 - dones) * next_q
+	        
+	        q1_loss = ((q1 - target_q) ** 2).mean()
+	        q2_loss = ((q2 - target_q) ** 2).mean()
+	        
+	        return q1_loss + q2_loss
+	        
+	    def compute_policy_loss(self, batch, context):
+	        """Compute policy loss (SAC-style)"""
+	        obs = batch[0]  # Only need observations for policy
+	        
+	        actions = self.policy.sample_action(obs, context)
+	        q_values = torch.min(
+	            self.q_func1(obs, actions, context),
+	            self.q_func2(obs, actions, context)
+	        )
+	        
+	        policy_loss = -q_values.mean()
+	        return policy_loss
+	        
+	    def compute_kl_loss(self, context_batch):
+	        """Compute KL divergence loss for context encoder"""
+	        mean, std = self.context_encoder(context_batch)
+	        
+	        # KL(q(z|C) || N(0,I))
+	        kl_loss = 0.5 * (mean**2 + std**2 - torch.log(std**2) - 1).sum(-1).mean()
+	        return kl_loss
+	        
+	    def meta_train_step(self, task_id, batch_size=256, context_size=10):
+	        """Single meta-training step"""
+	        # Sample context
+	        context_batch = self.sample_context(task_id, context_size)
+	        context_batch = torch.FloatTensor(context_batch).unsqueeze(0)  # Add batch dim
+	        
+	        # Encode task (sample z ~ q(z|C))
+	        mean, std = self.context_encoder(context_batch)
+	        context_embedding = mean + std * torch.randn_like(std)
+	        
+	        # Sample data batch
+	        buffer = self.replay_buffers[task_id]
+	        if len(buffer) < batch_size:
+	            return 0.0  # Not enough data
+	            
+	        indices = np.random.choice(len(buffer), batch_size, replace=False)
+	        batch = np.array(buffer)[indices]
+	        batch = [torch.FloatTensor(batch[:, i]) for i in range(5)]  # obs, a, r, next_obs, done
+	        
+	        # Q-function update
+	        q_loss = self.compute_q_loss(batch, context_embedding)
+	        self.q_optimizer.zero_grad()
+	        q_loss.backward()
+	        self.q_optimizer.step()
+	        
+	        # Policy update
+	        policy_loss = self.compute_policy_loss(batch, context_embedding)
+	        self.policy_optimizer.zero_grad()
+	        policy_loss.backward()
+	        self.policy_optimizer.step()
+	        
+	        # Context encoder update
+	        kl_loss = self.compute_kl_loss(context_batch)
+	        encoder_loss = q_loss + policy_loss + self.beta * kl_loss
+	        self.encoder_optimizer.zero_grad()
+	        encoder_loss.backward()
+	        self.encoder_optimizer.step()
+	        
+	        # Soft update target networks
+	        self.soft_update_targets()
+	        
+	        return encoder_loss.item()
+	        
+	    def soft_update_targets(self, tau=0.005):
+	        """Soft update target Q networks"""
+	        for target_param, param in zip(self.target_q1.parameters(), self.q_func1.parameters()):
+	            target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
+	            
+	        for target_param, param in zip(self.target_q2.parameters(), self.q_func2.parameters()):
+	            target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
+	        
+	    def adapt_to_task(self, task_id, context_size=10):
+	        """Adapt to new task using context"""
+	        context_batch = self.sample_context(task_id, context_size)
+	        context_batch = torch.FloatTensor(context_batch).unsqueeze(0)
+	        
+	        # Use mean embedding at test time (deterministic)
+	        mean, _ = self.context_encoder(context_batch)
+	        
+	        return mean.detach()
+	        
+	    def sample_action(self, obs, context_embedding, deterministic=False):
+	        """Sample action for adapted policy"""
+	        obs = torch.FloatTensor(obs).unsqueeze(0)
+	        context_embedding = torch.FloatTensor(context_embedding)
+	        
+	        with torch.no_grad():
+	            action = self.policy.sample_action(obs, context_embedding, deterministic)
+	            
+	        return action.item()
+	\end{lstlisting}
 	
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
