@@ -25,6 +25,8 @@ from src.model import TWMSSDModel, TWMSSDImageModel
 from src.losses import total_model_loss
 from src.utils import set_seed, get_device
 from src.tokenizer import ImageVQVAE
+import torchvision.utils as vutils
+from typing import Optional
 
 
 def setup_logging(log_dir: str):
@@ -60,10 +62,21 @@ def run(cfg, steps: int, save_dir: str):
     tb_writer = SummaryWriter(log_dir=os.path.join(save_dir, "tb"))
 
     if _HAS_WANDB:
-        wandb.init(project="ca11_twm_ssd", config=vars(cfg))
+        # use run name from cfg if provided
+        run_name = getattr(cfg, "run_name", None) or os.environ.get("RUN_NAME", None)
+        wandb.init(project="ca11_twm_ssd", config=vars(cfg), name=run_name)
         wandb.watch(model, log="all", log_freq=10)
 
     it = 0
+    # resume support: if resume path provided in cfg.resume_ckpt, load states
+    resume_ckpt = getattr(cfg, "resume_ckpt", None)
+    if resume_ckpt and os.path.exists(resume_ckpt):
+        ck = torch.load(resume_ckpt, map_location=device)
+        model.load_state_dict(ck.get("model_state", {}))
+        if "opt_state" in ck:
+            opt.load_state_dict(ck["opt_state"])
+        it = int(ck.get("iter", 0))
+        logger.info(f"Resumed from {resume_ckpt} at iter {it}")
     for epoch in range(1000000):
         for obs, acts in dl:
             obs = obs.to(device)
@@ -81,6 +94,21 @@ def run(cfg, steps: int, save_dir: str):
                 tb_writer.add_scalar("train/loss", loss.item(), it)
                 if _HAS_WANDB:
                     wandb.log({"train/loss": loss.item(), "iter": it})
+                # if image model, log reconstructions
+                try:
+                    if isinstance(model, TWMSSDImageModel):
+                        # create a random image batch to visualize reconstructions
+                        img_batch = torch.randn(cfg.batch_size, 3, getattr(cfg, "image_size", 32), getattr(cfg, "image_size", 32)).to(device)
+                        recon, quantized, indices = model.vq(img_batch)
+                        grid_orig = vutils.make_grid(img_batch.cpu(), normalize=True, scale_each=True)
+                        grid_rec = vutils.make_grid(recon.cpu().clamp(-1, 1), normalize=True, scale_each=True)
+                        tb_writer.add_image("images/orig", grid_orig, it)
+                        tb_writer.add_image("images/recon", grid_rec, it)
+                        if _HAS_WANDB:
+                            wandb.log({"images/orig": [wandb.Image(grid_orig.numpy(), caption=f"iter_{it}")], "images/recon": [wandb.Image(grid_rec.numpy(), caption=f"iter_{it}")], "iter": it})
+                except Exception:
+                    # logging should not interrupt training
+                    logger.exception("Failed to log images")
             if it >= steps:
                 # save checkpoint
                 ckpt = {
@@ -89,9 +117,10 @@ def run(cfg, steps: int, save_dir: str):
                     "cfg": vars(cfg),
                     "iter": it,
                 }
-                torch.save(ckpt, os.path.join(save_dir, f"ckpt_{it}.pt"))
-                logger.info(f"Saved checkpoint at iter {it}")
-                return
+                path = os.path.join(save_dir, f"ckpt_{it}.pt")
+                torch.save(ckpt, path)
+                logger.info(f"Saved checkpoint at iter {it} -> {path}")
+                return path
 
 
 def main():
