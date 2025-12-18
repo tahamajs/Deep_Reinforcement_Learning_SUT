@@ -9,9 +9,9 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from .config import cfg
-from .losses import SinkhornWrapper
-from .utils import set_seed, soft_update
+from config import cfg
+from losses import SinkhornWrapper
+from utils import set_seed, soft_update
 
 
 class DistributionalCritic(nn.Module):

@@ -24,6 +24,9 @@ class Config:
     tau: float = 0.005
     lr: float = 3e-4
     grad_clip: float = 10.0
+    # Training regime
+    num_grad_steps: int = 1  # gradient steps per environment update
+    minibatch_size: int = 64  # split batch into minibatches for multiple updates
 
     # Sinkhorn / OT
     sinkhorn_blur: float = 0.01
@@ -35,6 +38,12 @@ class Config:
 
     # Misc
     device: str = "cpu"
+    # Vectorized envs / logging
+    num_envs: int = 1
+    use_vector_env: bool = False
+    use_procgen: bool = False
+    use_wandb: bool = False
+    tb_logdir: str = "runs/ca8"
 
     def as_dict(self) -> Dict[str, Any]:
         return {k: getattr(self, k) for k in self.__dict__.keys()}
