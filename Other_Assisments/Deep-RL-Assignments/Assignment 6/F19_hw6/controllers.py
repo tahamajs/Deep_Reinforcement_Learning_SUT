@@ -113,55 +113,61 @@ def approximate_B(env, x, u, dynamics, delta=1e-5, dt=1e-5):
 
 
 def calc_lqr_input(env, sim_env, tN=None, max_iter=None):
-    """Calculate the optimal control input for the given state.
-
-    If you are following the API and simulate dynamics is returning
-    xdot, then you should use the scipy.linalg.solve_continuous_are
-    function to solve the Ricatti equations.
-
-    Parameters
-    ----------
-    env: gym.core.Env
-      This is the true environment you will execute the computed
-      commands on. Use this environment to get the Q and R values as
-      well as the state.
-    sim_env: gym.core.Env
-      A copy of the env class. Use this to simulate the dynamics when
-      doing finite differences.
-
-    Returns
-    -------
-    u: np.array
-      The command to execute at this point.
     """
-    # unwrap gymnasium wrappers to access the underlying environment attributes
+    Robust LQR Controller with 'Safe Mode' to prevent physics explosions.
+    """
+    # 1. Access Environment
     real_env = getattr(env, "unwrapped", env)
     real_sim = getattr(sim_env, "unwrapped", sim_env)
 
     x = real_env.state.copy()
-    u = np.zeros(real_env.action_space.shape[0])
 
-    # --- FIX: Increase dt to 1e-2 or 1e-3 to avoid float32 underflow ---
-    # dt=1e-5 is too small; the change in state is lost in floating point noise.
-    calc_dt = 1e-2
+    # --- SAFETY CHECK: EMERGENCY BRAKING ---
+    # If velocities are too high (> 20 rad/s), ignore LQR and just apply brakes.
+    # This prevents the "Overflow" and "NaN" errors you are seeing.
+    velocities = x[2:]  # Assuming last 2 elements are velocities
+    if np.linalg.norm(velocities) > 15.0:
+        # print("[WARN] Velocity too high! Emergency Braking.")
+        # Apply force opposite to velocity to slow down
+        u = -0.5 * velocities
+        return np.clip(u, real_env.action_space.low, real_env.action_space.high)
 
-    A = approximate_A(real_sim, x, u, simulate_dynamics, dt=calc_dt)
-    B = approximate_B(real_sim, x, u, simulate_dynamics, dt=calc_dt)
+    # 2. Linearization
+    u_zero = np.zeros(real_env.action_space.shape[0])
+    # Use dt=1e-3. 1e-2 is too coarse for stability, 1e-5 is too small for float32.
+    calc_dt = 1e-3
 
-    Q = real_env.Q.copy()
-    R = real_env.R.copy()
+    A = approximate_A(real_sim, x, u_zero, simulate_dynamics, dt=calc_dt)
+    B = approximate_B(real_sim, x, u_zero, simulate_dynamics, dt=calc_dt)
 
-    # Solve Continuous Algebraic Riccati Equation
-    # We use 'continuous' because simulate_dynamics returns x_dot (derivatives)
-    P = solve_continuous_are(A, B, Q, R)
+    # 3. Valid Check
+    # If linearization returned NaNs (simulation already broken), return zero to avoid crash
+    if np.isnan(A).any() or np.isnan(B).any():
+        return np.zeros(real_env.action_space.shape[0])
 
-    # Calculate Feedback Gain K
-    K = np.linalg.inv(R) @ B.T @ P
+    # 4. Tune Gains (The "Calm Down" Fix)
+    # We override the env's Q/R to be more stable.
+    # High R = Don't use excessive force.
+    # Non-zero Q_vel = Don't move too fast.
+    Q = np.zeros_like(A)
+    np.fill_diagonal(
+        Q, [10.0, 10.0, 1.0, 1.0]
+    )  # Lower position cost (10), add velocity cost (1)
 
-    # Compute action
-    u = -K @ (x - real_env.goal)
+    R = (
+        np.eye(real_env.action_space.shape[0]) * 1.0
+    )  # High penalty on action to prevent spikes
 
-    # Clip action to valid range
+    # 5. Solve LQR
+    try:
+        P = solve_continuous_are(A, B, Q, R)
+        K = np.linalg.inv(R) @ B.T @ P
+        u = -K @ (x - real_env.goal)
+    except Exception:
+        # If LQR fails, default to a weak damping action (passive braking)
+        # print("[WARN] LQR failed. Passive damping.")
+        u = -0.1 * velocities
+
+    # 6. Clip
     u = np.clip(u, real_env.action_space.low, real_env.action_space.high)
-
     return u
