@@ -22,17 +22,37 @@ def improve_policy(env, gamma, value_func, policy):
       Returns true if policy changed. Also returns the new policy.
     """
     policy_stable = True
-    for state in range(env.nS):
+    # derive discrete sizes
+    nS = getattr(env, "nS", None) or getattr(env.observation_space, "n", None)
+    nA = getattr(env, "nA", None) or getattr(env.action_space, "n", None)
+    if nS is None or nA is None:
+        # try from T array if present
+        if getattr(env, "T", None) is not None:
+            nS = env.T.shape[0]
+            nA = env.T.shape[1]
+        else:
+            raise RuntimeError("Cannot determine nS/nA for policy improvement")
+
+    for state in range(nS):
         max_value = -np.inf
         best_action = -1
-        for action in range(env.nA):
+        for action in range(nA):
             value = 0
-            for prob, nextstate, reward, is_terminal in env.P[state][action]:
-                prob = env.T[state, action, nextstate]
-                reward = env.R[state, action, nextstate]
-                value += prob * (
-                    reward + gamma * (1 - int(is_terminal)) * value_func[nextstate]
-                )
+            # prefer T/R arrays if available
+            if getattr(env, "T", None) is not None and getattr(env, "R", None) is not None:
+                T = env.T
+                R = env.R
+                for nextstate in range(nS):
+                    prob = T[state, action, nextstate]
+                    if prob == 0:
+                        continue
+                    reward = R[state, action, nextstate]
+                    value += prob * (reward + gamma * value_func[nextstate])
+            else:
+                for prob, nextstate, reward, is_terminal in env.P[state][action]:
+                    value += prob * (
+                        reward + gamma * (1 - int(is_terminal)) * value_func[nextstate]
+                    )
             if max_value < value:
                 max_value = value
                 best_action = action
