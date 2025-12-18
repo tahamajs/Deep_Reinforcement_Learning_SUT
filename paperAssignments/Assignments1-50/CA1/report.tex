@@ -80,6 +80,44 @@ The repository includes:
 \item \texttt{paperAssignments/Assignments1-50/CA1/train.py}: compact training loop building Bellman particle targets, computing AIS loss, optimizer steps, and checkpointing. Config in \texttt{config.yaml}.
 \end{itemize}
 
+\section{Results and Visualizations}
+We provide several figures illustrating training dynamics and particle geometry. Use the provided plotting utility \texttt{plot_metrics.py} to generate the figures from saved logs and particle arrays. Example command:
+\begin{verbatim}
+python paperAssignments/Assignments1-50/CA1/plot_metrics.py --log runs/ca1/logs.csv --particles runs/ca1/particles.npz --outdir runs/ca1/plots
+\end{verbatim}
+
+\begin{figure}[ht]
+    \centering
+    \begin{subfigure}[b]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{../runs/ca1/plots/loss.png}
+        \caption{Sinkhorn loss vs training step}
+        \label{fig:loss}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{../runs/ca1/plots/w1.png}
+        \caption{Estimated W1 distance (pred vs MC)}
+        \label{fig:w1}
+    \end{subfigure}
+    \vskip 2mm
+    \begin{subfigure}[b]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{../runs/ca1/plots/epsilon.png}
+        \caption{Epsilon annealing schedule}
+        \label{fig:eps}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{../runs/ca1/plots/particles_action0.png}
+        \caption{Particle KDE / scatter for action 0}
+        \label{fig:parts}
+    \end{subfigure}
+    \caption{Representative training diagnostics and particle visualizations.}
+\end{figure}
+
 \section{Experiments}
 We recommend smoke tests on CartPole and small-scale Atari transfers using wrappers in \texttt{wrappers.py}. Evaluation measures: mean return, W1 distance to MC returns, particle support width, and CVaR performance for risk-aware variants. Run multiple seeds (recommended 5) and report IQM and bootstrap CIs.
 
@@ -107,6 +145,9 @@ learning rate & 1e-4 \\
 
 \section{Mapping equations to code}
 Cost matrix: implemented in \texttt{sinkhorn.compute_cost_matrix} as squared Euclidean distances. Sinkhorn loop: \texttt{sinkhorn.sinkhorn_log_potentials}. Implicit gradient: \texttt{sinkhorn.get_transport_cost} reconstructs $\pi^*$ under \texttt{torch.no\_grad()} and returns $\langle\pi^*,C\rangle$.
+
+\section{Visualization recipe}
+Run the plotting utility to produce figures used in this manuscript. The plotting script expects a CSV with columns \texttt{step,loss,w1,epsilon} and (optionally) a NumPy .npz file containing a named array of particle clouds. The notebook \texttt{notebooks/demo.ipynb} (TODO) demonstrates live plotting and saving of figures.
 
 \section{Reproducibility}
 Include \texttt{config.yaml} and run scripts. Use the provided \texttt{setup.sh} to create a venv and install minimal dependencies.
