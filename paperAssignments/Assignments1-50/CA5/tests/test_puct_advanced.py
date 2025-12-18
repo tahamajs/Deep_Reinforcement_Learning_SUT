@@ -47,4 +47,3 @@ def test_parallel_search_runs():
 
     assert len(results) == 2
     assert all(r == 20 for r in results)
-

@@ -11,7 +11,11 @@ def test_crosshq_adapter_runs():
     actor = GaussianPolicy(obs_dim=s_dim, action_dim=a_dim, hidden=64, depth=2)
 
     # define a small discrete action set (e.g., 3 candidate continuous actions)
-    action_set = [torch.tensor([0.0, 0.0]), torch.tensor([1.0, 0.0]), torch.tensor([-1.0, 0.5])]
+    action_set = [
+        torch.tensor([0.0, 0.0]),
+        torch.tensor([1.0, 0.0]),
+        torch.tensor([-1.0, 0.5]),
+    ]
 
     adapter = CrossHQMCTSAdapter(critic, actor, action_set)
     # should return 3 priors summing to ~1
@@ -28,4 +32,3 @@ def test_crosshq_adapter_runs():
     root = puct.search(0, num_simulations=10)
     visits = sum(child.visits for child in root.children.values())
     assert visits == 10
-

@@ -12,7 +12,13 @@ class CrossHQMCTSAdapter:
     over sampled actions or evaluating Q for each discrete action.
     """
 
-    def __init__(self, critic: CrossQCritic, actor: GaussianPolicy, action_set: Sequence[torch.Tensor], device=None):
+    def __init__(
+        self,
+        critic: CrossQCritic,
+        actor: GaussianPolicy,
+        action_set: Sequence[torch.Tensor],
+        device=None,
+    ):
         self.critic = critic
         self.actor = actor
         self.action_set = list(action_set)

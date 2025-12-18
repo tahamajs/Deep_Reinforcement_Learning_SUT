@@ -107,4 +107,3 @@ class PUCT:
                 node.value_sum += -value
             else:
                 node.value_sum += value
-

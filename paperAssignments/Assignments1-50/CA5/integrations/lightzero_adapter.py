@@ -4,6 +4,7 @@ This file provides a lightweight adapter that demonstrates how a policy+value mo
 could be exposed to LightZero-style MCTS integration. It is intentionally minimal and
 serves as a starting point for a full integration.
 """
+
 from typing import Any, Dict
 
 
@@ -37,4 +38,9 @@ class MuZeroAdapter:
         next_state = hidden_state + (action - 1)
         priors = self.model.policy(next_state)
         value = self.model.value(next_state)
-        return {"policy": priors, "value": value, "next_state": next_state, "hidden_state": next_state}
+        return {
+            "policy": priors,
+            "value": value,
+            "next_state": next_state,
+            "hidden_state": next_state,
+        }
