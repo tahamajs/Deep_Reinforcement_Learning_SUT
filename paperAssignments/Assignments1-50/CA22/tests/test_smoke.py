@@ -28,7 +28,9 @@ def test_model_forward():
 
 def test_losses_and_dataset():
     cfg = ExperimentConfig()
-    ds = SyntheticDataset(num_episodes=10, obs_dim=cfg.obs_dim, horizon=5, seed=cfg.seed)
+    ds = SyntheticDataset(
+        num_episodes=10, obs_dim=cfg.obs_dim, horizon=5, seed=cfg.seed
+    )
     states, actions, rewards, constraints = ds.sample_batch(batch_size=2)
     assert states.shape[1] == cfg.obs_dim
     # make small torch tensors

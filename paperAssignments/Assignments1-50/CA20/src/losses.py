@@ -3,7 +3,9 @@ from typing import Optional
 import torch
 
 
-def policy_loss_from_logprob(log_probs: torch.Tensor, advantages: torch.Tensor) -> torch.Tensor:
+def policy_loss_from_logprob(
+    log_probs: torch.Tensor, advantages: torch.Tensor
+) -> torch.Tensor:
     """
     Standard policy gradient loss (to minimize).
     Args:
@@ -35,4 +37,3 @@ def compute_constraint(batch_constraints: torch.Tensor) -> torch.Tensor:
     E.g., mean constraint violation across episodes/samples.
     """
     return batch_constraints.mean()
-

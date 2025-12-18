@@ -15,7 +15,12 @@ def set_seed(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
-def save_checkpoint(path: str, model: torch.nn.Module, optimizer: Any, extra: Dict[str, Any] | None = None) -> None:
+def save_checkpoint(
+    path: str,
+    model: torch.nn.Module,
+    optimizer: Any,
+    extra: Dict[str, Any] | None = None,
+) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     payload = {
         "model_state": model.state_dict(),
@@ -25,7 +30,9 @@ def save_checkpoint(path: str, model: torch.nn.Module, optimizer: Any, extra: Di
     torch.save(payload, path)
 
 
-def load_checkpoint(path: str, model: torch.nn.Module, optimizer: Any | None = None) -> Dict[str, Any]:
+def load_checkpoint(
+    path: str, model: torch.nn.Module, optimizer: Any | None = None
+) -> Dict[str, Any]:
     payload = torch.load(path, map_location="cpu")
     model.load_state_dict(payload["model_state"])
     if optimizer is not None and payload.get("optimizer_state") is not None:
@@ -58,4 +65,3 @@ class LagrangeMultiplier:
         self.value = float(d.get("value", self.value))
         self.lr = float(d.get("lr", self.lr))
         self.clip = float(d.get("clip", self.clip))
-

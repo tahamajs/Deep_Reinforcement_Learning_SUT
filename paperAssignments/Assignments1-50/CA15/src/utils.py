@@ -16,7 +16,9 @@ def set_seed(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
-def save_checkpoint(path: str, model: torch.nn.Module, optimizer: Any, extra: Dict[str, Any] = None) -> None:
+def save_checkpoint(
+    path: str, model: torch.nn.Module, optimizer: Any, extra: Dict[str, Any] = None
+) -> None:
     """Save model and optimizer state to `path` (atomic)."""
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     payload = {
@@ -29,11 +31,12 @@ def save_checkpoint(path: str, model: torch.nn.Module, optimizer: Any, extra: Di
     os.replace(tmp, path)
 
 
-def load_checkpoint(path: str, model: torch.nn.Module, optimizer: Any = None) -> Dict[str, Any]:
+def load_checkpoint(
+    path: str, model: torch.nn.Module, optimizer: Any = None
+) -> Dict[str, Any]:
     """Load checkpoint and restore model/optimizer states if available."""
     payload = torch.load(path, map_location="cpu")
     model.load_state_dict(payload.get("model_state", {}))
     if optimizer is not None and "optimizer_state" in payload:
         optimizer.load_state_dict(payload["optimizer_state"])
     return payload.get("extra", {})
-

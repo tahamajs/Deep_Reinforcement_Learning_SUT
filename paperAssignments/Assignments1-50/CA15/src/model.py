@@ -21,7 +21,9 @@ class MLPPolicy(nn.Module):
         """Return action logits (unnormalized)."""
         return self.head(self.net(x))
 
-    def get_action(self, x: torch.Tensor, deterministic: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_action(
+        self, x: torch.Tensor, deterministic: bool = False
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Sample an action from the policy.
         Returns (action, log_prob).
@@ -53,4 +55,3 @@ class ValueNetwork(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x).squeeze(-1)
-

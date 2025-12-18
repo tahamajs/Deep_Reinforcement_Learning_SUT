@@ -37,7 +37,11 @@ class MLPPolicy(nn.Module):
         std = log_std.exp()
         eps = torch.randn_like(mean)
         action = mean + eps * std
-        log_prob = -0.5 * (((action - mean) / (std + 1e-8)) ** 2 + 2 * log_std + torch.log(2 * torch.pi))
+        log_prob = -0.5 * (
+            ((action - mean) / (std + 1e-8)) ** 2
+            + 2 * log_std
+            + torch.log(2 * torch.pi)
+        )
         log_prob = log_prob.sum(dim=-1)
         return action, log_prob
 
@@ -55,4 +59,3 @@ class ValueNet(nn.Module):
 
     def forward(self, obs: torch.Tensor) -> torch.Tensor:
         return self.net(obs).squeeze(-1)
-

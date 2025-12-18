@@ -20,7 +20,12 @@ def set_seed(seed: int) -> None:
         pass
 
 
-def save_checkpoint(path: str, model: torch.nn.Module, optimizer: Any | None = None, extra: Dict[str, Any] | None = None) -> None:
+def save_checkpoint(
+    path: str,
+    model: torch.nn.Module,
+    optimizer: Any | None = None,
+    extra: Dict[str, Any] | None = None,
+) -> None:
     """Save model and optimizer state to a file (atomic write)."""
     temp_path = path + ".tmp"
     data = {"model_state": model.state_dict()}
@@ -35,7 +40,9 @@ def save_checkpoint(path: str, model: torch.nn.Module, optimizer: Any | None = N
     os.replace(temp_path, path)
 
 
-def load_checkpoint(path: str, model: torch.nn.Module, optimizer: Any | None = None) -> Dict[str, Any]:
+def load_checkpoint(
+    path: str, model: torch.nn.Module, optimizer: Any | None = None
+) -> Dict[str, Any]:
     if not os.path.exists(path):
         raise FileNotFoundError(path)
     data = torch.load(path, map_location="cpu")
@@ -49,7 +56,9 @@ def load_checkpoint(path: str, model: torch.nn.Module, optimizer: Any | None = N
     return data
 
 
-def update_lagrange(mu: float, constraint_value: float, c: float, lr: float, max_mu: float) -> float:
+def update_lagrange(
+    mu: float, constraint_value: float, c: float, lr: float, max_mu: float
+) -> float:
     """Simple projected gradient ascent update for Lagrange multiplier.
 
     mu <- max(0, mu + lr * (constraint_value - c)) then clip to max_mu

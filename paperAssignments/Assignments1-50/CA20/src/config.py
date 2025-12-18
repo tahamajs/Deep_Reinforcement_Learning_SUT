@@ -32,4 +32,3 @@ class Config:
 
     def to_dict(self) -> Dict[str, Any]:
         return dataclasses.asdict(self)
-

@@ -2,7 +2,9 @@ from typing import Optional
 import torch
 
 
-def policy_gradient_loss(log_probs: torch.Tensor, advantages: torch.Tensor) -> torch.Tensor:
+def policy_gradient_loss(
+    log_probs: torch.Tensor, advantages: torch.Tensor
+) -> torch.Tensor:
     """
     Compute the (negative) policy gradient loss for a batch.
 
@@ -24,4 +26,3 @@ def value_mse_loss(values: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     if values.shape != targets.shape:
         raise ValueError("values and targets must have same shape")
     return torch.mean((values - targets) ** 2)
-

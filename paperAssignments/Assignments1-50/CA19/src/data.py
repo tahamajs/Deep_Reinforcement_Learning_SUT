@@ -17,7 +17,14 @@ class ReplayBuffer:
         self.capacity = capacity
         self.buffer: Deque[Transition] = deque(maxlen=capacity)
 
-    def add(self, obs: torch.Tensor, action: torch.Tensor, reward: float, next_obs: torch.Tensor, done: bool):
+    def add(
+        self,
+        obs: torch.Tensor,
+        action: torch.Tensor,
+        reward: float,
+        next_obs: torch.Tensor,
+        done: bool,
+    ):
         self.buffer.append(Transition(obs, action, reward, next_obs, done))
 
     def sample(self, batch_size: int) -> Dict[str, torch.Tensor]:
@@ -27,7 +34,13 @@ class ReplayBuffer:
         rewards = torch.tensor([t.reward for t in batch], dtype=torch.float32)
         next_obs = torch.stack([t.next_obs for t in batch])
         dones = torch.tensor([t.done for t in batch], dtype=torch.float32)
-        return {"obs": obs, "actions": actions, "rewards": rewards, "next_obs": next_obs, "dones": dones}
+        return {
+            "obs": obs,
+            "actions": actions,
+            "rewards": rewards,
+            "next_obs": next_obs,
+            "dones": dones,
+        }
 
     def __len__(self) -> int:
         return len(self.buffer)

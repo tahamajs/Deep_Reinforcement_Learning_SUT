@@ -6,6 +6,7 @@ import yaml
 @dataclass
 class Config:
     """Simple experiment configuration for CA15."""
+
     seed: int = 0
     input_dim: int = 8
     hidden_dim: int = 64
@@ -28,4 +29,3 @@ class Config:
         with open(path, "r") as f:
             data = yaml.safe_load(f)
         return Config.from_dict(data or {})
-

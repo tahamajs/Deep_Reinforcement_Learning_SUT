@@ -1,5 +1,15 @@
+import sys
+import pathlib
 import torch
-from paperAssignments.Assignments1_50.CA15.src import Config, MLPPolicy, ValueNetwork, set_seed
+
+# Ensure CA15/src is importable when running tests from repo root
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+SRC = ROOT / "CA15" / "src"
+sys.path.insert(0, str(SRC))
+
+from config import Config
+from model import MLPPolicy, ValueNetwork
+from utils import set_seed
 
 
 def test_import_and_forward():
@@ -12,4 +22,3 @@ def test_import_and_forward():
     assert logits.shape == (2, cfg.output_dim)
     v = value(x)
     assert v.shape == (2,)
-

@@ -9,7 +9,9 @@ class SyntheticDataset:
     Yields tuples (state, action_target, value_target).
     """
 
-    def __init__(self, input_dim: int, output_dim: int, size: int = 1024, seed: int = 0) -> None:
+    def __init__(
+        self, input_dim: int, output_dim: int, size: int = 1024, seed: int = 0
+    ) -> None:
         rng = np.random.RandomState(seed)
         self.states = rng.randn(size, input_dim).astype(np.float32)
         # random categorical targets in [0, output_dim)
@@ -21,7 +23,9 @@ class SyntheticDataset:
     def __len__(self) -> int:
         return self.size
 
-    def batches(self, batch_size: int) -> Iterator[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
+    def batches(
+        self, batch_size: int
+    ) -> Iterator[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
         idx = np.arange(self.size)
         rng = np.random.RandomState(0)
         rng.shuffle(idx)
@@ -31,4 +35,3 @@ class SyntheticDataset:
             a = torch.from_numpy(self.actions[batch_idx])
             v = torch.from_numpy(self.values[batch_idx])
             yield s, a, v
-

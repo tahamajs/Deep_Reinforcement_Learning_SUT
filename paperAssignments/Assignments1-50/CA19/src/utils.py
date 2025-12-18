@@ -14,7 +14,10 @@ def set_seed(seed: int) -> None:
 
 
 def to_device(batch: Dict[str, Any], device: torch.device) -> Dict[str, Any]:
-    return {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in batch.items()}
+    return {
+        k: (v.to(device) if isinstance(v, torch.Tensor) else v)
+        for k, v in batch.items()
+    }
 
 
 def save_checkpoint(state: Dict[str, Any], path: str) -> None:
@@ -22,7 +25,9 @@ def save_checkpoint(state: Dict[str, Any], path: str) -> None:
     torch.save(state, path)
 
 
-def load_checkpoint(path: str, device: torch.device = torch.device('cpu')) -> Dict[str, Any]:
+def load_checkpoint(
+    path: str, device: torch.device = torch.device("cpu")
+) -> Dict[str, Any]:
     if not os.path.exists(path):
         raise FileNotFoundError(path)
     return torch.load(path, map_location=device)

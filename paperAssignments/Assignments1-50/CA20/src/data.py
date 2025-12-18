@@ -11,7 +11,13 @@ class SyntheticBanditDataset(Dataset):
     Used for unit tests and quick debug runs.
     """
 
-    def __init__(self, num_samples: int = 1000, obs_dim: int = 8, action_dim: int = 2, seed: int = 42):
+    def __init__(
+        self,
+        num_samples: int = 1000,
+        obs_dim: int = 8,
+        action_dim: int = 2,
+        seed: int = 42,
+    ):
         rng = np.random.RandomState(seed)
         self.obs = rng.randn(num_samples, obs_dim).astype("float32")
         self.actions = rng.randn(num_samples, action_dim).astype("float32")
@@ -35,4 +41,3 @@ class SyntheticBanditDataset(Dataset):
 def make_dataloader(batch_size: int = 64, **kwargs) -> DataLoader:
     ds = SyntheticBanditDataset(**kwargs)
     return DataLoader(ds, batch_size=batch_size, shuffle=True)
-

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import torch
 
+
 @dataclass
 class CAConfig:
     seed: int = 0
@@ -11,4 +12,8 @@ class CAConfig:
     action_dim: int = 2
     ensemble_size: int = 3
     hidden_dim: int = 64
-    device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
+    beta: float = 0.1
+    env_name: str = "CartPole-v1"
+    max_steps_per_episode: int = 500
+    total_steps: int = 2000
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"

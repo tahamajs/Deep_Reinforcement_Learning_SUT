@@ -4,7 +4,7 @@ from pathlib import Path
 
 base = Path(__file__).resolve().parent.parent / "src"
 
-spec = importlib.util.spec_from_file_location('ca19.losses', str(base / 'losses.py'))
+spec = importlib.util.spec_from_file_location("ca19.losses", str(base / "losses.py"))
 mod = importlib.util.module_from_spec(spec)
 assert spec and spec.loader
 spec.loader.exec_module(mod)

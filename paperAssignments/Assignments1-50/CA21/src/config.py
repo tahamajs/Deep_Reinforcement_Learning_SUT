@@ -10,6 +10,7 @@ class Config:
 
     All training scripts and notebooks should import and use this Config.
     """
+
     seed: int = 42
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     input_dim: int = 8
@@ -23,4 +24,3 @@ class Config:
 def get_default_config() -> Config:
     """Return the default Config instance."""
     return Config()
-

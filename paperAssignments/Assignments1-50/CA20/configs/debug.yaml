@@ -10,4 +10,3 @@ lambda_clip: 100.0
 hidden_dim: 64
 obs_dim: 8
 action_dim: 2
-

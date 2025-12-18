@@ -22,7 +22,13 @@ def critic_loss(values: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     return F.mse_loss(mean_v, targets)
 
 
-def actor_loss(logits: torch.Tensor, actions: torch.Tensor, advantages: torch.Tensor, value_var: torch.Tensor, beta: float = 0.0) -> torch.Tensor:
+def actor_loss(
+    logits: torch.Tensor,
+    actions: torch.Tensor,
+    advantages: torch.Tensor,
+    value_var: torch.Tensor,
+    beta: float = 0.0,
+) -> torch.Tensor:
     """Policy gradient loss with uncertainty penalty.
 
     logits: (B, A)

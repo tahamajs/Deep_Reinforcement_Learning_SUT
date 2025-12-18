@@ -29,4 +29,3 @@ def test_lagrangian_loss_and_multiplier_step():
     updated = lam.step(float(constraint), cfg.constraint_c)
     assert updated >= 0.0
     assert lam.value >= 0.0
-

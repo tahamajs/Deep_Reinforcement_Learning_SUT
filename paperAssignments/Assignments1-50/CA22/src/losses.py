@@ -3,7 +3,9 @@ from typing import Optional
 import torch
 
 
-def policy_gradient_loss(log_probs: torch.Tensor, advantages: torch.Tensor) -> torch.Tensor:
+def policy_gradient_loss(
+    log_probs: torch.Tensor, advantages: torch.Tensor
+) -> torch.Tensor:
     """Standard policy gradient (negative objective to minimize).
 
     log_probs: (batch,)

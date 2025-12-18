@@ -26,7 +26,12 @@ def run_training(cfg: CAConfig) -> Dict[str, Any]:
     obs_dim = cfg.obs_dim
     action_dim = cfg.action_dim
 
-    model = ActorCriticEnsemble(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=cfg.hidden_dim, ensemble_size=cfg.ensemble_size)
+    model = ActorCriticEnsemble(
+        obs_dim=obs_dim,
+        action_dim=action_dim,
+        hidden_dim=cfg.hidden_dim,
+        ensemble_size=cfg.ensemble_size,
+    )
     model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr)
@@ -54,7 +59,13 @@ def run_training(cfg: CAConfig) -> Dict[str, Any]:
 
         next_obs, reward, terminated, truncated, info = env.step(int(action))
         done = bool(terminated or truncated)
-        rb.add(torch.tensor(obs, dtype=torch.float32), torch.tensor([action]), float(reward), torch.tensor(next_obs, dtype=torch.float32), done)
+        rb.add(
+            torch.tensor(obs, dtype=torch.float32),
+            torch.tensor([action]),
+            float(reward),
+            torch.tensor(next_obs, dtype=torch.float32),
+            done,
+        )
 
         episode_reward += reward
         episode_len += 1
@@ -71,11 +82,11 @@ def run_training(cfg: CAConfig) -> Dict[str, Any]:
         if len(rb) >= cfg.batch_size:
             batch = rb.sample(cfg.batch_size)
             # move tensors
-            obs_b = batch['obs'].to(device)
-            actions_b = batch['actions'].to(device)
-            rewards_b = batch['rewards'].to(device)
-            next_obs_b = batch['next_obs'].to(device)
-            dones_b = batch['dones'].to(device)
+            obs_b = batch["obs"].to(device)
+            actions_b = batch["actions"].to(device)
+            rewards_b = batch["rewards"].to(device)
+            next_obs_b = batch["next_obs"].to(device)
+            dones_b = batch["dones"].to(device)
 
             logits_b, values_b = model.forward(obs_b)
             with torch.no_grad():
@@ -104,29 +115,41 @@ def run_training(cfg: CAConfig) -> Dict[str, Any]:
 
         # occasional checkpoint
         if total_steps % 1000 == 0:
-            path = Path.cwd() / 'outputs' / f'checkpoint_step_{total_steps}.pt'
-            save_checkpoint({'model_state': model.state_dict(), 'optimizer': optimizer.state_dict(), 'step': total_steps}, str(path))
+            path = Path.cwd() / "outputs" / f"checkpoint_step_{total_steps}.pt"
+            save_checkpoint(
+                {
+                    "model_state": model.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                    "step": total_steps,
+                },
+                str(path),
+            )
 
     env.close()
 
     # plotting
-    Path.cwd().joinpath('pictures').mkdir(exist_ok=True)
-    fig_path = Path.cwd().joinpath('pictures', 'fig_01_reward.png')
-    plt.figure(figsize=(6,4))
+    Path.cwd().joinpath("pictures").mkdir(exist_ok=True)
+    fig_path = Path.cwd().joinpath("pictures", "fig_01_reward.png")
+    plt.figure(figsize=(6, 4))
     if len(rewards) > 0:
         plt.plot(np.arange(len(rewards)), np.array(rewards))
-        plt.xlabel('Episode')
-        plt.ylabel('Return')
-        plt.title('Training Returns')
+        plt.xlabel("Episode")
+        plt.ylabel("Return")
+        plt.title("Training Returns")
         plt.tight_layout()
         plt.savefig(fig_path, dpi=300)
         plt.close()
 
-    return {'rewards': rewards, 'losses': losses, 'steps': total_steps, 'checkpoint': str(path) if 'path' in locals() else ''}
+    return {
+        "rewards": rewards,
+        "losses": losses,
+        "steps": total_steps,
+        "checkpoint": str(path) if "path" in locals() else "",
+    }
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cfg = CAConfig()
     start = time.time()
     out = run_training(cfg)
-    print('Done', out['steps'], 'steps, total episodes', len(out['rewards']))
+    print("Done", out["steps"], "steps, total episodes", len(out["rewards"]))
