@@ -18,7 +18,9 @@ def collect_episode(
     Returns:
         A dict containing lists: observations, actions, rewards, log_probs, dones
     """
-    obs = env.reset()
+    reset_out = env.reset()
+    # gymnasium returns (obs, info); older gym returns obs
+    obs = reset_out[0] if isinstance(reset_out, tuple) else reset_out
     observations = []
     actions = []
     rewards = []
@@ -37,7 +39,14 @@ def collect_episode(
             actions.append(action_to_env)
         observations.append(obs)
         log_probs.append(float(logp.detach().cpu().item()))
-        next_obs, reward, done, info = env.step(action_to_env)
+        step_out = env.step(action_to_env)
+        # gymnasium: (obs, reward, terminated, truncated, info)
+        if isinstance(step_out, tuple) and len(step_out) == 5:
+            next_obs, reward, terminated, truncated, info = step_out
+            done = bool(terminated or truncated)
+        else:
+            # gym older API: (obs, reward, done, info)
+            next_obs, reward, done, info = step_out
         rewards.append(float(reward))
         dones.append(bool(done))
         obs = next_obs
@@ -63,4 +72,3 @@ def collect_n_episodes(
             collect_episode(env, policy, device=device, max_steps=max_steps)
         )
     return episodes
-
