@@ -37,6 +37,7 @@ def a3c_worker(
     lock,
 ):
     """Top-level worker function for A3C (picklable)."""
+
     # Reconstruct simple args from dict
     class SimpleArgs:
         pass
@@ -74,7 +75,9 @@ def a3c_worker(
         for t in range(args.n):
             state_tensor = torch.tensor(
                 np.concatenate(list(frames), axis=0), dtype=torch.float32
-            ).unsqueeze(0)  # shape (1,4,84,84)
+            ).unsqueeze(
+                0
+            )  # shape (1,4,84,84)
             states.append(state_tensor)
 
             policy, value = local_model(state_tensor)
@@ -133,7 +136,9 @@ def a3c_worker(
         torch.nn.utils.clip_grad_norm_(local_model.parameters(), 40)
 
         # Push gradients to global model
-        for local_param, global_param in zip(local_model.parameters(), global_model.parameters()):
+        for local_param, global_param in zip(
+            local_model.parameters(), global_model.parameters()
+        ):
             if local_param.grad is not None:
                 global_param._grad = local_param.grad
 
@@ -143,7 +148,9 @@ def a3c_worker(
         with lock:
             global_episode.value += 1
             global_episode_reward.value = episode_reward
-            global_avg_reward.value = 0.9 * global_avg_reward.value + 0.1 * episode_reward
+            global_avg_reward.value = (
+                0.9 * global_avg_reward.value + 0.1 * episode_reward
+            )
             if episode_reward > best_score.value:
                 best_score.value = episode_reward
 
@@ -457,7 +464,8 @@ class A3C:
     def train(self):
         """Train A3C with multiple asynchronous workers"""
         # Start workers
-        num_workers = min(mp.cpu_count(), 8)  # Use up to 8 workers
+        # Use a single worker for quieter debugging / lower console noise
+        num_workers = 1
         lock = mp.Lock()
 
         workers = []
