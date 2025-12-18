@@ -1,24 +1,237 @@
-% Combined report that includes existing solution PDFs
 \documentclass[11pt]{article}
 \usepackage{pdfpages}
 \usepackage[hidelinks]{hyperref}
 \usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{longtable}
 \geometry{margin=1in}
 
-\title{Assignment 3 — Combined Report}
-\author{Compiled Solutions}
+\title{Assignment 3 — A3C: Theory, Implementation and Experiments}
+\author{Compiled Solutions and Extended Report}
 \date{\today}
 
 \begin{document}
 \maketitle
 
-\section*{Included Documents}
-The following submitted solutions are appended in full (original PDFs).
+\begin{abstract}
+This report documents a complete implementation, theoretical derivation, and experimental evaluation of an Asynchronous Advantage Actor-Critic (A3C) agent applied to Atari-style environments (Breakout). It combines the submitted solutions (original Homework PDFs) with an extended, self-contained paper covering:
 
+- Background and related work;
+- Mathematical derivation of the objective and the n-step advantage estimator used in our implementation;
+- Detailed description of the network architecture and implementation notes (file mapping to the codebase);
+- Experimental protocol, hyperparameters, and results (placeholders for generated figures and logs);
+- Ablation studies and failure modes; and
+- Appendix with derivations, pseudocode, and a complete hyperparameters table.
+
+The aim is to provide a single, reproducible document that is ready for submission or archiving alongside the code.
+\end{abstract}
+
+\tableofcontents
+\clearpage
+
+\section{Introduction}
+Reinforcement Learning (RL) has made significant progress using deep neural networks as function approximators. Actor-Critic methods combine policy-based and value-based approaches to stabilise learning. The Asynchronous Advantage Actor-Critic (A3C) algorithm \cite{mnih2016asynchronous} leverages multiple parallel worker agents to explore diverse trajectories while updating a shared global model.
+
+This assignment implements an A3C agent in PyTorch and Gym/Gymnasium compatible environments, includes preprocessing (frame stacking and grayscale conversion), and evaluates the method on Atari Breakout variants. The repository contains the implementation under \texttt{src/}, the main runner \texttt{run\_a3c.py}, and supporting notebooks/logs.
+
+\section{Related Work}
+We briefly position A3C relative to related algorithms:
+
+\begin{itemize}
+  \item REINFORCE \cite{williams1992simple} — a pure policy gradient with high variance; A3C reduces variance with a learned baseline.
+  \item A2C/A3C \cite{mnih2016asynchronous} — synchronous and asynchronous multi-worker Actor-Critic variants that scale efficiently.
+  \item PPO \cite{schulman2017proximal} — stable policy updates via clipped objectives; complementary to A3C in practice.
+\end{itemize}
+
+References (placeholder bib entries at the end) provide pointers to foundational texts and papers.
+
+\section{Problem formulation and notation}
+We consider an MDP \( (\mathcal{S}, \mathcal{A}, P, r, \gamma) \) with discount factor \( \gamma \in (0,1) \). A stochastic policy \( \pi_\theta(a|s) \) is parametrized by \(\theta\). The state-value function is \(V^\pi(s)=\mathbb{E}_\pi\left[\sum_{t=0}^\infty \gamma^t r_{t} \mid s_0=s\right]\).
+
+The policy gradient theorem gives:
+\[
+\nabla_\theta J(\theta) = \mathbb{E}_{\pi_\theta}\left[ \nabla_\theta \log \pi_\theta(a|s) \, A^{\pi_\theta}(s,a) \right],
+\]
+where \(A(s,a) = Q(s,a) - V(s)\) is the advantage function. In practice we use an n-step return estimator for \(Q\) and a learned critic \(V_\phi\) (parameters \(\phi\)).
+
+\section{Algorithm and mathematical derivation}
+\subsection{n-step advantage estimator}
+Given a trajectory of rewards \(r_t\), the n-step return \(G_t^{(n)}\) is:
+\[
+G_t^{(n)} = \sum_{k=0}^{n-1} \gamma^k r_{t+k} + \gamma^n V_\phi(s_{t+n}),
+\]
+which yields the advantage estimate:
+\[
+\hat A_t = G_t^{(n)} - V_\phi(s_t).
+\]
+This balances bias-variance via choice of \(n\).
+
+\subsection{Losses and updates}
+We optimize the combined loss:
+\[
+L(\theta, \phi) = \mathbb{E}\left[-\log \pi_\theta(a_t|s_t)\hat A_t + \beta \, \frac12\left(G_t^{(n)}-V_\phi(s_t)\right)^2 - \eta \, H(\pi_\theta(\cdot|s_t))\right],
+\]
+where \(H(\pi)\) is the policy entropy and \(\beta,\eta\) are scalars for critic weight and entropy bonus respectively.
+
+Policy and critic updates are computed using gradients of \(L\) and applied to the shared global model. The implementation uses per-worker local models to compute gradients and then applies these gradients to the shared global parameters (the standard A3C procedure).
+
+\section{Implementation details (file map and code notes)}
+This section maps code files to their role in the algorithm and highlights key implementation choices.
+
+\begin{itemize}
+  \item \texttt{run\_a3c.py}: CLI and main entry point. Parses arguments and instantiates the A3C trainer.
+  \item \texttt{src/a3c\_agent.py}: Core trainer. Implements the global model, worker launching, and train loop. The worker was refactored into a module-level function \texttt{a3c\_worker(...)} to be spawn-safe on macOS.
+  \item \texttt{src/model.py}: Neural network architecture (ActorCritic). Input: 4-frame stacked grayscale 84x84 images; conv layers followed by fully-connected heads for policy and value.
+  \item \texttt{src/preprocessing.py}: Frame crop, resize to 84×84, grayscale, normalization and expansion to single-channel arrays. Frame stacking happens inside the agent.
+  \item \texttt{rep.tex}: This LaTeX report (you are reading).
+\end{itemize}
+
+Implementation notes:
+\begin{itemize}
+  \item Frame stacking: The network expects input shape \((N,4,84,84)\) where 4 consecutive frames form the channel dimension.
+  \item Multiprocessing: On macOS, the spawn start method is required with a module-level worker to avoid MPS/fork problems. SummaryWriter and any file handles are created only in the main process to keep children picklable.
+  \item Logging: TensorBoard events are saved under the assignment logs.
+\end{itemize}
+
+\section{Network architecture}
+The ActorCritic used is the standard small CNN used in Atari baselines:
+\begin{itemize}
+  \item Conv(4,32,kernel=8,stride=4) -> ReLU
+  \item Conv(32,64,kernel=4,stride=2) -> ReLU
+  \item Conv(64,64,kernel=3,stride=1) -> ReLU
+  \item Flatten -> FC(64*7*7,256) -> ReLU
+  \item Policy head: FC(256, |\mathcal{A}|) with log-softmax
+  \item Value head: FC(256,1)
+\end{itemize}
+(See \texttt{src/model.py} for the exact code.)
+
+\section{Experimental setup}
+\subsection{Environment}
+We evaluate on Breakout variants (e.g., \texttt{BreakoutNoFrameskip-v4} / ALE Backends). To run Atari envs you must have the ALE/ROMs installed (via autorom and ale-py) or use the Gymnasium Atari extras.
+
+\subsection{Hyperparameters}
+Below is the canonical hyperparameter table used for experiments (these values correspond to the typical A3C settings and the defaults in the CLI).
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrl}
+\toprule
+Parameter & Value & Notes \\
+\midrule
+num\_episodes & 50000 & total episodes \\
+policy\_lr & 5e-4 & Adam for policy/global optimizer \\
+critic\_lr & 1e-4 & Not separately used in shared optimizer variant \\
+n & 100 & n-step return length \\
+reward\_normalizer & 100.0 & divide rewards \\
+test\_episodes & 25 & episodes for periodic evaluation \\
+save\_interval & 1000 & checkpoints \\
+log\_interval & 25 & printing interval \\
+\bottomrule
+\end{tabular}
+\caption{Main hyperparameters}
+\end{table}
+
+\subsection{Compute and reproducibility}
+All experiments in this repository are deterministic conditioned on seeds where possible. Random seeds are set in the code (\texttt{self.args.random\_seed}). The implementation supports CPU and CUDA; on macOS with MPS available, use the spawn-based worker pattern to avoid fork-time initialization issues.
+
+\section{Results}
+This section contains placeholders for the figures generated by running the training notebook or scripts. Example figure inclusion:
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{../pictures/fig_01_convergence.png}
+  \caption{Cumulative rewards mean/std over training episodes. (Placeholder — save the actual plot to ../pictures/...) }
+  \label{fig:convergence}
+\end{figure}
+
+Include your TensorBoard runs or saved PNGs in the \texttt{pictures/} directory and the LaTeX will render them here.
+
+\section{Ablation study and failure modes}
+We recommend the following ablations to understand behavior:
+\begin{itemize}
+  \item n-step length \(n\) (compare 5, 20, 100).
+  \item Entropy coefficient (0, 0.01, 0.1).
+  \item Shared optimizer vs per-worker optimizers.
+  \item Frame stack size (1 vs 4).
+\end{itemize}
+Common failure modes:
+\begin{itemize}
+  \item Missing ROMs / ALE backend causing environment not found errors.
+  \item Fork+MPS issues on macOS — resolved by spawn + module-level workers.
+  \item Input channel mismatches — ensure 4-frame stacks match model input channels.
+\end{itemize}
+
+\section{Pseudocode}
+Algorithmic pseudocode for the main loop (A3C, simplified):
+
+\begin{verbatim}
+Initialize global model parameters theta and optimizer.
+Spawn N worker processes.
+Each worker:
+  loop until global_episode >= max:
+    run policy for up to n steps, collect rewards and states
+    compute n-step returns and advantages
+    compute gradients for policy and value locally
+    push gradients to global model and apply optimizer.step()
+    increment global counters
+\end{verbatim}
+
+\section{Appendix A: Derivations}
+\subsection{Policy gradient with baseline}
+Starting from the objective \(J(\theta)=\mathbb{E}_\pi\left[ \sum_t r_t \right]\) and using the log-derivative trick, derive the policy gradient and insert baseline \(b(s)=V_\phi(s)\), yielding the estimator in Section 3.
+
+Detailed steps omitted here for brevity — include the handwritten derivation or expand with LaTeX math if required.
+
+\section{Appendix B: Hyperparameters (full dump)}
+The exact hyperparameter dictionary used in the code (as saved to training\_parameters.json) is included here for reproducibility. The file saved under \texttt{logs/.../training\_parameters.json} contains the authoritative values.
+
+\begin{verbatim}
+% Example JSON (the actual file is present in logs/)
+{
+  "num_episodes": 50000,
+  "policy_lr": 0.0005,
+  "critic_lr": 1e-4,
+  "n": 100,
+  "reward_normalizer": 100.0,
+  "random_seed": 999,
+  "test_episodes": 25,
+  "save_interval": 1000,
+  "test_interval": 250,
+  "log_interval": 25
+}
+\end{verbatim}
+
+\section{Included original submissions}
+For completeness, the original PDF submissions are appended below.
 \bigskip
-
 \includepdf[pages=-,pagecommand={\thispagestyle{plain}}]{Homework 3.pdf}
 \includepdf[pages=-,pagecommand={\thispagestyle{plain}}]{F19_hw3.pdf}
+
+\clearpage
+\bibliographystyle{plain}
+\begin{thebibliography}{9}
+\bibitem{mnih2016asynchronous}
+Volodymyr Mnih, Adrià Puigdomènech Badia, et al.
+Asynchronous methods for deep reinforcement learning.
+In ICML, 2016.
+
+\bibitem{williams1992simple}
+Ronald J. Williams.
+Simple statistical gradient-following algorithms for connectionist reinforcement learning.
+Machine Learning, 1992.
+
+\bibitem{schulman2017proximal}
+John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov.
+Proximal Policy Optimization Algorithms. arXiv:1707.06347, 2017.
+\end{thebibliography}
 
 \end{document}
 
