@@ -5,15 +5,10 @@ from datetime import datetime
 from collections import deque
 import torch.multiprocessing as mp
 import multiprocessing as _mp
+import time
 
-# Use fork start method on macOS/Linux to avoid pickling non-picklable objects
-# (e.g., SummaryWriter file handles) when spawning worker processes.
-try:
-    mp.set_start_method("fork")
-except RuntimeError:
-    # start method may have already been set by another part of the program;
-    # in that case, we leave it as-is.
-    pass
+# Use spawn context on macOS to avoid unsafe fork behavior with MPS backend.
+# We'll explicitly get a 'spawn' context when creating processes below.
 
 import gymnasium as gym
 import torch
@@ -26,6 +21,133 @@ import matplotlib.pyplot as plt
 
 from src.preprocessing import preprocess
 from src.model import ActorCritic
+
+
+# Worker function must be module-level for the "spawn" start method to import it
+def a3c_worker(
+    worker_id,
+    env_name,
+    args_dict,
+    global_model,
+    optimizer,
+    global_episode,
+    global_episode_reward,
+    global_avg_reward,
+    best_score,
+    lock,
+):
+    """Top-level worker function for A3C (picklable)."""
+    # Reconstruct simple args from dict
+    class SimpleArgs:
+        pass
+
+    args = SimpleArgs()
+    for k, v in args_dict.items():
+        setattr(args, k, v)
+
+    torch.manual_seed(args.random_seed + worker_id)
+    np.random.seed(args.random_seed + worker_id)
+
+    # Use a short-lived environment to infer action space for the local model.
+    temp_env = gym.make(env_name)
+    local_model = ActorCritic(4, temp_env.action_space.n)
+    local_model.load_state_dict(global_model.state_dict())
+    temp_env.close()
+
+    # Each worker should create its own environment for interaction.
+    env = gym.make(env_name)
+
+    while global_episode.value < args.num_episodes:
+        local_model.load_state_dict(global_model.state_dict())
+
+        episode_reward = 0
+        done = False
+        state, _ = env.reset()
+
+        # Initialize frame stack for this episode
+        first_frame = preprocess(state)
+        frames = deque([first_frame.copy() for _ in range(4)], maxlen=4)
+
+        states, actions, rewards, log_probs, values = [], [], [], [], []
+
+        # Generate up to n steps (or until done)
+        for t in range(args.n):
+            state_tensor = torch.tensor(
+                np.concatenate(list(frames), axis=0), dtype=torch.float32
+            ).unsqueeze(0)  # shape (1,4,84,84)
+            states.append(state_tensor)
+
+            policy, value = local_model(state_tensor)
+            action = torch.multinomial(torch.exp(policy), 1).item()
+
+            next_state, reward, done, _, _ = env.step(action)
+
+            actions.append(action)
+            rewards.append(reward)
+            log_probs.append(policy[0, action])
+            values.append(value.item())
+
+            episode_reward += reward
+            frames.append(preprocess(next_state))
+            state = next_state
+
+            if done:
+                break
+
+        # Calculate returns and advantages (bootstrap if not done)
+        if done:
+            R = 0
+        else:
+            state_tensor = torch.tensor(
+                np.concatenate(list(frames), axis=0), dtype=torch.float32
+            ).unsqueeze(0)
+            _, value = local_model(state_tensor)
+            R = value.item()
+
+        returns = []
+        for r in rewards[::-1]:
+            R = r + 0.99 * R
+            returns.append(R)
+        returns.reverse()
+
+        # Convert to tensors
+        returns = torch.tensor(returns, dtype=torch.float32)
+        values = torch.tensor(values, dtype=torch.float32)
+        log_probs = torch.stack(log_probs)
+
+        # Calculate advantages
+        advantages = returns - values
+
+        # Calculate losses
+        policy_loss = -(log_probs * advantages.detach()).mean()
+        value_loss = F.mse_loss(values, returns)
+        entropy_loss = -0.01 * torch.sum(torch.exp(log_probs) * log_probs)
+
+        total_loss = policy_loss + 0.5 * value_loss + entropy_loss
+
+        # Update global model
+        optimizer.zero_grad()
+        total_loss.backward()
+
+        # Clip gradients
+        torch.nn.utils.clip_grad_norm_(local_model.parameters(), 40)
+
+        # Push gradients to global model
+        for local_param, global_param in zip(local_model.parameters(), global_model.parameters()):
+            if local_param.grad is not None:
+                global_param._grad = local_param.grad
+
+        optimizer.step()
+
+        # Update global counters
+        with lock:
+            global_episode.value += 1
+            global_episode_reward.value = episode_reward
+            global_avg_reward.value = 0.9 * global_avg_reward.value + 0.1 * episode_reward
+            if episode_reward > best_score.value:
+                best_score.value = episode_reward
+
+    env.close()
 
 
 class A3C:
@@ -45,6 +167,7 @@ class A3C:
         self.args = args
         self.env_name = env_name  # Store the string, don't keep the env object
         self.set_random_seeds()
+        self.device = torch.device("cpu")
         # 2. Setup Global Model (The missing part)
         # We use one unified ActorCritic network for A3C
         temp_env = gym.make(env_name)
@@ -85,10 +208,9 @@ class A3C:
 
         self.rewards_data = []
         if train:
+            # Do not create SummaryWriter here — it holds file handles which are not picklable.
+            # We'll create the writer in the main train() process after spawning workers.
             self.logdir = "logs/%s/%s" % (self.env_name, self.timestamp)
-            self.summary_writer = SummaryWriter(self.logdir)
-            with open(self.logdir + "/training_parameters.json", "w") as f:
-                json.dump(vars(self.args), f, indent=4)
 
     def initialize_weights(self, layer):
         if isinstance(layer, nn.Linear) or isinstance(layer, nn.Conv2d):
@@ -302,17 +424,7 @@ class A3C:
                         f"Worker {worker_id} | Episode {global_episode.value} | Reward: {episode_reward:.2f} | Avg: {global_avg_reward.value:.2f}"
                     )
 
-                # Testing
-                if global_episode.value % self.args.test_interval == 0:
-                    self.test_model_worker(
-                        global_model, int(global_episode.value), lock
-                    )
-
-                # Save model
-                if global_episode.value % self.args.save_interval == 0:
-                    self.save_model_worker(
-                        global_model, int(global_episode.value), lock
-                    )
+                # Testing and saving are handled by the main process (not workers).
 
         env.close()
 
@@ -349,14 +461,17 @@ class A3C:
         lock = mp.Lock()
 
         workers = []
-        # Use a fork-based context for spawning worker processes to avoid
-        # pickling the A3C instance (SummaryWriter, file handles, etc.).
-        ctx = _mp.get_context("fork")
+        # Use a spawn-based context on macOS to avoid unsafe fork interactions with MPS.
+        ctx = _mp.get_context("spawn")
+        # Prepare a lightweight args dict for workers (picklable)
+        args_dict = vars(self.args).copy()
         for worker_id in range(num_workers):
             p = ctx.Process(
-                target=self.worker,
+                target=a3c_worker,
                 args=(
                     worker_id,
+                    self.env_name,
+                    args_dict,
                     self.global_model,
                     self.optimizer,
                     self.global_episode,
@@ -368,6 +483,11 @@ class A3C:
             )
             p.start()
             workers.append(p)
+
+        # Create SummaryWriter in the main process only (safe)
+        self.summary_writer = SummaryWriter(self.logdir)
+        with open(self.logdir + "/training_parameters.json", "w") as f:
+            json.dump(vars(self.args), f, indent=4)
 
         # Monitor training
         try:
