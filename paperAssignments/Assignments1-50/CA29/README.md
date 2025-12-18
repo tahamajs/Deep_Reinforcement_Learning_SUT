@@ -157,9 +157,9 @@ Load from YAML for easy experimentation.
 
 2. Install dependencies:
    ```bash
-   python -m pip install torch numpy matplotlib gym pyyaml pytest
+   python -m pip install torch numpy matplotlib gymnasium pyyaml pytest
    ```
-   Note: For MuJoCo environments, you may need to install `mujoco-py` or use `gym[mujoco]`.
+   Note: We use `gymnasium` (the maintained successor to `gym`) for environments. If you prefer `gym`, install `gym` but note compatibility issues with NumPy 2.0+.
 
 3. Run tests:
    ```bash
