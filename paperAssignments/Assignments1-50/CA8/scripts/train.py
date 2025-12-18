@@ -30,6 +30,10 @@ try:
     import wandb  # type: ignore
 except Exception:
     wandb = None
+try:
+    from visualize import plot_reward_histograms, plot_sinkhorn_loss, plot_particle_pca  # type: ignore
+except Exception:
+    plot_reward_histograms = plot_sinkhorn_loss = plot_particle_pca = None
 
 
 class ReplayBuffer:
@@ -53,12 +57,18 @@ class ReplayBuffer:
         state = stack("state")
         action = torch.from_numpy(np.stack([b["action"] for b in batch])).long()
         reward = stack("reward").squeeze(-1)
+        # reward_raw may be missing if older data; fill with reward when absent
+        if "reward_raw" in batch[0]:
+            reward_raw = torch.from_numpy(np.stack([b["reward_raw"] for b in batch])).float().squeeze(-1)
+        else:
+            reward_raw = reward.clone()
         next_state = stack("next_state")
         done = torch.from_numpy(np.stack([b["done"] for b in batch])).float()
         return {
             "state": state,
             "action": action,
             "reward": reward,
+            "reward_raw": reward_raw,
             "next_state": next_state,
             "done": done,
         }
@@ -158,11 +168,13 @@ def main():
                 episode_returns[i] += float(r)
                 episode_lens[i] += 1
                 r_store = info.get("reward_max", r) if isinstance(info, dict) else r
+                r_raw = info.get("reward_raw", r) if isinstance(info, dict) else r
                 replay.add(
                     {
                         "state": np.asarray(states[i]).ravel().astype(np.float32),
                         "action": np.array(actions[i], dtype=np.int64),
                         "reward": np.array([r_store], dtype=np.float32),
+                        "reward_raw": np.array([r_raw], dtype=np.float32),
                         "next_state": next_state.astype(np.float32),
                         "done": np.array(float(dones[i]), dtype=np.float32),
                     }
@@ -184,11 +196,13 @@ def main():
 
             # store transformed reward (info['reward_max'] if present)
             r_store = info.get("reward_max", r)
+            r_raw = info.get("reward_raw", r)
             replay.add(
                 {
                     "state": state.astype(np.float32),
                     "action": np.array(a, dtype=np.int64),
                     "reward": np.array([r_store], dtype=np.float32),
+                    "reward_raw": np.array([r_raw], dtype=np.float32),
                     "next_state": next_state.astype(np.float32),
                     "done": np.array(float(done), dtype=np.float32),
                 }
@@ -214,6 +228,7 @@ def main():
             mb = cfg.minibatch_size
             num_mbs = max(1, B // mb)
             losses = []
+            last_x = last_y = None
             for _ in range(cfg.num_grad_steps):
                 for i in range(num_mbs):
                     # create sub-batch
@@ -226,11 +241,45 @@ def main():
                         "next_state": big_batch["next_state"][start:end],
                         "done": big_batch["done"][start:end],
                     }
-                    loss, sinkhorn_mean = agent.update(sub_batch)
+                    ret = agent.update(sub_batch)
+                    # handle new API returning particles
+                    if isinstance(ret, tuple) and len(ret) >= 4:
+                        loss, sinkhorn_mean, x_np, y_np = ret
+                        last_x, last_y = x_np, y_np
+                    else:
+                        loss, sinkhorn_mean = ret
+                        x_np = y_np = None
                     losses.append(loss)
             mean_loss = float(np.mean(losses)) if losses else 0.0
             # logging
             writer.add_scalar("train/sinkhorn_loss", mean_loss, step)
+            # collect reward hist data if available
+            try:
+                batch_raw = big_batch.get("reward_raw")
+                batch_trans = big_batch.get("reward")
+            except Exception:
+                batch_raw = batch_trans = None
+            # plot/save visualizations periodically
+            if cfg.plot_every > 0 and step % cfg.plot_every == 0:
+                picdir = cfg.picture_dir
+                os.makedirs(picdir, exist_ok=True)
+                # reward hist
+                if plot_reward_histograms is not None and batch_raw is not None:
+                    raw_np = batch_raw.cpu().numpy().ravel()
+                    trans_np = batch_trans.cpu().numpy().ravel()
+                    plot_reward_histograms(
+                        raw_np,
+                        trans_np,
+                        save_path=os.path.join(picdir, f"reward_hist_step_{step}.png"),
+                    )
+                # sinkhorn loss curve (we log recent losses)
+                if plot_sinkhorn_loss is not None:
+                    # naive: save the mean_loss curve up to this point (append)
+                    # here we just plot a single-point series for demonstration
+                    plot_sinkhorn_loss([mean_loss], save_path=os.path.join(picdir, f"sinkhorn_step_{step}.png"))
+                # particle PCA
+                if plot_particle_pca is not None and last_x is not None and last_y is not None:
+                    plot_particle_pca(last_x, last_y, save_path=os.path.join(picdir, f"particles_step_{step}.png"))
             if cfg.use_wandb and wandb is not None:
                 wandb.log({"train/sinkhorn_loss": mean_loss, "step": step})
             if step % 1000 == 0:

@@ -44,10 +44,13 @@ class Config:
     use_procgen: bool = False
     use_wandb: bool = True
     tb_logdir: str = "runs/ca8"
+    # plotting
+    plot_every: int = 5000
+    picture_dir: str = "paperAssignments/Assignments1-50/CA8/pictures"
 
     def as_dict(self) -> Dict[str, Any]:
         return {k: getattr(self, k) for k in self.__dict__.keys()}
 
 
-cfg = Config()
 
+cfg = Config()

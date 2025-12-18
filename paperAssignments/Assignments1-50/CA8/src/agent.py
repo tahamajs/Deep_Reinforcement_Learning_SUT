@@ -143,5 +143,13 @@ class MaxSinkAgent:
         # soft update target
         soft_update(self.target_critic, self.critic, self.tau)
 
-        return float(loss.item()), float(loss_per_batch.mean().item())
+        # return particles for optional visualization (numpy)
+        try:
+            x_np = x.detach().cpu().numpy()  # [B, N, 1]
+            y_np = y.detach().cpu().numpy()  # [B, N, 1]
+        except Exception:
+            x_np = None
+            y_np = None
+
+        return float(loss.item()), float(loss_per_batch.mean().item()), x_np, y_np
 
