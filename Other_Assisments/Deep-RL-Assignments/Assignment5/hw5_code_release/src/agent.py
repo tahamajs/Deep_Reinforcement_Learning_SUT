@@ -1,5 +1,7 @@
 import numpy as np
 import pdb
+
+
 class Agent:
     def __init__(self, env):
         self.env = env
@@ -33,6 +35,7 @@ class Agent:
             "reward_sum": reward_sum,
             "rewards": np.array(rewards),
         }
+
 
 class RandomPolicy:
     def __init__(self, action_dim):
