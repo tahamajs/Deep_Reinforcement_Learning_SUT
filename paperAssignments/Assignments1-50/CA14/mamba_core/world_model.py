@@ -79,22 +79,12 @@ class RSSM(nn.Module):
         """One step observe: update h using previous z,a and compute posterior over z.
         Returns new (h, z, mu_post, logvar_post)
         """
-        inp = (
-            torch.cat([z_m, a, h.new_zeros(h.size(0), 0)], dim=-1)
-            if False
-            else torch.cat([h.new_zeros(h.size(0), 0)], dim=-1)
-        )
-        # GRU input as (z_prev, a, z_m) concatenated
-        gru_in = torch.cat([h.new_zeros(h.size(0), self.stoch_dim), a, z_m], dim=-1)
-        # but we want to use previous z; keep simple: use a and z_m
-        h_new = self.gru(
-            (
-                torch.cat([a, z_m, torch.zeros_like(h)[:, :0]], dim=-1)
-                if False
-                else torch.cat([a, z_m], dim=-1)
-            ),
-            h,
-        )
+        # GRU input expects (stoch_dim + act_dim + morph_dim).
+        # Use previous stochastic z if available; here we don't have z in the signature,
+        # so use zeros as a placeholder for previous z to keep shapes consistent.
+        prev_z_placeholder = h.new_zeros(h.size(0), self.stoch_dim)
+        gru_in = torch.cat([prev_z_placeholder, a, z_m], dim=-1)
+        h_new = self.gru(gru_in, h)
         mu_post, logvar_post = self.posterior(h_new, obs)
         std = torch.exp(0.5 * logvar_post)
         eps = torch.randn_like(std)
@@ -104,8 +94,10 @@ class RSSM(nn.Module):
     def imagine_step(
         self, h: torch.Tensor, a: torch.Tensor, z_m: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        # update deterministic
-        gru_in = torch.cat([a, z_m], dim=-1)
+        # GRU input expects (stoch_dim + act_dim + morph_dim).
+        # For imagination we also lack previous stochastic z, so use zeros as placeholder.
+        prev_z_placeholder = h.new_zeros(h.size(0), self.stoch_dim)
+        gru_in = torch.cat([prev_z_placeholder, a, z_m], dim=-1)
         h_new = self.gru(gru_in, h)
         mu_prior, logvar_prior = self.prior(h_new)
         std = torch.exp(0.5 * logvar_prior)
