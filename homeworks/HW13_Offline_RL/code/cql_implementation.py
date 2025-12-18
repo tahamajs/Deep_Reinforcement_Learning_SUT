@@ -3,6 +3,7 @@ CQL implementation (lightweight, import-safe).
 Provides: QNetwork, PolicyNetwork, CQL class and train_step utility.
 No heavy execution on import.
 """
+
 from typing import Tuple
 import torch
 import torch.nn as nn
@@ -55,7 +56,9 @@ class CQL:
     into training notebooks or scripts. It avoids any execution at import time.
     """
 
-    def __init__(self, state_dim: int, action_dim: int, alpha: float = 1.0, lr: float = 3e-4):
+    def __init__(
+        self, state_dim: int, action_dim: int, alpha: float = 1.0, lr: float = 3e-4
+    ):
         self.Q1 = QNetwork(state_dim, action_dim)
         self.Q2 = QNetwork(state_dim, action_dim)
         self.Q1_target = QNetwork(state_dim, action_dim)
@@ -65,14 +68,23 @@ class CQL:
         self.Q1_target.load_state_dict(self.Q1.state_dict())
         self.Q2_target.load_state_dict(self.Q2.state_dict())
 
-        self.q_optimizer = optim.Adam(list(self.Q1.parameters()) + list(self.Q2.parameters()), lr=lr)
+        self.q_optimizer = optim.Adam(
+            list(self.Q1.parameters()) + list(self.Q2.parameters()), lr=lr
+        )
         self.policy_optimizer = optim.Adam(self.policy.parameters(), lr=lr)
 
         self.alpha = alpha
         self.gamma = 0.99
         self.tau = 0.005
 
-    def cql_loss(self, states: torch.Tensor, actions: torch.Tensor, rewards: torch.Tensor, next_states: torch.Tensor, dones: torch.Tensor) -> torch.Tensor:
+    def cql_loss(
+        self,
+        states: torch.Tensor,
+        actions: torch.Tensor,
+        rewards: torch.Tensor,
+        next_states: torch.Tensor,
+        dones: torch.Tensor,
+    ) -> torch.Tensor:
         q1 = self.Q1(states, actions)
         q2 = self.Q2(states, actions)
 
@@ -89,7 +101,9 @@ class CQL:
         # CQL regularization: sample random actions + policy actions
         batch_size = states.shape[0]
         action_dim = actions.shape[1]
-        random_actions = (torch.rand(batch_size, action_dim, device=states.device) * 2.0) - 1.0
+        random_actions = (
+            torch.rand(batch_size, action_dim, device=states.device) * 2.0
+        ) - 1.0
         curr_actions, _ = self.policy.sample(states)
 
         q1_rand = self.Q1(states, random_actions)
@@ -106,7 +120,9 @@ class CQL:
         cql_q1_loss = torch.logsumexp(cat_q1, dim=0).mean() - q1_data.mean()
         cql_q2_loss = torch.logsumexp(cat_q2, dim=0).mean() - q2_data.mean()
 
-        q_loss = bellman_error_1 + bellman_error_2 + self.alpha * (cql_q1_loss + cql_q2_loss)
+        q_loss = (
+            bellman_error_1 + bellman_error_2 + self.alpha * (cql_q1_loss + cql_q2_loss)
+        )
         return q_loss
 
     def policy_loss(self, states: torch.Tensor) -> torch.Tensor:
@@ -130,13 +146,22 @@ class CQL:
         self.policy_optimizer.step()
 
         # soft updates
-        for param, target_param in zip(self.Q1.parameters(), self.Q1_target.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
-        for param, target_param in zip(self.Q2.parameters(), self.Q2_target.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+        for param, target_param in zip(
+            self.Q1.parameters(), self.Q1_target.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
+        for param, target_param in zip(
+            self.Q2.parameters(), self.Q2_target.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
 
         return {"q_loss": q_loss.item(), "policy_loss": p_loss.item()}
 
 
 if __name__ == "__main__":
     print("cql_implementation module: define CQL, import in notebooks to train.")
+

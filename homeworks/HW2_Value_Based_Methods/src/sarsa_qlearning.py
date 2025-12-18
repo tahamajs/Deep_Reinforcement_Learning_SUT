@@ -138,3 +138,4 @@ if __name__ == "__main__":
     q_s, r_s = sarsa(env, episodes=10, seed=0)
     print("Q-learning sample rewards:", r_q[:3])
     print("SARSA sample rewards:", r_s[:3])
+

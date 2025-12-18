@@ -24,7 +24,9 @@ class BernoulliBandit:
         self.optimal_arm = int(np.argmax(means))
 
     @classmethod
-    def random(cls, num_arms: int, seed: int = 0, low: float = 0.05, high: float = 0.95):
+    def random(
+        cls, num_arms: int, seed: int = 0, low: float = 0.05, high: float = 0.95
+    ):
         rng = np.random.default_rng(seed)
         means = rng.uniform(low=low, high=high, size=num_arms)
         return cls(means)
@@ -83,7 +85,9 @@ class UCB1(BasePolicy):
 
 
 class ThompsonBeta(BasePolicy):
-    def __init__(self, num_arms: int, alpha0: float = 1.0, beta0: float = 1.0, seed: int = 0) -> None:
+    def __init__(
+        self, num_arms: int, alpha0: float = 1.0, beta0: float = 1.0, seed: int = 0
+    ) -> None:
         self.num_arms = num_arms
         self.rng = np.random.default_rng(seed)
         self.alpha = np.full(num_arms, alpha0, dtype=float)
@@ -107,7 +111,9 @@ def regret_curve(rewards: np.ndarray, optimal_mean: float) -> np.ndarray:
     return np.cumsum(inst_regret)
 
 
-def run_policy(env: BernoulliBandit, policy: BasePolicy, horizon: int, seed: int) -> PolicyResult:
+def run_policy(
+    env: BernoulliBandit, policy: BasePolicy, horizon: int, seed: int
+) -> PolicyResult:
     rng = np.random.default_rng(seed)
     rewards = np.zeros(horizon, dtype=float)
     for t in range(horizon):
@@ -118,14 +124,22 @@ def run_policy(env: BernoulliBandit, policy: BasePolicy, horizon: int, seed: int
     return rewards, regret_curve(rewards, env.optimal_mean)
 
 
-def run_bandit_experiment(num_arms: int, steps: int, runs: int, seed: int = 0) -> Dict[str, Dict]:
+def run_bandit_experiment(
+    num_arms: int, steps: int, runs: int, seed: int = 0
+) -> Dict[str, Dict]:
     results = {}
     for run in range(runs):
-        env = BernoulliBandit.random(num_arms=num_arms, seed=seed + run, low=0.05, high=0.95)
+        env = BernoulliBandit.random(
+            num_arms=num_arms, seed=seed + run, low=0.05, high=0.95
+        )
         policies = {
-            "epsilon_greedy": EpsilonGreedy(num_arms=num_arms, epsilon=0.1, seed=seed + run + 1),
+            "epsilon_greedy": EpsilonGreedy(
+                num_arms=num_arms, epsilon=0.1, seed=seed + run + 1
+            ),
             "ucb1": UCB1(num_arms=num_arms, c=np.sqrt(2.0), seed=seed + run + 2),
-            "thompson_beta": ThompsonBeta(num_arms=num_arms, alpha0=1.0, beta0=1.0, seed=seed + run + 3),
+            "thompson_beta": ThompsonBeta(
+                num_arms=num_arms, alpha0=1.0, beta0=1.0, seed=seed + run + 3
+            ),
         }
         for name, policy in policies.items():
             rewards, regrets = run_policy(env, policy, steps, seed + run)
@@ -168,7 +182,9 @@ def main():
     parser.add_argument("--out", type=str, default="../pictures/bandit_comparison.png")
     args = parser.parse_args()
 
-    results = run_bandit_experiment(args.num_arms, args.steps, args.runs, seed=args.seed)
+    results = run_bandit_experiment(
+        args.num_arms, args.steps, args.runs, seed=args.seed
+    )
     plot_bandit_comparison(results, args.out)
 
 

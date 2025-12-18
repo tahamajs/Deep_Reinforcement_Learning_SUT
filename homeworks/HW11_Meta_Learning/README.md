@@ -39,11 +39,12 @@ HW11_Meta_Learning/
 **Goal:** Learn across tasks to enable fast adaptation to new tasks
 
 **Setup:**
+
 ```
 Task distribution: p(T)
 Each task Ti has:
 - State space Si
-- Action space Ai  
+- Action space Ai
 - Reward function Ri
 - Dynamics Pi
 
@@ -52,6 +53,7 @@ Meta-Testing: Adapt quickly to new task from p(T)
 ```
 
 **Two-Level Optimization:**
+
 ```
 Inner Loop: Adapt to specific task Ti
   θ_i ← θ - α∇θ L_Ti(θ)
@@ -65,60 +67,62 @@ Outer Loop: Optimize for fast adaptation
 **Key Idea:** Find initialization that is good for fine-tuning
 
 **Algorithm:**
+
 ```python
 def maml(task_distribution, meta_lr=0.001, inner_lr=0.01, K=5):
     """
     MAML for RL
-    
+
     Args:
         task_distribution: Distribution over tasks
         meta_lr: Outer loop learning rate
-        inner_lr: Inner loop learning rate  
+        inner_lr: Inner loop learning rate
         K: Number of inner gradient steps
     """
     # Initialize meta-parameters
     theta = initialize_policy()
-    
+
     for meta_iteration in range(N_meta):
         # Sample batch of tasks
         tasks = task_distribution.sample(batch_size)
-        
+
         meta_gradient = 0
-        
+
         for task in tasks:
             # Copy current parameters
             phi = theta.clone()
-            
+
             # INNER LOOP: Adapt to task
             for k in range(K):
                 # Sample trajectories using phi
                 trajectories = collect_trajectories(task, phi)
-                
+
                 # Compute task loss (RL objective)
                 loss = compute_rl_loss(trajectories, phi)
-                
+
                 # Inner update
                 grad = compute_gradient(loss, phi)
                 phi = phi - inner_lr * grad
-            
+
             # OUTER LOOP: Meta-gradient
             # Sample new trajectories with adapted policy
             test_trajectories = collect_trajectories(task, phi)
             meta_loss = compute_rl_loss(test_trajectories, phi)
-            
+
             # Compute gradient w.r.t. theta (not phi!)
             meta_grad = compute_gradient(meta_loss, theta)
             meta_gradient += meta_grad
-        
+
         # Meta-update
         theta = theta - meta_lr * meta_gradient / batch_size
-    
+
     return theta
 ```
 
 **Key Innovation:** Backpropagation through optimization process
 
 **For RL:**
+
 ```python
 class MAML_RL:
     def compute_rl_loss(self, trajectories, policy):
@@ -129,25 +133,27 @@ class MAML_RL:
         - Value function loss
         """
         states, actions, returns, advantages = process(trajectories)
-        
+
         # Policy gradient loss
         log_probs = policy.log_prob(states, actions)
         policy_loss = -(log_probs * advantages).mean()
-        
+
         # Value function loss
         values = policy.value(states)
         value_loss = F.mse_loss(values, returns)
-        
+
         return policy_loss + 0.5 * value_loss
 ```
 
 **Challenges in RL:**
+
 - High variance in gradients
 - Need multiple rollouts per task
 - Computationally expensive
 - Second-order derivatives
 
 **Solutions:**
+
 - Use more samples per task
 - First-order approximation (FOMAML)
 - Larger inner learning rate
@@ -163,20 +169,20 @@ class MAML_RL:
 class RL2(nn.Module):
     def __init__(self, obs_dim, action_dim, hidden_dim=256):
         super().__init__()
-        
+
         # Recurrent encoder
         self.lstm = nn.LSTM(
             input_size=obs_dim + action_dim + 1 + 1,  # obs + prev_action + prev_reward + done
             hidden_size=hidden_dim,
             num_layers=2
         )
-        
+
         # Policy head
         self.policy = nn.Linear(hidden_dim, action_dim)
-        
+
         # Value head
         self.value = nn.Linear(hidden_dim, 1)
-    
+
     def forward(self, obs, prev_action, prev_reward, done, hidden):
         """
         Args:
@@ -188,16 +194,16 @@ class RL2(nn.Module):
         """
         # Concatenate context
         x = torch.cat([obs, prev_action, prev_reward.unsqueeze(-1), done.unsqueeze(-1)], dim=-1)
-        
+
         # Update hidden state (encodes task)
         output, hidden_new = self.lstm(x.unsqueeze(0), hidden)
-        
+
         # Compute policy and value
         policy_logits = self.policy(output.squeeze(0))
         value = self.value(output.squeeze(0))
-        
+
         return policy_logits, value, hidden_new
-    
+
     def reset_hidden(self, batch_size=1):
         """Reset hidden state for new task"""
         return (torch.zeros(2, batch_size, 256),
@@ -205,6 +211,7 @@ class RL2(nn.Module):
 ```
 
 **Training:**
+
 ```python
 def train_rl2(meta_tasks, episodes_per_task=10):
     """
@@ -212,13 +219,13 @@ def train_rl2(meta_tasks, episodes_per_task=10):
     Each "episode" is actually multiple episodes from same task
     """
     policy = RL2(obs_dim, action_dim)
-    
+
     for meta_iteration in range(N):
         task = meta_tasks.sample()
-        
+
         # Initialize hidden state
         hidden = policy.reset_hidden()
-        
+
         # Collect multiple episodes from same task
         trajectories = []
         for episode in range(episodes_per_task):
@@ -226,18 +233,20 @@ def train_rl2(meta_tasks, episodes_per_task=10):
                 task, policy, hidden, reset_hidden=False
             )
             trajectories.append(trajectory)
-        
+
         # Train with PPO on all trajectories
         loss = compute_ppo_loss(trajectories, policy)
         optimize(loss)
 ```
 
 **Advantages:**
+
 - No explicit inner loop
 - Fast adaptation at test time (just forward pass)
 - Can handle varying task horizons
 
 **Disadvantages:**
+
 - Requires many episodes per task during meta-training
 - Limited by LSTM capacity
 - Black-box adaptation
@@ -253,30 +262,30 @@ class PEARL(nn.Module):
     """
     def __init__(self, obs_dim, action_dim, context_dim):
         super().__init__()
-        
+
         # Context encoder (variational)
         self.context_encoder = nn.LSTM(
             input_size=obs_dim + action_dim + 1,  # obs + action + reward
             hidden_size=128
         )
-        
+
         self.context_mean = nn.Linear(128, context_dim)
         self.context_logstd = nn.Linear(128, context_dim)
-        
+
         # Policy conditioned on context
         self.policy = nn.Sequential(
             nn.Linear(obs_dim + context_dim, 256),
             nn.ReLU(),
             nn.Linear(256, action_dim)
         )
-        
+
         # Q-function conditioned on context
         self.q_function = nn.Sequential(
             nn.Linear(obs_dim + action_dim + context_dim, 256),
             nn.ReLU(),
             nn.Linear(256, 1)
         )
-    
+
     def encode_context(self, transitions):
         """
         Encode task from transitions
@@ -284,20 +293,20 @@ class PEARL(nn.Module):
         """
         # transitions: [(s, a, r, s'), ...]
         inputs = torch.cat([s, a, r.unsqueeze(-1)], dim=-1)
-        
+
         output, _ = self.context_encoder(inputs)
         pooled = output.mean(dim=0)  # Aggregate over transitions
-        
+
         mean = self.context_mean(pooled)
         logstd = self.context_logstd(pooled)
-        
+
         return mean, logstd
-    
+
     def sample_context(self, mean, logstd):
         """Sample context vector"""
         std = torch.exp(logstd)
         return mean + std * torch.randn_like(std)
-    
+
     def forward(self, obs, context):
         """
         Action selection conditioned on context
@@ -307,34 +316,36 @@ class PEARL(nn.Module):
 ```
 
 **Meta-Training:**
+
 ```python
 def meta_train_pearl(task_distribution):
     model = PEARL(obs_dim, action_dim, context_dim)
-    
+
     for iteration in range(N):
         task = task_distribution.sample()
-        
+
         # Phase 1: Collect context (few transitions)
         context_transitions = collect_transitions(task, model, n=10)
-        
+
         # Encode task
         mean, logstd = model.encode_context(context_transitions)
         context = model.sample_context(mean, logstd)
-        
+
         # Phase 2: Collect more data with inferred context
         trajectories = collect_trajectories(task, model, context, n=100)
-        
+
         # Update model (SAC + context encoder)
         sac_loss = compute_sac_loss(trajectories, context)
-        
+
         # Context encoder loss (variational)
         kl_loss = compute_kl(mean, logstd)
-        
+
         total_loss = sac_loss + beta * kl_loss
         optimize(total_loss)
 ```
 
 **Meta-Testing (Few-Shot Adaptation):**
+
 ```python
 def adapt(new_task, model, n_context=5):
     """
@@ -342,27 +353,29 @@ def adapt(new_task, model, n_context=5):
     """
     # Collect minimal context
     context_data = collect_transitions(new_task, model, n=n_context)
-    
+
     # Infer task embedding
     mean, logstd = model.encode_context(context_data)
     context = mean  # Use mean (no sampling) at test time
-    
+
     # Now can act on new task
     def policy(obs):
         return model(obs, context)
-    
+
     return policy
 ```
 
 ### 5. Meta-World Benchmark
 
 **Standard benchmark for meta-RL:**
+
 - 50 robotic manipulation tasks
 - Shared state/action spaces
 - Varying goals and object positions
 - Evaluation: success rate after K adaptations steps
 
 **Tasks include:**
+
 - Reach, push, pick-place
 - Drawer opening, button pressing
 - Door unlocking, window closing
@@ -370,16 +383,19 @@ def adapt(new_task, model, n_context=5):
 ### 6. Key Challenges
 
 1. **Sample Efficiency**
+
    - Need many tasks for meta-training
    - Each task requires episodes
    - Total sample cost high
 
 2. **Task Distribution**
+
    - Performance depends on task similarity
    - Need diverse but related tasks
    - Distribution shift at test time problematic
 
 3. **Computational Cost**
+
    - MAML requires second-order derivatives
    - Multiple rollouts per task
    - Slow meta-training

@@ -26,7 +26,9 @@ except Exception as exc:  # pragma: no cover
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Compare bandit algorithms and save results")
+    parser = argparse.ArgumentParser(
+        description="Compare bandit algorithms and save results"
+    )
     parser.add_argument("--num_arms", type=int, default=10)
     parser.add_argument("--steps", type=int, default=5000)
     parser.add_argument("--runs", type=int, default=20)
@@ -50,10 +52,14 @@ def main():
     print(f"Saved results to {out_path}")
 
     # Try to call the plotting helper if available
-    viz_script = os.path.abspath(os.path.join(this_dir, "..", "visualize", "generate_plots.py"))
+    viz_script = os.path.abspath(
+        os.path.join(this_dir, "..", "visualize", "generate_plots.py")
+    )
     if os.path.exists(viz_script):
         print("Calling visualization helper...")
-        os.system(f'python "{viz_script}" --results "{out_path}" --out_dir "{args.out_dir}"')
+        os.system(
+            f'python "{viz_script}" --results "{out_path}" --out_dir "{args.out_dir}"'
+        )
     else:
         print(f"Visualization script not found at {viz_script}; run it manually.")
 

@@ -34,17 +34,18 @@ HW8_Exploration_Methods/
 
 ### 🔧 How to run the provided notebook
 
-1) Create a virtual environment in this folder and install dependencies:
+1. Create a virtual environment in this folder and install dependencies:
+
 ```bash
 cd homeworks/HW8_Exploration_Methods/code
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
-2) Open `HW8_Notebook.ipynb` and run cells top-down. The first code cell centralizes seeds, device, and hyperparameters. A `run_info.json` file is written to capture commit hash, hardware, and config.
-3) Regret plots are saved under `homeworks/pictures/hw8_regret.png` (directory is auto-created).
 
-Command-line helpers
---------------------
+2. Open `HW8_Notebook.ipynb` and run cells top-down. The first code cell centralizes seeds, device, and hyperparameters. A `run_info.json` file is written to capture commit hash, hardware, and config.
+3. Regret plots are saved under `homeworks/pictures/hw8_regret.png` (directory is auto-created).
+
+## Command-line helpers
 
 Two utility scripts are provided for running and visualizing the canonical bandit experiments from the notebook:
 
@@ -72,23 +73,25 @@ These commands are optional; the notebook provides the same functionality but th
 
 - `reports/HW8_Report.tex` uses the IEEEtran class and summarizes the notebook’s Bernoulli bandit baselines (ε-greedy, UCB1, Thompson). Compile with `pdflatex` (twice) after running the notebook to refresh figures and tables.
 
-
 ## 📚 Core Concepts
 
 ### 1. The Exploration-Exploitation Dilemma
 
 **Fundamental Trade-off:**
+
 ```
 Exploration: Try new actions to discover better strategies
 Exploitation: Use known information to maximize immediate reward
 ```
 
 **Examples:**
+
 - **Restaurant**: Try new restaurant (explore) vs go to favorite (exploit)
 - **A/B Testing**: Test new webpage (explore) vs use best known (exploit)
 - **Clinical Trials**: Try experimental treatment vs use standard care
 
 **Formal Problem:**
+
 ```
 πt = argmax 𝔼[∑τ=t^T r(sτ, aτ) | πt, history]
       π
@@ -101,6 +104,7 @@ Challenge: Future rewards depend on information gathered through exploration.
 **Simplest Exploration Setting:** Stateless RL
 
 **Problem Formulation:**
+
 ```
 K arms (actions)
 Each arm i has reward distribution with mean μi
@@ -113,6 +117,7 @@ where μ* = max μi (best arm's mean)
 ```
 
 **Key Concepts:**
+
 - **Regret**: Lost reward compared to always picking best arm
 - **Sample Complexity**: How many pulls to identify best arm
 - **Sublinear Regret**: R(T) = o(T) means eventually exploiting well
@@ -120,6 +125,7 @@ where μ* = max μi (best arm's mean)
 ### 3. Exploration Strategies
 
 #### a) ε-Greedy
+
 ```python
 def epsilon_greedy(Q, epsilon):
     if random() < epsilon:
@@ -129,12 +135,14 @@ def epsilon_greedy(Q, epsilon):
 ```
 
 **Properties:**
+
 - Simple to implement
 - Wastes exploration on suboptimal arms
 - Linear regret: R(T) = O(T)
 - Decaying ε → sublinear regret
 
 #### b) Upper Confidence Bound (UCB)
+
 ```python
 def ucb1(counts, values, t, c=√2):
     """
@@ -149,11 +157,13 @@ def ucb1(counts, values, t, c=√2):
 ```
 
 **Intuition:** "Optimism in the face of uncertainty"
+
 - Confidence bound decreases with more samples
 - Encourages trying uncertain arms
 - Regret bound: R(T) = O(√(T log T))
 
 **Mathematical Justification:**
+
 ```
 With probability ≥ 1-δ:
 |Q̂(a) - Q(a)| ≤ √(2 log(1/δ) / N(a))
@@ -162,6 +172,7 @@ where N(a) = count of action a
 ```
 
 #### c) Thompson Sampling (Bayesian)
+
 ```python
 def thompson_sampling(alpha, beta):
     """
@@ -169,7 +180,7 @@ def thompson_sampling(alpha, beta):
     alpha[i], beta[i]: parameters for arm i
     """
     # Sample from posterior distribution
-    samples = [random.beta(alpha[i], beta[i]) 
+    samples = [random.beta(alpha[i], beta[i])
                for i in range(K)]
     return argmax(samples)
 
@@ -182,11 +193,13 @@ def update(arm, reward, alpha, beta):
 ```
 
 **Intuition:** Sample from belief distribution
+
 - Naturally balances exploration/exploitation
 - Optimal Bayesian strategy
 - Empirically strong performance
 
 **Properties:**
+
 - Regret: R(T) = O(√(KT log T))
 - Adapts to problem difficulty
 - Works well empirically
@@ -196,6 +209,7 @@ def update(arm, reward, alpha, beta):
 **Key Idea:** Bonus for visiting rarely-seen states
 
 #### Exploration Bonus
+
 ```python
 def exploration_bonus(state, counts, beta=0.1):
     """
@@ -207,6 +221,7 @@ def exploration_bonus(state, counts, beta=0.1):
 ```
 
 **R-Max Algorithm:**
+
 ```
 Initialize all Q(s,a) to Rmax (optimistic)
 Update Q-values as usual, but only after
@@ -216,11 +231,13 @@ Result: Explore until confident, then exploit
 ```
 
 **Advantages:**
+
 - Theoretically motivated (PAC bounds)
 - Simple to implement in tabular case
 - Guarantees near-optimal policy
 
 **Challenges in Deep RL:**
+
 - How to count in continuous/high-dimensional spaces?
 - Hash-based methods (SimHash, LSH)
 - Learned density models
@@ -230,11 +247,12 @@ Result: Explore until confident, then exploit
 **Philosophy:** Rewards for learning, not just external goals
 
 #### a) Prediction Error (Forward Model)
+
 ```python
 class ForwardModelBonus:
     def __init__(self, model):
         self.model = model  # Learns s,a → s'
-    
+
     def intrinsic_reward(self, s, a, s_next):
         s_pred = self.model(s, a)
         error = ||s_pred - s_next||²
@@ -244,12 +262,13 @@ class ForwardModelBonus:
 **Intuition:** Novel states are hard to predict
 
 #### b) Random Network Distillation (RND)
+
 ```python
 class RND:
     def __init__(self):
         self.target = random_network()  # Fixed
         self.predictor = trainable_network()
-    
+
     def intrinsic_reward(self, state):
         target_feat = self.target(state)
         pred_feat = self.predictor(state)
@@ -257,15 +276,18 @@ class RND:
 ```
 
 **Why It Works:**
+
 - Familiar states → predictor learns → low error → low bonus
 - Novel states → high error → high bonus → exploration
 
 #### c) Curiosity-Driven (ICM)
+
 Combines forward and inverse models (see HW6 for details)
 
 ### 6. Deep Exploration Strategies
 
 #### a) Noisy Networks
+
 ```python
 class NoisyLinear(nn.Module):
     def __init__(self, in_features, out_features):
@@ -274,23 +296,25 @@ class NoisyLinear(nn.Module):
         self.weight_sigma = nn.Parameter(torch.Tensor(out_features, in_features))
         self.bias_mu = nn.Parameter(torch.Tensor(out_features))
         self.bias_sigma = nn.Parameter(torch.Tensor(out_features))
-    
+
     def forward(self, x):
         weight_epsilon = torch.randn_like(self.weight_mu)
         bias_epsilon = torch.randn_like(self.bias_mu)
-        
+
         weight = self.weight_mu + self.weight_sigma * weight_epsilon
         bias = self.bias_mu + self.bias_sigma * bias_epsilon
-        
+
         return F.linear(x, weight, bias)
 ```
 
 **Benefits:**
+
 - State-dependent exploration
 - Learned exploration schedule
 - Parameters control exploration
 
 #### b) Parameter Space Noise
+
 ```python
 def add_parameter_noise(policy, std):
     """
@@ -304,16 +328,17 @@ def add_parameter_noise(policy, std):
 **Advantage:** Consistent exploration within episode
 
 #### c) Bootstrap DQN
+
 ```python
 class BootstrapDQN:
     def __init__(self, num_heads=10):
         self.heads = [QNetwork() for _ in range(num_heads)]
-    
+
     def forward(self, state):
         # Each head gives Q-value estimate
         q_values = [head(state) for head in self.heads]
         return q_values
-    
+
     def select_action(self, state):
         # Active head for this episode
         head_idx = random.randint(0, num_heads-1)
@@ -325,34 +350,38 @@ class BootstrapDQN:
 
 ### 7. Comparison of Methods
 
-| Method | Sample Efficiency | Computational Cost | Theory | Works in Deep RL |
-|--------|-------------------|-------------------|---------|------------------|
-| **ε-Greedy** | Low | Very Low | Weak | Yes |
-| **UCB** | Medium | Low | Strong (bandits) | Difficult |
-| **Thompson Sampling** | High | Medium | Strong | Difficult |
-| **Count-Based** | High | Medium | Strong | Needs tricks |
-| **RND** | Medium | Medium | Weak | Yes |
-| **Noisy Nets** | Medium | Low | Weak | Yes |
+| Method                | Sample Efficiency | Computational Cost | Theory           | Works in Deep RL |
+| --------------------- | ----------------- | ------------------ | ---------------- | ---------------- |
+| **ε-Greedy**          | Low               | Very Low           | Weak             | Yes              |
+| **UCB**               | Medium            | Low                | Strong (bandits) | Difficult        |
+| **Thompson Sampling** | High              | Medium             | Strong           | Difficult        |
+| **Count-Based**       | High              | Medium             | Strong           | Needs tricks     |
+| **RND**               | Medium            | Medium             | Weak             | Yes              |
+| **Noisy Nets**        | Medium            | Low                | Weak             | Yes              |
 
 ## 📊 Topics Covered
 
 1. **Multi-Armed Bandits**
+
    - Regret analysis
    - UCB algorithms
    - Thompson sampling
    - Contextual bandits
 
 2. **Exploration Bonuses**
+
    - Count-based methods
    - MBIE-EB, R-Max
    - Pseudo-counts
 
 3. **Intrinsic Motivation**
+
    - Prediction error
    - Information gain
    - Empowerment
 
 4. **Deep Exploration**
+
    - Noisy networks
    - Bootstrap DQN
    - Parameter noise
@@ -380,7 +409,7 @@ class BootstrapDQN:
 
 ### Books
 
-1. **Lattimore, T., & Szepesvári, C. (2020)** - *Bandit Algorithms* - [Free Online](https://tor-lattimore.com/downloads/book/book.pdf)
+1. **Lattimore, T., & Szepesvári, C. (2020)** - _Bandit Algorithms_ - [Free Online](https://tor-lattimore.com/downloads/book/book.pdf)
 
 2. **Sutton & Barto (2018)** - Chapter 2 (Multi-armed Bandits)
 

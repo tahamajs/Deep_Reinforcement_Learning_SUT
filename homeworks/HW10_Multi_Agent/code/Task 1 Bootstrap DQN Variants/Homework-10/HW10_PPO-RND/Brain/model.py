@@ -24,7 +24,7 @@ class PolicyModel(nn.Module, ABC):
         self.conv = nn.Sequential(
             nn.Conv2d(c, 32, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.Flatten()
+            nn.Flatten(),
         )
         flatten_size = 32 * 7 * 7
 
@@ -48,7 +48,7 @@ class PolicyModel(nn.Module, ABC):
         if inputs.ndim == 5:
             inputs = inputs.squeeze(1)
 
-        x = inputs / 255.
+        x = inputs / 255.0
         x = self.conv(x)
         x = F.relu(self.fc1(x))
         h = self.gru(x, hidden_state)

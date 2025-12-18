@@ -2,6 +2,7 @@
 IQL implementation (V network, Q network, and policy) for offline training.
 Import-safe; example usage guarded by __main__.
 """
+
 from typing import Tuple
 import torch
 import torch.nn as nn
@@ -25,13 +26,23 @@ class VNetwork(nn.Module):
 
 def expectile_loss(diff: torch.Tensor, expectile: float = 0.7) -> torch.Tensor:
     weight = torch.where(diff > 0, expectile, 1 - expectile)
-    return (weight * (diff ** 2)).mean()
+    return (weight * (diff**2)).mean()
 
 
 class IQL:
-    def __init__(self, state_dim: int, action_dim: int, expectile: float = 0.7, temperature: float = 0.05, lr: float = 3e-4):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        expectile: float = 0.7,
+        temperature: float = 0.05,
+        lr: float = 3e-4,
+    ):
         # Q and policy architectures re-used from cql style networks (simple)
-        from cql_implementation import QNetwork, PolicyNetwork  # local import to avoid circulars at top-level
+        from cql_implementation import (
+            QNetwork,
+            PolicyNetwork,
+        )  # local import to avoid circulars at top-level
 
         self.Q = QNetwork(state_dim, action_dim)
         self.V = VNetwork(state_dim)
@@ -45,7 +56,14 @@ class IQL:
         self.temperature = temperature
         self.gamma = 0.99
 
-    def train_step(self, states: torch.Tensor, actions: torch.Tensor, rewards: torch.Tensor, next_states: torch.Tensor, dones: torch.Tensor) -> dict:
+    def train_step(
+        self,
+        states: torch.Tensor,
+        actions: torch.Tensor,
+        rewards: torch.Tensor,
+        next_states: torch.Tensor,
+        dones: torch.Tensor,
+    ) -> dict:
         # 1. V update (expectile regression)
         with torch.no_grad():
             q_values = self.Q(states, actions)
@@ -60,7 +78,9 @@ class IQL:
         # 2. Q update using V
         with torch.no_grad():
             v_next = self.V(next_states).squeeze(-1)
-            q_target = rewards.squeeze(-1) + (1 - dones.squeeze(-1)) * self.gamma * v_next
+            q_target = (
+                rewards.squeeze(-1) + (1 - dones.squeeze(-1)) * self.gamma * v_next
+            )
 
         q_pred = self.Q(states, actions).squeeze(-1)
         q_loss = F.mse_loss(q_pred, q_target)
@@ -74,7 +94,9 @@ class IQL:
             q_val = self.Q(states, actions).squeeze(-1)
             v_val = self.V(states).squeeze(-1)
             advantage = q_val - v_val
-            weights = torch.exp(advantage / self.temperature).clamp(max=100).unsqueeze(-1)
+            weights = (
+                torch.exp(advantage / self.temperature).clamp(max=100).unsqueeze(-1)
+            )
 
         # policy log prob for given actions
         dist = self.policy.forward(states)
@@ -85,8 +107,13 @@ class IQL:
         policy_loss.backward()
         self.policy_optimizer.step()
 
-        return {"v_loss": v_loss.item(), "q_loss": q_loss.item(), "policy_loss": policy_loss.item()}
+        return {
+            "v_loss": v_loss.item(),
+            "q_loss": q_loss.item(),
+            "policy_loss": policy_loss.item(),
+        }
 
 
 if __name__ == "__main__":
     print("iql_implementation module: define IQL, import in notebooks to train.")
+

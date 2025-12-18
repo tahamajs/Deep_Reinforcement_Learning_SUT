@@ -2,6 +2,7 @@
 BCQ implementation (simple VAE behaviour model + perturbation network + BCQ agent).
 This file is intentionally compact and import-safe.
 """
+
 from typing import Tuple
 import torch
 import torch.nn as nn
@@ -10,7 +11,13 @@ import torch.optim as optim
 
 
 class VAE(nn.Module):
-    def __init__(self, state_dim: int, action_dim: int, latent_dim: int = 16, hidden_dim: int = 256):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        latent_dim: int = 16,
+        hidden_dim: int = 256,
+    ):
         super().__init__()
         self.encoder = nn.Sequential(
             nn.Linear(state_dim + action_dim, hidden_dim),
@@ -44,7 +51,9 @@ class VAE(nn.Module):
 
 
 class PerturbationNetwork(nn.Module):
-    def __init__(self, state_dim: int, action_dim: int, hidden_dim: int = 256, phi: float = 0.05):
+    def __init__(
+        self, state_dim: int, action_dim: int, hidden_dim: int = 256, phi: float = 0.05
+    ):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(state_dim + action_dim, hidden_dim),
@@ -60,7 +69,9 @@ class PerturbationNetwork(nn.Module):
 
 
 class BCQ:
-    def __init__(self, state_dim: int, action_dim: int, latent_dim: int = 16, lr: float = 3e-4):
+    def __init__(
+        self, state_dim: int, action_dim: int, latent_dim: int = 16, lr: float = 3e-4
+    ):
         from cql_implementation import QNetwork  # reuse simple QNetwork
 
         self.vae = VAE(state_dim, action_dim, latent_dim)
@@ -74,8 +85,12 @@ class BCQ:
     def select_action(self, state: torch.Tensor, n_samples: int = 10) -> torch.Tensor:
         # sample actions from VAE by sampling z from N(0,1)
         batch = state.shape[0]
-        z = torch.randn(batch * n_samples, self.vae.mu.out_features, device=state.device)
-        s_rep = state.unsqueeze(1).repeat(1, n_samples, 1).reshape(batch * n_samples, -1)
+        z = torch.randn(
+            batch * n_samples, self.vae.mu.out_features, device=state.device
+        )
+        s_rep = (
+            state.unsqueeze(1).repeat(1, n_samples, 1).reshape(batch * n_samples, -1)
+        )
         decoded = self.vae.decode(s_rep, z)
         decoded = decoded.reshape(batch, n_samples, -1)
 
@@ -87,7 +102,10 @@ class BCQ:
         cand = torch.cat(perturbed, dim=1)  # [B, n_samples, A]
 
         # score with Q and pick best
-        q_vals = self.Q(state.unsqueeze(1).expand(-1, n_samples, -1).reshape(-1, state.shape[1]), cand.reshape(-1, cand.shape[-1]))
+        q_vals = self.Q(
+            state.unsqueeze(1).expand(-1, n_samples, -1).reshape(-1, state.shape[1]),
+            cand.reshape(-1, cand.shape[-1]),
+        )
         q_vals = q_vals.reshape(batch, n_samples)
         idx = q_vals.argmax(dim=1)
         return cand[torch.arange(batch), idx]
@@ -95,3 +113,4 @@ class BCQ:
 
 if __name__ == "__main__":
     print("bcq_implementation module: define BCQ components for notebooks.")
+

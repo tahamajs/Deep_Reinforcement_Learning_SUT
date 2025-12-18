@@ -2,12 +2,19 @@
 Evaluation utilities for Offline RL experiments.
 Includes simple offline dataset loader and a policy evaluation stub.
 """
+
 from typing import Tuple
 import numpy as np
 import torch
 
 
-def make_offline_dataset(states: np.ndarray, actions: np.ndarray, rewards: np.ndarray, next_states: np.ndarray, dones: np.ndarray):
+def make_offline_dataset(
+    states: np.ndarray,
+    actions: np.ndarray,
+    rewards: np.ndarray,
+    next_states: np.ndarray,
+    dones: np.ndarray,
+):
     """Create simple dict-based offline dataset used by notebooks/tests."""
     return {
         "states": torch.from_numpy(states).float(),
@@ -18,7 +25,9 @@ def make_offline_dataset(states: np.ndarray, actions: np.ndarray, rewards: np.nd
     }
 
 
-def evaluate_policy(env, policy_fn, episodes: int = 10, max_steps: int = 1000) -> Tuple[float, float]:
+def evaluate_policy(
+    env, policy_fn, episodes: int = 10, max_steps: int = 1000
+) -> Tuple[float, float]:
     """Run policy in gym-like environment to get mean and std of episode returns.
 
     policy_fn: callable(state) -> action (numpy)
@@ -40,3 +49,4 @@ def evaluate_policy(env, policy_fn, episodes: int = 10, max_steps: int = 1000) -
 
 if __name__ == "__main__":
     print("evaluation utilities: make_offline_dataset, evaluate_policy")
+
