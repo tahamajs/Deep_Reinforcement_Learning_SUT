@@ -97,6 +97,24 @@ We recommend ablations on: (i) removing FiLM conditioning, (ii) freezing morphol
 \section{Results (Template)}
 Include tables and plots: zero-shot, few-shot@K, adaptation curves, KL trends, t-SNE of $z_{\mathrm{m}}$.
 
+\subsection{Visualizations}
+We include the following figures (placeholders saved under \texttt{pictures/} by the provided plotting utilities):
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.48\linewidth]{../pictures/fig_01_tsne_z_morph.png}
+\includegraphics[width=0.48\linewidth]{../pictures/fig_02_adaptation_curve.png}
+\caption{Left: t-SNE of inferred morphology latents $z_{\mathrm{m}}$ colored by embodiment. Right: Few-shot adaptation curves (returns vs episodes) comparing methods.}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.48\linewidth]{../pictures/fig_03_reconstruction.png}
+\includegraphics[width=0.48\linewidth]{../pictures/fig_04_kl_trends.png}
+\caption{Left: Example reconstructions (observed vs reconstructed proprioceptive states). Right: KL trends for $z_t$ and $z_{\mathrm{m}}$ during training.}
+\end{figure}
+
+Figure generation: use \texttt{scripts/plot_visuals.py} to create figures from training logs and checkpoints; the notebook \texttt{notebooks/demo.ipynb} contains example calls.
+
 \section{Discussion}
 Interpret how morphology latent enables transfer and discuss failure modes (latent collapse, overfitting to train morphs).
 
