@@ -9,12 +9,20 @@ from src.data import ReplayBuffer
 from src.utils import set_seed, soft_update, iqr_from_tensor
 import numpy as np
 
+
 def build_models(s_dim: int, a_dim: int, cfg: Config, device: str):
-    critics = [QuantileMLP(s_dim, a_dim, n_q=cfg.n_quantiles).to(device) for _ in range(cfg.n_critics)]
-    target_critics = [QuantileMLP(s_dim, a_dim, n_q=cfg.n_quantiles).to(device) for _ in range(cfg.n_critics)]
+    critics = [
+        QuantileMLP(s_dim, a_dim, n_q=cfg.n_quantiles).to(device)
+        for _ in range(cfg.n_critics)
+    ]
+    target_critics = [
+        QuantileMLP(s_dim, a_dim, n_q=cfg.n_quantiles).to(device)
+        for _ in range(cfg.n_critics)
+    ]
     actor = TanhGaussianPolicy(s_dim, a_dim).to(device)
     scas = SCASReg(s_dim, a_dim).to(device)
     return critics, target_critics, actor, scas
+
 
 def train(cfg: Config):
     set_seed(cfg.seed)
@@ -30,16 +38,22 @@ def train(cfg: Config):
     scas_opt = optim.Adam(scas.parameters(), lr=cfg.lr_critic)
 
     # simple random replay for skeleton
-    buf = ReplayBuffer(capacity=100_000, obs_dim=s_dim, act_dim=a_dim, device=str(device))
+    buf = ReplayBuffer(
+        capacity=100_000, obs_dim=s_dim, act_dim=a_dim, device=str(device)
+    )
     # fill with random data to keep import-safe
-    buf.add_batch({
-        "obs": np.random.randn(1024, s_dim).astype(np.float32),
-        "next_obs": np.random.randn(1024, s_dim).astype(np.float32),
-        "actions": np.random.randn(1024, a_dim).astype(np.float32),
-        "rewards": np.random.randn(1024).astype(np.float32),
-    })
+    buf.add_batch(
+        {
+            "obs": np.random.randn(1024, s_dim).astype(np.float32),
+            "next_obs": np.random.randn(1024, s_dim).astype(np.float32),
+            "actions": np.random.randn(1024, a_dim).astype(np.float32),
+            "rewards": np.random.randn(1024).astype(np.float32),
+        }
+    )
 
-    taus = (torch.arange(cfg.n_quantiles, device=device).float() + 0.5) / cfg.n_quantiles
+    taus = (
+        torch.arange(cfg.n_quantiles, device=device).float() + 0.5
+    ) / cfg.n_quantiles
 
     for step in range(1, 3):  # minimal loop for skeleton (no heavy work)
         batch = buf.sample(cfg.batch_size if buf.size >= cfg.batch_size else 256)
@@ -79,10 +93,10 @@ def train(cfg: Config):
 
     print("Training skeleton executed (no heavy training in this example).")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", type=str, default="cpu")
     args = parser.parse_args()
     cfg = Config(device=args.device)
     train(cfg)
-

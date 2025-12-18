@@ -12,6 +12,7 @@ Usage example:
     python train.py --env CartPole-v1 --seed 0 --steps 20000 --batch 64
 
 """
+
 from __future__ import annotations
 
 import argparse
@@ -29,7 +30,11 @@ import torch.nn.functional as F
 from torch import optim
 
 from paperAssignments.Assignments1_50.CA1.sinkhorn import AnnealedSinkhornLoss
-from paperAssignments.Assignments1_50.CA1.model import ParticleHead, ParticleQNetwork, NatureCNN
+from paperAssignments.Assignments1_50.CA1.model import (
+    ParticleHead,
+    ParticleQNetwork,
+    NatureCNN,
+)
 
 
 @dataclass
@@ -117,7 +122,9 @@ def to_tensor(x, device):
     return torch.from_numpy(x).to(device)
 
 
-def select_action_from_particles(particles: torch.Tensor, epsilon: float = 0.0) -> np.ndarray:
+def select_action_from_particles(
+    particles: torch.Tensor, epsilon: float = 0.0
+) -> np.ndarray:
     # particles: (B, A, N, D) -> compute mean over particles and last dim -> (B, A)
     with torch.no_grad():
         means = particles.mean(dim=2).mean(dim=-1)  # (B, A)
@@ -146,7 +153,11 @@ def train(cfg: Config):
         # ensure channels-first
         if obs_example.shape[-1] in (1, 3):
             # H,W,C -> C,H,W
-            obs_shape = (obs_example.shape[2], obs_example.shape[0], obs_example.shape[1])
+            obs_shape = (
+                obs_example.shape[2],
+                obs_example.shape[0],
+                obs_example.shape[1],
+            )
         else:
             # assume already C,H,W
             obs_shape = obs_example.shape
@@ -162,18 +173,30 @@ def train(cfg: Config):
     if hasattr(env.action_space, "n"):
         num_actions = env.action_space.n
     else:
-        raise NotImplementedError("Only discrete action spaces supported in this minimal trainer")
+        raise NotImplementedError(
+            "Only discrete action spaces supported in this minimal trainer"
+        )
 
     if pixel:
         # use provided NatureCNN
         encoder = NatureCNN(in_channels=obs_shape[0], out_dim=512)
-        model = ParticleQNetwork(in_channels=obs_shape[0], num_actions=num_actions, num_particles=cfg.num_particles, particle_dim=cfg.particle_dim)
+        model = ParticleQNetwork(
+            in_channels=obs_shape[0],
+            num_actions=num_actions,
+            num_particles=cfg.num_particles,
+            particle_dim=cfg.particle_dim,
+        )
         target_model = copy.deepcopy(model)
     else:
         # low-dim: MLP encoder + particle head
         obs_dim = obs_shape[0]
         enc = MLPEncoder(obs_dim, out_dim=512)
-        head = ParticleHead(in_dim=512, num_actions=num_actions, num_particles=cfg.num_particles, particle_dim=cfg.particle_dim)
+        head = ParticleHead(
+            in_dim=512,
+            num_actions=num_actions,
+            num_particles=cfg.num_particles,
+            particle_dim=cfg.particle_dim,
+        )
 
         class LowDimParticleNet(nn.Module):
             def __init__(self, enc, head):
@@ -193,7 +216,12 @@ def train(cfg: Config):
 
     opt = optim.Adam(model.parameters(), lr=cfg.lr)
 
-    loss_fn = AnnealedSinkhornLoss(n_iters=cfg.sinkhorn_iters, eps_start=cfg.sinkhorn_eps_start, eps_end=cfg.sinkhorn_eps_end, decay_steps=cfg.sinkhorn_decay_steps)
+    loss_fn = AnnealedSinkhornLoss(
+        n_iters=cfg.sinkhorn_iters,
+        eps_start=cfg.sinkhorn_eps_start,
+        eps_end=cfg.sinkhorn_eps_end,
+        decay_steps=cfg.sinkhorn_decay_steps,
+    )
     loss_fn.to(device)
 
     # Replay buffer expects flattened obs arrays matching preprocess
@@ -229,7 +257,9 @@ def train(cfg: Config):
             best = select_action_from_particles(particles)
             a = int(best[0])
 
-        next_obs, r, done, truncated, info = env.step(a) if "truncated" in env.step.__code__.co_varnames else env.step(a)
+        next_obs, r, done, truncated, info = (
+            env.step(a) if "truncated" in env.step.__code__.co_varnames else env.step(a)
+        )
         # gym API differences: some return (obs, reward, terminated, truncated, info)
         # normalize to (obs, rew, done)
         if isinstance(next_obs, tuple):
@@ -263,7 +293,9 @@ def train(cfg: Config):
         # update
         if step > cfg.update_start and step % cfg.update_every == 0:
             for _ in range(1):
-                o_batch, a_batch, r_batch, no_batch, d_batch = replay.sample(cfg.batch_size)
+                o_batch, a_batch, r_batch, no_batch, d_batch = replay.sample(
+                    cfg.batch_size
+                )
                 # to tensors
                 o_batch = o_batch.astype(np.float32)
                 no_batch = no_batch.astype(np.float32)
@@ -297,7 +329,9 @@ def train(cfg: Config):
                     idx_n = next_best.view(-1, 1, 1, 1).expand(-1, 1, N, D)
                     targ_sel = next_particles.gather(1, idx_n).squeeze(1)  # (B, N, D)
                     # bellman target y = r + gamma * z' * (1 - done)
-                    y = r_t.view(-1, 1, 1) + cfg.gamma * targ_sel * (1.0 - d_t.view(-1, 1, 1))
+                    y = r_t.view(-1, 1, 1) + cfg.gamma * targ_sel * (
+                        1.0 - d_t.view(-1, 1, 1)
+                    )
 
                 # compute sinkhorn loss between pred_sel and y
                 loss = loss_fn(pred_sel, y)
@@ -347,11 +381,14 @@ def train(cfg: Config):
             mean_eval = float(np.mean(eval_returns))
             print(f"Eval returns (3 episodes): mean={mean_eval:.2f}")
             # save checkpoint
-            torch.save({
-                "model_state": model.state_dict(),
-                "opt_state": opt.state_dict(),
-                "step": step,
-            }, os.path.join(cfg.save_dir, f"ckpt_step_{step}.pt"))
+            torch.save(
+                {
+                    "model_state": model.state_dict(),
+                    "opt_state": opt.state_dict(),
+                    "step": step,
+                },
+                os.path.join(cfg.save_dir, f"ckpt_step_{step}.pt"),
+            )
 
     env.close()
     eval_env.close()
@@ -369,7 +406,16 @@ def parse_args() -> Config:
     p.add_argument("--lr", type=float, default=1e-4)
     args = p.parse_args()
 
-    return Config(env=args.env, seed=args.seed, steps=args.steps, batch_size=args.batch, replay_size=args.replay, warmup_steps=args.warmup, num_particles=args.particles, lr=args.lr)
+    return Config(
+        env=args.env,
+        seed=args.seed,
+        steps=args.steps,
+        batch_size=args.batch,
+        replay_size=args.replay,
+        warmup_steps=args.warmup,
+        num_particles=args.particles,
+        lr=args.lr,
+    )
 
 
 if __name__ == "__main__":

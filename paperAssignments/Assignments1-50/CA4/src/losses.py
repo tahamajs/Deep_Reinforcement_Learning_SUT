@@ -2,7 +2,13 @@ from typing import Tuple
 import torch
 import torch.nn.functional as F
 
-def quantile_huber_loss(quantiles: torch.Tensor, target_quantiles: torch.Tensor, taus: torch.Tensor, kappa: float = 1.0) -> torch.Tensor:
+
+def quantile_huber_loss(
+    quantiles: torch.Tensor,
+    target_quantiles: torch.Tensor,
+    taus: torch.Tensor,
+    kappa: float = 1.0,
+) -> torch.Tensor:
     """
     Quantile Huber loss between predicted `quantiles` and `target_quantiles`.
 
@@ -26,6 +32,7 @@ def quantile_huber_loss(quantiles: torch.Tensor, target_quantiles: torch.Tensor,
     loss = (weight * huber).sum(dim=2).mean(dim=1).mean()
     return loss
 
+
 def cvar_tail(quantiles: torch.Tensor, alpha: float = 0.1) -> torch.Tensor:
     """
     Compute CVaR (mean of lower alpha fraction) from quantile estimates.
@@ -35,4 +42,3 @@ def cvar_tail(quantiles: torch.Tensor, alpha: float = 0.1) -> torch.Tensor:
     q_sorted, _ = torch.sort(quantiles, dim=1)
     k = max(1, int(alpha * q_sorted.size(1)))
     return q_sorted[:, :k].mean(dim=1, keepdim=True)
-

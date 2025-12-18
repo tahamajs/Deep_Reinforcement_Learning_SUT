@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
+
 @dataclass
 class Config:
     # Environment / data
@@ -31,4 +32,3 @@ class Config:
     device: str = "cpu"
     max_steps: int = 1_000_000
     save_every: int = 100_000
-
