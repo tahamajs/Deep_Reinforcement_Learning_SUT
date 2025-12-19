@@ -26,7 +26,13 @@ class DQNAgent:
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=config.learning_rate)
-        self.memory = ReplayBuffer(config.memory_size)
+        # Choose replay buffer implementation
+        if config.replay == "prioritized":
+            from .prioritized_replay import PrioritizedReplayBuffer
+
+            self.memory = PrioritizedReplayBuffer(config.memory_size, alpha=config.replay_alpha, beta=config.replay_beta)
+        else:
+            self.memory = ReplayBuffer(config.memory_size)
         self.epsilon = config.epsilon_start
         self.steps_done = 0
 
@@ -53,7 +59,18 @@ class DQNAgent:
         """Perform one optimization step using a sampled batch from replay."""
         if len(self.memory) < self.config.batch_size:
             return
-        states, actions, rewards, next_states, dones = self.memory.sample(self.config.batch_size)
+
+        # Support both uniform and prioritized replay sampling signatures.
+        sample = self.memory.sample(self.config.batch_size)
+        if len(sample) == 7:
+            # Prioritized: states, actions, rewards, next_states, dones, indices, weights
+            states, actions, rewards, next_states, dones, batch_indices, weights = sample
+            weights = torch.tensor(weights, dtype=torch.float32).to(self.device)
+        else:
+            states, actions, rewards, next_states, dones = sample
+            batch_indices = None
+            weights = None
+
         states = torch.tensor(states, dtype=torch.float32).to(self.device)
         actions = torch.tensor(actions, dtype=torch.int64).to(self.device)
         rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
@@ -61,13 +78,40 @@ class DQNAgent:
         dones = torch.tensor(dones, dtype=torch.float32).to(self.device)
 
         q_values = self.policy_net(states).gather(1, actions.unsqueeze(1)).squeeze(1)
-        next_q_values = self.target_net(next_states).max(1)[0]
+        if self.config.replay == "prioritized":
+            # For prioritized replay we will compute TD error to later update priorities
+            with torch.no_grad():
+                if self.config.double_dqn:
+                    next_actions = self.policy_net(next_states).argmax(1)
+                    next_q_values = self.target_net(next_states).gather(1, next_actions.unsqueeze(1)).squeeze(1)
+                else:
+                    next_q_values = self.target_net(next_states).max(1)[0]
+        else:
+            if self.config.double_dqn:
+                next_actions = self.policy_net(next_states).argmax(1)
+                next_q_values = self.target_net(next_states).gather(1, next_actions.unsqueeze(1)).squeeze(1)
+            else:
+                next_q_values = self.target_net(next_states).max(1)[0]
+
         expected_q_values = rewards + (1 - dones) * self.config.gamma * next_q_values
 
-        loss = F.mse_loss(q_values, expected_q_values)
+        if weights is not None:
+            # Apply per-sample importance sampling weights to the MSE loss
+            loss = (weights * (q_values - expected_q_values) ** 2).mean()
+        else:
+            loss = F.mse_loss(q_values, expected_q_values)
+
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+
+        # If using prioritized replay, update priorities based on TD errors
+        if batch_indices is not None:
+            td_errors = (expected_q_values - q_values).detach().cpu().numpy()
+            try:
+                self.memory.update_priorities(batch_indices, td_errors)
+            except Exception:
+                pass
 
     def update_target_net(self) -> None:
         """Copy policy network weights to target network."""

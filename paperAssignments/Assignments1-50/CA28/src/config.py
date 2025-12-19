@@ -15,6 +15,10 @@ class Config:
     num_episodes: int = 500
     max_steps: int = 200
     env_name: str = "CartPole-v1"
+    double_dqn: bool = False
+    replay: str = "uniform"  # options: 'uniform', 'prioritized'
+    replay_alpha: float = 0.6
+    replay_beta: float = 0.4
 
 def load_config(path: str) -> Config:
     """Load configuration from a YAML file."""
