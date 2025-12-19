@@ -22,3 +22,15 @@ def test_report_contains_metric_terms():
     assert "RMSE" in text, "REPORT.md should document RMSE formula"
     assert "Accuracy" in text, "REPORT.md should document Accuracy formula"
     assert "metrics.json" in text, "REPORT.md should mention metrics.json schema or saving metrics"
+
+
+def test_rep_tex_expanded_sections():
+    repo = Path(__file__).resolve().parents[1]
+    tex = (repo / "rep.tex").read_text()
+    assert "pseudocode" in tex.lower() or "algorithm" in tex.lower(), "rep.tex should include training pseudocode"
+    assert "hyperparameter sweep" in tex.lower(), "rep.tex should mention hyperparameter sweeps"
+    assert "implementation notes" in tex.lower(), "rep.tex should include implementation notes section"
+    assert "building the pdf" in tex.lower(), "rep.tex should include PDF building instructions"
+    assert "limitations" in tex.lower(), "rep.tex should include a Limitations section"
+    assert "future work" in tex.lower(), "rep.tex should include a Future Work section"
+    assert "evaluation metrics" in tex.lower(), "rep.tex should include an Evaluation Metrics subsection"
