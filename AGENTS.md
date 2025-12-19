@@ -34,14 +34,49 @@ JIT Index (what to open, not what to paste)
 - Vendored research deps: `external/` (mamba, Swin-Transformer) → see `external/AGENTS.md`
 - Demo and visualization runs: `notebooks/` → see `notebooks/AGENTS.md`
 - Papers/notes: `report.tex`, `README.md`, `slides/`, `stochastic_refs/` (reference only; no AGENT)
+- Paper assignments: `paperAssignments/` → LaTeX reports for CA1-CA50 assignments
+- Homework solutions: `homeworks/` → HW1-HW14 with solutions and archives
+- Course notes: `course_notes/` → Markdown files on RL topics (bandits, exploration, etc.)
+- Guest lectures: `guests/` → Notes on guest speakers
+- Quizzes and summaries: `quizzes/`, `summaries/` → Assessment materials
+- Workshops: `Workshops/` → Workshop materials and slides
 
-Quick Find Commands
+LaTeX Setup and Conventions
+
+- Use LaTeX for all paper assignments; compile with `pdflatex` or `xelatex` for Unicode support.
+- Bibliography: Use BibTeX with `.bib` files; run `bibtex` after initial compile.
+- Templates: Many assignments use IEEE or NeurIPS styles; check `report_neurips.tex` for examples.
+- Figures: Generate placeholders or use scripts like `gen_placeholder_figures.py`.
+- Build command: `cd paperAssignments/Assignments1-50/CAXX && pdflatex report.tex && bibtex report && pdflatex report.tex && pdflatex report.tex`
+- Avoid committing build artifacts (*.aux, *.log, *.pdf unless static).
+
+Detailed Directory Structure
+
+- `archive/`: Old solutions and no-answer archives for reference.
+- `assignments-hard/`: Advanced RL assignments with tests (e.g., Actor-Critic GFlowNets).
+- `course_notes/`: Comprehensive notes on RL subfields (policy-based, model-based, etc.).
+- `external/`: Vendored libraries like mamba and Swin-Transformer; install with `pip install -e external/mamba`.
+- `guests/`: Biographies and notes from RL experts (Sutton, Watkins, etc.).
+- `homeworks/`: Homework assignments HW1-HW14, including archives and special projects.
+- `notes_related/`: Additional notes and assessments.
+- `Other_Assisments/`: Berkeley Deep RL and other course materials.
+- `paperAssignments/`: CA1-CA50 paper assignments in LaTeX, with reports, references, and scripts.
+- `QuestionsAndNotes/`: Q&A and additional notes.
+- `Slides/`: Presentation slides for lectures.
+- `src/`: Core Python modules (library-style, typed, import-safe).
+- `stochastic_refs/`: Reference materials on stochastic processes.
+
+Quick Find Commands (Expanded)
 
 - Search a symbol in core code: rg -n "GuardedToolPolicy" src
 - Find diffusion safety pieces: rg -n "SafetyConstrainedDiffusion" src
 - Locate GFlowNet actor-critic bits: rg -n "ActorCriticGFlowNet" src/model.py src/train.py
 - Spot assignment briefs: rg -n "##" assignments-hard | head
 - List tests touched: rg -n "def test" assignments-hard external
+- Find LaTeX reports: find paperAssignments -name "*.tex" | head -10
+- Search for citations: rg -n "@" paperAssignments/Assignments1-50/*/references.bib
+- Locate homework solutions: rg -n "HW" homeworks | grep -v archive
+- Check for TODOs: rg -n "TODO" src course_notes
 
 Definition of Done
 
