@@ -446,76 +446,230 @@ search with Dreamer-style latent imagination. We provide code, tests, and a
 clear experimental recipe to evaluate on hard navigation tasks and include an
 extensible scaffold to reproduce experiments and iterate on planner design.
 
+% -----------------------------
 \appendix
-\section{TD(\(\lambda\)) derivation and implementation notes}
-Equation~\eqref{eq:td-lambda} is implemented as a backward recursion over each
-imagined branch. In practice we compute per-branch targets and aggregate top-k
-branches before updating the critic and actor (see `DreamerAgent.update_actor_critic_from_branches`).
 
-\section{Uncertainty penalty rationale}
-The penalty \(r' = r - \kappa\sigma_r\) is a simple pessimism heuristic: if
-predicted reward variance \(\sigma_r\) is high, the branch return is reduced to
-avoid over-optimistic selection. Formal bounds require assumptions on model bias
-and are left for future work.
-
-\section{Reproducibility checklist}
-For reproducibility, include the following in your experiment artifacts and in
-any shared supplementary material:
+\section{Worked Example: SimGolf-Latent Branching and TD($\lambda$) Calculation}
+To illustrate the planner, we provide a toy example with $B=2$ branches, $H=3$ steps, and simple scalar rewards/discounts. Assume:
 \begin{itemize}
-\item Exact config YAML files used for each experiment (include planner and training sections).
-\item Seed RNGs for numpy/torch and report the list of seeds used.
-\item Save the git commit hash and a short environment README (package versions).
-\item Save planner checkpoint dumps and metrics CSV files (step-indexed).
-\item Include commands to reproduce key runs (example below) and a script to re-run evaluation with a saved agent.
+\item $z_0$ is the checkpoint latent; $v_\psi(z)$ returns $0.5$ for all $z$.
+\item Branch 1: $r = [1.0, 0.0, 0.0]$, $\gamma = [0.9, 0.9, 0.0]$
+\item Branch 2: $r = [0.0, 0.0, 2.0]$, $\gamma = [0.9, 0.9, 0.0]$
+\item $\lambda = 0.8$
+\end{itemize}
+For Branch 1, compute $G_3 = v_\psi(z_3) = 0.5$.
+\begin{align*}
+G_2 &= r_2 + \gamma_2 \big((1-\lambda)v_\psi(z_3) + \lambda G_3\big) = 0.0 + 0.0 \cdot ((1-0.8)\cdot 0.5 + 0.8 \cdot 0.5) = 0.0 \\
+G_1 &= r_1 + \gamma_1 \big((1-\lambda)v_\psi(z_2) + \lambda G_2\big) = 0.0 + 0.9 \cdot (0.2 \cdot 0.5 + 0.8 \cdot 0.0) = 0.09 \\
+G_0 &= r_0 + \gamma_0 \big((1-\lambda)v_\psi(z_1) + \lambda G_1\big) = 1.0 + 0.9 \cdot (0.2 \cdot 0.5 + 0.8 \cdot 0.09) \approx 1.0 + 0.9 \cdot (0.1 + 0.072) = 1.0 + 0.9 \cdot 0.172 = 1.0 + 0.1548 = 1.1548
+\end{align*}
+Branch 1's TD($\lambda$) targets: $[1.1548, 0.09, 0.0]$.
+
+Branch 2 (similarly): $G_3 = 0.5$, $G_2 = 2.0$, $G_1 = 0.0 + 0.9 \cdot (0.2 \cdot 0.5 + 0.8 \cdot 2.0) = 0.9 \cdot (0.1 + 1.6) = 0.9 \cdot 1.7 = 1.53$, $G_0 = 0.0 + 0.9 \cdot (0.2 \cdot 0.5 + 0.8 \cdot 1.53) = 0.9 \cdot (0.1 + 1.224) = 0.9 \cdot 1.324 = 1.1916$.
+Branch 2's TD($\lambda$) targets: $[1.1916, 1.53, 2.0]$.
+
+This illustrates how the planner aggregates imagined returns and bootstraps with the critic.
+
+\section{Glossary of Symbols}
+\begin{tabular}{ll}
+$z_t$ & RSSM latent at time $t$ \\
+$a_t$ & action at time $t$ \\
+$r_t$ & reward at time $t$ \\
+$\gamma_t$ & discount at time $t$ \\
+$v_\psi(z)$ & value function (critic) \\
+$\pi_\phi(a|z)$ & policy (actor) \\
+$B$ & branching factor (number of branches) \\
+$H$ & branch horizon (steps per branch) \\
+$\kappa$ & uncertainty penalty coefficient \\
+$C$ & checkpoint buffer capacity \\
+$\lambda$ & TD($\lambda$) parameter \\
+\end{tabular}
+
+\section{Best Practices for Using SimGolf-Latent}
+\begin{itemize}
+\item Tune $B$ and $H$ to match your compute budget; start with $B=8$, $H=10$.
+\item Use prioritized checkpoint sampling for more effective planning.
+\item Enable CEM only if policy sampling is insufficient; CEM is more expensive.
+\item Log planner overhead and trigger frequency to avoid excessive compute use.
+\item Always run ablations on $\kappa$ and buffer size to check robustness.
+\item Use mixed precision and batch branch rollouts for GPU efficiency.
 \end{itemize}
 
-\subsection{Example commands}
+\section{Frequently Asked Questions (FAQ)}
+\begin{itemize}
+\item \textbf{Q: Can I use SimGolf-Latent with any world model?}
+A: Yes, as long as your model exposes a step function and value head.
+\item \textbf{Q: What if my actor does not have a sample method?}
+A: The planner tries sample, act, forward, and __call__ in order.
+\item \textbf{Q: How do I visualize branches?}
+A: Use the provided notebook and scripts to plot branch returns and latent trajectories.
+\item \textbf{Q: How do I know if the planner is helping?}
+A: Compare success rates and wall-clock time to a DreamerV3 baseline; look for improved performance on sparse-reward tasks.
+\item \textbf{Q: What if my buffer fills up?}
+A: The buffer is FIFO; old checkpoints are overwritten. Increase capacity if you need more diversity.
+\end{itemize}
+
+% -----------------------------
+\section{Appendix: README-to-Report Expanded Explanations}
+This appendix provides a comprehensive, section-by-section academic expansion of the README.md, ensuring all concepts, algorithms, and practicalities are fully described for both research and tutorial use.
+
+\subsection{Executive Summary}
+SimGolf-Latent fuses simulation-based global search (SimGolf) with DreamerV3’s latent world model. The core idea is to maintain a buffer of high-importance latent checkpoints (e.g., high TD-error, high uncertainty, or near-goal), and, when triggered, reset the imagination to one of these checkpoints. The planner then performs branching rollouts in latent space, aggregates returns, and updates the policy/value functions. This approach enables broad exploration and replanning, especially in sparse-reward, long-horizon domains such as D4RL AntMaze and DMControl navigation.
+
+\subsection{Selected Papers}
+The method builds on two key lines of work: (1) SimGolf (NeurIPS 2024), which introduced simulation-based global search with episodic resets and branching, and (2) DreamerV3, which uses a learned RSSM for latent imagination and actor-critic updates. SimGolf-Latent combines these by performing SimGolf-style branching entirely in the latent space of DreamerV3.
+
+\subsection{Novel Research Question}
+The central question is: Can SimGolf’s global search be realized entirely in latent space, eliminating the need for real-environment resets while retaining exploration benefits? The hypothesis is that latent resets plus imagined branching reduce compounding error at critical decision points, improving success on hard navigation tasks.
+
+\subsection{Core Idea and Pipeline}
+The pipeline is as follows:
+\begin{enumerate}
+\item Collect real trajectories with DreamerV3’s actor.
+\item Train RSSM, decoder, actor, and critic as in DreamerV3.
+\item Compute uncertainty, TD-error, or novelty; push latent checkpoints into a buffer.
+\item When triggered, pick a checkpoint, run SimGolf branching in latent for horizon $H$ and branching factor $B$.
+\item Aggregate returns, update actor/critic from imagined branches, and optionally bias the next real action.
+\item Repeat until the training budget is exhausted.
+\end{enumerate}
+
+\subsection{Mathematical Formulation}
+\textbf{Latent Dynamics:} The RSSM transition is $p_\theta(z_{t+1} \mid z_t, a_t)$, with decoder $p_\theta(o_t \mid z_t)$, reward head $p_\theta(r_t \mid z_t)$, and discount head $p_\theta(\gamma_t \mid z_t)$.
+
+\textbf{Actor-Critic:} The actor $\pi_\phi(a_t \mid z_t)$ is optimized on imagined rollouts, and the critic $v_\psi(z_t)$ is trained with TD($\lambda$) targets.
+
+\textbf{SimGolf Branching:} For a checkpoint $z_s$, generate $B$ branches $\{\tau_b\}$, each a sequence $(z_s, a_{s,b,0:H-1}, z_{s,b,1:H})$. The branch return is:
+\begin{equation}
+R_b = \sum_{k=0}^{H-1} \left( \prod_{j=0}^{k-1} \gamma_{s,b,j} \right) r_{s,b,k} + \left( \prod_{j=0}^{H-1} \gamma_{s,b,j} \right) v_\psi(z_{s,b,H})
+\end{equation}
+Branches are aggregated (top-k or softmax) to update the policy/value.
+
+\textbf{Trigger Conditions:} Triggers fire when $|v_\psi(z_t) - \text{target}_t| > \delta$, uncertainty is high, or the agent is near a goal.
+
+\subsection{Algorithm Pseudocode}
+See Section~\ref{sec:results} for a full pseudocode block. The key steps are: (1) collect real data, (2) update models, (3) compute triggers, (4) run planner if triggered, (5) update actor/critic from branches, (6) repeat.
+
+\subsection{Architecture}
+\textbf{Shared with DreamerV3:} RSSM, convolutional encoder/decoder, reward/discount/value heads.
+
+\textbf{Additions for SimGolf-Latent:} (1) Checkpoint buffer for latents and metadata, (2) branching planner using RSSM and critic, (3) trigger module, (4) branch selection policy (top-1, mixture, or distillation).
+
+\subsection{Losses}
+\textbf{World Model Loss:} Reconstruction, reward, discount, and KL regularization.
+
+\textbf{Actor Loss:} Maximize imagined return plus entropy regularization.
+
+\textbf{Critic Loss:} TD($\lambda$) regression.
+
+\textbf{Planner Auxiliary Loss:} Optional imitation/distillation of top-branch action distribution.
+
+\subsection{Trigger Mechanisms}
+Triggers can be based on TD-error, uncertainty, entropy, or periodic intervals. They are combined with OR logic and rate-limited by a cooldown.
+
+\subsection{Hyperparameters}
+Ablate over $B$ (branching factor), $H$ (horizon), buffer size, trigger thresholds, CEM settings, and distillation temperature. See Section~\ref{sec:results} for a full table.
+
+\subsection{Benchmarks and Evaluation}
+Evaluate on D4RL AntMaze, custom mazes, and DMControl navigation. Metrics include success rate, steps to goal, model loss, planner overhead, trigger frequency, and ablation results.
+
+\subsection{Logging and Visualization}
+Log all model and planner losses, planner stats (branches, horizon, FPS, trigger rate), and success/return metrics. Visualize success curves, trigger frequency, branch value distributions, and planning cost.
+
+\subsection{Implementation Plan and Checklist}
+Start from DreamerV3, add checkpoint buffer, trigger computation, latent branching, planner update path, logging, and ablations. See the checklist in the README for step-by-step progress.
+
+\subsection{Reproducibility}
+Seed all RNGs, log git hash and config YAML, save checkpoints and metrics, and provide exact configs for each experiment. Include commands for environment setup, training, testing, and paper build.
+
+% -----------------------------
+\section{Appendix: Code Walkthrough and API Usage}
+This appendix provides a detailed walkthrough of the main code modules, classes, and functions in the SimGolf-Latent package, with explanations, integration tips, and example usage for each public API.
+
+\subsection{planner/checkpoint	extunderscore buffer.py}
+\textbf{Class: CheckpointBuffer}
+\begin{itemize}
+\item \texttt{__init__(capacity, device)}: Initializes a fixed-size buffer for storing latent checkpoints, scores, and step indices. The buffer supports prioritized sampling and is device-aware (CPU/GPU).
+\item \texttt{push(z, score, step)}: Adds a new checkpoint (latent $z$) with a score (e.g., TD-error) and step index. Overwrites oldest if full.
+\item \texttt{sample(k, prioritized)}: Samples $k$ checkpoints, either proportional to score (prioritized) or uniformly. Returns a list of dicts with $z$, score, step, and index.
+\item \texttt{save(path)}, \texttt{load(path)}: Save/load buffer contents to disk (CPU tensors for portability).
+\item \texttt{to(device)}: Moves all stored tensors to the specified device.
+\end{itemize}
+\textbf{Integration tip:} Use one buffer per agent or experiment; push latents when TD-error or uncertainty is high.
+
+\subsection{planner/triggers.py}
+\textbf{Class: TriggerConfig}
+\begin{itemize}
+\item Stores thresholds for TD-error, uncertainty, entropy, and cooldown period.
+\end{itemize}
+\textbf{Function: should	extunderscore trigger(td	extunderscore error, unc, entropy, cfg, last	extunderscore trigger, step)}
+\begin{itemize}
+\item Returns True if any trigger condition is met and cooldown has elapsed.
+\end{itemize}
+\textbf{Integration tip:} Call this function at each step to decide whether to invoke the planner.
+
+\subsection{planner/simgolf	extunderscore latent.py}
+\textbf{Function: simulate	extunderscore branches(rssm, actor, value	extunderscore fn, z	extunderscore saved, cfg)}
+\begin{itemize}
+\item Simulates $B$ branches of length $H$ from a checkpoint $z_{saved}$ using the provided RSSM, actor, and value function. Returns a list of Branch objects, each with a return and trajectory.
+\item Handles actor methods (sample, act, forward, call) and RSSM step methods (step, imagine	extunderscore step, transition, predict).
+\end{itemize}
+\textbf{Integration tip:} Use this as the main planner entry point; pass in your DreamerV3 RSSM, actor, and critic.
+
+\subsection{planner/advanced.py}
+\textbf{Function: simulate	extunderscore branches	extunderscore advanced(...)}
+\begin{itemize}
+\item Adds CEM-based action sequence optimization and uncertainty-penalized returns. CEM is warm-started from the policy and can be tuned via population, elite count, and iterations.
+\end{itemize}
+\textbf{Integration tip:} Enable CEM in your config to use this advanced planner; otherwise, the default is policy sampling.
+
+\subsection{planner/distill.py}
+\textbf{Function: branch	extunderscore to	extunderscore action	extunderscore distribution(branches, topk	extunderscore frac, tau)}
+\begin{itemize}
+\item Extracts the first actions from the top-k branches and returns a softmax-weighted distribution over them (temperature $\tau$).
+\end{itemize}
+\textbf{Function: select	extunderscore branch	extunderscore action(branches, ...)}
+\begin{itemize}
+\item Samples a first action from the branch action distribution.
+\end{itemize}
+\textbf{Integration tip:} Use these to distill branch policies into your actor or to bias the next real action.
+
+\subsection{scripts/train	extunderscore simgolf	extunderscore dreamerv3.py}
+\textbf{Main script for running the planner in a DreamerV3-style training loop.}
+\begin{itemize}
+\item Loads config, sets up buffer, RSSM, actor, and value function (stubs or real models).
+\item At each step: computes trigger metrics, pushes checkpoints, samples and runs planner if triggered, and prints planner stats.
+\end{itemize}
+\textbf{Example usage:}
 \begin{verbatim}
-# create venv and install deps
-python -m venv .venv && source .venv/bin/activate
-python -m pip install -r requirements.txt
-
-# run training with a given config
 python scripts/train_simgolf_dreamerv3.py --config configs/antmaze_simgolf.yaml --workdir ./runs/exp1
-
-# run unit tests
-pytest -q
-
-# build the paper
-pdflatex report.tex && bibtex report && pdflatex report.tex
 \end{verbatim}
 
-\section{Compute resources and runtimes}
-Report typical compute used for each experiment: GPU model (e.g., NVIDIA A100), CPU, RAM, and number of hosts. Include typical wall-clock time for a single seed and for entire budgets (e.g., wall-time for 1e6 env steps). Provide a table in the supplementary material summarizing runtimes for baseline and planner-enabled runs.
-
-\section{Full hyperparameter table}
-Include a comprehensive hyperparameter table in the supplementary material (or as JSON/YAML in `configs/`). At minimum include:
+\subsection{tests/}
+\textbf{Unit tests for all major modules:}
 \begin{itemize}
-\item model architecture details (rssm dims, actor/critic hidden sizes),
-\item optimizer settings (lr, weight decay, betas),
-\item planner settings (B, H, kappa, CEM pop/elite/iters), and
-\item training settings (batch size, warmup steps, total steps, seed list).
+\item test	extunderscore checkpoint	extunderscore buffer.py: tests push, sample, save/load.
+\item test	extunderscore simgolf	extunderscore latent.py: tests branch simulation and return ordering.
+\item test	extunderscore advanced	extunderscore and	extunderscore distill.py: tests advanced planner and distillation utilities.
+\item test	extunderscore triggers.py: tests trigger logic and cooldown.
+\item test	extunderscore package	extunderscore api.py: tests package-level exports and API surface.
 \end{itemize}
+\textbf{Integration tip:} Run \texttt{pytest -q} in the CA13 directory to verify all functionality before running experiments.
 
-\section{Data and code availability}
-State where code is hosted (e.g., repository URL) and provide pointers to any external datasets or environment versions (d4rl versions, DMControl versions). For custom mazes include a `data/` directory or scripts to generate the maps and include seed lists used for evaluation.
+\subsection{Example: End-to-End Planner Call}
+\begin{verbatim}
+from planner import CheckpointBuffer, simulate_branches, should_trigger, TriggerConfig
 
-\section{Submission checklist}
-Before submitting or releasing the paper and artifacts, ensure the following are complete:
-\begin{itemize}
-\item Replace the author placeholder with the final author list and affiliations in `report.tex`.
-\item Fill tables/figures with empirical results and add figure files to `figures/`.
-\item Verify LaTeX compiles cleanly on a fresh environment (pdflatex -> bibtex -> pdflatex).
-\item Run `pytest` in `CA13/tests` and ensure all tests pass.
-\item Archive the exact config and seed lists for the reported experiments.
-\item Include a brief README in the run directory describing how to reproduce the core figures.
-\end{itemize}
+buffer = CheckpointBuffer(capacity=1024, device=device)
+if should_trigger(td_err, unc, entropy, trig_cfg, last_trigger, step):
+    sample = buffer.sample(k=1, prioritized=True)
+    if sample:
+        z_saved = sample[0]['z']
+        branches = simulate_branches(rssm, actor, value_fn, z_saved, planner_cfg)
+        a_plan = select_branch_action(branches)
+        # use a_plan to bias next real action or update actor/critic
+\end{verbatim}
 
-\section{Author contributions and conflicts of interest}
-For transparency, include an explicit author contributions statement (e.g., conceptualization, algorithm design, implementation, experiments, writing). Disclose funding sources and any potential conflicts of interest.
-
-\section*{Acknowledgements}
-We thank collaborators and code references (DreamerV3, SimGolf).
+% -----------------------------
 
 \bibliographystyle{unsrt}
 \begin{thebibliography}{9}
