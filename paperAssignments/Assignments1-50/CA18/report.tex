@@ -3,44 +3,154 @@
 \usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{booktabs}
-\title{CA18 — Assignment Report Template}
-\author{Your Name}
+\usepackage{amsmath}
+\usepackage{caption}
+\usepackage{subcaption}
+\title{CA18 — Assignment Report}
+\author{Your Name \\ \texttt{your.email@example.com}}
 \date{\today}
 
 \begin{document}
 \maketitle
 \begin{abstract}
-A short abstract summarizing the problem, proposed method, and main results (fill this in after experiments).
+A concise abstract (150--250 words) that summarizes the research question, the proposed method or modification, a short description of the experimental setup (datasets, baselines and seeds), and the core empirical finding (e.g., improvement in mean cumulative reward or stability).
 \end{abstract}
 
 \section{Introduction}
-Describe the research question and motivation. Reference relevant literature.
+In this work we address a focused question in reinforcement learning: whether a lightweight regularizer (or algorithmic modification) applied to Actor--Critic methods improves stability and sample efficiency on short-horizon tasks. The reader should be able to identify the specific gap this assignment targets (for example: high variance in policy gradients, overestimation in value networks, or poor early learning with sparse rewards). Explicitly state the hypothesis as a single sentence, e.g., ``We hypothesize that adding a KL-based regularizer to the policy objective reduces variance and yields higher mean cumulative reward measured in early training (first 1k steps).''
+
+Write an opening paragraph (2--3 sentences) like this as a placeholder for your submission and then replace it with a final paragraph when results are available.
+
+\section{Related Work}
+Briefly position the work relative to canonical approaches:
+\begin{itemize}
+  \item Policy gradient and Actor--Critic frameworks (Sutton et al., 2000; Schulman et al., 2017) — describe how the studied modification differs conceptually and practically.
+  \item Regularization in RL (entropy bonuses, KL constraints) and variance reduction techniques (GAE, baselines).
+  \item Any domain-specific work if using particular environments (cite papers using similar benchmarks).
+\end{itemize}
+
+End the related work section with a short paragraph (1--2 sentences) explaining how your chosen method builds on, or departs from, the literature listed above.
 
 \section{Method}
-Summarize the algorithm, model architecture, losses and any modifications made for the assignment. Include equations as needed.
+\subsection{Model Architecture}
+Provide explicit details so the implementation can be reproduced without guesswork. Example description to use or adapt:
 
+"We use two MLPs: a policy network that maps observations to logits for a categorical action distribution and a value network that outputs a scalar value for each observation. Both networks have two hidden layers with ReLU activations. Weight initialization follows Kaiming uniform for linear layers and biases initialized to zero. Observations are normalized with running mean/variance during training when applicable."
+
+Include layer shapes for the environments used: e.g., for a 4-dimensional observation space and 2 actions, the policy outputs logits with shape 2 and the value network outputs a single scalar.
+
+\subsection{Objective and Losses}
+Document all losses in both mathematical and implementation form. Use the following checklist as content for this section:
+\begin{itemize}
+  \item Exact definition of advantage estimation used (GAE with chosen $\lambda$ and $\gamma$).
+  \item Policy loss and whether you use baseline subtraction or normalization of advantages.
+  \item Value loss, loss weighting (value coefficient), and any gradient clipping used.
+  \item Entropy bonus: formula and coefficient (positive value encourages exploration).</n  \item If a new regularizer is proposed, define it clearly and show how it is added to the loss. For example, a KL regularizer to a fixed prior $\pi_0$:
+  \[ R(\pi) = \mathbb{E}_{s\sim D}[\mathrm{KL}(\pi_\theta(\cdot|s)\,||\,\pi_0(\cdot|s))].\]
+  Explain how you estimate or compute this term in minibatch stochastic updates.
+\end{itemize}
+
+\subsection{Optimization}
+State optimizer, learning rate schedule (if used), batch/mini-batch scheme, number of gradient steps per epoch, and any hyperparameter tuning approach. For reproducibility include optimizer type (Adam) and default hyperparameters (betas, eps).
 \section{Experimental Setup}
-\subsection{Configs}
-Describe `debug` and `default` config choices (learning rate, batch size, seeds).
+\subsection{Environments and Datasets}
+State the environment(s) / synthetic data used (e.g., `RandomMDPDataset` for quick debug; future work can add Gymnasium envs). Provide observation and action dimensionality used in the experiments.
+
+\subsection{Hyperparameters}
+Provide a table of core hyperparameters used in `debug` and `default` configurations.
+\begin{table}[h]
+\centering
+\caption{Core hyperparameters used in experiments}
+\begin{tabular}{lcc}
+\toprule
+Hyperparameter & Debug & Default \\
+\midrule
+seed & 123 & 42 \\
+learning rate & 1e-3 & 3e-4 \\
+batch size & 16 & 64 \\
+epochs & 3 & 50 \\
+$\gamma$ & 0.99 & 0.99 \\
+hidden sizes & (32, 32) & (64, 64) \\
+entropy coef ($c_H$) & 0.01 & 0.01 \\
+value coef ($c_V$) & 0.5 & 0.5 \\
+max grad norm & 0.5 & 0.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Evaluation Protocol}
-Describe metrics (cumulative reward, sample efficiency) and the number of seeds.
+Describe evaluation metrics and how they are computed: mean cumulative reward across N evaluation episodes, standard deviation across seeds, and any smoothing used for reward curves. State how many seeds were run (recommended 5) and how curves are averaged.
+
+\subsection{Implementation Details}
+Note frameworks and reproducibility measures: PyTorch (version), seeding, device management, and exact commands to run the demo and reproducibility checks.
 
 \section{Results}
-Place your tables and figures here. Example figure placeholder:
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.8\textwidth]{pictures/fig_rewards.png}
-\caption{Reward curves (placeholder).}
-\end{figure}
+Start with a short paragraph summarizing the main numerical findings (e.g., ``Across 5 seeds, the proposed regularizer improved mean return by X over baseline, and reduced variance by Y.''). Then present figures and tables documenting the learning curves and aggregated statistics.
+
+\subsection{Primary Results}
+Include:
+\begin{itemize}
+  \item Reward curves showing mean and shaded std/percentiles across seeds.
+  \item Loss curves to check for optimization stability (policy loss, value loss, entropy).
+  \item A table with aggregated returns (mean ± std) for each method/variant.
+\end{itemize}
+
+\subsection{Ablations and Sensitivity}
+Provide one table per ablation axis and a short summary sentence for each experiment. Example formats:
+\begin{itemize}
+  \item Varying $\lambda$: show mean return for $\lambda \in \{0.0, 0.01, 0.1, 1.0\}$ and comment on the tradeoff between bias and variance.
+  \item Removing the proposed regularizer: compare baseline vs. proposed variant.
+  \item Seeds: report mean and std across N seeds (recommended N=5).
+\end{itemize}
 
 \section{Discussion}
-Interpret results and discuss limitations and future work.
+Provide an interpretation of results that directly addresses the hypothesis stated in the Introduction. Be explicit about whether the hypothesis was supported and quantify the effect sizes (e.g., ``We observed a 12\% increase in mean return with $\lambda=0.1$ at 1k steps''). Discuss limitations, reproducibility concerns (sensitivity to seed or learning rate), and propose concrete next steps or additional experiments that would strengthen conclusions.
 
-\section{Reproducibility}
-List commands to run the demo and reproduce the main figures. Include seed sweep instructions.
+\section{Reproducibility and Usage Guide}
+Include exact commands and a short checklist for reproducing the experiments.
+
+\subsection{Commands}
+\begin{itemize}
+  \item Create environment and install requirements:
+  \begin{verbatim}
+python -m venv .venv && source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+  \end{verbatim}
+  \item Run tests:
+  \begin{verbatim}
+pytest -q
+  \end{verbatim}
+  \item Run a smoke forward pass:
+  \begin{verbatim}
+python scripts/run_debug.py
+  \end{verbatim}
+  \item Run a debug end-to-end (small) experiment (if implemented):
+  \begin{verbatim}
+python scripts/train.py --config configs/debug.yaml
+  \end{verbatim}
+\end{itemize}
+
+\subsection{Expected Artifacts}
+List what the repo should produce when runs are executed:
+\begin{itemize}
+  \item `outputs/checkpoints/` with model checkpoints
+  \item `pictures/` with saved figures (e.g., `fig_rewards.png`, `fig_loss.png`)
+  \item `outputs/logs/` with per-epoch metrics in CSV or JSON
+\end{itemize}
+
+\section*{Author Contributions}
+Briefly specify who implemented the code, ran experiments, and prepared the report.
 
 \section*{Acknowledgments}
 Optional.
+
+\appendix
+\section{Appendix A: Additional Implementation Notes}
+List any important implementation details, numerical stability tricks, or choices not discussed in the main text. For example: GAE lambda value, gradient clipping, optimizer momentum choices, or any data normalization.
+
+\section{Appendix B: Hyperparameter Search Details}
+Describe ranges and search procedure used when tuning hyperparameters (if any).
 
 \bibliographystyle{plain}
 \bibliography{references}

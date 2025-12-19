@@ -1,11 +1,14 @@
-\% SimGolf-Latent: NeurIPS style full paper draft
+% SimGolf-Latent: NeurIPS style full paper draft
 \documentclass{article}
 \usepackage[preprint]{neurips_2024}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath,amsfonts,amssymb,graphicx,booktabs}
 \usepackage[colorlinks=true,citecolor=blue,urlcolor=blue]{hyperref}
 \title{SimGolf in Latent Space: Combining DreamerV3 World Models with Simulation-Based Global Search}
-\author{Author Name \\ Institution}
+\author{Author Name \\
+Affiliation \\
+\texttt{email@institution.edu} \\
+(Replace with your author list and affiliations before submission)}
 \date{}
 
 \begin{document}
@@ -103,6 +106,31 @@ Benchmarks: D4RL AntMaze (umaze/medium/large) and custom continuous mazes requir
 \item Statistical reporting: 5 seeds, mean±std and IQM; bootstrap CIs for success rates.
 \end{itemize}
 
+\section{Results (Template)}
+\label{sec:results}
+This section should summarize main findings. Replace the placeholder tables/figures below with actual results. We recommend including: success rate curves vs training steps (baseline vs planner), a table of final success rates and standard deviations, and an analysis of planner overhead (imagined steps per second).
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lccc}
+\toprule
+Method & AntMaze-Umid (success) & AntMaze-Med (success) & Wall-time overhead \\
+\midrule
+DreamerV3 (baseline) & -- & -- & -- \\
+DreamerV3 + SimGolf (B=16,H=12) & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\caption{Template table: replace `--` with empirical numbers (mean±std over seeds).}
+\end{table}
+
+\begin{figure}[ht]
+\centering
+% includegraphics{figures/success_curve.pdf}
+\caption{Placeholder: success rate vs training steps for baseline and planner.}
+\end{figure}
+
+% Notes on reporting: include number of seeds, hyperparameters, and compute budget in the caption.
+
 \subsection{Hyperparameters (defaults)}
 \begin{table}[ht]
 \centering
@@ -133,6 +161,23 @@ checkpoint scoring and buffer design.
 
 \section{Discussion and limitations}
 Planner efficacy depends on model quality; high \(\kappa\) reduces optimism but may over-penalize. CEM increases compute cost; use sparse triggering and cooldowns. Latent resets assume RSSM captures all necessary state — a known limitation when observations contain non-modeled hidden variables.
+
+\section{Reproducibility and Build Instructions}
+To build the PDF and reproduce experiments, ensure you have a TeX toolchain (pdflatex) and follow the steps below. For experiments, use the provided YAML configs in `configs/` and log seeds/configs.
+
+\begin{verbatim}
+# from repo root
+cd paperAssignments/Assignments1-50/CA13
+pdflatex report.tex
+bibtex report
+pdflatex report.tex
+pdflatex report.tex
+\end{verbatim}
+
+Include generated figures under `figures/` and update the LaTeX `\includegraphics` lines.
+
+\section{Ethical considerations}
+Model-based planning and RL can be misapplied to safety-critical domains. Our method introduces additional compute and planning steps that may increase overall system complexity. Be cautious when transferring policies to real-world systems; validate thoroughly under safety constraints and consider human-in-the-loop verification for high-stakes deployments.
 
 \section{Conclusion}
 We proposed SimGolf-Latent, a practical method for integrating global branching

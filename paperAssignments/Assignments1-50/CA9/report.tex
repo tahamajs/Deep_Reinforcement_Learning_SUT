@@ -187,6 +187,80 @@ Conservative methods (CQL~\cite{kumar2020cql}), expectile-based IQL~\cite{kostri
 \section{Conclusion}
 AU-DMG provides a practical and theoretically motivated mechanism to open local generalization where epistemic uncertainty is low, and remain conservative elsewhere. The method bridges offline stability and online adaptability with minimal hand-tuning.
 
+\section{Implementation Details and Training Protocols}
+We provide explicit implementation notes to facilitate faithful reproduction.
+
+\paragraph{Network and optimizer details}
+- Critics: ensemble of $N$ independent MLPs (2 hidden layers of 256 units, ReLU, LayerNorm after hidden layers). Adam, lr=3e-4, no weight decay.
+- Value network: MLP (256-256-1). Expectile $	au=0.7$ by default.
+- CVAE: encoder/decoder with hidden sizes 256, latent dim = 2*a_dim. KL weight $\lambda_{\mathrm{KL}}=1.0$.
+- Policy: Gaussian policy network (256-256) trained via weighted maximum likelihood; std parameterized as a global log-std.
+- Targets: soft-update with $\tau=0.005$ (polyak updates).
+
+\paragraph{Training schedule}
+- CVAE pretrain: optional 10k gradient steps over dataset (recommended for complex behavior datasets), otherwise trained jointly online with critic updates.
+- Offline training: run for 50k--200k gradient steps depending on dataset; checkpoint every 5k steps.
+- Fine-tuning (offline-to-online): after checkpointing, continue training while collecting online interactions (exploration with small Gaussian noise, e.g., 0.1 std) for up to 200k steps.
+
+\paragraph{Compute and runtime}
+- A single CPU run (smoke) completes an epoch in minutes; full AntMaze runs require GPU (A100/RTX-class): expect 6–12 hours per 100k steps depending on parallelization and candidate count $M$.
+- Memory: ensemble size $N$ and candidate count $M$ increase compute linearly; choose $N\in [4,8]$, $M\in[20,50]$ as a compute/quality tradeoff.
+
+\section{Evaluation Metrics and Reporting}
+We recommend reporting the following:
+\begin{itemize}
+  \item Mean and standard deviation of normalized D4RL scores across at least 5 random seeds.
+  \item Offline-to-online fine-tuning curve: plot normalized performance vs online steps and report the ``dip'' (maximum drop from checkpoint) and recovery time (steps to reach checkpoint performance).
+  \item Gate diagnostic plots: track mean $\Lambda$, median and quantiles of $\sigma_{\mathrm{mild}}$, and scatter distributions to verify monotonicity and calibration.
+\end{itemize}
+
+\section{Experimental Results (Representative)}
+Below is a template table for presenting the final results. Replace placeholder numbers with actual experiment outputs.
+\begin{table}[H]
+\centering
+\begin{tabular}{l c c c}
+\toprule
+Method & AntMaze (norm.) & HalfCheetah (norm.) & H-Hopper (norm.) \\
+\midrule
+IQL & 45.1 $\pm$ 5.3 & 62.2 $\pm$ 3.9 & 58.0 $\pm$ 4.5 \\
+DMG (static) & 56.3 $\pm$ 4.1 & 63.0 $\pm$ 3.2 & 58.9 $\pm$ 3.8 \\
+AU-DMG (ours) & \textbf{68.4 $\pm$ 3.2} & \textbf{65.8 $\pm$ 2.4} & 60.1 $\pm$ 3.1 \\
+\bottomrule
+\end{tabular}
+\caption{Representative aggregate results (placeholder values). Report means $\pm$ std across seeds.}
+\end{table}
+
+Include additional plots in the paper: per-task fine-tuning curves, gate heatmaps over state embeddings, and ablation grids (varying $\beta,\kappa,N,M$).
+
+\section{Ablation Study (detailed plan)}
+For each ablation we recommend the following protocol: run 3 seeds per configuration, report means and stds, and visualize the gate behavior and failure cases.
+\begin{itemize}
+  \item Gate variants: compare sigmoid (default) vs softplus and binary threshold (hard). Evaluate stability and smoothness of transitions.
+  \item Ensemble size $N$: {2,4,7,10} — measure calibration of $\sigma$ and final performance.
+  \item Candidate count $M$: {5,20,50} — evaluate sample complexity and compute/benefit tradeoff.
+  \item Selection rule: mean vs LCB ($\mu - c\sigma$) with $c\in\{0,0.5,1.0\}$.
+\end{itemize}
+
+\section{Limitations and Failure Modes}
+AU-DMG relies on ensemble variance as a proxy for epistemic uncertainty. Known limitations include:
+\begin{itemize}
+  \item Ensemble mismatch: insufficient ensemble diversity (small $N$ or shared initialization) can understate uncertainty and over-trust generalized targets.
+  \item Misspecified behavior model: the CVAE may produce low-likelihood actions that appear plausible but violate dynamics, leading to spurious high $y_{\mathrm{mild}}$ values despite large unseen dynamics change.
+  \item Computational cost: high $M$ and $N$ increase runtime substantially; in resource-constrained settings the method may be impractical.
+\end{itemize}
+Mitigations include ensembling strategies (randomized priors), conservative selection rules (LCB), and small-$M$ high-quality candidate generation (e.g., learned proposals).
+
+\section{Broader Impact}
+AU-DMG aims to make offline RL safer by limiting generalization where uncertainty is high. Potential positive impacts include safer deployment of learned policies in robotics and healthcare. Potential negative impacts arise if the uncertainty proxy is miscalibrated and the agent is overconfident in safety-critical settings. We advocate for thorough validation and conservative deployment in high-stakes applications.
+
+\section{Future Work}
+Promising directions:
+\begin{itemize}
+  \item Improved uncertainty estimators (deep ensembles with randomized priors, Bayesian neural nets).
+  \item Better behavior models: normalizing flows or diffusion models for more faithful conditional action distributions.
+  \item Theoretical analysis: finite-sample bounds quantifying the trade-off induced by the gate.
+\end{itemize}
+
 \section{Reproducibility}
 We designed the codebase to be runnable and reproducible. Key commands to reproduce the main experiments and figures are below (run from the project root):
 \begin{enumerate}
@@ -333,8 +407,6 @@ plt.colorbar(hb); plt.title('Gate heatmap (mean Lambda)'); plt.savefig('plots/ga
 These recipes are a starting point; extend `notebooks/demo.ipynb` to generate publication-ready figures using the same saved artifacts.
 
 \end{document}
-
-
 
 
 

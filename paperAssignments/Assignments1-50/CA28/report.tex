@@ -30,125 +30,150 @@ The CartPole environment is a classic control problem where an agent must balanc
 
 \subsection{Deep Q-Network Algorithm}
 
-DQN uses two neural networks: a policy network for action selection and a target network for stable Q-value estimation. Experience replay stores transitions in a buffer and samples mini-batches for training.
-
-The Q-learning update is:
+We implement the Deep Q-Network (DQN) algorithm following the canonical setup: two networks are used — a policy network (online) and a target network. Transitions $(s,a,r,s',d)$ are stored in an experience replay buffer and sampled in mini-batches for training. For classic DQN the target is:
 \[
-Q(s, a) \leftarrow Q(s, a) + \alpha \left[ r + \gamma \max_{a'} Q(s', a') - Q(s, a) \right]
+y_i = r_i + (1 - d_i) \gamma \max_{a'} Q_{\text{target}}(s'_i, a')
+\]
+For Double DQN (available via `Config.double_dqn`) the action selection is performed with the policy network and evaluation with the target network:
+\[
+y_i = r_i + (1 - d_i) \gamma Q_{\text{target}}(s'_i, \arg\max_{a'} Q_{\text{policy}}(s'_i, a'))
 \]
 
-\subsection{Implementation Details}
+The per-sample loss is the squared TD-error and, when prioritized replay is used, weighted by importance-sampling weights $w_i$:
+\[
+\mathcal{L} = \frac{1}{B} \sum_{i=1}^B w_i \left( Q_{\text{policy}}(s_i,a_i) - y_i \right)^2
+\]
 
-Our implementation includes:
+\subsection{Prioritized Experience Replay}
+
+When `Config.replay` is set to `prioritized`, transitions are sampled proportionally to their priority $p_i = (|\delta_i| + \epsilon)^{\alpha}$. Importance-sampling weights with exponent $\beta$ correct the introduced bias and are normalized by the maximum weight in the sampled batch for numerical stability. The repository includes a compact, education-oriented prioritized buffer in `src/prioritized_replay.py` with configurable `alpha` and `beta`.
+
+\subsection{Exploration and Schedules}
+
+We use epsilon-greedy exploration, where epsilon decays multiplicatively each episode from `epsilon_start` to `epsilon_end` using factor `epsilon_decay`. This schedule is simple and effective on CartPole; more complex schedules (linear decay, annealing) can be plugged in via the configuration.
+
+\section{Implementation Details}
+
+\subsection{Architecture}
+
+The Q-network (`src/model.py`) is an MLP with two hidden layers of 128 units and ReLU activations; the final layer outputs Q-values for each discrete action. Architectures are kept small for fast iteration on CartPole.
+
+\subsection{Training Loop and Utilities}
+
+The training loop (in `src/train.py`) is import-safe and configurable. Key utilities:
 \begin{itemize}
-\item Q-Network: Two hidden layers with 128 units each, ReLU activation
-\item Experience Replay: Buffer capacity of 10,000 transitions
-\item Epsilon-greedy exploration: Starts at 1.0, decays to 0.01
-\item Target network updates: Every 10 episodes
-\item Optimizer: Adam with learning rate 0.001
+\item `src/utils.py`: `set_seed` (reproducible seeding strategy) and `ReplayBuffer` (uniform sampling).
+\item `src/prioritized_replay.py`: simple prioritized buffer with IS-weighted sampling.
+\item `scripts/run_demo.py`: example script that runs a short experiment and saves `outputs/` and `figures/`.
 \end{itemize}
 
-\subsection{Configuration}
+\subsection{Default Hyperparameters}
 
-Hyperparameters are loaded from the YAML configuration file at `configs/config.yaml`. The defaults used in our experiments were:
+Default hyperparameters are documented in `configs/config.yaml` and include:
 \begin{itemize}
-\item Learning rate: 0.001
-\item Batch size: 32
-\item Discount factor ($\gamma$): 0.99
-\item Epsilon decay: 0.995
-\item Number of episodes: 500
-\item Maximum steps per episode: 200
+\item learning\_rate: 0.001
+\item batch\_size: 32
+\item gamma: 0.99
+\item epsilon\_start: 1.0
+\item epsilon\_end: 0.01
+\item epsilon\_decay: 0.995
+\item target\_update: 10
+\item memory\_size: 10000
+\item replay\_alpha: 0.6 (if prioritized)
+\item replay\_beta: 0.4 (if prioritized)
 \end{itemize}
 
-\section{Reproducibility}
+\section{Experimental Protocol}
 
-To reproduce experiments:
-\begin{enumerate}
-\item Create a Python 3.10+ virtual environment and install the packages in `requirements.txt`.
-\item Update any hyperparameters in `configs/config.yaml` or copy it for ablations.
-\item Run `python -c "from src.config import load_config; from src.train import train_dqn; cfg=load_config('configs/config.yaml'); _=train_dqn(cfg)"` to execute a training run.
-\item Save training curves and results to `figures/` and `outputs/` and include them when compiling the report.
-\end{enumerate}
+\subsection{Evaluation Metrics}
 
-We provide deterministic seeding via `src.utils.set_seed` and recommend sweeping several seeds for reporting mean and standard deviation of final performance.
-\section{Experiments}
+We evaluate using per-episode return, rolling averages (e.g., 50-episode mean), and reporting mean/std across multiple seeds. We recommend reporting the number of episodes until a solving threshold (e.g., mean $\geq$ 195 over 100 episodes) when applicable.
 
-\subsection{Baseline Experiment}
+\subsection{Baselines and Ablations}
 
-We train DQN with default hyperparameters for 500 episodes. The agent learns to balance the pole, achieving increasing rewards over time.
-
-\subsection{Ablation Studies}
-
-We vary key hyperparameters to assess their impact:
+Run a baseline (default config) and the following ablations:
 \begin{itemize}
-\item Learning rate: 0.0001, 0.001, 0.01
-\item Batch size: 16, 32, 64
+\item Learning rates: 1e-4, 1e-3, 1e-2
+\item Batch sizes: 16, 32, 64
 \item Epsilon decay: 0.99, 0.995, 0.999
+\item Optional toggles: Double DQN on/off, Prioritized Replay on/off (vary alpha/beta)
 \end{itemize}
 
-\subsection{Seed Sweeps}
+Each condition should be run across multiple seeds (3--5) to estimate variance.
 
-To evaluate robustness, we run experiments with multiple random seeds (42, 123, 456) and report mean and standard deviation of final performance.
+\section{Results and How to Report Them}
 
-\section{Results}
+This section contains templates and guidance for presenting results. Replace placeholders with your experimental outputs.
 
-\subsection{Training Performance}
+\subsection{Learning Curves}
 
-This section is reserved for experimental results produced from running the training scripts. To reproduce and fill in the results:
-\begin{enumerate}
-\item Run training using the configuration in `configs/config.yaml` and save the episode rewards to `outputs/rewards.npy`.
-\item Generate a training plot and save to `figures/training_curve.png`.
-\item Replace the placeholder figure below with your generated file.
-\end{enumerate}
-
+Include per-episode returns and rolling averages for baseline and ablations. Save figures to `figures/` and reference them here. We include a small synthetic example figure `figures/example_training_curve.svg` (illustrative) and a script `scripts/generate_synthetic_results.py` to regenerate the synthetic curves.
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\textwidth]{figures/training_curve.png}
-\caption{Training curve showing episode rewards over time (placeholder; replace with experimental output).}
+\includegraphics[width=0.8\textwidth]{figures/example_training_curve.svg}
+\caption{Synthetic example training curves (baseline, Double DQN, Prioritized Replay). This figure is illustrative and produced from synthetic data (see `scripts/generate_synthetic_results.py`).}
 \label{fig:training}
 \end{figure}
 
-\subsection{Ablation Results}
+\subsection{Ablation Summary Table (Example Filled)}
 
-Tabulated ablation results should be added here after running the specified sweeps. Below is a templated table you can fill in with your own numbers:
+Below is an example table populated with synthetic/example results to illustrate the reporting format. These numbers are for demonstration only and should be replaced with your experimental outputs.
 
 \begin{table}[H]
 \centering
-\begin{tabular}{|c|c|}
+\begin{tabular}{|l|c|c|}
 \hline
-Hyperparameter & Average Final Reward \\
+Condition & Mean final return (last 50) & Std. dev. \\
 \hline
-Learning Rate 0.0001 & -- \\
-Learning Rate 0.001 & -- \\
-Learning Rate 0.01 & -- \\
-\hline
-Batch Size 16 & -- \\
-Batch Size 32 & -- \\
-Batch Size 64 & -- \\
+Baseline (DQN) & 195.2 & 3.1 \\
+Double DQN (true) & 196.4 & 2.8 \\
+Prioritized Replay (alpha=0.6, beta=0.4) & 197.0 & 2.5 \\
+Learning rate = 1e-4 & 180.5 & 6.0 \\
+Learning rate = 1e-3 & 194.8 & 3.2 \\
+Learning rate = 1e-2 & 150.3 & 12.4 \\
 \hline
 \end{tabular}
-\caption{Ablation study results (to be filled with experiment output).}
+\caption{Example ablation results (synthetic/example data). Replace with experimental results from runs across multiple seeds.}
 \label{tab:ablation}
 \end{table}
 
-\subsection{Seed Variability}
+\subsection{Seed Variability (Example)}
 
-Report mean and standard deviation across seeds here after running seed sweeps (e.g., 42, 123, 456). Example placeholder format: mean $= \mu$, std $= \sigma$.
+Example across-seed results (synthetic): mean = 195.2, std = 3.1 (over 5 seeds). Replace with empirical values computed from your runs.
+
+\subsection{Statistical Considerations}
+
+Report the number of seeds and use mean/standard deviation. For comparisons, consider reporting confidence intervals or simple statistical tests (t-test) while noting the small sample limitations.
 
 \section{Discussion}
 
-DQN successfully learns to solve CartPole, demonstrating the effectiveness of deep RL in control tasks. The ablation studies show that the default hyperparameters work well, with learning rate being the most sensitive parameter.
-
-Future work could include:
+Interpret the empirical findings and discuss:
 \begin{itemize}
-\item Implementing Double DQN or Dueling DQN variants
-\item Applying DQN to more complex environments
-\item Exploring prioritized experience replay
+\item Which hyperparameters have the largest effect and why.
+\item The impact of Double DQN and Prioritized Replay in the tested regime.
+\item Limitations such as small buffer implementations, computational constraints, and environment simplicity.
 \end{itemize}
+
+Include practical guidance for extending the work (e.g., SumTree-based prioritized replay, dueling networks, target smoothing).
 
 \section{Conclusion}
 
-We have implemented and evaluated DQN on the CartPole environment, achieving the research goal of balancing the pole for an average of 195+ steps. The modular code structure allows for easy experimentation and extension to other RL algorithms.
+We provide a modular, configurable DQN baseline for CartPole with optional Double DQN and Prioritized Replay. The repository includes tests, examples, and scripts to run reproducible experiments; fill the Results section with data from your runs and compile the report using `make report`.
+
+\appendix
+\section{Appendix: Hyperparameters and Reproducibility Checklist}
+
+\begin{itemize}
+\item Save `configs/config.yaml` used for each run alongside `outputs/` and `figures/`.
+\item Record seed values and environment versions (Gym, PyTorch).
+\item Note hardware used (CPU/GPU) and time per run.
+\item Provide exact commands used to run experiments (examples are in `scripts/run_demo.py`).
+\end{itemize}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
 
 \bibliographystyle{plain}
 \bibliography{references}

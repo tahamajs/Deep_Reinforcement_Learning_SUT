@@ -59,6 +59,9 @@ This README describes how to set up, run, test, and reproduce experiments and ho
 
 ---
 
+[![Tests](https://github.com/owner/repo/actions/workflows/python-package.yml/badge.svg)](https://github.com/owner/repo/actions/workflows/python-package.yml)  
+*Replace `owner/repo` with your repository path to activate the badge.*
+
 ## Reproducibility & Experiments 📋
 
 - The default config is `configs/config.yaml`. Change hyperparameters there or copy it for ablation studies.
@@ -70,6 +73,25 @@ Suggested experiments:
 1. Baseline: use defaults and train for 500 episodes.
 2. Ablations: sweep `learning_rate`, `batch_size`, `epsilon_decay`.
 3. Seed sweep: repeat with different `seed` values and report mean/std.
+
+---
+
+## Optional features
+
+This implementation includes optional features that can be enabled via `configs/config.yaml` or by modifying a loaded `Config`:
+
+- **Double DQN**: Set `double_dqn: true` to use Double DQN target estimation (reduces maximization bias).
+- **Prioritized Replay**: Set `replay: prioritized` to use a simple prioritized replay buffer (proportional prioritization). The prioritization uses exponent `replay_alpha` (priority exponent) and `replay_beta` (importance-sampling exponent) which can also be set in `configs/config.yaml` or overridden on a loaded `Config`.
+
+Example config override in code:
+
+```python
+cfg = load_config('configs/config.yaml')
+cfg.double_dqn = True
+cfg.replay = 'prioritized'
+cfg.replay_alpha = 0.6
+cfg.replay_beta = 0.4
+```
 
 Store experimental results (rewards, checkpoints, figures) under an `outputs/` directory per experiment for reproducibility.
 
@@ -123,8 +145,6 @@ See `requirements.txt` for the exact minimal environment used for development. T
 ## License & Contact
 
 This project uses the repository license in the root. For questions open an issue or contact the author listed in the `report.tex`.
-
-
 
 
 

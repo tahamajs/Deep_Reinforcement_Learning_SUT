@@ -1,5 +1,7 @@
 # CA26 — Curriculum Assignment 26
 
+[![CI](https://github.com/<your-org>/<your-repo>/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-org>/<your-repo>/actions/workflows/ci.yml)
+
 ## Overview ✅
 
 This repository is a compact, reproducible scaffold for a synthetic regression experiment. It includes an MLP model, loss implementations (MSE and Huber), utilities for deterministic experiments and plotting, a simple training script, and unit tests.
@@ -72,7 +74,9 @@ Expected outputs in `outputs/`:
 ## Tests and CI ✅
 
 - A test suite is included; run with `pytest`.
-- Tests added cover losses, model shapes, config loading, utils, and a short run of `fit()`.
+- Tests added cover losses, model shapes, config loading, utils, and a short run of `fit()` (fast smoke test).
+- A GitHub Actions workflow (`.github/workflows/ci.yml`) runs the test suite on push and pull requests (Python 3.10).
+- For quick experiments and demos, see `notebooks/continue_control.ipynb` (educational control-flow notebook) and add CA26 experiment notebooks under `notebooks/` if you want to preserve runs and plots.
 
 ---
 
@@ -98,9 +102,6 @@ Include the following in your submission:
 ## License
 
 MIT
-
-
-
 
 
 

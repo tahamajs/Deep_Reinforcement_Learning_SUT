@@ -324,6 +324,8 @@ TWM-SSD aims to bridge Transformers and SSMs via state-space duality, delivering
 
 _This README is the complete blueprint for Assignment 11: Transformer-Based World Models with State-Space Duality. Keep math, code, and experiments aligned._
 
+**Paper-style report:** see `REPORT_COMPLETE.tex` in this folder for a self-contained, expanded paper-style report (method, experiments, ablations, reproducibility).
+
 ---
 
 ## How to run (Quick) ✅

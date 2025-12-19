@@ -73,6 +73,123 @@ Suggested tables:
 - For research-grade experiments, add checkpointing, structured logging
   (e.g., CSV/JSONL), and a more detailed experiment runner.
 
+## Experimental Protocol (detailed)
+
+This section describes a reproducible experiment protocol for running the
+recommended sweeps. Use this as the canonical reference when reproducing the
+paper-style results.
+
+1. Configuration and versioning
+   - Create a `runs/<experiment-id>/` folder for each experiment.
+   - Save the **complete** YAML config used as `config.yaml` (use
+     `ExperimentConfig.to_yaml`). Record the git commit hash and the
+     environment (Python, torch versions).
+
+2. Seeds and replicates
+   - Run each hyperparameter setting across N=5 different seeds (e.g., 0,1,2,3,4).
+   - Use `set_seed(seed)` at the start of each run and record the seed in the
+     log file.
+
+3. Logging
+   - Log per-episode returns, policy loss, value loss, entropy, and learning
+     rate to a CSV file (`runs/<id>/metrics.csv`).
+   - Save model checkpoints periodically under `runs/<id>/checkpoints/`.
+
+4. Compute resources
+   - Small experiments (CartPole) can run on CPU; for larger experiments use
+     GPU and record device IDs in the run metadata.
+
+5. Postprocessing and plots
+   - Produce learning curves with shaded confidence intervals across seeds
+     (e.g., mean ± std or SEM). Use `save_figure` to store high-resolution
+     figures (`dpi=300`).
+
+---
+
+## Metrics, Statistical Tests & Result Reporting
+
+- Report mean ± standard deviation across seeds for final episode return at
+  convergence (or after a fixed number of episodes).
+- If comparing two conditions, perform a two-sided t-test on the final
+  returns across seeds, reporting p-values and effect sizes (Cohen's d).
+- When presenting plots, include shaded error bands and mark significant
+  differences with standard notation (*p* < 0.05, **p* < 0.01).
+
+---
+
+## Example hyperparameter table (template)
+
+| Experiment | lr | hidden | entropy | seeds | mean return | std |
+|---|---:|---:|---:|---:|---:|---:|
+| baseline | 1e-3 | (64,64) | 0.0 | 5 |  |  |
+| entropy0.01 | 1e-3 | (64,64) | 0.01 | 5 |  |  |
+| large-net | 1e-3 | (128,128) | 0.0 | 5 |  |  |
+
+---
+
+## Algorithm Pseudocode (vanilla policy gradient)
+
+1. Initialize policy π_θ and value V_φ with random weights.
+2. For each episode:
+   a. Collect trajectory τ = (s_0, a_0, r_0, ..., s_T).
+   b. Compute returns R_t = sum_{k≥t} γ^{k-t} r_k.
+   c. Compute advantages A_t = R_t − V_φ(s_t).
+   d. Update policy θ ← θ + α * ∇_θ E_t[log π_θ(a_t|s_t) * A_t] (SGD step with
+      gradient ascent implemented as minimizing −E[log π * A]).
+   e. Update value parameters φ by minimizing mean-squared error between
+      V_φ(s_t) and R_t.
+   f. Optionally add entropy regularization term to the policy objective.
+
+---
+
+## File map and responsibilities
+
+- `src/config.py` — `ExperimentConfig`: centralizes hyperparameters and YAML
+  serialization (validation in `__post_init__`).
+- `src/model.py` — `PolicyNetwork`, `ValueNetwork`: MLP-based modules with
+  configurable hidden sizes. `PolicyNetwork.get_action` returns actions and
+  log-probabilities.
+- `src/losses.py` — `policy_gradient_loss`, `value_loss`, `entropy_loss`: small
+  utilities used by scripts and tests.
+- `src/data.py` — `collect_episodes` (lazy `gym` import), `discounts`:
+  lightweight rollouts and return computation.
+- `src/utils.py` — seeding, device helpers, `ensure_dir`, `save_figure`.
+- `scripts/train.py` — Example training loop (pedagogical; not optimized for
+  large experiments). Use it as a starting point for more sophisticated
+  runners.
+- `configs/` — Example YAMLs for quick experiments (`default.yaml`,
+  `debug.yaml`).
+- `tests/` — Unit tests for core components to ensure import-safety and
+  numerical sanity checks.
+
+---
+
+## Reproducibility checklist (detailed)
+
+- [ ] Save the full YAML config for each run.
+- [ ] Save the git commit hash and diff of relevant files.
+- [ ] Record package versions (e.g., `pip freeze > requirements.txt`).
+- [ ] Save RNG seeds and ensure `set_seed` is used at run startup.
+- [ ] Save per-episode logs and periodic checkpoints.
+- [ ] Document compute hardware and OS.
+
+---
+
+## Limitations & Ethical Considerations
+
+- Small benchmarks (CartPole) may not generalize to complex tasks; do not
+  over-claim empirical findings without larger-scale validation.
+- Ensure any downstream research follows data usage and compute guidelines.
+
+---
+
+## Acknowledgements & Reuse
+
+This scaffold is provided for educational use. If you use parts of this
+scaffold in published work, please cite the course and maintainers.
+
+---
+
 ## References
 
 - Sutton & Barto, "Reinforcement Learning: An Introduction" (for PG/advantage).

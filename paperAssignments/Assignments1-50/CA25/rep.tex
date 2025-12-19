@@ -1,10 +1,11 @@
-% rep.tex — LaTeX report template for CA25
+% rep.tex — More detailed LaTeX report template for CA25
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb,graphicx,booktabs}
 \usepackage{hyperref}
 \usepackage{caption}
 \usepackage{float}
+\usepackage{siunitx}
 \title{Toy MLP Experiment — CA25}
 \author{Your Name}
 \date{\today}
@@ -18,6 +19,9 @@ A concise 3–5 sentence summary describing the problem, the method (MLP on synt
 
 \section{Introduction}
 Brief motivation and a one-sentence hypothesis.
+
+\section{Related Work}
+One paragraph noting briefly relevant references or standard baselines for context (e.g., simple linear regression, small MLPs in coursework).
 
 \section{Methods}
 \subsection{Model}
@@ -40,10 +44,26 @@ Cross-entropy for classification (logits $z$):
 \end{equation}
 
 \subsection{Data}
-Synthetic datasets are generated as described in `src/data.py`. For regression: $y = X w + \epsilon$ with Gaussian noise $\epsilon\sim\mathcal{N}(0,\sigma^2)$.
+Synthetic datasets are generated as described in `src/data.py`. For regression: $y = X w + \epsilon$ with Gaussian noise $\epsilon\sim\mathcal{N}(0,\sigma^2)$. Include data split details here.
 
 \section{Experimental Setup}
-List config values and number of trials here. Example: 5 epochs, lr=1e-3, batch size=128, seed=123.
+List config values and number of trials here. Example: 5 epochs, lr=1e-3, batch size=128, seed=123. Include a small hyperparameter table:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Hyperparameter & Value & Notes \\
+\midrule
+epochs & 5 & short smoke test \\
+batch size & 128 & example \\
+lr & 1e-3 & Adam optimizer \\
+hidden dims & [64, 32] & 2-layer MLP \\
+seeds & 3 & 42,43,44 \\
+\bottomrule
+\end{tabular}
+\caption{Hyperparameters used in the example runs.}
+\end{table}
 
 \section{Results}
 Include figures with captions and short interpretations.
@@ -62,11 +82,29 @@ Include figures with captions and short interpretations.
     \label{fig:pred}
 \end{figure}
 
+% Example metrics table
+\begin{table}[H]
+\centering
+\begin{tabular}{lccc}
+\toprule
+Model & Seeds & Val MSE (mean ± std) & Test MSE \\
+\midrule
+MLP [64,32] & 42,43,44 & 0.082 $\pm$ 0.004 & 0.089 \\
+\bottomrule
+\end{tabular}
+\caption{Example metrics table.}
+\end{table}
+
 \section{Discussion}
 Summarize whether results support hypothesis, limitations, and next steps.
 
 \section{Reproducibility}
-Provide commands and list artifact files (used_config.yaml, model.pt, pictures/*). Mention software versions.
+Provide commands and list artifact files (used_config.yaml, model.pt, pictures/*). Mention specific software versions and an example `pip` install command.
+\begin{verbatim}
+# Install example deps
+python -m pip install -r requirements.txt
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+\end{verbatim}
 
 \section*{Appendix}
 Place extended tables or additional plots here.
