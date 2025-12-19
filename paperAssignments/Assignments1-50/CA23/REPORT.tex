@@ -46,6 +46,20 @@ functions, provides pseudocode, and specifies a complete experimental protocol
 for a small set of baseline experiments (baseline, entropy sweep, network
 capacity ablation, learning rate sensitivity).
 
+\section{Quickstart and Environment Setup}
+A reproducible RL research workflow begins with a clean, isolated Python environment. We recommend using Python virtual environments (\texttt{venv}) to avoid dependency conflicts and ensure that all required packages are installed locally. The steps are:
+\begin{enumerate}
+  \item \textbf{Create a virtual environment:} \texttt{python -m venv .venv} creates a new environment in the project directory.
+  \item \textbf{Activate the environment:} On Unix/macOS, use \texttt{source .venv/bin/activate}. On Windows, use \texttt{.venv\\Scripts\\activate}.
+  \item \textbf{Upgrade pip and install dependencies:} Always upgrade pip to the latest version, then install all required packages from \texttt{requirements.txt} to ensure consistent versions.
+  \item \textbf{Editable install:} For development, install the package in editable mode (\texttt{pip install -e .}) so that code changes are immediately reflected.
+  \item \textbf{Testing:} Use \texttt{pytest} to run all unit and integration tests. The CA23 scaffold uses \texttt{pytest.importorskip} to allow tests to run even if optional dependencies are missing, making the suite robust to partial environments.
+\end{enumerate}
+This approach ensures that experiments are portable and can be reproduced on any compatible system.
+
+\section{Background}
+Reinforcement learning (RL) is a framework for sequential decision making where an agent interacts with an environment to maximize cumulative reward. The agent observes a state $s_t$, selects an action $a_t$, receives a reward $r_t$, and transitions to a new state $s_{t+1}$. The environment is typically modeled as a Markov Decision Process (MDP) defined by $(\mathcal{S}, \mathcal{A}, P, r, \gamma)$, where $\mathcal{S}$ is the state space, $\mathcal{A}$ is the action space, $P$ is the transition probability, $r$ is the reward function, and $\gamma$ is the discount factor. RL algorithms can be broadly categorized into value-based, policy-based, and actor-critic methods. Policy-gradient methods directly optimize the policy by estimating gradients of expected return with respect to policy parameters.
+
 \section{Related work}
 Classic references include Sutton and Barto's textbook \cite{sutton_barto},
 which derives policy-gradient estimators and advantage-based variance
@@ -54,6 +68,19 @@ advice and recipes for common algorithms (policy gradient, PPO) \cite{spinup}.
 This scaffold intentionally targets the policy-gradient family and provides a
 clear place to insert improvements such as GAE, baselines, or trust-region
 updates.
+
+\paragraph{Policy Gradient Methods} The REINFORCE algorithm \cite{williams1992simple} is the foundational Monte Carlo policy-gradient method. Actor-critic methods \cite{konda2000actor} combine policy-gradient updates with value function baselines to reduce variance. Trust Region Policy Optimization (TRPO) \cite{schulman2015trust} and Proximal Policy Optimization (PPO) \cite{schulman2017proximal} are modern, robust policy-gradient algorithms.
+
+\paragraph{Reproducibility in RL} Henderson et al. \cite{henderson2018deep} highlight the challenges of reproducibility in deep RL, including sensitivity to random seeds, hyperparameters, and environment stochasticity. Our scaffold addresses these by enforcing strict configuration management and logging.
+
+\section{Environments}
+The primary environment used in CA23 is \texttt{CartPole-v1}, a classic control benchmark from OpenAI Gym. The state space is continuous (cart position, velocity, pole angle, angular velocity), and the action space is discrete (left/right). The episode terminates when the pole falls or after 500 steps. The environment is fully observable and deterministic except for initial state randomization. The scaffold can be easily extended to other Gym environments (e.g., MountainCar, Acrobot, LunarLander) by changing the `env_name` in the config.
+
+\paragraph{MountainCar-v0} A continuous state, discrete action environment where the agent must build momentum to reach the goal. Episodes are challenging due to sparse rewards.
+
+\paragraph{LunarLander-v2} A more complex environment with continuous state and discrete actions, requiring precise control to land a spacecraft.
+
+\paragraph{Continuous Control (Pendulum-v0, BipedalWalker-v3)} The scaffold can be extended to continuous action spaces by using Gaussian policies and adapting the loss functions accordingly.
 
 \section{Methods}
 \subsection{Policy and value parameterization}
@@ -78,7 +105,7 @@ Entropy regularization encourages exploration by adding a term to encourage
 high-entropy policies. Denoting the entropy of the policy at state $s$ by
 $\mathcal{H}(\pi(\cdot|s))$, the combined loss minimized is
 $$\mathcal{L} = \mathcal{L}_\text{policy} + c_v \mathcal{L}_\text{value} - \lambda \mathbb{E}_t[\mathcal{H}(\pi(\cdot|s_t))],$$
-where $c_v$ is the value loss coefficient and $\lambda$ is the entropy
+where $c_v$ is the value loss coefficient and $\lambda" is the entropy
 regularization coefficient (in our code `entropy_coef`).
 
 \subsection{Numerical and implementation details}
@@ -90,6 +117,66 @@ regularization coefficient (in our code `entropy_coef`).
 - To support multiple gym versions, we handle both the older `(obs, reward,
   done, info)` and newer `(obs, reward, terminated, truncated, info)` step
   signatures.
+
+\section{Mathematical Derivations}
+\subsection{Policy Gradient Theorem}
+The policy gradient theorem states that for a differentiable policy $\pi_\theta(a|s)$, the gradient of the expected return $J(\theta)$ with respect to parameters $\theta$ is:
+$$
+\nabla_\theta J(\theta) = \mathbb{E}_{\pi_\theta}\left[ \nabla_\theta \log \pi_\theta(a|s) Q^{\pi_\theta}(s,a) \right]
+$$
+where $Q^{\pi_\theta}(s,a)$ is the action-value function. In practice, we use an advantage estimator $A_t$ to reduce variance.
+
+\subsection{Variance Reduction and Baselines}
+Subtracting a baseline $b(s)$ from the return does not introduce bias but can reduce variance:
+$$
+\nabla_\theta J(\theta) = \mathbb{E}_{\pi_\theta}\left[ \nabla_\theta \log \pi_\theta(a|s) (Q^{\pi_\theta}(s,a) - b(s)) \right]
+$$
+A common choice is $b(s) = V_\phi(s)$, the learned value function.
+
+\subsection{Entropy Gradient}
+The entropy of a categorical policy is $\mathcal{H}(\pi(\cdot|s)) = -\sum_a \pi(a|s) \log \pi(a|s)$. The gradient with respect to $\theta$ is:
+$$
+\nabla_\theta \mathcal{H}(\pi_\theta(\cdot|s)) = -\sum_a \nabla_\theta \pi_\theta(a|s) (1 + \log \pi_\theta(a|s))
+$$
+Adding this term to the loss encourages exploration.
+
+\section{Worked Example: Policy Gradient Calculation}
+Suppose the agent observes a state $s$ and takes action $a$ with probability $\pi_\theta(a|s) = 0.7$, receiving reward $r=1$. The log-probability is $\log 0.7 \approx -0.357$. If the advantage $A = 2.0$, the policy gradient loss for this step is $-\log 0.7 \times 2.0 = 0.714$. For a batch, average over all steps. This illustrates how the loss encourages actions with positive advantage and discourages those with negative advantage.
+
+\section{Implementation Pitfalls and Debugging}
+\begin{itemize}
+  \item \textbf{Reward scaling:} Large or unnormalized rewards can destabilize training. Normalize rewards if necessary.
+  \item \textbf{Gradient explosion:} Use gradient clipping to prevent large updates.
+  \item \textbf{Incorrect advantage computation:} Always check that advantages are computed with the correct bootstrapping and discounting.
+  \item \textbf{Seed leakage:} Ensure all sources of randomness (numpy, torch, env) are seeded.
+  \item \textbf{Silent bugs:} Use assertions and unit tests for tensor shapes and value ranges.
+\end{itemize}
+
+\section{Visualization and Interpretability}
+Visualizing learning curves, policy entropy, and value estimates is crucial for diagnosing training. Use moving averages and error bands to summarize results. For interpretability, visualize policy outputs (action probabilities) and value function landscapes. For environments with spatial structure, plot state visitation heatmaps.
+
+\section{Advanced Visualization Techniques}
+\subsection{t-SNE and Embedding Analysis}
+Use t-SNE or PCA to visualize high-dimensional state or policy embeddings, revealing structure in learned representations.
+
+\subsection{Saliency Maps}
+For environments with image observations, compute gradients of the value or policy output with respect to input pixels to identify salient regions.
+
+\subsection{Policy and Value Landscapes}
+Plot the output of the policy or value function over a grid of states to interpret agent behavior and detect overfitting or blind spots.
+
+\section{Ethical Considerations and Societal Impact}
+While CA23 is intended for educational and research use, RL algorithms can be applied to domains with ethical risks (e.g., automated trading, autonomous vehicles). Users should consider the societal impact of deploying RL agents, including safety, fairness, and transparency. All experiments should comply with institutional and legal guidelines.
+
+\section{Extensions}
+\subsection{Multi-Agent Reinforcement Learning}
+Extend the scaffold to multi-agent settings by instantiating multiple policies and value functions, and designing appropriate reward structures (cooperative, competitive, or mixed).
+
+\subsection{Offline RL}
+Offline RL methods learn from fixed datasets without further environment interaction. Integrate batch RL algorithms (e.g., BCQ, CQL) and add dataset loading utilities.
+
+\subsection{Hierarchical RL}
+Hierarchical RL decomposes tasks into sub-policies (options, skills). Extend the scaffold by adding high-level controllers and sub-policy modules.
 
 \section{Implementation files and responsibilities}
 Table~\ref{tab:filemap} lists the principal files and their responsibilities.
@@ -110,6 +197,23 @@ File & Purpose \\\midrule
 \caption{File map and responsibilities for the CA23 scaffold.}
 \label{tab:filemap}
 \end{table}
+
+\section{Repository Layout and Modular Design}
+The CA23 repository is organized to separate concerns and promote clarity:
+\begin{itemize}
+  \item \textbf{src/} contains all core modules, each with a single responsibility:
+    \begin{itemize}
+      \item \texttt{config.py}: Defines the \texttt{ExperimentConfig} dataclass for all hyperparameters and YAML serialization.
+      \item \texttt{model.py}: Implements \texttt{PolicyNetwork} and \texttt{ValueNetwork} using PyTorch, with configurable architectures.
+      \item \texttt{losses.py}: Contains loss functions for policy gradient, value fitting, and entropy regularization.
+      \item \texttt{data.py}: Provides episode collection and discounted return computation utilities.
+      \item \texttt{utils.py}: Offers seeding, device selection, and figure saving helpers.
+    \end{itemize}
+  \item \textbf{configs/} holds example YAML configuration files for quick experimentation and reproducibility.
+  \item \textbf{scripts/} includes entry-point scripts (e.g., \texttt{train.py}) for running experiments.
+  \item \textbf{tests/} contains all unit and integration tests, ensuring correctness and import-safety.
+\end{itemize}
+This modular design makes it easy to extend, test, and maintain the codebase.
 
 \section{Experimental design}
 We provide a canonical experimental protocol intended to be reproducible and
@@ -194,40 +298,99 @@ Follow this checklist to ensure reproducible runs and publishable artifacts:
   raw data (CSV) in a `results/` folder for easy re-analysis.
 \end{itemize}
 
-\section{Appendix A: Algorithm pseudocode}
-\begin{algorithm}[h]
-\caption{Vanilla Policy Gradient (episodic)}
-\begin{algorithmic}[1]
-\State Initialize policy $\theta$ and value $\phi$.
-\For{episode = 1 to N}
-  \State Collect trajectory $\tau$ by rolling out $\pi_\theta$.
-  \State Compute returns $R_t$ for $t$ in trajectory.
-  \State Compute advantages $A_t = R_t - V_\phi(s_t)$.
-  \State $\theta \leftarrow \theta - \alpha \nabla_\theta [ -\mathbb{E}_t[\log \pi_\theta(a_t|s_t) A_t] - \lambda \mathbb{E}_t[\mathcal{H}(\pi(\cdot|s_t)) ] ]$
-  \State $\phi \leftarrow \phi - \beta \nabla_\phi \mathbb{E}_t[(V_\phi(s_t) - R_t)^2]$
-\EndFor
-\end{algorithmic}
-\end{algorithm}
+\section{Reproducibility and Reporting: Principles and Rationale}
+Reproducibility is a cornerstone of scientific research. In RL, it is especially important due to the stochastic nature of environments and learning algorithms. CA23 enforces reproducibility by:
+\begin{itemize}
+  \item \textbf{Seeding all random number generators:} Use \texttt{src.utils.set_seed} to set seeds for Python, NumPy, PyTorch, and (if applicable) the environment.
+  \item \textbf{Config versioning:} Save the exact YAML config used for each run, and record the git commit hash and environment details.
+  \item \textbf{Automated figure saving:} Use \texttt{src.utils.save_figure} with high DPI to ensure publication-quality plots.
+  \item \textbf{Comprehensive logging:} Log all metrics, hyperparameters, and environment details for each run.
+\end{itemize}
+Reporting should include not only results but also the full experimental context, enabling others to reproduce and extend the work.
 
-\section{Appendix B: How to run}
-A minimal sequence of commands to run the baseline experiment:
+\section{Documentation and Scientific Communication}
+The CA23 scaffold includes both a human-readable report (\texttt{REPORT.md}) and a full LaTeX write-up (\texttt{REPORT.tex}). These documents:
+\begin{itemize}
+  \item Summarize the research question, hypothesis, and experimental design.
+  \item Provide detailed methods, including code-to-math mapping.
+  \item Present results with appropriate statistical analysis and visualization.
+  \item Discuss limitations, future work, and broader impact.
+\end{itemize}
+Clear documentation is essential for both internal development and external communication.
+
+\section{Running Experiments: Concepts and Best Practices}
+Experiments are run using the provided \texttt{scripts/train.py}, which loads a YAML config and executes a training loop. Key concepts:
+\begin{itemize}
+  \item \textbf{Configuration-driven:} All experiment parameters are specified in a YAML file, ensuring that runs are fully documented and reproducible.
+  \item \textbf{Logging:} Results (returns, losses) are logged to CSV files in a \texttt{runs/} directory, and plots are saved to \texttt{pictures/} for later analysis.
+  \item \textbf{Separation of code and config:} By keeping code generic and using configs for specifics, the same codebase can be used for many experiments.
+  \item \textbf{Batch runs:} For sweeps, generate multiple configs and run \texttt{train.py} for each, organizing outputs by experiment and seed.
+\end{itemize}
+This approach supports both single-run debugging and large-scale hyperparameter sweeps.
+
+\section{Sample Experiment Walkthrough}
+\subsection{Configuration}
+A sample YAML config for CartPole-v1:
 \begin{verbatim}
-python -m venv .venv && source .venv/bin/activate
-python -m pip install -r requirements.txt
-python scripts/train.py --config configs/debug.yaml
+env_name: CartPole-v1
+seed: 42
+device: cpu
+learning_rate: 1e-3
+gamma: 0.99
+hidden_sizes: [64, 64]
+batch_size: 32
+max_episodes: 200
+entropy_coef: 0.01
 \end{verbatim}
 
-To run a sweep, create per-run YAML configs in `runs/<exp>/<seed>/config.yaml`
-and launch `scripts/train.py` with those configs (see the notebook for an
-example shell loop).
+\subsection{Code}
+Run the experiment with:
+\begin{verbatim}
+python scripts/train.py --config configs/sample.yaml
+\end{verbatim}
 
-\section{Appendix C: API reference (short)}
+\subsection{Expected Output}
+The script will print episode returns, save a CSV log, and output a checkpoint. Example log:
+\begin{verbatim}
+episode,episode_return
+1,12.0
+2,15.0
+...
+200,500.0
+\end{verbatim}
+
+\subsection{Analysis}
+Plot the learning curve using matplotlib or pandas, and compare across seeds or hyperparameters. Look for stability, convergence, and variance.
+
+\section{Troubleshooting Common Errors}
 \begin{itemize}
-\item `src.config.ExperimentConfig` — dataclass with fields shown in Table~\ref{tab:hparams}. Use `from_yaml` and `to_yaml` for load/save.
-\item `src.model.PolicyNetwork` — constructor `(obs_dim, action_dim, hidden_sizes=(64,64))`. Use `.get_action(obs_tensor)` to sample actions.
-\item `src.losses.policy_gradient_loss` — signature `(log_probs, advantages)`.
-\item `src.data.collect_episodes` — `(env_name, policy, num_episodes=1, max_steps=1000)`; returns list of episodes (each a list of `Transition`).
+  \item \textbf{ImportError: No module named 'src'}: Ensure you run scripts from the project root or set PYTHONPATH.
+  \item \textbf{CUDA out of memory}: Reduce batch size or use CPU.
+  \item \textbf{NaN losses}: Check for exploding gradients, invalid operations (e.g., log(0)), or unnormalized inputs.
+  \item \textbf{Test failures}: Run \texttt{pytest -v} and check stack traces; ensure all dependencies are installed.
 \end{itemize}
+
+\section{Community Resources and Further Reading}
+\begin{itemize}
+  \item OpenAI Spinning Up: \url{https://spinningup.openai.com}
+  \item RL Baselines3 Zoo: \url{https://github.com/DLR-RM/rl-baselines3-zoo}
+  \item Deep RL Bootcamp Lectures: \url{https://deep-rl.net/lectures/}
+  \item RL Discord and forums: \url{https://discord.gg/2BqRKrG}
+  \item Papers with Code RL leaderboard: \url{https://paperswithcode.com/task/deep-reinforcement-learning}
+\end{itemize}
+
+\section{Contributing: Guidelines and Rationale}
+Contributions to CA23 should follow best practices for open-source and scientific software:
+\begin{itemize}
+  \item \textbf{Import-safety:} All modules must be import-safe (no side effects on import) to ensure that tests and scripts can import code without triggering computation.
+  \item \textbf{Testing:} Every new feature or bugfix should be accompanied by a test. Prefer small, focused tests that are easy to debug.
+  \item \textbf{Documentation:} All algorithmic choices and design decisions should be documented in \texttt{REPORT.md} or inline comments.
+  \item \textbf{Code review:} Use pull requests and code review to maintain code quality and share knowledge.
+\end{itemize}
+This ensures that the codebase remains robust, maintainable, and useful for the community.
+
+\section{Licensing, Attribution, and Ethical Use}
+CA23 is provided for educational and research use under the terms specified in \texttt{LICENSE}. Users are encouraged to cite the course and maintainers if they use or adapt the scaffold in their own work. Ethical use includes respecting data privacy, avoiding misuse in sensitive domains, and acknowledging all contributors.
 
 \section{Conclusion}
 We present CA23 as a minimal but practical scaffold for policy-gradient
@@ -247,6 +410,21 @@ Richard S. Sutton and Andrew G. Barto. Reinforcement Learning: An Introduction. 
 
 \bibitem{spinup}
 OpenAI. Spinning Up in Deep RL. 2018. \url{https://spinningup.openai.com}
+
+\bibitem{williams1992simple}
+Ronald J. Williams. Simple statistical gradient-following algorithms for connectionist reinforcement learning. Machine Learning, 1992.
+
+\bibitem{konda2000actor}
+Vijay R. Konda and John N. Tsitsiklis. Actor-critic algorithms. NIPS, 2000.
+
+\bibitem{schulman2015trust}
+John Schulman, Sergey Levine, Pieter Abbeel, Michael Jordan, and Philipp Moritz. Trust Region Policy Optimization. ICML, 2015.
+
+\bibitem{schulman2017proximal}
+John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. Proximal Policy Optimization Algorithms. arXiv preprint arXiv:1707.06347, 2017.
+
+\bibitem{henderson2018deep}
+Peter Henderson, Riashat Islam, Philip Bachman, Joelle Pineau, Doina Precup, David Meger. Deep Reinforcement Learning that Matters. AAAI, 2018.
 \end{thebibliography}
 
 \end{document}
