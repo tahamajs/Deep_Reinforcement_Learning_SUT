@@ -92,6 +92,95 @@ Key decisions:
   \item Import-safe modules with no side-effects.
 \end{itemize}
 
+\subsection{Network Architectures}
+The SAC implementation uses the following network architectures:
+
+\subsubsection{Actor Network}
+A stochastic policy network that outputs a Gaussian distribution over actions:
+\begin{itemize}
+  \item Input: state vector of dimension $d_s$
+  \item Hidden layers: 2 fully-connected layers with 256 units each, ReLU activation
+  \item Output: mean $\mu(s)$ and log standard deviation $\log\sigma(s)$ for each action dimension
+  \item Action sampling: $a = \mu(s) + \sigma(s) \odot \epsilon$, where $\epsilon \sim \mathcal{N}(0,I)$
+  \item Squashing: $a = \tanh(a)$ to enforce action bounds
+\end{itemize}
+
+\subsubsection{Critic Networks}
+Two identical Q-networks for stability:
+\begin{itemize}
+  \item Input: concatenated state and action vectors $(s, a)$
+  \item Hidden layers: 2 fully-connected layers with 256 units each, ReLU activation
+  \item Output: scalar Q-value $Q(s,a)$
+  \item Target networks: Polyak-averaged copies updated with $\tau = 0.005$
+\end{itemize}
+
+\subsubsection{Temperature Network (for automatic tuning)}
+A simple network to learn the entropy coefficient:
+\begin{itemize}
+  \item Input: scalar (log temperature)
+  \item Output: temperature $\alpha = \exp(\log\alpha)$
+  \item Target entropy: $\mathcal{H}_0 = -|A|$ for continuous actions
+\end{itemize}
+
+\subsection{Hyperparameter Tuning Guide}
+SAC is relatively robust, but key hyperparameters include:
+
+\begin{table}[H]
+\centering
+\caption{SAC Hyperparameters and Recommended Ranges}
+\begin{tabular}{lccc}
+\toprule
+Parameter & Default & Range & Description \\
+\midrule
+Learning Rate ($\alpha_{actor}$, $\alpha_{critic}$) & 3e-4 & 1e-5 to 1e-3 & Adam optimizer step size \\
+Discount $\gamma$ & 0.99 & 0.95-0.999 & Future reward weighting \\
+Replay Buffer Size & 1e6 & 1e5-1e7 & Experience storage capacity \\
+Batch Size & 256 & 64-1024 & Mini-batch size for updates \\
+Target Update Rate $\tau$ & 0.005 & 0.001-0.01 & Polyak averaging coefficient \\
+Initial $\alpha$ & 0.2 & 0.01-1.0 & Entropy regularization strength \\
+Target Entropy & $-|A|$ & $-2|A|$ to 0 & Desired policy entropy \\
+Hidden Dimensions & 256 & 64-512 & Network width \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Tuning Strategies}
+\begin{itemize}
+  \item Start with default values from the original SAC paper
+  \item For exploration: increase initial $\alpha$ or decrease target entropy
+  \item For stability: decrease learning rates or increase $\tau$
+  \item For sample efficiency: increase buffer size and batch size
+  \item Use random search over 2-3 orders of magnitude for learning rates
+\end{itemize}
+
+\subsection{Replay Buffer Implementation}
+The replay buffer stores transitions $(s, a, r, s', d)$ and supports:
+\begin{itemize}
+  \item Uniform random sampling for off-policy learning
+  \item Capacity management with circular buffer
+  \item Efficient numpy array storage
+  \item Optional prioritization (extension)
+\end{itemize}
+
+Code snippet:
+\begin{lstlisting}
+class ReplayBuffer:
+    def __init__(self, capacity=1e6):
+        self.capacity = int(capacity)
+        self.buffer = []
+        self.position = 0
+    
+    def add(self, state, action, reward, next_state, done):
+        if len(self.buffer) < self.capacity:
+            self.buffer.append(None)
+        self.buffer[self.position] = (state, action, reward, next_state, done)
+        self.position = (self.position + 1) % self.capacity
+    
+    def sample(self, batch_size):
+        batch = random.sample(self.buffer, batch_size)
+        return map(np.array, zip(*batch))
+\end{lstlisting}
+
 \subsection{API Reference}
 \begin{description}
   \item[\texttt{SAC}] Main class: \texttt{SAC(state\_dim, action\_dim, hidden\_dim=256, lr=3e-4, alpha=0.2, auto\_alpha=True)}
@@ -126,11 +215,94 @@ Walker2d & 5000 & 200 & 1e6 \\
 \end{tabular}
 \end{table}
 
+\subsection{Experimental Setup}
+\subsubsection{Environments}
+We evaluate SAC on continuous control tasks from OpenAI Gym/MuJoCo:
+\begin{itemize}
+  \item \textbf{HalfCheetah-v2}: A 2D cheetah robot that must run forward
+  \item \textbf{Walker2d-v2}: A 2D bipedal walker
+  \item \textbf{Hopper-v2}: A one-legged hopper
+  \item \textbf{Ant-v2}: A four-legged ant
+  \item \textbf{Humanoid-v2}: A 3D humanoid walker
+  \item \textbf{Reacher-v2}: A robotic arm reaching task
+\end{itemize}
+
+\subsubsection{Evaluation Protocol}
+\begin{itemize}
+  \item Train for 1M environment steps (3 seeds per task)
+  \item Evaluate every 10K steps with 10 deterministic episodes
+  \item Report mean and standard deviation of returns
+  \item Use the same random seeds for reproducibility
+\end{itemize}
+
+\subsubsection{Baseline Comparisons}
+Compare against:
+\begin{itemize}
+  \item DDPG: Deterministic policy gradient
+  \item TD3: Twin delayed DDPG
+  \item PPO: On-policy actor-critic
+  \item SAC (ours): Entropy-regularized off-policy method
+\end{itemize}
+
+\subsection{Ablation Studies}
+Key ablations to understand SAC components:
+\begin{enumerate}
+  \item \textbf{Automatic vs Fixed $\alpha$}: Compare entropy tuning vs fixed temperature
+  \item \textbf{Twin vs Single Critic}: Effect of double Q-learning
+  \item \textbf{Target Networks}: Impact of delayed updates
+  \item \textbf{Replay Buffer Size}: Sample efficiency vs memory usage
+  \item \textbf{Hidden Dimensions}: Network capacity effects
+\end{enumerate}
+
+\subsection{Expected Results}
+SAC should achieve state-of-the-art performance on most MuJoCo tasks:
+\begin{itemize}
+  \item HalfCheetah: 12,000+ average return
+  \item Walker2d: 5,000+ average return
+  \item Hopper: 3,500+ average return
+  \item Ant: 5,000+ average return
+\end{itemize}
+
+Learning curves should show:
+\begin{itemize}
+  \item Smooth improvement without catastrophic forgetting
+  \item Better exploration than DDPG/TD3 due to entropy bonus
+  \item Faster convergence than PPO due to off-policy learning
+\end{itemize}
+
 \section{Best Practices for Extensions}
 \begin{itemize}
   \item Add image inputs with CNN encoders.
   \item Implement SAC-Discrete for discrete actions.
   \item Use prioritized replay for better sample efficiency.
+\end{itemize}
+
+\section{Limitations and Future Work}
+\subsection{Current Limitations}
+\begin{itemize}
+  \item \textbf{Sample Inefficiency}: SAC requires more samples than on-policy methods like PPO
+  \item \textbf{Hyperparameter Sensitivity}: Performance depends on careful tuning of $\alpha$ and learning rates
+  \item \textbf{Continuous Actions Only}: Original SAC designed for continuous control
+  \item \textbf{Exploration}: Entropy regularization may not suffice for sparse reward tasks
+  \item \textbf{Computational Cost}: Twin critics and target networks increase memory usage
+\end{itemize}
+
+\subsection{Future Research Directions}
+\begin{itemize}
+  \item \textbf{SAC-Discrete}: Extend to discrete action spaces using Gumbel-Softmax
+  \item \textbf{Hierarchical SAC}: Multi-level policies for complex tasks
+  \item \textbf{SAC with Priors}: Incorporate prior knowledge or demonstrations
+  \item \textbf{Multi-Agent SAC}: Cooperative/competitive settings
+  \item \textbf{SAC for Images}: End-to-end learning from pixels
+  \item \textbf{Theoretical Analysis}: Convergence guarantees and regret bounds
+\end{itemize}
+
+\subsection{Known Issues and Fixes}
+\begin{itemize}
+  \item \textbf{NaN Gradients}: Use gradient clipping or reward normalization
+  \item \textbf{Poor Local Optima}: Try different random seeds or curriculum learning
+  \item \textbf{Overestimation Bias}: Twin critics help but may need additional techniques
+  \item \textbf{Entropy Collapse}: Monitor entropy and adjust target values
 \end{itemize}
 
 \section{Reproducibility Checklist}
@@ -152,8 +324,164 @@ $s$: state, $a$: action, $\pi$: policy, $Q$: Q-function, $\alpha$: temperature.
 \section{Appendix B: Extended Examples}
 Full training loop example.
 
+\subsection{Complete Training Script}
+\begin{lstlisting}
+import gym
+import torch
+from src.sac import SAC
+from src.replay_buffer import ReplayBuffer
+
+env = gym.make('HalfCheetah-v2')
+sac = SAC(env.observation_space.shape[0], env.action_space.shape[0])
+buffer = ReplayBuffer()
+
+state = env.reset()
+episode_reward = 0
+episode_num = 0
+
+for step in range(1000000):
+    action = sac.select_action(state)
+    next_state, reward, done, _ = env.step(action)
+    
+    buffer.add(state, action, reward, next_state, done)
+    state = next_state
+    episode_reward += reward
+    
+    if len(buffer) > 1000:
+        batch = buffer.sample(256)
+        sac.update(batch)
+    
+    if done:
+        print(f"Episode {episode_num}: {episode_reward}")
+        state = env.reset()
+        episode_reward = 0
+        episode_num += 1
+\end{lstlisting}
+
+\subsection{Evaluation Script}
+\begin{lstlisting}
+def evaluate_policy(env, policy, eval_episodes=10):
+    avg_reward = 0.
+    for _ in range(eval_episodes):
+        state = env.reset()
+        done = False
+        while not done:
+            action = policy.select_action(state, evaluate=True)
+            state, reward, done, _ = env.step(action)
+            avg_reward += reward
+    avg_reward /= eval_episodes
+    return avg_reward
+\end{lstlisting}
+
 \section{Appendix C: Figure Generation}
 Use Matplotlib to plot returns.
+
+\subsection{Plotting Learning Curves}
+\begin{lstlisting}
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Load training logs
+df = pd.read_csv('logs/training_returns.csv')
+
+plt.figure(figsize=(10, 6))
+plt.plot(df['step'], df['mean_return'], label='SAC')
+plt.fill_between(df['step'], 
+                 df['mean_return'] - df['std_return'],
+                 df['mean_return'] + df['std_return'], 
+                 alpha=0.3)
+plt.xlabel('Environment Steps')
+plt.ylabel('Average Return')
+plt.title('SAC Learning Curve on HalfCheetah-v2')
+plt.legend()
+plt.savefig('figures/learning_curve.png')
+plt.show()
+\end{lstlisting}
+
+\subsection{Comparison Plots}
+\begin{lstlisting}
+# Compare multiple algorithms
+algorithms = ['SAC', 'TD3', 'DDPG', 'PPO']
+colors = ['blue', 'red', 'green', 'orange']
+
+plt.figure(figsize=(12, 8))
+for alg, color in zip(algorithms, colors):
+    df = pd.read_csv(f'logs/{alg.lower()}_returns.csv')
+    plt.plot(df['step'], df['mean_return'], 
+             label=alg, color=color, linewidth=2)
+
+plt.xlabel('Environment Steps (1e6)')
+plt.ylabel('Average Return')
+plt.title('Algorithm Comparison on MuJoCo Tasks')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.savefig('figures/algorithm_comparison.png')
+plt.show()
+\end{lstlisting}
+
+\section{Appendix D: Mathematical Derivations}
+\subsection{Derivation of SAC Objectives}
+Starting from the entropy-regularized return:
+\[
+J(\pi) = \mathbb{E}_{\tau \sim \pi} \left[ \sum_{t=0}^\infty \gamma^t (r_t + \alpha \mathcal{H}(\pi(\cdot|s_t))) \right]
+\]
+
+Using the soft Q-function definition:
+\[
+Q^\pi(s,a) = r(s,a) + \gamma \mathbb{E}_{s' \sim p} V^\pi(s')
+\]
+where
+\[
+V^\pi(s) = \alpha \log \int \exp(Q^\pi(s,a)/\alpha) da + const
+\]
+
+The optimal policy satisfies:
+\[
+\pi^*(a|s) \propto \exp(Q^*(s,a)/\alpha)
+\]
+
+\subsection{Proof of Convergence}
+Under standard assumptions (bounded rewards, Lipschitz continuity), SAC converges to the optimal entropy-regularized policy. The proof follows from the contraction mapping properties of the soft Bellman operator.
+
+\section{Appendix E: Code Quality and Testing}
+\subsection{Unit Tests}
+\begin{lstlisting}
+import unittest
+import torch
+from src.sac import SAC
+
+class TestSAC(unittest.TestCase):
+    def setUp(self):
+        self.sac = SAC(10, 4)
+    
+    def test_forward_pass(self):
+        state = torch.randn(1, 10)
+        action = self.sac.actor.sample(state)
+        q1, q2 = self.sac.critic(state, action)
+        self.assertEqual(q1.shape, (1, 1))
+        self.assertEqual(q2.shape, (1, 1))
+    
+    def test_update_shapes(self):
+        batch_size = 64
+        batch = {
+            'state': torch.randn(batch_size, 10),
+            'action': torch.randn(batch_size, 4),
+            'reward': torch.randn(batch_size, 1),
+            'next_state': torch.randn(batch_size, 10),
+            'done': torch.randint(0, 2, (batch_size, 1))
+        }
+        losses = self.sac.update(batch)
+        self.assertIn('actor', losses)
+        self.assertIn('critic', losses)
+\end{lstlisting}
+
+\subsection{Integration Tests}
+\begin{itemize}
+  \item Test full training loop on toy environment
+  \item Verify checkpoint saving/loading
+  \item Check reproducibility with fixed seeds
+  \item Validate against known SAC implementations
+\end{itemize}
 
 \section{Acknowledgements}
 Based on SAC paper and implementations.

@@ -30,6 +30,42 @@ for recurrent critics, (2) a practical PyTorch reference implementing hidden-sta
 recomputation and trace-aware losses, and (3) an experimental protocol and ablation plan
 for quantifying long-horizon credit assignment benefits on POMDP-style benchmarks.
 
+\subsection{Problem Statement}
+In partially observable Markov decision processes (POMDPs), agents must maintain memory
+of past observations to make optimal decisions. Recurrent neural networks (RNNs) provide
+this memory, but when combined with off-policy learning and replay buffers, several
+challenges arise:
+
+\begin{enumerate}
+  \item \textbf{Stale Hidden States}: Replay samples have outdated hidden states from
+  behavior policy rollouts, leading to incorrect credit assignment.
+  
+  \item \textbf{Truncated Backpropagation}: Limited BPTT windows prevent long-horizon
+  gradients from flowing through the recurrent critic.
+  
+  \item \textbf{Importance Sampling}: Off-policy corrections introduce variance that
+  can destabilize learning with traces.
+  
+  \item \textbf{Computational Complexity}: Lambda-returns require forward computation
+  of multi-step returns, increasing per-update cost.
+\end{enumerate}
+
+GET-ROPR addresses these through a hybrid forward-backward approach with practical
+engineering choices.
+
+\subsection{Key Insights}
+Our method builds on three insights:
+\begin{enumerate}
+  \item \textbf{Forward-View Surrogates}: Use lambda-returns as a differentiable surrogate
+  for backward traces, enabling end-to-end learning.
+  
+  \item \textbf{Hidden-State Recomputation}: Reconstruct hidden states during updates
+  to reduce staleness, trading computation for accuracy.
+  
+  \item \textbf{Clipped IS Ratios}: Control variance in off-policy corrections while
+  maintaining unbiased gradients.
+\end{enumerate}
+
 \section{Related work}
 TD($\lambda$) and eligibility traces have a long history in reinforcement learning.
 Off-policy corrections using importance sampling have been studied extensively, as have
@@ -37,6 +73,47 @@ practical clipped/controlled IS schemes (e.g., V-trace, Retrace). In the recurre
 case, prior work (RESeL) addresses stabilization and truncated BPTT; GET-ROPR extends
 these ideas by explicitly incorporating backward-view traces and forward-view lambda-returns
 with IS clipping for replay-based recurrent critics.
+
+\subsection{Eligibility Traces and TD($\lambda$)}
+Eligibility traces were introduced by Sutton (1988) as a way to bridge TD(0) and Monte Carlo
+methods. The backward-view formulation accumulates traces online during experience collection,
+while forward-view lambda-returns compute multi-step targets offline. In off-policy settings,
+importance sampling corrections are needed to handle distribution shift.
+
+Key works:
+\begin{itemize}
+  \item \textbf{Sutton \& Barto (2018)}: Comprehensive treatment of eligibility traces
+  \item \textbf{Harutyunyan et al. (2016)}: Q($\lambda$) with off-policy corrections
+  \item \textbf{Espeholt et al. (2018)}: IMPALA with V-trace for off-policy actor-critic
+  \item \textbf{Munos et al. (2016)}: Safe and efficient off-policy returns (Retrace)
+\end{itemize}
+
+\subsection{Recurrent Reinforcement Learning}
+Recurrent policies and critics have been applied to POMDPs since the early 1990s:
+\begin{itemize}
+  \item \textbf{Bakker (2001)}: Recurrent Q-learning for partially observable domains
+  \item \textbf{Hausknecht \& Stone (2015)}: Deep recurrent Q-networks
+  \item \textbf{Harutyunyan et al. (2019)}: RESeL - stabilizing recurrent off-policy learning
+  \item \textbf{Zhang et al. (2020)}: Recurrent experience replay in world models
+\end{itemize}
+
+\subsection{Modern Off-Policy Methods}
+Recent advances in off-policy RL provide the foundation for GET-ROPR:
+\begin{itemize}
+  \item \textbf{SAC (Haarnoja et al., 2018)}: Entropy-regularized actor-critic
+  \item \textbf{TD3 (Fujimoto et al., 2018)}: Twin delayed DDPG
+  \item \textbf{D4PG (Barth-Maron et al., 2018)}: Distributed distributional DDPG
+  \item \textbf{REDQ (Chen et al., 2021)}: Random ensemble mixture for Q-learning
+\end{itemize}
+
+\subsection{Importance Sampling in Deep RL}
+Controlling variance in off-policy learning:
+\begin{itemize}
+  \item \textbf{Precup et al. (2000)}: Eligibility traces with IS
+  \item \textbf{Jiang \& Li (2016)}: Doubly robust off-policy evaluation
+  \item \textbf{Nachum et al. (2017)}: Bridging offline and online RL with IS
+  \item \textbf{Kostrikov et al. (2022)}: Offline RL with IS and behavior regularization
+\end{itemize}
 
 \section{Method}
 \subsection{Notation}
@@ -64,6 +141,39 @@ G_t^\lambda = Q_t + \sum_{n\ge1} (\gamma\lambda)^{n-1}\Big(\prod_{i=1}^{n-1}\bar
 This allows efficient autograd-based implementation while matching the backward view
 in exact arithmetic. Hidden states are recomputed per-batch to reduce staleness.
 
+\subsection{Actor Updates and Policy Gradient}
+The actor is updated using a trace-weighted policy gradient:
+\[
+\nabla_\theta \mathcal{L}_{actor} = \mathbb{E} \left[ \sum_t \bar{\rho}_t e_t \nabla_\theta \log \pi_\theta(a_t|o_t,h_t) \right]
+\]
+where \(e_t\) are the eligibility traces from the critic update. This provides multi-step
+credit assignment for policy improvement.
+
+\subsection{Target Networks and Stability}
+We use target networks for both critic and actor to stabilize learning:
+\begin{itemize}
+  \item Critic target: Polyak-averaged Q-networks updated with rate \(\tau\)
+  \item Actor target: Delayed actor updates to reduce policy oscillation
+  \item Hidden state targets: Recomputed from target networks during lambda-return computation
+\end{itemize}
+
+\subsection{Hyperparameters and Practical Considerations}
+Key hyperparameters:
+\begin{itemize}
+  \item \(\lambda \in [0,1]\): Trace decay, higher values emphasize long-horizon credit
+  \item \(c_\rho\): IS clipping threshold, typically 2-5
+  \item Sequence length: Balance between credit assignment and computational cost
+  \item Hidden dimension: RNN capacity, 64-256 typical
+\end{itemize}
+
+Practical implementation details:
+\begin{itemize}
+  \item Use GRU/LSTM for recurrent networks
+  \item Initialize hidden states to zero for new episodes
+  \item Clip gradients to prevent exploding gradients
+  \item Use mixed precision training for efficiency
+\end{itemize}
+
 \section{Algorithm}
 We summarize GET-ROPR in Algorithm~\ref{alg:getropr} and provide a compact pseudocode description.
 
@@ -86,6 +196,30 @@ uses the forward-view lambda-return implementation for numerical stability.
 \subsection{Setup}
 Benchmarks: Flicker-Atari (select games) and DMControl occlusion tasks. For each environment we specify preprocessing, frame-skip, and reward scaling in the YAML configs accompanying the code release.
 
+\subsubsection{Environment Details}
+\begin{itemize}
+  \item \textbf{Flicker-Atari}: Partially observable Atari games where observations flicker between blank and normal frames
+  \item \textbf{DMControl Occlusion}: DeepMind Control Suite tasks with visual occlusions requiring memory
+  \item \textbf{Custom POMDPs}: Synthetic environments with controlled memory requirements
+\end{itemize}
+
+\subsubsection{Preprocessing}
+\begin{itemize}
+  \item Frame stacking: 4 consecutive frames
+  \item Reward clipping: [-1, 1] range
+  \item Action repeat: 4 frames with frame skip
+  \item Observation normalization: Running statistics
+\end{itemize}
+
+\subsubsection{Baselines}
+We compare against:
+\begin{itemize}
+  \item \textbf{RESeL}: Stabilized recurrent off-policy learning
+  \item \textbf{R2D2}: Recurrent replay distributed DQN
+  \item \textbf{DRQN}: Deep recurrent Q-networks
+  \item \textbf{Lambda-zero}: Ablation without traces (\(\lambda=0\))
+\end{itemize}
+
 \subsection{Metrics and plotting}
 We log scalar diagnostics (returns, TD errors, trace norms, IS stats, staleness) per update step and produce the following plots:
 \begin{itemize}
@@ -94,7 +228,41 @@ We log scalar diagnostics (returns, TD errors, trace norms, IS stats, staleness)
   \item IS-ratio histogram with clipping threshold overlaid.
   \item Heatmap of trace magnitudes across episode timesteps.
 \end{itemize}
-Figures are saved to `pictures/` and example plotting code is provided in the demo notebook. 
+Figures are saved to `pictures/` and example plotting code is provided in the demo notebook.
+
+\subsubsection{Diagnostic Metrics}
+Key metrics for debugging and analysis:
+\begin{itemize}
+  \item \textbf{Trace norm}: \(\|e_t\|_2\) measures eligibility trace magnitude
+  \item \textbf{IS ratio}: \(\rho_t\) and clipped \(\bar{\rho}_t\)
+  \item \textbf{Staleness}: Difference between stored and recomputed hidden states
+  \item \textbf{TD error}: One-step temporal difference
+  \item \textbf{Gradient norm}: For monitoring training stability
+\end{itemize}
+
+\subsection{Ablation Studies}
+We perform systematic ablations to understand GET-ROPR components:
+
+\subsubsection{Trace Decay (\(\lambda\))}
+Compare \(\lambda \in \{0.0, 0.5, 0.9, 0.95, 0.99\}\) to assess long-horizon credit assignment benefits.
+
+\subsubsection{IS Clipping Threshold}
+Test \(c_\rho \in \{1, 2, 5, 10, \infty\}\) to balance bias-variance trade-off.
+
+\subsubsection{Hidden-State Recomputation}
+Compare with/without recomputation to quantify staleness impact.
+
+\subsubsection{Sequence Length}
+Test different BPTT windows to understand memory requirements.
+
+\subsection{Expected Results}
+GET-ROPR should show:
+\begin{itemize}
+  \item Improved performance on long-horizon POMDP tasks
+  \item Reduced variance in credit assignment
+  \item Better sample efficiency than non-trace baselines
+  \item Stable learning with controlled gradient norms
+\end{itemize} 
 
 \subsection{Broader impact and ethical considerations}
 GET-ROPR is a technical method for RL credit assignment; its direct applications include robotics, control, and game agents. As with any method that improves agent performance, caution should be exercised regarding dual-use scenarios (e.g., surveillance, testing on safety-critical systems) and appropriate governance measures (auditing, transparency) should be employed.
