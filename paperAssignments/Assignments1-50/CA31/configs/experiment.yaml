@@ -1,6 +1,0 @@
-# Example experiment config for CA31 bandit experiment
-seed: 42
-arm_probs: [0.1, 0.2, 0.8]
-n_steps: 1000
-epsilon: 0.05
-# save_path: "results/ca31_rewards.csv"
