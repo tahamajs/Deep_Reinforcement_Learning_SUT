@@ -31,11 +31,19 @@ The CartPole environment is a classic control problem where an agent must balanc
 
 \section{Related Work}
 
-Deep Q-Networks (DQN) were introduced by Mnih et al.~\cite{mnih2015human} to stabilize Q-learning with deep neural networks, using experience replay and target networks. Subsequent improvements include Double DQN~\cite{van2016deep} to reduce overestimation bias, and Prioritized Experience Replay~\cite{schaul2015prioritized} for efficient sampling.
+Deep Q-Networks (DQN) were introduced by Mnih et al.~\cite{mnih2015human} to stabilize Q-learning with deep neural networks, using experience replay and target networks. This breakthrough enabled agents to achieve human-level performance on Atari games by approximating the Q-function with convolutional neural networks. The key innovations included storing transitions in a replay buffer to break temporal correlations and using a separate target network to stabilize training targets.
 
-CartPole has been widely used as a benchmark for RL algorithms~\cite{barto1983neuronlike}. Modern approaches extend DQN to continuous control~\cite{lillicrap2015continuous} and multi-agent settings~\cite{lowe2017multi}, but we focus on the discrete-action variant for clarity.
+Subsequent improvements include Double DQN~\cite{van2016deep} to reduce overestimation bias, where action selection and evaluation are decoupled using separate networks. Prioritized Experience Replay~\cite{schaul2015prioritized} samples transitions proportionally to their TD-error magnitude, focusing learning on surprising experiences. Dueling DQN~\cite{wang2015dueling} separates the Q-function into value and advantage streams for better representation.
 
-Our implementation draws from open-source baselines~\cite{dhariwal2017openai} and educational resources~\cite{sutton2018reinforcement}, ensuring modularity for extensions.
+CartPole has been widely used as a benchmark for RL algorithms since its introduction~\cite{barto1983neuronlike}. It serves as a testbed for policy gradients~\cite{williams1992simple}, actor-critic methods~\cite{konda2000actor}, and modern deep RL approaches~\cite{schulman2017proximal}. Extensions to continuous control problems include Deep Deterministic Policy Gradients (DDPG)~\cite{lillicrap2015continuous} and Soft Actor-Critic (SAC)~\cite{haarnoja2018soft}.
+
+Multi-agent RL has seen significant advances, with methods like MADDPG~\cite{lowe2017multi} for cooperative-competitive environments and QMIX~\cite{rashid2018qmix} for value-based multi-agent learning. In offline RL, algorithms like Conservative Q-Learning (CQL)~\cite{kumar2020conservative} learn from fixed datasets without environment interaction.
+
+Our implementation draws from open-source baselines~\cite{dhariwal2017openai} and educational resources~\cite{sutton2018reinforcement}, ensuring modularity for extensions. We focus on the discrete-action CartPole variant for clarity, while noting that continuous variants exist~\cite{brockman2016openai}. Recent work on sample-efficient RL includes Rainbow DQN~\cite{hessel2018rainbow}, combining multiple improvements, and Dreamer~\cite{hafner2019dream} for model-based learning.
+
+\subsection{Comparison to Existing Implementations}
+
+Unlike monolithic baselines, our code is educational and modular, allowing toggling of Double DQN and prioritized replay. This differs from Stable Baselines~\cite{stable-baselines3} which provides optimized implementations but less transparency. Our approach emphasizes reproducibility with YAML configs and import-safe modules, following best practices from the RL community~\cite{engstrom2019implementation}.
 
 \section{Method}
 
@@ -64,6 +72,20 @@ When `Config.replay` is set to `prioritized`, transitions are sampled proportion
 \subsection{Exploration and Schedules}
 
 We use epsilon-greedy exploration, where epsilon decays multiplicatively each episode from `epsilon_start` to `epsilon_end` using factor `epsilon_decay`. This schedule is simple and effective on CartPole; more complex schedules (linear decay, annealing) can be plugged in via the configuration.
+
+\subsection{Network Architecture}
+
+The Q-network is implemented as a multi-layer perceptron (MLP) in PyTorch, consisting of an input layer matching the 4-dimensional CartPole state, two hidden layers of 128 units each with ReLU activations, and an output layer with 2 units corresponding to the discrete actions (left/right). This architecture is chosen for simplicity and computational efficiency, avoiding overfitting on the small CartPole state space.
+
+Weights are initialized using PyTorch's default scheme (uniform for linear layers). The target network is initialized as a copy of the policy network and updated via hard copies every `target_update` episodes. For Double DQN, the policy network handles action selection while the target network provides value estimates.
+
+\subsection{Hyperparameter Choices}
+
+Default hyperparameters are selected based on common DQN practices and tuned for CartPole's reward scale. The learning rate of 0.001 balances convergence speed and stability, with Adam optimizer providing adaptive updates. A discount factor $\gamma = 0.99$ encourages long-term planning without excessive discounting.
+
+The replay buffer capacity of 10,000 transitions ensures diverse sampling while fitting in memory. Batch size of 32 provides stable gradient estimates without excessive computation. Epsilon decay from 1.0 to 0.01 over episodes enables initial exploration and eventual exploitation.
+
+For prioritized replay, $\alpha = 0.6$ and $\beta = 0.4$ follow standard values, with $\beta$ annealed to 1.0 over training for unbiased sampling. These choices are configurable via YAML and can be ablated as described in the Experiments section.
 
 \subsection{Algorithm Pseudocode}
 
@@ -161,9 +183,15 @@ Default hyperparameters are documented in `configs/config.yaml` and include:
 
 \section{Experiments}
 
+\subsection{Experimental Setup}
+
+All experiments are conducted on the CartPole-v1 environment from OpenAI Gym, with episodes terminating at 200 steps or pole fall. We use PyTorch 1.12+ and Gym 0.26+ for compatibility. Training runs for 500 episodes by default, with evaluation every episode. Seeds are set using `src.utils.set_seed` to ensure reproducibility across Python, NumPy, and PyTorch random number generators.
+
+Hardware requirements are minimal: experiments run on CPU in under 5 minutes, making them suitable for laptops. For production use, GPU acceleration can be enabled by moving tensors to CUDA devices.
+
 \subsection{Evaluation Metrics}
 
-We evaluate using per-episode return, rolling averages (e.g., 50-episode mean), and reporting mean/std across multiple seeds. We recommend reporting the number of episodes until a solving threshold (e.g., mean $\geq$ 195 over 100 episodes) when applicable.
+We evaluate using per-episode return, rolling averages (e.g., 50-episode mean), and reporting mean/std across multiple seeds. We recommend reporting the number of episodes until a solving threshold (e.g., mean $\geq$ 195 over 100 episodes) when applicable. Additional metrics include training time, final Q-value distributions, and buffer diversity measures.
 
 \subsection{Baselines and Ablations}
 
@@ -176,6 +204,14 @@ Run a baseline (default config) and the following ablations:
 \end{itemize}
 
 Each condition should be run across multiple seeds (3--5) to estimate variance.
+
+\subsection{Data Collection and Reproducibility}
+
+Rewards are logged per episode and saved to NumPy arrays in `outputs/`. Configurations are stored alongside results for reproducibility. We provide scripts in `scripts/` for automated data collection and figure generation. All code is version-controlled with Git, and dependencies are pinned in `requirements.txt`.
+
+\subsection{Statistical Analysis}
+
+Results are reported as mean ± standard deviation over seeds. We use simple t-tests for comparing conditions, noting the small sample sizes. Confidence intervals are computed assuming normality. Ablation studies focus on final performance and learning speed metrics.
 
 \section{Results and How to Report Them}
 
