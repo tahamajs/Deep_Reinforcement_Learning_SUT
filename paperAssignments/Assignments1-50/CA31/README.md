@@ -87,6 +87,18 @@ short note in your README or paper.
 
 A compact report is included as `REPORT.md` (summary, methods, experiments,
 results and reproducibility information) and a full LaTeX source `report.tex`.
+The LaTeX report is comprehensive, including:
+- Detailed introduction to RL and A2C.
+- In-depth background on MDPs, key definitions, and notation.
+- Step-by-step derivation of A2C objectives with entropy and value losses.
+- Detailed pseudocode algorithm with explanations.
+- Architecture, implementation details, and key modules.
+- Experimental setups, ablation studies, and hyperparameter sensitivity.
+- Illustrative results with interpretations.
+- Hyperparameter table with sensitivity notes.
+- Reproducibility checklist.
+- Discussion, limitations, future work, ethical considerations, and glossary.
+It features a table of contents, list of figures/tables, and bibliography.
 
 ### Figures and illustrative results
 
