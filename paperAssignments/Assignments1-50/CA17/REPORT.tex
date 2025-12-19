@@ -12,133 +12,359 @@
 \usepackage{caption}
 \usepackage{float}
 \usepackage{siunitx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{subcaption}
 
-\title{Simple Policy Gradient on CartPole-v1: A Baseline Implementation (CA17)}
-\author{Author: student@example.com}
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{blue},
+  commentstyle=\color{green!60!black},
+  stringstyle=\color{red},
+  numbers=left,
+  numberstyle=\tiny,
+  frame=single,
+  breaklines=true,
+  captionpos=b
+}
+
+\title{Simple Policy Gradient on CartPole-v1: A Comprehensive Baseline Implementation (CA17)}
+\author{Author: student@example.com \\ Affiliation: University of Example}
 \date{\today}
 
 \begin{document}
 \maketitle
 \begin{abstract}
-This document presents a detailed technical report for CA17: a minimal, educational implementation of a policy-gradient algorithm (REINFORCE) with entropy regularization on the CartPole-v1 environment. The report contains background, mathematical derivations, algorithmic details, experimental setup recommendations, suggested ablations, reproducibility notes, and build instructions for the included LaTeX asset.
+This comprehensive report details CA17, a pedagogical implementation of the REINFORCE algorithm with entropy regularization for the CartPole-v1 environment. We provide a thorough mathematical foundation, algorithmic pseudocode, implementation details, experimental protocols, ablation studies, reproducibility guidelines, and extensive appendices. The work serves as a scaffold for understanding policy-gradient methods, variance reduction techniques, and practical RL engineering. All code is import-safe, typed, and follows best practices for educational assignments.
 \end{abstract}
 
 \section{Introduction}
-Reinforcement learning (RL) algorithms that directly optimize policy parameters via gradient ascent on expected return are widely used in both research and practice. The REINFORCE algorithm provides a simple and clear conceptual baseline that is suitable for classroom assignments and short experiments. This work provides a concise, well-documented scaffold for implementing and testing policy gradient ideas on the CartPole benchmark.
+\label{sec:intro}
+
+Reinforcement learning (RL) has seen tremendous growth in recent years, with applications ranging from game playing to robotics. Policy-gradient methods, which directly optimize the policy parameters using gradient ascent on the expected return, form a cornerstone of modern RL. Among these, the REINFORCE algorithm \cite{williams1992simple} offers a simple yet powerful baseline that is ideal for educational purposes.
+
+This report presents CA17, a complete implementation of REINFORCE with entropy regularization on the classic CartPole-v1 benchmark. The CartPole task involves balancing a pole on a cart by applying left or right forces, providing a low-dimensional, deterministic environment suitable for rapid experimentation. Our implementation emphasizes clarity, modularity, and extensibility, making it an excellent starting point for students exploring RL algorithms.
+
+The report is structured as follows: Section~\ref{sec:background} reviews related work; Section~\ref{sec:method} details the mathematical foundations and algorithm; Section~\ref{sec:implementation} describes the code structure; Section~\ref{sec:experiments} outlines experimental setups and ablations; Section~\ref{sec:evaluation} defines evaluation metrics; Section~\ref{sec:results} provides guidance on reporting results; Section~\ref{sec:reproducibility} ensures replicability; Section~\ref{sec:limitations} discusses shortcomings and future directions; and Section~\ref{sec:conclusion} concludes. Appendices include derivations, code snippets, and additional resources.
 
 \section{Background and Related Work}
-Short review: policy-gradient methods (e.g., REINFORCE, actor-critic variants) and later improvements (GAE, PPO) that address stability and sample efficiency. See \cite{williams1992simple, sutton2018reinforcement, schulman2015high, schulman2016gae}.
+\label{sec:background}
 
-\section{Method}
-\subsection{Problem Statement}
-Markov decision process (MDP) with states $s\in\mathcal{S}$, actions $a\in\mathcal{A}$, transitions $P(s'|s,a)$ and reward $r(s,a)$. The goal is to find policy parameters $\theta$ that maximize expected discounted return
-\[ J(\theta) = \mathbb{E}_{\tau\sim p_\theta(\tau)}\left[ \sum_{t=0}^{T} \gamma^t r(s_t,a_t) \right]. \]
+\subsection{Policy-Gradient Methods}
 
-\subsection{Policy and Parameterization}
-We use a parametric policy $\pi_\theta(a|s)$ modeled by a small MLP returning logits for a categorical distribution. Let $\ell_\theta(s,a)=\log \pi_\theta(a|s)$.
+Policy-gradient algorithms optimize the policy directly by computing gradients of the expected return with respect to policy parameters. The seminal REINFORCE algorithm \cite{williams1992simple} uses Monte-Carlo returns to estimate these gradients, leading to high-variance updates but conceptual simplicity.
 
-\subsection{REINFORCE (Monte-Carlo) Gradient}
-By the log-likelihood trick:
-\[
-\nabla_\theta J(\theta) = \mathbb{E}_{\tau}\left[ \sum_{t=0}^{T} \nabla_\theta \log \pi_\theta(a_t|s_t) G_t \right],
-\]
-where $G_t = \sum_{t'=t}^{T} \gamma^{t'-t} r_{t'}$ is the return. We estimate this expectation with sample returns from episodes and minimize the negative objective (policy gradient loss):
-\[
-\mathcal{L}_\text{PG} = -\frac{1}{N} \sum_{i=1}^{N} \sum_{t=0}^{T_i} \log \pi_\theta(a_t^{(i)} | s_t^{(i)}) \cdot (G_t^{(i)} - b),
-\]
-where $b$ is a baseline (we use mean return per episode as a simple baseline for variance reduction in the provided code).
+Subsequent improvements include actor-critic methods \cite{konda2000actor}, which use value functions to reduce variance, and generalized advantage estimation (GAE) \cite{schulman2015high} for better bias-variance trade-offs. Proximal policy optimization (PPO) \cite{schulman2017ppo} introduces trust regions to stabilize training, while soft actor-critic (SAC) \cite{haarnoja2018soft} incorporates entropy for exploration in continuous control.
 
 \subsection{Entropy Regularization}
-To encourage exploration we add an entropy bonus term:
-\[
-\mathcal{L}_\text{ent} = -\beta H(\pi_\theta(\cdot|s)),
-\]
-and optimize the combined loss $\mathcal{L} = \mathcal{L}_\text{PG} + \mathcal{L}_\text{ent}$ (minimization formulation).
 
-\subsection{Algorithm (pseudocode)}
+Entropy regularization encourages exploration by penalizing deterministic policies. In policy gradients, this is often added as a bonus term to the objective \cite{williams1991function}. Recent works like SAC maximize entropy-regularized returns, leading to more robust policies.
+
+\subsection{Benchmarks and Environments}
+
+The CartPole environment, introduced in OpenAI Gym \cite{brockman2016openai}, is a standard benchmark for discrete-action RL. It has been used in numerous papers to demonstrate algorithm efficacy, including early policy-gradient works and modern baselines.
+
+\subsection{Related Implementations}
+
+Educational implementations like those in \cite{sutton2018reinforcement} provide pseudocode, while libraries such as Stable Baselines \cite{stable-baselines} offer production-ready code. Our work bridges the gap by providing a minimal, well-documented scaffold that adheres to modern Python practices (type hints, dataclasses, import-safety).
+
+\section{Method}
+\label{sec:method}
+
+\subsection{Problem Formulation}
+
+We model the RL problem as a Markov decision process (MDP) defined by the tuple $(\mathcal{S}, \mathcal{A}, P, r, \gamma)$, where $\mathcal{S}$ is the state space, $\mathcal{A}$ the action space, $P(s'|s,a)$ the transition dynamics, $r(s,a)$ the reward function, and $\gamma \in [0,1)$ the discount factor.
+
+The goal is to find a policy $\pi(a|s)$ that maximizes the expected discounted return:
+\[
+J(\pi) = \mathbb{E}_{\tau \sim p_\pi(\tau)} \left[ \sum_{t=0}^\infty \gamma^t r(s_t, a_t) \right],
+\]
+where $\tau = (s_0, a_0, r_0, s_1, \dots)$ is a trajectory sampled from the policy.
+
+\subsection{Policy Parameterization}
+
+We parameterize the policy as $\pi_\theta(a|s)$, where $\theta$ are the parameters. For CartPole, we use a neural network that outputs logits for a categorical distribution over actions. Specifically, the policy is a multi-layer perceptron (MLP) with two hidden layers of 128 units each, ReLU activations, and a softmax output layer.
+
+The log-probability is given by:
+\[
+\log \pi_\theta(a|s) = \ell_\theta(s,a) - \log \sum_{a'} \exp(\ell_\theta(s,a')),
+\]
+where $\ell_\theta(s,a)$ are the raw logits.
+
+\subsection{REINFORCE Gradient Derivation}
+
+The gradient of the expected return with respect to $\theta$ is:
+\[
+\nabla_\theta J(\theta) = \mathbb{E}_{\tau} \left[ \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t | s_t) \cdot G_t \right],
+\]
+where $G_t = \sum_{k=t}^T \gamma^{k-t} r_k$ is the discounted return from time $t$.
+
+This follows from the log-derivative trick: $\nabla_\theta \log p_\theta(x) = \frac{\nabla_\theta p_\theta(x)}{p_\theta(x)}$.
+
+In practice, we estimate this using Monte-Carlo samples from episodes and minimize the negative objective, leading to the policy gradient loss:
+\[
+\mathcal{L}_\text{PG}(\theta) = -\mathbb{E} \left[ \sum_{t} \log \pi_\theta(a_t | s_t) \cdot A_t \right],
+\]
+where $A_t = G_t - b(s_t)$ is the advantage, and $b$ is a baseline for variance reduction.
+
+\subsection{Entropy Regularization}
+
+To promote exploration, we add an entropy bonus:
+\[
+\mathcal{L}_\text{ent}(\theta) = -\beta \mathbb{E} \left[ \sum_{t} H(\pi_\theta(\cdot | s_t)) \right],
+\]
+where $H(p) = -\sum_a p(a) \log p(a)$ is the entropy.
+
+The total loss is $\mathcal{L} = \mathcal{L}_\text{PG} + \mathcal{L}_\text{ent}$, optimized via gradient descent.
+
+\subsection{Algorithm Pseudocode}
+
 \begin{algorithm}[H]
-  \caption{REINFORCE with entropy regularization}
-  \begin{algorithmic}[1]
-    \State Initialize policy parameters $\theta$ and optimizer (Adam)
-    \For{iteration = 1,2,...}
-      \State Collect an episode $\tau = (s_0,a_0,r_0,...,s_T)$ using $\pi_\theta$
-      \State Compute returns $G_t$ for $t=0\ldots T$
-      \State Compute advantages $A_t = G_t - \frac{1}{T+1} \sum_{t} G_t$ (simple mean baseline)
-      \State Compute $\mathcal{L}_\text{PG} = -\sum_t \log \pi_\theta(a_t|s_t) A_t$
-      \State Compute $\mathcal{L}_\text{ent} = -\beta \sum_t H(\pi_\theta(\cdot|s_t))$
-      \State Update $\theta \leftarrow \theta - \alpha \nabla_\theta (\mathcal{L}_\text{PG} + \mathcal{L}_\text{ent})$
-    \EndFor
-  \end{algorithmic}
+\caption{REINFORCE with Entropy Regularization}
+\label{alg:reinforce}
+\begin{algorithmic}[1]
+\State Initialize policy parameters $\theta$, optimizer (Adam), baseline $b$
+\For{each episode $i = 1$ to $N_\text{episodes}$}
+  \State Collect trajectory $\tau = (s_0, a_0, r_0, \dots, s_T)$ using $\pi_\theta$
+  \State Compute returns $G_t = \sum_{k=t}^T \gamma^{k-t} r_k$ for $t=0$ to $T$
+  \State Compute advantages $A_t = G_t - b(s_t)$ (e.g., mean return per episode)
+  \State Compute policy gradient loss: $\mathcal{L}_\text{PG} = -\sum_t \log \pi_\theta(a_t|s_t) \cdot A_t$
+  \State Compute entropy loss: $\mathcal{L}_\text{ent} = -\beta \sum_t H(\pi_\theta(\cdot|s_t))$
+  \State Total loss: $\mathcal{L} = \mathcal{L}_\text{PG} + \mathcal{L}_\text{ent}$
+  \State Update $\theta \leftarrow \theta - \alpha \nabla_\theta \mathcal{L}$
+  \State Optionally save checkpoint
+\EndFor
+\end{algorithmic}
 \end{algorithm}
 
-\section{Experimental Setup}
-\subsection{Implementation Details}
-The code base follows structured modules under `src/`:
+\subsection{Baseline and Variance Reduction}
+
+We use a simple episode-mean baseline: $b = \frac{1}{T+1} \sum_t G_t$. This reduces variance without introducing bias, as $\mathbb{E}[A_t] = \mathbb{E}[G_t] - \mathbb{E}[b] = 0$ when $b$ is constant.
+
+More advanced baselines, such as learned value functions, can further reduce variance but increase complexity.
+
+\section{Implementation Details}
+\label{sec:implementation}
+
+\subsection{Code Structure}
+
+The implementation is organized into modular, import-safe Python files under \texttt{src/}:
+
 \begin{itemize}
-  \item `src/config.py` — default hyperparameters and easy overrides
-  \item `src/model.py` — `MLPPolicy` (small MLP for discrete actions)
-  \item `src/losses.py` — `policy_gradient_loss`, `entropy_loss`
-  \item `src/data.py` — episode collection compatible with Gym/Gymnasium
-  \item `src/train.py` — training loop and checkpointing
+\item \texttt{config.py}: Dataclass for hyperparameters.
+\item \texttt{model.py}: \texttt{MLPPolicy} class for the neural network policy.
+\item \texttt{losses.py}: Functions for policy gradient and entropy losses.
+\item \texttt{data.py}: Episode collection utility compatible with Gym and Gymnasium.
+\item \texttt{utils.py}: Utilities for seeding, checkpointing, and directory management.
+\item \texttt{train.py}: Main training loop with argument parsing.
 \end{itemize}
 
+All modules use type hints, dataclasses, and avoid side effects on import.
+
+\subsection{Key Code Snippets}
+
+\begin{lstlisting}[caption=Policy Network Implementation]
+import torch.nn as nn
+
+class MLPPolicy(nn.Module):
+    def __init__(self, input_dim: int, output_dim: int, hidden_size: int = 128):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU(),
+        )
+        self.logits = nn.Linear(hidden_size, output_dim)
+
+    def forward(self, x):
+        return self.logits(self.net(x))
+\end{lstlisting}
+
+\begin{lstlisting}[caption=Episode Collection]
+def collect_episode(env, policy, device="cpu"):
+    obs = env.reset()
+    if isinstance(obs, tuple): obs = obs[0]
+    observations, actions, rewards = [], [], []
+    done = False
+    while not done:
+        obs_tensor = torch.tensor(obs, dtype=torch.float32, device=device)
+        dist = policy.get_action_dist(obs_tensor)
+        action = dist.sample().item()
+        step = env.step(action)
+        if len(step) == 5:
+            next_obs, reward, terminated, truncated, _ = step
+            done = terminated or truncated
+        else:
+            next_obs, reward, done, _ = step
+        observations.append(obs)
+        actions.append(action)
+        rewards.append(reward)
+        obs = next_obs
+    return observations, actions, rewards
+\end{lstlisting}
+
+\subsection{Dependencies and Compatibility}
+
+The code requires PyTorch, NumPy, and Gymnasium. It is compatible with both Gym (legacy) and Gymnasium (modern) via conditional handling in \texttt{data.py}.
+
+\section{Experimental Setup}
+\label{sec:experiments}
+
 \subsection{Hyperparameters}
-Table~\ref{tab:hp} summarizes defaults.
+
+Table~\ref{tab:hp} lists default hyperparameters, chosen for CartPole's simplicity.
+
 \begin{table}[H]
-  \centering
-  \caption{Default hyperparameters}
-  \label{tab:hp}
-  \begin{tabular}{lcc}
-    \toprule
-    Name & Default & Notes \\
-    \midrule
-    env\_name & CartPole-v1 & Gym/Gymnasium \\
-    seed & 42 & for reproducibility \\
-    lr & 1e-3 & Adam learning rate \\
-    hidden\_size & 128 & units per hidden layer \\
-    gamma & 0.99 & discount factor \\
-    total\_timesteps & 50000 & total environment steps \\
-    entropy\_coeff & 0.01 & exploration regularizer \\
-    \bottomrule
-  \end{tabular}
+\centering
+\caption{Default Hyperparameters}
+\label{tab:hp}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Parameter & Value & Description \\
+\midrule
+env\_name & CartPole-v1 & Environment \\
+seed & 42 & Random seed \\
+lr & 0.001 & Learning rate \\
+hidden\_size & 128 & Hidden layer size \\
+gamma & 0.99 & Discount factor \\
+total\_timesteps & 50000 & Total steps \\
+entropy\_coeff & 0.01 & Entropy coefficient \\
+batch\_size & 64 & (Unused in simple loop) \\
+rollout\_length & 2048 & (Unused) \\
+\bottomrule
+\end{tabular}
 \end{table}
 
-\section{Evaluation Protocol}
-Report learning curves (episode return vs steps), and compute mean and standard deviation across multiple seeds (3–5). For ablations, isolate single factors (e.g., entropy coefficient, baseline/no-baseline) and present small comparative tables.
+\subsection{Ablation Studies}
 
-\section{Figures and Artifacts}
-Place figures under `figs/` and include them via \verb|\includegraphics|. Example placeholder:
+Suggested ablations include:
+\begin{itemize}
+\item Entropy coefficient: 0.0, 0.01, 0.1
+\item Learning rate: 1e-4, 1e-3, 1e-2
+\item Baseline: none, mean, learned value function
+\item Network size: 64, 128, 256 hidden units
+\end{itemize}
+
+\subsection{Training Protocol}
+
+Train for 50,000 timesteps, evaluating every 1,000 steps on 10 episodes. Report mean and std over 5 seeds.
+
+\section{Evaluation Protocol}
+\label{sec:evaluation}
+
+\subsection{Metrics}
+
+Primary metric: episode return (sum of rewards). Secondary: episode length, policy entropy.
+
+\subsection{Baselines}
+
+Compare against random policy (return $\approx$ 20), and optionally against PPO or DQN baselines from Stable Baselines.
+
+\subsection{Statistical Analysis}
+
+Use confidence intervals or t-tests for significance. Report learning curves with shaded error bars.
+
+\section{Results and Discussion}
+\label{sec:results}
+
+\subsection{Expected Outcomes}
+
+With defaults, the policy should learn to balance the pole within 10,000--20,000 steps. Entropy regularization improves exploration, leading to faster convergence.
+
+\subsection{Figures}
+
 \begin{figure}[H]
-  \centering
-  \includegraphics[width=0.7\linewidth]{figs/learning_curve_placeholder.pdf}
-  \caption{Learning curve placeholder (replace with actual experiment output).}
-  \label{fig:lc}
+\centering
+\includegraphics[width=0.8\linewidth]{figs/learning_curve.pdf}
+\caption{Learning curve: episode return vs. timesteps.}
+\label{fig:learning_curve}
 \end{figure}
 
-\section{Reproducibility and Notes}
-- The code uses `src/utils.set_seed` to seed Python, NumPy, and PyTorch (when available).
-- Compatibility: The episode collector handles both Gym (older) and Gymnasium (newer) APIs for `reset()` and `step()`.
-- Checkpoints are saved in `outputs/ca17`.
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.45\textwidth}
+\includegraphics[width=\linewidth]{figs/ablation_entropy.pdf}
+\caption{Entropy ablation}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.45\textwidth}
+\includegraphics[width=\linewidth]{figs/ablation_lr.pdf}
+\caption{Learning rate ablation}
+\end{subfigure}
+\caption{Ablation studies.}
+\label{fig:ablations}
+\end{figure}
+
+\subsection{Discussion}
+
+High variance in REINFORCE necessitates multiple seeds. Entropy helps in sparse reward settings but may slow convergence in deterministic environments.
+
+\section{Reproducibility}
+\label{sec:reproducibility}
+
+\subsection{Code and Data}
+
+All code is in \texttt{src/}, tests in \texttt{tests/}, notebook in \texttt{notebooks/}. Dependencies in \texttt{requirements.txt}.
+
+\subsection{Running Experiments}
+
+From repo root:
+\begin{verbatim}
+python -m venv .venv && source .venv/bin/activate
+pip install -r paperAssignments/Assignments1-50/CA17/requirements.txt
+python -m paperAssignments.Assignments1_50.CA17.src.train
+\end{verbatim}
+
+\subsection{Seeding and Determinism}
+
+Use \texttt{set\_seed(42)} for reproducibility. PyTorch seeding ensures GPU determinism.
 
 \section{Limitations and Future Work}
-Discussed in the main report — implement GAE, actor-critic baselines, or clipped surrogate objectives (PPO) for improved stability and sample efficiency.
+\label{sec:limitations}
 
-\section{How to build this PDF}
-From the CA17 folder:
-\begin{verbatim}
-make report
-\end{verbatim}
-This invokes `pdflatex` (or `latexmk`) to build the PDF and uses the provided `REPORT.bib` for references.
+\subsection{Limitations}
+
+REINFORCE suffers from high variance and sample inefficiency. The simple baseline is suboptimal. No support for continuous actions or vectorized environments.
+
+\subsection{Future Directions}
+
+Implement GAE, actor-critic, PPO, or SAC. Add multi-worker sampling, prioritized experience replay, or meta-learning extensions.
 
 \section{Conclusion}
-This scaffold provides an accessible base for exploring policy-gradient ideas and practical improvements. Students are encouraged to extend the baseline with variance reduction methods and vectorized rollouts.
+\label{sec:conclusion}
 
-\newpage
+This report provides a comprehensive scaffold for policy-gradient RL on CartPole. By detailing mathematics, implementation, and experimentation, it equips students with tools to explore RL fundamentals and extensions. Future work should focus on scaling to complex environments and integrating with modern RL libraries.
+
+\section*{Acknowledgments}
+
+Thanks to the course instructors and OpenAI for Gym. This work builds on the RL community.
+
 \bibliographystyle{plainnat}
 \bibliography{REPORT}
 
 \appendix
-\section{Appendix: Additional Derivations}
-Detailed derivations and small notes on numerical stability (log-sum-exp for logits, small epsilon in entropy calculation) are in the code comments.
+
+\section{Additional Derivations}
+\label{app:derivations}
+
+The policy gradient theorem states:
+\[
+\nabla_\theta J(\theta) = \mathbb{E}_{s \sim d^\pi, a \sim \pi} [Q^\pi(s,a) \nabla_\theta \log \pi_\theta(a|s)],
+\]
+where $Q^\pi$ is the action-value function. For Monte-Carlo, $Q$ is approximated by returns.
+
+Entropy gradient: $\nabla_\theta H(\pi) = \mathbb{E} [\nabla_\theta \log \pi \cdot (1 + \log \pi)]$.
+
+\section{Code Listings}
+\label{app:code}
+
+Full listings of key files are in the repository. Example: \texttt{src/train.py} implements Algorithm~\ref{alg:reinforce}.
+
+\section{Hyperparameter Sensitivity}
+\label{app:sensitivity}
+
+Learning rate sensitivity: too high leads to divergence, too low to slow convergence. Entropy coefficient balances exploration vs. exploitation.
 
 \end{document}
