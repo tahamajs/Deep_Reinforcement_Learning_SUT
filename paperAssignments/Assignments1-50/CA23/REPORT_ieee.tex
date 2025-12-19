@@ -1,0 +1,133 @@
+% CA23 — IEEE/NeurIPS-style report
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\title{CA23: A Reproducible Scaffold for Policy-Gradient Experiments}
+\author{Course Maintainers}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We present CA23, a modular, reproducible scaffold for reinforcement learning (RL) research and education. CA23 provides clean, import-safe modules for policy-gradient algorithms, YAML-based configuration, and robust experiment logging. We detail the design, implementation, and best practices for reproducible RL, and demonstrate the scaffold on classic control benchmarks. The report follows IEEE/NeurIPS conventions and includes all required sections for a research paper.
+\end{abstract}
+
+\section{Introduction}
+Reinforcement learning (RL) is a powerful framework for sequential decision making, but reproducibility and robust evaluation remain challenging. We introduce CA23, a research-style RL assignment scaffold designed for clarity, extensibility, and reproducibility. Our goals are to enable rapid prototyping of policy-gradient algorithms and to provide a template for rigorous RL research.
+
+\section{Related Work}
+Classic RL references include Sutton and Barto~\cite{sutton_barto}, REINFORCE~\cite{williams1992simple}, actor-critic~\cite{konda2000actor}, TRPO~\cite{schulman2015trust}, PPO~\cite{schulman2017proximal}, and reproducibility studies~\cite{henderson2018deep}. OpenAI Spinning Up~\cite{spinup} and RL Baselines3 Zoo provide practical implementations. Our scaffold is inspired by these works and aims to make best practices accessible for students and researchers.
+
+\section{Background}
+RL formalizes the agent-environment interaction as a Markov Decision Process (MDP). The agent observes state $s_t$, selects action $a_t$, receives reward $r_t$, and transitions to $s_{t+1}$. The objective is to maximize expected return $J(\theta)$. Policy-gradient methods directly optimize the policy $\pi_\theta(a|s)$ by estimating $\nabla_\theta J(\theta)$.
+
+\section{Methods}
+\subsection{Policy and Value Networks}
+We use multi-layer perceptrons for both policy and value functions. The policy outputs logits for a categorical distribution; the value network outputs a scalar. Both are configurable via YAML.
+
+\subsection{Loss Functions}
+The policy gradient loss is $\mathcal{L}_\text{policy} = -\mathbb{E}_t[\log \pi_\theta(a_t|s_t) A_t]$, where $A_t$ is the advantage. The value loss is $\mathcal{L}_\text{value} = \mathbb{E}_t[(V_\phi(s_t) - R_t)^2]$. Entropy regularization $-\lambda \mathbb{E}_t[\mathcal{H}(\pi(\cdot|s_t))]$ encourages exploration.
+
+\subsection{Generalized Advantage Estimation (GAE)}
+GAE~\cite{schulman2015high} reduces variance in advantage estimates:
+$A_t^{\text{GAE}} = \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{t+l}$, with $\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$.
+
+\subsection{Configuration and Logging}
+All hyperparameters are specified in YAML. The scaffold logs per-episode returns, losses, and saves configs, checkpoints, and plots for reproducibility.
+
+\section{Experiments}
+\subsection{Environments}
+We evaluate on CartPole-v1, MountainCar-v0, and LunarLander-v2 from OpenAI Gym. The scaffold supports both discrete and continuous state spaces, and can be extended to continuous actions.
+
+\subsection{Experimental Protocol}
+For each experiment, we run 5 seeds per setting, log all configs and results, and use fixed random seeds. Hyperparameters are tuned via grid search. Ablation studies isolate the effect of entropy regularization, network size, and learning rate.
+
+\subsection{Results}
+Learning curves show mean episode return with shaded error bands. Table~\ref{tab:results} summarizes final performance. (Placeholder: fill with real results after running experiments.)
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lcc@{}}\toprule
+Experiment & Mean Return & Std \\ \midrule
+Baseline & -- & -- \\
+Entropy 0.01 & -- & -- \\
+Large Net & -- & -- \\
+\bottomrule
+\end{tabular}
+\caption{Final performance across hyperparameters (to be filled in).}
+\label{tab:results}
+\end{table}
+
+\section{Discussion}
+CA23 enables reproducible RL research by enforcing strict configuration, logging, and testing. The modular design supports rapid prototyping and extension to advanced algorithms (PPO, A2C, multi-agent, offline RL). Limitations include lack of distributed training and minimal logging for large-scale runs.
+
+\section{Broader Impact}
+RL has broad applications, but also ethical risks (e.g., safety, fairness, transparency). CA23 is intended for education and research; users should consider societal impact and comply with ethical guidelines.
+
+\section{Conclusion}
+We present CA23, a minimal but powerful scaffold for policy-gradient RL research. By following best practices in configuration, logging, and testing, CA23 supports robust, reproducible experiments and serves as a template for future work.
+
+\section*{Acknowledgments}
+Thanks to the course staff and maintainers for their contributions and feedback.
+
+\bibliographystyle{IEEEtran}
+\begin{thebibliography}{99}
+\bibitem{sutton_barto} R. S. Sutton and A. G. Barto, \emph{Reinforcement Learning: An Introduction}, 2nd ed., MIT Press, 2018.
+\bibitem{williams1992simple} R. J. Williams, "Simple statistical gradient-following algorithms for connectionist reinforcement learning," Machine Learning, 1992.
+\bibitem{konda2000actor} V. R. Konda and J. N. Tsitsiklis, "Actor-critic algorithms," NIPS, 2000.
+\bibitem{schulman2015trust} J. Schulman et al., "Trust Region Policy Optimization," ICML, 2015.
+\bibitem{schulman2017proximal} J. Schulman et al., "Proximal Policy Optimization Algorithms," arXiv:1707.06347, 2017.
+\bibitem{schulman2015high} J. Schulman et al., "High-Dimensional Continuous Control Using Generalized Advantage Estimation," ICLR, 2016.
+\bibitem{henderson2018deep} P. Henderson et al., "Deep Reinforcement Learning that Matters," AAAI, 2018.
+\bibitem{spinup} OpenAI, "Spinning Up in Deep RL," 2018. [Online]. Available: https://spinningup.openai.com
+\end{thebibliography}
+
+\appendices
+\section{Appendix: Sample Config and Code}
+\subsection{Sample YAML Config}
+\begin{verbatim}
+env_name: CartPole-v1
+seed: 42
+device: cpu
+learning_rate: 1e-3
+gamma: 0.99
+hidden_sizes: [64, 64]
+batch_size: 32
+max_episodes: 200
+entropy_coef: 0.01
+\end{verbatim}
+
+\subsection{Sample Training Command}
+\begin{verbatim}
+python scripts/train.py --config configs/sample.yaml
+\end{verbatim}
+
+\subsection{Sample Output}
+\begin{verbatim}
+episode,episode_return
+1,12.0
+2,15.0
+...
+200,500.0
+\end{verbatim}
+
+\section{Appendix: Troubleshooting}
+\begin{itemize}
+\item ImportError: No module named 'src' -- run from project root or set PYTHONPATH.
+\item CUDA out of memory -- reduce batch size or use CPU.
+\item NaN losses -- check for exploding gradients, invalid operations, or unnormalized inputs.
+\item Test failures -- run pytest -v and check dependencies.
+\end{itemize}
+
+\end{document}
