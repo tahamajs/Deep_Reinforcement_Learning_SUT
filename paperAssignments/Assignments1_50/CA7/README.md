@@ -1,103 +1,85 @@
-# Gradient Eligibility Traces for Recurrent Off-Policy RL (GET-ROPR)
+# CA7 — Soft Actor-Critic (SAC) Implementation
 
-## 1. Executive Summary
+## Overview
 
-Recurrent off-policy reinforcement learning (RL) is crucial for partially observable environments, yet suffers from stale hidden states and poor credit assignment over time. Existing methods like RESeL stabilize recurrent critics with learning-rate heuristics and truncated backpropagation through time (BPTT), but they do not provide theoretically principled long-horizon credit assignment. This assignment introduces **GET-ROPR**—Gradient Eligibility Traces for Recurrent Off-Policy RL—integrating backward-view TD($\lambda$) eligibility traces into RNN/GRU/LSTM critics to propagate credit across long temporal spans while maintaining off-policy correctness. The design targets the RESeL codebase and extends it with:
+CA7 is a compact, educational implementation of Soft Actor-Critic (SAC), an off-policy actor-critic algorithm for continuous control. It demonstrates entropy-regularized RL with MLP networks, replay buffers, and automatic temperature tuning. Suitable for quick experimentation, unit testing, and extensions.
 
-- Backward-view eligibility traces for recurrent critics, computed online across replayed sequences.
-- Trace clipping and decay to control variance.
-- Hidden-state refresh to reduce staleness.
-- Efficient GPU implementation with vectorized scans.
+This folder contains:
+- `src/` — import-safe Python modules (config, data, model, losses, sac, utils)
+- `train_sac_full.py` — training script
+- `notebooks/demo.ipynb` — demo notebook (non-executed)
+- `tests/` — smoke tests for importability and forward passes
+- `REPORT.md` — full report and reproduction instructions (read this first)
 
-We provide complete math, algorithmic derivations, PyTorch/JAX-style pseudocode, hyperparameters, ablation plans, evaluation protocols on partially observable domains (DMControl with occlusions, Atari with flicker), and reproducibility guidance. The goal is to deliver a 1000+ line blueprint for implementing and evaluating GET-ROPR as a drop-in improvement for recurrent off-policy agents.
+## Learning Goals
 
----
+- Understand SAC's soft Q-learning, stochastic actor, and entropy regularization.
+- Learn off-policy RL with replay buffers and target networks.
+- Gain experience with continuous control and reproducibility.
 
-## 2. Problem Statement and Motivation
+## Quick Start
 
-1. **Partial observability:** Requires memory; recurrent networks are standard.
-2. **Off-policy replay:** Hidden states stored in replay become stale as network parameters evolve.
-3. **Truncated BPTT:** Commonly unrolls 16–64 steps; loses long-horizon credit assignment.
-4. **n-step returns:** Provide limited horizon; high variance when long n is used.
-5. **Eligibility traces:** TD($\lambda$) bridges 1-step TD and Monte Carlo, balancing bias-variance; backward view enables incremental credit assignment.
-6. **Gap:** Eligibility traces rarely used with deep recurrent off-policy RL due to stability/efficiency concerns; this work fills that gap.
+1. Create a virtual environment and install dependencies (Python 3.10+):
 
----
+```bash
+python -m venv .venv && source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install torch numpy pyyaml matplotlib pytest gym
+```
 
-## 3. Background
+2. Run tests (from repository root):
 
-### 3.1 TD($\lambda$) Recap (Backward View)
+```bash
+python -m pytest paperAssignments/Assignments1_50/CA7/tests -q
+```
 
-For value $V_\theta$, eligibility trace $e_t$:
-$$
-e_t = \lambda \gamma e_{t-1} + \nabla_\theta V_\theta(s_t, h_t),
-$$
-TD error $\delta_t = r_t + \gamma V_\theta(s_{t+1}, h_{t+1}) - V_\theta(s_t, h_t)$,
-update $\theta \leftarrow \theta + \alpha \delta_t e_t$.
+3. Run a short CPU training example:
 
-### 3.2 Recurrent Off-Policy RL
+```bash
+python train_sac_full.py --device cpu --out outputs/ca7_smoke
+```
 
-We store $(o_t, a_t, r_t, o_{t+1}, d_t)$ with initial hidden state $h_t$ (or reconstruct). Off-policy correction via importance sampling (IS) ratios $\rho_t = \frac{\pi(a_t|o_t)}{\mu(a_t|o_t)}$.
+## Files & Usage (summary)
 
-### 3.3 RESeL Baseline
+- `src/config.py` — `Config` dataclass
+- `src/data.py` — `ReplayBuffer`
+- `src/model.py` — `Actor`, `Critic`, `Temperature`
+- `src/losses.py` — SAC loss functions
+- `src/sac.py` — `SAC` class with `update` method
+- `src/utils.py` — `set_seed`, `save_checkpoint`, etc.
+- `train_sac_full.py` — CLI training script
 
-RESeL stabilizes recurrent critics with small LR and target networks; uses n-step TD with truncated BPTT. It still truncates credit and suffers from hidden-state staleness.
+See `REPORT.md` for full API and examples.
 
----
+## Notebook Template
 
-## 4. Key Idea: Eligibility Traces for Recurrent Critics
+Open `notebooks/demo.ipynb` for a guided template on SAC usage.
 
-- Use backward-view traces within replayed sequences to accumulate gradients of the value (or Q) w.r.t. parameters across time.
-- Combine with off-policy IS ratios to preserve correctness: use weighted IS or truncated IS to reduce variance.
-- Clip traces to avoid explosion; reset on episode boundaries.
+## Reproducibility
 
----
+- Use `utils.set_seed(seed)` at start.
+- Save config in checkpoints.
+- Pin versions for exact reproducibility.
 
-## 5. Mathematical Formulation
+## Troubleshooting
 
-### 5.1 Notation
+- Import errors: set `PYTHONPATH` to CA `src/`.
+- NaN Q-values: clip rewards or scale.
+- Poor exploration: adjust initial alpha.
 
-- Observations $o_t$, actions $a_t$, rewards $r_t$, discounts $\gamma_t$, done flag $d_t$.
-- Policy $\pi_\theta(a|o,h)$, behavior $\mu$.
-- Recurrent critic $Q_\phi(o_t, h_t, a_t)$ with hidden transition $h_{t+1} = f_\phi(o_t, a_t, h_t)$.
-- Importance ratio $\rho_t = \frac{\pi(a_t|o_t,h_t)}{\mu(a_t|o_t,h_t)}$.
+## Contributing
 
-### 5.2 Off-Policy TD($\lambda$) for Q
+- Small, focused changes.
+- Add tests for new features.
+- Update docs.
 
-Define TD error:
-$$
-\delta_t = r_t + \gamma_{t+1}(1-d_t) Q_\phi(o_{t+1}, h_{t+1}, a_{t+1}^*) - Q_\phi(o_t, h_t, a_t),
-$$
-with target action $a_{t+1}^*$ (greedy or target policy sample).
+## License & Citation
 
-Eligibility trace:
-$$
-e_t = \rho_t \big[\lambda \gamma_t e_{t-1} + \nabla_\phi Q_\phi(o_t, h_t, a_t)\big].
-$$
+- See repository `LICENSE`.
 
-Update:
-$$
-\phi \leftarrow \phi + \alpha \, \delta_t \, e_t.
-$$
+## Contact
 
-### 5.3 Truncated IS (Optional)
-
-Use $\bar{\rho}_t = \min(\rho_t, c_\rho)$ to clip variance. Bias introduced is managed by choosing $c_\rho$ modestly (e.g., 2–5).
-
-### 5.4 Sequence-Level Objective
-
-For a sequence of length $L$ from replay:
-$$
-\mathcal{L} = \sum_{t=0}^{L-1} \frac{1}{2} \delta_t^2
-$$
-with gradients accumulated via traces instead of pure backprop across all $L$ steps, reducing memory and capturing longer horizons than truncated BPTT.
-
----
-
-## 6. Hidden State Handling and Staleness
-
-1. **Recompute hidden states**: On batch load, re-run the RNN with current params over the sequence prefix to refresh $h_t$.
-2. **Store short prefixes**: Save initial hidden $h_0$ per episode segment; recompute forward.
+Open issues in the main repo.
 3. **Detach between sequences**: Avoid cross-episode leakage.
 4. **Optional refresh buffer**: Periodically relabel stored hidden states with current network (like target refresh).
 

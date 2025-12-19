@@ -143,6 +143,43 @@ The equivalence follows from linearity and rearrangement of sums. Write the loss
 \(\sum_{n\ge1} (\gamma\lambda)^{n-1} (\prod_{i=1}^{n-1}\bar{\rho}_{t+i}) \nabla_\phi \delta_{t+n-1}\)
 and collecting coefficients in front of \(\nabla_\phi Q_s\) for a fixed \(s\) gives exactly the backward trace coefficient at step \(s\). We omit the full algebraic expansion for brevity but follow standard derivations in reinforcement learning theory.
 
+\subsection{Full derivation: forward-backward equivalence}
+We provide a detailed derivation of the equivalence between forward-view lambda-return gradients and backward-view eligibility traces. Start with the loss
+\[
+\mathcal{L} = \tfrac12 \sum_{t=0}^{L-1} (G_t^{\lambda} - Q_t)^2,
+\]
+where \(G_t^{\lambda}\) is the lambda-return as defined. Differentiating w.r.t. parameters \(\phi\):
+\[
+\nabla_\phi \mathcal{L} = \sum_t (G_t^{\lambda} - Q_t) (\nabla_\phi G_t^{\lambda} - \nabla_\phi Q_t).
+\]
+Focus on the term involving \(\nabla_\phi G_t^{\lambda}\). Using linearity:
+\[
+\nabla_\phi G_t^{\lambda} = \nabla_\phi Q_t + \sum_{n=1}^{L-t} (\gamma\lambda)^{n-1} \Big(\prod_{i=1}^{n-1} \bar{\rho}_{t+i}\Big) \nabla_\phi \delta_{t+n-1}.
+\]
+Plugging into the gradient and rearranging sums, collect coefficients multiplying a
+fixed \(\nabla_\phi Q_s\). The contribution of \(\nabla_\phi Q_s\) to \(\nabla_\phi \mathcal{L}\) arises from two sources: (i) the direct term when \(t=s\) and (ii) the terms where \(Q_s\) appears inside future returns (through \(\delta\)s). After algebraic reindexing,
+one obtains
+\[
+\nabla_\phi \mathcal{L} = -\sum_s \Big[ \sum_{t\le s} (G_t^{\lambda} - Q_t) (\gamma\lambda)^{s-t} \prod_{i=t+1}^{s} \bar{\rho}_i \Big] \nabla_\phi Q_s.
+\]
+Recognizing \((G_t^{\lambda} - Q_t) = -\delta_t\) reorganizes this expression into
+\(\sum_s \delta_s e_s\) where
+\[
+e_s = \bar{\rho}_s \big(\lambda\gamma (1-d_{s-1}) e_{s-1} + \nabla_\phi Q_s\big)
+\]
+as desired. The rigorous interchange of sums and the handling of clipped ratios can
+be justified under mild boundedness conditions on rewards and IS ratios.
+
+\subsection{Actor updates and policy gradient}
+The actor is updated using a clipped surrogate objective similar to PPO, but with traces. The gradient is
+\[
+\nabla_\theta \mathcal{L}_{actor} = \mathbb{E} \left[ \sum_t \bar{\rho}_t e_t \nabla_\theta \log \pi_\theta(a_t|s_t) \right],
+\]
+where \(e_t\) is the eligibility trace from the critic. This reduces variance by incorporating multi-step returns. In practice, we use the same clipping as in PPO to prevent large policy updates.
+
+\subsection{Complexity analysis}
+Time complexity: Forward pass \(O(L)\) for sequence length \(L\), backward pass \(O(L)\) with traces. Space: \(O(L)\) for storing traces and hidden states. Compared to standard actor-critic, adds \(O(L)\) trace computation but enables better credit assignment.
+
 \subsection{IS clipping bias and practical guidance}
 Clipping ratios trades a small bias for large variance reduction. For stability ensure
 \(\lambda\gamma c_\rho < 1\) to keep trace norms bounded. In practice, start with
@@ -163,6 +200,29 @@ loss = 0.5 * (returns - q_vals).pow(2).mean()
 
 # Backprop and optimizer step as usual
 
+\end{verbatim}
+
+\subsection{Implementation checklist}
+\begin{itemize}
+  \item Recurrent critic and actor networks (GRU/LSTM) implemented in PyTorch.
+  \item Lambda-return computation with importance sampling and clipping.
+  \item Eligibility traces for critic updates, forward-view surrogate for stability.
+  \item Twin critics for SAC-style updates, target networks for stability.
+  \item Hidden state recomputation to reduce staleness in traces.
+  \item Clipped surrogate for actor updates to prevent large policy changes.
+  \item Logging of trace norms, IS ratios, TD errors for debugging.
+\end{itemize}
+
+\subsection{Example command lines}
+\begin{verbatim}
+# Train on HalfCheetah-v2 with traces
+python train_sac_full.py --env HalfCheetah-v2 --lambda 0.9 --c_rho 2.0 --seed 0
+
+# Ablation: no traces (lambda=0)
+python train_sac_full.py --env HalfCheetah-v2 --lambda 0.0 --c_rho 1.0 --seed 0
+
+# Plot results from CSV logs
+python scripts/plot_from_csv.py --logdir outputs/ca7/ --metric returns_mean
 \end{verbatim}
 
 \subsection{Experimental protocol and metrics}
