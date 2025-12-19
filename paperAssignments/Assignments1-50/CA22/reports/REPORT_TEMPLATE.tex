@@ -1,0 +1,76 @@
+% REPORT_TEMPLATE.tex — CA22 LaTeX report template
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage[round]{natbib}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+% Short macros for convenience
+\newcommand{\todo}[1]{{\color{red} TODO: #1}}
+
+\title{\textbf{Title of Your Experiment}\vspace{0.5em}\\\large CA22 — Reproducible Experiment Template}
+\author{Author Name(s) \\\texttt{email@example.com}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+A concise abstract (approx. 150–300 words): motivation, method, and key quantitative results. Keep this short and self-contained.
+\end{abstract}
+
+\section{Introduction}
+Provide a short, precise problem statement and motivation. Cite relevant background briefly (e.g., \citep{Sutton2018}).
+
+\section{Related Work}
+One or two paragraphs placing your experiment in context with the most relevant prior work.
+
+\section{Methods}
+Describe the model and objectives. Include pseudocode or equations for losses. Example subsections:
+\subsection{Model}
+Describe the policy and value architectures you used (layer sizes, activations) and reference `src/model.py`.
+
+\subsection{Objective and Constraints}
+Describe the loss functions, including any Lagrangian formulation (reference `src/losses.py`) and the update rules used for Lagrange multipliers.
+
+\subsection{Dataset and Synthetic Generator}
+Describe the synthetic generator (`src/data.py`), episode length, and any dataset sampling details.
+
+\section{Experimental Setup}
+List hyperparameters and training details (optimizer, learning rate, batch size, epochs). Add a small table if useful.
+
+\section{Results}
+Present your quantitative results with figures and tables. Include clear captions and short interpretation.
+
+\begin{figure}[ht]
+  \centering
+  % include a PNG or PDF plot here: outputs/figures/example.png
+  \fbox{\parbox[c][4cm][c]{0.9\linewidth}{\centering Placeholder for a figure (save as outputs/figures/your_figure.png)}}
+  \caption{Example figure caption explaining what is shown and the main takeaway.}
+\end{figure}
+
+\section{Discussion}
+Interpret results and state limitations, potential failure modes, and suggestions for future work.
+
+\section{Reproducibility Appendix}
+List exact commands and configuration used to reproduce the experiment. Example:
+\begin{verbatim}
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python run_experiment.py --config configs/my_experiment.yaml
+\end{verbatim}
+Include a table of key hyperparameters and seeds.
+
+\section*{Acknowledgements}
+(Optional) Acknowledge assistance or funding.
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}

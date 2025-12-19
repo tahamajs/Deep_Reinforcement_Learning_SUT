@@ -1,0 +1,100 @@
+% Simple LaTeX report for CA20
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\title{CA20: Lagrangian-constrained Policy Optimization — Short Report}
+\author{Student Name}
+\date{\today}
+\begin{document}
+\maketitle
+\begin{abstract}
+This short report documents a minimal experiment using a simple MLP policy trained with a Lagrangian relaxation on a synthetic dataset.
+\end{abstract}
+\section{Method}
+We implement a Gaussian MLP policy with a state-independent log-std and a value network for baseline advantage estimation. The Lagrangian objective is:\\
+$L = $ policy loss $ + \mu (C - c)$\\
+\section{Experiments}
+Run the debug config and save figures:\\
+\texttt{python -c "from paperAssignments.Assignments1_50.CA20.src import train, config; cfg=config.Config(); cfg.epochs=2; cfg.batch_size=32; train.train(cfg)"}
+\section{Results}
+
+This section contains example placeholders for tables and figures. Replace the placeholders with actual results produced by running the experiments described in Section~\ref{sec:experiments}.
+
+\subsection{Learning Curves}
+\begin{figure}[h]
+  \centering
+  % Replace with your reward curve: e.g. notebooks/pictures/reward_curve.png
+  \includegraphics[width=0.7\textwidth]{notebooks/pictures/reward_curve.png}
+  \caption{Average reward over training steps for a representative seed (placeholder).}
+  \label{fig:reward}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  % Replace with your constraint violation curve: e.g. notebooks/pictures/constraint_curve.png
+  \includegraphics[width=0.7\textwidth]{notebooks/pictures/constraint_curve.png}
+  \caption{Mean constraint violation over training steps (placeholder).}
+  \label{fig:constraint}
+\end{figure}
+
+\subsection{Summary Tables}
+\begin{table}[h]
+  \centering
+  \begin{tabular}{lrrrr}
+    \hline
+    Method & Mean return & Std return & Mean constraint & Std constraint\\
+    \hline
+    Baseline & -- & -- & -- & -- \\
+    Lagrangian ($c=0.05$) & -- & -- & -- & -- \\
+    Lagrangian ($c=0.1$) & -- & -- & -- & -- \\
+    \hline
+  \end{tabular}
+  \caption{Summary statistics across seeds (placeholders).}
+  \label{tab:summary}
+\end{table}
+
+\section{Discussion}
+
+Interpret the results and discuss potential failure modes. For example:
+
+- How does the multiplier evolve over time and does it stabilise? Compare final multiplier values across runs.
+- Is there a visible trade-off between reward and constraint satisfaction in the sweep over $c$?
+- What hyperparameters (learning rates, lambda lr, clipping) affected stability the most?
+
+\section{Reproducibility and Build Instructions}
+\label{sec:repro}
+
+To reproduce these results locally:
+
+\begin{enumerate}
+  \item Create and activate a Python 3.10+ virtualenv.
+  \item Install dependencies: \texttt{pip install -r requirements.txt}.
+  \item Run the debug experiment (short run):
+  \begin{verbatim}
+python -c "from paperAssignments.Assignments1_50.CA20.src import train, config; cfg=config.Config(); cfg.epochs=2; cfg.batch_size=32; train.train(cfg)"
+  \end{verbatim}
+  \item Run the notebook `notebooks/demo.ipynb` to generate example figures saved to `notebooks/pictures/`.
+  \item Compile this report to PDF (requires a LaTeX toolchain):
+  \begin{verbatim}
+pdflatex report.tex
+bibtex report || true
+pdflatex report.tex
+pdflatex report.tex
+  \end{verbatim}
+\end{enumerate}
+
+\section{Conclusion}
+
+We presented a compact, reproducible scaffold for studying Lagrangian-constrained optimization in simple RL settings. The codebase is intentionally minimal and designed for pedagogy and extension; future work includes integrating environment-based episodic evaluation, richer policy classes, and more extensive hyperparameter sweeps.
+
+\section*{Acknowledgements}
+
+This scaffold was developed for course CA20. Please cite this repository if you use it for course work or research.
+
+\section*{Data and Code Availability}
+
+All code is included in this repository. Example scripts and notebooks save figures and checkpoints under `notebooks/pictures/` and `outputs/` respectively. Tests are located in `tests/` and can be run with `pytest`.
+
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}

@@ -1,0 +1,186 @@
+% CA26 — Detailed LaTeX Report
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{siunitx}
+\usepackage{enumitem}
+\usepackage{natbib}
+\usepackage{microtype}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\tcbset{colback=white,colframe=black!10,boxrule=0.3pt,arc=2pt}
+
+\title{CA26: Synthetic Regression Benchmark\vspace{0.3em} \\ Comprehensive Report}
+\author{CA26 scaffold}
+\date{\today}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+This document describes a fully reproducible synthetic regression benchmark implemented for CA26. It details the dataset, model family (MLP), loss functions (MSE and Huber), training protocol, evaluation metrics, experimental protocols and reproducibility best practices. The goal is to provide a clear, replicable template for students and researchers to run small, well-documented experiments and produce publishable figures and tables.
+\end{abstract}
+
+\section{Introduction}
+The CA26 scaffold is designed as a small, import-safe research pipeline that demonstrates how to go from a theoretical idea to a reproducible experiment. The primary motivating questions are: How do different losses and model capacities affect regression performance on a simple, controlled synthetic task? And how can we ensure reproducibility and ease of aggregation across seeds and runs?
+
+\section{Problem setting and dataset}
+We consider a scalar regression problem: given input $x\in[0,1]$, predict target
+\begin{equation}
+y = f(x) + \varepsilon, \qquad f(x) = \sin(2\pi x),\quad \varepsilon \sim \mathcal{N}(0,\sigma^2).
+\end{equation}
+The dataset generator is implemented in \texttt{src/data.py} as \texttt{SyntheticRegressionDataset}. Key parameters:
+\begin{itemize}
+  \item \textbf{n\_samples:} total samples in the dataset (default 1000).
+  \item \textbf{noise\_std:} standard deviation of additive gaussian noise (default 0.1).
+  \item \textbf{seed:} for reproducible draws.
+\end{itemize}
+For experiments, users should perform train/validation/test splits (simple random split is sufficient), and aggregate results across multiple seeds to estimate mean and variance of final metrics.
+
+\section{Model family}
+We use simple fully-connected multilayer perceptrons (MLPs). The architecture is parameterized by input dimension $d_{in}$, a hidden sizes tuple $H = [h_1, h_2, \dots]$, and an output dimension $d_{out}$.
+The implemented network in \texttt{src/model.py} stacks linear layers with configurable activation functions (ReLU, tanh, identity). The forward pass can be written as
+\begin{equation}
+\hat y = W_L \phi( W_{L-1} \phi( \dots \phi(W_1 x + b_1) + b_{L-1}) ) + b_L
+\end{equation}
+where $\phi$ denotes the activation.
+
+\subsection{Initialization and practical notes}
+Default PyTorch initializers are used. If controlled initialization is needed (e.g. for very small networks or reproducibility across frameworks) we recommend adding an explicit initializer (Kaiming/Xavier) in the constructor.
+
+\section{Loss functions}
+This project implements two losses:
+\begin{enumerate}[nosep]
+  \item Mean Squared Error (MSE):
+  \begin{equation}
+    \mathcal{L}_{\mathrm{MSE}}(\hat y, y) = \frac{1}{N} \sum_i (y_i - \hat y_i)^2.
+  \end{equation}
+  \item Huber loss (smooth L1): with parameter $\delta>0$,
+  \begin{equation}
+    H_\delta(r) = \begin{cases}
+      0.5 r^2 & \text{if } |r| \le \delta, \\
+      \delta(|r| - 0.5 \delta) & \text{otherwise.}
+    \end{cases}
+  \end{equation}
+\end{enumerate}
+
+The Huber loss offers robustness to outliers; MSE is appropriate when squared error is the objective.
+
+\section{Training procedure}
+The training loop is implemented in \texttt{scripts/run\_experiment.py} via \texttt{fit(cfg, out\_dir)}. Key choices:
+\begin{itemize}
+  \item Optimizer: Adam (default learning rate 1e-3).
+  \item Epochs: configurable via config file (default 30).
+  \item Batch size: configurable (default 128).
+  \item Deterministic seeding: \texttt{src/utils.set\_seed} controls numpy and torch seeds.
+  \item Artifacts: model state dict saved as \texttt{model.pt}; loss curve saved as \texttt{loss/loss\_curve.png}.
+\end{itemize}
+
+For reliable comparisons, always run multiple seeds and report mean $\pm$ std for final metrics.
+
+\section{Evaluation metrics and recommended figures}
+Use these primary numerical metrics:
+\begin{itemize}
+  \item MSE (mean squared error)
+  \item RMSE (root mean squared error)
+  \item MAE (mean absolute error)
+  \item $R^2$ (coefficient of determination)
+\end{itemize}
+Recommended figures:
+\begin{enumerate}
+  \item Training loss curve vs epoch (per-run)
+  \item Predictions vs ground-truth scatter plot on validation/test datasets
+  \item Residual histogram to inspect bias and tails
+  \item Aggregated mean $\pm$ std loss across seeds (bar or line plot)
+\end{enumerate}
+
+\section{Experimental protocols and ablations}
+Here are reproducible protocols to run experiments and ablations:
+\begin{enumerate}
+  \item \textbf{Baseline:} run default config with seeds [0,1,2,3,4], record final loss and produce mean $\pm$ std.
+  \item \textbf{Loss ablation:} keep architecture fixed and compare MSE vs Huber with several $\delta$ values.
+  \item \textbf{Capacity sweep:} compare hidden dims (e.g. (16,), (64,64), (128,128)) and report final metric curves.
+  \item \textbf{Noise sensitivity:} sweep noise\_std and measure robustness of loss functions.
+\end{enumerate}
+For each experiment, save a `metadata.json` containing seed, config, final metric, timestamp, and commit SHA (recommended).
+
+\section{Reproducibility and artifacts}
+We recommend the exact run layout: each run in `outputs/seed-<n>` contains:
+\begin{itemize}
+  \item `metadata.json` — run metadata (seed, config, final metrics, timestamp, commit)
+  \item `model.pt` — saved PyTorch `state_dict`
+  \item `loss/loss_curve.png` — training loss plot
+\end{itemize}
+A small aggregation script (example in the repo) collects `metadata.json` across seeds and writes `aggregate.csv`.
+
+\section{Results (example placeholder)}
+Below is a placeholder table. Replace with the actual aggregated results from `outputs/aggregate.csv`.
+\begin{table}[h!]
+\centering
+\begin{tabular}{lcccc}
+\toprule
+Model & Loss & Epochs & Mean final loss & Std dev \\
+\midrule
+MLP (64,64) & MSE & 30 & 0.012 & 0.003 \\
+MLP (64,64) & Huber($\delta=1.0$) & 30 & 0.010 & 0.002 \\
+\bottomrule
+\end{tabular}
+\caption{Example (placeholder) aggregated results across seeds. Replace with real numbers from runs.}
+\end{table}
+
+\section{Implementation notes and tests}
+All modules are import-safe and include unit tests in `tests/` covering:
+\begin{itemize}
+  \item `tests/test\_losses.py` — correctness of MSE and Huber
+  \item `tests/test\_model\_shapes.py` — MLP forward shapes
+  \item `tests/test\_config.py` — YAML to dataclass mapping
+  \item `tests/test\_utils.py` — seeding and plotting
+  \item `tests/test\_train.py` — short smoke test running `fit()` and verifying artifacts
+\end{itemize}
+Continuous integration runs `pytest` on push and PRs using `.github/workflows/ci.yml`.
+
+\section{How to build this report (PDF)}
+Requirements: a TeX distribution (\texttt{pdflatex} or \texttt{latexmk}). From the CA26 root run:
+\begin{verbatim}
+# using latexmk if available
+latexmk -pdf REPORT.tex
+# or with pdflatex
+pdflatex REPORT.tex
+pdflatex REPORT.tex
+\end{verbatim}
+Alternatively a helper script `scripts/build_report.sh` (provided) runs `pdflatex` twice and exits cleanly.
+
+\section{Deliverables and checklist}
+Before submission, ensure the following:
+\begin{itemize}
+  \item Unit tests pass locally (`pytest -q`).
+  \item `README.md` and `REPORT.tex` contain final numbers, figures, and captions.
+  \item `outputs/` contains representative run artifacts and `aggregate.csv`.
+  \item Notebooks in `notebooks/` reproduce the figures contained in this report.
+\end{itemize}
+
+\section{Extensions and future work}
+Possible extensions include uncertainty estimation (ensembles, MC dropout), richer synthetic tasks, and automated hyperparameter sweeps with logging and a slurm-compatible runner for larger experiments.
+
+\section*{Acknowledgements}
+This scaffold was created for CA26. The implementation emphasizes clarity, reproducibility and pedagogical value.
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\appendix
+\section{Appendix: example `metadata.json`}
+\begin{verbatim}
+{
+  "seed": 42,
+  "config": {"model": {"input_dim": 1, "hidden_dims": [64, 64], "output_dim": 1}, "train": {"lr": 0.001, "batch_size": 128, "epochs": 30}},
+  "final_loss": 0.012345,
+  "timestamp": "2025-12-19T12:34:56Z",
+  "commit": "<git-sha>"
+}
+\end{verbatim}
+
+\end{document}

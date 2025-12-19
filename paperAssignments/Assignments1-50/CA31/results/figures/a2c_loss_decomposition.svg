@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="360" viewBox="0 0 760 360">
+  <rect width="100%" height="100%" fill="#fff"/>
+  <g transform="translate(60,300)">
+    <line x1="0" y1="0" x2="640" y2="0" stroke="#333"/>
+    <line x1="0" y1="0" x2="0" y2="-240" stroke="#333"/>
+    <polyline fill="none" stroke="#d62728" stroke-width="2.5" points="0,-70 80,-72 160,-75 240,-78 320,-85 400,-95 480,-110 560,-125 640,-140"/>
+    <polyline fill="none" stroke="#1f77b4" stroke-width="2.5" points="0,-40 80,-50 160,-60 240,-72 320,-85 400,-100 480,-118 560,-140 640,-165"/>
+    <text x="320" y="40" text-anchor="middle" font-family="sans-serif">Training steps</text>
+    <text x="-40" y="-120" transform="rotate(-90 -40,-120)" font-family="sans-serif">Loss</text>
+    <rect x="460" y="-220" width="170" height="50" fill="#f8f8f8" stroke="#ddd"/>
+    <line x1="472" y1="-200" x2="502" y2="-200" stroke="#d62728" stroke-width="2.5"/>
+    <text x="510" y="-195" font-family="sans-serif">Policy loss</text>
+    <line x1="472" y1="-180" x2="502" y2="-180" stroke="#1f77b4" stroke-width="2.5"/>
+    <text x="510" y="-175" font-family="sans-serif">Value loss</text>
+  </g>
+</svg>

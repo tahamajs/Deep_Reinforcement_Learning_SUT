@@ -27,14 +27,42 @@ experimental protocol for hard navigation tasks.
 \end{abstract}
 
 \section{Introduction}
-Model-based reinforcement learning (RL) with learned latent world models has
-demonstrated strong sample efficiency across many domains. However, long-horizon
-planning under partial observability and sparse rewards remains challenging:
-local greedy planning can miss viable long-range plans and backtracking behaviors.
-SimGolf \cite{sim_golf} introduced simulation-based global search with episodic
-resets to previously visited states; this work adapts SimGolf to operate entirely
-in latent space using DreamerV3's RSSM, avoiding real-environment resets while
-preserving the planner's exploratory power.
+Model-based reinforcement learning (RL) has shown strong sample efficiency by
+learning compact latent representations and performing optimization in latent
+space. Dreamer-family agents use a Recurrent State-Space Model (RSSM) to
+capture dynamics and perform actor-critic updates via imagined rollouts, which
+dramatically reduces sample complexity in many domains. However, these
+approaches still struggle on **long-horizon**, **sparse-reward** tasks that
+require non-local planning and explicit backtracking: local greedy updates may
+fail to discover long-range sequences of actions that lead to sparse rewards.
+
+SimGolf \cite{sim_golf} proposed simulation-based global search on top of
+episodic resets to rediscover and refine long-range plans; the central idea is
+to perform branching search from previously visited states to explore
+alternative continuations. In this work we adapt and extend SimGolf to operate
+entirely in **latent space** using DreamerV3's RSSM. Latent resets eliminate
+the need for costly environment resets while allowing broad, imagined
+branching that can be used to refine actor and critic at critical decision
+points.
+
+Contributions: we make the following contributions in this paper:
+\begin{enumerate}
+\item We present SimGolf-Latent, a planner that performs global branching in the
+latent space of a learned RSSM and integrates its imagined branches into
+actor-critic training via TD(\(\lambda\)) targets and distillation.
+\item We introduce a lightweight trigger module that decides when to invoke
+expensive planning based on TD-errors, model uncertainty, and policy entropy,
+with cooldowns to limit compute overhead.
+\item We implement an efficient CEM-based branch proposal module that can be
+warm-started from the policy and supports uncertainty-penalized returns.
+\item We provide a robust open-source scaffold (planner utilities, training
+script, examples, tests), reproducibility guidance, and a detailed experimental
+protocol to evaluate the planner on hard navigation benchmarks.
+\end{enumerate}
+
+In the rest of this paper we formalize the planner, describe implementation
+choices and integration with DreamerV3, and present a rigorous experimental
+protocol and templates for reporting results.
 
 \section{Method}
 \subsection{Overview and notation}
@@ -80,6 +108,50 @@ Branch returns are bootstrapped with the critic as:
 Branches are ranked by \(\hat R_b\) and aggregated for learning or action
 selection.
 
+\subsection{Algorithm (pseudocode)}
+Below is high-level pseudocode for the planner integration used in our
+experiments. This pseudocode highlights the planner trigger, checkpoint sampling,
+branch generation (policy sampling or CEM), branch scoring, and imagined
+updates applied to the actor and critic.
+
+\begin{verbatim}
+# Main training loop (simplified)
+for step in range(total_steps):
+    # Real environment interaction and Dreamer updates (world model + actor/critic)
+    o, a, r, done = env.step(a_real)
+    z = rssm.observe(o, a, r)
+    update_world_model_and_actor_critic(replay)
+
+    # compute trigger metrics
+    td_err = compute_td_error(z)
+    unc = compute_model_uncertainty(z)
+    ent = compute_policy_entropy(z)
+
+    # maybe record checkpoint
+    if should_record_checkpoint(td_err, unc, ent):
+        buffer.push(z, score=td_err, step=step)
+
+    # planner invocation
+    if trigger(td_err, unc, ent) and len(buffer) > 0:
+        z_saved = buffer.sample(k=1, prioritized=True)[0]['z']
+        branches = simulate_branches(rssm, actor, value_fn, z_saved, cfg)
+        # compute TD(lambda) targets and update actor/critic from imagined data
+        imagined_updates = build_imagined_targets(branches, cfg.lambda)
+        apply_imagined_updates(imagined_updates)
+        # optional: distill top-k first actions into policy
+        if cfg.branch_distill:
+            actions, probs = branch_to_action_distribution(branches, cfg.topk, cfg.tau)
+            distill_actions_into_policy(actions, probs)
+
+    # choose next real action (may be biased by planner)
+    a_real = select_real_action(z, actor, planner_hint)
+
+# end loop
+\end{verbatim}
+
+We provide reference implementations in `planner/` and example notebooks to
+visualize branches and their effects.
+
 \subsection{CEM branch proposal}
 When CEM is enabled we optimize an action-sequence distribution to maximize
 predicted branch return. The implemented CEM uses a population of size
@@ -92,15 +164,24 @@ Implementation details and pragmatic defaults live in `planner.advanced`.
 Each branch yields an imagined trajectory \(\tau=(z_0,a_0,r_0,\gamma_0,\dots)\).
 We compute TD(\(\lambda\)) targets backward along each branch using
 Equation~\eqref{eq:td-lambda} and treat the results as additional imagined
-training examples for the critic and actor. Practically:
-\begin{itemize}
-\item compute per-branch targets using backward recursion (stop-gradient on targets),
-\item update critic with MSE to targets and apply gradient clipping/regularization, and
-\item update actor via advantage-weighted objective using imagined actions and
-advantages \(\hat A_t = \mathrm{stopgrad}(G_t) - v_\psi(z_t)\).
-\end{itemize}
-We typically aggregate updates using the top-\(k\) branches or a reweighted
-mixture (softmax on returns) to limit the influence of model bias.
+training examples for the critic and actor. Concretely, for a single branch of
+length \(H\) we compute targets via the backward recursion:
+\begin{align}
+G_{H} &= v_\psi(z_H),\nonumber \\
+G_{t} &= r_t + \gamma_t\big((1-\lambda)v_\psi(z_{t+1}) + \lambda G_{t+1}\big)\quad\text{for }t=H-1,\dots,0.
+\end{align}
+The critic minimizes the MSE loss
+\(L_{\rm critic}=\mathbb{E}_{\tau}[\|v_\psi(z_t)-\mathrm{stopgrad}(G_t)\|^2]\)
+averaged over selected branches. The actor is updated using an advantage-weighted
+policy gradient loss computed from imagined data:
+\begin{equation}
+L_\pi = -\mathbb{E}_{\tau, t}[\log\pi_\phi(a_t\mid z_t)\cdot\mathrm{stopgrad}(G_t - v_\psi(z_t))] - \eta\mathcal{H}(\pi_\phi).
+\end{equation}
+To compute stable gradient targets we stop gradients through \(G_t\) and use
+bootstrapped critic values only where appropriate. Aggregation strategies
+include using the top-\(k\) branches, normalizing branch weights with a
+softmax of returns, or temperature-scaling to control variance introduced by
+outlier branches.
 
 \subsection{Branch-to-real distillation}
 To bias real actions toward promising branches we extract the first-action
@@ -153,6 +234,23 @@ clear docstrings, and add unit tests that cover edge cases (empty buffer,
 file save/load, actor missing sample method). Use the existing stubs in the
 training script for smoke-testing before wiring into full DreamerV3 agents.
 
+\subsection{API signatures and expected shapes}
+To ease integration we provide minimal recommended signatures and tensor shapes
+for the key planner primitives (Python type hints shown informally):
+\begin{itemize}
+\item `simulate_branches(rssm, actor, value_fn, z_saved, cfg) -> List[Branch]`:
+  - `z_saved`: Tensor `[1, z_dim]` or `[batch, z_dim]` (uses batch size 1 for checkpoints),
+  - returns `Branch` objects with `.ret` (float) and `.traj` as list of `(z, a, r, gamma)`.
+\item `CheckpointBuffer.push(z: Tensor, score: float, step: int)` and `sample(k:int, prioritized:bool)`:
+  - `z` shape `[1, z_dim]`, `sample` returns list of dicts `{'z':Tensor,'score':float,'step':int}`.
+\item `branch_to_action_distribution(branches, topk_frac, tau) -> (actions:Tensor[k,adim], probs:Tensor[k])`:
+  - `actions` stacked first-actions for top-k branches, `probs` softmax-weighted on returns.
+\item CEM helper: returns a list of `H` action tensors `[1, adim]` or a Tensor `[H,adim]` representing the proposed sequence.
+\end{itemize}
+These minimal contracts make it straightforward to plug in different RSSMs or
+actor implementations without committing to a heavy dependency on a specific
+project layout.
+
 \section{Experimental setup and ablations}
 We evaluate on hard navigation tasks where long-horizon planning and backtracking
 matter. Below we provide experimental protocols to ensure fair comparison and
@@ -182,7 +280,8 @@ Primary environments:
 \end{itemize}
 
 \subsection{Ablations}
-Systematic ablations to understand behavior:
+Systematic ablations to understand behavior and sensitivity to planner
+hyperparameters:
 \begin{enumerate}
 \item Branching factor \(B\): \{0 (off), 8, 16, 32\}.
 \item Horizon \(H\): \{5, 10, 20\}.
@@ -190,10 +289,46 @@ Systematic ablations to understand behavior:
 \item CEM vs policy sampling and CEM hyperparameters (population, elites, iters).
 \item Uncertainty penalty \(\kappa\): \{0.0, 0.1, 0.5\}.
 \item Buffer size: \{256, 1024, 4096\}.
+\item Branch-to-real distillation: on/off and distillation temperature \(\tau\).
 \end{enumerate}
 
-\subsection{Statistical considerations}
-Use multiple random seeds (>=5) per experimental condition. Report mean ± std,
+\subsection{Evaluation protocol and defaults}
+We recommend the following practical defaults and evaluation procedure to make
+comparisons fair and reproducible (modify per environment):
+\begin{table}[ht]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Parameter & Default & Notes \\
+\midrule
+Branching factor (B) & 16 & planner branches per invocation \\
+Horizon (H) & 12 & imagined steps per branch \\
+Uncertainty penalty (\kappa) & 0.1 & reduces optimism from uncertain rewards \\
+CEM pop & 64 & if CEM enabled \\
+CEM elite & 8 & \\
+CEM iters & 3 & \\
+Buffer size & 1024 & checkpoint capacity \\
+Trigger cooldown & 8 steps & prevents overuse \\
+Eval frequency & 50k env steps & evaluate policy every N steps \\
+Eval episodes & 100 & per seed per evaluation \\
+Seeds & 5 & matched seeds across baselines \\
+\bottomrule
+\end{tabular}
+\caption{Representative experimental defaults used in our protocol.}
+\end{table}
+
+For each experimental condition:
+\begin{itemize}
+\item run at least 5 seeds with matched RNGs, log per-step metrics, and save planner checkpoints,
+\item perform evaluations every `Eval frequency` steps over `Eval episodes` episodes per seed, and
+\item report mean ± std, IQM and 95% bootstrap confidence intervals for success rates and returns.
+\end{itemize}
+
+\subsection{Compute budgeting}
+Report wall-clock training times and compute budgets (number of GPUs, GPU type,
+CPU/RAM). For planner ablations also report planner fraction (fraction of
+training wall-time consumed by planning). This helps explain trade-offs between
+improved performance and added compute.
 IQM where appropriate, and compute bootstrap confidence intervals for success
 rates. Perform paired tests between baseline and planner variants when seeds
 are matched.

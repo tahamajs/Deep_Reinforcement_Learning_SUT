@@ -18,33 +18,56 @@ A concise 3–5 sentence summary describing the problem, the method (MLP on synt
 \end{abstract}
 
 \section{Introduction}
-Brief motivation and a one-sentence hypothesis.
+This report documents a small, reproducible supervised learning experiment that trains a multilayer perceptron (MLP) on synthetic data. Small controlled experiments are useful for validating implementation details, checking for regressions, and teaching fundamental concepts such as optimization dynamics and overfitting. The aim is not to propose a novel algorithm, but rather to provide a clear, reproducible example that maps theory (formulas) to practice (code, tests, and figures).
+
+\paragraph{Scope.} The scope of this exercise is intentionally constrained: synthetic datasets, small model sizes, and short training runs. This keeps runs fast and makes it practical to perform multiple seeds and small ablations during a coursework submission.
+
+\paragraph{Hypothesis.} For the synthetic linear-ish data used here, a small MLP with ReLU activations and Adam optimization will reliably converge in a few epochs, producing low validation MSE and sensible prediction behaviour (predicted vs true scatter aligned along the $y=x$ line).
 
 \section{Related Work}
-One paragraph noting briefly relevant references or standard baselines for context (e.g., simple linear regression, small MLPs in coursework).
+This section briefly positions this toy experiment relative to canonical baselines. For simple supervised tasks, linear regression provides an analytic baseline; small MLPs (1--3 hidden layers) are commonly used to evaluate optimization and regularization behaviour in coursework and reproducibility studies. The goal of this template is pedagogical: to capture a clean mapping from mathematical objective to tested code, and to provide an artifact bundle (config, code, outputs, report) that supports reproducible grading and inspection.
 
 \section{Methods}
 \subsection{Model}
-We use a fully connected multilayer perceptron (MLP) with ReLU activations. For an input $x\in\mathbb{R}^{D}$, layer computations are:
+We use a fully connected multilayer perceptron (MLP) with ReLU activations. For an input batch $X\in\mathbb{R}^{B\times D}$ and layer index $l$ the computations are:
 \begin{align}
-    h^{(0)} &= x, \\
-    z^{(l)} &= W^{(l)} h^{(l-1)} + b^{(l)}, \\
-    h^{(l)} &= \phi(z^{(l)}) \quad (\phi=\mathrm{ReLU})
+    H^{(0)} &= X, \\
+    Z^{(l)} &= H^{(l-1)} {W^{(l)}}^{\top} + b^{(l)}, \quad Z^{(l)} \in \mathbb{R}^{B\times d_l}, \\
+    H^{(l)} &= \phi(Z^{(l)})
 \end{align}
-The final output is linear $y = W^{(L)} h^{(L-1)} + b^{(L)}$. For classification we interpret $y$ as logits and apply softmax.
+with $d_l$ the width of layer $l$ and $\phi(\cdot)$ the elementwise ReLU. The final layer produces outputs $Y\in\mathbb{R}^{B\times C}$ (where $C=1$ for regression or $C$ number of classes for classification).
 
-\subsection{Loss Functions}
-Mean squared error (MSE) for regression:
-\begin{equation}
-    \mathcal{L}_{\mathrm{MSE}} = \frac{1}{N} \sum_{i=1}^N (y_i - \hat{y}_i)^2
-\end{equation}
-Cross-entropy for classification (logits $z$):
-\begin{equation}
-    \mathcal{L}_{\mathrm{CE}} = -\frac{1}{N} \sum_{i=1}^N \log \frac{e^{z_{i,c_i}}}{\sum_{c} e^{z_{i,c}}}
-\end{equation}
+\paragraph{Initialization.} We initialise linear layers using Kaiming uniform initialization appropriate for ReLU nonlinearities and set biases to zero. This is consistent with the implementation in `src/model.py`.
+
+\subsection{Loss and optimization}
+We use mean squared error (MSE) for regression and cross-entropy for classification. The training uses the Adam optimizer with learning rate $\alpha$ and optional weight decay $\lambda$.
+
+\subsection{Training pseudocode (detailed)}
+\begin{algorithm}[H]
+\caption{Detailed training loop with logging}
+\begin{algorithmic}[1]
+\State \textbf{Input:} model $f_{\theta}$, optimizer $\mathcal{A}$, loss $\mathcal{L}$, train data $\mathcal{D}_{\mathrm{train}}$, val data $\mathcal{D}_{\mathrm{val}}$, epochs $T$, logger
+\For{$e=1$ to $T$}
+  \State \texttt{train\_loss} $\leftarrow 0$; $n\leftarrow 0$
+  \For{batch $(x,y)$ in $\mathcal{D}_{\mathrm{train}}$}
+    \State $\hat{y} \leftarrow f_{\theta}(x)$
+    \State $\ell \leftarrow \mathcal{L}(\hat{y},y)$
+    \State $\nabla_{\theta} \ell \leftarrow \text{backprop}(\ell)$
+    \State $\theta \leftarrow \mathcal{A}(\theta,\nabla_{\theta} \ell)$
+    \State \texttt{train\_loss} $\mathrel{+}= \ell \times |x|$; $n\mathrel{+}=|x|$
+  \EndFor
+  \State $\texttt{train\_loss} \leftarrow \texttt{train\_loss} / n$
+  \State Evaluate on $\mathcal{D}_{\mathrm{val}}$ and log metrics, optionally save checkpoint
+\EndFor
+\end{algorithmic}
+\end{algorithm}
 
 \subsection{Data}
-Synthetic datasets are generated as described in `src/data.py`. For regression: $y = X w + \epsilon$ with Gaussian noise $\epsilon\sim\mathcal{N}(0,\sigma^2)$. Include data split details here.
+Synthetic regression: sample $X\sim\mathcal{N}(0,I_D)$ and choose a ground-truth linear weight vector $w\sim\mathcal{N}(0,I_D)$. Targets are $y=Xw+\epsilon$ with $\epsilon\sim\mathcal{N}(0,\sigma^2)$. The classification synthetic dataset constructs logits from a linear mapping and samples class indices. The dataset sizes, input dimension $D$, and noise $\sigma$ are configurable in `configs/*.yaml`.
+
+\paragraph{Splits and seeding.} Use a deterministic split (first 80\% train, last 20\% validation) and set RNG seeds for reproducibility (see `src/utils.py`).
+
+\paragraph{Implementation notes.} Keep training code import-safe (no heavy work at import time). Save `used_config.yaml` when a run starts and the final `model.pt` at completion.
 
 \section{Experimental Setup}
 List config values and number of trials here. Example: 5 epochs, lr=1e-3, batch size=128, seed=123. Include a small hyperparameter table:
@@ -67,6 +90,20 @@ seeds & 3 & 42,43,44 \\
 
 \section{Results}
 Include figures with captions and short interpretations.
+
+% Metric formulas
+\subsection{Metrics}
+Root mean squared error (RMSE):
+\begin{equation}
+    \mathrm{RMSE} = \sqrt{\frac{1}{N} \sum_{i=1}^N (y_i - \hat{y}_i)^2}
+\end{equation}
+
+Accuracy (classification):
+\begin{equation}
+    \mathrm{Accuracy} = \frac{1}{N} \sum_{i=1}^N \mathbf{1}[\hat{y}_i = y_i]
+\end{equation}
+
+A metrics JSON file (e.g. `metrics.json`) with keys like `val_mse`, `val_rmse`, `test_mse`, `test_rmse`, and `accuracy` is recommended.
 
 \begin{figure}[H]
     \centering
@@ -94,7 +131,6 @@ MLP [64,32] & 42,43,44 & 0.082 $\pm$ 0.004 & 0.089 \\
 \end{tabular}
 \caption{Example metrics table.}
 \end{table}
-
 \section{Discussion}
 Summarize whether results support hypothesis, limitations, and next steps.
 

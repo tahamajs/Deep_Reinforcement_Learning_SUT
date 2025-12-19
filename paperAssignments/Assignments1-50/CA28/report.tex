@@ -6,6 +6,11 @@
 \usepackage{hyperref}
 \usepackage{natbib}
 \usepackage{geometry}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
 \geometry{margin=1in}
 
 \title{CA28: Deep Q-Network Implementation for CartPole}
@@ -27,6 +32,8 @@ Reinforcement Learning (RL) has shown remarkable success in solving complex deci
 The CartPole environment is a classic control problem where an agent must balance a pole on a cart by applying left or right forces. The state consists of cart position, cart velocity, pole angle, and pole angular velocity. The agent receives a reward of +1 for each timestep the pole remains upright.
 
 \section{Methodology}
+
+This section provides a detailed description of the algorithms used, the theoretical motivation, and precise implementation choices to enable reproducibility and clarity. We include pseudocode, optimization details, and the interplay between optional components (Double DQN, prioritized replay) and the baseline algorithm.
 
 \subsection{Deep Q-Network Algorithm}
 

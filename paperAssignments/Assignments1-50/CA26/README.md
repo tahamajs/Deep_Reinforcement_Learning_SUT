@@ -59,6 +59,16 @@ python -m scripts.run_experiment --config configs/default.yaml --out outputs
 - The code uses deterministic seeds (`src/utils.set_seed`). For real experiments, run multiple seeds and average results.
 - Use the CLI for single-run experiments. For sweeps, write a small loop or use hydra/other sweep tools.
 
+### Building the PDF report (optional)
+
+A formal LaTeX report is available at `REPORT.tex`. To build a PDF locally (requires a TeX distribution), run:
+
+```bash
+# from the CA26 repo root
+./scripts/build_report.sh
+```
+The script will use `latexmk` if available, otherwise it will call `pdflatex` twice.
+
 Example command:
 
 ```bash

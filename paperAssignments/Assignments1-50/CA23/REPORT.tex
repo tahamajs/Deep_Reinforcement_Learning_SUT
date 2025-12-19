@@ -1,0 +1,252 @@
+% CA23 — Full report (LaTeX)
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{enumitem}
+\geometry{margin=1in}
+
+\title{CA23: A Reproducible Scaffold for Policy-Gradient Experiments}
+\author{Course Maintainers}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document provides a comprehensive, reproducible description of the CA23
+scaffold: design goals, implementation details, algorithmic building blocks,
+experimental protocols, and best practices for reproducible reinforcement
+learning experiments. The report is intended as a short, self-contained piece
+suitable for inclusion in a course submission or as the basis for a short
+conference-style write-up. We include equations for the optimization
+objectives, suggested hyperparameter sweeps, metrics and statistical tests,
+and instructions for packaging and sharing results.
+\end{abstract}
+
+\section{Introduction}
+Reinforcement learning (RL) experiments often require careful attention to
+reproducibility: controlled randomness, configuration management, and clear
+reporting of evaluation metrics. The CA23 scaffold provides a minimal,
+well-documented toolkit for implementing policy-gradient style agents and
+evaluating them on canonical control tasks. Our goals are (1) to make it easy
+for students and researchers to implement and iterate on policy-gradient
+algorithms, and (2) to ensure experiments are reproducible and reportable.
+
+This report expands on the short `REPORT.md`: it formalizes the loss
+functions, provides pseudocode, and specifies a complete experimental protocol
+for a small set of baseline experiments (baseline, entropy sweep, network
+capacity ablation, learning rate sensitivity).
+
+\section{Related work}
+Classic references include Sutton and Barto's textbook \cite{sutton_barto},
+which derives policy-gradient estimators and advantage-based variance
+reduction techniques. OpenAI Spinning Up provides practical implementation
+advice and recipes for common algorithms (policy gradient, PPO) \cite{spinup}.
+This scaffold intentionally targets the policy-gradient family and provides a
+clear place to insert improvements such as GAE, baselines, or trust-region
+updates.
+
+\section{Methods}
+\subsection{Policy and value parameterization}
+We use simple multi-layer perceptrons for both policy and value networks. For a
+categorical action space, the policy $\pi_\theta(a|s)$ is parameterized by a
+network returning action logits; action probabilities are given by softmax.
+The value network $V_\phi(s)$ returns a scalar estimate of expected return.
+
+\subsection{Objectives}
+Let $\tau = (s_0,a_0,r_0,\dots,s_T)$ be an episode. The return from time $t$ is
+$$R_t = \sum_{k=t}^{T} \gamma^{k-t} r_k$$
+The policy gradient objective can be written as
+$$J(\theta) = \mathbb{E}_\tau\left[ \sum_{t=0}^{T} \log \pi_\theta(a_t|s_t) A_t \right],$$
+where $A_t$ is an estimator of advantage (we use $A_t = R_t - V_\phi(s_t)$ as
+a simple baseline). Minimizing the negative expected advantage gives the
+loss used in code:
+$$\mathcal{L}_\text{policy} = -\mathbb{E}_t[\log \pi_\theta(a_t|s_t) A_t].$$
+
+We also include a value-function loss (MSE):
+$$\mathcal{L}_\text{value} = \mathbb{E}_t\left[(V_\phi(s_t) - R_t)^2\right].$$
+Entropy regularization encourages exploration by adding a term to encourage
+high-entropy policies. Denoting the entropy of the policy at state $s$ by
+$\mathcal{H}(\pi(\cdot|s))$, the combined loss minimized is
+$$\mathcal{L} = \mathcal{L}_\text{policy} + c_v \mathcal{L}_\text{value} - \lambda \mathbb{E}_t[\mathcal{H}(\pi(\cdot|s_t))],$$
+where $c_v$ is the value loss coefficient and $\lambda$ is the entropy
+regularization coefficient (in our code `entropy_coef`).
+
+\subsection{Numerical and implementation details}
+- Policy action selection uses PyTorch's `Categorical` distribution to obtain
+  actions and log-probabilities. For deterministic evaluation we pick the
+  argmax of the probabilities.
+- Careful dtype handling is used in `src/losses.py` so tests remain stable with
+  mixed dtypes.
+- To support multiple gym versions, we handle both the older `(obs, reward,
+  done, info)` and newer `(obs, reward, terminated, truncated, info)` step
+  signatures.
+
+\section{Implementation files and responsibilities}
+Table~\ref{tab:filemap} lists the principal files and their responsibilities.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}ll@{}}\toprule
+File & Purpose \\\midrule
+`src/config.py` & `ExperimentConfig` dataclass: YAML load/save, validation \\
+`src/model.py` & `PolicyNetwork`, `ValueNetwork` (MLP-based) \\
+`src/losses.py` & `policy_gradient_loss`, `value_loss`, `entropy_loss` (compat wrapper) \\
+`src/data.py` & `collect_episodes` (lazy gym import), `discounts` \\
+`src/utils.py` & `set_seed`, `get_device`, `save_figure`, `ensure_dir` \\
+`scripts/train.py` & Pedagogical training loop and CSV logging \\
+`tests/` & Unit tests and import-safe smoke checks \\
+\bottomrule
+\end{tabular}
+\caption{File map and responsibilities for the CA23 scaffold.}
+\label{tab:filemap}
+\end{table}
+
+\section{Experimental design}
+We provide a canonical experimental protocol intended to be reproducible and
+interpretable. Experiments recommended for a short course project include:
+
+\begin{enumerate}[itemsep=2pt]
+\item Baseline: run the default config on \texttt{CartPole-v1} for 5 seeds.
+\item Entropy sweep: \(\lambda \in \{0.0, 0.01, 0.1\}\) across 5 seeds.
+\item Network capacity ablation: hidden sizes in \{(32,32), (64,64), (128,128)\}.
+\item LR sensitivity: learning rates \{1e-4, 1e-3, 3e-3\}.
+\end{enumerate}
+
+For each experiment report the per-episode return, policy and value losses,
+entropy, and the wall-clock time per episode. Use a consistent stopping
+criterion or fixed number of episodes across runs for fair comparison.
+
+\subsection{Hyperparameters}
+Table~\ref{tab:hparams} gives suggested default hyperparameters used in the
+scaffold and in the baseline experiments.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}ll@{}}\toprule
+Hyperparameter & Value \\\midrule
+env_name & CartPole-v1 \\
+seed & 0 (sweep seeds 0–4) \\
+learning_rate & 1e-3 \\
+gamma & 0.99 \\
+hidden_sizes & (64,64) \\
+batch_size & 32 \\
+max_episodes & 200 \\
+entropy_coef & 0.0 (sweep as above) \\
+\bottomrule
+\end{tabular}
+\caption{Suggested default hyperparameters.}
+\label{tab:hparams}
+\end{table}
+
+\section{Evaluation metrics and statistical tests}
+Primary metric: mean episode return computed per episode and smoothed with a
+moving average (window 50). For comparing conditions, compute the mean and
+standard deviation of final returns across seeds and report confidence
+intervals. For pairwise comparisons use a two-sided t-test and report p-value
+and Cohen's d for effect size.
+
+\section{Example results (placeholder)}
+To include real results, run the sweep above and place aggregated CSVs under
+`runs/`. For this template we include placeholders shown in
+Figure~\ref{fig:placeholder} and Table~\ref{tab:results}.
+
+\begin{figure}[h]
+\centering
+\fbox{\parbox[c][0.25\textheight][c]{0.6\textwidth}{\centering Placeholder figure: run experiments to generate plots}}
+\caption{Placeholder plot location — replace with learning curve generated from `runs/`.}
+\label{fig:placeholder}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lcc@{}}\toprule
+Experiment & Mean return & Std \\\midrule
+Baseline & -- & -- \\
+Entropy 0.01 & -- & -- \\
+Entropy 0.1 & -- & -- \\
+\bottomrule
+\end{tabular}
+\caption{Placeholder results table (fill in after running experiments).}
+\label{tab:results}
+\end{table}
+
+\section{Reproducibility checklist}
+Follow this checklist to ensure reproducible runs and publishable artifacts:
+\begin{itemize}
+\item Save `config.yaml` for each run under `runs/<id>/config.yaml` using
+  `ExperimentConfig.to_yaml`.
+\item Record git commit hash (e.g., `git rev-parse HEAD`) and include it in the
+  run metadata.
+\item Store `pip freeze` in the run folder or an environment YAML.
+\item Record seeds and, when using GPUs, device identifiers.
+\item Save per-episode logs and model checkpoints.
+\item Report aggregated results with mean ± std across seeds and include the
+  raw data (CSV) in a `results/` folder for easy re-analysis.
+\end{itemize}
+
+\section{Appendix A: Algorithm pseudocode}
+\begin{algorithm}[h]
+\caption{Vanilla Policy Gradient (episodic)}
+\begin{algorithmic}[1]
+\State Initialize policy $\theta$ and value $\phi$.
+\For{episode = 1 to N}
+  \State Collect trajectory $\tau$ by rolling out $\pi_\theta$.
+  \State Compute returns $R_t$ for $t$ in trajectory.
+  \State Compute advantages $A_t = R_t - V_\phi(s_t)$.
+  \State $\theta \leftarrow \theta - \alpha \nabla_\theta [ -\mathbb{E}_t[\log \pi_\theta(a_t|s_t) A_t] - \lambda \mathbb{E}_t[\mathcal{H}(\pi(\cdot|s_t)) ] ]$
+  \State $\phi \leftarrow \phi - \beta \nabla_\phi \mathbb{E}_t[(V_\phi(s_t) - R_t)^2]$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Appendix B: How to run}
+A minimal sequence of commands to run the baseline experiment:
+\begin{verbatim}
+python -m venv .venv && source .venv/bin/activate
+python -m pip install -r requirements.txt
+python scripts/train.py --config configs/debug.yaml
+\end{verbatim}
+
+To run a sweep, create per-run YAML configs in `runs/<exp>/<seed>/config.yaml`
+and launch `scripts/train.py` with those configs (see the notebook for an
+example shell loop).
+
+\section{Appendix C: API reference (short)}
+\begin{itemize}
+\item `src.config.ExperimentConfig` — dataclass with fields shown in Table~\ref{tab:hparams}. Use `from_yaml` and `to_yaml` for load/save.
+\item `src.model.PolicyNetwork` — constructor `(obs_dim, action_dim, hidden_sizes=(64,64))`. Use `.get_action(obs_tensor)` to sample actions.
+\item `src.losses.policy_gradient_loss` — signature `(log_probs, advantages)`.
+\item `src.data.collect_episodes` — `(env_name, policy, num_episodes=1, max_steps=1000)`; returns list of episodes (each a list of `Transition`).
+\end{itemize}
+
+\section{Conclusion}
+We present CA23 as a minimal but practical scaffold for policy-gradient
+experiments with an emphasis on reproducibility and reporting. The included
+code, tests, and documentation provide a clear starting point for course
+projects and small-scale research experiments. We encourage users to extend the
+scaffold with more advanced algorithms and improved logging/checkpointing for
+larger studies.
+
+\section*{Acknowledgements}
+Thanks to the course staff and maintainers for continuous improvement of the
+scaffold.
+
+\begin{thebibliography}{9}
+\bibitem{sutton_barto}
+Richard S. Sutton and Andrew G. Barto. Reinforcement Learning: An Introduction. 2nd edition, MIT Press, 2018.
+
+\bibitem{spinup}
+OpenAI. Spinning Up in Deep RL. 2018. \url{https://spinningup.openai.com}
+\end{thebibliography}
+
+\end{document}

@@ -1,0 +1,139 @@
+% CA27 — Full report in LaTeX (extended)
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{geometry}
+\geometry{margin=1in}
+\title{Meta-Learning for Fast Adaptation: MAML and RL$^2$ Baselines}
+\author{Your Name \\ Institution / Course}
+\date{\today}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+We present a compact, reproducible comparison of two meta-learning approaches for fast adaptation in reinforcement learning: Model-Agnostic Meta-Learning (MAML) and the recurrent meta-learner RL$^2$. Our contributions include: a clean, import-safe implementation of both algorithms; a set of task distributions based on CartPole variants; a reproducible experiment scaffold with configuration files and unit tests; and a written report with analysis and reproducibility instructions. We report example metrics and provide scripts to reproduce the experiments and generate figures. This LaTeX report is an extended version of the markdown template included in the repository and includes full experimental descriptions, tables and example figure placeholders.
+\end{abstract}
+
+\section{Introduction}
+Meta-learning aims to enable learning systems to quickly adapt to new tasks using only a small amount of data. In reinforcement learning (RL), meta-learning is particularly useful when agents must rapidly adapt their policy to variations in dynamics, reward functions, or sensors. Two prominent approaches are MAML \cite{finn2017model}—which explicitly optimizes for quick adaptation via gradient-based inner-loops—and RL$^2$ \cite{duan2016rl2}—which uses recurrent policies that internalize learning dynamics through hidden state.
+
+In this work we implement both MAML and RL$^2$ as compact, well-tested baselines for the CartPole family of tasks and provide a reproducible experimental scaffold to enable comparison and future extensions.
+
+\section{Related Work}
+We briefly situate our implementations in context:
+\begin{itemize}
+  \item MAML (Finn et al., 2017) optimizes model parameters such that a small number of gradient steps produce good performance on a new task. Variants include first-order approximations and extensions to RL.
+  \item RL$^2$ (Duan et al., 2016/2017) learns an episodic learner via recurrent neural networks and an outer optimization loop; it can exploit experience across episodes to internalize learning rules.
+  \item Other approaches such as probabilistic meta-learning and gradient-free adaptation are discussed in the literature; we focus on gradient-based MAML and recurrent RL$^2$ as representative baselines.
+\end{itemize}
+
+\section{Methods}
+\subsection{MAML}
+Our MAML implementation uses a simple MLP policy with two hidden layers (default 64 units), categorical outputs for discrete actions, and manual inner-loop SGD updates with a configurable inner learning rate. The outer loop uses Adam to update the meta-parameters and supports second-order derivatives by default. We compute policy gradient loss using REINFORCE-style returns with optional baseline/value heads (left as an extendable option in the source).
+
+\subsection{RL$^2$}
+The RL$^2$ policy encodes past observations, actions and rewards through an LSTM with configurable hidden size and layers. For discrete control we produce logits and use a PPO-style inner optimization loop per task during meta-training. The implementation includes GAE computation and supports both old and new Gym step/reset APIs.
+
+\subsection{Tasks}
+We use variants of CartPole where parameters (e.g., gravity, pole-length, masses) are sampled from ranges to create a distribution of tasks. Task distributions are implemented in a small helper that either pre-creates tasks or samples parameters on-the-fly.
+
+\section{Implementation Details}
+\subsection{Robustness and Compatibility}
+To maximize portability we:
+\begin{itemize}
+  \item Make all modules import-safe (no side-effects on import).
+  \item Support both Gym APIs where \texttt{reset()} returns either \texttt{obs} or \texttt{(obs, info)} and \texttt{step()} returns either 4- or 5-tuples (terminated/truncated).
+  \item Provide a small suite of unit tests that verify forward passes, hidden-state shapes, and trajectory collection under both older and newer Gym signatures.
+\end{itemize}
+
+\subsection{Hyperparameters}
+Table~\ref{tab:hyper} summarizes recommended defaults; these are also stored in the YAML config files in `configs/`.
+
+\begin{table}[H]
+\centering
+\caption{Default hyperparameters used in experiments (examples).}
+\label{tab:hyper}
+\begin{tabular}{lcc}
+\toprule
+Parameter & MAML & RL$^2$ \\
+\midrule
+Hidden dim & 64 & 256 \\
+Inner LR & 0.1 & (PPO inner lr) 1e-3 \\
+Meta LR & 1e-3 & 1e-3 \\
+Inner steps / episodes & 1 & 5 \\
+Meta iterations (example) & 100 & 50 \\
+Num tasks per meta-batch & 5 & 5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Experiments}
+We recommend the following baseline experiments to reproduce the key qualitative behaviours:
+\begin{enumerate}
+  \item Small-scale sanity run: meta-iterations = 30, tasks = 20, seed sweep across 3 seeds for quick checks.
+  \item Medium run for plots: meta-iterations = 200, save learning curves and adaptation curves; analyze mean + std across seeds.
+  \item Ablations: change inner steps, inner LR, and LSTM capacity to measure robustness.
+\end{enumerate}
+
+\subsection{Metrics}
+Primary metrics: average return after K adaptation steps (with K ∈ {1, 5, 10}), sample efficiency curves (return vs environment interactions), and variance across seeds. Secondary metrics include wall-clock time per meta-iteration and memory usage for LSTM-based policies.
+
+\section{Results (Placeholders)}
+\begin{figure}[H]
+  \centering
+  \fbox{\parbox[c][6cm][c]{0.85\linewidth}{\centering Placeholder: Insert learning curves (return vs meta-iterations) here}}\
+  \caption{Example learning curves (placeholders). Replace with actual plots generated from experiments and saved under `pictures/` }
+  \label{fig:learning}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Example adaptation performance after 5 adaptation steps (placeholders).}
+\begin{tabular}{lcc}
+\toprule
+Algorithm & Mean return & Std return \\
+\midrule
+MAML & 120.0 & 10.5 \\
+RL$^2$ & 105.2 & 8.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion}
+Interpretation should cover where each method excels: gradient-based MAML can adapt with explicit gradient steps but relies on accurate gradients and short inner-loops; RL$^2$ can internalize adaptation but may require more capacity and more meta-iterations to learn effective internal learning dynamics. Discuss limitations such as compute constraints and the simulated task family (CartPole) being relatively simple.
+
+\section{Reproducibility}
+To reproduce the experiments:
+\begin{enumerate}
+  \item Set up a Python 3.10+ virtual environment and install dependencies from `requirements.txt`.
+  \item Run `make test` to verify the codebase is healthy.
+  \item Use the notebook `notebooks/meta_learning_experiment.ipynb` to run quick experiments or call experiment runner scripts (if added) with a chosen YAML config in `configs/`.
+  \item Save figures to `pictures/` and numeric outputs to `results/` with descriptive filenames (include seed and timestamp).
+\end{enumerate}
+
+\section{Conclusion}
+This repository provides a reproducible, educational implementation of MAML and RL$^2$ for fast adaptation in reinforcement learning. We provide a strong baseline for future experiments and extensions such as applying the same code to continuous control tasks or integrating probabilistic meta-learning approaches.
+
+\section*{Acknowledgements}
+Thanks to the course authors and maintainers for the assignment scaffold and guidance.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\appendix
+\section{Full hyperparameter table and example commands}
+\begin{verbatim}
+# Build the paper (requires latexmk or pdflatex)
+make paper
+# Run tests
+make test
+\end{verbatim}
+
+\end{document}

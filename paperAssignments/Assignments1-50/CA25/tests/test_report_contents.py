@@ -14,3 +14,11 @@ def test_rep_tex_contains_hyperparams_and_repro():
     tex = (repo / "rep.tex").read_text()
     assert "Hyperparameters" in tex or "Hyperparameters used" in tex, "rep.tex should include hyperparameter table or caption"
     assert "Reproducibility" in tex, "rep.tex should include reproducibility section"
+
+
+def test_report_contains_metric_terms():
+    repo = Path(__file__).resolve().parents[1]
+    text = (repo / "REPORT.md").read_text()
+    assert "RMSE" in text, "REPORT.md should document RMSE formula"
+    assert "Accuracy" in text, "REPORT.md should document Accuracy formula"
+    assert "metrics.json" in text, "REPORT.md should mention metrics.json schema or saving metrics"

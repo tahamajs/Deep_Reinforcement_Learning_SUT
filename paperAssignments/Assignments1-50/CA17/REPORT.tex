@@ -1,0 +1,144 @@
+% REPORT.tex — Expanded LaTeX report for CA17
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{siunitx}
+
+\title{Simple Policy Gradient on CartPole-v1: A Baseline Implementation (CA17)}
+\author{Author: student@example.com}
+\date{\today}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+This document presents a detailed technical report for CA17: a minimal, educational implementation of a policy-gradient algorithm (REINFORCE) with entropy regularization on the CartPole-v1 environment. The report contains background, mathematical derivations, algorithmic details, experimental setup recommendations, suggested ablations, reproducibility notes, and build instructions for the included LaTeX asset.
+\end{abstract}
+
+\section{Introduction}
+Reinforcement learning (RL) algorithms that directly optimize policy parameters via gradient ascent on expected return are widely used in both research and practice. The REINFORCE algorithm provides a simple and clear conceptual baseline that is suitable for classroom assignments and short experiments. This work provides a concise, well-documented scaffold for implementing and testing policy gradient ideas on the CartPole benchmark.
+
+\section{Background and Related Work}
+Short review: policy-gradient methods (e.g., REINFORCE, actor-critic variants) and later improvements (GAE, PPO) that address stability and sample efficiency. See \cite{williams1992simple, sutton2018reinforcement, schulman2015high, schulman2016gae}.
+
+\section{Method}
+\subsection{Problem Statement}
+Markov decision process (MDP) with states $s\in\mathcal{S}$, actions $a\in\mathcal{A}$, transitions $P(s'|s,a)$ and reward $r(s,a)$. The goal is to find policy parameters $\theta$ that maximize expected discounted return
+\[ J(\theta) = \mathbb{E}_{\tau\sim p_\theta(\tau)}\left[ \sum_{t=0}^{T} \gamma^t r(s_t,a_t) \right]. \]
+
+\subsection{Policy and Parameterization}
+We use a parametric policy $\pi_\theta(a|s)$ modeled by a small MLP returning logits for a categorical distribution. Let $\ell_\theta(s,a)=\log \pi_\theta(a|s)$.
+
+\subsection{REINFORCE (Monte-Carlo) Gradient}
+By the log-likelihood trick:
+\[
+\nabla_\theta J(\theta) = \mathbb{E}_{\tau}\left[ \sum_{t=0}^{T} \nabla_\theta \log \pi_\theta(a_t|s_t) G_t \right],
+\]
+where $G_t = \sum_{t'=t}^{T} \gamma^{t'-t} r_{t'}$ is the return. We estimate this expectation with sample returns from episodes and minimize the negative objective (policy gradient loss):
+\[
+\mathcal{L}_\text{PG} = -\frac{1}{N} \sum_{i=1}^{N} \sum_{t=0}^{T_i} \log \pi_\theta(a_t^{(i)} | s_t^{(i)}) \cdot (G_t^{(i)} - b),
+\]
+where $b$ is a baseline (we use mean return per episode as a simple baseline for variance reduction in the provided code).
+
+\subsection{Entropy Regularization}
+To encourage exploration we add an entropy bonus term:
+\[
+\mathcal{L}_\text{ent} = -\beta H(\pi_\theta(\cdot|s)),
+\]
+and optimize the combined loss $\mathcal{L} = \mathcal{L}_\text{PG} + \mathcal{L}_\text{ent}$ (minimization formulation).
+
+\subsection{Algorithm (pseudocode)}
+\begin{algorithm}[H]
+  \caption{REINFORCE with entropy regularization}
+  \begin{algorithmic}[1]
+    \State Initialize policy parameters $\theta$ and optimizer (Adam)
+    \For{iteration = 1,2,...}
+      \State Collect an episode $\tau = (s_0,a_0,r_0,...,s_T)$ using $\pi_\theta$
+      \State Compute returns $G_t$ for $t=0\ldots T$
+      \State Compute advantages $A_t = G_t - \frac{1}{T+1} \sum_{t} G_t$ (simple mean baseline)
+      \State Compute $\mathcal{L}_\text{PG} = -\sum_t \log \pi_\theta(a_t|s_t) A_t$
+      \State Compute $\mathcal{L}_\text{ent} = -\beta \sum_t H(\pi_\theta(\cdot|s_t))$
+      \State Update $\theta \leftarrow \theta - \alpha \nabla_\theta (\mathcal{L}_\text{PG} + \mathcal{L}_\text{ent})$
+    \EndFor
+  \end{algorithmic}
+\end{algorithm}
+
+\section{Experimental Setup}
+\subsection{Implementation Details}
+The code base follows structured modules under `src/`:
+\begin{itemize}
+  \item `src/config.py` — default hyperparameters and easy overrides
+  \item `src/model.py` — `MLPPolicy` (small MLP for discrete actions)
+  \item `src/losses.py` — `policy_gradient_loss`, `entropy_loss`
+  \item `src/data.py` — episode collection compatible with Gym/Gymnasium
+  \item `src/train.py` — training loop and checkpointing
+\end{itemize}
+
+\subsection{Hyperparameters}
+Table~\ref{tab:hp} summarizes defaults.
+\begin{table}[H]
+  \centering
+  \caption{Default hyperparameters}
+  \label{tab:hp}
+  \begin{tabular}{lcc}
+    \toprule
+    Name & Default & Notes \\
+    \midrule
+    env\_name & CartPole-v1 & Gym/Gymnasium \\
+    seed & 42 & for reproducibility \\
+    lr & 1e-3 & Adam learning rate \\
+    hidden\_size & 128 & units per hidden layer \\
+    gamma & 0.99 & discount factor \\
+    total\_timesteps & 50000 & total environment steps \\
+    entropy\_coeff & 0.01 & exploration regularizer \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Evaluation Protocol}
+Report learning curves (episode return vs steps), and compute mean and standard deviation across multiple seeds (3–5). For ablations, isolate single factors (e.g., entropy coefficient, baseline/no-baseline) and present small comparative tables.
+
+\section{Figures and Artifacts}
+Place figures under `figs/` and include them via \verb|\includegraphics|. Example placeholder:
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.7\linewidth]{figs/learning_curve_placeholder.pdf}
+  \caption{Learning curve placeholder (replace with actual experiment output).}
+  \label{fig:lc}
+\end{figure}
+
+\section{Reproducibility and Notes}
+- The code uses `src/utils.set_seed` to seed Python, NumPy, and PyTorch (when available).
+- Compatibility: The episode collector handles both Gym (older) and Gymnasium (newer) APIs for `reset()` and `step()`.
+- Checkpoints are saved in `outputs/ca17`.
+
+\section{Limitations and Future Work}
+Discussed in the main report — implement GAE, actor-critic baselines, or clipped surrogate objectives (PPO) for improved stability and sample efficiency.
+
+\section{How to build this PDF}
+From the CA17 folder:
+\begin{verbatim}
+make report
+\end{verbatim}
+This invokes `pdflatex` (or `latexmk`) to build the PDF and uses the provided `REPORT.bib` for references.
+
+\section{Conclusion}
+This scaffold provides an accessible base for exploring policy-gradient ideas and practical improvements. Students are encouraged to extend the baseline with variance reduction methods and vectorized rollouts.
+
+\newpage
+\bibliographystyle{plainnat}
+\bibliography{REPORT}
+
+\appendix
+\section{Appendix: Additional Derivations}
+Detailed derivations and small notes on numerical stability (log-sum-exp for logits, small epsilon in entropy calculation) are in the code comments.
+
+\end{document}

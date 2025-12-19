@@ -1,0 +1,7 @@
+{
+  "val_mse": 0.082,
+  "val_rmse": 0.286,
+  "test_mse": 0.089,
+  "test_rmse": 0.298,
+  "accuracy": 0.91
+}

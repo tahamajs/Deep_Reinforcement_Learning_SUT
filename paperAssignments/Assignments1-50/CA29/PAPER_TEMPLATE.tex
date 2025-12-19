@@ -1,0 +1,174 @@
+% PAPER_TEMPLATE.tex
+% Comprehensive LaTeX paper template for CA29 (SAC implementation)
+% Usage: pdflatex PAPER_TEMPLATE.tex && bibtex PAPER_TEMPLATE && pdflatex PAPER_TEMPLATE.tex && pdflatex PAPER_TEMPLATE.tex
+
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{siunitx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{natbib}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\setcitestyle{numbers,comma,square}
+
+\title{Soft Actor-Critic (SAC) for Continuous Control: Implementation, Evaluation, and Reproducibility}
+\author{Author Name \\\small Affiliation}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We provide a comprehensive implementation of the Soft Actor-Critic (SAC) algorithm and an experimental pipeline designed for reproducibility and rigorous evaluation. This document contains algorithmic derivations, detailed implementation notes to ensure numerical stability, a complete experimental protocol (including ablations), and templates for reporting and reproducibility. The repository includes unit tests, a CLI, notebook-based visualizations, and LaTeX templates for producing a formal paper.
+\end{abstract}
+
+\section{Introduction}
+Reinforcement learning for continuous control requires balancing stability and exploration. Soft Actor-Critic (SAC) \citep{haarnoja2018soft} achieves this by adding an entropy bonus to the return, promoting exploratory stochastic policies while maintaining sample efficiency via off-policy learning. This work documents our implementation choices and provides tools and templates for reproducible research.
+
+\subsection{Contributions}
+\begin{itemize}
+  \item A robust, import-safe PyTorch implementation of SAC with unit tests and a simple CLI.
+  \item An experiment runner (`Experiment`) that handles seeding, evaluation, logging, and metric collection into `metrics.csv`.
+  \item Notebooks and LaTeX templates for quick analysis and a paper-style writeup, respectively.
+\end{itemize}
+
+\section{Related Work}
+SAC builds on deterministic and stochastic actor-critic families (DDPG \citep{lillicrap2015continuous}, TD3 \citep{fujimoto2018addressing}) and connects to maximum entropy RL literature. Our implementation borrows best practices from recent reproducible RL work, focusing on numerical stability and consistent logging for experiments.
+
+\section{Method}
+\subsection{Maximum Entropy Objective and Notation}
+Given state space $\mathcal{S}$ and action space $\mathcal{A}$, SAC optimizes
+\begin{equation}
+J(\pi) = \E_{\tau\sim\pi} \left[ \sum_{t=0}^{\infty} r(s_t,a_t) + \alpha \mathcal{H}(\pi(\cdot|s_t)) \right],
+\end{equation}
+where $\mathcal{H}(\pi(\cdot|s)) = -\E_{a\sim\pi}[\log \pi(a|s)]$.
+
+\subsection{Policy Representation}
+We use a squashed Gaussian policy: sample $x\sim\mathcal{N}(\mu_\theta(s),\sigma_\theta(s))$, set $a=\tanh(x)$, and compute corrected log-probabilities:
+\begin{equation}
+\log \pi(a|s) = \log \mathcal{N}(x;\mu,\sigma) - \sum_j \log \left(1 - \tanh(x_j)^2 + \epsilon\right).
+\end{equation}
+This correction is critical for correct entropy estimation and stable gradients.
+
+\subsection{Critic (Q) Learning}
+We train two critics $Q_{\phi_1}$ and $Q_{\phi_2}$, and the target is:
+\begin{equation}
+y = r + \gamma \left(\min_{i=1,2} Q_{\phi'_i}(s', a') - \alpha \log \pi_\theta(a'|s') \right).
+\end{equation}
+Minimizing $(Q_\phi(s,a) - y)^2$ yields stable critic updates; twin critics reduce overestimation.
+
+\subsection{Automatic Temperature Tuning}
+We optionally adapt $\alpha$ to maintain target entropy $\mathcal{H}_0$ by minimizing
+\begin{equation}
+\mathcal{L}(\alpha) = -\E_{a\sim\pi_\theta}[\alpha(\log\pi_\theta(a|s) + \mathcal{H}_0)].
+\end{equation}
+Using the log parameterization $\log \alpha$ helps constrain positivity and stabilizes optimization.
+
+\section{Algorithm}
+\begin{algorithm}[H]
+\caption{Soft Actor-Critic (detailed)}
+\begin{algorithmic}[1]
+\State Initialize $\pi_\theta$, $Q_{\phi_1}$, $Q_{\phi_2}$, target networks $\phi'_1,\phi'_2$, replay buffer $\mathcal{D}$
+\State Set target entropy $\mathcal{H}_0$ (default $-|\mathcal{A}|$) and initial log alpha
+\For{each environment step}
+  \State Collect $(s,a,r,s',d)$ using current policy
+  \State Add to $\mathcal{D}$
+  \If{time to update}
+    \For{gradient steps}
+      \State Sample minibatch from $\mathcal{D}$
+      \State Compute targets $y$ and critic losses; update critics
+      \State Compute actor loss using sampled actions; update policy
+      \If{automatic entropy tuning} update $\alpha$ via gradient on dual objective
+      \State Soft-update targets: $\phi' \leftarrow \tau \phi + (1-\tau)\phi'$
+    \EndFor
+  \EndIf
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Implementation Notes and Best Practices}
+\subsection{Numerical Stability}
+- Add small constant $\epsilon$ when computing log or dividing.
+- Clamp `log_std` outputs (e.g., [-20,2]) to keep std in a reasonable range.
+- Use double precision where appropriate for numerical checks; training in fp32 is standard.
+
+\subsection{Seeding and Determinism}
+Use `set_seed` and `set_env_seed` utilities. Note: deterministic execution can still vary across hardware and PyTorch versions.
+
+\section{Experiments}
+\subsection{Environments}
+We recommend HalfCheetah-v4, Walker2d-v4, Hopper-v4; for more computationally expensive tests use Ant-v4.
+
+\subsection{Evaluation Protocol}
+Run each config with multiple seeds; evaluate every `eval_freq` steps for `num_eval_episodes` episodes. Store per-evaluation mean and std in `metrics.csv` for plotting.
+
+\subsection{Ablation Design}
+Fix a single variable (e.g., alpha, buffer size, network width) and run a sweep. Keep seeds consistent across the sweep for fair comparisons.
+
+\section{Results Reporting Format}
+Include the following in the `results/<tag>/` folder:
+\begin{itemize}
+  \item `metrics.csv` (columns: step, avg_reward, std_reward)
+  \item `training.log` (logger output)
+  \item `sac_final.pth` (checkpoint)
+  \item `plots/` (PNG/PDF for figures referenced in the paper)
+  \item `metadata.txt` (git sha, config used, seeds, environment versions)
+\end{itemize}
+
+Include a LaTeX table with final results per environment (example in the file) and embed plots created from `metrics.csv`.
+
+\section{Discussion and Future Work}
+Discuss algorithmic strengths and failure modes observed, propose extensions (recurrent policies, distributional critics, improved exploration priors), and suggest additional stress tests.
+
+\section{Reproducibility Appendix}
+Provide exact commands used to run important experiments. Example:
+\begin{lstlisting}[language=bash]
+python -m src.cli --config configs/default.yaml --log-dir results/halfcheetah_default
+
+git rev-parse HEAD > results/halfcheetah_default/commit.txt
+\end{lstlisting}
+
+\section*{Acknowledgements}
+We acknowledge contributors and reviewers and any funding sources.
+
+\bibliographystyle{abbrvnat}
+\bibliography{references}
+
+\appendix
+\section{Appendix A: Hyperparameter Table}
+\begin{table}[H]
+\centering
+\caption{Primary hyperparameters used in experiments and suggested ranges}
+\begin{tabular}{lcc}
+\toprule
+Parameter & Default & Suggested range \\
+\midrule
+$\gamma$ & 0.99 & 0.95 -- 0.999 \\
+actor lr & 3e-4 & 1e-4 -- 1e-3 \\
+critic lr & 3e-4 & 1e-4 -- 1e-3 \\
+batch size & 256 & 64 -- 512 \\
+buffer size & 1e6 & 1e5 -- 1e7 \\
+$\tau$ & 0.005 & 0.001 -- 0.01 \\
+initial $\alpha$ & 0.2 & 1e-4 -- 1.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Appendix B: Compute and Runtime}
+Document sample runtime and GPU usage for representative runs here (e.g., 100k steps takes X hours on Y GPU with Z memory).
+
+\section{Appendix C: Additional Plots and Seed-level Results}
+Include extra plots (per-seed curves, variance breakdowns, entropy traces) here or in the supplemental materials.
+
+\end{document}

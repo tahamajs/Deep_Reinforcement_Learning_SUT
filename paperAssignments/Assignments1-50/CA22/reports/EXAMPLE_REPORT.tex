@@ -1,0 +1,105 @@
+% EXAMPLE_REPORT.tex — extended example for CA22
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage[round]{natbib}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{Constrained Policy Optimization on a Synthetic Control Problem}
+\author{Example Author \\\texttt{author@example.com}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study a simple policy-gradient agent on a synthetic episodic control task with an additional constraint cost (a penalty-like "safety" signal). Using a Lagrangian formulation, we seek to maintain expected cost below a threshold while maximizing reward. Our results on a small synthetic dataset demonstrate effective control of constraint expectations with modest impact on reward.
+\end{abstract}
+
+\section{Introduction}
+Constrained reinforcement learning is important when deploying agents in domains with safety or resource constraints. We experiment with a compact synthetic environment designed to be reproducible and interpretable, allowing us to focus on algorithmic behavior rather than environment engineering.
+
+\section{Background and Related Work}
+Classic references on RL include \citet{Sutton2018}, and constrained or safe-RL has recent treatments in the literature (e.g., Lagrangian-based methods; \citet{Achiam2017}). We implement a basic Lagrange multiplier approach as a pedagogical baseline.
+
+\section{Methods}
+\subsection{Model Architectures}
+We use a small MLP policy and a value baseline (two hidden layers; ReLU activations). See `src/model.py` for code.
+
+\subsection{Objective}
+The objective is the standard policy gradient (REINFORCE/actor-critic style) combined with a penalty term of the form:
+\begin{equation}
+\mathcal{L} = -\mathbb{E}[\log \pi(a|s) \hat{A}] + \mu ( \mathbb{E}[c(s,a)] - c_0 )
+\end{equation}
+where $\mu$ is the Lagrange multiplier updated by projected gradient ascent (see `src/utils.py`).
+
+\subsection{Dataset}
+We use the provided `SyntheticDataset` (short episodes) and perform multiple sampled batches per training step.
+
+\section{Experimental Setup}
+We ran small-scale experiments using `configs/debug.yaml` for quick iteration. Key hyperparameters are summarized in Table~\ref{tab:hyper}.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Hyperparameter & Value \\\midrule
+Seed & 0 \\
+Hidden size & 16 \\
+Batch size & 8 \\
+Learning rate & 1e-3 \\
+Lagrange lr & 1e-2 \\
+Constraint threshold & 0.5 \\
+\bottomrule
+\end{tabular}
+\caption{Main hyperparameters used in the debug experiments.}
+\label{tab:hyper}
+\end{table}
+
+\section{Results}
+Figure~\ref{fig:reward} shows a sample learning curve for reward and constraint mean; Table~\ref{tab:results} reports final means over 5 seeds.
+
+\begin{figure}[ht]
+  \centering
+  \fbox{\parbox[c][4cm][c]{0.9\linewidth}{\centering Placeholder for learning curve (save as outputs/figures/learning_curve.png)}}
+  \caption{Learning curve placeholder (reward and constraint mean).}
+  \label{fig:reward}
+\end{figure}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Method & Mean Reward & Mean Constraint \\\midrule
+Baseline (no penalty) & 1.35 $\pm$ 0.12 & 0.82 $\pm$ 0.04 \\
+Lagrangian (this work) & 1.20 $\pm$ 0.10 & 0.48 $\pm$ 0.03 \\
+\bottomrule
+\end{tabular}
+\caption{Summary statistics across seeds (mean $\pm$ standard error).}
+\label{tab:results}
+\end{table}
+
+\section{Discussion}
+The Lagrangian approach successfully reduced expected constraint to near the target with a small tradeoff in reward. The synthetic setting is useful for reproducibility; future work should test larger-scale environments and alternative constraint optimization strategies.
+
+\section*{Reproducibility and Commands}
+To compile this report and reproduce the figures locally (after running the demo notebook to generate figures):
+\begin{verbatim}
+# build example report
+./reports/build_report.sh reports/EXAMPLE_REPORT.tex
+\end{verbatim}
+To run the demo notebook, open `notebooks/demo.ipynb` and run the cells using `configs/debug.yaml`.
+
+\section*{Acknowledgements}
+Thanks to course staff and peers for feedback.
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}

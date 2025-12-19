@@ -25,10 +25,18 @@ assignment. Eligibility traces (TD($\lambda$)) offer a classical remedy; GET-ROP
 this idea to modern deep recurrent off-policy agents with engineering choices that ensure
 stability and efficiency.
 
+Our contributions are: (1) a mathematically principled integration of IS-aware lambda-returns
+for recurrent critics, (2) a practical PyTorch reference implementing hidden-state
+recomputation and trace-aware losses, and (3) an experimental protocol and ablation plan
+for quantifying long-horizon credit assignment benefits on POMDP-style benchmarks.
+
 \section{Related work}
-We build on classic TD($\lambda$) theory \cite{sutton2018reinforcement} and integrate ideas
-from recurrent off-policy learning (RESeL) and modern off-policy actor-critic algorithms
-such as SAC/TD3.
+TD($\lambda$) and eligibility traces have a long history in reinforcement learning.
+Off-policy corrections using importance sampling have been studied extensively, as have
+practical clipped/controlled IS schemes (e.g., V-trace, Retrace). In the recurrent
+case, prior work (RESeL) addresses stabilization and truncated BPTT; GET-ROPR extends
+these ideas by explicitly incorporating backward-view traces and forward-view lambda-returns
+with IS clipping for replay-based recurrent critics.
 
 \section{Method}
 \subsection{Notation}
@@ -57,30 +65,39 @@ This allows efficient autograd-based implementation while matching the backward 
 in exact arithmetic. Hidden states are recomputed per-batch to reduce staleness.
 
 \section{Algorithm}
-Pseudo-summary:
-\begin{enumerate}
-  \item Sample batch of sequences from replay.
-  \item Recompute hidden states \(h_{0:L}\) with current networks.
-  \item Compute Q-values, lambda-returns (with clipped IS), and MSE loss.
-  \item Update critics (twin critics supported).
-  \item Update actor with SAC-style objective using minimum of twin critics and automatic temperature tuning.
-  \item Soft-update targets and checkpoint periodically.
-\end{enumerate}
+We summarize GET-ROPR in Algorithm~\ref{alg:getropr} and provide a compact pseudocode description.
+
+\begin{verbatim}
+Algorithm GET-ROPR (per update):
+Inputs: replay batch of sequences (obs, acts, rews, dones, beh_logp)
+1. Recompute hidden states with current critic/actor parameters.
+2. Compute Q-values and bootstrap next values with target critics.
+3. Compute current policy log-probs and importance ratios; clip with c_rho.
+4. Compute lambda-returns (forward-view) and MSE critic loss.
+5. Backpropagate, clip gradients, and step optimizer.
+6. Update actor with SAC-style loss and temperature; soft-update targets.
+7. Log metrics and optionally compute staleness diagnostics.
+\end{verbatim}
+
+This compact algorithm can be implemented with a few hundred lines of PyTorch and
+uses the forward-view lambda-return implementation for numerical stability.
 
 \section{Experiments}
 \subsection{Setup}
-Benchmarks: Flicker-Atari (Atari with frame masking) and DMControl occlusion (occluded observations).
-We report return curves, trace-norm statistics, IS-ratio distributions, and hidden-state staleness.
+Benchmarks: Flicker-Atari (select games) and DMControl occlusion tasks. For each environment we specify preprocessing, frame-skip, and reward scaling in the YAML configs accompanying the code release.
 
 \subsection{Metrics and plotting}
-Figures generated during training are saved to \texttt{pictures/}. Example plotting code is in the demo notebook.
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=0.48\linewidth]{../pictures/fig_returns.png}
-  \includegraphics[width=0.48\linewidth]{../pictures/fig_metrics.png}
-  \caption{Example return and metrics figures (placeholders). Left: return curve (mean ± std). Right: trace norm and IS ratio over time.}
-  \label{fig:metrics}
-\end{figure}
+We log scalar diagnostics (returns, TD errors, trace norms, IS stats, staleness) per update step and produce the following plots:
+\begin{itemize}
+  \item Return vs steps (mean ± std across seeds) with wall-clock annotation.
+  \item Trace-norm time series and p95 bands.
+  \item IS-ratio histogram with clipping threshold overlaid.
+  \item Heatmap of trace magnitudes across episode timesteps.
+\end{itemize}
+Figures are saved to `pictures/` and example plotting code is provided in the demo notebook. 
+
+\subsection{Broader impact and ethical considerations}
+GET-ROPR is a technical method for RL credit assignment; its direct applications include robotics, control, and game agents. As with any method that improves agent performance, caution should be exercised regarding dual-use scenarios (e.g., surveillance, testing on safety-critical systems) and appropriate governance measures (auditing, transparency) should be employed.
 
 \subsection{Visualizations}
 We provide supplementary visualizations to analyze credit assignment and staleness:
@@ -118,23 +135,52 @@ We provide supplementary visualizations to analyze credit assignment and stalene
   \end{tabular}
 \end{table}
 
-\section{Appendix: Proof sketches}
+\section{Appendix: Proof sketches and Implementation Notes}
 \subsection{Equivalence of forward/backward views}
-Sketch: Under standard interchange of sum/integral and exact arithmetic, the gradient of
-the lambda-return MSE equals \(\sum_t \delta_t e_t\) where \(e_t\) are backward traces.
-We follow the derivation in classical texts and adapt for clipped IS by replacing products
-with clipped products; clipping introduces bounded bias that can be controlled by \(c_\rho\).
+The equivalence follows from linearity and rearrangement of sums. Write the loss as
+\(\mathcal{L}=\tfrac12\sum_t (G_t^{\lambda}-Q_t)^2\). Differentiating and expanding
+\(\nabla_\phi G_t^{\lambda}\) yields terms of the form
+\(\sum_{n\ge1} (\gamma\lambda)^{n-1} (\prod_{i=1}^{n-1}\bar{\rho}_{t+i}) \nabla_\phi \delta_{t+n-1}\)
+and collecting coefficients in front of \(\nabla_\phi Q_s\) for a fixed \(s\) gives exactly the backward trace coefficient at step \(s\). We omit the full algebraic expansion for brevity but follow standard derivations in reinforcement learning theory.
 
-\subsection{Trace norm bound}
-If \(\|\nabla_\phi Q_t\|\le G_{\max}\) and \(\bar\rho\le c_\rho\) then
-\[
-\|e_t\|\le c_\rho \sum_{k=0}^t (\lambda\gamma c_\rho)^k G_{\max} = \frac{c_\rho G_{\max}}{1-\lambda\gamma c_\rho},
-\]
-requiring \(\lambda\gamma c_\rho<1\) for bounded traces.
+\subsection{IS clipping bias and practical guidance}
+Clipping ratios trades a small bias for large variance reduction. For stability ensure
+\(\lambda\gamma c_\rho < 1\) to keep trace norms bounded. In practice, start with
+\(\lambda=0.9\) and \(c_\rho=2\) and tune as needed.
 
-\section{Reproducibility}
-All scripts, config defaults, and a demo notebook are included in the code release. Use
-the provided CSV logger or replace with W&B/TensorBoard for richer monitoring.
+\subsection{Pseudocode (compact)}
+\begin{verbatim}
+# Critic lambda-return update (compact)
+q_vals, _ = critic(obs, acts)
+next_acts = roll(acts, -1)
+next_q, _ = target_critic(obs, next_acts)
+values = concat(q_vals, next_q[:, -1:])
+if beh_logp is not None:
+    rhos = exp(policy.log_prob(obs, acts) - beh_logp)
+    rhos = clamp(rhos, max=c_rho)
+returns = lambda_returns(rews, values, dones, gamma, lam, rhos=rhos, c_rho=c_rho)
+loss = 0.5 * (returns - q_vals).pow(2).mean()
+
+# Backprop and optimizer step as usual
+
+\end{verbatim}
+
+\subsection{Experimental protocol and metrics}
+Report mean and standard deviation of returns across seeds, and log the following diagnostics during training:\
+\texttt{trace_norm_mean, trace_norm_p95, rho_mean, rho_p95, td_error_mean, staleness_mean}.
+
+\section{Reproducibility checklist}
+\begin{itemize}
+  \item Commit hash and config snapshot saved with every checkpoint.
+  \item Scripts to replay training results from CSV logs (suggested: `scripts/plot_from_csv.py`) included.
+  \item Minimum required seeds: 5 per ablation point to report stable statistics.
+\end{itemize}
+
+\section{Supplementary tables and placeholders}
+We include template tables for ablations in the README and placeholder figures in the `pictures/` directory. After running experiments, populate the tables below and replace placeholder figures with generated PNGs.
+
+\section{Acknowledgements}
+We thank course staff and peers for feedback and the maintainers of the RESeL baseline on which this work builds.
 
 \paragraph{Code and tests} The implementation includes a minimal unit test suite under
 `tests/` (run `pytest -q`). The demo runner `train_sac_full.py` logs `returns_mean`
