@@ -242,4 +242,242 @@ Before submitting results or sharing an experiment, ensure the following items a
 \section{Appendix K: Contact and Contributions}
 If you use this codebase in research, please cite the assignment and the original papers referenced in this report. For questions contact the assignment maintainers via the course repository issue tracker.
 
+\section{Appendix L: Detailed Pseudocode for Core Algorithms}
+We provide algorithmic pseudocode for the key components to aid implementation and verification.
+
+\begin{algorithm}
+\caption{Online Linear Attention Update}
+\begin{algorithmic}[1]
+\Require Sequence $x_1, \dots, x_L$, feature map $\phi$, projections $W_Q, W_K, W_V, W_O$
+\State Initialize $S \leftarrow 0$, $Z \leftarrow 0$ \Comment{Running accumulators}
+\For{$t = 1$ to $L$}
+    \State $q_t \leftarrow W_Q x_t$, $k_t \leftarrow W_K x_t$, $v_t \leftarrow W_V x_t$
+    \State $S \leftarrow S + \phi(k_t) \otimes v_t$ \Comment{Outer product update}
+    \State $Z \leftarrow Z + \phi(k_t)$ \Comment{Normalizer update}
+    \State $\mathrm{attn}_t \leftarrow \phi(q_t)^\top S / (Z + \epsilon)$ \Comment{Compute attention}
+    \State $y_t \leftarrow W_O \mathrm{attn}_t$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Diagonal SSM Recurrence}
+\begin{algorithmic}[1]
+\Require Sequence $x_1, \dots, x_L$, parameters $\tilde{a}, b, W_{in}, W_{out}$
+\State $a \leftarrow \tanh(\tilde{a})$ \Comment{Constrain for stability}
+\State $h_0 \leftarrow 0$ \Comment{Initial state}
+\For{$t = 1$ to $L$}
+    \State $u_t \leftarrow W_{in} x_t$
+    \State $h_t \leftarrow a \odot h_{t-1} + b \odot u_t$ \Comment{Per-dimension update}
+    \State $y_t \leftarrow W_{out} h_t$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Hybrid Block Forward Pass}
+\begin{algorithmic}[1]
+\Require Input $x$, SSM block $\mathrm{SSM}$, LinAttn $\mathrm{Attn}$, MLP $\mathrm{MLP}$, LN $\mathrm{LayerNorm}$
+\State $x' \leftarrow x + \mathrm{SSM}(\mathrm{LN}(x))$
+\State $x'' \leftarrow x' + \mathrm{Attn}(\mathrm{LN}(x'))$
+\State $x^+ \leftarrow x'' + \mathrm{MLP}(\mathrm{LN}(x''))$
+\State \Return $x^+$
+\end{algorithmic}
+\end{algorithm}
+
+\section{Appendix M: Hyperparameter Sensitivity Grids}
+We provide comprehensive hyperparameter grids for systematic exploration. Each grid varies one parameter while fixing others to the base config.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Parameter & Value 1 & Value 2 & Value 3 & Value 4 \\\midrule
+d\_model & 128 & 256 & 512 & 1024 \\
+n\_layers & 4 & 8 & 12 & 16 \\
+n\_heads & 2 & 4 & 8 & 16 \\
+seq\_len & 64 & 128 & 256 & 512 \\
+batch\_size & 16 & 32 & 64 & 128 \\
+lr & 1e-5 & 1e-4 & 5e-4 & 1e-3 \\
+weight\_decay & 0 & 1e-4 & 1e-2 & 1e-1 \\
+ssm\_ratio & 0.0 & 0.25 & 0.5 & 1.0 \\
+vq\_codebook & 128 & 256 & 512 & 1024 \\
+\bottomrule
+\end{tabular}
+\caption{Hyperparameter sweep grid for ablation studies.}
+\end{table}
+
+\section{Appendix N: Key Code Snippets}
+Below are excerpts from the implementation for clarity.
+
+\paragraph{Linear Attention Implementation}
+\begin{verbatim}
+class LinearAttention(nn.Module):
+    def __init__(self, d_model, n_heads):
+        super().__init__()
+        self.n_heads = n_heads
+        self.d_head = d_model // n_heads
+        self.Wq = nn.Linear(d_model, d_model)
+        self.Wk = nn.Linear(d_model, d_model)
+        self.Wv = nn.Linear(d_model, d_model)
+        self.Wo = nn.Linear(d_model, d_model)
+
+    def forward(self, x):
+        B, L, D = x.shape
+        q = self.Wq(x).view(B, L, self.n_heads, self.d_head)
+        k = self.Wk(x).view(B, L, self.n_heads, self.d_head)
+        v = self.Wv(x).view(B, L, self.n_heads, self.d_head)
+        
+        phi = lambda z: F.elu(z) + 1  # Feature map
+        q_phi = phi(q)
+        k_phi = phi(k)
+        
+        # Online accumulation
+        S = torch.zeros(B, self.n_heads, self.d_head, self.d_head, device=x.device)
+        for t in range(L):
+            S = S + torch.einsum('bhdk,bhdv->bhkv', k_phi[:,t], v[:,t])
+            attn = torch.einsum('bhdk,bhkv->bhdv', q_phi[:,t], S)
+            # Normalize and output...
+\end{verbatim}
+
+\paragraph{SSM Block}
+\begin{verbatim}
+class SSMBlock(nn.Module):
+    def __init__(self, d_model):
+        super().__init__()
+        self.a_tilde = nn.Parameter(torch.randn(d_model))
+        self.b = nn.Parameter(torch.randn(d_model) * 0.01)
+        self.W_in = nn.Linear(d_model, d_model)
+        self.W_out = nn.Linear(d_model, d_model)
+
+    def forward(self, x):
+        a = torch.tanh(self.a_tilde)
+        u = self.W_in(x)
+        h = torch.zeros_like(u[:,0])
+        outputs = []
+        for t in range(x.shape[1]):
+            h = a * h + self.b * u[:,t]
+            outputs.append(self.W_out(h))
+        return torch.stack(outputs, dim=1)
+\end{verbatim}
+
+\section{Appendix O: Extended Related Work}
+Beyond the core strands mentioned in Section 2, we draw inspiration from:
+\begin{itemize}
+  \item Hybrid architectures like Hyena \cite{poli2023hyena} that combine convolutions with global attention,
+  \item Efficient Transformers such as Linformer \cite{wang2020linformer} and Longformer \cite{beltagy2020longformer} for sparse attention,
+  \item SSM variants like S5 \cite{smith2022simplified} and GSS \cite{mehta2023long} for improved stability and expressivity,
+  \item World model approaches in RL such as PlaNet \cite{hafner2019planet} and TD-MPC \cite{hansen2022temporal} that emphasize latent dynamics.
+\end{itemize}
+Our SSD-based hybrid is novel in explicitly deriving the SSM parameters from attention feature maps, providing a principled way to blend recurrence and attention.
+
+\section{Appendix P: Future Directions and Extensions}
+Potential extensions to TWM-SSD include:
+\begin{itemize}
+  \item Multi-modal fusion: extending to text or audio inputs via modality-specific tokenizers,
+  \item Hierarchical modeling: stacking multiple hybrid blocks with increasing context lengths,
+  \item Adaptive computation: learning to switch between SSM and attention based on input statistics,
+  \item Scaling to larger models: investigating sparse variants or distillation for deployment,
+  \item Applications beyond RL: sequence prediction tasks like language modeling or time-series forecasting.
+\end{itemize}
+
+\section{Appendix Q: Error Analysis and Common Pitfalls}
+Common errors encountered during implementation and training:
+\begin{itemize}
+  \item Numerical instability in SSM: ensure $\tanh$ on $a$ parameters and small initialization for $b$.
+  \item Gradient vanishing in long sequences: use pre-LN and residual connections; monitor gradient norms.
+  \item VQ-VAE collapse: use commitment loss and EMA updates for codebook; avoid large codebooks without sufficient data.
+  \item Overfitting on small datasets: employ data augmentation, dropout, and early stopping.
+  \item Memory issues: batch sequences or use gradient checkpointing for long contexts.
+\end{itemize}
+Debugging tips: log per-layer activations, use synthetic data for unit tests, and profile memory usage.
+
+\section{Appendix R: Dataset Statistics and Preprocessing Details}
+Statistics for the recommended datasets:
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Dataset & Episodes & Avg Length & Obs Dim & Reward Range \\\midrule
+Atari-100k & 100k & 1000 & 84x84x4 & 0-1 (clipped) \\
+DMControl & 10k & 1000 & 64x64x3 & task-dependent \\
+MiniGrid & 50k & 100 & 7x7x3 & 0-1 \\
+\bottomrule
+\end{tabular}
+\caption{Dataset statistics summary.}
+\end{table}
+
+Preprocessing steps:
+\begin{itemize}
+  \item Atari: grayscale, resize, normalize to [-1,1], frame stacking.
+  \item DMControl: RGB resize, per-channel normalization.
+  \item MiniGrid: one-hot encoding for partial observations.
+\end{itemize}
+
+\section{Appendix S: Training Curves Templates}
+We provide templates for plotting training curves. Use Matplotlib or Seaborn for visualization.
+
+\begin{verbatim}
+import matplotlib.pyplot as plt
+import json
+
+# Load logs
+with open('runs/experiment_1/metrics.json', 'r') as f:
+    data = json.load(f)
+
+plt.figure(figsize=(10,6))
+plt.subplot(1,2,1)
+plt.plot(data['train_loss'], label='Train Loss')
+plt.plot(data['val_loss'], label='Val Loss')
+plt.legend()
+plt.title('Loss Curves')
+
+plt.subplot(1,2,2)
+plt.plot(data['eval_return'], label='Eval Return')
+plt.legend()
+plt.title('Performance')
+plt.show()
+\end{verbatim}
+
+Expected shapes: loss should decrease monotonically; returns should increase to asymptote.
+
+\section{Appendix T: Full Environment Setup and Dependencies}
+To reproduce experiments, set up the environment as follows:
+
+\begin{verbatim}
+# Create conda environment
+conda create -n twm-ssd python=3.10
+conda activate twm-ssd
+
+# Install PyTorch (adjust for CUDA version)
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# Install other dependencies
+pip install numpy matplotlib tensorboard wandb einops
+pip install gym[atari] dm-control mujoco-py minigrid
+
+# Install local package
+pip install -e .
+\end{verbatim}
+
+Key dependencies:
+\begin{itemize}
+  \item PyTorch 2.0+: for autograd and CUDA support,
+  \item einops: for tensor manipulations,
+  \item gym/minigrid/dm-control: for environments,
+  \item tensorboard/wandb: for logging.
+\end{itemize}
+
+Verify installation with \texttt{python -c "import torch; print(torch.cuda.is_available())"}.
+
+\section{Appendix U: Glossary of Terms}
+\begin{itemize}
+  \item \textbf{SSD (State-Space Duality)}: Theoretical link between linear attention and SSMs.
+  \item \textbf{Hybrid Block}: Module combining SSM, attention, and MLP.
+  \item \textbf{VQ-VAE}: Vector Quantized Variational Autoencoder for tokenization.
+  \item \textbf{Feature Map}: Non-linear transformation for linear attention (e.g., ELU+1).
+  \item \textbf{Recurrence}: Sequential state updates in SSMs.
+  \item \textbf{Planning}: Using the world model for policy optimization (e.g., CEM).
+\end{itemize}
+
 \end{document}
