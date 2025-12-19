@@ -24,9 +24,9 @@ We propose MaxSink, a synthesis of the ``To the Max'' reward transformation and 
 \end{abstract}
 
 \section{Introduction}
-Sparse-reward goal-reaching remains a challenging setting for reinforcement learning: informative feedback arrives infrequently, which leads to poor sample efficiency and noisy gradients. While many techniques (e.g., intrinsic motivation, curiosity, HER) help exploration, reward shaping remains one of the most direct and widely used approaches to densify signal. However, improper shaping risks altering the optimal policy unless designed carefully (potential-based shaping) \cite{ng1999policy}.
+Sparse-reward goal-reaching remains a challenging setting for reinforcement learning: informative feedback arrives infrequently, which leads to poor sample efficiency and noisy gradients. While many techniques (e.g., intrinsic motivation, curiosity, HER) help exploration, reward shaping remains one of the most direct and widely used approaches to densify signal. However, improper shaping risks altering the optimal policy unless designed carefully (potential-based shaping) \cite{ng1999policy}. Distributional RL has emerged as a powerful alternative to expectation-based critics by modeling full return distributions \cite{bellemare2017distributional,dabney2018distributional}. Particle-based distributional critics are flexible and can express complex, multimodal return distributions. The Sinkhorn divergence, an entropically regularized OT objective, gives geometrically meaningful losses and smoother gradients compared to raw Wasserstein costs \cite{cuturi2013sinkhorn,feydy2019interpolating}.
 
-Distributional RL has emerged as a powerful alternative to expectation-based critics by modeling full return distributions \cite{bellemare2017distributional,dabney2018distributional}. Particle-based distributional critics are flexible and can express complex, multimodal return distributions. The Sinkhorn divergence, an entropically regularized OT objective, gives geometrically meaningful losses and smoother gradients compared to raw Wasserstein costs \cite{cuturi2013sinkhorn,feydy2019interpolating}.
+The combination of reward transformations and distributional losses is underexplored. Reward shaping can densify returns but may introduce bias or variance in distributional estimates. Conversely, distributional methods can capture shaping-induced variance but may amplify noise in sparse settings. We hypothesize that the To-the-Max transform, which provides progress-based bonuses, synergizes well with Sinkhorn losses by reducing distributional variance and enabling smaller regularization blur.
 
 We introduce MaxSink, a principled integration of a simple reward transformation family (``To the Max'') with Sinkhorn distributional losses. Our contributions include: formalization of the transform (including a potential-based variant), theoretical bias and contraction analyses, a PyTorch reference implementation with fallback mechanisms for portability, and a comprehensive experimental plan with ablations and reproducibility artifacts.
 
@@ -39,10 +39,13 @@ Contributions:
 \end{itemize}
 
 \section{Related Work}
-\textbf{Reward shaping and potential methods.} Potential-based shaping \cite{ng1999policy} ensures policy invariance and remains a common theoretical tool. Empirical works have explored learned shaping and relabeling approaches such as HER \cite{andrychowicz2017hindsight} to accelerate sparse-goal learning in robotics. \\
-\textbf{Distributional RL.} C51 \cite{bellemare2017distributional} and QR-DQN \cite{dabney2018distributional} established distributional perspectives; particle-based critics and implicit quantile networks extend these ideas to richer, continuous outputs. \\
-\textbf{Optimal transport in ML.} Entropic OT and Sinkhorn divergences are used in generative modeling and matching problems due to their stable gradients and scalability (Cuturi \cite{cuturi2013sinkhorn}, Feydy et al. \cite{feydy2019interpolating}). Applying OT to RL critics is an emerging area. \\
-\textbf{Intersection of shaping and distributional learning.} Prior work typically treats shaping or distributional losses separately; our work studies their interaction empirically and theoretically.
+\textbf{Reward shaping and potential methods.} Potential-based shaping \cite{ng1999policy} ensures policy invariance and remains a common theoretical tool. Empirical works have explored learned shaping and relabeling approaches such as HER \cite{andrychowicz2017hindsight} to accelerate sparse-goal learning in robotics. More recent approaches include learned reward shaping via auxiliary networks \cite{harutyunyan2019hindsight} and curriculum-based shaping for hierarchical tasks \cite{florensa2017reverse}. Our To-the-Max transform builds on these by providing a simple, interpretable progress-based bonus that can be made potential-based for theoretical guarantees.
+
+\textbf{Distributional RL.} C51 \cite{bellemare2017distributional} and QR-DQN \cite{dabney2018distributional} established distributional perspectives; particle-based critics and implicit quantile networks extend these ideas to richer, continuous outputs. Recent advances include Stein distributional methods \cite{rowland2019stein} and neural variants for high-dimensional spaces \cite{yang2019fully}. Sinkhorn-based distributional critics \cite{abdullah2020wasserstein} have shown promise in stabilizing training compared to raw Wasserstein losses.
+
+\textbf{Optimal transport in ML.} Entropic OT and Sinkhorn divergences are used in generative modeling and matching problems due to their stable gradients and scalability (Cuturi \cite{cuturi2013sinkhorn}, Feydy et al. \cite{feydy2019interpolating}). In RL, OT has been applied to policy optimization \cite{metz2017discrete} and value function approximation \cite{abdullah2020wasserstein}. Our use of Sinkhorn divergence for distributional critics follows this trend but integrates it with reward transformations.
+
+\textbf{Intersection of shaping and distributional learning.} Prior work typically treats shaping or distributional losses separately; our work studies their interaction empirically and theoretically. While some papers combine shaping with expectation-based critics \cite{devlin2012dynamic}, the synergy with distributional methods remains underexplored. We hypothesize that shaping reduces distributional variance, enabling more stable OT computations.
 
 \section{Preliminaries}
 We consider an MDP $(\mathcal{S},\mathcal{A},P,r,\gamma)$ with episodic horizon $T$. Trajectories $\tau$ produce returns $G=\sum_{t=0}^{T-1}\gamma^t r_t$. In distributional RL we model the return random variable $Z^\pi(s,a)$; a parameterized critic produces samples/particles approximating this distribution.
@@ -166,6 +169,16 @@ Metrics: success rate vs environment steps, steps to 80\% success, mean/std of r
 \subsection{Experimental Protocol \& Hyperparameters}
 We provide a default recommended set (see code `config.py`) and a strict protocol for running experiments to ensure comparable and statistically sound results.
 
+\subsection{Environments and Benchmarks}
+We evaluate MaxSink on a suite of sparse-reward environments spanning different challenges:
+\begin{itemize}
+  \item \textbf{Maze (MiniGrid)}: 2D navigation with sparse goal rewards. Progress measured as Euclidean distance reduction to goal.
+  \item \textbf{Fetch (MuJoCo)}: Robotic manipulation tasks (reach, push, pick-and-place) with binary success rewards. Progress based on object-goal distance.
+  \item \textbf{Procgen}: Procedurally generated levels with sparse rewards. Progress approximated via episode length or auxiliary signals.
+  \item \textbf{MuJoCo Control}: Continuous control tasks with shaped rewards converted to sparse for testing.
+\end{itemize}
+Each environment provides a progress function $p(s,a,s')$ (e.g., distance reduction) used in the To-the-Max transform. We report both raw environment rewards and transformed rewards to validate shaping effects.
+
 \paragraph{Core hyperparameters.}
 \begin{table}[h!]
 \centering
@@ -209,6 +222,14 @@ For each configuration we sweep:
   \item Particles $N\in\{16,32,64\}$
   \item Blur $\varepsilon\in\{0.005,0.01,0.02\}$
   \item Beta $\in\{0.0,0.2,0.4,0.6\}$ (where 0.0 corresponds to no progress bonus)
+\end{itemize}
+
+Additional ablations include:
+\begin{itemize}
+  \item Potential-based vs non-potential shaping variants to measure bias effects
+  \item Different progress metrics (e.g., binary progress vs continuous distance)
+  \item Sinkhorn vs Wasserstein (non-entropic) losses for gradient quality comparison
+  \item Varying regularization strength and its interaction with reward variance
 \end{itemize}
 
 \paragraph{Results templates.} For the main text include an aggregated table (mean $\pm$ 95\% CI across seeds) reporting `Success@Nsteps`, `Steps to 80\%`, `Return mean`, `Return std`, and `Sinkhorn loss final`. Include at least two figures:
@@ -265,7 +286,11 @@ We provide the following artifacts to enable exact reproduction:
 
 \subsection{Limitations and Ethical Considerations}
 Reward shaping can introduce bias and change optimal policies if not implemented as potential-based shaping. We discuss bias bounds in Section 3 and recommend always reporting raw-reward evaluations (without shaping) to validate that improvements are not an artifact of shaping. Additionally, OT computations have non-negligible computational cost which may limit applicability in resource-constrained settings. Practitioners should weigh these tradeoffs and report wall-clock comparisons and costs when claiming efficiency gains.
+\\subsection{Broader Implications and Societal Impact}
+MaxSink contributes to the broader goal of making RL more sample-efficient and applicable to real-world sparse-reward tasks, such as robotics manipulation or autonomous navigation. By reducing the need for extensive human-designed reward engineering, our method could accelerate deployment in safety-critical domains. However, as with any reward modification technique, there is a risk of unintended behavior if shaping signals are misaligned with true objectives. We advocate for rigorous evaluation on raw rewards and encourage the use of our potential-based variant to minimize such risks. In terms of computational equity, while OT adds overhead, our fallback mechanisms ensure accessibility even without specialized hardware.
 
+\\subsection{Future Work}
+Several directions remain open: (i) extending MaxSink to multi-agent settings where shaping must account for cooperative or competitive dynamics, (ii) integrating learned progress estimators (e.g., via auxiliary networks) to make the transform adaptive, (iii) applying MaxSink to offline RL by transforming relabeled rewards in datasets, (iv) theoretical extensions to risk-sensitive variants using CVaR in both shaping and action selection, and (v) scaling to high-dimensional observations with learned representations for the progress metric.
 \section{Figures and Tables}
 \subsection{Figure placeholders}
 % Figure 1: Success vs Steps
