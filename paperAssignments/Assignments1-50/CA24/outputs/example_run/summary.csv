@@ -1,0 +1,10 @@
+run_id,seed,setting,final_train_loss,duration_seconds
+run-001,42,baseline,0.034,40.2
+run-002,43,baseline,0.038,41.0
+run-003,44,baseline,0.030,39.8
+hidden32_seed42,42,hidden32,0.041,38.7
+hidden32_seed43,43,hidden32,0.045,39.2
+hidden32_seed44,44,hidden32,0.038,40.1
+hidden128_seed42,42,hidden128,0.033,41.5
+hidden128_seed43,43,hidden128,0.031,41.7
+hidden128_seed44,44,hidden128,0.036,40.9

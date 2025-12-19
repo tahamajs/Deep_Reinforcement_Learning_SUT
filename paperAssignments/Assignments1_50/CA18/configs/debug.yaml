@@ -1,0 +1,25 @@
+seed: 123
+lr: 1e-3
+batch_size: 16
+epochs: 3
+gamma: 0.99
+device: cpu
+hidden_sizes: [32, 32]
+entropy_coef: 0.01
+value_coef: 0.5
+max_grad_norm: 0.5
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,175 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\title{Distributional State-Corrected Action Suppression (Dist-SCAS):\\A Unified Framework for Risk-Sensitive Offline Reinforcement Learning}
+\author{Authors TBD}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present Distributional State-Corrected Action Suppression (Dist-SCAS), a unified offline reinforcement learning framework that combines distributional (quantile) critics with a value-aware state-correction regularizer. Dist-SCAS optimizes a risk-adjusted policy objective (lower-tail CVaR of the return distribution) while enforcing that the policy-induced next-state predictions remain close to an in-distribution, high-value manifold. We provide theoretical motivation, derive learning objectives (quantile Huber critic, CVaR actor, adaptive SCAS penalty), and describe a modular PyTorch implementation. Empirical evaluation on D4RL-style tasks and ablations are proposed to demonstrate improved safety (reduced OOD actions and states) and competitive normalized scores.
+\end{abstract}
+
+\section{Introduction}
+Offline reinforcement learning must balance exploitation of high-return behaviors in a static dataset with conservatism to avoid extrapolation error. Prior approaches focus on scalar-value regularizers (e.g., CQL) or policy constraints (BC, TD3+BC) but often conflate aleatoric and epistemic uncertainty. Dist-SCAS bridges geometric state-correction (SCAS) with distributional pessimism by optimizing a lower-quantile objective (CVaR) while imposing a dynamics-consistency penalty that aligns predicted next states with a value-aware dataset manifold.
+
+\section{Related Work}
+We situate Dist-SCAS relative to Conservative Q-Learning (CQL) \cite{cql2020}, distributional critics (QR-DQN, TQC), lower-expectile approaches (LEQ), and SCAS-style state correction. Dist-SCAS synthesizes these strands: distributional critics provide explicit tail-risk signals, while SCAS regularizers prevent the policy from drifting into OOD states even when actions appear promising under value estimates.
+
+\section{Problem Setup and Notation}
+We consider an MDP $(\mathcal{S},\mathcal{A},P,r,\gamma)$ and an offline dataset $\mathcal{D}=\{(s,a,r,s',d)\}$. Let $Z_\theta(s,a)$ be a learned distributional critic approximated by $N$ quantiles $\{q_i(s,a)\}_{i=1}^N$. The pooled ensemble of $M$ critics produces $MN$ quantiles which we sort and denote $\tilde q_{1:MN}(s,a)$.
+
+\section{Method}
+\subsection{Quantile Critic and Targets}
+We train each quantile critic by minimizing the Quantile Huber loss against Bellman targets. For a target sample $y_j$ and predicted quantile $q_i$ the Huberised quantile loss is:
+\[
+\rho_\kappa(u) = 
+\begin{cases}
+\frac{1}{2}u^2 & |u|\le\kappa\\
+\kappa(|u|-\tfrac{1}{2}\kappa) & \text{otherwise}
+\end{cases},\quad u=y_j-q_i
+\]
+and the quantile-weighted objective per critic is
+\[
+\mathcal{L}_\text{crit}(\theta)=\frac{1}{N}\sum_{i=1}^N\sum_{j=1}^N \rho_\kappa(y_j-q_i)\,\big|\tau_i-\mathbf{1}[y_j<q_i]\big|
+\]
+where $\tau_i=(i-0.5)/N$.
+
+\subsection{Risk-Adjusted Policy (CVaR)}
+We define the risk value as the empirical CVaR (mean of the lowest $\alpha$-fraction of pooled quantiles):
+\[
+Q_{\text{risk}}(s,a)=\frac{1}{k}\sum_{i=1}^k \tilde q_i(s,a),\qquad k=\lfloor \alpha MN\rfloor.
+\]
+The actor maximizes $Q_{\text{risk}}$ (or equivalently minimizes its negative), encouraging actions whose lower tails are favorable.
+
+\subsection{Value-Aware State Correction (SCAS)}
+Let $f_\psi(s,a)$ be a learned residual dynamics model predicting the next state. Let $\tilde s'$ be a high-value, in-distribution next-state sample (e.g., nearest neighbor or VAE sample). The SCAS regularizer penalizes deviation:
+\[
+\mathcal{L}_\text{SCAS}(\phi,\psi)=\mathbb{E}_{s\sim\mathcal{D},a\sim\pi_\phi}\big\|f_\psi(s,a)-\tilde s'\big\|_2^2.
+\]
+To adaptively weight the penalty, we compute an uncertainty proxy via the interquartile range (IQR) of pooled quantiles:
+\[
+\lambda(s,a)=\lambda_\text{base}(1+\sigma(\mathrm{IQR}(s,a))),
+\]
+where $\sigma$ is the sigmoid function.
+
+\subsection{Actor Objective}
+Combining terms, the actor loss is:
+\[
+\mathcal{L}_\text{actor}(\phi)= -Q_\text{risk}(s,a_\phi) + \lambda(s,a_\phi)\|f_\psi(s,a_\phi)-\tilde s'\|_2^2 - \beta\mathcal{H}(\pi_\phi(\cdot|s)),
+\]
+where $\mathcal{H}$ denotes policy entropy (optional).
+
+\section{Implementation Details}
+We implement Dist-SCAS in PyTorch. Key components:
+\begin{itemize}
+  \item Quantile critics: MLPs that output $N$ quantiles per state-action input (default $N=50$).
+  \item Actor: Tanh-Gaussian reparameterized policy, outputs mean and log-std.
+  \item SCAS dynamics: residual MLP predicting $s' = s + \delta_\psi(s,a)$ trained on dataset transitions.
+  \item Ensemble: $M$ critics (default $M=2$) pooled for tail estimation.
+\end{itemize}
+Quantile Huber loss and CVaR helpers are provided; adaptive $\lambda$ uses the IQR of pooled quantiles.
+
+\section{Experiments}
+\subsection{Benchmarks}
+We evaluate on D4RL tasks: Hopper/Walker/HalfCheetah (medium, medium-expert), AntMaze (umaze, medium), and Kitchen. For each environment we follow standard dataset loading and normalization.
+
+\subsection{Metrics}
+We report normalized D4RL score, OOD action rate (distance to BC policy), OOD state distance (nearest-dataset neighbor), quantile spread (q0.9-q0.1), and value bias.
+
+\subsection{Ablations}
+We compare:
+\begin{enumerate}
+  \item Dist-SCAS (full),
+  \item Dist-SCAS w/ fixed $\lambda$,
+  \item Distributional-only (no SCAS),
+  \item Scalar critics + SCAS.
+\end{enumerate}
+Expected outcomes: SCAS is essential for AntMaze; distributional tail optimization reduces OOD action rate in noisy datasets.
+
+\section{Results (Planned)}
+We provide placeholder tables and figures to be filled after experiments. Example table format:
+\begin{table}[h]
+\centering
+\caption{D4RL normalized scores (mean$\pm$std, seeds=5)}
+\begin{tabular}{lccc}
+\toprule
+Env & Baseline & CQL & Dist-SCAS (ours) \\
+\midrule
+Hopper-medium & 60.2$\pm$3.1 & 68.4$\pm$2.5 & \textbf{72.1}$\pm$2.8 \\
+AntMaze-umaze & 12.3$\pm$6.4 & 18.9$\pm$5.3 & \textbf{45.7}$\pm$7.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion}
+Dist-SCAS leverages the complementary strengths of distributional pessimism and geometry-aware constraints. The adaptive $\lambda$ couples statistical uncertainty to geometric correction, enforcing stronger state-regularization where return dispersion is high.
+
+\section{Conclusion}
+We introduced Dist-SCAS, provided derivations and an implementation blueprint, and proposed an evaluation suite. Future work includes using richer generative models for $\tilde s'$ (conditional diffusion/VAE) and formalizing convergence properties under model error.
+
+\section*{Acknowledgments}
+TBD.
+
+\appendix
+\section{Appendix: Derivations}
+\subsection{Quantile Huber and Gradient}
+The quantile Huber loss used in training is derived from the quantile regression asymmetric weighting combined with Huber robustification; see Section 11 of the README for full details.
+
+\subsection{Adaptive $\lambda$}
+Given pooled quantiles $\tilde q_{1:K}$ we compute $q_{0.25}, q_{0.75}$ and set $\mathrm{IQR}=q_{0.75}-q_{0.25}$. Then $\lambda=\lambda_\text{base}(1+\sigma(\mathrm{IQR}))$ which ensures $\lambda\ge\lambda_\text{base}$ and amplifies penalties where return dispersion is high.
+
+\section{Hyperparameters}
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+n\_quantiles $N$ & 50 \\
+n\_critics $M$ & 2 \\
+CVaR $\alpha$ & 0.1 \\
+LR (actor/critic) & 3e-4 \\
+Batch size & 256 \\
+$\lambda_\text{base}$ & 1.0 \\
+$\beta$ (entropy) & 0.2 \\
+\bottomrule
+\end{tabular}
+\caption{Default hyperparameters (also present in src/config.py).}
+\end{table}
+
+\section{Reproducibility}
+All experiments should fix seeds (PyTorch, NumPy), save checkpoints, and evaluate with at least 5 seeds. Code and configs live in the repository under the CA4 folder.
+
+\bibliographystyle{plain}
+\begin{thebibliography}{9}
+\bibitem{cql2020} A. Kumar, A. Zhou, G. Tucker, S. Levine. Conservative Q-Learning for Offline Reinforcement Learning, NeurIPS 2020.
+\bibitem{tqc} A. Dabney, et al. Truncated Quantile Critics, ICML (references placeholder).
+\bibitem{scas} SCAS: Offline Reinforcement Learning with OOD State Correction and OOD Action Suppression (NeurIPS 2024) — repository and paper.
+\end{thebibliography}
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

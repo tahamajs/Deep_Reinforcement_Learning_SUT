@@ -1,0 +1,24 @@
+env_name: "Hopper-v4"
+num_envs: 8
+use_vector_env: true
+particles: 32
+batch_size: 512
+minibatch_size: 64
+total_steps: 400000
+device: "cpu"
+tb_logdir: "runs/ca8/mujoco"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,25 @@
+env_name: "procgen:procgen-coinrun-v0"
+num_envs: 32
+use_vector_env: true
+use_procgen: true
+particles: 16
+batch_size: 512
+minibatch_size: 64
+total_steps: 500000
+device: "cuda" # set to cuda if available
+tb_logdir: "runs/ca8/procgen"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

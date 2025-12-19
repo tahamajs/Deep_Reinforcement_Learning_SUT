@@ -1,0 +1,6 @@
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "W", "B", "C90"]
+
+[tool.ruff.flake8]
+exclude = [".git", "__pycache__", "build", "dist", "venv"]

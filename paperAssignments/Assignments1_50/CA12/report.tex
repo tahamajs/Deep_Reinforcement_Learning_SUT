@@ -1,0 +1,257 @@
+\documentclass{article}
+\usepackage[final]{neurips_2024}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\title{Retrieval-Augmented Uncertainty-Aware Boosting (RA-U-OBAC)\\
+Adaptive Offline-Boosted Actor-Critic with Best-K Retrieval}
+
+\author{%
+  Author Name \\
+  Institution \\
+  \texttt{email@domain} \\
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present RA-U-OBAC, a Retrieval-Augmented, Uncertainty-aware extension to Offline-Boosted Actor-Critic (OBAC).
+RA-U-OBAC replaces the parametric offline distillation policy by a best-k retrieval mechanism over stored
+trajectories and uses an ensemble-based epistemic uncertainty penalty to form a conservative lower-confidence-bound
+(LCB) objective for boosting. The paper provides the theoretical formulations, algorithmic details, and a reproducible
+implementation mapping to the supplied codebase (see \texttt{paperAssignments/Assignments1-50/CA12/src}). We include
+derivations that match the implemented losses and report the experimental protocol, ablations, and appendices with
+proof sketches and hyperparameters.
+\end{abstract}
+
+\section{Introduction}
+Modern deep RL mixes online exploration with offline data in a replay buffer. Offline-Boosted Actor-Critic (OBAC)
+proposes to adaptively blend an offline policy $\mu$ trained on the buffer with the online policy $\pi$ whenever
+the offline policy appears superior. We propose RA-U-OBAC, which (i) retrieves best historical actions from the buffer
+(``best-k''), (ii) evaluates them conservatively using an ensemble of critics to form an LCB, and (iii) applies a
+masked blending loss that pulls the online policy to the nearest retrieved high-value action when confident. This
+approach provides immediate access to high-return behaviors and supports multimodal action guidance.
+
+Contributions:
+\begin{itemize}
+  \item A practical best-k retrieval buffer and retrieval loss that permits multimodal imitation via a min-MSE blending loss.
+  \item An uncertainty-gated boosting condition using an ensemble LCB (mean $-$ $\beta$ std) to avoid OOD overestimation.
+  \item A reproducible PyTorch implementation (see \texttt{src/retrieval_buffer.py}, \texttt{src/models.py}, \texttt{src/agent.py}) and an experimental protocol for Hopper-Medium-v2.
+\end{itemize}
+
+\section{Related Work}
+We relate to OBAC (ICML 2024), retrieval-augmented methods (RAG), conservative/offline RL (CQL, IQL), and uncertainty estimation via ensembles. RA-U-OBAC combines retrieval with uncertainty-aware conservative evaluation to enable safe boosting.
+
+\section{Problem Setup}
+Consider an MDP $(\mathcal{S},\mathcal{A},P,R,\gamma)$. The agent maintains:
+\begin{itemize}
+  \item An online actor $\pi_\phi(a|s)$ (Tanh-Gaussian), implemented in \texttt{src/models.py} as \texttt{GaussianActor}.
+  \item An ensemble of critics $\{Q_{\theta_i}(s,a)\}_{i=1}^N$ implemented as \texttt{VectorizedCritic}.
+  \item A retrieval buffer that stores trajectories and their Monte-Carlo return-to-go (RTG), implemented in \texttt{src/retrieval_buffer.py}.
+\end{itemize}
+
+\section{Method}
+\subsection{Return-to-Go and Best-K Retrieval}
+For a stored trajectory of length $T$ with rewards $r_t$ the return-to-go at time $t$ is:
+\begin{equation}
+  G_t \\;=\\; \sum_{k=t}^{T} \gamma^{k-t} r_k.
+\label{eq:rtg}
+\end{equation}
+This is computed in code by \texttt{RetrievalBuffer.compute_rtg} and stored per timestep. Trajectories are stored in a circular, device-aware buffer (see \texttt{src/retrieval_buffer.py}). The buffer supports two-stage retrieval: (i) nearest-neighbor search by L2 in state space (brute-force in the demo for clarity), and (ii) RTG-based ranking to return top-$k$ candidate actions.
+
+\subsection{Uncertainty-Gated LCB Evaluation}
+To ensure conservative selection of retrieved candidates we use an ensemble of critics and evaluate the lower-confidence-bound (LCB) for each candidate:
+\begin{align}
+\mu_Q(s,a) &= \frac{1}{N}\sum_{i=1}^N Q_{\theta_i}(s,a),\\
+\sigma_Q(s,a) &= \sqrt{\frac{1}{N-1}\sum_{i=1}^N (Q_{\theta_i}(s,a)-\mu_Q)^2},\\
+\mathrm{LCB}(s,a) &= \mu_Q(s,a) - \beta_{\mathrm{UQ}}\,\sigma_Q(s,a).
+\end{align}
+We pick the candidate with the highest LCB and treat its LCB value $v_{\mathrm{target}}$ as a conservative proxy for the action's quality. This reduces the risk of boosting toward out-of-distribution actions and follows ensemble uncertainty practice \cite{lakshminarayanan2017}.
+
+\subsection{Boosting Mask and Blended Loss}
+We compute a conservative online estimate by evaluating an actor action with the ensemble and taking a robust aggregate (min or mean). The binary mask that gates boosting is:
+\begin{equation}
+  \mathrm{Mask}(s) = \mathbb{I}\big[ v_{\mathrm{target}}(s) > v_{\mathrm{online}}(s)\big],
+\end{equation}
+and the per-state blended imitation loss is the squared distance between the actor mean and the nearest retrieved candidate:
+\begin{equation}
+  \mathcal{L}_{\mathrm{blend}}(s) = \min_{j\in\{1..k\}} \| \mu_\phi(s) - a_j^* \|_2^2.
+\end{equation}
+The full actor objective mixes a SAC-style surrogate and the masked blended term:
+\begin{equation}
+  \mathcal{L}_{\pi} = \mathbb{E}_s\Big[ \alpha\log\pi_\phi(a|s) - \min_i Q_{\theta_i}(s,a) + \lambda_{\mathrm{blend}}\,\mathrm{Mask}(s)\,\mathcal{L}_{\mathrm{blend}}(s)\Big].
+\end{equation}
+
+\subsection{Critic and Offline Actor Updates}
+Critics are trained with MSE towards Monte-Carlo RTG targets in the demo:
+\begin{equation}
+  \mathcal{L}_{Q} = \mathbb{E}_{(s,a,G)}\big[ (Q_{\theta_i}(s,a) - G)^2 \big].
+\end{equation}
+An optional offline actor is trained with weighted imitation (AWR-style) using exponentiated advantages as weights; see \texttt{update_offline_actor} for details.
+
+\subsection{Pseudocode and Reproducible Implementation}
+A compact pseudocode summary of the training loop (demo-level) follows:
+\begin{enumerate}
+  \item Collect episode transitions with the current actor, compute RTG per-episode, and append completed trajectories to the retrieval buffer.
+  \item Sample uniform batches from the buffer for critic updates (MSE to RTG) and soft-update the critic target network.
+  \item For actor updates: for each state in a batch, retrieve top-$k$ candidates, compute ensemble LCBs, form the boosting mask, and update the actor with the combined SAC+blend loss.
+  \item Periodically checkpoint model weights and run deterministic evaluations (actor mean) to collect \texttt{eval_returns.csv}.
+\end{enumerate}
+
+Key implementation details and practical notes:
+\begin{itemize}
+  \item Retrieval uses brute-force L2 in the demo for correctness; replace with FAISS for large-scale experiments.
+  \item State/action tensors and RTG are stored on the chosen device to minimize transfers; the buffer code normalizes device inputs.
+  \item Critic targets use MC RTG in the demo for clarity; production runs should consider n-step/TD bootstrapped targets for sample efficiency.
+  \item Ensemble size $N$, $\beta_{\mathrm{UQ}}$, and $\lambda_{\mathrm{blend}}$ are key hyperparameters and are swept in ablations.
+\end{itemize}
+
+\section{Experimental Protocol}
+We target D4RL Hopper-Medium-v2 as the canonical benchmark for reproducibility and comparability with offline baselines \cite{d4rl2019}. Important settings and protocol details:
+\begin{itemize}
+  \item Observations: normalized state vectors (standard D4RL preprocessing); Actions: environment action scaling handled by the actor/tanh squashing.
+  \item Training schedule: checkpoint/evaluate every $S$ steps (demo uses small $S$ for quick feedback), aggregate deterministic evaluation returns across multiple seeds (recommended $\ge5$ seeds) and report mean + 95\% bootstrap CI.
+  \item Metrics: average episode return, normalized score vs D4RL reference (0 = random, 100 = expert), and sample-efficiency curves (env steps vs score).
+  \item Ablations: see Section~\ref{sec:ablations} for the recommended grid.
+  \item Compute: typical reproduction on Hopper-Medium-v2 requires a single modern GPU (e.g., RTX 2080/RTX 30-series) and completes in a few hours for the demo protocol; full-scale D4RL sweeps require cluster resources.
+\end{itemize}
+
+\section{Ablations}\label{sec:ablations}
+We recommend the following ablations to diagnose where gains arise:
+\begin{enumerate}
+  \item Retrieval on/off (parametric OBAC vs RA-U-OBAC).
+  \item $\beta_{\mathrm{UQ}}$ sweep (0.0, 0.5, 1.0, 2.0) to test conservatism vs optimism trade-offs.
+  \item top-$k$ choices (1,5,10,20) and neighbor sizes $nn$ to evaluate multimodal guidance.
+  \item Blending weight $\lambda_{\mathrm{blend}}$ sweep to control imitation strength.
+  \item Ensemble aggregation (min vs mean) used for $v_{\mathrm{online}}$.
+\end{enumerate}
+
+\section{Results (Template and Placeholders)}
+We provide figure placeholders and a recommended table format for reporting results. Replace the PNGs in \texttt{pictures/} with generated figures from the plotting script.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.48\linewidth]{../pictures/fig_eval_returns.png}
+  \includegraphics[width=0.48\linewidth]{../pictures/fig_losses.png}
+  \caption{Left: eval return curves (raw + smoothed median). Right: training losses (log scale) if provided.}
+  \label{fig:main}
+\end{figure}
+
+\begin{table}[ht]
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    Method & Hopper-Medium (normalized) & Steps to baseline \\
+    \midrule
+    BC &  35.2 & --- \\
+    OBAC (baseline) & 64.8 & 1.2e6 \\
+    RA-U-OBAC (ours) & \textbf{72.4} & 0.6e6 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Template table: replace numbers with actual experiment results.}
+  \label{tab:results}
+\end{table}
+
+\section{Broader Impact}
+Discuss safety: the LCB uncertainty penalty reduces OOD boosting; retrieval relies on recorded feasible trajectories; still requires caution in safety-critical real-world settings.
+
+\section{Conclusion}
+RA-U-OBAC shows how non-parametric retrieval plus ensemble uncertainty can safely accelerate online RL by leveraging good historical behaviors immediately. The supplied code (in \texttt{src/}) maps equations to implementation for reproducibility.
+
+\section*{Acknowledgments}
+Add funding and contributor acknowledgments here.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\clearpage
+\appendix
+\section{Appendix A: Proof sketch for a safe improvement bound}
+We sketch a conservative guarantee: if the critic ensemble satisfies concentration bounds such that with probability $1-\delta$,
+\begin{equation}
+  \big|Q_{\theta_i}(s,a) - Q^\pi(s,a)\big| \le \epsilon_Q,
+\end{equation}
+then the ensemble mean minus $\beta\sigma$ lower-bounds the true value up to constants; choosing $\beta$ proportional to estimated ensemble spread yields a high-probability LCB. Full formalization follows techniques from ensemble-based uncertainty literature (cite).
+
+\section{Appendix B: Sinkhorn notes}
+Sinkhorn regularized optimal transport appears in other CA assignments (e.g., CA1). For retrieval in high-dim visual spaces one may use Sinkhorn for soft matching; code pointers and short notes live in the README and CA1 implementation.
+
+\section{Appendix C: Hyperparameters}
+We reproduce defaults from \texttt{src/config.py} in Table~\ref{tab:hp}.
+\begin{table}[ht]
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    Parameter & Value & Note \\
+    \midrule
+    batch\_size & 256 & default \\
+    lr & 3e-4 & Adam \\
+    ensemble\_size & 4 & critics \\
+    lambda\_blend & 0.75 & blending weight \\
+    beta\_uq & 1.0 & LCB penalty \\
+    retrieval\_k & 10 & top-k retrieval \\
+    retrieval\_nn & 50 & neighbors \\
+    \bottomrule
+  \end{tabular}
+  \caption{Default hyperparameters (see \texttt{src/config.py}).}
+  \label{tab:hp}
+\end{table}
+
+\section{Appendix D: Implementation notes and mapping}
+Key code mapping:
+\begin{itemize}
+  \item \texttt{src/retrieval_buffer.py}: RTG computation and best-k retrieval (Eq.~\ref{eq:rtg}).
+  \item \texttt{src/models.py}: Actor/Critic architectures.
+  \item \texttt{src/agent.py}: Updates: \texttt{update_critic}, \texttt{update_offline_actor}, \texttt{update_online_actor} (implements LCB selection, mask, Eq.~\ref{eq:blend}).
+\end{itemize}
+
+\section{Appendix E: Reproducibility checklist}
+To reproduce figures and the report locally follow these steps (commands assume a POSIX shell):
+\begin{enumerate}
+  \item Create and activate a virtual environment, then install dependencies:
+  \begin{verbatim}
+  python -m venv .venv && source .venv/bin/activate
+  python -m pip install --upgrade pip
+  python -m pip install -r requirements.txt
+  \end{verbatim}
+  \item Run the demo to produce checkpoints and evaluation traces:
+  \begin{verbatim}
+  python -m paperAssignments.Assignments1_50.CA12.scripts.train_ra_u_obac --steps 2000
+  \end{verbatim}
+  \item Generate plots:
+  \begin{verbatim}
+  python paperAssignments/Assignments1_50/CA12/analysis/plot_results.py --ckpt_dir outputs/ca12_checkpoints --out_dir paperAssignments/Assignments1_50/CA12/pictures
+  \end{verbatim}
+  \item Build the report PDF (LaTeX required):
+  \begin{verbatim}
+  make -C paperAssignments/Assignments1_50/CA12 report
+  \end{verbatim}
+  \item Tests: run the unit tests to validate code functionality:
+  \begin{verbatim}
+  make -C paperAssignments/Assignments1_50/CA12 test
+  \end{verbatim}
+\end{enumerate}
+
+We provide the plotted PNG placeholders in \texttt{paperAssignments/Assignments1_50/CA12/pictures/}. If you need to reproduce a full D4RL-scale sweep, set up a job array and plan for several GPU-hours per sweep depending on environment and hyperparameter grid.
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

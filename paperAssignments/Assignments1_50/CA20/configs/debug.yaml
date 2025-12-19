@@ -1,0 +1,27 @@
+seed: 123
+device: cpu
+lr: 1e-3
+batch_size: 32
+epochs: 2
+gamma: 0.99
+constraint_c: 0.1
+lambda_lr: 1e-2
+lambda_clip: 100.0
+hidden_dim: 64
+obs_dim: 8
+action_dim: 2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

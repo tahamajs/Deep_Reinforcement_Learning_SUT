@@ -1,0 +1,16 @@
+env_name: HalfCheetah-v4
+gamma: 0.99
+alpha: 0.2
+automatic_entropy_tuning: true
+target_entropy: null  # null will use -|A| by default
+lr_actor: 0.0003
+lr_critic: 0.0003
+optimizer_betas: [0.9, 0.999]
+buffer_size: 1000000
+batch_size: 256
+num_steps: 1000000
+eval_freq: 10000
+tau: 0.005
+seed: 42
+device: auto
+log_dir: results/sac_experiment

@@ -1,0 +1,223 @@
+% Full paper-style report for CA11: TWM-SSD (complete)
+\documentclass{article}
+\usepackage[final]{neurips_2024}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{subcaption}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{enumitem}
+
+\title{Transformer-Based World Models with State-Space Duality (TWM-SSD)}
+\author{Assignment CA11 -- Course Material}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present TWM-SSD, a hybrid world model that merges linear-attention Transformers with stable state-space model recurrence via the State-Space Duality (SSD) viewpoint. TWM-SSD interleaves SSM updates and linear-attention updates inside modular hybrid blocks, enabling efficient long-horizon modeling for model-based RL tasks. This document provides a full method description, implementation mapping, training recipes, evaluation protocol, ablation plans, and reproducibility checklist.
+\end{abstract}
+
+\section{Introduction}
+Long-horizon sequence modeling is central to model-based reinforcement learning (MBRL). Transformers provide global context but incur quadratic memory and compute with sequence length; SSMs are linear-time and have useful inductive biases for temporal dynamics. The State-Space Duality (SSD) theory provides a mapping that links linear-attention accumulators to discrete-time SSM updates, which we leverage to design hybrid blocks that combine both strengths while controlling stability.
+
+\section{Background and Related Work}
+We build on three strands of work: Transformer-based sequence modeling (\cite{vaswani2017attention}), efficient/linear attention mechanisms (e.g., Performers, Favor+) and recent SSMs for long-range sequences (e.g., S4, Mamba). Our contribution is a pragmatic hybrid that demonstrates how SSD can guide architecture and parameter choices for RL world models.
+
+\section{Method}
+\subsection{Notation}
+We denote a trajectory by $\tau=(o_1,a_1,r_1,\dots,o_T)$. Tokenized observations are $o_t\in\mathbb{R}^{D}$, actions $a_t\in\mathbb{R}^{A}$, and latent states $h_t\in\mathbb{R}^D$. For a sequence length $L$ we use batch shape $B\times L\times D$.
+
+\subsection{Linear attention: math and implementation}
+We implement multi-head linear attention using an explicit feature map $\phi(\cdot)$. For queries $q_t$, keys $k_t$, values $v_t$ the per-head attention at time $t$ is:
+\begin{equation}
+\mathrm{Attn}(q_t) = \phi(q_t) \left( \sum_{i\le t} \phi(k_i)^\top v_i \right).
+\end{equation}
+This can be computed efficiently with running accumulators: maintain $S_t=\sum_{i\le t} \phi(k_i) v_i^\top$ and compute $\phi(q_t)^\top S_t$. In multi-head form we split into heads and project with a linear layer as in standard transformers; we use $\phi(x)=\mathrm{ELU}(x)+1$ in code for numerical stability and non-negativity.
+
+\subsection{State-space recurrence (SSMBlock)}
+We implement a diagonal-parameterized SSM block for stable recurrence. The per-dimension update is:
+\begin{align}
+h_{t+1} &= a \odot h_t + b \odot \mathrm{proj}(x_t),\\
+a &= \tanh(\tilde a),
+\end{align}
+where $\tilde a$ is an unconstrained parameter vector and $b$ is a learned input gain. The projection maps token embeddings into the SSM input space.
+
+\subsection{Mamba gating (selective updates)}
+To allow selective update behavior reminiscent of Mamba, we provide a gated recurrence variant where a per-token gate determines how much of the previous state to keep versus new proposal information. This can reduce unnecessary computation and improve stability on long sequences.
+
+\subsection{Hybrid block and backbone}
+The SSDHybridBlock composes SSM recurrence, linear attention, and an MLP residual with pre-LN and residual connections:
+\begin{align}
+x' &= x + \mathrm{SSM}(\mathrm{LN}(x)),\\
+x'' &= x' + \mathrm{LinAttn}(\mathrm{LN}(x')),\\
+x^{+} &= x'' + \mathrm{MLP}(\mathrm{LN}(x'')).
+\end{align}
+The backbone stacks $N$ such blocks; `ssm\_ratio` controls the fraction of blocks that prioritize SSM updates in early layers.
+
+\subsection{Tokenizers: ImageVQVAE and SimpleVQVAE}
+For image tasks we use a small ImageVQVAE implementing an encoder that downsamples by 4 (two stride-2 convs), projects to $D$ channels, and flattens the $H'\times W'$ grid into a sequence. Quantization uses a learnable codebook $E\in\mathbb{R}^{K\times D}$ with nearest-neighbor assignment and the straight-through estimator for backprop.
+
+\subsection{Prediction heads}
+The model exposes:
+\begin{itemize}
+  \item observation predictor (predict next-step tokens or pixels),
+  \item reward predictor (scalar regression),
+  \item optional value/policy heads for latent control (actor-critic).
+\end{itemize}
+
+\section{Training Objectives}
+Primary training objectives implemented in \texttt{src/losses.py}:
+\begin{itemize}
+  \item observation reconstruction: MSE on pixels or cross-entropy on VQ tokens,
+  \item reward loss: MSE on predicted reward,
+  \item VQ commitment and reconstruction losses for VQ-VAE,
+  \item optional latent KL for stochastic latents,
+  \item optional contrastive auxiliary (InfoNCE) for latent robustness.
+\end{itemize}
+Total loss is a weighted sum; weights are hyperparameters in the config.
+
+\section{Datasets and Preprocessing}
+We provide recommended preprocessing for the three target benchmarks:
+\paragraph{Atari-100k}
+- Frame preprocessing: convert to grayscale, resize to 84x84, clip and normalize to [-1,1], stack 4 frames for temporal context when using non-VQ tokenizers. For VQ approach use original color and the ImageVQVAE downsampling.
+- Episode handling: clip at 1M frames; provide reward clipping to [-1,1].
+
+\paragraph{DMControl}
+- Use RGB frames at 84x84 or low-dimensional state vectors depending on task. Normalize observations per-channel.
+
+\paragraph{MiniGrid}
+- Use low-dim observations or partial-view images; manage action discretization accordingly.
+
+\section{Experimental Setup and Baselines}
+We evaluate against:
+\begin{itemize}
+  \item Transformer baseline with softmax attention,
+  \item linear-attention only Transformer,
+  \item pure SSM (Mamba-style) backbone,
+  \item Dreamer-style latent world model for comparison in control tasks.
+\end{itemize}
+Each experiment runs 5-10 seeds. For each run we store checkpoints and log metrics to TensorBoard and (optionally) W&B.
+
+\section{Evaluation Protocol and Metrics}
+Metrics reported:
+\begin{itemize}
+  \item task performance: mean episodic return (10 seeds) and standard error,
+  \item model metrics: per-step MSE/NLL, reconstruction PSNR,
+  \item planning throughput: imagined steps per second (CEM and Dreamer rollouts),
+  \item compute/memory: peak GPU memory and approximate per-step FLOPs (estimated via theoretical formulas for attention and MLPs).
+\end{itemize}
+Evaluation cadence: evaluate policy every N training steps (e.g., 5k gradient steps) with fixed evaluation episodes (e.g., 20 episodes).
+
+\section{Ablation Protocol}
+For each ablation we vary one factor and keep others fixed. Key ablations:
+\begin{itemize}
+  \item ssm\_ratio: {0.0, 0.25, 0.5, 0.75, 1.0}
+  \item attention: softmax vs linear with different feature maps (ELU+1, exp)
+  \item tokenizer: VQ-VAE codebook sizes {128,256,1024} vs patch embeddings
+  \item context length: {64,128,256,512}
+  \item model scale: {small, medium, large} in terms of d\_model and n\_layers
+\end{itemize}
+We report final return, model NLL, and planning throughput for each configuration.
+
+\section{Implementation Details and File Mapping}
+Important files:
+\begin{itemize}
+  \item `src/model.py` -- model blocks and backbones (LinearAttention, SSMBlock, SSDHybridBlock, TWMSSDModel, TWMSSDImageModel),
+  \item `src/tokenizer.py` -- ImageVQVAE and SimpleVQVAE,
+  \item `src/losses.py` -- losses,
+  \item `src/data.py` -- simple RandomTrajectoryDataset for smoke tests,
+  \item `scripts/experiment.py` -- experiment runner with TB/W&B and checkpointing,
+  \item `tests/` -- unit tests (shapes, forward passes, LinearAttention equivalence).
+\end{itemize}
+
+\section{Reproducibility, Compute, and Logging}
+Reproducibility checklist (must accompany each experiment):
+\begin{itemize}
+  \item save random seeds and git sha,
+  \item save full YAML config for run,
+  \item save checkpoints (model, tokenizer, optimizer) periodically,
+  \item log to TB/W&B with run metadata and environment details,
+  \item provide scripts to reproduce the run and evaluation.
+\end{itemize}
+Compute estimate: A medium configuration (d\_model=256, n\_layers=8, seq_len=128) can be trained on 1×A100 in ~1–2 days for Atari-sized experiments; empirical times vary by dataset and planning budget.
+
+\section{Figures and Tables (Suggested)}
+Include:
+\begin{itemize}
+  \item Return vs steps curves with error bands across seeds (base and ablations),
+  \item Model NLL vs steps,
+  \item Ablation tables (ssm\_ratio, attention type, tokenizer),
+  \item Planning throughput (imagined steps/s) vs config,
+  \item Visualizations: reconstructions, attention maps, SSM gate activations.
+\end{itemize}
+
+\section{Limitations and Ethical Considerations}
+Limitations: linear attention may introduce approximation bias compared to softmax in some tasks; SSM parameterizations restrict expressivity for stability trade-offs. Ethical considerations: ensure RL agents are not deployed unsafely; report compute costs and environmental impact.
+
+\section{Conclusion}
+We provide a practical architecture and experimental plan for combining linear attention with SSM recurrence under the SSD perspective. The codebase and REPORT_COMPLETE.tex are designed to be an executable blueprint for reproducing experiments and exploring extensions.
+
+\appendix
+\section{Appendix A: Training pseudocode}
+\begin{algorithm}[h]
+\caption{Training loop (high-level)}
+\begin{algorithmic}[1]
+\State Initialize model, tokenizer, optimizer, replay buffer, logging
+\For{iter = 1..N}
+  \State Sample batch of sequences from replay
+  \State If images: recon, quantized, indices = VQ.encode(inputs)
+  \State Forward through backbone to produce predictions
+  \State Compute loss and backpropagate
+  \State Clip gradients and optimizer.step()
+  \State Periodically evaluate and checkpoint
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Appendix B: Hyperparameter table}
+\begin{table}[h]
+  \centering
+  \begin{tabular}{lcc}
+    \toprule
+    Param & Default & Sweep \\\midrule
+    d\_model & 256 & {128,256,384} \\
+    n\_layers & 8 & {4,8,12} \\
+    n\_heads & 4 & {4,6,8} \\
+    seq\_len & 128 & {64,128,256} \\
+    batch & 32 & {16,32,64} \\
+    lr & 1e-4 & {1e-4,3e-4} \\
+    weight decay & 1e-2 & {0.0,1e-2} \\
+    ssm\_ratio & 0.5 & {0.25,0.5,0.75} \\
+    \bottomrule
+  \end{tabular}
+  \caption{Representative hyperparameters and sweep ranges}
+\end{table}
+
+\section{Appendix C: Reproducibility commands}
+\begin{verbatim}
+# create env and run tests
+python -m venv .venv && source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -r requirements.txt
+pytest -q
+# smoke train
+python scripts/experiment.py --steps 100 --save-dir runs/ca11_smoke
+\end{verbatim}
+
+\section{Appendix D: Additional derivations and SSD comments}
+Derivations relating linear attention accumulators to first-order recurrence (SSM) are included in the README; we note that tying feature map parameters to SSM gains can reduce the separate parameter count and encourage stable dynamics.
+
+\section*{Acknowledgments}
+We thank course staff and contributors.
+
+\begin{thebibliography}{9}
+\bibitem{vaswani2017attention} A. Vaswani et al., \textit{Attention is All You Need}, 2017.
+\bibitem{choromanski2021rethinking} K. Choromanski et al., \textit{Rethinking Attention with Performers}, ICLR 2021.
+\bibitem{gu2022s4} A. Gu et al., \textit{State-space models for sequences (S4, representative references)}, 2022.
+\end{thebibliography}
+
+\end{document}

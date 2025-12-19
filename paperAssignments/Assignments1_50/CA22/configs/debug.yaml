@@ -1,0 +1,28 @@
+# Debug config - small and deterministic
+seed: 0
+device: cpu
+obs_dim: 8
+action_dim: 4
+hidden_size: 16
+lr: 1e-3
+batch_size: 8
+epochs: 2
+gamma: 0.99
+constraint_threshold: 0.5
+lagrange_lr: 1e-2
+max_mu: 100.0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

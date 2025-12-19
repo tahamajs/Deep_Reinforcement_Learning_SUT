@@ -1,0 +1,16 @@
+\"\"\"Demo: use a small neural network as model for PUCT MCTS.\n\"\"\"\nfrom typing import Tuple\nimport argparse\nimport torch\nimport random\nimport numpy as np\n\nfrom src.mcts.nn_model import SmallDiscreteModel\nfrom src.mcts.puct import PUCT\n\n\ndef run_nn_demo(seed: int = 0, sims: int = 100):\n    random.seed(seed)\n    np.random.seed(seed)\n    torch.manual_seed(seed)\n\n    model = SmallDiscreteModel(n_actions=3, hidden=64)\n    # optionally do a tiny supervised fit to mimic heuristic (distance to goal)\n    # We'll train on states -5..5 to predict priors that favor moving right when goal positive\n    states = torch.arange(-5, 6, dtype=torch.float32).unsqueeze(-1)\n    goal = 3.0\n    def heuristic_priors(s):\n        d = goal - float(s)\n        scores = torch.tensor([-(abs(d - a)) for a in [-1, 0, 1]], dtype=torch.float32)\n        return torch.softmax(scores, dim=0)\n\n    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)\n    for _ in range(200):\n        idx = torch.randint(0, states.shape[0], (16,))\n        batch = states[idx]\n        logits, vals = model(batch)\n        # policy loss: KL to heuristic priors\n        target = torch.stack([heuristic_priors(s.item()) for s in batch.squeeze(-1)], dim=0)\n        loss_p = torch.nn.functional.kl_div(torch.log_softmax(logits, dim=-1), target, reduction='batchmean')\n        # value loss: negative distance\n        target_v = -torch.abs(goal - batch.squeeze(-1))\n        loss_v = torch.nn.functional.mse_loss(vals, target_v)\n        loss = loss_p + 0.1 * loss_v\n        optimizer.zero_grad(); loss.backward(); optimizer.step()\n\n    # run PUCT\n    action_space = [0, 1, 2]\n    puct = PUCT(model, action_space=action_space, c_puct=1.0, dirichlet_alpha=0.3)\n    root_state = 0\n    root = puct.search(root_state, num_simulations=sims)\n\n    visits = {a: child.visits for a, child in root.children.items()}\n    best = max(visits.items(), key=lambda kv: kv[1])[0]\n    print(f\"Seed {seed} best action idx {best} visits {visits}\")\n    return root, best\n\n\nif __name__ == '__main__':\n    parser = argparse.ArgumentParser()\n    parser.add_argument('--seed', type=int, default=0)\n    parser.add_argument('--sims', type=int, default=100)\n    args = parser.parse_args()\n    run_nn_demo(seed=args.seed, sims=args.sims)\n"}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

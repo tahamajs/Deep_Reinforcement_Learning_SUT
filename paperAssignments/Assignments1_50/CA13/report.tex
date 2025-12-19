@@ -1,0 +1,409 @@
+% SimGolf-Latent: NeurIPS style full paper draft
+\documentclass{article}
+\usepackage[preprint]{neurips_2024}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amsfonts,amssymb,graphicx,booktabs}
+\usepackage[colorlinks=true,citecolor=blue,urlcolor=blue]{hyperref}
+\title{SimGolf in Latent Space: Combining DreamerV3 World Models with Simulation-Based Global Search}
+\author{Author Name \\
+Affiliation \\
+\texttt{email@institution.edu} \\
+(Replace with your author list and affiliations before submission)}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present SimGolf-Latent, an approach that integrates simulation-based global
+search (SimGolf) with learned latent world models (DreamerV3's RSSM). When the
+agent detects high decision importance (large TD-error or model uncertainty),
+it resets imagination to stored latent checkpoints and performs global branching
+search in latent space. Branch returns are penalized by model uncertainty and
+aggregated to yield TD(\(\lambda\)) targets and policy updates. Our
+implementation supports CEM branch proposals, uncertainty penalties, and
+branch-to-real distillation. We provide algorithmic details, code, and an
+experimental protocol for hard navigation tasks.
+\end{abstract}
+
+\section{Introduction}
+Model-based reinforcement learning (RL) with learned latent world models has
+demonstrated strong sample efficiency across many domains. However, long-horizon
+planning under partial observability and sparse rewards remains challenging:
+local greedy planning can miss viable long-range plans and backtracking behaviors.
+SimGolf \cite{sim_golf} introduced simulation-based global search with episodic
+resets to previously visited states; this work adapts SimGolf to operate entirely
+in latent space using DreamerV3's RSSM, avoiding real-environment resets while
+preserving the planner's exploratory power.
+
+\section{Method}
+\subsection{Overview and notation}
+Let \(z_t\in\mathbb{R}^d\) denote the learned stochastic latent state (RSSM). The
+world model parameterized by \(\theta\) defines transitions
+\(p_\theta(z_{t+1}\mid z_t,a_t)\), a decoder \(p_\theta(o_t\mid z_t)\), a reward head
+\(r_\theta(z_t)\), and an optional uncertainty estimate \(\sigma_{r,\theta}(z_t)\)
+for predicted rewards. The actor \(\pi_\phi(a\mid z)\) and critic
+\(v_\psi(z)\) operate in latent space and are trained using imagined rollouts.
+
+\subsection{Checkpoint buffer}
+We maintain a fixed-capacity checkpoint buffer \(C\) storing tuples
+\((z, s, t, m)\) where \(z\) is a latent, \(s\) is a numeric score (e.g., absolute TD-error),
+\(t\) is the env step when recorded, and \(m\) are optional metadata (entropy,
+novelty). The buffer supports:
+\begin{itemize}
+\item insertion with overwrite (FIFO when full),
+\item prioritized sampling proportional to positive scores (falling back to uniform), and
+\item save/load to disk for reproducibility.
+\end{itemize}
+Implementation: see `planner.checkpoint_buffer.CheckpointBuffer`.
+
+\subsection{Trigger logic}
+A lightweight trigger decides when global planning is worth the compute. Typical
+signals include: large absolute TD-error, model ensemble variance on rewards,
+and extreme policy entropy (either very low or very high). Triggers obey a
+cooldown to prevent overuse. Formally, with thresholds \(\delta_{TD},\tau_{unc}\),
+trigger when
+\( |\delta_{TD}|>\delta_{TD} \) OR \( \mathrm{Var}(r)>\tau_{unc} \) OR
+\( H(\pi(\cdot|z))\notin[H_{low},H_{high}]\). See `planner.triggers.TriggerConfig`.
+
+\subsection{Branch generation and scoring}
+From a saved latent \(z_s\), we generate \(B\) candidate branches each of
+horizon \(H\) using either policy sampling or CEM-optimized action sequences.
+During each imagined step the RSSM produces \(z_{t+1}, r_t, \gamma_t\) and
+(optional) reward uncertainty \(\sigma_{r,t}\). We use an uncertainty-penalized
+reward
+\( r'_t = r_t - \kappa\sigma_{r,t} \), where \(\kappa\ge0\) is a hyperparameter.
+Branch returns are bootstrapped with the critic as:
+\begin{equation}
+\hat R_b = \sum_{k=0}^{H-1}\Big(\prod_{j=0}^{k-1}\gamma_{j}\Big) r'_{k} + \Big(\prod_{j=0}^{H-1}\gamma_j\Big) v_\psi(z_{H}).
+\end{equation}
+Branches are ranked by \(\hat R_b\) and aggregated for learning or action
+selection.
+
+\subsection{CEM branch proposal}
+When CEM is enabled we optimize an action-sequence distribution to maximize
+predicted branch return. The implemented CEM uses a population of size
+\(P\), selects the top-\(E\) elites each iteration, and re-fits a Gaussian
+sequence model for several iterations. CEM is warm-started from policy samples
+to improve sample efficiency and may be constrained to reasonable action bounds.
+Implementation details and pragmatic defaults live in `planner.advanced`.
+
+\subsection{Learning from branches}
+Each branch yields an imagined trajectory \(\tau=(z_0,a_0,r_0,\gamma_0,\dots)\).
+We compute TD(\(\lambda\)) targets backward along each branch using
+Equation~\eqref{eq:td-lambda} and treat the results as additional imagined
+training examples for the critic and actor. Practically:
+\begin{itemize}
+\item compute per-branch targets using backward recursion (stop-gradient on targets),
+\item update critic with MSE to targets and apply gradient clipping/regularization, and
+\item update actor via advantage-weighted objective using imagined actions and
+advantages \(\hat A_t = \mathrm{stopgrad}(G_t) - v_\psi(z_t)\).
+\end{itemize}
+We typically aggregate updates using the top-\(k\) branches or a reweighted
+mixture (softmax on returns) to limit the influence of model bias.
+
+\subsection{Branch-to-real distillation}
+To bias real actions toward promising branches we extract the first-action
+distribution over top branches and (optionally) distill that into the policy
+via a supervised loss (KL or cross-entropy for discrete actions). `planner.distill`
+provides helpers `branch_to_action_distribution` and `select_branch_action`.
+
+\subsection{Computational complexity and practical tips}
+Per planner invocation, the imagined-step cost scales as \(O(BH\cdot C_{step})\)
+where \(C_{step}\) is the RSSM step cost. CEM adds a factor proportional to the
+population size and iterations. To control wall-clock cost: reduce \(B\) or
+\(H\), increase trigger thresholds, or limit CEM usage. Use mixed precision and
+batch branch rollouts for GPU efficiency.
+
+\section{Implementation details}
+We provide a production-ready scaffold and practical guidance for integration.
+
+\subsection{Code layout and key modules}
+\begin{itemize}
+\item `planner/checkpoint_buffer.py` — checkpoint storage, prioritized sampling, save/load.
+\item `planner/simgolf_latent.py` — policy-sampled branching (minimal, robust interface).
+\item `planner/advanced.py` — CEM branch proposal, uncertainty-penalized returns.
+\item `planner/distill.py` — utilities for extracting and distilling first-action distributions.
+\item `scripts/train_simgolf_dreamerv3.py` — integration scaffold showing how to:
+  \begin{enumerate}
+  \item compute trigger statistics (TD-error, uncertainty, entropy),
+  \item sample checkpoints from buffer, and
+  \item run `simulate_branches` and apply imagined updates.
+  \end{enumerate}
+\end{itemize}
+
+\subsection{Integration hooks}
+To integrate with an existing Dreamer agent:
+\begin{enumerate}
+\item instrument the training loop to compute TD-errors per latent and push to the checkpoint buffer when thresholds are met,
+\item expose a periodic planner hook (or event-based trigger) that samples a checkpoint and runs the planner, and
+\item provide a pathway to apply imagined branch targets to actor and critic updates (e.g., `DreamerAgent.update_actor_critic_from_branches`).
+\end{enumerate}
+
+\subsection{Logging schema and metrics}
+Log planner-specific metrics alongside standard training metrics:
+`planner/branches` (count), `planner/top_return`, `planner/trigger_rate`,
+`planner/fps` (imagined steps per second), `planner/cost_fraction` (fraction of
+wall-time used by planner). Also log `td_error`, `uncertainty`, and `entropy` to
+facilitate ablation and analysis. Tests are available in `CA13/tests`.
+
+\subsection{Developer notes}
+Keep planner code import-safe (no heavy side-effects), add type hints and
+clear docstrings, and add unit tests that cover edge cases (empty buffer,
+file save/load, actor missing sample method). Use the existing stubs in the
+training script for smoke-testing before wiring into full DreamerV3 agents.
+
+\section{Experimental setup and ablations}
+We evaluate on hard navigation tasks where long-horizon planning and backtracking
+matter. Below we provide experimental protocols to ensure fair comparison and
+reproducibility.
+
+\subsection{Benchmarks and environments}
+Primary environments:
+\begin{itemize}
+\item D4RL AntMaze: `antmaze-umaze`, `antmaze-medium-play`, `antmaze-large-play` (use d4rl~v0.5+),
+\item DMControl maze/nav variants (if available), and
+\item Custom continuous mazes used for controlled ablations (deterministic map layouts).
+\end{itemize}
+
+\subsection{Baselines and variants}
+\begin{itemize}
+\item DreamerV3 baseline (no planner) using identical model capacity and optimization hyperparameters.
+\item DreamerV3 + SimGolf-Latent (policy-sampled branches).
+\item DreamerV3 + SimGolf-Latent + CEM (CEM enabled for branch proposals).
+\end{itemize}
+
+\subsection{Evaluation metrics and protocol}
+\begin{itemize}
+\item Success rate (binary goal completion) over evaluation episodes.
+\item Episode return and steps-to-goal for successful episodes.
+\item Planner overhead: imagined steps per second and wall-clock training time ratio.
+\item Trigger statistics: average triggers per 1e5 steps and distribution across trajectories.
+\end{itemize}
+
+\subsection{Ablations}
+Systematic ablations to understand behavior:
+\begin{enumerate}
+\item Branching factor \(B\): \{0 (off), 8, 16, 32\}.
+\item Horizon \(H\): \{5, 10, 20\}.
+\item Trigger modes: TD-error only, uncertainty only, entropy only, OR combination.
+\item CEM vs policy sampling and CEM hyperparameters (population, elites, iters).
+\item Uncertainty penalty \(\kappa\): \{0.0, 0.1, 0.5\}.
+\item Buffer size: \{256, 1024, 4096\}.
+\end{enumerate}
+
+\subsection{Statistical considerations}
+Use multiple random seeds (>=5) per experimental condition. Report mean ± std,
+IQM where appropriate, and compute bootstrap confidence intervals for success
+rates. Perform paired tests between baseline and planner variants when seeds
+are matched.
+
+\section{Results (Template)}
+\label{sec:results}
+The following templates and examples show how to present experimental results. Replace the example numbers with empirical values produced by your runs, and save all figures in the `figures/` directory. Use provided notebooks under `notebooks/` to generate plots and `scripts/` to aggregate metrics into CSVs for table construction.
+
+\subsection{Tables}
+\begin{itemize}
+\item Final performance table: for each environment, report mean ± std success rate and mean episode return across seeds.
+\item Overhead table: report planner imaginary steps per second and wall-clock training-time ratio vs baseline.
+\end{itemize}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lccc}
+\toprule
+Method & AntMaze-Umid (success) & AntMaze-Med (success) & Wall-time overhead \\
+\midrule
+DreamerV3 (baseline) & 0.45 ± 0.12 & 0.38 ± 0.10 & 1.00x \\
+DreamerV3 + SimGolf (B=16,H=12) & 0.62 ± 0.08 & 0.54 ± 0.09 & 1.22x \\
+\bottomrule
+\end{tabular}
+\caption{Example: replace numbers with empirical results (mean ± std). Include number of seeds in caption.}
+\end{table}
+
+\subsection{Figures and curves}
+\begin{itemize}
+\item Success rate (y-axis) vs training steps (x-axis) with shaded episode-wise std across seeds.
+\item Trigger rate over training (how often planner fired per 1e5 steps).
+\item Ablation plots: performance metric vs \(B\) / \(H\) / \(\kappa\).
+\end{itemize}
+
+\subsection{Figures & artifacts}
+Provide these concrete artifacts alongside the paper submission:
+\begin{itemize}
+\item `figures/success_curve.pdf/png` — success rate curves per env (SVG/PDF preferred for publication quality), 1200×600 px or vector.
+\item `figures/trigger_rate.pdf` — trigger frequency vs steps.
+\item `figures/ablation_B_H.pdf` — ablation grids for branching/horizon.
+\item `figures/branch_value_distributions.pdf` — distributions of branch returns.
+\item `data/metrics_<experiment>.csv` — step-indexed metrics for reproducibility and table generation.
+\end{itemize}
+
+Tips: prefer vector formats (PDF/SVG) for plots used in LaTeX. Include a small script `notebooks/generate_and_visualize_example.py --out_prefix figures/fig_branch_example` to recreate example figures from saved CSVs.
+
+\subsection{Statistical reporting and analysis}
+Report number of seeds, compute budget, and the random seeds used. For primary
+comparisons, use paired tests when seeds are matched and report bootstrap CIs
+for medians or means where appropriate. Discuss effect sizes and practical
+significance, not only p-values.
+
+\subsection{Hyperparameters (defaults)}
+\begin{table}[ht]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Parameter & Default & Notes \\
+\midrule
+Branching factor \(B\) & 16 & per planner call \\
+Horizon \(H\) & 12 & imagined steps \\
+CEM pop & 64 & if CEM enabled \\
+CEM elite & 8 & \\
+Kappa \(\kappa\) & 0.0 & uncertainty penalty \\
+Trigger TD threshold & 0.7 & absolute TD-error \\
+Buffer size & 1024 & \\
+Actor lr & 3e-4 & Adam \\
+Critic lr & 3e-4 & Adam \\
+\bottomrule
+\end{tabular}
+\caption{Representative defaults (see configs/antmaze_simgolf.yaml).}
+\end{table}
+
+\section{Related work}
+DreamerV1--V3 (Hafner et al.) introduced latent RSSMs and imagination-based policy
+learning. SimGolf introduced episodic resets with branching search. CEM-MPC is a
+classical planner; our CEM runs in latent-space to produce candidate action
+sequences. Prioritized replay and contrastive representation learning inform our
+checkpoint scoring and buffer design.
+
+\section{Discussion, Limitations, and Future Work}
+\subsection{Discussion}
+The SimGolf-Latent planner is complementary to Dreamer-style imagination: it
+injects global search at decision-critical moments, which can facilitate
+backtracking and recovery in sparse-reward navigation tasks. Our design trades
+extra compute (imagined rollouts) for better long-horizon planning and can be
+tuned to the available budget via trigger thresholds, branching factor, and
+horizon.
+
+\subsection{Limitations}
+Key limitations include:
+\begin{itemize}
+\item Model quality dependence: if the RSSM is biased or poorly calibrated, branch
+    returns may be misleading and can degrade performance.
+\item Computational overhead: frequent planning with large \(B,H\) or CEM can
+    significantly increase wall-clock training time.
+\item Partial observability and non-modeled hidden variables may make latent
+    resets unreliable for certain tasks where important state is not captured.
+\end{itemize}
+
+\subsection{Future work}
+Future directions to improve practicality and robustness:
+\begin{itemize}
+\item Better uncertainty estimation (ensembles or Bayesian heads) and principled
+    ways to incorporate model epistemic uncertainty into branch scoring.
+\item Cache-aware CEM warm-starts and hierarchical planner combinations to
+    improve sample efficiency of CEM proposals.
+\item Application to multi-agent or partially-observed multi-objective tasks
+    where global resets could be coordinated or constrained.
+\end{itemize}
+
+\section{Conclusion}
+We proposed SimGolf-Latent, a practical method for integrating global branching
+search with Dreamer-style latent imagination. We provide code, tests, and a
+clear experimental recipe to evaluate on hard navigation tasks and include an
+extensible scaffold to reproduce experiments and iterate on planner design.
+
+\appendix
+\section{TD(\(\lambda\)) derivation and implementation notes}
+Equation~\eqref{eq:td-lambda} is implemented as a backward recursion over each
+imagined branch. In practice we compute per-branch targets and aggregate top-k
+branches before updating the critic and actor (see `DreamerAgent.update_actor_critic_from_branches`).
+
+\section{Uncertainty penalty rationale}
+The penalty \(r' = r - \kappa\sigma_r\) is a simple pessimism heuristic: if
+predicted reward variance \(\sigma_r\) is high, the branch return is reduced to
+avoid over-optimistic selection. Formal bounds require assumptions on model bias
+and are left for future work.
+
+\section{Reproducibility checklist}
+For reproducibility, include the following in your experiment artifacts and in
+any shared supplementary material:
+\begin{itemize}
+\item Exact config YAML files used for each experiment (include planner and training sections).
+\item Seed RNGs for numpy/torch and report the list of seeds used.
+\item Save the git commit hash and a short environment README (package versions).
+\item Save planner checkpoint dumps and metrics CSV files (step-indexed).
+\item Include commands to reproduce key runs (example below) and a script to re-run evaluation with a saved agent.
+\end{itemize}
+
+\subsection{Example commands}
+\begin{verbatim}
+# create venv and install deps
+python -m venv .venv && source .venv/bin/activate
+python -m pip install -r requirements.txt
+
+# run training with a given config
+python scripts/train_simgolf_dreamerv3.py --config configs/antmaze_simgolf.yaml --workdir ./runs/exp1
+
+# run unit tests
+pytest -q
+
+# build the paper
+pdflatex report.tex && bibtex report && pdflatex report.tex
+\end{verbatim}
+
+\section{Compute resources and runtimes}
+Report typical compute used for each experiment: GPU model (e.g., NVIDIA A100), CPU, RAM, and number of hosts. Include typical wall-clock time for a single seed and for entire budgets (e.g., wall-time for 1e6 env steps). Provide a table in the supplementary material summarizing runtimes for baseline and planner-enabled runs.
+
+\section{Full hyperparameter table}
+Include a comprehensive hyperparameter table in the supplementary material (or as JSON/YAML in `configs/`). At minimum include:
+\begin{itemize}
+\item model architecture details (rssm dims, actor/critic hidden sizes),
+\item optimizer settings (lr, weight decay, betas),
+\item planner settings (B, H, kappa, CEM pop/elite/iters), and
+\item training settings (batch size, warmup steps, total steps, seed list).
+\end{itemize}
+
+\section{Data and code availability}
+State where code is hosted (e.g., repository URL) and provide pointers to any external datasets or environment versions (d4rl versions, DMControl versions). For custom mazes include a `data/` directory or scripts to generate the maps and include seed lists used for evaluation.
+
+\section{Submission checklist}
+Before submitting or releasing the paper and artifacts, ensure the following are complete:
+\begin{itemize}
+\item Replace the author placeholder with the final author list and affiliations in `report.tex`.
+\item Fill tables/figures with empirical results and add figure files to `figures/`.
+\item Verify LaTeX compiles cleanly on a fresh environment (pdflatex -> bibtex -> pdflatex).
+\item Run `pytest` in `CA13/tests` and ensure all tests pass.
+\item Archive the exact config and seed lists for the reported experiments.
+\item Include a brief README in the run directory describing how to reproduce the core figures.
+\end{itemize}
+
+\section{Author contributions and conflicts of interest}
+For transparency, include an explicit author contributions statement (e.g., conceptualization, algorithm design, implementation, experiments, writing). Disclose funding sources and any potential conflicts of interest.
+
+\section*{Acknowledgements}
+We thank collaborators and code references (DreamerV3, SimGolf).
+
+\bibliographystyle{unsrt}
+\begin{thebibliography}{9}
+\bibitem{hafner2023dreamerv3}
+Danijar Hafner et al., DreamerV3: Mastering Diverse Domains through World Models, ICLR 2023.
+\bibitem{sim_golf}
+SimGolf authors, Simulation-Based Global Search, NeurIPS 2024.
+\end{thebibliography}
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

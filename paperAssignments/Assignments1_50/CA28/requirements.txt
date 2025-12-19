@@ -1,0 +1,8 @@
+numpy
+torch
+gym
+pyyaml
+matplotlib
+pytest
+ruff
+pre-commit

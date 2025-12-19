@@ -1,0 +1,23 @@
+seed: 42
+input_dim: 8
+hidden_dim: 64
+action_dim: 4
+lr: 1e-3
+batch_size: 32
+epochs: 10
+device: "cuda"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

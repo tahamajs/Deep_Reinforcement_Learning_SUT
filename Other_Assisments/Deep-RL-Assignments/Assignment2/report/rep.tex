@@ -1,0 +1,200 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,graphicx,hyperref,booktabs}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{geometry}
+\geometry{margin=1in}
+\title{Assignment 2 — Deep Q-Networks and Dynamic Programming (VI / PI) \\ Implementation Report}
+\author{Author: Student / Repository: Deep-RL-Assignments/Assignment2}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report documents two parts of Assignment 2:
+\begin{enumerate}
+  \item A Deep Q-Network (DQN) implementation for CartPole (Keras / TensorFlow).
+  \item Tabular Dynamic Programming algorithms (Value Iteration and Policy Iteration) on FrozenLake variants (VI/PI).
+\end{enumerate}
+Both code paths are implemented in this repository under \texttt{src/}. The DQN
+agent is runnable via \texttt{run\_dqn.py} and the DP algorithms via
+\texttt{run\_vi\_pi.py}. The report lists algorithms, implementation choices,
+compatibility fixes for Gymnasium/Keras, hyperparameters, and example outputs
+including saved visualizations.
+\end{abstract}
+
+\section{Part I — Deep Q-Network (DQN)}
+\subsection{Overview}
+DQN approximates the optimal action-value function \(Q^*(s,a)\) using a neural
+network and uses experience replay and a target network for stability
+\cite{mnih2015human}. The implementation sits in \texttt{src/q\_network.py},
+\texttt{src/dqn\_agent.py}, and \texttt{src/replay\_memory.py}.
+
+\subsection{Algorithm (brief)}
+\begin{enumerate}
+  \item Collect transitions using an epsilon-greedy policy.
+  \item Store transitions in replay buffer.
+  \item Sample minibatches and compute targets:
+  \[
+    y = r + \gamma \max_{a'} Q_{\text{target}}(s',a';\theta^-)
+  \]
+  \item Minimize MSE loss between \(y\) and \(Q(s,a;\theta)\).
+  \item Periodically copy weights \(\theta \to \theta^-\).
+\end{enumerate}
+
+\subsection{Implementation notes and fixes}
+\begin{itemize}
+  \item TF2/GPU: use tf.config.experimental.set\_memory\_growth when available,
+    with a tf.compat.v1 fallback for older setups (see \texttt{run\_dqn.py}).
+  \item Keras compatibility: explicit \texttt{keras.Input(shape=(input,))} and
+    \texttt{Adam(learning\_rate=...)} to avoid deprecated argument errors.
+  \item Gym/Gymnasium: handle differences in \texttt{env.reset()} and
+    \texttt{env.step()} return signatures (tuple vs single values).
+\end{itemize}
+
+\subsection{Hyperparameters (DQN)}
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+Learning rate & 0.001 \\
+Memory size & 50000 \\
+Batch size & 32 \\
+Gamma & 0.99 \\
+Epsilon start & 1.0 \\
+Epsilon final & 0.05 \\
+Target update freq & 10 (steps) \\
+Num episodes & 5000 (default branch) \\
+\bottomrule
+\end{tabular}
+
+\subsection{Example outputs}
+Training logs and TensorBoard scalars are written to \texttt{logs/CartPole-v0/}.
+You can generate videos with \texttt{--render}. Example plots (loss/reward)
+can be produced from the TensorBoard logs (not embedded here).
+
+\section{Part II — Dynamic Programming (Value Iteration / Policy Iteration)}
+\subsection{Overview}
+This component implements tabular Value Iteration and Policy Iteration for
+discrete MDPs, exercised on FrozenLake variants. The code resides under
+\texttt{src/}: \texttt{value\_iteration.py}, \texttt{policy\_iteration.py},
+\texttt{policy\_evaluation.py}, \texttt{policy\_improvement.py}, and helpers.
+
+\subsection{Environment compatibility}
+Modern Gymnasium environments wrap base envs and do not expose legacy
+attributes such as \texttt{nS}, \texttt{nA} or transition table \texttt{P}.
+To support both legacy code and Gymnasium:
+\begin{itemize}
+  \item \texttt{src/environment.py} unwraps wrappers and constructs dense
+    \texttt{T} and \texttt{R} arrays when possible.
+  \item DP code now derives \texttt{nS}/\texttt{nA} from the observation/action
+    spaces or from \texttt{env.T} if available, and prefers \texttt{env.T}/\texttt{env.R}
+    when computing Bellman updates for speed and clarity.
+\end{itemize}
+
+\subsection{Algorithms}
+\paragraph{Value Iteration}
+Iteratively apply Bellman optimality:
+\[
+V_{k+1}(s) = \max_a \sum_{s'} P(s'|s,a)\left[r(s,a,s') + \gamma V_k(s')\right]
+\]
+until convergence.
+
+\paragraph{Policy Iteration}
+Alternates policy evaluation (solve for \(V^\pi\)) and policy improvement:
+\[
+\pi'(s) = \arg\max_a \sum_{s'} P(s'|s,a)\left[r(s,a,s') + \gamma V^\pi(s')\right]
+\]
+until policy stable.
+
+\subsection{FrozenLake specifics and helper package}
+The assignment includes a small helper package under
+\texttt{hw2-VI-PI-DQN/Q2-VI-PI/deeprl\_hw2q2/} that defines deterministic and
+stochastic FrozenLake variants and a NegReward variant. The environment
+registration was adapted to Gymnasium entry points.
+
+\subsection{Saved Visualizations}
+The DP runner saves visualizations via \texttt{src/visualization.py}. Example
+outputs (generated when you run \texttt{run\_vi\_pi.py}) are saved under:
+\begin{itemize}
+  \item \texttt{pictures/value\_func\_heatmap\_4x4.png} — value function heatmap.
+  \item \texttt{pictures/policy\_letters\_4x4.png} — policy letters image (table).
+\end{itemize}
+Include these figures in the report as follows:
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.7\linewidth]{pictures/value_func_heatmap_4x4.png}
+\caption{Value function heatmap for Deterministic 4x4 FrozenLake (example run).}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.5\linewidth]{pictures/policy_letters_4x4.png}
+\caption{Derived greedy policy (letters) for Deterministic 4x4 FrozenLake.}
+\end{figure}
+
+\subsection{Representative Results}
+An example run produced the following value function (swept to convergence):
+\[
+V \approx [0.9, 0.0, 0.387, 0.430, 1.0, 0.0, 0.0, 0.478, 0.9, 0.0, 0.0, 0.531, 0.81, 0.729, 0.656, 0.590]
+\]
+and a corresponding policy (in action indices) as printed by the runner.
+
+\section{Reproducibility / How to run}
+\begin{enumerate}
+  \item Create and activate a virtual environment:
+  \begin{verbatim}
+  python -m venv .venv && source .venv/bin/activate
+  pip install -r Other_Assisments/Deep-RL-Assignments/Assignment2/src/requirements.txt
+  \end{verbatim}
+  \item To run DP algorithms and save visualizations:
+  \begin{verbatim}
+  python run_vi_pi.py
+  \end{verbatim}
+  The code will write images to \texttt{pictures/} and logs to \texttt{logs/}.
+  \item To run DQN:
+  \begin{verbatim}
+  python run_dqn.py --env CartPole-v0
+  \end{verbatim}
+\end{enumerate}
+
+\section{Code map}
+\begin{itemize}
+  \item \texttt{run\_dqn.py} — DQN entrypoint and GPU setup.
+  \item \texttt{run\_vi\_pi.py} — VI/PI runner and visualization calls.
+  \item \texttt{src/q\_network.py} — neural network model for DQN.
+  \item \texttt{src/dqn\_agent.py} — DQN agent and training loop.
+  \item \texttt{src/replay\_memory.py} — replay buffer.
+  \item \texttt{src/environment.py} — env wrapper for FrozenLake and deriving T/R.
+  \item \texttt{src/value\_iteration.py}, \texttt{src/policy\_iteration.py}, \texttt{src/policy\_evaluation.py}, \texttt{src/policy\_improvement.py} — DP algorithms.
+  \item \texttt{src/visualization.py} — heatmap and policy image saving utilities.
+\end{itemize}
+
+\section{Future Work}
+\begin{itemize}
+  \item Extend DQN with replay prioritization and dueling networks.
+  \item Add unit tests and continuous-integration checks for DP routines.
+  \item Produce aggregated plots across multiple seeds and parameter sweeps.
+\end{itemize}
+
+\appendix
+\section{Selected Code References}
+\begin{itemize}
+  \item \texttt{src/q\_network.py} — network definition (Keras Sequential).
+  \item \texttt{src/dqn\_agent.py} — agent, experience collection, and training logic.
+  \item \texttt{src/environment.py} — unwrapping and T/R construction for FrozenLake.
+  \item \texttt{src/visualization.py} — saving policy letters and value heatmaps.
+\end{itemize}
+
+\section{Example hyperparameters JSON}
+The runner stores hyperparameters used in runs under \texttt{logs/<env>/<timestamp>/hyperparameters.json}.
+
+\section{Acknowledgements}
+Based on standard DQN algorithms and the Sutton \& Barto DP exercises. Thanks to Gymnasium and Keras.
+
+\end{document}
+
+

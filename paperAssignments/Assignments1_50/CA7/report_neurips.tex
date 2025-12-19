@@ -1,0 +1,162 @@
+\documentclass{article}
+\usepackage{neurips_2024}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\title{GET-ROPR: Gradient Eligibility Traces for Recurrent Off-Policy RL}
+\author{Auto-generated for Assignment CA7}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present GET-ROPR, a practical method to incorporate backward-view
+TD($\lambda$) eligibility traces into recurrent off-policy reinforcement learning.
+GET-ROPR blends IS-aware backward traces with forward-view lambda-return surrogates,
+hidden-state recomputation, and target networks to enable stable long-horizon credit assignment
+in replay-based recurrent agents.
+\end{abstract}
+
+\section{Introduction}
+Partial observability is ubiquitous in real-world control. Recurrent critics with replay
+are effective but suffer from stale hidden states and truncated BPTT which limit credit
+assignment. Eligibility traces (TD($\lambda$)) offer a classical remedy; GET-ROPR brings
+this idea to modern deep recurrent off-policy agents with engineering choices that ensure
+stability and efficiency.
+
+\section{Related work}
+We build on classic TD($\lambda$) theory \cite{sutton2018reinforcement} and integrate ideas
+from recurrent off-policy learning (RESeL) and modern off-policy actor-critic algorithms
+such as SAC/TD3.
+
+\section{Method}
+\subsection{Notation}
+Observations \(o_t\), actions \(a_t\), rewards \(r_t\), discount \(\gamma\), done \(d_t\).
+Policy \(\pi_\theta(a|o,h)\), behavior \(\mu\). Recurrent critic \(Q_\phi(o,h,a)\).
+
+\subsection{Backward-view IS traces}
+Define the TD error
+\[
+\delta_t = r_t + \gamma(1-d_t) Q_{\bar\phi}(o_{t+1},h_{t+1},a_{t+1}) - Q_\phi(o_t,h_t,a_t).
+\]
+The backward-view (clipped IS) eligibility trace is:
+\[
+e_t = \bar{\rho}_t\big(\lambda\gamma(1-d_{t-1})e_{t-1} + \nabla_\phi Q_\phi(o_t,h_t,a_t)\big),
+\quad \bar{\rho}_t = \min(\rho_t, c_\rho).
+\]
+The parameter update direction is \(g=\sum_t \delta_t e_t\).
+
+\subsection{Forward-view surrogate and implementation}
+We optimize the forward surrogate
+\[
+\mathcal{L}=\tfrac12\sum_t (G_t^\lambda - Q_t)^2,\quad
+G_t^\lambda = Q_t + \sum_{n\ge1} (\gamma\lambda)^{n-1}\Big(\prod_{i=1}^{n-1}\bar{\rho}_{t+i}\Big)\delta_{t+n-1}.
+\]
+This allows efficient autograd-based implementation while matching the backward view
+in exact arithmetic. Hidden states are recomputed per-batch to reduce staleness.
+
+\section{Algorithm}
+Pseudo-summary:
+\begin{enumerate}
+  \item Sample batch of sequences from replay.
+  \item Recompute hidden states \(h_{0:L}\) with current networks.
+  \item Compute Q-values, lambda-returns (with clipped IS), and MSE loss.
+  \item Update critics (twin critics supported).
+  \item Update actor with SAC-style objective using minimum of twin critics and automatic temperature tuning.
+  \item Soft-update targets and checkpoint periodically.
+\end{enumerate}
+
+\section{Experiments}
+\subsection{Setup}
+Benchmarks: Flicker-Atari (Atari with frame masking) and DMControl occlusion (occluded observations).
+We report return curves, trace-norm statistics, IS-ratio distributions, and hidden-state staleness.
+
+\subsection{Metrics and plotting}
+Figures generated during training are saved to \texttt{pictures/}. Example plotting code is in the demo notebook.
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.48\linewidth]{../pictures/fig_returns.png}
+  \includegraphics[width=0.48\linewidth]{../pictures/fig_metrics.png}
+  \caption{Example return and metrics figures (placeholders). Left: return curve (mean ± std). Right: trace norm and IS ratio over time.}
+  \label{fig:metrics}
+\end{figure}
+
+\subsection{Visualizations}
+We provide supplementary visualizations to analyze credit assignment and staleness:
+\begin{itemize}
+  \item Trace norm heatmap (episodes × timesteps) saved as \texttt{fig_trace_heatmap.png}.
+  \item IS-ratio histogram saved as \texttt{fig_rho_hist.png}.
+  \item Hidden-state staleness curve saved as \texttt{fig_staleness.png}.
+\end{itemize}
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.48\linewidth]{../pictures/fig_trace_heatmap.png}
+  \includegraphics[width=0.48\linewidth]{../pictures/fig_rho_hist.png}
+  \caption{Left: trace norm heatmap showing how trace magnitudes evolve across timesteps and episodes. Right: distribution of importance-sampling ratios with clip line.}
+  \label{fig:heat_rho}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.7\linewidth]{../pictures/fig_staleness.png}
+  \caption{Hidden-state staleness over replayed timesteps: recomputed vs stored hidden similarity (mean ± std).}
+  \label{fig:staleness}
+\end{figure}
+
+\subsection{Results (placeholder tables)}
+\begin{table}[ht]
+  \centering
+  \caption{Sample Ablation Results (placeholders).}
+  \begin{tabular}{lcccc}
+    \toprule
+    Env & Method & Return & Std & Steps-to-threshold \\
+    \midrule
+    FlickerPong & Baseline & 17.5 & 1.8 & 1.5M \\
+    FlickerPong & GET-ROPR & \textbf{20.1} & \textbf{1.2} & \textbf{1.0M} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Appendix: Proof sketches}
+\subsection{Equivalence of forward/backward views}
+Sketch: Under standard interchange of sum/integral and exact arithmetic, the gradient of
+the lambda-return MSE equals \(\sum_t \delta_t e_t\) where \(e_t\) are backward traces.
+We follow the derivation in classical texts and adapt for clipped IS by replacing products
+with clipped products; clipping introduces bounded bias that can be controlled by \(c_\rho\).
+
+\subsection{Trace norm bound}
+If \(\|\nabla_\phi Q_t\|\le G_{\max}\) and \(\bar\rho\le c_\rho\) then
+\[
+\|e_t\|\le c_\rho \sum_{k=0}^t (\lambda\gamma c_\rho)^k G_{\max} = \frac{c_\rho G_{\max}}{1-\lambda\gamma c_\rho},
+\]
+requiring \(\lambda\gamma c_\rho<1\) for bounded traces.
+
+\section{Reproducibility}
+All scripts, config defaults, and a demo notebook are included in the code release. Use
+the provided CSV logger or replace with W&B/TensorBoard for richer monitoring.
+
+\paragraph{Code and tests} The implementation includes a minimal unit test suite under
+`tests/` (run `pytest -q`). The demo runner `train_sac_full.py` logs `returns_mean`
+and saves checkpoints under `outputs/ca7/`. Figures in this draft are placeholders until
+experiment runs are executed and saved to `pictures/`.
+
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

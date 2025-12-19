@@ -1,0 +1,193 @@
+% NeurIPS 2024 style paper converted from README (Assignment CA11)
+\\documentclass{article}
+\\usepackage[final]{neurips_2024}
+\\usepackage{amsmath,amssymb}
+\\usepackage{graphicx}
+\\usepackage{booktabs}
+\\usepackage{hyperref}
+\\usepackage{cleveref}
+
+\\title{Transformer-Based World Models with State-Space Duality (TWM-SSD)}
+\\author{Assignment CA11 -- Author: Course Material}
+
+\\begin{document}
+\\maketitle
+
+\\begin{abstract}
+We present TWM-SSD, a hybrid world-model architecture that merges Transformer-style linear attention with state-space model (SSM) recurrence via State-Space Duality (SSD). TWM-SSD interleaves SSM blocks (diagonal-stable parameterization) with linear-attention Transformer blocks to obtain both long-range expressivity and efficient, linear-time recurrence. We provide the method, matching equations, an implementation mapping (\\texttt{src/model.py}), training objectives, experimental protocol, ablations, and appendices with theoretical remarks and hyperparameters.
+\\end{abstract}
+
+\\section{Introduction}
+Model-based RL and world-modeling require architectures that capture long-horizon dependencies without prohibitive compute. Transformers offer expressive global context via attention, but scale quadratically in context length. SSMs (and Mamba variants) provide linear-time recurrence with inductive biases for time-series. SSD shows linear attention can be interpreted as a discrete SSM; this permits principled hybridization. Our contribution is a compact, practical TWM-SSD design that:
+\\begin{itemize}
+  \\item Replaces softmax attention with a linear feature-map attention (\\S\\ref{sec:attn-ssm});
+  \\item Interleaves SSM recurrence (stable diagonal parameterization) with linear-attention Transformer blocks (\\S\\ref{sec:hybrid});
+  \\item Provides a training objective for reconstruction, reward prediction, and optional actor-critic control (\\S\\ref{sec:training});
+  \\item Supplies a reproducible implementation mapping (code pointers) and an experimental protocol (\\S\\ref{sec:experiments}).
+\\end{itemize}
+
+\\section{Background and Notation}
+We consider trajectories $\\tau = (o_1,a_1,r_1,\\dots,o_T)$ with tokenized observations $o_t\\in\\mathbb{R}^D$. Let $h_t\\in\\mathbb{R}^D$ denote latent states. For sequences length $L$ we write inputs as matrices $O\\in\\mathbb{R}^{B\\times L \\times D}$ (batch first).
+
+\\section{Method}
+\\subsection{Linear attention and SSD}
+\\label{sec:attn-ssm}
+Linear attention replaces softmax with a kernel-feature map $\\phi:\\mathbb{R}^d\\to\\mathbb{R}^m$ (often $m=d$). Given queries $q_t$, keys $k_t$, and values $v_t$:
+\\begin{equation}
+\\mathrm{Attn}(q_t;K,V) = \\phi(q_t)\\Big(\\sum_{i\\le t} \\phi(k_i)^\\top v_i\\Big).
+\\end{equation}
+Define running accumulators
+\\[
+S_t = \\sum_{i\\le t} \\phi(k_i) v_i^\\top, \\quad Z_t = \\sum_{i\\le t} \\phi(k_i).
+\\]
+Then the attention output is $\\phi(q_t)^\\top S_t$. This accumulation is algebraically equivalent to a discretized convolution / SSM accumulation; choosing $\\phi$ corresponds to choosing an SSM kernel, establishing SSD.
+
+\\subsection{State-space recurrence (SSMBlock)}
+We use a diagonal-stable parameterization to ensure recurrence stability. For per-dimension parameters $a\\in(-1,1)^D$ and input gain $b\\in\\mathbb{R}^D$, the SSM update is:
+\\begin{align}
+h_{t+1} &= a \\odot h_t + b \\odot \\mathrm{proj}(x_t),\\qquad a = \\tanh(\\tilde a),\\;\\tilde a\\in\\mathbb{R}^D,\\\\
+y_t &= C h_t,
+\\end{align}
+where $\\mathrm{proj}$ is a learned linear map. This is implemented in \\texttt{SSMBlock} (\\texttt{src/model.py}) where $a$ is parameterized with tanh for spectral control and $b$ is a learned gain.
+
+\\subsection{Hybrid Block and full backbone}
+The SSDHybridBlock composes (1) an SSM update, (2) linear-attention, and (3) an MLP residual:
+\\begin{align}
+x' &= x + \\mathrm{SSM}\\big(\\mathrm{LN}(x)\\big),\\\\
+x'' &= x' + \\mathrm{LinAttn}\\big(\\mathrm{LN}(x')\\big),\\\\
+x^{+} &= x'' + \\mathrm{MLP}\\big(\\mathrm{LN}(x'')\\big).
+\\end{align}
+The full backbone stacks $N$ such blocks. The implementation corresponds to \\texttt{SSDHybridBlock} and \\texttt{TWMSSDModel} in \\texttt{src/model.py}.
+
+\\subsection{Image tokenization (VQ-VAE)}
+For image-based tasks we provide an ImageVQVAE module (\\texttt{src/tokenizer.py}). The encoder downsamples images (two stride-2 convolutions), projects to $D$ channels and flattens the $H'\\times W'$ grid into a sequence of length $L=H'W'$. Quantization uses a learnable codebook $E\\in\\mathbb{R}^{K\\times D}$ with nearest-neighbor lookup:
+\\[
+\\mathrm{index}(z_i) = \\arg\\min_k \\|z_i - E_k\\|_2^2,\\quad \\mathrm{quant}(z_i)=E_{\\mathrm{index}(z_i)}.
+\\]
+We use the straight-through estimator for backprop through quantization. See \\texttt{ImageVQVAE} in code for exact shapes and conv kernels.
+
+\\section{Training Objectives}
+\\label{sec:training}
+We optimize a combination of:
+\\begin{itemize}
+  \\item Observation reconstruction: $\\mathcal{L}_\\mathrm{obs} = \\mathbb{E}\\|\\hat o_{t+1}-o_{t+1}\\|^2$ (MSE or token cross-entropy for VQ tokens).
+  \\item Reward loss: $\\mathcal{L}_r = \\mathbb{E}\\|\\hat r_t - r_t\\|^2$.
+  \\item Optional KL regularization if using stochastic latents.
+\\end{itemize}
+Total model loss used in code (\\texttt{src/losses.py}):
+\\[
+\\mathcal{L} = w_{\\mathrm{obs}}\\,\\mathcal{L}_\\mathrm{obs} + w_r\\,\\mathcal{L}_r.
+\\]
+For VQ-VAE we additionally include reconstruction MSE between decoded images and inputs (see \\texttt{vq_reconstruction_loss}).
+
+\\section{Experimental Protocol}
+\\label{sec:experiments}
+Datasets: Atari-100k (image tokens), DMControl (pixels or low-dim states), MiniGrid for partial observability.
+
+Training loop (implemented in \\texttt{scripts/experiment.py} and \\texttt{train.py}):
+\\begin{enumerate}
+  \\item Build replay buffer and sample sequences of length $L$.
+  \\item Tokenize images (ImageVQVAE) to obtain sequences $(o_t)_{t=1}^L$.
+  \\item Forward through backbone to produce $\\hat o_{t+1}, \\hat r_t$.
+  \\item Compute losses, backprop, clip gradients, and step optimizer.
+  \\item Periodically checkpoint model+optimizer and log metrics to TensorBoard and optionally Weights\\&Biases.
+\\end{enumerate}
+The code includes TB image logging of VQ-VAE reconstructions and W&B run naming / resume support (see \\texttt{scripts/experiment.py}).
+
+\\section{Ablations}
+We recommend the following ablation axes (also in README):
+\\begin{itemize}
+  \\item SSM ratio (0, 25, 50, 75, 100\\%).
+  \\item Attention type: linear vs softmax.
+  \\item Tokenization: VQ-VAE vs patch embeddings.
+  \\item Context length $L$ (e.g., 128, 256, 512).
+  \\item Planner: Dreamer actor vs CEM.
+\\end{itemize}
+
+\\section{Implementation Notes and Code Mapping}
+Key files:
+\\begin{itemize}
+  \\item \\texttt{src/model.py}: \\texttt{LinearAttention}, \\texttt{SSMBlock}, \\texttt{SSDHybridBlock}, \\texttt{TWMSSDModel}, \\texttt{TWMSSDImageModel}.
+  \\item \\texttt{src/tokenizer.py}: \\texttt{ImageVQVAE}, \\texttt{SimpleVQVAE}.
+  \\item \\texttt{src/losses.py}: reconstruction and VQ losses.
+  \\item \\texttt{scripts/experiment.py}, \\texttt{train.py}: training and experiment runner (TB/W&B).
+\\end{itemize}
+The latex equations here are implemented in the code with matching variable names (e.g., feature-map $\\phi$ corresponds to \\texttt{LinearAttention.feature_map}, SSM $a,b$ correspond to \\texttt{SSMBlock.logit_a} and \\texttt{SSMBlock.b}).
+
+\\section{Evaluation Metrics}
+Report:
+\\begin{itemize}
+  \\item Return (episodic) vs training steps (10 seeds).
+  \\item Model NLL / MSE vs steps.
+  \\item Planning throughput (imagined steps/sec).
+  \\item Ablation tables and FLOPs vs performance.
+\\end{itemize}
+
+\\section{Conclusion}
+TWM-SSD offers a practical pathway to combine transformer expressivity and SSM efficiency via SSD. The implementation provides a clear mapping from equations to code and a reproducible experiment runner.
+
+\\appendix
+\\section{Appendix A: SSD derivation sketch}
+Linear attention with explicit feature map $\\phi$ can be written as:
+\\[
+o_t = \\phi(q_t)\\Big(\\sum_{i\\le t} \\phi(k_i)^\\top v_i\\Big).
+\\]
+Define $S_t = \\sum_{i\\le t} \\phi(k_i) v_i^\\top$. Then $S_t$ satisfies $S_{t+1}=S_t + \\phi(k_{t+1})v_{t+1}^\\top$, a first-order recurrence that can be written in SSM form. Matching discretized convolution kernels yields the SSD correspondence (see README \\S24).
+
+\\section{Appendix B: Bias bound notes (sketch)}
+When approximating softmax attention with a linear kernel $\\phi$, the induced bias depends on the choice of $\\phi$ and the distribution of $q,k$. For bounded inputs and Lipschitz kernels the approximation error scales with $\\mathcal{O}(\\|\\phi\\|_{\\infty}\\,L^{-1/2})$ under Monte-Carlo kernel approximation assumptions. Detailed bounds depend on kernel RKHS norm and are left as future work.
+
+\\section{Appendix C: Sinkhorn notes}
+We include Sinkhorn references for optional transport-based auxiliary losses (used in other assignments). See \\texttt{paperAssignments/Assignments1-50/CA1} for a reference Sinkhorn implementation.
+
+\\section{Appendix D: Hyperparameters}
+Default config (file: \\texttt{configs/default.yaml}):
+\\begin{table}[h]
+  \\centering
+  \\begin{tabular}{lrr}
+    \\toprule
+    Param & Value \\\\
+    \\midrule
+    d\\_model & 128 \\\\
+    n\\_heads & 4 \\\\
+    n\\_layers & 4 \\\\
+    seq\\_len & 64 \\\\
+    batch\\_size & 8 \\\\
+    lr & 1e-4 \\\\
+    weight\\_decay & 0.0 \\\\
+    dropout & 0.1 \\\\
+    ssm\\_ratio & 0.5 \\\\
+    \\bottomrule
+  \\end{tabular}
+  \\caption{Representative default hyperparameters.}
+\\end{table}
+
+\\section{Appendix E: Reproducibility checklist}
+Seed logging, config save, checkpoints (model+tokenizer+optimizer), and environment versions must be recorded. The experiment runner saves checkpoints and logs to TensorBoard; W&B integration supports run names and resume.
+
+To reproduce basic checks and smoke runs locally (examples):
+\begin{verbatim}
+python -m pip install -U torch torchvision pytest
+pytest -q
+python train.py --steps 20
+python scripts/experiment.py --steps 100 --save-dir runs/ca11
+\end{verbatim}
+
+\\bibliographystyle{plain}
+\\bibliography{references}
+\\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

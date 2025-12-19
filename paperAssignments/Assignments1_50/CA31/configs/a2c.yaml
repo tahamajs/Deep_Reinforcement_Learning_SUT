@@ -1,0 +1,11 @@
+# A2C Configuration
+env_name: "CartPole-v1"
+gamma: 0.99
+learning_rate: 0.001
+entropy_coef: 0.01
+value_coef: 0.5
+max_grad_norm: 0.5
+num_steps: 5
+num_envs: 16
+total_timesteps: 50000
+seed: 42

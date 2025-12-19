@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400">
+  <rect width="100%" height="100%" fill="#ffffff" />
+  <g transform="translate(60,40)">
+    <rect width="680" height="320" fill="#fafafa" stroke="#ddd"/>
+    <!-- axes -->
+    <line x1="0" y1="320" x2="680" y2="320" stroke="#333"/>
+    <line x1="0" y1="0" x2="0" y2="320" stroke="#333"/>
+    <!-- ticks -->
+    <!-- y ticks -->
+    <g fill="#333" font-size="12">
+      <text x="-40" y="320" text-anchor="end">0</text>
+      <text x="-40" y="260" text-anchor="end">50</text>
+      <text x="-40" y="200" text-anchor="end">100</text>
+      <text x="-40" y="140" text-anchor="end">150</text>
+      <text x="-40" y="80" text-anchor="end">200</text>
+    </g>
+    <!-- sample baseline (blue) -->
+    <polyline fill="none" stroke="#1f77b4" stroke-width="2" points="
+      0,300 40,290 80,250 120,210 160,170 200,140 240,120 280,105 320,95 360,90 400,88 440,87 480,86 520,86 560,86 600,86 640,86 680,86"/>
+    <!-- double dqn (green) -->
+    <polyline fill="none" stroke="#2ca02c" stroke-width="2" points="
+      0,300 40,288 80,240 120,200 160,160 200,132 240,112 280,100 320,93 360,90 400,88 440,87 480,86 520,86 560,85 600,85 640,84 680,84"/>
+    <!-- prioritized (orange) -->
+    <polyline fill="none" stroke="#ff7f0e" stroke-width="2" points="
+      0,300 40,286 80,236 120,196 160,158 200,130 240,112 280,98 320,92 360,88 400,87 440,86 480,85 520,85 560,84 600,84 640,83 680,83"/>
+    <!-- Legend -->
+    <g transform="translate(480,10)" font-size="12">
+      <rect x="0" y="0" width="170" height="70" fill="#fff" stroke="#eee"/>
+      <g>
+        <line x1="10" y1="18" x2="30" y2="18" stroke="#1f77b4" stroke-width="3"/>
+        <text x="40" y="22">Baseline (synthetic)</text>
+        <line x1="10" y1="38" x2="30" y2="38" stroke="#2ca02c" stroke-width="3"/>
+        <text x="40" y="42">Double DQN (synthetic)</text>
+        <line x1="10" y1="58" x2="30" y2="58" stroke="#ff7f0e" stroke-width="3"/>
+        <text x="40" y="62">Prioritized (synthetic)</text>
+      </g>
+    </g>
+    <!-- Labels -->
+    <text x="340" y="360" font-size="14" text-anchor="middle">Episode</text>
+    <text x="-50" y="170" transform="rotate(-90 -50,170)" font-size="14" text-anchor="middle">Total Reward</text>
+  </g>
+</svg>

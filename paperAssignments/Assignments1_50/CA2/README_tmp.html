@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>README.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="crossq-with-sophia-optimization-high-utd-continuous-control-without-target-networks">CrossQ with Sophia Optimization: High-UTD Continuous Control Without Target Networks</h1>
+<h2 id="0-tldr">0. TL;DR</h2>
+<p>Replace Adam with the second-order Sophia optimizer in CrossQ to push Update-To-Data (UTD) ratios beyond 1 while maintaining stability. Batch Normalization (BN) plus Sophia’s curvature-aware scaling should allow fast, target-network-free TD learning on MuJoCo tasks with &gt;5k reward in &lt;1M steps.</p>
+<h2 id="1-source-papers-and-repos">1. Source Papers and Repos</h2>
+<ul>
+<li><strong>CrossQ: Batch Normalization in Deep Reinforcement Learning</strong> (ICLR 2024) — GitHub: https://github.com/adityab/CrossQ</li>
+<li><strong>Sophia: A Scalable Stochastic Second-Order Optimizer</strong> (ICLR 2024) — GitHub: https://github.com/Liuhong99/Sophia</li>
+</ul>
+<h2 id="2-research-gap--novel-question">2. Research Gap / Novel Question</h2>
+<p>CrossQ stabilizes bootstrapping without target networks via BN, but Adam gradients become unstable as UTD rises (≥5), limiting sample-efficiency gains. Hypothesis: Sophia’s diagonal Hessian preconditioning will (a) keep value-scale drift bounded under BN, (b) enable UTD 10–20 without divergence, and (c) accelerate convergence on hard continuous-control benchmarks.</p>
+<h2 id="3-mathematical-formulation">3. Mathematical Formulation</h2>
+<h3 id="31-crossq-critic-loss-single-critic-extend-to-twin-critics-if-desired">3.1 CrossQ Critic Loss (single critic; extend to twin critics if desired)</h3>
+<p>[
+\mathcal{L}{\text{CrossQ}}(\theta)
+= \mathbb{E}{(s,a,r,s')\sim \mathcal{D}}
+\Big[\big(Q_\theta(s,a)-y\big)^2\Big],
+\
+y = r + \gamma \max_{a'} Q_\theta(s', a')
+]
+BN is applied to concatenated current/next batches to share statistics.</p>
+<h3 id="32-sophia-g-update-per-parameter">3.2 Sophia-G Update (per-parameter)</h3>
+<p>Let (g_t = \nabla_\theta \mathcal{L}t), (h_t \approx \text{diag Hessian}) (EMA).
+[
+m_t = \beta_1 m{t-1} + (1-\beta_1) g_t,
+\quad
+h_t = \beta_2 h_{t-1} + (1-\beta_2) \hat{h}t
+]
+[
+\theta{t+1} = \theta_t - \eta \cdot
+\text{clip}!\left(\frac{m_t}{\max(\gamma h_t, \epsilon)}, -\delta, \delta\right)
+]
+where (\hat{h}_t) is a mini-batch Hessian-diagonal estimator (e.g., squared gradients), (\gamma) scales curvature, and (\delta) clips extreme steps. BN stats must stay consistent during Hessian estimation; freeze or synchronize running means during (\hat{h}_t) computation.</p>
+<h3 id="33-utd-and-bn-stability">3.3 UTD and BN Stability</h3>
+<ul>
+<li>UTD = gradient steps per env step. BN keeps scale invariant across concatenated ([s, s']); Sophia’s curvature term counteracts BN-induced non-stationarity at high UTD.</li>
+</ul>
+<h2 id="4-algorithm-outline">4. Algorithm Outline</h2>
+<ol>
+<li>Sample batch (B = {(s,a,r,s')}).</li>
+<li>Build concatenated tensors: (X = [s; s']) → BN → features.</li>
+<li>Critic forward → (Q_\theta(s,a)), target (y).</li>
+<li>Compute loss (\mathcal{L}); backprop to get (g_t).</li>
+<li>Update Hessian diag estimate (\hat{h}_t); apply Sophia step.</li>
+<li>Actor (TD3-style): delay policy update; policy loss (-\mathbb{E}{s} Q\theta(s, \pi_\phi(s))).</li>
+<li>Repeat <code>UTD</code> times per env step; periodically update BN running stats from mixed (s, s') mini-batches.</li>
+</ol>
+<h2 id="5-implementation-blueprint-pytorch">5. Implementation Blueprint (PyTorch)</h2>
+<ul>
+<li><strong>Base repo:</strong> fork <code>adityab/CrossQ</code>.</li>
+<li><strong>Key file touchpoints:</strong>
+<ul>
+<li><code>agent.py</code> or equivalent: inject Sophia optimizer class; expose <code>--utd</code>, <code>--bn_momentum</code>, <code>--sophia_gamma</code>, <code>--sophia_eps</code>, <code>--sophia_clip</code>.</li>
+<li><code>networks.py</code>: ensure BN layers accept concatenated batches (<code>(2N, feature_dim)</code>), and support <code>eval()</code> freeze when estimating Hessian diag if needed.</li>
+<li><code>replay_buffer.py</code>: unchanged; but ensure sampler can yield large batches for stable BN stats (e.g., batch 1024).</li>
+</ul>
+</li>
+<li><strong>New module:</strong> <code>optim/sophia.py</code>
+<ul>
+<li>Implements Sophia-G with EMA of gradient and Hessian diag.</li>
+<li>Supports mixed-precision safe ops; uses <code>torch.clamp</code> for stability.</li>
+</ul>
+</li>
+<li><strong>Logging:</strong> track <code>||g||</code>, <code>||h||</code>, BN running mean/var drift, and UTD × loss curves.</li>
+</ul>
+<h2 id="6-experimental-protocol">6. Experimental Protocol</h2>
+<h3 id="61-environments">6.1 Environments</h3>
+<ul>
+<li>MuJoCo v4: Humanoid-v4, Ant-v4, Walker2d-v4.</li>
+<li>Control suite alternative: DMControl Cheetah/Walker for cross-check.</li>
+</ul>
+<h3 id="62-hyperparameters-starting-grid">6.2 Hyperparameters (starting grid)</h3>
+<ul>
+<li><code>utd</code>: {1, 5, 10, 20}</li>
+<li>Batch size: 1024</li>
+<li>Replay size: 1e6</li>
+<li>Discount γ: 0.99</li>
+<li>Policy delay: 2 (if TD3-style)</li>
+<li>BN momentum: 0.05</li>
+<li>Sophia: <code>beta1=0.965</code>, <code>beta2=0.99</code>, <code>gamma=0.1</code>, <code>eps=1e-12</code>, <code>clip=1.0</code>, <code>lr_critic=3e-4</code>, <code>lr_actor=3e-4</code></li>
+</ul>
+<h3 id="63-ablations">6.3 Ablations</h3>
+<ul>
+<li>Adam vs Sophia at UTD ∈ {1,5,10,20}</li>
+<li>BN on/off (expect failure without BN at UTD&gt;1)</li>
+<li>Hessian estimation frequency: every step vs every k=2/4 steps</li>
+<li>BN stats handling: train-mode vs frozen during Hessian pass</li>
+</ul>
+<h3 id="64-metrics">6.4 Metrics</h3>
+<ul>
+<li>Episode return (mean, IQM) vs env steps</li>
+<li>Divergence rate (NaN/inf in Q or loss blow-up)</li>
+<li>Gradient and Hessian norms</li>
+<li>Wall-clock to 5k Humanoid reward</li>
+</ul>
+<h2 id="7-engineering-notes">7. Engineering Notes</h2>
+<ul>
+<li><strong>BN + Hessian:</strong> When estimating (\hat{h}_t), run BN in eval or synchronize stats to avoid double-drift.</li>
+<li><strong>Mixed precision:</strong> Prefer <code>torch.cuda.amp</code> for forward/backward; keep Hessian accumulations in FP32.</li>
+<li><strong>Replay freshness:</strong> Large UTD benefits from prioritized or recency-biased sampling; optional.</li>
+<li><strong>Target networks:</strong> Keep disabled (CrossQ design); if instability remains at UTD 20, allow a slow-EMA target as a safety fallback.</li>
+</ul>
+<h2 id="8-docker--reproducibility">8. Docker / Reproducibility</h2>
+<p>Use a pinned CUDA image:</p>
+<pre class="hljs"><code><div>FROM pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
+RUN apt-get update &amp;&amp; apt-get install -y libgl1-mesa-glx
+RUN pip install mujoco==3.1.5 gymnasium[mujoco]==0.29.1 wandb hydra-core==1.3.2
+</div></code></pre>
+<p>Seed all RNGs; log config + git SHA; run ≥3 seeds per setting (prefer 5) and report IQM with bootstrap CIs (<code>rliable</code>).</p>
+<h2 id="9-success-criteria">9. Success Criteria</h2>
+<ul>
+<li>Stable training at UTD 10 on Humanoid-v4 without target networks.</li>
+<li>≥5k reward within 1M env steps; improvement over CrossQ+Adam at same UTD.</li>
+<li>No BN/stat explosions; finite losses across runs.</li>
+</ul>
+<h2 id="10-checklist">10. Checklist</h2>
+<ul>
+<li><input type="checkbox" id="checkbox0"><label for="checkbox0">Implement </label><code>SophiaG</code> optimizer.</li>
+<li><input type="checkbox" id="checkbox1"><label for="checkbox1">Integrate optimizer switch &amp; hyperparams CLI.</label></li>
+<li><input type="checkbox" id="checkbox2"><label for="checkbox2">Ensure BN uses concatenated (s,s') batches; add unit test for stat consistency.</label></li>
+<li><input type="checkbox" id="checkbox3"><label for="checkbox3">Add logging for grad/Hessian norms and BN drift.</label></li>
+<li><input type="checkbox" id="checkbox4"><label for="checkbox4">Run ablations (Adam vs Sophia; UTD sweep).</label></li>
+<li><input type="checkbox" id="checkbox5"><label for="checkbox5">Aggregate results with IQM + CIs; produce table + learning curves.</label></li>
+</ul>
+<hr>
+<h2 id="11-extended-design-dossier">11. Extended Design Dossier</h2>
+<h3 id="111-objective-recap">11.1 Objective Recap</h3>
+<ul>
+<li>Achieve high UTD training in CrossQ without target networks.</li>
+<li>Use Sophia’s curvature-aware steps to stabilize BN-based critics.</li>
+<li>Maintain sample efficiency on MuJoCo while preventing divergence.</li>
+<li>Provide reproducible configs, ablations, and evaluation protocols.</li>
+</ul>
+<h3 id="112-core-modules">11.2 Core Modules</h3>
+<ul>
+<li>Encoder + Q-head with BN on concatenated (s, s′).</li>
+<li>Sophia optimizer implementation (diagonal Hessian approx).</li>
+<li>UTD training loop with policy delay (if TD3-style actor).</li>
+<li>Replay buffer (uniform/PER).</li>
+<li>Eval harness for MuJoCo (return, episode length, stability metrics).</li>
+<li>Logging (grad norms, Hessian diag stats, BN drift, loss).</li>
+</ul>
+<h3 id="113-stability-levers">11.3 Stability Levers</h3>
+<ul>
+<li>UTD ratio.</li>
+<li>BN momentum and affine flags.</li>
+<li>Sophia hyperparams: beta1, beta2, gamma (curvature scale), eps, clip, lr.</li>
+<li>Learning rates for actor/critic.</li>
+<li>Gradient clipping.</li>
+<li>Optional EMA target as safety fallback (off by default).</li>
+</ul>
+<h3 id="114-architectural-variants">11.4 Architectural Variants</h3>
+<ul>
+<li>Single critic vs twin critics (TD3-style).</li>
+<li>Deterministic vs stochastic policy (DDPG vs TD3).</li>
+<li>BN vs GN/LayerNorm ablation (baseline BN expected).</li>
+<li>Shared encoder vs separate for critics.</li>
+</ul>
+<hr>
+<h2 id="12-mathematical-details-additional">12. Mathematical Details (Additional)</h2>
+<ul>
+<li>CrossQ loss remains MSE TD error; Sophia modifies parameter update, not objective.</li>
+<li>Sophia Hessian proxy often taken as squared gradients or EMA of second moment; ensure consistent batch usage with BN.</li>
+<li>UTD &gt;1 increases reuse of batches; BN stabilizes scale by mixing (s,s′).</li>
+<li>Policy gradient (TD3 actor): maximize Q(s, π(s)) with delayed updates; critic provides gradients shaped by Sophia.</li>
+<li>Clipping in Sophia prevents exploding steps when Hessian diag small.</li>
+</ul>
+<hr>
+<h2 id="13-hyperparameter-cookbook">13. Hyperparameter Cookbook</h2>
+<ul>
+<li>UTD: 1 / 5 / 10 / 20</li>
+<li>Batch: 512 / 1024</li>
+<li>Replay size: 1e6</li>
+<li>BN momentum: 0.05 / 0.1</li>
+<li>Sophia: beta1=0.965 / 0.95, beta2=0.99, gamma=0.1 / 0.2, eps=1e-12, clip=1.0</li>
+<li>LR critic: 3e-4 / 1e-3</li>
+<li>LR actor: 3e-4 / 1e-3 (if actor used)</li>
+<li>Grad clip: 1.0 / 2.0</li>
+<li>Policy delay: 2 (TD3 style)</li>
+<li>Exploration noise (TD3): 0.1 Gaussian; target noise 0.2, clip 0.5</li>
+<li>Eval episodes: 10 (≥3 seeds)</li>
+</ul>
+<hr>
+<h2 id="14-evaluation-playbook">14. Evaluation Playbook</h2>
+<ul>
+<li>Envs: Humanoid-v4, Ant-v4, Walker2d-v4; optionally Hopper-v4.</li>
+<li>Metrics: episode return (mean, median, IQM), time-to-5k (Humanoid), divergence rate (NaN/inf), grad/Hessian norms.</li>
+<li>Seeds: ≥3 (prefer 5).</li>
+<li>Eval frequency: every 10k env steps (or every 100k gradient steps).</li>
+<li>Record step time; measure speed vs UTD.</li>
+<li>Report CI via stratified bootstrap.</li>
+</ul>
+<hr>
+<h2 id="15-debugging-cookbook">15. Debugging Cookbook</h2>
+<ul>
+<li>Divergence at high UTD: lower UTD or lr; raise gamma (Sophia); increase BN momentum; add grad clip.</li>
+<li>BN drift: check running stats; ensure concatenation of (s,s′); consider eval-mode for Hessian estimation.</li>
+<li>Hessian diag zeros: add floor to h_t (eps); verify accumulation.</li>
+<li>Actor lagging: increase policy delay or reduce critic updates (UTD).</li>
+<li>Slow learning: increase lr slightly; reduce clip; lower ε exploration noise if deterministic.</li>
+</ul>
+<hr>
+<h2 id="16-profiling--performance">16. Profiling &amp; Performance</h2>
+<ul>
+<li>Measure step time vs UTD; expect near-linear growth.</li>
+<li>Hessian estimation cost ~one extra pass; consider subsampling Hessian frequency (every k steps).</li>
+<li>Use AMP for forward/backward; keep Hessian accumulations FP32.</li>
+<li>Pre-allocate buffers; keep BN stats on GPU.</li>
+<li>Profile BN throughput on large batches (1024).</li>
+</ul>
+<hr>
+<h2 id="17-risk-assessment">17. Risk Assessment</h2>
+<ul>
+<li>High UTD without proper BN/Sophia can diverge quickly.</li>
+<li>BN statistics with mixed (s,s′) must be consistent; mis-handling leads to scale drift.</li>
+<li>Hessian approximation noise can cause unstable steps; clip and floor h_t.</li>
+<li>Replay bias: high UTD oversamples recent data; monitor for overfitting to narrow regime.</li>
+</ul>
+<hr>
+<h2 id="18-reproducibility-protocol">18. Reproducibility Protocol</h2>
+<ul>
+<li>Fix seeds; log git SHA + config.</li>
+<li>Save checkpoints (critic, actor, optimizer, replay pointer, scheduler step).</li>
+<li>Run ≥3 (prefer 5) seeds per config.</li>
+<li>Report IQM + CI for returns.</li>
+<li>Keep MuJoCo version and mujoco-py consistent; set <code>MUJOCO_GL=egl</code> for headless.</li>
+</ul>
+<hr>
+<h2 id="19-dataset--env-notes">19. Dataset &amp; Env Notes</h2>
+<ul>
+<li>MuJoCo v4 tasks; use Gymnasium API.</li>
+<li>Reward scales vary: Humanoid large; Ant/Walker moderate; LR/Sophia gamma may need per-task tuning.</li>
+<li>Action noise: OU or Gaussian; start 0.1, decay optionally.</li>
+<li>Normalize observations if beneficial; BN handles activations inside network.</li>
+</ul>
+<hr>
+<h2 id="20-visualization-plan">20. Visualization Plan</h2>
+<ul>
+<li>Learning curves (return vs env steps) per UTD and optimizer.</li>
+<li>Grad/Hessian norm plots over time.</li>
+<li>BN running mean/var drift over training.</li>
+<li>Step time vs UTD.</li>
+<li>Stability plots: count of NaN/inf events.</li>
+</ul>
+<hr>
+<h2 id="21-baseline-comparison-set">21. Baseline Comparison Set</h2>
+<ul>
+<li>CrossQ + Adam @ UTD=1.</li>
+<li>CrossQ + Adam @ UTD=5,10 (expect instability).</li>
+<li>CrossQ + Sophia @ UTD=1,5,10,20.</li>
+<li>TD3 (standard) as external baseline.</li>
+<li>Optionally REDQ or ReBRAC for data-efficiency comparison.</li>
+</ul>
+<hr>
+<h2 id="22-failure-case-narratives">22. Failure Case Narratives</h2>
+<ul>
+<li>Adam @ UTD=10 diverges: grad explosion; BN stats swing; Sophia expected to stabilize.</li>
+<li>Sophia without clipping: occasional spikes; add clip=1.0.</li>
+<li>BN omitted: scale drift causes overestimation; target networks would be needed otherwise.</li>
+<li>Hessian too stale (updated rarely): curvature misspecification; keep reasonable frequency.</li>
+</ul>
+<hr>
+<h2 id="23-implementation-checklist-granular">23. Implementation Checklist (Granular)</h2>
+<ul>
+<li><input type="checkbox" id="checkbox6"><label for="checkbox6">SophiaG implemented with EMA of grad and Hessian diag.</label></li>
+<li><input type="checkbox" id="checkbox7"><label for="checkbox7">Hessian floor via eps; clipping applied.</label></li>
+<li><input type="checkbox" id="checkbox8"><label for="checkbox8">BN layers receive concatenated (s,s′) batches; unit test for stat equality to manual calc.</label></li>
+<li><input type="checkbox" id="checkbox9"><label for="checkbox9">UTD loop repeats critic step </label><code>utd</code> times per env step.</li>
+<li><input type="checkbox" id="checkbox10"><label for="checkbox10">Policy delay respected (if actor).</label></li>
+<li><input type="checkbox" id="checkbox11"><label for="checkbox11">Logging: loss, grad norm, Hessian norm, BN running stats, step time.</label></li>
+<li><input type="checkbox" id="checkbox12"><label for="checkbox12">Eval script deterministic; noise off.</label></li>
+<li><input type="checkbox" id="checkbox13"><label for="checkbox13">Seed control and config save.</label></li>
+</ul>
+<hr>
+<h2 id="24-command-templates-text-only">24. Command Templates (Text Only)</h2>
+<ul>
+<li>Train: <code>python train.py task=humanoid utd=10 optim=sophia gamma=0.1 eps=1e-12 clip=1.0 bn_momentum=0.05</code></li>
+<li>Train alt: <code>python train.py task=ant utd=20 optim=sophia beta1=0.965 beta2=0.99 lr=3e-4</code></li>
+<li>Eval: <code>python eval.py checkpoint=ckpt_best.pth --episodes 10</code></li>
+<li>Sweep: <code>python sweep.py task=walker utd=[1,5,10,20] optim=[adam,sophia]</code></li>
+</ul>
+<hr>
+<h2 id="25-timeline--milestones-week-plan">25. Timeline &amp; Milestones (Week Plan)</h2>
+<ul>
+<li>Day 1: Implement Sophia; unit tests on toy regression; BN concat test.</li>
+<li>Day 2: Integrate into CrossQ; Humanoid smoke (UTD=1).</li>
+<li>Day 3: UTD sweep 1/5/10; log stability.</li>
+<li>Day 4: UTD 20 with tuning (lr, gamma, clip); add actor delay if needed.</li>
+<li>Day 5: Ablations (BN momentum, Hessian freq, clipping).</li>
+<li>Day 6: Full runs 1M steps; collect results and plots.</li>
+<li>Day 7: Summaries, tables, README update.</li>
+</ul>
+<hr>
+<h2 id="26-extended-glossary">26. Extended Glossary</h2>
+<ul>
+<li><strong>UTD:</strong> updates per environment step.</li>
+<li><strong>BN:</strong> Batch Normalization; stabilizes scale.</li>
+<li><strong>Sophia:</strong> stochastic second-order optimizer with Hessian diag scaling.</li>
+<li><strong>γ (gamma in Sophia):</strong> curvature scaling factor (not discount).</li>
+<li><strong>clip:</strong> clamp on update magnitude in Sophia.</li>
+<li><strong>EMA:</strong> exponential moving average.</li>
+<li><strong>PER:</strong> prioritized experience replay.</li>
+<li><strong>IQM:</strong> interquartile mean.</li>
+</ul>
+<hr>
+<h2 id="27-detailed-pseudocode">27. Detailed Pseudocode</h2>
+<ul>
+<li>Initialize networks, replay, optimizer (Sophia), schedulers.</li>
+<li>Loop over env steps:</li>
+<li>• Select action with exploration noise (if actor) or greedy Q.</li>
+<li>• Step env; store transition.</li>
+<li>• For i in 1..UTD:</li>
+<li>– Sample batch.</li>
+<li>– Forward: Q(s,a), target r+γQ(s′,a′).</li>
+<li>– Loss = MSE; backprop to get grad g.</li>
+<li>– Update Hessian diag estimate (\hat{h}) (e.g., squared grad).</li>
+<li>– Apply Sophia step with clipping and eps floor.</li>
+<li>• Every policy_delay steps: update actor (if used).</li>
+<li>• Log metrics; eval periodically; save checkpoints.</li>
+</ul>
+<hr>
+<h2 id="28-hyperparameter-sensitivities">28. Hyperparameter Sensitivities</h2>
+<ul>
+<li>High UTD → lower lr, lower clip threshold, stronger gamma.</li>
+<li>High BN momentum smooths stats; too high slows adaptation.</li>
+<li>Hessian freq: too rare → stale; too frequent → overhead.</li>
+<li>Actor delay: larger delay stabilizes actor when critic noisy.</li>
+</ul>
+<hr>
+<h2 id="29-reproducibility-artifacts">29. Reproducibility Artifacts</h2>
+<ul>
+<li>YAML configs per experiment.</li>
+<li>Seed list; git SHA.</li>
+<li>Checkpoints (best/last).</li>
+<li>Logs (CSV) for loss/metrics.</li>
+<li>Plots scripts.</li>
+<li>System info (CUDA, MuJoCo version).</li>
+</ul>
+<hr>
+<h2 id="30-visualization-recipes">30. Visualization Recipes</h2>
+<ul>
+<li>Return vs env steps (per UTD, per optimizer).</li>
+<li>Grad/Hessian norms vs steps.</li>
+<li>BN running mean/var vs steps.</li>
+<li>Update magnitude histograms.</li>
+<li>Step time vs UTD.</li>
+</ul>
+<hr>
+<h2 id="31-compute-budget-scenarios">31. Compute Budget Scenarios</h2>
+<ul>
+<li>Light: UTD=1, batch=512, no actor → fits 8GB.</li>
+<li>Medium: UTD=10, batch=1024 → 12GB recommended.</li>
+<li>Heavy: UTD=20, batch=1024, twin critics → 16GB+.</li>
+</ul>
+<hr>
+<h2 id="32-extended-faq">32. Extended FAQ</h2>
+<ul>
+<li><strong>Why Sophia over Adam?</strong> Curvature-aware scaling stabilizes high UTD without targets.</li>
+<li><strong>Do we still need target networks?</strong> Not for CrossQ design; optional fallback.</li>
+<li><strong>How to set gamma (Sophia)?</strong> Start 0.1; increase if updates too aggressive.</li>
+<li><strong>Hessian source?</strong> Use squared grads or mini-batch Hessian diag approximations.</li>
+<li><strong>BN vs LayerNorm?</strong> BN chosen to stabilize scale with concatenated batches; LN may underperform.</li>
+<li><strong>Exploration?</strong> Gaussian noise; decayed optionally; or parameter noise as ablation.</li>
+</ul>
+<hr>
+<h2 id="33-unit-test-matrix">33. Unit Test Matrix</h2>
+<ul>
+<li>Sophia step updates decrease loss on toy quadratic.</li>
+<li>Hessian diag non-negative; floored by eps.</li>
+<li>BN concat test: running mean/var matches manual computation.</li>
+<li>UTD loop executes correct number of times per env step.</li>
+<li>Policy delay enforced.</li>
+</ul>
+<hr>
+<h2 id="34-ablation-narratives">34. Ablation Narratives</h2>
+<ul>
+<li>Adam vs Sophia: expect divergence of Adam at UTD≥10; Sophia stable.</li>
+<li>Clip on/off: clipping prevents rare spikes; turning off may speed but risk blow-up.</li>
+<li>BN momentum: lower momentum (0.05) handles non-stationarity better.</li>
+<li>Hessian freq: every step vs every 2–4 steps trade accuracy vs speed.</li>
+<li>Actor delay: necessary when UTD high to avoid chasing changing critic.</li>
+</ul>
+<hr>
+<h2 id="35-risk-controls">35. Risk Controls</h2>
+<ul>
+<li>Auto-reduce lr if loss &gt; threshold.</li>
+<li>Early stop if NaN detected; resume from last good checkpoint.</li>
+<li>Logging alerts for Hessian zeros or huge values.</li>
+<li>Option to switch to Adam mid-run if Sophia misbehaves (for debugging).</li>
+</ul>
+<hr>
+<h2 id="36-data-handling">36. Data Handling</h2>
+<ul>
+<li>Replay size 1e6; prioritize recent if needed.</li>
+<li>PER optional; apply IS weights to avoid bias.</li>
+<li>Normalize observations optional; BN helps internal normalization.</li>
+<li>Reward scaling generally unnecessary; keep consistent across runs.</li>
+</ul>
+<hr>
+<h2 id="37-profiling-checklist">37. Profiling Checklist</h2>
+<ul>
+<li>Measure time spent in BN, Hessian update, forward/backward.</li>
+<li>Compare step time across UTD values.</li>
+<li>Monitor GPU utilization; batch size adjustment if low utilization.</li>
+<li>Memory profiling: verify fits device; adjust batch if OOM.</li>
+</ul>
+<hr>
+<h2 id="38-storage-planning">38. Storage Planning</h2>
+<ul>
+<li>Checkpoints ~10–50MB each; keep best/last per seed.</li>
+<li>Logs minimal; plots small.</li>
+<li>Keep run manifest listing configs and checkpoints.</li>
+</ul>
+<hr>
+<h2 id="39-extended-commands-library">39. Extended Commands Library</h2>
+<ul>
+<li><code>python train.py task=humanoid utd=5 optim=sophia gamma=0.2 clip=0.5 batch=1024</code></li>
+<li><code>python train.py task=ant utd=10 optim=adam lr=1e-3</code> (baseline)</li>
+<li><code>python train.py task=walker utd=20 optim=sophia beta1=0.95 beta2=0.99</code></li>
+<li><code>python eval.py checkpoint=ckpt_best.pth --episodes 20 --deterministic</code></li>
+<li><code>python profile.py task=humanoid utd=10 batch=1024</code></li>
+</ul>
+<hr>
+<h2 id="40-timeline-for-paper-quality-results">40. Timeline for Paper-Quality Results</h2>
+<ul>
+<li>Week 1: Implementation + sanity; UTD sweep small.</li>
+<li>Week 2: Full MuJoCo runs; ablations; collect tables/plots.</li>
+<li>Week 3: Robustness checks (noise perturbations); finalize hyperparams.</li>
+<li>Week 4: Writeup; release code + configs.</li>
+</ul>
+<hr>
+<h2 id="41-robustness-tests">41. Robustness Tests</h2>
+<ul>
+<li>Transition noise: add Gaussian noise to obs; evaluate stability.</li>
+<li>Reward noise: perturb rewards; see if Sophia maintains stability.</li>
+<li>Dynamics shift: change mass/friction; test zero-shot generalization.</li>
+<li>Exploration noise schedules: fixed vs decayed.</li>
+</ul>
+<hr>
+<h2 id="42-safetyethics-notes">42. Safety/Ethics Notes</h2>
+<ul>
+<li>Sim-only benchmarks; no sensitive data.</li>
+<li>Report energy if running long sweeps.</li>
+<li>Document when BN/Sophia choices alter fairness of comparisons (e.g., UTD differences).</li>
+</ul>
+<hr>
+<h2 id="43-additional-mathematical-checks">43. Additional Mathematical Checks</h2>
+<ul>
+<li>Verify Lipschitz effect of BN + Sophia step size: monitor norm of updates.</li>
+<li>Analyze coupling of BN stats and Hessian estimation; confirm stable EMA.</li>
+<li>Theoretical upper bound on update magnitude under clip and gamma.</li>
+</ul>
+<hr>
+<h2 id="44-extended-pseudocode-for-sophia">44. Extended Pseudocode for Sophia</h2>
+<ul>
+<li>Input: params θ, moments m, h; grad g.</li>
+<li>m ← β1 m + (1-β1) g</li>
+<li>h ← β2 h + (1-β2) (\hat{h}) (e.g., g²)</li>
+<li>denom ← max(γ h, eps)</li>
+<li>step ← clip(m / denom, -clip, clip) * lr</li>
+<li>θ ← θ - step</li>
+<li>Return θ, m, h</li>
+</ul>
+<hr>
+<h2 id="45-bn-handling-notes">45. BN Handling Notes</h2>
+<ul>
+<li>Concatenate (s, s′) along batch: shape (2N, feat).</li>
+<li>Training mode during forward; for Hessian estimation you may freeze BN to avoid stat shift.</li>
+<li>Track running mean/var drift; log for analysis.</li>
+<li>If BN unstable, try GroupNorm as ablation (expect lower performance).</li>
+</ul>
+<hr>
+<h2 id="46-actor-considerations-if-using-td3-style">46. Actor Considerations (if using TD3-style)</h2>
+<ul>
+<li>Policy delay reduces actor updates relative to critic; crucial at high UTD.</li>
+<li>Target policy smoothing with noise; clamp.</li>
+<li>Exploration noise decays over time; ensure not zero too early.</li>
+<li>Actor lr often smaller than critic when UTD high.</li>
+</ul>
+<hr>
+<h2 id="47-comparative-expectations">47. Comparative Expectations</h2>
+<ul>
+<li>Adam @ UTD=1: baseline speed; slower sample efficiency.</li>
+<li>Adam @ UTD=10: likely unstable/divergent.</li>
+<li>Sophia @ UTD=10: stable; faster wall-clock to target return.</li>
+<li>Sophia @ UTD=20: may need lower lr/gamma; still feasible with tuning.</li>
+</ul>
+<hr>
+<h2 id="48-visualization-defaults">48. Visualization Defaults</h2>
+<ul>
+<li>Plot return curves with CI.</li>
+<li>Plot grad/Hessian norms on log scale.</li>
+<li>Histogram of update magnitudes per optimizer.</li>
+<li>BN running mean/var drift chart.</li>
+<li>Step time vs UTD scatter.</li>
+</ul>
+<hr>
+<h2 id="49-unit-test-ideas-additional">49. Unit Test Ideas (Additional)</h2>
+<ul>
+<li>Compare Sophia step to analytical solution on 1D quadratic.</li>
+<li>Ensure clip applied symmetrically.</li>
+<li>Hessian floor applied: min(denom) ≥ eps.</li>
+<li>BN concat correctness via manual computation on synthetic data.</li>
+<li>UTD loop executes exact count; test with counter.</li>
+</ul>
+<hr>
+<h2 id="50-ablation-matrix-suggested">50. Ablation Matrix (Suggested)</h2>
+<ul>
+<li>Optimizers: Adam, AdamW, Sophia.</li>
+<li>UTD: 1,5,10,20.</li>
+<li>BN momentum: 0.05, 0.1.</li>
+<li>Clip: 0.5, 1.0, 2.0.</li>
+<li>Gamma (Sophia): 0.05, 0.1, 0.2.</li>
+<li>Hessian freq: every step vs every 2 vs every 4 steps.</li>
+</ul>
+<hr>
+<h2 id="51-error-modes--remedies">51. Error Modes &amp; Remedies</h2>
+<ul>
+<li>Spike in loss: decrease lr/clip; raise gamma; check BN stats.</li>
+<li>Grad norm collapse: increase lr slightly; lower gamma; check Hessian zeroing.</li>
+<li>Actor collapse: increase policy delay; reduce actor lr; add noise.</li>
+<li>VRAM OOM: reduce batch; reduce UTD; smaller network.</li>
+</ul>
+<hr>
+<h2 id="52-storage--artifacts">52. Storage &amp; Artifacts</h2>
+<ul>
+<li>Keep run manifest (config + seed + checkpoint path).</li>
+<li>Store best and last checkpoints per seed.</li>
+<li>Compress logs if many runs.</li>
+<li>Version checkpoints with hash to avoid overwrite.</li>
+</ul>
+<hr>
+<h2 id="53-extended-commands-for-sweeps">53. Extended Commands for Sweeps</h2>
+<ul>
+<li><code>python sweep.py task=ant utd=[1,5,10,20] optim=sophia gamma=[0.1,0.2] clip=[0.5,1.0]</code></li>
+<li><code>python sweep.py task=humanoid bn_momentum=[0.05,0.1] batch=[512,1024]</code></li>
+<li><code>python sweep.py task=walker hessian_freq=[1,2,4]</code></li>
+</ul>
+<hr>
+<h2 id="54-integration-with-logging-tools">54. Integration with Logging Tools</h2>
+<ul>
+<li>wandb: log metrics, gradients, Hessian norms, BN stats, step time.</li>
+<li>TensorBoard: optional; add scalars for loss and norms.</li>
+<li>CSV: always save for reproducibility; minimal dependency.</li>
+</ul>
+<hr>
+<h2 id="55-additional-robustness-experiments">55. Additional Robustness Experiments</h2>
+<ul>
+<li>Domain randomization: vary mass/friction per episode; check adaptation.</li>
+<li>Action noise schedules: compare fixed vs decayed.</li>
+<li>Reward scaling: test effect; expect CrossQ+Sophia robust but confirm.</li>
+<li>PER on/off: impact on stability at UTD 20.</li>
+</ul>
+<hr>
+<h2 id="56-checklist-before-large-runs">56. Checklist Before Large Runs</h2>
+<ul>
+<li><input type="checkbox" id="checkbox14"><label for="checkbox14">Loss/grad/Hessian logging verified.</label></li>
+<li><input type="checkbox" id="checkbox15"><label for="checkbox15">BN concat implemented and unit tested.</label></li>
+<li><input type="checkbox" id="checkbox16"><label for="checkbox16">Sophia hyperparams set; clip enabled.</label></li>
+<li><input type="checkbox" id="checkbox17"><label for="checkbox17">Eval script deterministic; seeds set.</label></li>
+<li><input type="checkbox" id="checkbox18"><label for="checkbox18">Storage and compute budget checked.</label></li>
+<li><input type="checkbox" id="checkbox19"><label for="checkbox19">Line count target (≥1000) tracked.</label></li>
+</ul>
+<hr>
+<h2 id="57-future-work-ideas">57. Future Work Ideas</h2>
+<ul>
+<li>Curvature-aware actor updates (Sophia for policy).</li>
+<li>Layer-wise γ/clip for Sophia.</li>
+<li>Adaptive UTD based on loss plateau.</li>
+<li>BN stat alignment across devices for distributed runs.</li>
+<li>Combine with REDQ-style ensemble for even higher UTD.</li>
+</ul>
+<hr>
+<h2 id="58-extended-mathematical-notes-on-utd">58. Extended Mathematical Notes on UTD</h2>
+<ul>
+<li>Effective sample reuse factor = UTD.</li>
+<li>Gradient correlation increases with UTD; Sophia’s scaling can mitigate correlated noise.</li>
+<li>BN on concatenated (s,s′) normalizes joint distribution, stabilizing scale under reuse.</li>
+<li>Theoretical regret bound with high UTD remains open; empirical evidence guides selection.</li>
+</ul>
+<hr>
+<h2 id="59-checklist-for-bn--sophia-interaction">59. Checklist for BN + Sophia Interaction</h2>
+<ul>
+<li>Ensure Hessian uses same mode as forward (train/eval) as intended.</li>
+<li>Consider freezing BN during Hessian accumulation if stats drift.</li>
+<li>Log difference between running and batch stats to detect drift.</li>
+<li>Test small vs large batches to observe BN sensitivity.</li>
+</ul>
+<hr>
+<h2 id="60-extended-evaluation-metrics">60. Extended Evaluation Metrics</h2>
+<ul>
+<li>Time-to-threshold (e.g., return ≥5000).</li>
+<li>Variance of returns across seeds.</li>
+<li>Divergence count (runs failing due to NaN).</li>
+<li>Update magnitude statistics.</li>
+<li>Hessian spectrum approx (min/max diag).</li>
+</ul>
+<hr>
+<h2 id="61-per-environment-tips">61. Per-Environment Tips</h2>
+<ul>
+<li>Humanoid: sensitive; start with UTD=5; gamma=0.1; clip=1.0.</li>
+<li>Ant: more stable; UTD=10 feasible; lr 3e-4.</li>
+<li>Walker2d: similar to Ant; try BN momentum 0.05.</li>
+<li>Hopper: simpler; good for quick sanity.</li>
+</ul>
+<hr>
+<h2 id="62-gradient--hessian-monitoring">62. Gradient &amp; Hessian Monitoring</h2>
+<ul>
+<li>Log moving average of grad norm.</li>
+<li>Log moving average of h_t mean/std.</li>
+<li>Detect outliers; clamp if necessary.</li>
+<li>Compare grad norm distributions between Adam and Sophia.</li>
+</ul>
+<hr>
+<h2 id="63-optional-regularizers">63. Optional Regularizers</h2>
+<ul>
+<li>Weight decay (small, 1e-5).</li>
+<li>Dropout (rarely needed; usually off).</li>
+<li>Spectral norm (optional) to bound Lipschitz; may slow.</li>
+<li>Policy smoothing noise (if actor) as standard in TD3.</li>
+</ul>
+<hr>
+<h2 id="64-practical-tips">64. Practical Tips</h2>
+<ul>
+<li>Warmup with UTD=1 then ramp to target UTD after few k steps.</li>
+<li>Reduce ε exploration noise as critic stabilizes.</li>
+<li>Save more frequent checkpoints when exploring high UTD configs.</li>
+<li>Keep code paths for both Adam and Sophia to ease comparison.</li>
+</ul>
+<hr>
+<h2 id="65-visualization-examples">65. Visualization Examples</h2>
+<ul>
+<li>Learning curves overlay (Adam vs Sophia) with shaded CI.</li>
+<li>Bar plot of time-to-5k return per UTD.</li>
+<li>Heatmap of stability (success/fail) across UTD and clip.</li>
+<li>Hessian norm trajectories per optimizer.</li>
+</ul>
+<hr>
+<h2 id="66-command-snippets-for-profiling">66. Command Snippets for Profiling</h2>
+<ul>
+<li><code>python profile_step.py task=humanoid utd=10 batch=1024 optim=sophia</code></li>
+<li><code>python profile_step.py task=ant utd=20 batch=1024 optim=adam</code></li>
+<li>Compare reported step times; adjust configs accordingly.</li>
+</ul>
+<hr>
+<h2 id="67-additional-unit-tests-for-stability">67. Additional Unit Tests for Stability</h2>
+<ul>
+<li>Run tiny training loop on toy env (CartPole) to ensure no NaN for high UTD.</li>
+<li>Verify BN stats finite after thousands of updates.</li>
+<li>Check Hessian estimates finite and positive.</li>
+<li>Ensure optimizer state loads correctly from checkpoint.</li>
+</ul>
+<hr>
+<h2 id="68-large-sweep-management">68. Large-Sweep Management</h2>
+<ul>
+<li>Use job arrays; parameterize UTD and gamma.</li>
+<li>Auto-stop jobs on NaN detection.</li>
+<li>Aggregate results with scripts; compute IQM/CI automatically.</li>
+<li>Maintain spreadsheet or Markdown table of runs.</li>
+</ul>
+<hr>
+<h2 id="69-threats-to-validity">69. Threats to Validity</h2>
+<ul>
+<li>Comparing UTD settings changes compute per env step; report wall-clock too.</li>
+<li>BN effects may differ across hardware; document device and cudnn settings.</li>
+<li>Hessian approximation choice impacts stability; describe method used.</li>
+<li>Exploration noise choices influence results; keep consistent across runs.</li>
+</ul>
+<hr>
+<h2 id="70-final-notes">70. Final Notes</h2>
+<ul>
+<li>CrossQ+Sophia targets high-UTD stability without targets; BN plus curvature scaling are key.</li>
+<li>Follow checklists and ablations to ensure fair comparisons.</li>
+<li>Keep logs and configs organized for reproducibility.</li>
+<li>Ensure README remains the canonical spec and meets ≥1000-line requirement.</li>
+</ul>
+<hr>
+<h2 id="71-extended-ablation-ideas-more-variants">71. Extended Ablation Ideas (More Variants)</h2>
+<ul>
+<li>Sophia gamma sweep: {0.05, 0.1, 0.2, 0.3}</li>
+<li>Clip sweep: {0.2, 0.5, 1.0, 2.0}</li>
+<li>Hessian estimator types: squared grad vs EMA of second moment vs Hutchinson probe (optional).</li>
+<li>Hessian frequency: every step vs every 2 vs every 4 vs every 8.</li>
+<li>BN momentum: {0.02, 0.05, 0.1, 0.2}</li>
+<li>UTD schedules: start low then increase; compare fixed high UTD.</li>
+<li>Actor delay: {1,2,3} if actor present.</li>
+<li>Exploration noise schedules: fixed vs linear decay vs cosine.</li>
+<li>Replay sampling: uniform vs PER (α=0.6) vs recency bias.</li>
+<li>Target smoothing noise on/off (actor ablation).</li>
+</ul>
+<hr>
+<h2 id="72-script-stubs-textual-examples">72. Script Stubs (Textual Examples)</h2>
+<ul>
+<li><code>scripts/train_crossq_sophia.sh</code> with arguments: task, utd, gamma, clip, batch, bn_momentum.</li>
+<li><code>scripts/eval.sh</code> for deterministic evaluation.</li>
+<li><code>scripts/sweep_utd.sh</code> to launch grid over UTD and optimizers.</li>
+<li><code>scripts/profile.sh</code> for step-time measurements.</li>
+</ul>
+<hr>
+<h2 id="73-bn-stability-study-plan">73. BN Stability Study Plan</h2>
+<ul>
+<li>Measure running mean/var drift across training.</li>
+<li>Compare BN momentum settings on Humanoid vs Ant.</li>
+<li>Evaluate performance with BN frozen after pretraining vs continuously updating.</li>
+<li>Test GroupNorm as control; expect lower stability.</li>
+<li>Record per-layer BN stats to detect layer-specific drift.</li>
+</ul>
+<hr>
+<h2 id="74-hessian-study-plan">74. Hessian Study Plan</h2>
+<ul>
+<li>Track mean/std/min/max of Hessian diag each eval interval.</li>
+<li>Plot update magnitude vs Hessian magnitude.</li>
+<li>Compare squared-grad vs Hutchinson estimator (small batch) to validate.</li>
+<li>Observe impact of Hessian frequency on stability/performance.</li>
+<li>Test effect of flooring denom with different eps values.</li>
+</ul>
+<hr>
+<h2 id="75-safety--robustness-considerations">75. Safety &amp; Robustness Considerations</h2>
+<ul>
+<li>High UTD can overfit replay peculiarities; include random seeds and varied env initializations.</li>
+<li>Detect and log NaN events immediately; auto-restore from last good checkpoint.</li>
+<li>Ensure reproducible MuJoCo physics by fixing seeds and versions.</li>
+<li>When comparing to Adam, match wall-clock or gradient-step budget for fairness.</li>
+</ul>
+<hr>
+<h2 id="76-future-research-extensions">76. Future Research Extensions</h2>
+<ul>
+<li>Layer-wise Sophia (different gamma/clip per layer).</li>
+<li>Combine Sophia with lookahead/ema weight averaging.</li>
+<li>Adaptive UTD based on loss slope or grad variance.</li>
+<li>Integrate second-order actor updates.</li>
+<li>Explore curvature-aware PER (priorities scaled by Hessian info).</li>
+<li>Distributed training with synchronized BN and Hessian stats.</li>
+</ul>
+<hr>
+<h2 id="77-open-questions">77. Open Questions</h2>
+<ul>
+<li>How does Sophia interact with very deep critics under BN?</li>
+<li>Does Hessian diag estimation bias matter at high UTD?</li>
+<li>What is optimal BN momentum when replay distribution shifts rapidly?</li>
+<li>Can adaptive gamma based on grad norm improve stability?</li>
+<li>Do we benefit from different gamma for actor vs critic?</li>
+</ul>
+<hr>
+<h2 id="78-known-issues--mitigations">78. Known Issues &amp; Mitigations</h2>
+<ul>
+<li>Occasional spikes when Hessian diag tiny → use denom floor (eps) and clip.</li>
+<li>BN stat mismatch between train/eval → ensure eval uses running stats; no dropout.</li>
+<li>Replay imbalance with PER at high UTD → tune β; consider uniform for stability.</li>
+<li>Actor collapse if critic noisy → increase policy delay; reduce actor lr.</li>
+</ul>
+<hr>
+<h2 id="79-reproducibility-checklist-verbose">79. Reproducibility Checklist (Verbose)</h2>
+<ul>
+<li><input type="checkbox" id="checkbox20"><label for="checkbox20">Seeds fixed for torch, numpy, env.</label></li>
+<li><input type="checkbox" id="checkbox21"><label for="checkbox21">Config saved with run artifacts.</label></li>
+<li><input type="checkbox" id="checkbox22"><label for="checkbox22">Exact commands logged.</label></li>
+<li><input type="checkbox" id="checkbox23"><label for="checkbox23">MuJoCo version pinned; mujoco-py or gymnasium-mujoco consistent.</label></li>
+<li><input type="checkbox" id="checkbox24"><label for="checkbox24">Hardware logged (GPU type, driver).</label></li>
+<li><input type="checkbox" id="checkbox25"><label for="checkbox25">Results reported with IQM + CI over ≥3 seeds.</label></li>
+<li><input type="checkbox" id="checkbox26"><label for="checkbox26">Checkpoints and logs archived.</label></li>
+</ul>
+<hr>
+<h2 id="80-memory--performance-tables-text">80. Memory &amp; Performance Tables (Text)</h2>
+<ul>
+<li>Example (batch=1024, twin critics, UTD=10):</li>
+<li>• Params: ~3–5M; optimizer state ~2× (m,h).</li>
+<li>• Activations: dominated by BN + linear layers.</li>
+<li>• Step time: measure ~X ms (fill from profiling).</li>
+<li>Adjust batch/UTD to fit 12GB; if OOM, reduce batch first.</li>
+</ul>
+<hr>
+<h2 id="81-comparative-outcome-expectations-per-task">81. Comparative Outcome Expectations (Per Task)</h2>
+<ul>
+<li>Humanoid: Sophia+CrossQ expected to reach 5k faster than Adam baseline; UTD 10–20 feasible with tuning.</li>
+<li>Ant: Stable; UTD 20 likely with moderate lr and clip.</li>
+<li>Walker2d: Similar to Ant; monitor Hessian for small values.</li>
+<li>Hopper: All configs should converge; use for rapid sanity.</li>
+</ul>
+<hr>
+<h2 id="82-visualization-ideas-additional">82. Visualization Ideas (Additional)</h2>
+<ul>
+<li>Scatter of return vs step time for different UTD.</li>
+<li>Violin plots of update magnitudes per optimizer.</li>
+<li>BN stat drift heatmaps per layer.</li>
+<li>Hessian vs grad norm joint scatter to see curvature-adjusted steps.</li>
+</ul>
+<hr>
+<h2 id="83-extended-command-library-more-examples">83. Extended Command Library (More Examples)</h2>
+<ul>
+<li><code>python train.py task=humanoid utd=15 optim=sophia gamma=0.15 clip=0.5 bn_momentum=0.05 hessian_freq=2</code></li>
+<li><code>python train.py task=walker utd=8 optim=sophia beta1=0.95 beta2=0.99 hessian_floor=1e-12</code></li>
+<li><code>python train.py task=ant utd=12 optim=adam lr=5e-4</code> (baseline check)</li>
+<li><code>python eval.py checkpoint=ckpt_last.pth --episodes 15 --no-noise</code></li>
+</ul>
+<hr>
+<h2 id="84-unit-test-examples-concrete">84. Unit Test Examples (Concrete)</h2>
+<ul>
+<li>Toy 1D quadratic: verify Sophia step reduces loss for various gamma/clip.</li>
+<li>BN concat: feed known inputs, check running stats match manual mean/var.</li>
+<li>UTD counter: assert number of critic updates equals utd parameter.</li>
+<li>Checkpoint reload: parameters and optimizer state identical after save/load.</li>
+<li>Hessian positivity: min(h) ≥ eps; log to ensure.</li>
+</ul>
+<hr>
+<h2 id="85-additional-failure-handling-hooks">85. Additional Failure-Handling Hooks</h2>
+<ul>
+<li>If loss &gt; threshold: auto-reduce lr by factor; or drop UTD temporarily.</li>
+<li>If NaN detected: halt, save debug dump (grad, Hessian, BN stats).</li>
+<li>If performance plateau: try mild increase in UTD or decrease gamma.</li>
+</ul>
+<hr>
+<h2 id="86-reporting-templates">86. Reporting Templates</h2>
+<ul>
+<li>Table: Returns (mean/median/IQM) for {UTD 1,5,10,20} × {Adam, Sophia}.</li>
+<li>Table: Time-to-5k (Humanoid) in env steps and wall-clock.</li>
+<li>Plot: Grad/Hessian norms over steps for Adam vs Sophia.</li>
+<li>Plot: BN stat drift for momentum settings.</li>
+</ul>
+<hr>
+<h2 id="87-detailed-bnutd-interaction-notes">87. Detailed BN/UTD Interaction Notes</h2>
+<ul>
+<li>Higher UTD increases batch reuse; BN stats must remain accurate; concatenation of (s,s′) approximates mixed distribution.</li>
+<li>If UTD very high, consider lowering BN momentum to adapt faster.</li>
+<li>Freezing BN during Hessian estimation can reduce stat drift.</li>
+<li>Evaluate effect of virtual batch size (ghost batches) if BN unstable.</li>
+</ul>
+<hr>
+<h2 id="88-extended-safety-tests">88. Extended Safety Tests</h2>
+<ul>
+<li>Randomized resets to test robustness.</li>
+<li>Perturbation robustness: apply small disturbances to observations/actions.</li>
+<li>Constraint tests: clip actions; ensure stability under clipping.</li>
+</ul>
+<hr>
+<h2 id="89-additional-future-directions">89. Additional Future Directions</h2>
+<ul>
+<li>Explore Sophia in offline CrossQ (dataset-only).</li>
+<li>Combine with conservative penalties (ReBRAC) for offline settings.</li>
+<li>Investigate curvature-aware PER priority scaling.</li>
+<li>Evaluate on Safety Gym tasks to test stability under constraints.</li>
+</ul>
+<hr>
+<h2 id="90-final-buffer-notes">90. Final Buffer Notes</h2>
+<ul>
+<li>Maintain documentation alignment with code changes.</li>
+<li>Keep a changelog for hyperparameter tweaks during sweeps.</li>
+<li>Prioritize stability first, then push UTD upward.</li>
+<li>Confirm README exceeds 1000 lines after additions.</li>
+</ul>
+
+</body>
+</html>
