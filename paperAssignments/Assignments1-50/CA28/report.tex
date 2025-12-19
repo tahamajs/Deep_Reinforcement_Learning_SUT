@@ -284,6 +284,18 @@ The current implementation uses simple MLP architectures suitable for CartPole b
 
 CartPole's simplicity (discrete actions, low-dimensional state) makes it ideal for educational DQN but may not capture challenges in continuous control or high-dimensional vision tasks. The reward horizon (200 steps) is short, potentially underestimating the benefits of replay prioritization.
 
+\subsection{Broader Implications for RL Research}
+
+Our findings highlight the importance of algorithmic stability in deep RL. Double DQN's bias reduction is crucial for reliable Q-value estimation, while prioritized replay demonstrates the value of adaptive sampling strategies. These insights extend beyond CartPole to more complex domains where overestimation can lead to catastrophic failures.
+
+The modularity of our implementation facilitates ablation studies, a key component of rigorous RL research. By isolating components like exploration schedules and replay mechanisms, researchers can better understand interaction effects and develop more robust algorithms.
+
+\subsection{Ethical Considerations and Responsible AI}
+
+While CartPole is benign, RL algorithms trained on real-world tasks must consider safety and fairness. Our epsilon-greedy exploration could be extended to safe exploration strategies~\cite{garcia2015comprehensive} to avoid harmful actions. Additionally, the replay buffer's uniform sampling may perpetuate biases in non-stationary environments; prioritized sampling could exacerbate this if priorities correlate with sensitive attributes.
+
+We encourage researchers to incorporate fairness audits and safety checks when deploying RL systems, following guidelines from the AI community~\cite{jobin2019global}.
+
 \subsection{Practical Extensions and Future Work}
 
 To extend this work:
@@ -372,6 +384,10 @@ plt.savefig('figures/training_curve.png')
 \end{verbatim}
 
 For rolling averages, compute `rolling = np.convolve(rewards, np.ones(50)/50, mode='valid')` and plot that instead.
+
+\section*{Acknowledgments}
+
+This work was supported by the Deep Reinforcement Learning course materials and open-source contributions from the RL community. We thank the developers of PyTorch, OpenAI Gym, and related libraries for providing robust tools. Special thanks to Richard Sutton and Andrew Barto for their foundational textbook, and to the NeurIPS and IEEE communities for establishing standards in academic publishing.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
