@@ -1,0 +1,284 @@
+% CA22_FULL_REPORT.tex — Comprehensive Example Report for CA22
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage[round]{natbib}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{A Reproducible Research Pipeline for Constrained Policy Optimization: \newline Full Report for CA22}
+\author{Your Name(s) \\\texttt{your.email@example.com}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report presents a comprehensive, reproducible research pipeline for constrained policy optimization using a synthetic dataset. We detail the motivation, theoretical background, code structure, configuration-driven experiments, and reproducibility practices. All components are described in depth, including model architectures, loss functions, dataset generation, experiment configuration, and evaluation. The report is structured to mirror the CA22 scaffold and README, providing a complete reference for future research and reproducibility.
+\end{abstract}
+
+
+\section{Introduction}
+Reproducibility is a cornerstone of modern machine learning research. In reinforcement learning (RL), the complexity of environments, stochasticity of algorithms, and sensitivity to hyperparameters make reproducibility especially challenging. This report documents a full pipeline for constrained RL using a synthetic environment, with a focus on clarity, modularity, and reproducibility. The CA22 scaffold is designed to help researchers and students translate mathematical ideas into stable, testable code, and to produce results that can be easily replicated and extended.
+
+The motivation for this work is twofold: (1) to provide a minimal, well-documented codebase for rapid prototyping and experimentation in RL, and (2) to serve as a teaching tool for best practices in research software engineering. By using a synthetic dataset, we eliminate confounding factors from complex environments and focus on algorithmic behavior, making it easier to debug, analyze, and extend the code.
+
+This report is structured to mirror the CA22 README and codebase, providing detailed explanations, theoretical background, and practical advice for each component. We also discuss common pitfalls in RL research, such as seed management, configuration drift, and the importance of unit testing.
+
+\section{Theoretical Background}
+\subsection{Reinforcement Learning and Policy Gradients}
+Reinforcement learning (RL) is a framework for sequential decision making, where an agent interacts with an environment to maximize cumulative reward. The agent observes a state $s_t$, selects an action $a_t$, receives a reward $r_t$, and transitions to a new state $s_{t+1}$. The goal is to learn a policy $\pi(a|s)$ that maximizes expected return $\mathbb{E}[\sum_t \gamma^t r_t]$.
+
+Policy gradient methods directly optimize the parameters of a stochastic policy by ascending the gradient of expected return. The REINFORCE algorithm uses the following update:
+\begin{equation}
+\nabla_\theta J(\theta) = \mathbb{E}_{\pi_\theta} [\nabla_\theta \log \pi_\theta(a|s) \hat{A}(s,a)]
+\end{equation}
+where $\hat{A}(s,a)$ is an estimator of the advantage function, often computed as the difference between observed returns and a learned value baseline.
+
+\subsection{Constrained RL and Lagrangian Methods}
+In many real-world applications, agents must satisfy constraints (e.g., safety, resource limits). Constrained RL introduces a cost signal $c(s,a)$ and a threshold $c_0$, seeking to maximize reward while ensuring $\mathbb{E}[c(s,a)] \leq c_0$. The Lagrangian approach augments the objective with a penalty term:
+\begin{equation}
+\mathcal{L}(\theta, \mu) = -J(\theta) + \mu (\mathbb{E}[c(s,a)] - c_0)
+\end{equation}
+where $\mu \geq 0$ is the Lagrange multiplier, updated by projected gradient ascent:
+\begin{equation}
+\mu \leftarrow \max(0, \mu + \alpha (\mathbb{E}[c(s,a)] - c_0))
+\end{equation}
+This approach allows the agent to trade off reward and constraint satisfaction, and is widely used in safe RL literature \citep{Achiam2017}.
+
+\subsection{Synthetic Datasets in RL}
+Synthetic datasets are valuable for debugging, benchmarking, and teaching. By controlling the data generation process, we can isolate algorithmic behavior and ensure that results are not confounded by environment complexity. The CA22 synthetic dataset uses random projections to generate nontrivial, yet interpretable, episodes for rapid experimentation.
+\section{Worked Example: End-to-End Experiment}
+This section walks through a complete experiment using the CA22 scaffold, from configuration to reporting.
+
+\subsection{Step 1: Configuration}
+Create a YAML config file (e.g., \texttt{configs/my\_experiment.yaml}):
+\begin{verbatim}
+seed: 123
+device: cpu
+obs_dim: 8
+action_dim: 4
+hidden_size: 64
+lr: 3e-4
+batch_size: 32
+epochs: 50
+gamma: 0.99
+constraint_threshold: 0.5
+lagrange_lr: 1e-2
+max_mu: 1000.0
+\end{verbatim}
+
+\subsection{Step 2: Running the Experiment}
+In your notebook or script:
+\begin{verbatim}
+from src.config import ExperimentConfig
+from src.utils import set_seed
+from src.model import PolicyNet, ValueNet
+from src.data import SyntheticDataset
+from src.losses import policy_gradient_loss, value_loss, LagrangianLoss
+
+cfg = ExperimentConfig.from_yaml('configs/my_experiment.yaml')
+set_seed(cfg.seed)
+policy = PolicyNet(cfg.obs_dim, cfg.action_dim, cfg.hidden_size)
+value = ValueNet(cfg.obs_dim, cfg.hidden_size)
+ds = SyntheticDataset(num_episodes=100, obs_dim=cfg.obs_dim, horizon=20, seed=cfg.seed)
+# ...training loop here...
+\end{verbatim}
+
+\subsection{Step 3: Saving Results}
+Save checkpoints and figures to \texttt{outputs/}. Log the config and seed used.
+
+\subsection{Step 4: Reporting}
+Use the provided LaTeX or Markdown template to document your findings. Include all figures, tables, and config files.
+
+\section{Extensions and Future Work}
+The CA22 scaffold is designed for extensibility. Possible extensions include:
+\begin{itemize}
+  \item Implementing alternative constraint handling methods (e.g., primal-dual, penalty methods, or shielded RL).
+  \item Adding support for continuous action spaces and more complex policy/value architectures.
+  \item Integrating with real or simulated environments (e.g., OpenAI Gym) for more realistic experiments.
+  \item Adding experiment tracking tools (e.g., Weights \\& Biases, MLflow) for large-scale studies.
+  \item Extending the synthetic dataset to include multi-agent or hierarchical tasks.
+\end{itemize}
+
+\section{Best Practices for Reproducible RL Research}
+\begin{itemize}
+  \item Always use version control and tag releases for major experiments.
+  \item Archive all config files, seeds, and environment details with your results.
+  \item Use containerization (e.g., Docker) for full environment reproducibility if possible.
+  \item Share code and data publicly when publishing results.
+  \item Write clear, modular code with tests for every function and class.
+  \item Document all assumptions, limitations, and sources of nondeterminism.
+\end{itemize}
+
+
+\section{Learning Outcomes}
+The CA22 scaffold is designed to help you achieve the following learning outcomes:
+\begin{enumerate}
+  \item \textbf{Implement a reproducible research pipeline and config-driven experiments.} You will learn to separate configuration from code, enabling easy replication and ablation studies. All experiment settings are stored in YAML files and loaded via a dataclass, ensuring transparency and traceability.
+  \item \textbf{Translate mathematical derivations into stable, testable code.} The scaffold encourages you to implement algorithms directly from their mathematical definitions, with explicit docstrings and type hints. This reduces ambiguity and makes it easier to verify correctness.
+  \item \textbf{Perform reproducible experiments with logging, checkpoints, and a short written report.} You will learn to log all relevant information (hyperparameters, seeds, config files) and to save checkpoints for experiment resumption. The report templates guide you in documenting your findings clearly and concisely.
+  \item \textbf{Produce clear visualizations and a concise findings report suitable for peer review.} The scaffold includes utilities for saving figures and tables, and the report templates provide structure for presenting your results in a professional format.
+\end{enumerate}
+
+
+\section{Repository Layout and Code Structure}
+The repository is organized to maximize modularity, clarity, and reproducibility. Each directory and file serves a specific purpose:
+\begin{description}
+  \item[src/] Contains all core modules, each import-safe (no side effects on import):
+    \begin{description}
+      \item[config.py] Defines the \texttt{ExperimentConfig} dataclass, which holds all experiment settings. Includes a robust YAML loader that supports both PyYAML and a fallback parser, ensuring portability.
+      \item[model.py] Implements the policy and value networks as simple, extensible MLPs. The \texttt{sample\_action} function provides a clean interface for action selection, abstracting away PyTorch distribution details.
+      \item[losses.py] Encapsulates all loss functions, including policy gradient, value, and Lagrangian losses. The \texttt{LagrangianLoss} class is designed for easy extension to more complex constraints.
+      \item[data.py] Provides a synthetic dataset generator and in-memory dataset class. This enables fast, deterministic experiments and facilitates debugging.
+      \item[utils.py] Contains utility functions for seeding, checkpointing, and Lagrange multiplier updates. All functions are stateless and import-safe.
+    \end{description}
+  \item[notebooks/] Contains Jupyter notebooks for end-to-end experiments and visualization. The \texttt{demo.ipynb} notebook demonstrates the full pipeline, from config loading to result visualization.
+  \item[configs/] Stores YAML configuration files for all experiments. The \texttt{default.yaml} and \texttt{debug.yaml} files provide templates for standard and quick debug runs, respectively.
+  \item[tests/] Contains Pytest-compatible tests for all core modules. Tests cover config loading, model forward passes, loss computation, dataset sampling, and utility functions.
+  \item[reports/] Includes Markdown and LaTeX report templates, example reports, a bibliography file, and a build script for compiling LaTeX reports.
+  \item[requirements.txt] Lists all minimal Python dependencies required to run the code and tests. This ensures that all users have a consistent environment.
+  \item[outputs/] Directory for runtime artifacts, such as model checkpoints and generated figures. This directory is not committed to version control, preserving repository cleanliness.
+\end{description}
+
+
+\section{Implementation Details}
+This section provides a deep dive into each core component of the CA22 scaffold, explaining both the design rationale and practical usage.
+
+\subsection{Experiment Configuration (\texttt{src/config.py})}
+All experiment settings are managed via the \texttt{ExperimentConfig} dataclass. This approach has several advantages:
+\begin{itemize}
+  \item \textbf{Centralization:} All hyperparameters (seed, device, observation and action dimensions, hidden sizes, learning rates, batch size, epochs, discount factor, constraint threshold, Lagrange learning rate, and maximum multiplier) are defined in one place.
+  \item \textbf{Reproducibility:} By loading settings from a YAML file, you ensure that every experiment can be exactly replicated. The YAML loader supports both PyYAML (for full-featured parsing) and a fallback parser (for environments where PyYAML is unavailable), making the code robust and portable.
+  \item \textbf{Extensibility:} Adding new hyperparameters is as simple as adding a new field to the dataclass and updating the config file.
+\end{itemize}
+The \texttt{from\_yaml} class method loads a config file, merges it with dataclass defaults, and returns a fully initialized config object. This pattern is widely used in modern ML research for experiment management.
+
+\subsection{Model Architectures (\texttt{src/model.py})}
+The policy and value networks are implemented as simple, extensible multilayer perceptrons (MLPs):
+\begin{itemize}
+  \item \textbf{PolicyNet:} Maps observations to action logits for discrete action selection. The architecture consists of two hidden layers with ReLU activations, followed by a linear output layer producing logits for each action. This design is standard in RL and provides a good balance between expressiveness and simplicity.
+  \item \textbf{ValueNet:} Maps observations to scalar value estimates. The architecture mirrors that of PolicyNet, but the output layer produces a single value. This network is used as a baseline for advantage estimation and value-based learning.
+  \item \textbf{sample\_action:} Samples actions from the policy logits using a categorical distribution. Returns both the sampled action and its log-probability, which are required for policy gradient updates. This function abstracts away the details of PyTorch's distribution API, making the training loop cleaner and less error-prone.
+\end{itemize}
+All networks are fully compatible with PyTorch's module system, allowing for easy integration with optimizers, checkpointing, and device management.
+
+\subsection{Loss Functions (\texttt{src/losses.py})}
+The loss functions are implemented as standalone functions and classes for maximum flexibility:
+\begin{itemize}
+  \item \textbf{Policy Gradient Loss:} Implements the standard REINFORCE objective, minimizing the negative expected advantage-weighted log-probability. This is the foundation of most policy-based RL algorithms.
+  \item \textbf{Value Loss:} Computes the mean squared error between predicted and target values. Used for training the value network as a baseline.
+  \item \textbf{Lagrangian Loss:} Combines the policy loss with a penalty for constraint violation, using a Lagrange multiplier updated by projected gradient ascent. The \texttt{LagrangianLoss} class is designed for easy extension to more complex constraints, such as multiple or time-varying constraints.
+\end{itemize}
+All loss functions are fully differentiable and compatible with PyTorch's autograd system.
+
+\subsection{Synthetic Dataset (\texttt{src/data.py})}
+The synthetic dataset is designed for speed, determinism, and ease of analysis:
+\begin{itemize}
+  \item \textbf{synthetic\_episode:} Generates a single episode of states, actions, rewards, and constraint costs using random projections. The use of random projections ensures that the data is nontrivial but still interpretable.
+  \item \textbf{SyntheticDataset:} Stores multiple episodes in memory and provides batch sampling for training. This enables fast, deterministic experiments and facilitates debugging. The dataset can be easily extended to support more complex environments or data augmentation.
+\end{itemize}
+By using a synthetic dataset, we eliminate confounding factors from complex environments and focus on algorithmic behavior. This makes it easier to debug, analyze, and extend the code.
+
+\subsection{Utilities (\texttt{src/utils.py})}
+The utilities module provides essential functions for reproducibility and experiment management:
+\begin{itemize}
+  \item \textbf{set\_seed:} Sets seeds for Python, NumPy, and PyTorch for full reproducibility. Also configures PyTorch's cuDNN backend for deterministic behavior when using GPUs.
+  \item \textbf{save\_checkpoint} and \textbf{load\_checkpoint}: Save and restore model and optimizer state dictionaries, supporting experiment resumption and ablation studies. Checkpoints are saved atomically to prevent corruption.
+  \item \textbf{update\_lagrange}: Updates the Lagrange multiplier using projected gradient ascent, ensuring it remains non-negative and below a maximum. This function is critical for constrained optimization and can be easily extended to support multiple multipliers.
+\end{itemize}
+
+
+\section{Experiment Workflow}
+This section describes the recommended workflow for running, tracking, and validating experiments using the CA22 scaffold.
+
+\subsection{Configuration-Driven Experiments}
+All experiments are driven by YAML config files, which are loaded at runtime and used to initialize the \texttt{ExperimentConfig} dataclass. This approach has several benefits:
+\begin{itemize}
+  \item \textbf{Transparency:} All hyperparameters are documented in a human-readable format.
+  \item \textbf{Reproducibility:} Experiments can be exactly replicated by sharing the config file.
+  \item \textbf{Ablation Studies:} Changing a single parameter (e.g., learning rate or batch size) is as simple as editing the config file and rerunning the experiment.
+\end{itemize}
+Example configs are provided for both default and debug runs. The debug config uses smaller batch sizes and fewer epochs for quick iteration.
+
+\subsection{Seeding and Reproducibility}
+Seeding is handled at the start of every run using the \texttt{set\_seed} utility. This function sets seeds for Python's \texttt{random} module, NumPy, and PyTorch, ensuring that all sources of randomness are synchronized. For GPU experiments, PyTorch's cuDNN backend is configured for deterministic behavior. This is critical for reproducibility, especially when comparing results across different machines or runs.
+
+\subsection{Checkpoints and Logging}
+Checkpoints are saved at regular intervals using the \texttt{save\_checkpoint} utility, which stores both model and optimizer state dictionaries. This allows for experiment resumption, ablation studies, and debugging. Logging of hyperparameters, seeds, and config files is recommended for every experiment. All runtime artifacts (checkpoints, figures, logs) are saved to the \texttt{outputs/} directory, which is excluded from version control to keep the repository clean.
+
+\subsection{Testing and Validation}
+Unit tests are provided for all core modules, including config loading, model forward passes, loss computation, dataset sampling, and utility functions. Tests are written using Pytest and are designed to be fast and deterministic. This ensures that all components work as expected and that changes do not break existing functionality. Continuous integration (CI) is recommended for larger projects.
+
+
+\section{Reporting and Visualization}
+Clear, well-structured reporting is essential for communicating research findings. The CA22 scaffold provides both Markdown and LaTeX report templates, as well as an extended example report. The LaTeX template includes sections for abstract, introduction, related work, methods, experiments, results, discussion, and reproducibility appendix. The Markdown template is suitable for shorter reports or when LaTeX is not available.
+
+\subsection{Figures and Tables}
+All figures and tables should be generated programmatically and saved to the \texttt{outputs/figures/} directory. Captions should clearly explain the content and significance of each figure or table. Figures should be referenced in the text and include units, legends, and error bars where appropriate. Tables should summarize key results, hyperparameters, and ablation studies.
+
+\subsection{Reproducibility Appendix}
+Every report should include a reproducibility appendix, listing the exact config files, seeds, and commands used to generate the results. This ensures that others can replicate your findings without ambiguity.
+
+
+\section{Evaluation Rubric}
+The following rubric is recommended for evaluating CA22 submissions:
+\begin{description}
+  \item[Correctness \& Reproducibility (40\%)] Code runs without errors, all seeds and configs are documented, and results are reproducible by others. Checkpoints and logs are provided.
+  \item[Experiment Design (30\%)] Experiments include appropriate baselines, metrics, and evaluation protocols. Ablation studies and sensitivity analyses are encouraged.
+  \item[Clarity \& Presentation (20\%)] Figures and tables are clear, well-labeled, and referenced in the text. The report is well-structured and easy to read.
+  \item[Tests \& Code Quality (10\%)] All core modules are covered by unit tests. Code uses type hints, docstrings, and follows best practices for readability and maintainability.
+\end{description}
+
+
+\section{Reproducibility Checklist}
+To maximize reproducibility, ensure that your submission includes the following:
+\begin{enumerate}
+  \item All config files (\texttt{configs/*.yaml}) used for main experiments.
+  \item Documentation of all random seeds and a description of how they were set (e.g., via \texttt{set\_seed}).
+  \item Step-by-step instructions to reproduce all plots and key tables, including commands and expected outputs.
+  \item All checkpoints saved using \texttt{torch.save}/\texttt{torch.load}, with a description of the checkpoint format and how to resume experiments.
+  \item All figures and tables referenced in the report, saved to \texttt{outputs/figures/}.
+  \item The exact version of all dependencies (see \texttt{requirements.txt}).
+\end{enumerate}
+
+
+\section{Contributing and Style Guide}
+The CA22 scaffold encourages best practices in research software engineering:
+\begin{itemize}
+  \item Use Python 3.10+ for modern language features and compatibility.
+  \item Annotate all functions and methods with type hints for clarity and static analysis.
+  \item Use dataclasses for configuration and data structures, ensuring immutability where appropriate.
+  \item Write explicit docstrings for all public functions, classes, and methods, describing inputs, outputs, and side effects.
+  \item Keep all modules in \texttt{src/} import-safe, with no side effects on import. This enables safe use in tests and notebooks.
+  \item Make small, well-scoped changes, and add unit tests for all new utilities and features.
+  \item Use version control (e.g., git) to track changes and facilitate collaboration.
+  \item Document all non-obvious design decisions and trade-offs in the code or accompanying documentation.
+\end{itemize}
+
+
+\section{Contact and Support}
+For questions, bug reports, or contributions, please open a pull request or issue on the project repository, or contact the course staff directly. Feedback, suggestions, and extensions are welcome. If you extend the scaffold for new research directions, consider submitting a pull request to share your improvements with the community.
+
+\section*{Practical Advice and Common Pitfalls}
+\begin{itemize}
+  \item Always fix random seeds and document them in your report. Unseeded experiments are not reproducible.
+  \item Use configuration files for all hyperparameters; avoid hard-coding values in scripts or notebooks.
+  \item Run all unit tests before submitting or sharing your code. Tests catch subtle bugs and regressions.
+  \item Save all figures and tables programmatically, and reference them in your report with clear captions.
+  \item Keep your code modular and import-safe. Avoid side effects in module-level code.
+  \item Use version control to track changes and facilitate collaboration.
+  \item Document all dependencies and their versions in \texttt{requirements.txt}.
+  \item When extending the scaffold, follow the existing style and structure for consistency.
+\end{itemize}
+
+\section*{References}
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}
