@@ -1,3 +1,86 @@
+
+\section{Introduction}
+\label{sec:intro}
+% ...existing Introduction content...
+
+\section{Related Work}
+\label{sec:related}
+% ...existing Related work content...
+
+\section{Motivation}
+\label{sec:motivation}
+% ...existing Motivation content...
+
+\section{Background}
+\label{sec:background}
+% ...existing Background content...
+
+\section{Problem Formulation}
+\label{sec:problem}
+% ...existing Problem formulation content...
+
+\section{Method}
+\label{sec:method}
+% ...existing Method and updates content...
+
+\section{Theoretical Analysis}
+\label{sec:theory}
+% ...existing Theoretical Analysis content...
+
+\section{Algorithm}
+\label{sec:algorithm}
+\begin{algorithm}[H]
+\caption{Lagrangian-Constrained Policy Optimization}
+\begin{algorithmic}[1]
+\STATE Initialize policy $\pi_\theta$, value $V_\phi$, multiplier $\mu$
+\FOR{each epoch}
+  \FOR{each batch}
+    \STATE Sample $(s, a, r, c)$ from data
+    \STATE Compute advantage $A = r - V_\phi(s)$
+    \STATE Compute policy loss $L_{\text{policy}}$
+    \STATE Compute constraint $\hat{C}$
+    \STATE $L = L_{\text{policy}} + \mu (\hat{C} - c)$
+    \STATE Update $\theta$ by gradient descent on $L$
+    \STATE Update $\phi$ by MSE on $V_\phi(s)$
+    \STATE $\mu \leftarrow \max(0, \mu + \eta_\mu (\hat{C} - c))$
+  \ENDFOR
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\section{Experimental Setup}
+\label{sec:exp}
+% ...existing Experimental protocol, Hyperparameters, and Setup content...
+
+\section{Results}
+\label{sec:results}
+% ...existing Results (placeholders), Empirical Results, and figures/tables...
+
+\section{Discussion}
+\label{sec:discussion}
+% ...existing Discussion, Societal Impact, and FAQ content...
+
+\section{Limitations}
+\label{sec:limitations}
+% ...existing Limitations content...
+
+\section{Future Work}
+\label{sec:future}
+% ...existing Future Work content...
+
+\section{Conclusion}
+\label{sec:conclusion}
+% ...existing Conclusion content...
+
+\section*{Acknowledgements}
+% ...existing Acknowledgements content...
+
+\section*{References}
+% ...existing bibliography...
+
+\appendix
+\section{Appendix: Code Structure and README Concepts}
+% ...existing Appendix content...
 % CA20 NeurIPS/IEEE-style report
 \documentclass[conference]{IEEEtran}
 \usepackage{graphicx}
