@@ -77,6 +77,80 @@ Quick Find Commands (Expanded)
 - Search for citations: rg -n "@" paperAssignments/Assignments1-50/*/references.bib
 - Locate homework solutions: rg -n "HW" homeworks | grep -v archive
 - Check for TODOs: rg -n "TODO" src course_notes
+- Find Python imports: rg -n "^import|^from" src
+- Locate Jupyter notebooks: find . -name "*.ipynb" | grep -v checkpoints
+- Search for math equations: rg -n "\\\$" course_notes  # Inline math
+- Find figure includes in LaTeX: rg -n "\\includegraphics" paperAssignments
+
+Notebook Execution Guidelines
+
+- All execution should happen in Jupyter notebooks under `notebooks/`.
+- Use `configure_notebook` tool before running cells for the first time.
+- Install packages via `notebook_install_packages` if needed.
+- Avoid running notebooks in production; keep them for experimentation and demos.
+- Clean metadata before committing: remove execution counts and outputs unless intentional.
+
+Dependencies and Installation
+
+- Core: Python 3.10+, PyTorch, NumPy, Matplotlib.
+- Optional: Install vendored packages like `pip install -e external/mamba` for mamba-related work.
+- For assignments: Check individual AGENTS.md in subfolders for specific deps.
+- Use virtual environment: `python -m venv .venv && source .venv/bin/activate`.
+- Update pip first: `python -m pip install --upgrade pip`.
+
+Testing and Validation
+
+- Run tests for assignments-hard: `python -m pytest assignments-hard/XX/tests`
+- Validate code: Use type checkers like mypy on src/ modules.
+- For LaTeX: Compile reports and check for errors.
+- Notebook validation: Run cells and ensure outputs are as expected.
+- Pre-commit: Ensure no syntax errors, import issues, or linting failures.
+
+Research Focus and Topics
+
+- Deep Reinforcement Learning (DRL) with emphasis on safety, flow models, and advanced algorithms.
+- Key areas: Policy gradients, actor-critic, GFlowNets, model-based RL, exploration, multi-agent, hierarchical RL, offline RL, safe RL.
+- Course notes cover bandits, exploration, imitation, inverse RL, meta-learning, etc.
+- Guest lectures from RL experts like Richard Sutton, Peter Dayan, etc.
+
+Best Practices
+
+- Follow type hints and docstrings for all algorithms.
+- Preserve mathematical comments and derivations.
+- Use dataclasses for configuration and state.
+- Keep commits small and focused; describe intent clearly.
+- Avoid mixing unrelated changes in one commit.
+- Document environment variables in comments; never commit secrets.
+- For LaTeX: Use consistent citation styles; generate figures programmatically where possible.
+
+Troubleshooting
+
+- Import errors: Check virtual environment activation and package installation.
+- LaTeX compilation fails: Ensure BibTeX is run after initial pdflatex; check for missing packages.
+- Notebook kernel issues: Reconfigure notebook or restart kernel.
+- Git conflicts: Pull latest changes; resolve merges carefully.
+- Performance issues: Profile code; consider GPU usage for PyTorch models.
+
+External Resources
+
+- PyTorch docs: https://pytorch.org/docs/
+- RL papers: Check stochastic_refs/ and course_notes/ for references.
+- GitHub repos: Vendored code in external/ links to original sources.
+- Course materials: Slides/, Workshops/ for additional context.
+
+Contribution Guidelines
+
+- Read relevant AGENTS.md before editing.
+- Test changes locally before committing.
+- Update documentation if adding new features.
+- Follow universal conventions for code style.
+- For new assignments: Add to appropriate folder with AGENTS.md.
+
+Version and Changelog
+
+- This workspace is for DRL course assignments and research.
+- Updates: Regularly sync with course repo; add new assignments as completed.
+- Changelog: See git log for recent changes; major updates noted in README.md.
 
 Definition of Done
 
