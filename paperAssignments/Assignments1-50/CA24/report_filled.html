@@ -165,5 +165,20 @@ python -c "from src.config import load_from_yaml; cfg=load_from_yaml('configs/de
 <p><b>Reproducibility:</b> Reproducibility is ensured by fixing random seeds, logging all configs and outputs, and using import-safe, deterministic code. This allows others to exactly replicate results, a cornerstone of scientific research.</p>
 <p><b>Interpretation:</b> The results demonstrate that, for a well-posed synthetic regression task, a simple MLP can reliably recover the ground truth mapping. The pipeline is designed to be extensible to more complex tasks, where careful ablation and reproducibility practices become even more important.</p>
 
+<h2>Mathematical Derivations and Practical Insights</h2>
+<p><b>Synthetic Data:</b> For each sample, <i>x</i> is drawn from a standard normal distribution and <i>y</i> is computed as a linear function of <i>x</i> plus Gaussian noise. The optimal predictor is the true linear mapping, and the best achievable MSE is the noise variance. In practice, the model should approach this value as training progresses.</p>
+<p><b>MLP Model:</b> The MLP computes a function of the form <i>f<sub>&theta;</sub>(x) = W<sub>2</sub> &phi;(W<sub>1</sub>x + b<sub>1</sub>) + b<sub>2</sub></i>, where &phi; is the ReLU activation. For a linear ground truth, a single-layer network suffices, but deeper networks are used to test generalization and optimization. The universal approximation theorem guarantees that, with enough width, the MLP can approximate any continuous function.</p>
+<p><b>Loss and Optimization:</b> The MSE loss is the average squared difference between predictions and targets. Adam optimizer adapts the learning rate for each parameter, helping avoid plateaus or exploding gradients.</p>
+<p><b>Ablation Pipeline:</b> For each ablation (e.g., hidden size), all other parameters are fixed and only the variable of interest is changed. Each run is repeated with multiple seeds to account for randomness. Results are aggregated and compared using statistical tests, analogous to controlled experiments in science.</p>
+<p><b>Reproducibility Steps:</b></p>
+<ol>
+  <li>Fix all random seeds (Python, NumPy, PyTorch).</li>
+  <li>Log all configs and outputs (YAML, CSV, figures).</li>
+  <li>Use version control to track code changes.</li>
+  <li>Document all dependencies and environment details.</li>
+  <li>Provide scripts for running and evaluating experiments.</li>
+</ol>
+<p><b>Real-World Analogy:</b> Training a model on synthetic data is like calibrating a scientific instrument with a known standard. If the instrument (model) cannot recover the standard, it is unlikely to perform well on unknown samples. Ablations are like sensitivity analyses, probing which settings matter most.</p>
+
 </body>
 </html>

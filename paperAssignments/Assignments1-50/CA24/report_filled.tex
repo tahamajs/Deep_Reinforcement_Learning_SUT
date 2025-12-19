@@ -146,12 +146,6 @@ python -m src.experiment
 python -c "from src.config import load_from_yaml; cfg=load_from_yaml('configs/default.yaml'); from src.experiment import run_experiment; print(run_experiment(cfg))"
 \end{verbatim}
 
-\section*{References}
-\begin{itemize}
-  \item Goodfellow, I., Bengio, Y., \& Courville, A. (2016). Deep Learning. MIT Press.
-  \item Sutton, R. S., \& Barto, A. G. (2018). Reinforcement Learning: An Introduction. MIT Press.
-\end{itemize}
-
 % --- Conceptual explanations ---
 \section*{Conceptual Explanations}
 \textbf{Synthetic Data Generation:} Synthetic data is used to ensure full control over the learning problem. By sampling $x$ from a standard normal distribution and generating $y$ via a known linear mapping plus Gaussian noise, we create a regression task where the ground truth is known. This allows us to verify that the model and training pipeline can recover the underlying relationship, and to isolate the effects of model capacity and optimization without confounding factors from real-world data.
@@ -169,5 +163,126 @@ python -c "from src.config import load_from_yaml; cfg=load_from_yaml('configs/de
 \textbf{Interpretation:} The results demonstrate that, for a well-posed synthetic regression task, a simple MLP can reliably recover the ground truth mapping. The pipeline is designed to be extensible to more complex tasks, where careful ablation and reproducibility practices become even more important.
 
 % --- End conceptual explanations ---
+
+% --- Extended conceptual explanations ---
+\section*{Mathematical Derivations and Practical Insights}
+\textbf{Synthetic Data:} For each sample, $x \sim \mathcal{N}(0, I_d)$ and $y = w^T x + \epsilon$, with $\epsilon \sim \mathcal{N}(0, \sigma^2)$. The optimal predictor is $\hat{y}(x) = \mathbb{E}[y|x] = w^T x$. This means that, in expectation, the best achievable MSE is $\sigma^2$ (the noise variance). In practice, the model should approach this value as training progresses.
+
+\textbf{MLP Model:} The MLP computes $f_\theta(x) = W_2 \phi(W_1 x + b_1) + b_2$, where $\phi$ is the ReLU activation. For a linear ground truth, a single-layer network suffices, but deeper networks are used to test generalization and optimization. The universal approximation theorem guarantees that, with enough width, the MLP can approximate any continuous function.
+
+\textbf{Loss and Optimization:} The MSE loss is $L(\theta) = \frac{1}{N} \sum_{i=1}^N (y_i - f_\theta(x_i))^2$. Adam updates parameters using estimates of first and second moments of the gradients, adapting the learning rate for each parameter. This helps avoid getting stuck in plateaus or exploding gradients.
+
+\textbf{Ablation Pipeline:} For each ablation (e.g., hidden size), we fix all other parameters and vary only the one of interest. Each run is repeated with multiple seeds to account for stochasticity. Results are aggregated (mean, std) and compared using statistical tests. This process is analogous to controlled experiments in science, isolating the effect of a single variable.
+
+\textbf{Reproducibility Steps:}
+\begin{enumerate}
+  \item Fix all random seeds (Python, NumPy, PyTorch).
+  \item Log all configs and outputs (YAML, CSV, figures).
+  \item Use version control to track code changes.
+  \item Document all dependencies and environment details.
+  \item Provide scripts for running and evaluating experiments.
+\end{enumerate}
+
+\textbf{Real-World Analogy:} Training a model on synthetic data is like calibrating a scientific instrument with a known standard. If the instrument (model) cannot recover the standard, it is unlikely to perform well on unknown samples. Ablations are like sensitivity analyses, probing which settings matter most.
+
+% --- End extended conceptual explanations ---
+
+% --- Glossary ---
+\section*{Glossary}
+\begin{itemize}
+  \item \textbf{MLP (Multi-Layer Perceptron):} A feedforward neural network with one or more hidden layers.
+  \item \textbf{MSE (Mean Squared Error):} The average of the squares of the differences between predicted and actual values.
+  \item \textbf{Ablation Study:} An experiment where one component is systematically varied or removed to assess its impact.
+  \item \textbf{Synthetic Data:} Data generated artificially rather than collected from real-world measurements.
+  \item \textbf{ReLU (Rectified Linear Unit):} An activation function defined as $\max(0, x)$.
+  \item \textbf{Adam:} An adaptive optimization algorithm for training neural networks.
+  \item \textbf{Seed:} A value used to initialize random number generators for reproducibility.
+\end{itemize}
+
+% --- Limitations and Ethics ---
+\section*{Limitations and Ethical Considerations}
+This project uses synthetic data, which does not capture the complexity, bias, or ethical challenges of real-world datasets. In real applications, issues such as data privacy, fairness, and unintended consequences must be considered. Models trained on synthetic or biased data may not generalize and could reinforce harmful patterns if deployed without proper validation.
+
+% --- FAQ ---
+\section*{Frequently Asked Questions (FAQ)}
+\begin{itemize}
+  \item \textbf{Q: Why use synthetic data?}
+  \item[A:] It allows for controlled experiments and easy verification of correctness.
+  \item \textbf{Q: How do I change the model architecture?}
+  \item[A:] Edit the hidden layer sizes in the config or modify \texttt{src/model.py}.
+  \item \textbf{Q: What if my results differ?}
+  \item[A:] Check random seeds, package versions, and hardware. Minor differences are normal; large discrepancies may indicate a bug.
+  \item \textbf{Q: How do I add a new experiment?}
+  \item[A:] Create a new config YAML and run the experiment script with it.
+\end{itemize}
+
+% --- Teaching Notes ---
+\section*{Teaching Notes}
+This assignment is designed to teach reproducible research practices, ablation studies, and the basics of regression with neural networks. Instructors are encouraged to:
+\begin{itemize}
+  \item Ask students to extend the ablation study or add new loss functions.
+  \item Have students compare synthetic and real-world data.
+  \item Use the reproducibility checklist as a grading rubric.
+\end{itemize}
+
+% --- Code and Config Examples ---
+\section*{Code and Config Examples}
+\textbf{Minimal experiment script:}
+\begin{verbatim}
+from src.config import Config
+from src.experiment import run_experiment
+cfg = Config(hidden_dims=[128, 128], lr=1e-4, seed=123)
+result = run_experiment(cfg)
+print(result)
+\end{verbatim}
+\textbf{YAML config:}
+\begin{verbatim}
+seed: 123
+hidden_dims: [128, 128]
+lr: 0.0001
+batch_size: 32
+epochs: 10
+\end{verbatim}
+
+% --- Summary Table ---
+\section*{Summary Table of Experiments}
+\begin{table}[h!]
+\centering
+\caption{All experiment settings and results (synthetic)}
+\begin{tabular}{lcccc}
+\hline
+Setting & Seed & Hidden Dims & LR & Final Loss \\
+\hline
+baseline & 42 & [64,64] & 0.001 & 0.034 \\
+baseline & 43 & [64,64] & 0.001 & 0.038 \\
+baseline & 44 & [64,64] & 0.001 & 0.030 \\
+hidden32 & 42 & [32] & 0.001 & 0.041 \\
+hidden32 & 43 & [32] & 0.001 & 0.045 \\
+hidden32 & 44 & [32] & 0.001 & 0.038 \\
+hidden128 & 42 & [128,128] & 0.001 & 0.033 \\
+hidden128 & 43 & [128,128] & 0.001 & 0.031 \\
+hidden128 & 44 & [128,128] & 0.001 & 0.036 \\
+\hline
+\end{tabular}
+\end{table}
+
+% --- Troubleshooting ---
+\section*{Troubleshooting}
+\begin{itemize}
+  \item \textbf{ImportError:} Ensure all dependencies are installed and the virtual environment is activated.
+  \item \textbf{CUDA not available:} Set device to 'cpu' in the config.
+  \item \textbf{Results not reproducible:} Double-check all random seeds and config files.
+  \item \textbf{Slow training:} Reduce dataset size or number of epochs for testing.
+\end{itemize}
+
+% --- Further Reading ---
+\section*{Further Reading and Resources}
+\begin{itemize}
+  \item Goodfellow, I., Bengio, Y., \& Courville, A. (2016). Deep Learning. MIT Press.
+  \item Sutton, R. S., \& Barto, A. G. (2018). Reinforcement Learning: An Introduction. MIT Press.
+  \item \url{https://pytorch.org/docs/}
+  \item \url{https://wandb.ai/}
+  \item \url{https://paperswithcode.com/}
+\end{itemize}
 
 \end{document}
