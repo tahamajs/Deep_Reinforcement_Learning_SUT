@@ -47,3 +47,10 @@ def register_envs():
             from cs285.envs import obstacles
         except Exception:
             pass
+
+
+# Attempt to register envs upon import; silent on failure
+try:
+    register_envs()
+except Exception:
+    pass
