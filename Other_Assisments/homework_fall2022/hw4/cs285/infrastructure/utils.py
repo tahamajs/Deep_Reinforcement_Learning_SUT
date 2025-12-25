@@ -17,13 +17,27 @@ def calculate_mean_prediction_error(env, action_sequence, models, data_statistic
     return mpe, true_states, pred_states
 
 def perform_actions(env, actions):
-    ob = env.reset()
+    # Handle both Gym and Gymnasium reset/step signatures
+    reset_out = env.reset()
+    if isinstance(reset_out, tuple):
+        ob = reset_out[0]
+    else:
+        ob = reset_out
+
     obs, acs, rewards, next_obs, terminals, image_obs = [], [], [], [], [], []
     steps = 0
     for ac in actions:
         obs.append(ob)
         acs.append(ac)
-        ob, rew, done, _ = env.step(ac)
+        step_out = env.step(ac)
+        # step_out can be (obs, rew, done, info) or (obs, rew, terminated, truncated, info)
+        if len(step_out) == 4:
+            ob, rew, done, _ = step_out
+        elif len(step_out) == 5:
+            ob, rew, terminated, truncated, _ = step_out
+            done = bool(terminated or truncated)
+        else:
+            raise RuntimeError("Unexpected env.step return signature: {}".format(len(step_out)))
 
         next_obs.append(ob)
         rewards.append(rew)
@@ -40,7 +54,13 @@ def mean_squared_error(a, b):
     return np.mean((a-b)**2)
 
 def sample_trajectory(env, policy, max_path_length, render=False):
-    ob = env.reset()
+    # Reset may return (obs, info) for Gymnasium; handle both
+    reset_out = env.reset()
+    if isinstance(reset_out, tuple):
+        ob = reset_out[0]
+    else:
+        ob = reset_out
+
     obs, acs, rewards, next_obs, terminals, image_obs = [], [], [], [], [], []
     steps = 0
     while True:
@@ -49,11 +69,19 @@ def sample_trajectory(env, policy, max_path_length, render=False):
         if isinstance(action, np.ndarray) and action.ndim > 1:
             action = action.squeeze(0)
         acs.append(action)
-        ob, rew, done, _ = env.step(action)
+        step_out = env.step(action)
+        if len(step_out) == 4:
+            ob, rew, done, _ = step_out
+        elif len(step_out) == 5:
+            ob, rew, terminated, truncated, _ = step_out
+            done = bool(terminated or truncated)
+        else:
+            raise RuntimeError("Unexpected env.step return signature: {}".format(len(step_out)))
+
         next_obs.append(ob)
         rewards.append(rew)
         steps += 1
-        rollout_done = done or (steps >= max_path_length)
+        rollout_done = bool(done) or (steps >= max_path_length)
         terminals.append(rollout_done)
         if rollout_done:
             break

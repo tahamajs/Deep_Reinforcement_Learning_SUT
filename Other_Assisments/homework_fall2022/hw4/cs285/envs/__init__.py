@@ -31,6 +31,19 @@ def register_envs():
     """Register custom environments with Gym."""
     try:
         # Import submodules to trigger their registration
-        from cs285.envs import cheetah
+        # Keep this best-effort so imports won't crash if mujoco/etc are missing
+        from cs285.envs import cheetah, reacher, obstacles
     except ImportError:
-        pass
+        # Fall back to importing individually to give clearer partial availability
+        try:
+            from cs285.envs import cheetah
+        except Exception:
+            pass
+        try:
+            from cs285.envs import reacher
+        except Exception:
+            pass
+        try:
+            from cs285.envs import obstacles
+        except Exception:
+            pass
