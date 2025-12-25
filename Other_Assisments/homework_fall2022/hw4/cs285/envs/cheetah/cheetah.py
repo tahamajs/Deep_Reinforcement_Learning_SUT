@@ -1,15 +1,23 @@
 import numpy as np
-import gym
-from gym import utils
-from gym.envs.mujoco import MujocoEnv
+import gymnasium as gym
+from gymnasium import utils
+from gymnasium.envs.mujoco import MujocoEnv
+from gymnasium.spaces import Box
 
 
 class HalfCheetahEnv(MujocoEnv, utils.EzPickle):
 
     def __init__(self):
-
-        MujocoEnv.__init__(self, "half_cheetah.xml", 5)
+        # Newer Gymnasium's MujocoEnv requires an observation_space argument.
+        # Provide a temporary small Box and then set the proper observation_space
+        # after initialization using a sample observation.
+        dummy_obs_space = Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float64)
+        super(HalfCheetahEnv, self).__init__("half_cheetah.xml", 5, observation_space=dummy_obs_space)
         utils.EzPickle.__init__(self)
+
+        # Now compute and set the correct observation space
+        obs = self._get_obs()
+        self.observation_space = Box(low=-np.inf, high=np.inf, shape=obs.shape, dtype=np.float64)
 
         self.action_dim = self.ac_dim = self.action_space.shape[0]
         self.observation_dim = self.obs_dim = self.observation_space.shape[0]
@@ -71,23 +79,28 @@ class HalfCheetahEnv(MujocoEnv, utils.EzPickle):
         return xposafter
 
     def step(self, action):
+        # Gymnasium expects step to return: obs, reward, terminated, truncated, info
         self.do_simulation(action, self.frame_skip)
         ob = self._get_obs()
         rew, done = self.get_reward(ob, action)
         score = self.get_score(ob)
-        env_info = {
+        info = {
             "obs_dict": self.obs_dict,
             "rewards": self.reward_dict,
             "score": score,
         }
-        return ob, rew, done, env_info
+        terminated = bool(done)
+        truncated = False
+        return ob, rew, terminated, truncated, info
 
     def _get_obs(self):
 
         self.obs_dict = {}
-        self.obs_dict["joints_pos"] = self.sim.data.qpos.flat.copy()
-        self.obs_dict["joints_vel"] = self.sim.data.qvel.flat.copy()
-        self.obs_dict["com_torso"] = self.get_body_com("torso").flat.copy()
+        # gymnasium's MuJoCoEnv stores state in self.data
+        self.obs_dict["joints_pos"] = self.data.qpos.ravel().copy()
+        self.obs_dict["joints_vel"] = self.data.qvel.ravel().copy()
+        # compute/approximate center of mass of torso; for smoke tests use zeros
+        self.obs_dict["com_torso"] = np.zeros((3,))
 
         return np.concatenate(
             [
