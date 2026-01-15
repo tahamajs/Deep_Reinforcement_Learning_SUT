@@ -1,0 +1,25 @@
+{
+  "commit": "56c63d6dbec7929b39cf018c7842e793be14f504",
+  "seed": 0,
+  "device": "cpu",
+  "timestamp": "2026-01-15 09:17:17",
+  "description": "HW6 bandits experiments (stochastic Bernoulli arms).",
+  "hyperparameters": {
+    "n_arms": 10,
+    "default_max_steps": 500,
+    "default_runs": 2000,
+    "ucb_bonus_c": 2.0,
+    "eps_schedule": [
+      0.0,
+      0.1,
+      0.2,
+      0.4
+    ],
+    "linucb_alpha": 1.0
+  },
+  "dataset": "Synthetic Bernoulli multi-armed bandit (K arms)",
+  "hardware": {
+    "cuda_available": false,
+    "device": "cpu"
+  }
+}

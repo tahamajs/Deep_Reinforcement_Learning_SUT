@@ -2,10 +2,10 @@
   "assignment": "HW7 Value-Based Theory",
   "seed": 0,
   "device": "cpu",
-  "torch_version": "not_installed",
-  "numpy_version": "2.3.3",
+  "torch_version": "2.9.1",
+  "numpy_version": "1.26.4",
   "python_version": "3.13.1",
-  "timestamp": "2025-12-18T16:49:33.737434Z",
-  "commit": "37a50a7",
-  "notes": "Generated run metadata programmatically"
+  "timestamp": "2026-01-15T05:45:20.020107Z",
+  "commit": "56c63d6dbec7929b39cf018c7842e793be14f504",
+  "notes": "Theoretical-only; see HW7_Complete_Solutions.md and reports/Homework-7-Report.pdf."
 }
