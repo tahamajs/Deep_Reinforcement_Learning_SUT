@@ -69,7 +69,5 @@ This phase bridges theory and practice for modern deep RL. We revisit **dynamic 
 
 ## Prerequisites
 - Familiarity with basic RL (Bellman equations), linear algebra, and probability inequalities (Markov, Hoeffding).
-- Comfort with automatic differentiation and optimization (SGD, line search, CG).
-
-## Suggested Reading
+- Comfort with automatic differentiation and optimization (SGD, line search, CG).## Suggested Reading
 - Sutton & Barto (2018) Ch. 3–4 for DP, Ch. 13 for PG; Kakade (2001) on NPG; Schulman et al. (2015) TRPO; Haarnoja et al. (2018) SAC; Dann et al. (2019) on regret bounds.
