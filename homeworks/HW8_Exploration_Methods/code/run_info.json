@@ -1,0 +1,17 @@
+{
+  "commit": "ecf9dd458561a60eb72b93133f5f4a6a2e60d0b7",
+  "platform": "macOS-26.1-arm64-arm-64bit-Mach-O",
+  "cuda_available": false,
+  "device": "cpu",
+  "hyperparameters": {
+    "num_arms": 10,
+    "horizon": 5000,
+    "epsilon": 0.1,
+    "ucb_c": 2.0,
+    "alpha0": 1.0,
+    "beta0": 1.0,
+    "seed": 7,
+    "device": "cpu"
+  },
+  "dataset": "Bernoulli multi-armed bandit (synthetic)"
+}
