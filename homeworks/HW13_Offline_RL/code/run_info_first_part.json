@@ -1,0 +1,20 @@
+{
+  "timestamp_utc": "2026-01-15T01:26:19.075794Z",
+  "commit": "9b82ec3d5519a8d7274c766a77344d29916ae87f",
+  "cwd": "/Users/tahamajs/Documents/uni/DRL/homeworks/HW13_Offline_RL/code",
+  "notebook": "HW_13_first_part.ipynb",
+  "hyperparameters": {
+    "fp_iterations": 1000000,
+    "epsilon_values": [
+      0.01,
+      0.1,
+      0.3
+    ],
+    "seed": 42
+  },
+  "dataset": "Synthetic Rock-Scissors-Paper (standard and modified)",
+  "hardware": {
+    "device": "cpu",
+    "cuda_available": false
+  }
+}
