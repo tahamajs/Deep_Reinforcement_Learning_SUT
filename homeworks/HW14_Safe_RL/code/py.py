@@ -403,24 +403,25 @@ class SimpleEnv:
         
     def reset(self):
         self.state = np.random.rand(self.state_dim)
-        self.goal = np.array([0.5, 0.5, 0.5, 0.5])  # Goal state
+        self.goal = np.array([0.5, 0.5, 0.5, 0.5])
         self.step_count = 0
         return self.state
         
     def step(self, action):
-        # Move toward goal (reward)
-        self.state = np.clip(self.state + action * 0.1, 0, 1)
+        # FIX: Apply action ONLY to first 2 dimensions of state
+        self.state[:2] = np.clip(self.state[:2] + action * 0.1, 0, 1)
+        
+        # Reward: Move toward goal
         reward = -np.linalg.norm(self.state - self.goal)
         
-        # Cost: Energy consumption (separate from reward)
-        cost = np.sum(action**2) * 0.1  # Scale cost to be smaller
+        # Cost: Energy consumption
+        cost = np.sum(action**2) * 0.1
         
         self.step_count += 1
         done = self.step_count >= self.max_steps
         return self.state, reward, done, done, {"cost": cost}
     
     def render(self):
-        """Create a simple visualization of the state for rendering"""
         plt.figure(figsize=(6, 4))
         plt.bar(range(len(self.state)), self.state, color='skyblue')
         plt.title('State Visualization')
@@ -428,13 +429,13 @@ class SimpleEnv:
         plt.ylabel('Value')
         plt.tight_layout()
         
-        # Save to buffer
         buf = io.BytesIO()
         plt.savefig(buf, format='png')
         plt.close()
         buf.seek(0)
         return np.array(Image.open(buf))
 
+        
         
 # ======================
 # MAIN EXECUTION
