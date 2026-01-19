@@ -272,12 +272,6 @@ def train_ppo_lagrangian(
     ep_rewards = []
     ep_costs = []
     obs = env.reset()
-    cost_fn = lambda s, a: np.sum(a**2) * 0.1  # Your cost function
-    shield = SafetyLayer(
-        cost_fn=cost_fn,
-        cost_limit=5.0,
-        fallback=[0.0, 0.0]  # Safe default action
-    )
     for ep in range(num_episodes):
         states, actions, logps, rewards, costs, dones, values = (
             [],
@@ -292,11 +286,11 @@ def train_ppo_lagrangian(
         while steps < batch_size_steps:
             state = obs
             action, logp = agent.select_action(state)
-            safe_action = shield.safe_action(state, action)  # Apply safety layer
+            safe_action = shield.safe_action(state, action)
             next_obs, reward, terminated, truncated, info = env.step(safe_action)
             cost = info.get("cost", 0.0)
             states.append(state)
-            actions.append(safe_action)  # Store safe action
+            actions.append(safe_action)
             logps.append(logp.cpu().item() if hasattr(logp, "cpu") else float(logp))
             rewards.append(reward)
             costs.append(cost)
@@ -305,9 +299,12 @@ def train_ppo_lagrangian(
             steps += 1
             if terminated or truncated:
                 obs = env.reset()
+        
+        # FIX: Convert lists to numpy arrays BEFORE tensor conversion
         with torch.no_grad():
-            vals = agent.value(torch.FloatTensor(states).to(DEVICE)).squeeze().cpu().numpy()
-            cost_vals = agent.cost_value(torch.FloatTensor(states).to(DEVICE)).squeeze().cpu().numpy()
+            vals = agent.value(torch.FloatTensor(np.array(states)).to(DEVICE)).squeeze().cpu().numpy()
+            cost_vals = agent.cost_value(torch.FloatTensor(np.array(states)).to(DEVICE)).squeeze().cpu().numpy()
+        
         advs, returns = agent.compute_gae(rewards, vals, dones)
         cost_advs, cost_returns = agent.compute_gae(costs, cost_vals, dones)
         batch = {
@@ -328,6 +325,7 @@ def train_ppo_lagrangian(
             )
     return ep_rewards, ep_costs
 
+    
 def train_cpo(env, agent: CPOAgent, num_episodes=500):
     rewards_hist = []
     costs_hist = []
