@@ -272,6 +272,12 @@ def train_ppo_lagrangian(
     ep_rewards = []
     ep_costs = []
     obs = env.reset()
+    cost_fn = lambda s, a: np.sum(a**2) * 0.1  # Your cost function
+    shield = SafetyLayer(
+        cost_fn=cost_fn,
+        cost_limit=5.0,
+        fallback=[0.0, 0.0]  # Safe default action
+    )
     for ep in range(num_episodes):
         states, actions, logps, rewards, costs, dones, values = (
             [],
@@ -286,10 +292,11 @@ def train_ppo_lagrangian(
         while steps < batch_size_steps:
             state = obs
             action, logp = agent.select_action(state)
-            next_obs, reward, terminated, truncated, info = env.step(action)
+            safe_action = shield.safe_action(state, action)  # Apply safety layer
+            next_obs, reward, terminated, truncated, info = env.step(safe_action)
             cost = info.get("cost", 0.0)
             states.append(state)
-            actions.append(action)
+            actions.append(safe_action)  # Store safe action
             logps.append(logp.cpu().item() if hasattr(logp, "cpu") else float(logp))
             rewards.append(reward)
             costs.append(cost)
@@ -355,6 +362,10 @@ def evaluate_agent(
     frames = []
     rewards = []
     costs = []
+    # Create safety layer for evaluation
+    cost_fn = lambda s, a: np.sum(a**2) * 0.1
+    shield = SafetyLayer(cost_fn=cost_fn, cost_limit=5.0, fallback=[0.0, 0.0])
+    
     for ep in range(num_episodes):
         obs = env.reset()
         ep_r = 0.0
@@ -364,17 +375,12 @@ def evaluate_agent(
             with torch.no_grad():
                 mean, std = agent_policy(state_t)
                 action = mean.cpu().numpy().squeeze(0)
-            obs, r, terminated, truncated, info = env.step(action)
+            safe_action = shield.safe_action(obs, action)  # Apply safety layer
+            obs, r, terminated, truncated, info = env.step(safe_action)
             ep_r += r
             ep_c += info.get("cost", 0.0)
-            # Only render for the first episode
-            if ep == 0 and hasattr(env, 'render'):
-                try:
-                    frame = env.render()
-                    if frame is not None:
-                        frames.append(frame)
-                except Exception as e:
-                    print(f"Warning: Could not render frame: {e}")
+            if ep == 0:
+                frames.append(env.render())
             if terminated or truncated:
                 break
         rewards.append(ep_r)
@@ -383,6 +389,7 @@ def evaluate_agent(
         imageio.mimsave(save_path, frames, fps=20)
     print(f"Eval mean reward: {np.mean(rewards):.2f}, mean cost: {np.mean(costs):.2f}")
     return rewards, costs
+
 
 # ======================
 # EXAMPLE ENVIRONMENT
@@ -396,15 +403,21 @@ class SimpleEnv:
         
     def reset(self):
         self.state = np.random.rand(self.state_dim)
+        self.goal = np.array([0.5, 0.5, 0.5, 0.5])  # Goal state
         self.step_count = 0
         return self.state
         
     def step(self, action):
+        # Move toward goal (reward)
+        self.state = np.clip(self.state + action * 0.1, 0, 1)
+        reward = -np.linalg.norm(self.state - self.goal)
+        
+        # Cost: Energy consumption (separate from reward)
+        cost = np.sum(action**2) * 0.1  # Scale cost to be smaller
+        
         self.step_count += 1
-        reward = -np.sum(action**2)  # Negative reward for large actions
-        cost = np.sum(action**2)     # Cost proportional to action magnitude
         done = self.step_count >= self.max_steps
-        return self.reset(), reward, done, done, {"cost": cost}
+        return self.state, reward, done, done, {"cost": cost}
     
     def render(self):
         """Create a simple visualization of the state for rendering"""
@@ -422,6 +435,7 @@ class SimpleEnv:
         buf.seek(0)
         return np.array(Image.open(buf))
 
+        
 # ======================
 # MAIN EXECUTION
 # ======================
@@ -433,11 +447,16 @@ if __name__ == "__main__":
     agent = PPOLagrangian(
         state_dim=env.state_dim,
         action_dim=env.action_dim,
-        cost_limit=0.5,
-        lr=3e-4,
-        lr_value=1e-3,
-        lr_cost_value=1e-3
-    )
+        cost_limit=5.0,  # Increased from 0.5 to 5.0
+        clip=0.2,
+        gamma=0.99,
+        lr=1e-4,  # Reduced from 3e-4
+        lr_value=5e-4,  # Reduced from 1e-3
+        lr_cost_value=5e-4,  # Reduced from 1e-3
+        lr_lambda=1e-3,
+        initial_lambda=0.0
+    )    
+
     
     # Train agent
     print("\n" + "="*50)
