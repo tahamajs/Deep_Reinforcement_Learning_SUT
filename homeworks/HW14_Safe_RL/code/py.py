@@ -446,7 +446,7 @@ if __name__ == "__main__":
     rewards, costs = train_ppo_lagrangian(
         env=env,
         agent=agent,
-        num_episodes=50,
+        num_episodes=200,
         batch_size_steps=2048
     )
     
