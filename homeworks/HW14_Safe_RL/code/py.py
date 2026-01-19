@@ -13,19 +13,13 @@ import matplotlib
 matplotlib.use('Agg')
 import io
 from PIL import Image
-import gymnasium as gym  # تغییر از gym به gymnasium
+import gymnasium as gym
 
-# ======================
-# CONFIGURATION SECTION
-# ======================
 SAVE_DIR = "./results"
 os.makedirs(SAVE_DIR, exist_ok=True)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {DEVICE}")
 
-# ======================
-# CORE IMPLEMENTATIONS
-# ======================
 
 class Policy(nn.Module):
     def __init__(self, state_dim, action_dim):
@@ -190,39 +184,30 @@ class PPOLagrangian:
             "mean_cost": mean_cost,
         }
 
-# ======================
-# ENVIRONMENT SETUP
-# ======================
-# ======================
-# ENVIRONMENT SETUP
-# ======================
 class CostWrapper(gym.Wrapper):
     """Wrapper to add cost to environment info"""
     def __init__(self, env):
         super().__init__(env)
-        # Cost function: proportional to squared action (energy)
         self.cost_fn = lambda state, action: np.sum(np.square(action)) * 0.1
     
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         cost = self.cost_fn(obs, action)
-        info["cost"] = cost  # Add cost to info dictionary
+        info["cost"] = cost 
         return obs, reward, terminated, truncated, info
 
 def create_env():
     env = gym.make("HalfCheetah-v4", render_mode="rgb_array")
     env = CostWrapper(env)
-    # تغییر این خط: محدودیت هزینه برای Per-Step (نه Episode)
     shield = SafetyLayer(
         cost_fn=env.cost_fn,
-        cost_limit=0.01,  # از 10.0 به 0.01 تغییر یافت (10.0 / 1000)
+        cost_limit=0.01,
         fallback=np.zeros(env.action_space.shape[0])
     )
     return env, env.cost_fn, shield
 
-# ======================
-# TRAINING AND EVALUATION
-# ======================
+
+
 def train_ppo_lagrangian(
     env, agent: PPOLagrangian, shield, num_episodes=500, batch_size_steps=2048
 ):
@@ -313,28 +298,27 @@ def evaluate_agent(
     print(f"Eval mean reward: {np.mean(rewards):.2f}, mean cost: {np.mean(costs):.2f}")
     return rewards, costs
 
-# ======================
-# MAIN EXECUTION
-# ======================
+
+
+
+
+
 if __name__ == "__main__":
-    # Create environment with cost function
     env, cost_fn, shield = create_env()
     
-    # Create agent with appropriate cost limit
     agent = PPOLagrangian(
         state_dim=env.observation_space.shape[0],
         action_dim=env.action_space.shape[0],
-        cost_limit=10.0,  # Reasonable for HalfCheetah
+        cost_limit=10.0, 
         clip=0.2,
         gamma=0.99,
-        lr=1e-4,
+        lr=5e-5,
         lr_value=5e-4,
         lr_cost_value=5e-4,
         lr_lambda=1e-3,
         initial_lambda=0.0
     )
     
-    # Train agent
     print("\n" + "="*50)
     print("Starting Training...")
     print("="*50)
@@ -346,12 +330,10 @@ if __name__ == "__main__":
         batch_size_steps=2048
     )
     
-    # Save training metrics
     print("\n" + "="*50)
     print("Saving Training Metrics...")
     print("="*50)
     
-    # Plot and save rewards
     plt.figure(figsize=(12, 6))
     plt.plot(rewards, 'b-', alpha=0.7, label='Episode Reward')
     plt.plot(np.convolve(rewards, np.ones(10)/10, mode='valid'), 'r-', label='10-ep Avg')
@@ -363,7 +345,6 @@ if __name__ == "__main__":
     plt.savefig(os.path.join(SAVE_DIR, "training_rewards.png"), dpi=150, bbox_inches='tight')
     plt.close()
     
-    # Plot and save costs
     plt.figure(figsize=(12, 6))
     plt.plot(costs, 'g-', alpha=0.7, label='Episode Cost')
     plt.plot(np.convolve(costs, np.ones(10)/10, mode='valid'), 'm-', label='10-ep Avg')
@@ -375,10 +356,8 @@ if __name__ == "__main__":
     plt.savefig(os.path.join(SAVE_DIR, "training_costs.png"), dpi=150, bbox_inches='tight')
     plt.close()
     
-    # Save final policy
     torch.save(agent.policy.state_dict(), os.path.join(SAVE_DIR, "final_policy.pth"))
     
-    # Evaluate agent
     print("\n" + "="*50)
     print("Evaluating Agent...")
     print("="*50)
@@ -391,7 +370,6 @@ if __name__ == "__main__":
         save_path=os.path.join(SAVE_DIR, "evaluation_video.mp4")
     )
     
-    # Save evaluation metrics
     with open(os.path.join(SAVE_DIR, "evaluation_metrics.txt"), "w") as f:
         f.write(f"Average Reward: {np.mean(eval_rewards):.4f}\n")
         f.write(f"Average Cost: {np.mean(eval_costs):.4f}\n")
@@ -408,5 +386,4 @@ if __name__ == "__main__":
     print(f"Evaluation video: {os.path.join(SAVE_DIR, 'evaluation_video.mp4')}")
     print(f"Evaluation metrics: {os.path.join(SAVE_DIR, 'evaluation_metrics.txt')}")
     
-    # Close environment
     env.close()

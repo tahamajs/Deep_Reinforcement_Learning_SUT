@@ -189,15 +189,24 @@ python3 ./py.py
 ==================================================
 Starting Training...
 ==================================================
-Ep 0: reward=-8.69, cost=8.79, lambda=0.00
-Ep 10: reward=-8.58, cost=8.61, lambda=0.00
-Ep 20: reward=-3.25, cost=7.86, lambda=0.00
-Ep 30: reward=-0.78, cost=6.70, lambda=0.00
-Ep 40: reward=0.04, cost=5.01, lambda=0.00
-Ep 50: reward=0.09, cost=1.89, lambda=0.00
-Ep 60: reward=0.90, cost=1.40, lambda=0.00
-Ep 70: reward=5.35, cost=3.77, lambda=0.00
-Ep 80: reward=3.19, cost=3.28, lambda=0.00
+Ep 0: reward=-12.47, cost=8.70, lambda=0.00
+Ep 10: reward=-8.98, cost=8.27, lambda=0.00
+Ep 20: reward=-7.84, cost=7.66, lambda=0.00
+Ep 30: reward=-5.16, cost=6.61, lambda=0.00
+Ep 40: reward=-4.65, cost=5.59, lambda=0.00
+Ep 50: reward=-1.70, cost=5.39, lambda=0.00
+Ep 60: reward=-1.33, cost=4.48, lambda=0.00
+Ep 70: reward=1.50, cost=4.07, lambda=0.00
+Ep 80: reward=5.16, cost=6.12, lambda=0.00
+Ep 90: reward=5.84, cost=6.00, lambda=0.00
+Ep 100: reward=7.63, cost=5.40, lambda=0.00
+Ep 110: reward=10.01, cost=4.70, lambda=0.00
+Ep 120: reward=13.71, cost=5.24, lambda=0.00
+Ep 130: reward=17.50, cost=5.11, lambda=0.00
+Ep 140: reward=19.97, cost=5.33, lambda=0.00
+Ep 150: reward=22.13, cost=5.48, lambda=0.00
+Ep 160: reward=24.49, cost=5.31, lambda=0.00
+Ep 170: reward=27.63, cost=5.20, lambda=0.00
 ```
 
 ---
