@@ -10,9 +10,10 @@ import imageio
 import os
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('Agg')  # Use non-interactive backend for headless environments
+matplotlib.use('Agg')
 import io
 from PIL import Image
+import gymnasium as gym  # تغییر از gym به gymnasium
 
 # ======================
 # CONFIGURATION SECTION
@@ -177,8 +178,7 @@ class PPOLagrangian:
                 self.optimizer_cost_value.zero_grad()
                 cost_value_loss.backward()
                 self.optimizer_cost_value.step()
-
-        mean_cost = np.mean(batch["costs"])  # Use actual costs, not discounted returns
+        mean_cost = np.mean(batch["costs"])
         self.lambda_coef = max(
             0.0, self.lambda_coef + self.lr_lambda * (mean_cost - self.cost_limit)
         )
@@ -190,89 +190,45 @@ class PPOLagrangian:
             "mean_cost": mean_cost,
         }
 
-class CPOAgent:
-    def __init__(self, state_dim, action_dim, cost_limit=10.0, delta_kl=0.01):
-        self.policy = Policy(state_dim, action_dim)
-        self.value_r = nn.Sequential(
-            nn.Linear(state_dim, 64), nn.ReLU(), nn.Linear(64, 1)
-        )
-        self.value_c = nn.Sequential(
-            nn.Linear(state_dim, 64), nn.ReLU(), nn.Linear(64, 1)
-        )
-        self.cost_limit = cost_limit
-        self.delta_kl = delta_kl
-        self.optimizer_value_r = optim.Adam(self.value_r.parameters(), lr=1e-3)
-        self.optimizer_value_c = optim.Adam(self.value_c.parameters(), lr=1e-3)
-    def compute_advantages(
-        self, rewards, values, costs, cost_values, dones, gamma=0.99, lam=0.97
-    ):
-        rewards = np.array(rewards)
-        costs = np.array(costs)
-        dones = np.array(dones, dtype=float)
-        values = np.array(values)
-        cost_values = np.array(cost_values)
-        adv_r = np.zeros_like(rewards)
-        adv_c = np.zeros_like(costs)
-        last_r = 0
-        last_c = 0
-        for t in reversed(range(len(rewards))):
-            next_val_r = values[t + 1] if t + 1 < len(values) else 0
-            next_val_c = cost_values[t + 1] if t + 1 < len(cost_values) else 0
-            delta_r = rewards[t] + gamma * next_val_r * (1 - dones[t]) - values[t]
-            delta_c = costs[t] + gamma * next_val_c * (1 - dones[t]) - cost_values[t]
-            last_r = delta_r + gamma * lam * (1 - dones[t]) * last_r
-            last_c = delta_c + gamma * lam * (1 - dones[t]) * last_c
-            adv_r[t] = last_r
-            adv_c[t] = last_c
-        returns_r = adv_r + values
-        returns_c = adv_c + cost_values
-        return adv_r, adv_c, returns_r, returns_c
-    def update(self, states, actions, rewards, costs, dones):
-        states_t = torch.FloatTensor(states).to(DEVICE)
-        actions_t = torch.FloatTensor(actions).to(DEVICE)
-        with torch.no_grad():
-            values_r = self.value_r(states_t).squeeze().cpu().numpy()
-            values_c = self.value_c(states_t).squeeze().cpu().numpy()
-        adv_r, adv_c, returns_r, returns_c = self.compute_advantages(
-            rewards, values_r, costs, values_c, dones
-        )
-        adv_r = (adv_r - adv_r.mean()) / (adv_r.std() + 1e-8)
-        adv_c = (adv_c - adv_c.mean()) / (adv_c.std() + 1e-8)
-        for _ in range(10):
-            vpred = self.value_r(states_t).squeeze()
-            loss_v = F.mse_loss(vpred, torch.FloatTensor(returns_r).to(DEVICE))
-            self.optimizer_value_r.zero_grad()
-            loss_v.backward()
-            self.optimizer_value_r.step()
-            vpred_c = self.value_c(states_t).squeeze()
-            loss_vc = F.mse_loss(vpred_c, torch.FloatTensor(returns_c).to(DEVICE))
-            self.optimizer_value_c.zero_grad()
-            loss_vc.backward()
-            self.optimizer_value_c.step()
-        mean, std = self.policy(states_t)
-        dist = Normal(mean, std)
-        logp = dist.log_prob(actions_t).sum(dim=-1)
-        surrogate_r = (logp * torch.FloatTensor(adv_r).to(DEVICE)).mean()
-        surrogate_c = (logp * torch.FloatTensor(adv_c).to(DEVICE)).mean()
-        J_c = float(np.sum(costs))
-        if J_c <= self.cost_limit:
-            loss = -surrogate_r
-        else:
-            loss = surrogate_c
-        self.policy.zero_grad()
-        loss.backward()
-        with torch.no_grad():
-            for p in self.policy.parameters():
-                if p.grad is not None:
-                    p.data += 0.01 * p.grad
-        return {"policy_loss": loss.item(), "J_c": J_c}
+# ======================
+# ENVIRONMENT SETUP
+# ======================
+# ======================
+# ENVIRONMENT SETUP
+# ======================
+class CostWrapper(gym.Wrapper):
+    """Wrapper to add cost to environment info"""
+    def __init__(self, env):
+        super().__init__(env)
+        # Cost function: proportional to squared action (energy)
+        self.cost_fn = lambda state, action: np.sum(np.square(action)) * 0.1
+    
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        cost = self.cost_fn(obs, action)
+        info["cost"] = cost  # Add cost to info dictionary
+        return obs, reward, terminated, truncated, info
 
+def create_env():
+    env = gym.make("HalfCheetah-v4", render_mode="rgb_array")
+    env = CostWrapper(env)
+    # تغییر این خط: محدودیت هزینه برای Per-Step (نه Episode)
+    shield = SafetyLayer(
+        cost_fn=env.cost_fn,
+        cost_limit=0.01,  # از 10.0 به 0.01 تغییر یافت (10.0 / 1000)
+        fallback=np.zeros(env.action_space.shape[0])
+    )
+    return env, env.cost_fn, shield
+
+# ======================
+# TRAINING AND EVALUATION
+# ======================
 def train_ppo_lagrangian(
-    env, agent: PPOLagrangian, num_episodes=500, batch_size_steps=2048
+    env, agent: PPOLagrangian, shield, num_episodes=500, batch_size_steps=2048
 ):
     ep_rewards = []
     ep_costs = []
-    obs = env.reset()
+    obs, _ = env.reset()
     for ep in range(num_episodes):
         states, actions, logps, rewards, costs, dones, values = (
             [],
@@ -299,9 +255,8 @@ def train_ppo_lagrangian(
             obs = next_obs
             steps += 1
             if terminated or truncated:
-                obs = env.reset()
+                obs, _ = env.reset()
         
-        # FIX: Convert lists to numpy arrays BEFORE tensor conversion
         with torch.no_grad():
             vals = agent.value(torch.FloatTensor(np.array(states)).to(DEVICE)).squeeze().cpu().numpy()
             cost_vals = agent.cost_value(torch.FloatTensor(np.array(states)).to(DEVICE)).squeeze().cpu().numpy()
@@ -316,8 +271,7 @@ def train_ppo_lagrangian(
             "advs": np.array(advs),
             "cost_returns": np.array(cost_returns),
             "cost_advs": np.array(cost_advs),
-                "costs": np.array(costs),  # ADD THIS LINE
-
+            "costs": np.array(costs),
         }
         stats = agent.update(batch)
         ep_rewards.append(sum(rewards))
@@ -328,47 +282,15 @@ def train_ppo_lagrangian(
             )
     return ep_rewards, ep_costs
 
-    
-def train_cpo(env, agent: CPOAgent, num_episodes=500):
-    rewards_hist = []
-    costs_hist = []
-    for ep in range(num_episodes):
-        states, actions, rewards, costs, dones = [], [], [], [], []
-        obs = env.reset()
-        done = False
-        while not done:
-            mean, std = agent.policy(torch.FloatTensor(obs).unsqueeze(0).to(DEVICE))
-            action = Normal(mean, std).sample().squeeze(0).detach().cpu().numpy()
-            next_obs, reward, terminated, truncated, info = env.step(action)
-            cost = info.get("cost", 0.0)
-            states.append(obs)
-            actions.append(action)
-            rewards.append(reward)
-            costs.append(cost)
-            dones.append(terminated or truncated)
-            obs = next_obs
-            done = terminated or truncated
-        stats = agent.update(np.array(states), np.array(actions), rewards, costs, dones)
-        rewards_hist.append(sum(rewards))
-        costs_hist.append(sum(costs))
-        if ep % 10 == 0:
-            print(
-                f"CPO Ep {ep}: reward={rewards_hist[-1]:.2f}, cost={costs_hist[-1]:.2f}"
-            )
-    return rewards_hist, costs_hist
-
 def evaluate_agent(
-    agent_policy, env, num_episodes=5, max_steps=1000, save_path="./eval.mp4"
+    agent_policy, env, shield, num_episodes=5, max_steps=1000, save_path="./eval.mp4"
 ):
     frames = []
     rewards = []
     costs = []
-    # Create safety layer for evaluation
-    cost_fn = lambda s, a: np.sum(a**2) * 0.1
-    shield = SafetyLayer(cost_fn=cost_fn, cost_limit=5.0, fallback=[0.0, 0.0])
     
     for ep in range(num_episodes):
-        obs = env.reset()
+        obs, _ = env.reset()
         ep_r = 0.0
         ep_c = 0.0
         for t in range(max_steps):
@@ -376,7 +298,7 @@ def evaluate_agent(
             with torch.no_grad():
                 mean, std = agent_policy(state_t)
                 action = mean.cpu().numpy().squeeze(0)
-            safe_action = shield.safe_action(obs, action)  # Apply safety layer
+            safe_action = shield.safe_action(obs, action)
             obs, r, terminated, truncated, info = env.step(safe_action)
             ep_r += r
             ep_c += info.get("cost", 0.0)
@@ -391,81 +313,27 @@ def evaluate_agent(
     print(f"Eval mean reward: {np.mean(rewards):.2f}, mean cost: {np.mean(costs):.2f}")
     return rewards, costs
 
-
-# ======================
-# EXAMPLE ENVIRONMENT
-# ======================
-class SimpleEnv:
-    def __init__(self):
-        self.state_dim = 4
-        self.action_dim = 2
-        self.max_steps = 100
-        self.reset()
-        
-    def reset(self):
-        self.state = np.random.rand(self.state_dim)
-        self.goal = np.array([0.5, 0.5, 0.5, 0.5])
-        self.step_count = 0
-        return self.state
-        
-    def step(self, action):
-        # FIX: Apply action ONLY to first 2 dimensions of state
-        self.state[:2] = np.clip(self.state[:2] + action * 0.1, 0, 1)
-        
-        # Reward: Move toward goal
-        reward = -np.linalg.norm(self.state - self.goal)
-        
-        # Cost: Energy consumption
-        cost = np.sum(action**2) * 0.1
-        
-        self.step_count += 1
-        done = self.step_count >= self.max_steps
-        return self.state, reward, done, done, {"cost": cost}
-    
-    def render(self):
-        plt.figure(figsize=(6, 4))
-        plt.bar(range(len(self.state)), self.state, color='skyblue')
-        plt.title('State Visualization')
-        plt.xlabel('State Dimension')
-        plt.ylabel('Value')
-        plt.tight_layout()
-        
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png')
-        plt.close()
-        buf.seek(0)
-        return np.array(Image.open(buf))
-
-        
-        
 # ======================
 # MAIN EXECUTION
 # ======================
 if __name__ == "__main__":
-    # Initialize environment
-    env = SimpleEnv()
+    # Create environment with cost function
+    env, cost_fn, shield = create_env()
     
-    # Create agent
+    # Create agent with appropriate cost limit
     agent = PPOLagrangian(
-        state_dim=env.state_dim,
-        action_dim=env.action_dim,
+        state_dim=env.observation_space.shape[0],
+        action_dim=env.action_space.shape[0],
+        cost_limit=10.0,  # Reasonable for HalfCheetah
         clip=0.2,
-            cost_limit=15.0,  
-
         gamma=0.99,
-        lr=1e-4,  # Reduced from 3e-4
-        lr_value=5e-4,  # Reduced from 1e-3
-        lr_cost_value=5e-4,  # Reduced from 1e-3
+        lr=1e-4,
+        lr_value=5e-4,
+        lr_cost_value=5e-4,
         lr_lambda=1e-3,
         initial_lambda=0.0
     )
-    cost_fn = lambda s, a: np.sum(a**2) * 0.1
-    shield = SafetyLayer(
-        cost_fn=cost_fn,
-        cost_limit=5.0,
-        fallback=[0.0, 0.0]
-    )
-
+    
     # Train agent
     print("\n" + "="*50)
     print("Starting Training...")
@@ -473,11 +341,12 @@ if __name__ == "__main__":
     rewards, costs = train_ppo_lagrangian(
         env=env,
         agent=agent,
+        shield=shield,
         num_episodes=200,
         batch_size_steps=2048
     )
     
-    # Save training metrics as images
+    # Save training metrics
     print("\n" + "="*50)
     print("Saving Training Metrics...")
     print("="*50)
@@ -516,6 +385,7 @@ if __name__ == "__main__":
     eval_rewards, eval_costs = evaluate_agent(
         agent_policy=agent.policy,
         env=env,
+        shield=shield,
         num_episodes=5,
         max_steps=100,
         save_path=os.path.join(SAVE_DIR, "evaluation_video.mp4")
@@ -537,3 +407,6 @@ if __name__ == "__main__":
     print(f"Training costs plot: {os.path.join(SAVE_DIR, 'training_costs.png')}")
     print(f"Evaluation video: {os.path.join(SAVE_DIR, 'evaluation_video.mp4')}")
     print(f"Evaluation metrics: {os.path.join(SAVE_DIR, 'evaluation_metrics.txt')}")
+    
+    # Close environment
+    env.close()
