@@ -413,7 +413,7 @@ class SimpleEnv:
         self.state[:2] = np.clip(self.state[:2] + action * 0.1, 0, 1)
         
         # Reward: Move toward goal
-        reward = np.linalg.norm(self.state - self.goal)
+        reward = -np.linalg.norm(self.state - self.goal)
         
         # Cost: Energy consumption
         cost = np.sum(action**2) * 0.1
@@ -449,8 +449,9 @@ if __name__ == "__main__":
     agent = PPOLagrangian(
         state_dim=env.state_dim,
         action_dim=env.action_dim,
-        cost_limit=5.0,  # Should be higher than expected cost
         clip=0.2,
+            cost_limit=15.0,  
+
         gamma=0.99,
         lr=1e-4,  # Reduced from 3e-4
         lr_value=5e-4,  # Reduced from 1e-3
