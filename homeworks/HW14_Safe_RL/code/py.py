@@ -177,7 +177,8 @@ class PPOLagrangian:
                 self.optimizer_cost_value.zero_grad()
                 cost_value_loss.backward()
                 self.optimizer_cost_value.step()
-        mean_cost = cost_returns.mean().item()
+
+        mean_cost = np.mean(batch["costs"])  # Use actual costs, not discounted returns
         self.lambda_coef = max(
             0.0, self.lambda_coef + self.lr_lambda * (mean_cost - self.cost_limit)
         )
@@ -315,6 +316,8 @@ def train_ppo_lagrangian(
             "advs": np.array(advs),
             "cost_returns": np.array(cost_returns),
             "cost_advs": np.array(cost_advs),
+                "costs": np.array(costs),  # ADD THIS LINE
+
         }
         stats = agent.update(batch)
         ep_rewards.append(sum(rewards))
@@ -410,7 +413,7 @@ class SimpleEnv:
         self.state[:2] = np.clip(self.state[:2] + action * 0.1, 0, 1)
         
         # Reward: Move toward goal
-        reward = -np.linalg.norm(self.state - self.goal)
+        reward = np.linalg.norm(self.state - self.goal)
         
         # Cost: Energy consumption
         cost = np.sum(action**2) * 0.1
@@ -446,7 +449,7 @@ if __name__ == "__main__":
     agent = PPOLagrangian(
         state_dim=env.state_dim,
         action_dim=env.action_dim,
-        cost_limit=5.0,  # Increased from 0.5 to 5.0
+        cost_limit=5.0,  # Should be higher than expected cost
         clip=0.2,
         gamma=0.99,
         lr=1e-4,  # Reduced from 3e-4
@@ -454,9 +457,14 @@ if __name__ == "__main__":
         lr_cost_value=5e-4,  # Reduced from 1e-3
         lr_lambda=1e-3,
         initial_lambda=0.0
-    )    
+    )
+    cost_fn = lambda s, a: np.sum(a**2) * 0.1
+    shield = SafetyLayer(
+        cost_fn=cost_fn,
+        cost_limit=5.0,
+        fallback=[0.0, 0.0]
+    )
 
-    
     # Train agent
     print("\n" + "="*50)
     print("Starting Training...")
