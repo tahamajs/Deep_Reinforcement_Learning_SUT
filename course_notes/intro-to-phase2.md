@@ -60,14 +60,10 @@ This phase bridges theory and practice for modern deep RL. We revisit **dynamic 
 ## Concentration and Generalization
 - **Hoeffding/Azuma**: bound deviations of bounded random variables; used to derive PAC and regret bounds in bandits/MDPs.
 - **Concentration of measure** enables confidence intervals for UCB/optimistic methods.
-- **Regret bounds**: logarithmic for stochastic bandits (UCB/TS), \(\tilde{O}(\sqrt{T})\) for adversarial settings; in RL, regret depends on horizon \(H\), state-action cardinality, and mixing assumptions.
-
-## Notation
+- **Regret bounds**: logarithmic for stochastic bandits (UCB/TS), \(\tilde{O}(\sqrt{T})\) for adversarial settings; in RL, regret depends on horizon \(H\), state-action cardinality, and mixing assumptions.## Notation
 - States \(s \in \mathcal{S}\), actions \(a \in \mathcal{A}\); transition \(P(s'|s,a)\); reward \(r(s,a)\); discount \(\gamma\).
 - Value \(V^\pi\), action-value \(Q^\pi\), advantage \(A^\pi = Q^\pi - V^\pi\).
-- Policies parameterized by \(\theta\); Fisher \(F\); temperature \(\alpha\) for entropy bonuses.
-
-## Prerequisites
+- Policies parameterized by \(\theta\); Fisher \(F\); temperature \(\alpha\) for entropy bonuses.## Prerequisites
 - Familiarity with basic RL (Bellman equations), linear algebra, and probability inequalities (Markov, Hoeffding).
 - Comfort with automatic differentiation and optimization (SGD, line search, CG).## Suggested Reading
 - Sutton & Barto (2018) Ch. 3–4 for DP, Ch. 13 for PG; Kakade (2001) on NPG; Schulman et al. (2015) TRPO; Haarnoja et al. (2018) SAC; Dann et al. (2019) on regret bounds.
