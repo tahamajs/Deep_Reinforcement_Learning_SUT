@@ -95,17 +95,22 @@ class MOPO:
                 
     def model_rollout(
         self, state: torch.Tensor, action: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:  # <-- ADD COLON HERE IF MISSING
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Predict next state and reward using ensemble dynamics model."""
         # Remove extra batch dimension (state is [1, 1, state_dim] from select_action)
         state = state.squeeze(0)  # Now [1, state_dim]
-        action = action.squeeze(0)  # Now [1, action_dim]
+        
+        # Ensure action is 2D: [1, action_dim] (fix for zero-dimensional tensor error)
+        if action.dim() == 0:  # If action is scalar (zero-dimensional)
+            action = action.unsqueeze(0).unsqueeze(0)  # [1, 1]
+        elif action.dim() == 1:  # If action is [1] (1D)
+            action = action.unsqueeze(0)  # [1, 1]
         
         # Predict with ensemble
         preds_next = []
         preds_r = []
         for model in self.ensemble:
-            ns, r = model(state, action)  # <-- FIXED: Removed .unsqueeze(0)
+            ns, r = model(state, action)
             preds_next.append(ns.squeeze(0))
             preds_r.append(r.squeeze(0))
         
@@ -119,6 +124,7 @@ class MOPO:
         adjusted_reward = reward_mean - penalty
         
         return next_state_mean, adjusted_reward
+
 
     def select_action(self, state: torch.Tensor) -> torch.Tensor:
         """
@@ -144,4 +150,4 @@ class MOPO:
         
         # Select the action with the highest expected reward
         best_action_idx = torch.argmax(torch.tensor(rewards))
-        return actions[best_action_idx].item()
+        return actions[best_action_idx].clone().detach()

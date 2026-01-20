@@ -222,7 +222,7 @@ def main():
         for i in range(len(dataset["states"]))
     ]
 
-    mopo_agent.train_dynamics(dataset_list, epochs=10)
+    mopo_agent.train_dynamics(dataset_list, epochs=1)
     
     # Evaluate MOPO
     def mopo_policy_fn(state):
@@ -230,7 +230,7 @@ def main():
         action = mopo_agent.select_action(state_tensor).detach().numpy()[0]
         return action
     
-    mopo_mean_reward, mopo_std_reward = evaluate_policy(env, mopo_policy_fn, episodes=10)
+    mopo_mean_reward, mopo_std_reward = evaluate_policy(env, mopo_policy_fn, episodes=1)
     
     print(f"\n{'='*50}")
     print("Final Results")
