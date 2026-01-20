@@ -326,12 +326,14 @@ class CQLSAC(nn.Module):
     def calc_policy_loss(self, states, alpha):
         """Calculates the policy (actor) loss."""
         actions_pred, log_pis = self.actor_local.evaluate(states)
-        q1 = self.critic1(states, actions_pred.squeeze(0))
-        q2 = self.critic2(states, actions_pred.squeeze(0))
-        min_Q = torch.min(q1, q2).cpu()
-        actor_loss = (alpha * log_pis.cpu() - min_Q).mean()
+        # FIX: Remove .squeeze(0) to keep batch dimension
+        q1 = self.critic1(states, actions_pred)
+        q2 = self.critic2(states, actions_pred)
+        min_Q = torch.min(q1, q2)
+        actor_loss = (alpha * log_pis - min_Q).mean()
         return actor_loss, log_pis
-    
+
+
     def _compute_policy_values(self, obs_pi, obs_q):
         """Computes the policy values adjusted by the policy's entropy term."""
         actions_pred, log_pis = self.actor_local.evaluate(obs_pi)
@@ -530,7 +532,9 @@ def get_config():
     parser.add_argument("--hidden_size", type=int, default=256, help="Hidden size")
     parser.add_argument("--learning_rate", type=float, default=3e-4, help="Learning rate")
     parser.add_argument("--temperature", type=float, default=1.0, help="Temperature for CQL")
-    parser.add_argument("--cql_weight", type=float, default=1.0, help="CQL weight")
+    parser.add_argument(
+        "--cql_weight", type=float, default=0.1, help="CQL weight" # Changed from 1.0 to 0.1
+    )
     parser.add_argument("--target_action_gap", type=float, default=10, help="Target action gap")
     parser.add_argument("--tau", type=float, default=5e-3, help="Soft update parameter")
     args = parser.parse_args()
