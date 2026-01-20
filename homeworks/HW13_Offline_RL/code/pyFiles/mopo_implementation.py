@@ -95,11 +95,8 @@ class MOPO:
                 
     def model_rollout(
         self, state: torch.Tensor, action: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Predict next state and reward using ensemble dynamics model.
-        
-        Fixes dimension mismatch by properly handling batch dimensions.
-        """
+    ) -> Tuple[torch.Tensor, torch.Tensor]:  # <-- ADD COLON HERE IF MISSING
+        """Predict next state and reward using ensemble dynamics model."""
         # Remove extra batch dimension (state is [1, 1, state_dim] from select_action)
         state = state.squeeze(0)  # Now [1, state_dim]
         action = action.squeeze(0)  # Now [1, action_dim]
@@ -108,7 +105,7 @@ class MOPO:
         preds_next = []
         preds_r = []
         for model in self.ensemble:
-            ns, r = model(state, action)
+            ns, r = model(state, action)  # <-- FIXED: Removed .unsqueeze(0)
             preds_next.append(ns.squeeze(0))
             preds_r.append(r.squeeze(0))
         
@@ -120,9 +117,8 @@ class MOPO:
         uncertainty = preds_next.std(dim=0).mean()
         penalty = self.lambda_u * uncertainty
         adjusted_reward = reward_mean - penalty
-    
-    return next_state_mean, adjusted_reward
-
+        
+        return next_state_mean, adjusted_reward
 
     def select_action(self, state: torch.Tensor) -> torch.Tensor:
         """
