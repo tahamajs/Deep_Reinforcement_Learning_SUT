@@ -2,12 +2,10 @@
 MOPO implementation (ensemble dynamics + penalized rollouts).
 Lightweight, intended for integration in notebooks.
 """
-
 from typing import List, Tuple
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
 
 class DynamicsModel(nn.Module):
     def __init__(self, state_dim: int, action_dim: int, hidden_dim: int = 256):
@@ -20,7 +18,7 @@ class DynamicsModel(nn.Module):
         )
         self.delta_head = nn.Linear(hidden_dim, state_dim)
         self.reward_head = nn.Linear(hidden_dim, 1)
-
+    
     def forward(
         self, state: torch.Tensor, action: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -30,7 +28,6 @@ class DynamicsModel(nn.Module):
         reward = self.reward_head(h)
         next_state = state + delta
         return next_state, reward.squeeze(-1)
-
 
 class MOPO:
     def __init__(
@@ -46,7 +43,7 @@ class MOPO:
         ]
         self.optimizers = [optim.Adam(m.parameters(), lr=lr) for m in self.ensemble]
         self.lambda_u = lambda_u
-
+    
     def train_dynamics(
         self,
         dataset: List[
@@ -95,7 +92,6 @@ class MOPO:
             avg_epoch_loss = total_loss / (len(dataset) * len(self.ensemble))
             print(f"Epoch {epoch+1}/{epochs} | Overall Avg Loss: {avg_epoch_loss:.4f}")
             print(f"{'-'*50}")
-
                 
     def model_rollout(
         self, state: torch.Tensor, action: torch.Tensor
@@ -109,19 +105,35 @@ class MOPO:
             preds_r.append(r.squeeze(0))
         preds_next = torch.stack(preds_next, dim=0)
         preds_r = torch.stack(preds_r, dim=0)
-
         next_state_mean = preds_next.mean(dim=0)
         reward_mean = preds_r.mean(dim=0)
         uncertainty = preds_next.std(dim=0).mean()
-
         penalty = self.lambda_u * uncertainty
         adjusted_reward = reward_mean - penalty
         return next_state_mean, adjusted_reward
 
-
-
-
-
-
-
-
+    def select_action(self, state: torch.Tensor) -> torch.Tensor:
+        """
+        Select an action using the MOPO algorithm.
+        For CartPole (discrete actions), we try both possible actions and select the one with highest expected reward.
+        """
+        # Convert state to tensor if needed
+        if not isinstance(state, torch.Tensor):
+            state = torch.tensor(state, dtype=torch.float32)
+        
+        # Expand state to batch dimension
+        state = state.unsqueeze(0)
+        
+        # Try both possible actions (0 and 1 for CartPole)
+        actions = torch.tensor([0, 1], dtype=torch.float32).view(-1, 1)
+        
+        # Evaluate both actions
+        rewards = []
+        for action in actions:
+            # Use model_rollout to get the expected reward
+            _, reward = self.model_rollout(state, action)
+            rewards.append(reward.item())
+        
+        # Select the action with the highest expected reward
+        best_action_idx = torch.argmax(torch.tensor(rewards))
+        return actions[best_action_idx].item()
