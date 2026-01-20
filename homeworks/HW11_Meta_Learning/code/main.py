@@ -754,7 +754,7 @@ class PEARL:
         # Context structure: [obs (4), action (1), reward (1)] -> Total 6
         context_input_dim = obs_dim + 1 + 1 
         
-        self.context_encoder = ContextEncoder(context_input_dim, context_dim)
+        self.context_encoder = ContextEncoder(context_input_dim, context_dim, hidden_dim=256) 
         self.policy = ContextPolicy(obs_dim, action_dim, context_dim)
         
         # Optimizers
@@ -845,7 +845,7 @@ class PEARL:
 
         return AdaptedPolicyWrapper(self, context)
 
-        
+
 ##############################################
 # CartPole Task
 ##############################################
@@ -890,20 +890,34 @@ def main():
     
     # Train MAML
     print("Training MAML...")
-    maml = MAML_RL(obs_dim, action_dim, inner_lr=0.1, meta_lr=0.001, inner_steps=1)
-    maml_losses = maml.train(task_distribution, num_meta_iterations=50, meta_batch_size=5)
+    maml = MAML_RL(
+        obs_dim, 
+        action_dim, 
+        inner_lr=0.2,        # INCREASE from 0.1 (Faster adaptation)
+        meta_lr=0.001,       # Keep as is
+        inner_steps=10       # INCREASE from 1 (More adaptation steps)
+    )
+    maml_losses = maml.train(
+        task_distribution, 
+        num_meta_iterations=1000,  # INCREASE from 500 (More training)
+        meta_batch_size=10         # INCREASE from 5 (More stable gradients)
+    )
     print("MAML Training completed!")
     
     # Train RL²
     print("\nTraining RL²...")
     rl2_trainer = RL2Trainer(obs_dim, action_dim)
-    rl2_losses = rl2_trainer.train(task_distribution, num_meta_iterations=50, meta_batch_size=5)
+    rl2_losses = rl2_trainer.train(
+        task_distribution, 
+        num_meta_iterations=500,   # INCREASE from 200 (LSTMs need time)
+        meta_batch_size=10         # INCREASE from 5 (Stabilizes LSTM training)
+    )
     print("RL² Training completed!")
     
     # Train PEARL
     print("\nTraining PEARL...")
     pearl_agent = PEARL(obs_dim, action_dim, context_dim=16)
-    for task in task_distribution.sample(5):
+    for task in task_distribution.sample(10):
         loss = pearl_agent.meta_train_step(task)
         print(f"PEARL task loss: {loss:.3f}")
     print("PEARL training completed!")
@@ -943,10 +957,22 @@ def main():
     
     # Compare with random policy
     class RandomPolicy:
+        def __init__(self, action_dim):
+            self.action_dim = action_dim
+
+        def __call__(self, state):
+            """Allows the policy object to be called like a function."""
+            # Return random logits for the given state batch size
+            # state shape is (batch_size, obs_dim)
+            batch_size = state.shape[0]
+            return torch.randn(batch_size, self.action_dim)
+
+        # You can keep the forward method if it's used elsewhere, 
+        # but __call__ is what fixes the error in collect_trajectory.
         def forward(self, state):
-            return torch.randn(1, 2)  # Random logits
-    
-    random_policy = RandomPolicy()
+            return self.__call__(state)
+
+    random_policy = RandomPolicy(action_dim=2)
     random_rewards = []
     for i, task in enumerate(test_tasks):
         trajectory = collect_trajectory(task.env, random_policy, max_steps=200)

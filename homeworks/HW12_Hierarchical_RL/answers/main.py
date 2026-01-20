@@ -554,6 +554,11 @@ def train(config):
     env = gym.make(config.env)
     eval_env = gym.make(config.env)
     
+    # --- IMPROVEMENT 1: Better Hyperparameters for Stability ---
+    # If config doesn't have these, set them manually here for stability
+    if not hasattr(config, 'cql_weight'): config.cql_weight = 0.01  # Much lower for online
+    if not hasattr(config, 'learning_rate'): config.learning_rate = 1e-4 # Lower LR for stability
+    
     # Initialize agent
     agent = CQLSAC(
         state_size=env.observation_space.shape[0],
@@ -566,6 +571,12 @@ def train(config):
         target_action_gap=config.target_action_gap,
         device=device,
     )
+    
+    # --- IMPROVEMENT 2: Add Learning Rate Schedulers ---
+    # These will decay the learning rate over time to help convergence
+    actor_scheduler = optim.lr_scheduler.CosineAnnealingLR(agent.actor_optimizer, T_max=config.episodes)
+    critic1_scheduler = optim.lr_scheduler.CosineAnnealingLR(agent.critic1_optimizer, T_max=config.episodes)
+    critic2_scheduler = optim.lr_scheduler.CosineAnnealingLR(agent.critic2_optimizer, T_max=config.episodes)
     
     # Initialize replay buffer
     buffer = ReplayBuffer(
@@ -594,7 +605,6 @@ def train(config):
         
         while not done:
             action = agent.get_action(state)
-            # Fixed: Unpack 5 values from env.step() and handle done properly
             next_state, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
             buffer.add(state, action, reward, next_state, done)
@@ -616,6 +626,11 @@ def train(config):
                     lagrange_alpha_loss,
                     lagrange_alpha,
                 ) = agent.learn(experiences)
+        
+        # --- IMPROVEMENT 3: Step the Schedulers ---
+        actor_scheduler.step()
+        critic1_scheduler.step()
+        critic2_scheduler.step()
         
         # Record results
         average10.append(rewards)
