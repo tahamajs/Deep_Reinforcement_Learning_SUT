@@ -96,13 +96,23 @@ class MOPO:
     def model_rollout(
         self, state: torch.Tensor, action: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # predict with ensemble, compute mean and std
+        """Predict next state and reward using ensemble dynamics model.
+        
+        Fixes dimension mismatch by properly handling batch dimensions.
+        """
+        # Remove extra batch dimension (state is [1, 1, state_dim] from select_action)
+        state = state.squeeze(0)  # Now [1, state_dim]
+        action = action.squeeze(0)  # Now [1, action_dim]
+        
+        # Predict with ensemble
         preds_next = []
         preds_r = []
         for model in self.ensemble:
-            ns, r = model(state.unsqueeze(0), action.unsqueeze(0))
+            ns, r = model(state, action)
             preds_next.append(ns.squeeze(0))
             preds_r.append(r.squeeze(0))
+        
+        # Compute ensemble statistics
         preds_next = torch.stack(preds_next, dim=0)
         preds_r = torch.stack(preds_r, dim=0)
         next_state_mean = preds_next.mean(dim=0)
@@ -110,7 +120,9 @@ class MOPO:
         uncertainty = preds_next.std(dim=0).mean()
         penalty = self.lambda_u * uncertainty
         adjusted_reward = reward_mean - penalty
-        return next_state_mean, adjusted_reward
+    
+    return next_state_mean, adjusted_reward
+
 
     def select_action(self, state: torch.Tensor) -> torch.Tensor:
         """
