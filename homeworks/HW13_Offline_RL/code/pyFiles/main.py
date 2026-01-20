@@ -5,13 +5,11 @@ from collections import deque
 import matplotlib.pyplot as plt
 import os
 from datetime import datetime
-
 # Import all the implementations
 from bcq_implementation import BCQ, VAE, PerturbationNetwork
 from cql_implementation import CQL, QNetwork, PolicyNetwork
 from iql_implementation import IQL, VNetwork
 from mopo_implementation import MOPO, DynamicsModel
-
 # Create results directory
 os.makedirs("results", exist_ok=True)
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -51,21 +49,18 @@ def generate_offline_dataset(env, num_episodes=100, max_steps=200):
     
     return states, actions, rewards, next_states, dones
 
-
 def train_and_evaluate(algorithm_name, agent, dataset, env, num_episodes=100):
     """Train an agent and evaluate its performance"""
     print(f"\n{'='*50}")
     print(f"Training {algorithm_name} agent")
     print(f"{'='*50}")
     
-    # Convert dataset to tensors
-    states = torch.tensor(dataset["states"], dtype=torch.float32)
-    actions = torch.tensor(dataset["actions"], dtype=torch.float32).unsqueeze(1)  # [batch, 1]
-    rewards = torch.tensor(dataset["rewards"], dtype=torch.float32)
-    next_states = torch.tensor(dataset["next_states"], dtype=torch.float32)
-    dones = torch.tensor(dataset["dones"], dtype=torch.float32)
-
-
+    # Convert dataset to tensors (already tensors, so just use them directly)
+    states = dataset["states"]
+    actions = dataset["actions"].unsqueeze(1)  # [batch, 1]
+    rewards = dataset["rewards"]
+    next_states = dataset["next_states"]
+    dones = dataset["dones"]
 
     # Training loop
     train_losses = {"q_loss": [], "policy_loss": []}
@@ -76,16 +71,16 @@ def train_and_evaluate(algorithm_name, agent, dataset, env, num_episodes=100):
         # Initialize losses for BCQ
         losses = {}
         
-        # Train step
+        # Train step - handle IQL specially
         if algorithm_name == "BCQ":
             # BCQ doesn't have a standard train_step
             pass
+        elif algorithm_name == "IQL":
+            # IQL expects separate arguments
+            losses = agent.train_step(states, actions, rewards, next_states, dones)
         else:
+            # For CQL and others that expect a tuple
             losses = agent.train_step(batch)
-            if "q_loss" in losses:
-                train_losses["q_loss"].append(losses["q_loss"])
-            if "policy_loss" in losses:
-                train_losses["policy_loss"].append(losses["policy_loss"])
         
         # Print progress
         if epoch % 10 == 0:
@@ -108,11 +103,20 @@ def train_and_evaluate(algorithm_name, agent, dataset, env, num_episodes=100):
             action = torch.argmax(action_tensor).item()
             return int(action)  # Ensure discrete action (0 or 1)
     else:
-        # For continuous action spaces (other algorithms)
+        # For continuous action spaces (other algorithms), convert to discrete for CartPole
         def policy_fn(state):
             state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-            action = agent.select_action(state_tensor).detach().numpy()[0]
-            return action
+            try:
+                action_tensor = agent.select_action(state_tensor)
+            except AttributeError:
+                # For CQL, use the policy attribute
+                actions, _ = agent.policy.sample(state_tensor)
+                action_tensor = actions
+            
+            # Convert continuous action to discrete (0 or 1) for CartPole
+            action_value = action_tensor.detach().numpy()[0, 0]  # Get scalar value
+            discrete_action = 1 if action_value >= 0 else 0
+            return discrete_action
     
     # Evaluate the agent
     mean_reward, std_reward = evaluate_policy(env, policy_fn, episodes=10)
@@ -161,7 +165,7 @@ def main():
     env = gym.make("CartPole-v1")
     
     # FOR CARTPOLE: We're using discrete actions as scalars (0 or 1), so action_dim = 1
-    action_dim = 1
+    action_dim = 1  # FIXED: Use 1 instead of env.action_space.n
     
     # Generate offline dataset
     print("Generating offline dataset...")
@@ -191,14 +195,14 @@ def main():
     
     cql_agent = CQL(
         state_dim=env.observation_space.shape[0],
-        action_dim=action_dim,  # FIXED: 1 instead of env.action_space.n
+        action_dim=action_dim,  # FIXED
         alpha=1.0,
         lr=3e-4
     )
     
     iql_agent = IQL(
         state_dim=env.observation_space.shape[0],
-        action_dim=action_dim,  # FIXED: 1 instead of env.action_space.n
+        action_dim=action_dim,  # FIXED
         expectile=0.7,
         temperature=0.05,
         lr=3e-4
@@ -206,14 +210,25 @@ def main():
     
     mopo_agent = MOPO(
         state_dim=env.observation_space.shape[0],
-        action_dim=action_dim,  # FIXED: 1 instead of env.action_space.n
+        action_dim=action_dim,  # FIXED
         ensemble_size=5,
         lambda_u=1.0,
         lr=1e-3
     )
     
+    # Train BCQ
+    print("\nTraining BCQ agent...")
+    bcq_mean_reward, bcq_std_reward = train_and_evaluate("BCQ", bcq_agent, dataset, env)
     
-    # Train dynamics model (simplified for demonstration)
+    # Train CQL
+    print("\nTraining CQL agent...")
+    cql_mean_reward, cql_std_reward = train_and_evaluate("CQL", cql_agent, dataset, env)
+    
+    # Train IQL
+    print("\nTraining IQL agent...")
+    iql_mean_reward, iql_std_reward = train_and_evaluate("IQL", iql_agent, dataset, env)
+    
+    # Train MOPO dynamics model
     print("\nTraining MOPO dynamics model...")
     dataset_list = [
         (dataset["states"][i].numpy(), dataset["actions"][i].numpy(), 
@@ -221,16 +236,16 @@ def main():
         dataset["dones"][i].numpy())
         for i in range(len(dataset["states"]))
     ]
-
-    mopo_agent.train_dynamics(dataset_list, epochs=1)
+    mopo_agent.train_dynamics(dataset_list, epochs=10)
     
     # Evaluate MOPO
     def mopo_policy_fn(state):
         state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-        action = mopo_agent.select_action(state_tensor).detach().numpy()[0]
-        return action
+        action_tensor = mopo_agent.select_action(state_tensor)
+        action = action_tensor.detach().numpy()[0]
+        return int(action)  # Convert float to integer
     
-    mopo_mean_reward, mopo_std_reward = evaluate_policy(env, mopo_policy_fn, episodes=1)
+    mopo_mean_reward, mopo_std_reward = evaluate_policy(env, mopo_policy_fn, episodes=10)
     
     print(f"\n{'='*50}")
     print("Final Results")
