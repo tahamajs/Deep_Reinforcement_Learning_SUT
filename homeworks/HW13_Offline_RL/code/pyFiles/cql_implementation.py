@@ -11,11 +11,13 @@ import torch.optim as optim
 from torch.distributions import Normal
 
 class QNetwork(nn.Module):
+
     def __init__(self, state_dim: int, action_dim: int, hidden_dim: int = 256):
         super().__init__()
         self.fc1 = nn.Linear(state_dim + action_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.fc3 = nn.Linear(hidden_dim, 1)
+
     def forward(self, state: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
         x = torch.cat([state, action], dim=-1)
         x = F.relu(self.fc1(x))
@@ -29,6 +31,7 @@ class PolicyNetwork(nn.Module):
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.mean = nn.Linear(hidden_dim, action_dim)
         self.log_std = nn.Linear(hidden_dim, action_dim)
+
     def forward(self, state: torch.Tensor) -> Normal:
         x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))
@@ -36,6 +39,7 @@ class PolicyNetwork(nn.Module):
         log_std = self.log_std(x).clamp(-20, 2)
         std = log_std.exp()
         return Normal(mean, std)
+
     def sample(self, state: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         dist = self.forward(state)
         raw_action = dist.rsample()
@@ -64,6 +68,7 @@ class CQL:
         self.alpha = alpha
         self.gamma = 0.99
         self.tau = 0.005
+        
     def cql_loss(
         self,
         states: torch.Tensor,
@@ -82,7 +87,6 @@ class CQL:
             q_target = rewards + (1 - dones) * self.gamma * q_next
         bellman_error_1 = F.mse_loss(q1, q_target)
         bellman_error_2 = F.mse_loss(q2, q_target)
-        # CQL regularization: sample random actions + policy actions
         batch_size = states.shape[0]
         action_dim = actions.shape[1]
         random_actions = (
@@ -103,12 +107,16 @@ class CQL:
             bellman_error_1 + bellman_error_2 + self.alpha * (cql_q1_loss + cql_q2_loss)
         )
         return q_loss
+
+
     def policy_loss(self, states: torch.Tensor) -> torch.Tensor:
         actions, log_probs = self.policy.sample(states)
         q1 = self.Q1(states, actions)
         q2 = self.Q2(states, actions)
         q = torch.min(q1, q2)
         return -(q - 0.01 * log_probs).mean()
+
+
     def train_step(self, batch: Tuple[torch.Tensor, ...]) -> dict:
         states, actions, rewards, next_states, dones = batch
         self.q_optimizer.zero_grad()

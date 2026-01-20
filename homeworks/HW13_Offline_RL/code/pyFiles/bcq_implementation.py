@@ -72,7 +72,7 @@ class BCQ:
     def __init__(
         self, state_dim: int, action_dim: int, latent_dim: int = 16, lr: float = 3e-4
     ):
-        from cql_implementation import QNetwork  # reuse simple QNetwork
+        from cql_implementation import QNetwork 
 
         self.vae = VAE(state_dim, action_dim, latent_dim)
         self.perturb = PerturbationNetwork(state_dim, action_dim)
@@ -83,7 +83,6 @@ class BCQ:
         self.q_opt = optim.Adam(self.Q.parameters(), lr=lr)
 
     def select_action(self, state: torch.Tensor, n_samples: int = 10) -> torch.Tensor:
-        # sample actions from VAE by sampling z from N(0,1)
         batch = state.shape[0]
         z = torch.randn(
             batch * n_samples, self.vae.mu.out_features, device=state.device
@@ -94,14 +93,12 @@ class BCQ:
         decoded = self.vae.decode(s_rep, z)
         decoded = decoded.reshape(batch, n_samples, -1)
 
-        # perturb
         perturbed = []
         for i in range(n_samples):
             a = decoded[:, i, :]
             perturbed.append(self.perturb(state, a).unsqueeze(1))
-        cand = torch.cat(perturbed, dim=1)  # [B, n_samples, A]
+        cand = torch.cat(perturbed, dim=1)
 
-        # score with Q and pick best
         q_vals = self.Q(
             state.unsqueeze(1).expand(-1, n_samples, -1).reshape(-1, state.shape[1]),
             cand.reshape(-1, cand.shape[-1]),

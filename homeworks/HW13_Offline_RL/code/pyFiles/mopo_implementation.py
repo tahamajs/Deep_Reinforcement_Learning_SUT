@@ -62,21 +62,17 @@ class MOPO:
             for model_idx, (model, opt) in enumerate(zip(self.ensemble, self.optimizers)):
                 model_loss = 0.0
                 for s, a, r, s_next, _ in dataset:
-                    # Convert to tensors with correct shapes
                     s_tensor = torch.tensor(s, dtype=torch.float32).unsqueeze(0)  # [1, state_dim]
                     a_tensor = torch.tensor(a, dtype=torch.float32).view(1, 1)    # [1, 1]
                     s_next_tensor = torch.tensor(s_next, dtype=torch.float32).unsqueeze(0)
                     r_tensor = torch.tensor(r, dtype=torch.float32).view(1, 1)
                     
-                    # Forward pass
                     pred_next, pred_r = model(s_tensor, a_tensor)
                     
-                    # Compute losses
                     next_loss = ((pred_next.squeeze(0) - s_next_tensor) ** 2).mean()
                     r_loss = ((pred_r.squeeze(0) - r_tensor) ** 2).mean()
                     loss = next_loss + r_loss
                     
-                    # Backpropagation
                     opt.zero_grad()
                     loss.backward()
                     opt.step()
@@ -84,11 +80,9 @@ class MOPO:
                     model_loss += loss.item()
                     total_loss += loss.item()
                 
-                # Print per-model progress
                 avg_model_loss = model_loss / len(dataset)
                 print(f"  Model {model_idx+1}/{len(self.ensemble)} | Epoch {epoch+1}/{epochs} | Loss: {avg_model_loss:.4f}")
             
-            # Print epoch summary
             avg_epoch_loss = total_loss / (len(dataset) * len(self.ensemble))
             print(f"Epoch {epoch+1}/{epochs} | Overall Avg Loss: {avg_epoch_loss:.4f}")
             print(f"{'-'*50}")
@@ -97,16 +91,13 @@ class MOPO:
         self, state: torch.Tensor, action: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Predict next state and reward using ensemble dynamics model."""
-        # Remove extra batch dimension (state is [1, 1, state_dim] from select_action)
-        state = state.squeeze(0)  # Now [1, state_dim]
+        state = state.squeeze(0) 
         
-        # Ensure action is 2D: [1, action_dim] (fix for zero-dimensional tensor error)
-        if action.dim() == 0:  # If action is scalar (zero-dimensional)
-            action = action.unsqueeze(0).unsqueeze(0)  # [1, 1]
-        elif action.dim() == 1:  # If action is [1] (1D)
-            action = action.unsqueeze(0)  # [1, 1]
+        if action.dim() == 0:
+            action = action.unsqueeze(0).unsqueeze(0) 
+        elif action.dim() == 1: 
+            action = action.unsqueeze(0)
         
-        # Predict with ensemble
         preds_next = []
         preds_r = []
         for model in self.ensemble:
@@ -114,7 +105,6 @@ class MOPO:
             preds_next.append(ns.squeeze(0))
             preds_r.append(r.squeeze(0))
         
-        # Compute ensemble statistics
         preds_next = torch.stack(preds_next, dim=0)
         preds_r = torch.stack(preds_r, dim=0)
         next_state_mean = preds_next.mean(dim=0)
@@ -131,23 +121,17 @@ class MOPO:
         Select an action using the MOPO algorithm.
         For CartPole (discrete actions), we try both possible actions and select the one with highest expected reward.
         """
-        # Convert state to tensor if needed
         if not isinstance(state, torch.Tensor):
             state = torch.tensor(state, dtype=torch.float32)
         
-        # Expand state to batch dimension
         state = state.unsqueeze(0)
         
-        # Try both possible actions (0 and 1 for CartPole)
         actions = torch.tensor([0, 1], dtype=torch.float32).view(-1, 1)
         
-        # Evaluate both actions
         rewards = []
         for action in actions:
-            # Use model_rollout to get the expected reward
             _, reward = self.model_rollout(state, action)
             rewards.append(reward.item())
         
-        # Select the action with the highest expected reward
         best_action_idx = torch.argmax(torch.tensor(rewards))
         return actions[best_action_idx].clone().detach()

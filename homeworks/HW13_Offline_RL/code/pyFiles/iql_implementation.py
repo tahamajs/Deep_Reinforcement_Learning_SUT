@@ -38,11 +38,10 @@ class IQL:
         temperature: float = 0.05,
         lr: float = 3e-4,
     ):
-        # Q and policy architectures re-used from cql style networks (simple)
         from cql_implementation import (
             QNetwork,
             PolicyNetwork,
-        )  # local import to avoid circulars at top-level
+        )  
 
         self.Q = QNetwork(state_dim, action_dim)
         self.V = VNetwork(state_dim)
@@ -64,7 +63,6 @@ class IQL:
         next_states: torch.Tensor,
         dones: torch.Tensor,
     ) -> dict:
-        # 1. V update (expectile regression)
         with torch.no_grad():
             q_values = self.Q(states, actions)
 
@@ -75,7 +73,6 @@ class IQL:
         v_loss.backward()
         self.v_optimizer.step()
 
-        # 2. Q update using V
         with torch.no_grad():
             v_next = self.V(next_states).squeeze(-1)
             q_target = (
@@ -89,7 +86,6 @@ class IQL:
         q_loss.backward()
         self.q_optimizer.step()
 
-        # 3. Policy update with advantage-weighted regression
         with torch.no_grad():
             q_val = self.Q(states, actions).squeeze(-1)
             v_val = self.V(states).squeeze(-1)
@@ -98,7 +94,6 @@ class IQL:
                 torch.exp(advantage / self.temperature).clamp(max=100).unsqueeze(-1)
             )
 
-        # policy log prob for given actions
         dist = self.policy.forward(states)
         log_probs = dist.log_prob(actions).sum(dim=-1, keepdim=True)
         policy_loss = -(weights.detach() * log_probs).mean()
