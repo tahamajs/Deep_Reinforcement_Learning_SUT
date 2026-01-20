@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from torch.distributions import Normal
 import gym
 import matplotlib.pyplot as plt
+import os
 
 def set_seed(seed: int) -> None:
     random.seed(seed)
@@ -134,6 +135,7 @@ def train(config: Config):
     critic_optim = torch.optim.Adam(
         list(critic1.parameters()) + list(critic2.parameters()), lr=config.lr
     )
+    os.makedirs(os.path.dirname(config.save_fig), exist_ok=True)
     replay = ReplayBuffer(obs_dim, act_dim, size=200000)
     total_steps = config.epochs * config.steps_per_epoch
     obs, _ = env.reset()
