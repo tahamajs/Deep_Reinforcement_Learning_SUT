@@ -54,18 +54,49 @@ class MOPO:
         ],
         epochs: int = 10,
     ):
-        # dataset: list of (s, a, r, s', done) as tensors
+        """Train the dynamics model using the dataset with progress tracking"""
+        print(f"\n{'='*50}")
+        print(f"Training MOPO Dynamics Model (Ensemble Size: {len(self.ensemble)})")
+        print(f"{'='*50}")
+        
         for epoch in range(epochs):
-            for model, opt in zip(self.ensemble, self.optimizers):
+            total_loss = 0.0
+            epoch_loss = 0.0
+            for model_idx, (model, opt) in enumerate(zip(self.ensemble, self.optimizers)):
+                model_loss = 0.0
                 for s, a, r, s_next, _ in dataset:
-                    pred_next, pred_r = model(s.unsqueeze(0), a.unsqueeze(0))
-                    loss = ((pred_next.squeeze(0) - s_next) ** 2).mean() + (
-                        (pred_r - r) ** 2
-                    ).mean()
+                    # Convert to tensors with correct shapes
+                    s_tensor = torch.tensor(s, dtype=torch.float32).unsqueeze(0)  # [1, state_dim]
+                    a_tensor = torch.tensor(a, dtype=torch.float32).view(1, 1)    # [1, 1]
+                    s_next_tensor = torch.tensor(s_next, dtype=torch.float32).unsqueeze(0)
+                    r_tensor = torch.tensor(r, dtype=torch.float32).view(1, 1)
+                    
+                    # Forward pass
+                    pred_next, pred_r = model(s_tensor, a_tensor)
+                    
+                    # Compute losses
+                    next_loss = ((pred_next.squeeze(0) - s_next_tensor) ** 2).mean()
+                    r_loss = ((pred_r.squeeze(0) - r_tensor) ** 2).mean()
+                    loss = next_loss + r_loss
+                    
+                    # Backpropagation
                     opt.zero_grad()
                     loss.backward()
                     opt.step()
+                    
+                    model_loss += loss.item()
+                    total_loss += loss.item()
+                
+                # Print per-model progress
+                avg_model_loss = model_loss / len(dataset)
+                print(f"  Model {model_idx+1}/{len(self.ensemble)} | Epoch {epoch+1}/{epochs} | Loss: {avg_model_loss:.4f}")
+            
+            # Print epoch summary
+            avg_epoch_loss = total_loss / (len(dataset) * len(self.ensemble))
+            print(f"Epoch {epoch+1}/{epochs} | Overall Avg Loss: {avg_epoch_loss:.4f}")
+            print(f"{'-'*50}")
 
+                
     def model_rollout(
         self, state: torch.Tensor, action: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -88,8 +119,6 @@ class MOPO:
         return next_state_mean, adjusted_reward
 
 
-if __name__ == "__main__":
-    print("mopo_implementation: dynamics ensemble + model_rollout utilities.")
 
 
 

@@ -162,11 +162,3 @@ class CQL:
         return {"q_loss": q_loss.item(), "policy_loss": p_loss.item()}
 
 
-if __name__ == "__main__":
-    print("cql_implementation module: define CQL, import in notebooks to train.")
-
-
-
-
-
-

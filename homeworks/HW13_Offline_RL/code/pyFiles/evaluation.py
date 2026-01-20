@@ -47,11 +47,4 @@ def evaluate_policy(
     return float(np.mean(returns)), float(np.std(returns))
 
 
-if __name__ == "__main__":
-    print("evaluation utilities: make_offline_dataset, evaluate_policy")
-
-
-
-
-
 
