@@ -229,23 +229,40 @@ def train(config: Config):
     plt.savefig(config.save_fig, dpi=200)
     print(f"Saved training plot to {config.save_fig}")
     def evaluate_policy(policy, n_eval_episodes=5, deterministic=True):
-        env_eval = gym.make(config.env_name)
-        returns = []
+        """Evaluate the policy on the environment."""
+        eval_env = gym.make("Pendulum-v1")
+        rewards = []
+        
         for _ in range(n_eval_episodes):
-            obs_eval, done = env_eval.reset(), False
-            ep_ret = 0.0
-            while True:
-                if deterministic:
-                    a = policy.act(obs_eval)
-                else:
-                    a = env_eval.action_space.sample()
-                obs_eval, r, terminated, truncated, _ = env_eval.step(a)
+            # FIX: Ensure we unpack the observation correctly
+            obs, _ = eval_env.reset()
+            
+            # Safety check: ensure obs is not empty
+            if obs.size == 0:
+                print("Warning: Reset returned empty observation. Retrying...")
+                obs, _ = eval_env.reset()
+
+            episode_reward = 0
+            done = False
+            
+            while not done:
+                # Pass the observation to the policy
+                a = policy.act(obs)
+                
+                # Step the environment
+                obs, reward, terminated, truncated, info = eval_env.step(a)
                 done = terminated or truncated
-                ep_ret += r
-                if done:
+                
+                episode_reward += reward
+                
+                # FIX: Safety check inside the loop
+                # If the environment returns an empty obs after a step, break to avoid crash
+                if obs.size == 0:
                     break
-            returns.append(ep_ret)
-        return np.mean(returns)
+                    
+            rewards.append(episode_reward)
+            
+        return np.mean(rewards)
     mean_agent = evaluate_policy(actor, n_eval_episodes=5, deterministic=True)
     print(f"Mean agent return (deterministic): {mean_agent}")
 

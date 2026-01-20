@@ -725,8 +725,23 @@ class ContextPolicy(nn.Module):
         )
     
     def forward(self, obs, context):
+        # FIX: Ensure both tensors are 2D (Batch_Size, Feature_Dim)
+        
+        # Handle observation dimensions
+        if obs.dim() == 1:
+            obs = obs.unsqueeze(0)  # (1, obs_dim)
+        elif obs.dim() > 2:
+            obs = obs.squeeze(0)    # Remove extra batch dims if present
+            
+        # Handle context dimensions
+        if context.dim() == 1:
+            context = context.unsqueeze(0)  # (1, context_dim)
+        elif context.dim() > 2:
+            context = context.squeeze(0)    # Remove extra batch dims if present
+        
         x = torch.cat([obs, context], dim=-1)
         return self.network(x)
+
 
 class PEARL:
     """PEARL Agent"""
@@ -737,7 +752,6 @@ class PEARL:
         
         # FIX: Calculate input_dim based on how data is stored in collect_context
         # Context structure: [obs (4), action (1), reward (1)] -> Total 6
-        # Note: action is stored as a scalar, not one-hot, in the current implementation
         context_input_dim = obs_dim + 1 + 1 
         
         self.context_encoder = ContextEncoder(context_input_dim, context_dim)
@@ -761,14 +775,13 @@ class PEARL:
             done = terminated or truncated
             
             # Store as [obs, action, reward]
-            # obs is (4,), action is scalar, reward is scalar -> total 6
             transition = np.concatenate([obs, [action], [reward]])
             transitions.append(transition)
             obs = next_obs
             if done:
                 obs, _ = task.env.reset()
         
-        # FIX: Convert list to numpy array first for performance
+        # Convert list to numpy array first for performance
         return torch.FloatTensor(np.array(transitions))
     
     def meta_train_step(self, task):
@@ -804,8 +817,35 @@ class PEARL:
     def adapt(self, task, num_context=5):
         """Adapt to task"""
         context = self.collect_context(task, num_context)
-        return lambda obs: self.adapt_and_act(task, context, obs)
+        
+        # FIX: Return a wrapper class that behaves like a policy network
+        # instead of a simple lambda function
+        class AdaptedPolicyWrapper:
+            def __init__(self, pearl_agent, context):
+                self.pearl_agent = pearl_agent
+                self.context = context
+            
+            def __call__(self, obs):
+                # This method is called by collect_trajectory
+                # It expects a tensor input (obs_tensor)
+                
+                # 1. Handle input dimensions
+                if obs.dim() > 2:
+                    obs = obs.squeeze(0)
+                
+                # 2. Encode context to get z
+                mean, std = self.pearl_agent.context_encoder(self.context.unsqueeze(0))
+                z = mean + std * torch.randn_like(mean)
+                
+                # 3. Get logits from the policy network
+                logits = self.pearl_agent.policy(obs, z)
+                
+                # 4. Return logits (so Categorical distribution works)
+                return logits
 
+        return AdaptedPolicyWrapper(self, context)
+
+        
 ##############################################
 # CartPole Task
 ##############################################
