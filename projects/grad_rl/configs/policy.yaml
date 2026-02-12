@@ -1,0 +1,14 @@
+algo: "ppo" # reinforce|ppo|trpo|cpo
+env: "CartPole-v1"
+policy: "MlpPolicy"
+num_envs: 8
+learning_rate: 3e-4
+batch_size: 256
+gamma: 0.99
+lam: 0.95
+clip_range: 0.2
+kl_target: 0.01
+cpo_cost_limit: 0.02
+cpo_lambda_lr: 0.05
+total_steps: 200000
+save_path: "projects/grad_rl/outputs/policy/model.zip"

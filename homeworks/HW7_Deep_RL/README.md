@@ -1,5 +1,23 @@
 # HW7: Deep Reinforcement Learning Fundamentals
 
+## Quick Run Sheet
+1) **Env**: Python 3.8–3.11; new venv.  
+2) **Install deps**:  
+```bash
+pip install -r code/requirements.txt        # if present
+pip install -r Homework-7-Template/requirements.txt  # template env (optional)
+```  
+3) **Work notebook**: `Homework-7-Template` (folder/zip) or any notebook under `code/` if provided.  
+4) **Prompt**: see PDFs in `reports/`.  
+5) **Reference**: `answers/` and `HW7_Complete_Solutions.md`.  
+6) **Deliverables**: completed notebook + PDF export and plots/logs as requested.
+
+## Folder Legend
+- `Homework-7-Template` / `.zip` – release notebook and assets.  
+- `answers/` – fully solved version.  
+- `reports/` – question PDF / rubric.  
+- `HW7_Complete_Solutions.md` – textual solution guide.
+
 [![Deep RL](https://img.shields.io/badge/Deep-RL-blue.svg)](https://en.wikipedia.org/wiki/Reinforcement_learning)
 [![Theory](https://img.shields.io/badge/Type-Theory-yellow.svg)](.)
 [![Status](https://img.shields.io/badge/Status-Complete-success.svg)](.)

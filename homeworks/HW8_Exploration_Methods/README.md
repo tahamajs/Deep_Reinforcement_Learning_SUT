@@ -1,5 +1,24 @@
 # HW8: Exploration Methods in RL
 
+## Quick Run Sheet
+1) **Env**: Python 3.8–3.11; create venv.  
+2) **Install deps**:  
+```bash
+pip install -r code/requirements.txt        # main notebooks/scripts
+```  
+3) **Work notebooks/scripts**: start in `code/`; some bandit demos live in `bandits/`.  
+4) **Prompt**: see `reports/` for questions and grading.  
+5) **Reference**: solutions in `answers/`.  
+6) **Deliverables**: notebook(s) + PDF; include plots from `visualize/` or saved in `pictures/`/`results/`.
+
+## Folder Legend
+- `code/` – primary implementations and notebooks.  
+- `bandits/` – bandit-specific experiments.  
+- `answers/` – completed solutions.  
+- `reports/` – prompt PDF(s).  
+- `pictures/`, `results/`, `visualize/` – generated plots and helpers.  
+- `Homework-8-Template*` – release template (folder + zip).
+
 [![Deep RL](https://img.shields.io/badge/Deep-RL-blue.svg)](https://en.wikipedia.org/wiki/Reinforcement_learning)
 [![Exploration](https://img.shields.io/badge/Topic-Exploration-purple.svg)](.)
 [![Status](https://img.shields.io/badge/Status-Complete-success.svg)](.)

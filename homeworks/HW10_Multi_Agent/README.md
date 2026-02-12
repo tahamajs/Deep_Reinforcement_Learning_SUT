@@ -1,5 +1,26 @@
 # HW10: Multi-Agent Reinforcement Learning
 
+## Quick Run Sheet
+1) **Env**: Python 3.8–3.11; create a dedicated venv.  
+2) **Install deps** (per task):  
+```bash
+pip install -r base_code/Task\\ 1\\ Bootstrap\\ DQN\\ Variants/requirements.txt
+pip install -r base_code/Task\\ 2\\ Random\\ Network\\ Distillation/requirements.txt
+```  
+3) **Workspaces**:  
+   - `code/` – main student code.  
+   - `base_code/Task 1 Bootstrap DQN Variants/` and `Task 2 Random Network Distillation/` – task-specific starter kits.  
+4) **Prompt**: question PDFs in `reports/`.  
+5) **Reference**: `answers/` plus `Homework-10-Template*` (folder/zip).  
+6) **Deliverables**: per-task notebooks/scripts + PDF with learning curves for cooperative/competitive settings.
+
+## Folder Legend
+- `code/` – editable implementation for MARL tasks.  
+- `base_code/` – two task subfolders with their own requirements.  
+- `answers/` – solved versions.  
+- `reports/` – prompts/rubrics.  
+- `Homework-10-Template*` – release template (folder + zip).
+
 [![Deep RL](https://img.shields.io/badge/Deep-RL-blue.svg)](https://en.wikipedia.org/wiki/Reinforcement_learning)
 [![Multi-Agent](https://img.shields.io/badge/Type-Multi--Agent-green.svg)](.)
 [![Status](https://img.shields.io/badge/Status-Complete-success.svg)](.)

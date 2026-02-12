@@ -1,849 +1,115 @@
+# Deep Reinforcement Learning (DRL) Repository – Complete Guide  
+*Updated: February 12, 2026 – Sharif University of Technology*
 
-# Deep Reinforcement Learning Course Repository: Comprehensive Report
+This repository is the single source for the DRL course: slides, notes, homeworks, computer assignments (CAs), paper replications, workshops, and research projects. It is organized so you can (1) study theory, (2) run reference implementations, and (3) extend them for projects or research.
 
+---
 ## Table of Contents
-
-1. [Executive Summary](#executive-summary)
-2. [Introduction](#introduction)
-3. [Repository Structure and Organization](#repository-structure-and-organization)
-4. [Detailed Analysis of Course Assignments](#detailed-analysis-of-course-assignments)
-
-   4.1. [Computer Assignments (CAs)](#computer-assignments-cas)
-
-   4.2. [Additional Assignment Collections](#additional-assignment-collections)
-5. [Educational Resources and Materials](#educational-resources-and-materials)
-
-   5.1. [Lecture Slides](#lecture-slides)
-
-   5.2. [Course Notes](#course-notes)
-
-   5.3. [Questions and Notes](#questions-and-notes)
-
-   5.4. [Supplementary Resources](#supplementary-resources)
-6. [Technical Implementation Details](#technical-implementation-details)
-7. [Pedagogical Approach and Learning Objectives](#pedagogical-approach-and-learning-objectives)
-8. [Conclusion](#conclusion)
-9. [References and Acknowledgments](#references-and-acknowledgments)
+1. Quick Start
+2. Environment & Dependencies
+3. Repository Map
+4. How to Pick Where to Begin
+5. Assignment Workflows (Notebooks vs. Scripts)
+6. Data & Assets
+7. Validation & Repro Tips
+8. Contribution Guidelines
+9. License & Attribution
 
 ---
+## 1) Quick Start
+```bash
+# 1) Create and activate an isolated env (Python 3.8–3.11)
+python -m venv .venv && source .venv/bin/activate
+pip install --upgrade pip
 
-## Introduction
+# 2) Install dependencies for the task you want to run
+pip install -r homeworks/HW3_Policy_Gradients/requirements.txt
 
-### Background and Context
-
-Reinforcement Learning (RL) represents a fundamental paradigm in artificial intelligence where agents learn optimal behavior through interaction with environments. Deep Reinforcement Learning combines traditional RL with deep neural networks, enabling the solution of complex, high-dimensional problems that were previously intractable.
-
-The Deep Reinforcement Learning course at Sharif University of Technology provides a comprehensive curriculum covering theoretical foundations, algorithmic implementations, and practical applications. This repository serves as the central hub for all course materials, assignments, and solutions.
-
-### Repository Purpose and Scope
-
-The primary objectives of this repository are:
-
-1.**Educational Delivery**: Provide structured learning materials for DRL concepts
-
-2.**Practical Implementation**: Offer complete, runnable code solutions for all assignments
-
-3.**Progressive Learning**: Support learning from basic to advanced RL topics
-
-4.**Research Foundation**: Enable students to build upon implementations for research projects
-
-5.**Community Resource**: Serve as a reference for RL practitioners and researchers
-
-### Technical Foundation
-
-The repository utilizes modern Python-based frameworks including:
-
--**PyTorch**: Primary deep learning framework for neural network implementations
-
--**Gymnasium**: Standardized environment library for RL experimentation
-
--**NumPy/Matplotlib**: Scientific computing and visualization
-
--**Jupyter Notebooks**: Interactive development and demonstration environment
-
----
-
-## Repository Structure and Organization
-
-The repository follows a hierarchical organization designed to support systematic learning and easy navigation:
-
-### Root Level Structure
-
+# 3) Launch notebooks or scripts
+jupyter lab                     # for .ipynb
+python train.py --help          # when a script is provided
 ```
-
-DRL/
-
-├── AGENTS.md                     # Agent-specific guidelines for each area
-
-├── archive/                      # Archived assignments and solutions (CA1-CA19)
-
-├── course_notes/                 # Lecture notes organized by topic
-
-├── guests/                       # Guest lecturer materials and interviews
-
-├── homeworks/                    # Homework assignments (HW1-HW14) and solutions
-
-├── notes_related/                # Additional notes and resources
-
-├── Other_Assisments/             # Miscellaneous assignments collections
-
-├── paperAssignments/             # Paper-based assignments (CA23-CA31)
-
-├── prompts/                      # Prompts for assignments
-
-├── QuestionsAndNotes/            # Q&A and additional notes
-
-├── quizzes/                      # Quiz materials
-
-├── Slides/                       # Lecture slides
-
-├── summaries/                    # Summary documents
-
-├── Workshops/                    # Workshop materials
-
-├── LICENSE                       # License information
-
-├── CLAUDE.md                     # Claude-specific documentation
-
-└── README.md                     # This documentation
-
-```
-
-### Design Principles
-
-The organization follows several key principles:
-
-1.**Separation of Concerns**: Assignments, solutions, and resources are clearly separated
-
-2.**Progressive Complexity**: Materials are ordered from basic to advanced concepts
-
-3.**Modularity**: Code is organized into reusable components
-
-4.**Documentation**: Comprehensive documentation at all levels
-
-5.**Reproducibility**: All implementations include necessary dependencies and instructions
+- **GPU**: Optional for early assignments; recommended for Atari/MuJoCo-heavy tasks. Match CUDA with your PyTorch wheel.
+- **Determinism**: Many notebooks set seeds; keep CuDNN deterministic when comparing results.
 
 ---
-
-## Detailed Analysis of Course Assignments
-
-### Computer Assignments (CAs)
-
-The repository contains a comprehensive collection of computer assignments covering fundamental to advanced reinforcement learning concepts. The assignments are organized into several categories:
-
-#### Archived Assignments (CA1-CA19)
-
-Located in `archive/Solutions/` and `archive/No Answer/`, these assignments provide complete solutions and problem statements for core RL topics including:
-
-- Basic RL fundamentals (CA1-CA3)
-- Value-based methods (CA4-CA6)
-- Policy-based methods (CA7-CA9)
-- Model-based RL (CA10-CA12)
-- Advanced topics (CA13-CA19)
-
-Each assignment includes:
-- Complete implementation in Python
-- Jupyter notebooks for experimentation
-- Theoretical analysis and derivations
-- Performance evaluation and visualization
-
-#### Homework Assignments (HW1-HW14)
-
-Located in `homeworks/`, these assignments cover practical implementations of RL algorithms:
-
-- HW1: CartPole with basic RL
-- HW2: Value-based methods
-- HW3: Policy gradients
-- HW4: Actor-critic methods
-- HW5: Model-based RL
-- HW6-HW9: Advanced topics
-- HW10: Multi-agent RL
-- HW11: Meta-learning
-- HW12: Hierarchical RL
-- HW13: Offline RL
-- HW14: Safe RL
-
-#### Paper Assignments (CA23-CA31)
-
-Located in `paperAssignments/Assignments1-50/`, these advanced assignments focus on implementing state-of-the-art RL algorithms from research papers:
-
-- CA23: [Specific algorithm/topic]
-- CA24: [Specific algorithm/topic]
-- CA25: [Specific algorithm/topic]
-- CA26: [Specific algorithm/topic]
-- CA27: Meta-learning (MAML and RL²)
-- CA28: Deep Q-Networks (DQN)
-- CA29: Soft Actor-Critic (SAC)
-- CA30: [Specific algorithm/topic]
-- CA31: Actor-Critic methods and bandits
-
-Each paper assignment includes:
-- Complete algorithm implementation
-- Configuration management
-- Training scripts and notebooks
-- Unit tests and documentation
-- Research paper references
-- Temporal difference learning with function approximation
-
-**Learning Objectives:**
-
-- Understand DQN architecture and training
-- Implement experience replay buffer
-- Analyze training stability issues
-- Apply DQN to complex environments
-
-**Technical Implementation:**
-
-- Neural network Q-function approximator
-- Experience replay buffer implementation
-- Target network updates
-- Training loop with optimization
-
-#### CA5: Advanced DQN Variants
-
-**Location:**`CAs/Solutions/CA5/`
-
-**Core Concepts:**
-
-- Double DQN for reducing overestimation
-- Dueling network architecture
-- Prioritized experience replay
-- Distributional RL (C51)
-- Rainbow DQN integration
-
-**Learning Objectives:**
-
-- Understand DQN limitations and improvements
-- Implement advanced DQN techniques
-- Compare performance of different variants
-- Analyze the impact of architectural changes
-
-**Technical Implementation:**
-
-- Multiple DQN variant implementations
-- Comparative analysis framework
-- Performance benchmarking
-- Ablation studies
-
-#### CA6: Policy Gradient Methods
-
-**Location:**`CAs/Solutions/CA6/`
-
-**Core Concepts:**
-
-- Policy-based reinforcement learning
-- REINFORCE algorithm
-- Gradient estimation in policy space
-- Variance reduction techniques
-- Baseline subtraction
-
-**Learning Objectives:**
-
-- Understand policy gradient theory
-- Implement basic policy gradient algorithms
-- Analyze gradient variance issues
-- Apply policy gradients to continuous action spaces
-
-**Technical Implementation:**
-
-- Stochastic policy networks
-- Trajectory collection and processing
-- Gradient computation and optimization
-- Performance analysis and visualization
-
-#### CA7: Advanced Policy Gradient Methods
-
-**Location:**`CAs/Solutions/CA7/`
-
-**Core Concepts:**
-
-- Trust Region Policy Optimization (TRPO)
-- Proximal Policy Optimization (PPO)
-- Constrained optimization in RL
-- Sample efficiency improvements
-- Actor-critic architectures
-
-**Learning Objectives:**
-
-- Understand advanced policy optimization
-- Implement TRPO and PPO algorithms
-- Analyze stability and sample efficiency
-- Compare policy gradient variants
-
-**Technical Implementation:**
-
-- Conjugate gradient optimization
-- Clipped surrogate objectives
-- Value function learning
-- Multi-environment training
-
-#### CA8: Causal Reinforcement Learning and Multi-modal Learning
-
-**Location:**`CAs/Solutions/CA8/`
-
-**Core Concepts:**
-
-- Causal inference in RL
-- Counterfactual reasoning
-- Multi-modal state representations
-- Cross-modal learning
-- Causal discovery algorithms
-
-**Learning Objectives:**
-
-- Understand causality in decision making
-- Implement causal RL algorithms
-- Process multi-modal observations
-- Analyze causal relationships in environments
-
-**Technical Implementation:**
-
-- Causal model implementations
-- Multi-modal feature processing
-- Causal effect estimation
-- Cross-modal attention mechanisms
-
-#### CA9: Continuous Control and Advanced Policy Gradients
-
-**Location:**`CAs/Solutions/CA9/`
-
-**Core Concepts:**
-
-- Continuous action spaces
-- Deterministic policy gradients
-- Deep Deterministic Policy Gradients (DDPG)
-- Twin Delayed DDPG (TD3)
-- Soft Actor-Critic (SAC)
-
-**Learning Objectives:**
-
-- Handle continuous control problems
-- Implement deterministic policy gradients
-- Manage exploration in continuous spaces
-- Apply advanced algorithms to robotics tasks
-
-**Technical Implementation:**
-
-- Continuous action policy networks
-- Ornstein-Uhlenbeck noise for exploration
-- Twin critics for stability
-- Entropy-regularized learning
-
-#### CA10: Model-Based Reinforcement Learning
-
-**Location:**`CAs/Solutions/CA10/`
-
-**Core Concepts:**
-
-- Model-based vs. model-free RL
-- Environment modeling
-- Dyna-Q algorithm
-- Monte Carlo Tree Search (MCTS)
-- Model Predictive Control (MPC)
-
-**Learning Objectives:**
-
-- Understand model-based learning paradigm
-- Implement environment models
-- Apply planning algorithms
-- Compare model-based and model-free approaches
-
-**Technical Implementation:**
-
-- Tabular and neural environment models
-- Dyna-Q with planning
-- MCTS implementation
-- MPC with learned models
-- Modular architecture with separate algorithm files
-
-#### CA11: World Models and Dreamer Algorithm
-
-**Location:**`CAs/Solutions/CA11/`
-
-**Core Concepts:**
-
-- World model learning
-- Latent space dynamics
-- Dreamer algorithm architecture
-- Imagination-based planning
-- Model-based imagination
-
-**Learning Objectives:**
-
-- Understand world model concept
-- Implement latent dynamics models
-- Apply imagination for planning
-- Analyze model-based learning efficiency
-
-**Technical Implementation:**
-
-- Variational autoencoders for state encoding
-- Recurrent neural networks for dynamics
-- Imagination-based actor-critic
-- End-to-end training procedures
-
-#### CA12: Multi-Agent Reinforcement Learning
-
-**Location:**`CAs/Solutions/CA12/`
-
-**Core Concepts:**
-
-- Multi-agent systems
-- Cooperative and competitive scenarios
-- Centralized vs. decentralized training
-- Communication protocols
-- Emergent behaviors
-
-**Learning Objectives:**
-
-- Understand multi-agent RL challenges
-- Implement multi-agent algorithms
-- Design communication mechanisms
-- Analyze emergent behaviors
-
-**Technical Implementation:**
-
-- Multi-agent environments
-- Centralized critic architectures
-- Communication networks
-- Population-based training
-
-#### CA13: Sample Efficient Reinforcement Learning
-
-**Location:**`CAs/Solutions/CA13/`
-
-**Core Concepts:**
-
-- Sample efficiency metrics
-- Meta-learning for RL
-- Model-based meta-learning
-- Few-shot adaptation
-- Context-aware learning
-
-**Learning Objectives:**
-
-- Understand sample efficiency challenges
-- Implement meta-learning algorithms
-- Apply few-shot learning techniques
-- Analyze adaptation capabilities
-
-**Technical Implementation:**
-
-- Meta-learning frameworks
-- Context embedding networks
-- Adaptation algorithms
-- Efficiency benchmarking
-
-#### CA14: Advanced RL Topics (Offline, Safe, Robust)
-
-**Location:**`CAs/Solutions/CA14/`
-
-**Core Concepts:**
-
-- Offline reinforcement learning
-- Safe reinforcement learning
-- Robust reinforcement learning
-- Constrained optimization
-- Risk-sensitive learning
-
-**Learning Objectives:**
-
-- Understand advanced RL challenges
-- Implement offline learning algorithms
-- Design safety constraints
-- Analyze robustness properties
-
-**Technical Implementation:**
-
-- Offline policy learning
-- Safety layer implementations
-- Robust optimization techniques
-- Constraint satisfaction methods
-
-#### CA15: Hierarchical Reinforcement Learning
-
-**Location:**`CAs/Solutions/CA15/`
-
-**Core Concepts:**
-
-- Hierarchical action spaces
-- Options framework
-- Temporal abstraction
-- Skill discovery
-- Multi-level planning
-
-**Learning Objectives:**
-
-- Understand hierarchical decision making
-- Implement option-based learning
-- Design skill hierarchies
-- Apply temporal abstraction
-
-**Technical Implementation:**
-
-- Option policies
-- Intra-option learning
-- Hierarchical value functions
-- Skill composition algorithms
-
-#### CA16-CA19: Future of Reinforcement Learning
-
-**Location:**`CAs/Solutions/CA16-CA19/`
-
-**Core Concepts:**
-
-- Foundation models in RL
-- Human-AI collaboration
-- Quantum reinforcement learning
-- Neuromorphic computing
-- Brain-inspired learning
-
-**Learning Objectives:**
-
-- Understand emerging RL directions
-- Explore interdisciplinary applications
-- Analyze future research challenges
-- Design novel RL architectures
-
-**Technical Implementation:**
-
-- Advanced neural architectures
-- Quantum circuit implementations
-- Neuromorphic algorithms
-- Human-in-the-loop systems
-
-### Additional Assignment Collections
-
-#### Berkeley CS285 Deep RL Assignments
-
-**Location:**`Assisments/berkeley-deep-RL-pytorch-solutions/`
-
-**Content Overview:**
-
-- Complete PyTorch implementations of Berkeley's CS285 course
-- Homework assignments 1-5 covering core DRL topics
-- Infrastructure code for RL experimentation
-- Advanced topics in deep reinforcement learning
-
-**Key Components:**
-
-- Policy gradient implementations
-- Actor-critic methods
-- Model-based RL algorithms
-- Advanced optimization techniques
-
-#### Deep Learning Assignments 2022
-
-**Location:**`Assisments/Deep-Learning-Assignments-2022/`
-
-**Content Overview:**
-
-- Four comprehensive deep learning assignments
-- Neural network fundamentals
-- Convolutional neural networks
-- Recurrent neural networks
-- Advanced architectures
-
-**Educational Focus:**
-
-- Deep learning theory and practice
-- Neural network optimization
-- Computer vision applications
-- Sequence modeling
-
-#### Additional Deep RL Assignments
-
-**Location:**`Assisments/Deep-RL-Assignments/`
-
-**Content Overview:**
-
-- Supplementary RL assignments
-- Advanced algorithm implementations
-- Research-oriented problems
-- Practical applications
-
-#### Homework Collections
-
-**Location:**`Assisments/homework/`, `Assisments/homework_fall2022/`
-
-**Content Overview:**
-
-- Semester-long homework assignments
-- Progressive difficulty levels
-- Comprehensive coverage of RL topics
-- Practical implementation focus
+## 2) Environment & Dependencies
+- **Per-task `requirements.txt`**: Always install from the specific folder (homeworks, paperAssignments, archive solutions, etc.). Avoid a single monolithic environment.
+- **Common stack**: PyTorch, Gymnasium/Classic Control, NumPy, Matplotlib, Jupyter. Some tasks require MuJoCo, Atari ROMs, or image libs—check the local README.
+- **Conflicts**: If two assignments need conflicting versions, create separate virtualenvs (e.g., `.venv-hw8`, `.venv-ca28`).
 
 ---
+## 3) Repository Map (Top Level)
+- `archive/` – CAs CA01–CA19 with **Solutions** and answer-free notebooks in **No Answer**.
+- `CA_extra/` – Supplemental notebooks s20–s28 (advanced or make-up sessions).
+- `CA_extra_versions/` – Cleaned vs. pre-cleaned copies of the extra sessions.
+- `course_notes/` – Topic Markdown notes (bandits, exploration, hierarchical, imitation, meta, etc.).
+- `guests/` – Bios and summaries for invited lectures.
+- `homeworks/` – Core homework track HW1–HW14, weekly drills, special tasks, and term archives.
+- `notes_related/` – Numbered PDF lecture notes (1–19) aligned with slides.
+- `Other_Assisments/` – External/alternate assignment collections (Berkeley CS285 ports, deep RL class units, Fall 2022 homeworks, DL 2022 sets, etc.).
+- `paperAssignments/` – Paper-driven coding assignments (CA1–CA31 style) with prompts and requirements.
+- `projects/` – Standalone project codebases (`amasa`, `grad_rl`).
+- `QuestionsAndNotes/` – Session Q&A PDFs paired with slide sets.
+- `quizzes/` – Quiz solution PDFs.
+- `Slides/` – Lecture slide decks (1–19).
+- `summaries/` – One-page lecture summaries (10–19).
+- `Workshops/` – Six hands-on workshop folders with runnable notebooks.
+- `LICENSE` – MIT License.
 
-## Educational Resources and Materials
-
-### Lecture Slides
-
-**Location:**`Slides/`
-
-**Content Structure:**
-
-- Nineteen lecture slide decks (PDF format)
-- Progressive coverage from RL fundamentals to advanced topics
-- Visual explanations of complex concepts
-- Mathematical derivations and algorithm pseudocode
-
-**Key Topics Covered:**
-
-1. Introduction to Reinforcement Learning
-2. Markov Decision Processes
-3. Dynamic Programming
-4. Monte Carlo Methods
-5. Temporal Difference Learning
-6. Function Approximation
-7. Deep Q-Networks
-8. Policy Gradient Methods
-9. Actor-Critic Algorithms
-10. Exploration Strategies
-11. Model-Based RL
-12. Multi-Agent RL
-13. Advanced Topics
-14. Applications and Case Studies
-15. Future Directions
-
-    16-19. Specialized Advanced Topics
-
-### Course Notes
-
-**Location:**`notes_related/`
-
-**Content Overview:**
-
-- Detailed mathematical derivations
-- Algorithm analysis and proofs
-- Theoretical foundations
-- Implementation guidelines
-
-**Key Components:**
-
-- Bellman equation derivations
-- Convergence proofs
-- Algorithm complexity analysis
-- Implementation considerations
-
-### Questions and Notes
-
-**Location:**`QuestionsAndNotes/`
-
-**Content Structure:**
-
-- Session-wise question sets
-- Detailed solutions and explanations
-- Additional notes and clarifications
-- Practice problems with solutions
-
-**Educational Purpose:**
-
-- Self-assessment tools
-- Deepened understanding through problem-solving
-- Supplementary explanations
-- Preparation for assignments
-
-### Supplementary Resources
-
-**Location:**`Other_RES/`
-
-**Content Overview:**
-
-- Audio lectures and explanations
-- Visual aids and diagrams
-- Additional reference materials
-- Multimedia learning resources
+Every directory listed above now has its own README describing contents and how to run them.
 
 ---
-
-## Technical Implementation Details
-
-### Code Architecture
-
-The repository follows a modular architecture designed for:
-
-1.**Reusability**: Common components shared across assignments
-
-2.**Maintainability**: Clear separation of concerns
-
-3.**Educational Value**: Code designed for learning and modification
-
-4.**Research Applications**: Extensible for advanced research
-
-### Key Technical Features
-
-#### Modular Design
-
-- Separate files for algorithms, environments, and utilities
-- Consistent API across implementations
-- Easy integration and testing
-
-#### Visualization and Analysis
-
-- Comprehensive plotting functions
-- Performance analysis tools
-- Comparative studies framework
-
-#### Reproducibility
-
-- Fixed random seeds
-- Detailed configuration files
-- Version-controlled dependencies
-
-#### Documentation
-
-- Inline code documentation
-- Algorithm explanations
-- Usage examples
-
-### Dependencies and Environment
-
-#### Core Requirements
-
-- Python 3.8+: Modern Python features and type hints
-- PyTorch 1.9+: Deep learning framework
-- Gymnasium 0.29+: RL environment library
-- NumPy: Scientific computing
-- Matplotlib: Visualization
-- Jupyter: Interactive development
-
-#### Environment Setup
-
-- Virtual environment recommended
-- GPU support for accelerated training
-- Cross-platform compatibility
+## 4) How to Pick Where to Begin
+- **Taking the course**: follow `homeworks/` in order; pair each HW with matching slide number and `course_notes/`.
+- **Practicing concepts**: start with `archive/No Answer` notebooks, then check solutions under `archive/Solutions`.
+- **Research replication**: use `paperAssignments/` (choose the tree `Assignments1-50/` or `Assignments1_50/` based on the path expected by your notebook).
+- **Workshop sprint**: open `Workshops/README.md` and run sessions sequentially (good for quick refreshers).
+- **External curricula**: browse `Other_Assisments/` and pick the set aligned with your course (e.g., `berkeley-deep-RL-pytorch-solutions/`).
+- **Project work**: see `projects/` for starting points; clone a project into a fresh branch/environment.
 
 ---
+## 5) Assignment Workflows
+### Notebooks
+1. Install the local `requirements.txt`.
+2. Launch `jupyter lab` inside the assignment folder.
+3. Run cells top-to-bottom; keep copies of your completed notebook separate from provided solutions.
 
-## Pedagogical Approach and Learning Objectives
+### Python scripts
+1. Install requirements.
+2. Check `--help` for CLI flags (e.g., env name, seed, total steps).
+3. Save outputs (plots, checkpoints) inside the assignment folder or a `runs/` subdir; avoid committing large binaries.
 
-### Learning Progression
-
-The course follows a carefully designed progression:
-
-1.**Foundation Building**: Basic concepts and algorithms
-
-2.**Theoretical Understanding**: Mathematical foundations
-
-3.**Practical Implementation**: Hands-on coding experience
-
-4.**Advanced Topics**: Cutting-edge research areas
-
-5.**Integration**: Connecting concepts across domains
-
-### Educational Objectives
-
-#### Knowledge Objectives
-
-- Understand RL theoretical foundations
-- Master algorithmic implementations
-- Analyze algorithm performance
-- Apply RL to real-world problems
-
-#### Skill Objectives
-
-- Implement RL algorithms from scratch
-- Debug and optimize RL systems
-- Design effective learning architectures
-- Conduct RL research and experimentation
-
-#### Competency Objectives
-
-- Solve complex decision-making problems
-- Evaluate RL algorithm suitability
-- Contribute to RL research community
-- Apply RL in practical applications
-
-### Assessment and Evaluation
-
-#### Assignment Structure
-
-- Progressive difficulty increase
-- Theoretical and practical components
-- Comprehensive testing and validation
-- Performance analysis requirements
-
-#### Learning Outcomes
-
-- Ability to implement state-of-the-art RL algorithms
-- Understanding of algorithm limitations and tradeoffs
-- Capacity for independent RL research
-- Practical application skills
+### Multi-env tasks
+Some CAs and paper assignments need MuJoCo or Atari:
+- Install MuJoCo and set `MUJOCO_PY_MUJOCO_PATH` (see per-folder README).
+- For Atari, install `ale-py`/ROMs as directed.
 
 ---
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-### MIT License Summary
-
-Copyright (c) 2025 Taha Majlesi
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-
-of this software and associated documentation files (the "Software"), to deal
-
-in the Software without restriction, including without limitation the rights
-
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-
-copies of the Software, and to permit persons to whom the Software is
-
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-
-SOFTWARE.
-
-### Educational Use
-
-This repository is intended for educational purposes as part of the Deep Reinforcement Learning course at Sharif University of Technology. Students and researchers are encouraged to use, modify, and build upon the provided materials for learning and research purposes.
-
-### Attribution Requirements
-
-When using materials from this repository in academic work, research papers, or other publications, please provide appropriate attribution to:
-
-- Sharif University of Technology Deep Reinforcement Learning Course
-- Repository: https://github.com/tahamajs/DRL_SUT
-- Author: Taha Majlesi
+## 6) Data & Assets
+- Large assets are rarely bundled. If a README lists downloads (e.g., D4RL datasets, ROMs), follow those steps before running.
+- Keep downloaded data under a local `data/` sibling when possible; avoid adding to git.
+- Workshop 5 ships small assets in `Workshops/Workshop-5-Material/assets/`; keep paths relative.
 
 ---
+## 7) Validation & Repro Tips
+- **Seeds**: use provided seeds for grading; log them when experimenting.
+- **Hardware notes**: if you switch between CPU/GPU, expect minor numeric drift; compare learning curves, not single-step losses.
+- **Plots**: many notebooks auto-save figures; verify output directories before running on shared machines.
+- **Time**: Atari and MuJoCo runs can be lengthy—consider shorter `--num-steps` for smoke tests.
 
-## References and Acknowledgments
+---
+## 8) Contribution Guidelines
+- Add new material in its own folder with:
+  - A concise README (scope, how to run, dependencies).
+  - A `requirements.txt` (pinned if needed for grading).
+  - Clear entrypoints (`main.py`, notebooks, or scripts) and sample commands.
+- Use relative paths, avoid hard-coding machine-specific directories.
+- Keep checkpoints and large datasets out of the repo; prefer download scripts or `.gitignore`.
+- When modifying shared utilities, ensure downstream notebooks still run; note breaking changes in the relevant README.
 
-### Academic References
+---
+## 9) License & Attribution
+Licensed under MIT (see `LICENSE`). Cite the course and original paper authors when reusing code or figures. Guest materials remain the property of their presenters.
 
-- Sutton, R. S., & Barto, A. G. (2018). Reinforcement Learning: An Introduction. MIT Press.
-- Bertsekas, D. P. (2019). Reinforcement Learning and Optimal Control. Athena Scientific.
-- Mnih, V., et al. (2015). Human-level control through deep reinforcement learning. Nature.
-- Schulman, J., et al. (2017). Proximal Policy Optimization Algorithms. arXiv preprint.
-
-### Acknowledgments
-
-- Course instructors and teaching assistants
-- Open source community contributors
-- Berkeley CS285 course materials
-- PyTorch and Gymnasium development teams
-
-### Technical Acknowledgments
-
-- Python Software Foundation
-- PyTorch development team
-- OpenAI Gym maintainers
-- Academic research community
+Happy learning and experimenting!  

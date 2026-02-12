@@ -1,5 +1,26 @@
 # HW11: Meta-Learning in Reinforcement Learning
 
+## Quick Run Sheet
+1) **Env**: Python 3.8–3.11; use fresh venv.  
+2) **Install deps**:  
+```bash
+pip install -r code/requirements.txt        # if present
+pip install -r base_code/requirements.txt   # starter env
+```  
+3) **Build/Run**: `compile_and_run.sh` can compile and execute experiments; otherwise open notebooks in `code/`.  
+4) **Prompt**: PDFs in `reports/`.  
+5) **Reference**: `answers/`, `HW11_Complete_Solution.md`, and `EXPERIMENTS.md` for expected runs.  
+6) **Deliverables**: completed notebooks/scripts + PDF; include adaptation curves and meta-train/meta-test splits.
+
+## Folder Legend
+- `code/` – main student code/notebooks.  
+- `base_code/` – starter templates.  
+- `answers/` – solved versions.  
+- `reports/` – questions/rubric.  
+- `compile_and_run.sh` – helper script for building/running experiments.  
+- `EXPERIMENTS.md` – experiment matrix.  
+- `Homework-11-Template*` – release template (folder + zip).
+
 [![Deep RL](https://img.shields.io/badge/Deep-RL-blue.svg)](https://en.wikipedia.org/wiki/Reinforcement_learning)
 [![Meta-Learning](https://img.shields.io/badge/Type-Meta--Learning-purple.svg)](.)
 [![Status](https://img.shields.io/badge/Status-Complete-success.svg)](.)

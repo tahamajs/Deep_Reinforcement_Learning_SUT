@@ -1,5 +1,23 @@
 # HW14: Safe Reinforcement Learning
 
+## Quick Run Sheet
+1) **Env**: Python 3.8–3.11; fresh venv.  
+2) **Install deps**:  
+```bash
+pip install -r requirements.txt
+```  
+3) **Work notebooks/scripts**: inside `code/`.  
+4) **Prompt**: question PDFs in `reports/`.  
+5) **Reference**: `answers/` for solved versions; template in `Homework-14-Template*`.  
+6) **Deliverables**: notebook(s)/scripts + PDF; include constraint metrics (e.g., cost, safety violations) alongside returns.
+
+## Folder Legend
+- `code/` – editable implementations.  
+- `answers/` – completed solutions.  
+- `reports/` – question PDFs / rubrics.  
+- `Homework-14-Template*` – release template (folder + zip).  
+- `requirements.txt` – install first.
+
 [![Deep RL](https://img.shields.io/badge/Deep-RL-blue.svg)](https://en.wikipedia.org/wiki/Reinforcement_learning)
 [![Safety](https://img.shields.io/badge/Type-Safe--RL-red.svg)](.)
 
@@ -69,6 +87,5 @@ See `answers/HW14_Solutions.md` for references and suggested readings (Achiam et
 ---
 
 Last updated: 2025-12-18
-
 
 

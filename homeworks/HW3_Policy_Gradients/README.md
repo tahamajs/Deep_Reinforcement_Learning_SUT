@@ -1,5 +1,24 @@
 # HW3: Policy Gradient Methods
 
+## Quick Run Sheet
+1) **Env**: Python 3.8–3.11; new virtualenv recommended.  
+2) **Install deps** (choose your workspace):  
+```bash
+pip install -r code/requirements.txt        # main notebooks (if present)
+pip install -r base_code/requirements.txt   # starter env (optional)
+```  
+3) **Work notebooks**: use the `code/` notebooks (P1–P4).  
+4) **Prompts**: `reports/HW3_Questions.pdf`.  
+5) **Reference**: solutions in `answers/`; packaged template in `Homework-3-Template*`.  
+6) **Deliverables**: filled notebooks + PDF export; include learning-curve plots for each part.
+
+## Folder Legend
+- `code/` – student notebooks with TODOs.  
+- `answers/` – completed solutions (review after attempting).  
+- `reports/` – question PDF / rubric.  
+- `Homework-3-Template*` – release template in folder and zip form.  
+- `report/` (if present) – alternative location for the prompt.
+
 [![Deep RL](https://img.shields.io/badge/Deep-RL-blue.svg)](https://en.wikipedia.org/wiki/Reinforcement_learning)
 [![Policy-Based](https://img.shields.io/badge/Methods-Policy--Based-orange.svg)](https://www.deepmind.com/)
 [![Status](https://img.shields.io/badge/Status-Complete-success.svg)](.)

@@ -1,4 +1,21 @@
-# Strategic Research Roadmap 2025-2026 – Advanced Architectures & Algorithmic Frontiers in Reinforcement Learning
+# paperAssignments – Navigator (Updated: Feb 12, 2026)
+
+Use this guide to locate and run the paper-driven assignments. Two mirrored directory trees exist to preserve original path expectations; contents are identical unless noted.
+
+## Directory map
+- `Assignments1-50/` – Primary tree of CA-style paper assignments (CA1–CA31 and beyond). Each subfolder has its own README and `requirements.txt`.
+- `Assignments1_50/` – Symlink-free copy of the same assignments; use this if your notebooks expect underscores instead of hyphens.
+- `prompts/` – Text/HTML prompts for the assignments.
+- `README_tmp.html` – HTML export of an earlier overview (kept for reference).
+
+## How to run a paper assignment
+1. Choose the assignment folder (e.g., `Assignments1_50/CA28`).
+2. Create a fresh environment and install its `requirements.txt`.
+3. Open the provided notebook or script and follow the README inside that folder.
+4. Save checkpoints/plots locally; avoid committing large artifacts.
+
+---
+## Strategic Research Roadmap 2025-2026 – Advanced Architectures & Algorithmic Frontiers in Reinforcement Learning
 
 **To:** Principal Investigators, Senior Research Scientists, and Engineering Fellows  
 **From:** Director of Advanced Research  
@@ -1032,4 +1049,3 @@ VII | World Models | Graph Diffusion, Posterior Sampling | Causal reasoning & pl
 **Evaluation Strategy:**  
 - Benchmark: autonomous driving simulator (CARLA) with stochastic traffic.  
 - Ablation: mean vs CVaR planning; quantile count.
-

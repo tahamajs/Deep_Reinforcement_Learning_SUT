@@ -1,0 +1,5 @@
+\contentsline {figure}{\numberline {1}{\ignorespaces Illustrative learning curves for value-based agents (replace with logged curves after running).}}{4}{figure.1}%
+\contentsline {figure}{\numberline {2}{\ignorespaces Illustrative policy-gradient learning curves. Add cost plot if using safety tasks.}}{5}{figure.2}%
+\contentsline {figure}{\numberline {3}{\ignorespaces Illustrative actor--critic learning curves on CartPole (A2C) and Pendulum (SAC).}}{6}{figure.3}%
+\contentsline {figure}{\numberline {4}{\ignorespaces Illustrative returns for model-based methods.}}{7}{figure.4}%
+\contentsline {figure}{\numberline {5}{\ignorespaces Illustrative cooperative multi-agent learning curves on MPE simple\_spread.}}{8}{figure.5}%

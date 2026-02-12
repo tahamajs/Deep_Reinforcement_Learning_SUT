@@ -1,0 +1,17 @@
+torch>=2.2
+numpy>=1.25
+gymnasium>=0.29.1
+gymnasium[atari,accept-rom-license]
+gymnasium[box2d]
+ale-py>=0.8.1
+stable-baselines3>=2.3.0
+sb3-contrib>=2.3.0
+huggingface-hub>=0.20.0
+tensorboard>=2.15
+rich>=13.7
+pyyaml>=6.0
+tqdm>=4.66
+autorom[accept-rom-license]>=0.6.1
+ray[rllib]>=2.9.3
+pettingzoo[mpe]>=1.24.3
+supersuit>=3.9.0

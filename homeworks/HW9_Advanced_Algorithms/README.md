@@ -1,5 +1,23 @@
 # HW9: Advanced RL Algorithms
 
+## Quick Run Sheet
+1) **Env**: Python 3.8–3.11; fresh venv.  
+2) **Install deps**:  
+```bash
+pip install -r requirements.txt
+```  
+3) **Work notebooks/scripts**: primary materials in `src/` and `Homework-9-Template` (folder/zip).  
+4) **Prompt**: see PDFs under `reports/`.  
+5) **Reference**: `answers/` contains completed solutions.  
+6) **Deliverables**: code/notebook outputs + PDF; include metrics/plots requested by the prompt.
+
+## Folder Legend
+- `src/` – source code / notebooks to modify.  
+- `answers/` – solved versions.  
+- `reports/` – question PDFs / rubrics.  
+- `Homework-9-Template*` – release template (folder + zip).  
+- `requirements.txt` – install before running anything.
+
 [![Deep RL](https://img.shields.io/badge/Deep-RL-blue.svg)](https://en.wikipedia.org/wiki/Reinforcement_learning)
 [![Advanced](https://img.shields.io/badge/Level-Advanced-red.svg)](.)
 [![Status](https://img.shields.io/badge/Status-Complete-success.svg)](.)

@@ -1,5 +1,25 @@
 # HW5: Model-Based Reinforcement Learning
 
+## Quick Run Sheet
+1) **Env**: Python 3.8–3.11; create venv.  
+2) **Install deps** (pick your working copy):  
+```bash
+pip install -r code/requirements.txt          # main notebook env (if present)
+pip install -r base_codes/requirements.txt    # starter env
+```  
+3) **Work notebook**: `code/` notebooks; `base_codes/` provides minimal scaffolding.  
+4) **Prompt**: see question PDF(s) in `reports/`.  
+5) **Reference**: `answers/` plus `HW5_Complete_Solution.md`; template in `Homework-5-Template*`.  
+6) **Deliverables**: filled notebooks + PDF exports; include rollout visuals/metrics for planning vs. model-free baselines.
+
+## Folder Legend
+- `code/` – student notebooks/scripts with TODOs.  
+- `base_codes/` – lighter starter versions.  
+- `answers/` – completed solutions.  
+- `reports/` – prompts/rubrics.  
+- `HW5_Complete_Solution.md` – narrative solution.  
+- `Homework-5-Template*` – packaged template (folder + zip).
+
 [![Deep RL](https://img.shields.io/badge/Deep-RL-blue.svg)](https://en.wikipedia.org/wiki/Reinforcement_learning)
 [![Model-Based](https://img.shields.io/badge/Methods-Model--Based-purple.svg)](https://www.deepmind.com/)
 [![Status](https://img.shields.io/badge/Status-Complete-success.svg)](.)
@@ -441,4 +461,3 @@ jupyter notebook code/RL_HW5_MPC.ipynb
 
 **Course:** Deep Reinforcement Learning  
 **Last Updated:** 2024
-

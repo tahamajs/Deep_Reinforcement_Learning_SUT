@@ -1,5 +1,26 @@
 # HW6: Advanced Topics in Deep RL
 
+## Quick Run Sheet
+1) **Env**: Python 3.8–3.11; fresh virtualenv.  
+2) **Install deps** (choose workspace):  
+```bash
+pip install -r code/requirements.txt        # main notebooks (if present)
+pip install -r base_code/requirements.txt   # starter env
+```  
+3) **Work notebooks/scripts**: in `code/`; `base_code/` holds pared-down templates.  
+4) **Prompt**: PDFs in `reports/`; consult `run_info.json` for released settings.  
+5) **Reference**: `answers/` plus `HW6_Complete_Solutions.md`; template in `Homework-6-Template*`.  
+6) **Deliverables**: notebook(s) + PDF with curves/metrics for each subtask.
+
+## Folder Legend
+- `code/` – editable student notebooks or scripts.  
+- `base_code/` – minimal starter versions.  
+- `answers/` – completed solutions.  
+- `reports/` – question PDFs / rubrics.  
+- `run_info.json` – published hyperparameters.  
+- `HW6_Complete_Solutions.md` – solution narrative.  
+- `Homework-6-Template*` – release templates (folder + zip).
+
 [![Deep RL](https://img.shields.io/badge/Deep-RL-blue.svg)](https://en.wikipedia.org/wiki/Reinforcement_learning)
 [![Advanced](https://img.shields.io/badge/Level-Advanced-red.svg)](https://www.deepmind.com/)
 [![Status](https://img.shields.io/badge/Status-Complete-success.svg)](.)
@@ -351,4 +372,3 @@ higher>=0.2.1  # For MAML
 
 **Course:** Deep Reinforcement Learning  
 **Last Updated:** 2024
-

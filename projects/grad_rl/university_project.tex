@@ -1,0 +1,229 @@
+% University project report for Graduate Deep RL Paper Chains
+\documentclass[12pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{enumitem}
+\usepackage{siunitx}
+\usepackage{listings}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\hypersetup{colorlinks=true,linkcolor=MidnightBlue,citecolor=ForestGreen,urlcolor=blue}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\E}{\mathbb{E}}
+
+\title{Graduate Deep Reinforcement Learning Paper Chains\\Comprehensive Project Report}
+\author{Your Name \and Partner Name\\Course: Deep Reinforcement Learning\\Institution: <University Name>}
+\date{\today}
+
+\lstset{basicstyle=\ttfamily\small,breaklines=true,frame=single,backgroundcolor=\color{gray!5},keywordstyle=\color{blue!70!black},commentstyle=\color{gray!70},stringstyle=\color{red!70!black}}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\listoftables
+\listoffigures
+
+\section{Introduction}
+This project reproduces and analyzes five canonical deep RL paper chains spanning value-based, policy-gradient/trust-region, actor--critic with maximum entropy, model-based, and multi-agent learning. The goals are: (i) implement faithful yet compact baselines, (ii) evaluate them on standardized benchmarks, (iii) compare theoretical guarantees with empirical behaviour, and (iv) provide reproducible artifacts suitable for graduate coursework.
+
+\section{Related Work}
+\begin{itemize}[leftmargin=*]
+    \item Tabular Q-learning convergence \cite{watkins1992} and stability refinements (Double DQN \cite{vanhasselt2016double}, Dueling DQN \cite{wang2016dueling}).
+    \item Trust-region methods TRPO \cite{schulman2015trpo} and PPO \cite{schulman2017ppo}; constrained policy optimization \cite{achiam2017cpo}.
+    \item Actor--critic advances including A3C \cite{mnih2016a3c} and maximum-entropy SAC \cite{haarnoja2018sac}.
+    \item Model-based rollouts from Dyna-Q \cite{sutton1990dyna} to ensemble TRPO \cite{kurutach2018metrpo}.
+    \item Multi-agent formulations: minimax Q \cite{littman1994}, centralized training with decentralized execution (MADDPG \cite{lowe2017maddpg}), and value factorization (QMIX \cite{rashid2018qmix}).
+\end{itemize}
+
+\section{Methods}
+\subsection{Codebase Overview}
+All code lives in \code{projects/grad\_rl/}. Entry scripts implement the five chains (see \cref{tab:commands}). Shared utilities handle seeding, environment creation (Atari wrappers, vector envs), and evaluation.
+
+\begin{table}[h]
+    \centering
+    \caption{Entry-point commands (laptop-friendly defaults).}\label{tab:commands}
+    \begin{tabular}{ll}
+        \toprule
+        Chain & Command \\
+        \midrule
+        Value-based & \code{python projects/grad\_rl/scripts/train\_value.py --env ALE/Breakout-v5 --total-steps 200000} \\
+        Policy (PPO) & \code{python projects/grad\_rl/scripts/train\_policy.py --algo ppo --env HalfCheetah-v4 --total-steps 300000} \\
+        Policy (TRPO) & \code{python projects/grad\_rl/scripts/train\_policy.py --algo trpo --env Walker2d-v4} \\
+        Policy (CPO-lite) & \code{python projects/grad\_rl/scripts/train\_policy.py --algo cpo --env SafetyPointCircle0-v0} \\
+        Actor--Critic (SAC) & \code{python projects/grad\_rl/scripts/train\_actor\_critic.py --algo sac --env Pendulum-v1} \\
+        Model-based (Dyna-Q) & \code{python projects/grad\_rl/scripts/train\_model\_based.py --algo dyna-q} \\
+        Model-based (ME-TRPO) & \code{python projects/grad\_rl/scripts/train\_model\_based.py --algo me-trpo --env Pendulum-v1} \\
+        Multi-agent (QMIX) & \code{python projects/grad\_rl/scripts/train\_marl.py --algo qmix --iters 50} \\
+        Multi-agent (MADDPG) & \code{python projects/grad\_rl/scripts/train\_marl.py --algo maddpg --iters 50} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Chain Descriptions}
+\paragraph{Value-based.} DQN with replay and target networks; optional Double, Dueling, and QR-DQN variants.
+\paragraph{Policy-gradient / trust-region.} REINFORCE baseline; PPO clip surrogate; TRPO with CG and line search; CPO-lite using Lagrangian penalty for safety cost.
+\paragraph{Actor--critic / max-entropy.} A2C as synchronous A3C stand-in; SAC with automatic entropy tuning.
+\paragraph{Model-based.} Tabular Dyna-Q with planning updates; lightweight ME-TRPO-style ensemble dynamics with periodic TRPO updates using imagined rollouts.
+\paragraph{Multi-agent.} QMIX monotonic value factorization and MADDPG centralized critics on PettingZoo MPE simple\_spread.
+
+\section{Experimental Setup}\label{sec:experimental}
+\textbf{Hardware:} document CPU/GPU, RAM.\\
+\textbf{Software:} Python 3.10+, PyTorch 2.2, Gymnasium 0.29, SB3 2.3, Ray 2.9 (pinned in \code{requirements.txt}).\\
+\textbf{Environments:} Atari (ALE), classic control, MuJoCo, PettingZoo MPE.\\
+\textbf{Seeding:} \code{--seed} flag; vector environments offset seeds per worker.\\
+\textbf{Logging:} TensorBoard scalars; JSON metrics next to checkpoints.
+
+\section{Experiments and Results}
+Populate the following tables after running the scripts.
+
+\subsection{Value-Based Results}
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}
+    \begin{axis}[
+        width=0.8\linewidth,
+        height=6cm,
+        xlabel={Environment Steps ($\times 10^3$)},
+        ylabel={Return},
+        legend style={at={(0.5,-0.2)},anchor=north,legend columns=2},
+        ymin=0,ymax=400
+    ]
+    \addplot+[thick,blue,mark=none] coordinates {(0,20) (50,120) (100,180) (150,210) (200,240)};
+    \addlegendentry{DQN}
+    \addplot+[thick,ForestGreen,mark=none] coordinates {(0,25) (50,150) (100,210) (150,260) (200,280)};
+    \addlegendentry{Double DQN}
+    \addplot+[thick,red,mark=none] coordinates {(0,30) (50,170) (100,230) (150,290) (200,310)};
+    \addlegendentry{Dueling DQN}
+    \addplot+[thick,orange,mark=none,dashed] coordinates {(0,35) (50,190) (100,250) (150,310) (200,330)};
+    \addlegendentry{QR-DQN}
+    \end{axis}
+    \end{tikzpicture}
+    \caption{Illustrative learning curves for value-based agents (replace with logged curves after running).}
+\end{figure}
+\input{report_table_dqn.tex}
+
+\subsection{Policy Gradient / Trust Region}
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}
+    \begin{axis}[
+        width=0.8\linewidth,
+        height=6cm,
+        xlabel={Environment Steps ($\times 10^3$)},
+        ylabel={Return},
+        legend style={at={(0.5,-0.2)},anchor=north,legend columns=2}
+    ]
+    \addplot+[thick,blue,mark=none] coordinates {(0,0) (50,120) (100,160) (150,180) (200,190)};
+    \addlegendentry{REINFORCE}
+    \addplot+[thick,ForestGreen,mark=none] coordinates {(0,0) (50,200) (100,400) (150,450) (200,460)};
+    \addlegendentry{PPO}
+    \addplot+[thick,red,mark=none] coordinates {(0,0) (50,180) (100,350) (150,410) (200,430)};
+    \addlegendentry{TRPO}
+    \addplot+[thick,orange,mark=none,dashed] coordinates {(0,0) (50,150) (100,280) (150,360) (200,380)};
+    \addlegendentry{CPO-lite (reward)}
+    \end{axis}
+    \end{tikzpicture}
+    \caption{Illustrative policy-gradient learning curves. Add cost plot if using safety tasks.}
+\end{figure}
+\input{report_table_policy.tex}
+
+\subsection{Actor--Critic / Max-Entropy}
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}
+    \begin{axis}[
+        width=0.8\linewidth,
+        height=6cm,
+        xlabel={Environment Steps ($\times 10^3$)},
+        ylabel={Return},
+        legend style={at={(0.5,-0.2)},anchor=north,legend columns=2}
+    ]
+    \addplot+[thick,blue,mark=none] coordinates {(0,50) (25,150) (50,300) (75,420) (100,500)};
+    \addlegendentry{A2C (A3C proxy)}
+    \addplot+[thick,red,mark=none] coordinates {(0,-1000) (25,-600) (50,-400) (75,-250) (100,-150)};
+    \addlegendentry{SAC}
+    \end{axis}
+    \end{tikzpicture}
+    \caption{Illustrative actor--critic learning curves on CartPole (A2C) and Pendulum (SAC).}
+\end{figure}
+\input{report_table_ac.tex}
+
+\subsection{Model-Based}
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}
+    \begin{axis}[
+        width=0.8\linewidth,
+        height=6cm,
+        xlabel={Episodes},
+        ylabel={Return},
+        legend style={at={(0.5,-0.2)},anchor=north,legend columns=2}
+    ]
+    \addplot+[thick,blue,mark=none] coordinates {(0,-80) (100,-60) (200,-50) (300,-40) (400,-35) (500,-30)};
+    \addlegendentry{Dyna-Q}
+    \addplot+[thick,ForestGreen,mark=none] coordinates {(0,-900) (25,-500) (50,-350) (75,-200) (100,-120)};
+    \addlegendentry{ME-TRPO}
+    \end{axis}
+    \end{tikzpicture}
+    \caption{Illustrative returns for model-based methods.}
+\end{figure}
+\input{report_table_model.tex}
+
+\subsection{Multi-Agent}
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}
+    \begin{axis}[
+        width=0.8\linewidth,
+        height=6cm,
+        xlabel={Training Iterations},
+        ylabel={Episode Reward Mean},
+        legend style={at={(0.5,-0.2)},anchor=north,legend columns=2}
+    ]
+    \addplot+[thick,blue,mark=none] coordinates {(0,-5) (10,2) (20,6) (30,10) (40,13) (50,15)};
+    \addlegendentry{QMIX}
+    \addplot+[thick,red,mark=none] coordinates {(0,-5) (10,1) (20,4) (30,7) (40,10) (50,12)};
+    \addlegendentry{MADDPG}
+    \end{axis}
+    \end{tikzpicture}
+    \caption{Illustrative cooperative multi-agent learning curves on MPE simple\_spread.}
+\end{figure}
+\input{report_table_marl.tex}
+
+\section{Ablations}
+Suggested ablations: replay buffer size, Double vs. vanilla DQN; PPO clip range; SAC entropy coefficient fixed vs. auto; Dyna-Q planning steps; QMIX worker counts.
+
+\section{Discussion}
+Relate empirical findings to theoretical expectations (see \S\ref{sec:experimental} for setup): overestimation bias reduction, KL constraint stability, entropy-driven exploration, model bias vs. rollout horizon, multi-agent non-stationarity.
+
+\section{Limitations and Ethics}
+Note approximations (A2C for A3C, simplified CPO), environment realism limits, and responsible reporting of randomness and hyperparameters.
+
+\section{Reproducibility Checklist}
+\begin{itemize}[leftmargin=*]
+    \item Code and scripts: \code{projects/grad\_rl/scripts/*.py}
+    \item Configs: YAML defaults under \code{projects/grad\_rl/configs}
+    \item Seeds: recorded in logs; set via CLI
+    \item Dependencies: \code{requirements.txt}
+    \item Hardware/software: state in \S\ref{sec:experimental}
+    \item Data: environments auto-downloaded (ALE ROMs via AutoROM)
+    \item Metrics: JSON + TensorBoard logs stored in outputs folder
+\end{itemize}
+
+\section{Conclusion}
+Summarize which methods are most stable, sample-efficient, or safe for the tested domains, and outline future extensions (Rainbow, true CPO, PlaNet/MuZero, SMACv2).
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\appendix
+\section{Theoretical Notes}
+For detailed derivations and proofs, see \code{solutions.tex}; reuse its content here as needed.
+
+\end{document}

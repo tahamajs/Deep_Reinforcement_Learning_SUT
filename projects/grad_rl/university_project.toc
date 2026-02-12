@@ -1,0 +1,23 @@
+\contentsline {section}{\numberline {1}Introduction}{2}{section.1}%
+\contentsline {section}{\numberline {2}Related Work}{2}{section.2}%
+\contentsline {section}{\numberline {3}Methods}{3}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Codebase Overview}{3}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Chain Descriptions}{3}{subsection.3.2}%
+\contentsline {paragraph}{Value-based.}{3}{section*.4}%
+\contentsline {paragraph}{Policy-gradient / trust-region.}{3}{section*.5}%
+\contentsline {paragraph}{Actor--critic / max-entropy.}{3}{section*.6}%
+\contentsline {paragraph}{Model-based.}{3}{section*.7}%
+\contentsline {paragraph}{Multi-agent.}{3}{section*.8}%
+\contentsline {section}{\numberline {4}Experimental Setup}{3}{section.4}%
+\contentsline {section}{\numberline {5}Experiments and Results}{4}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Value-Based Results}{4}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Policy Gradient / Trust Region}{5}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Actor--Critic / Max-Entropy}{5}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Model-Based}{5}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}Multi-Agent}{5}{subsection.5.5}%
+\contentsline {section}{\numberline {6}Ablations}{5}{section.6}%
+\contentsline {section}{\numberline {7}Discussion}{5}{section.7}%
+\contentsline {section}{\numberline {8}Limitations and Ethics}{6}{section.8}%
+\contentsline {section}{\numberline {9}Reproducibility Checklist}{6}{section.9}%
+\contentsline {section}{\numberline {10}Conclusion}{6}{section.10}%
+\contentsline {section}{\numberline {A}Theoretical Notes}{8}{appendix.A}%

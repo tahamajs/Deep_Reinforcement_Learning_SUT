@@ -1,0 +1,9 @@
+algo: "qmix" # qmix|maddpg
+iters: 50
+num_workers: 2
+num_envs_per_worker: 4
+train_batch_size: 3200
+rollout_fragment_length: 32
+lr: 5e-4
+gamma: 0.99
+save_dir: "projects/grad_rl/outputs/marl"

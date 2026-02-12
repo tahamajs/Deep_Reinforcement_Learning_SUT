@@ -1,0 +1,218 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage[table]{xcolor}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\title{Graduate Deep Reinforcement Learning Paper Chains\\Experimental Report}
+\author{DRL Course Repository (projects/grad\_rl)}
+\date{\today}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+This report documents reproducible experimental baselines for five canonical paper chains in deep reinforcement learning: value-based, policy-gradient/trust-region, actor--critic with maximum entropy, model-based, and multi-agent. Each section details objectives, algorithms, default hyperparameters, evaluation protocols, and placeholders for results produced by the accompanying Python scripts in \code{projects/grad\_rl/}.
+\end{abstract}
+
+\section{How to Reproduce}
+\begin{enumerate}[leftmargin=*]
+    \item Create and activate a virtual environment, then install dependencies: \code{pip install -r projects/grad\_rl/requirements.txt}.
+    \item Run the desired script (examples in Table~\ref{tab:commands}); set \code{--seed} for determinism.
+    \item Results are saved under \code{projects/grad\_rl/outputs/<chain>/}. TensorBoard logs live in \code{projects/grad\_rl/outputs/tb/}.
+    \item Insert the produced metrics into the result tables below.
+\end{enumerate}
+
+\begin{table}[h]
+    \centering
+    \caption{Entry-point commands (laptop-friendly defaults).}
+    \label{tab:commands}
+    \begin{tabular}{ll}
+        \toprule
+        Chain & Command \\
+        \midrule
+        Value-based & \code{python projects/grad\_rl/scripts/train\_value.py --env ALE/Breakout-v5 --total-steps 200000} \\
+        Policy (PPO) & \code{python projects/grad\_rl/scripts/train\_policy.py --algo ppo --env HalfCheetah-v4 --total-steps 300000} \\
+        Policy (TRPO) & \code{python projects/grad\_rl/scripts/train\_policy.py --algo trpo --env Walker2d-v4} \\
+        Policy (CPO-lite) & \code{python projects/grad\_rl/scripts/train\_policy.py --algo cpo --env SafetyPointCircle0-v0} \\
+        Actor--Critic (SAC) & \code{python projects/grad\_rl/scripts/train\_actor\_critic.py --algo sac --env Pendulum-v1} \\
+        Model-based (Dyna-Q) & \code{python projects/grad\_rl/scripts/train\_model\_based.py --algo dyna-q} \\
+        Model-based (ME-TRPO) & \code{python projects/grad\_rl/scripts/train\_model\_based.py --algo me-trpo --env Pendulum-v1} \\
+        Multi-agent (QMIX) & \code{python projects/grad\_rl/scripts/train\_marl.py --algo qmix --iters 50} \\
+        Multi-agent (MADDPG) & \code{python projects/grad\_rl/scripts/train\_marl.py --algo maddpg --iters 50} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Experimental Setup}
+\textbf{Hardware}: specify CPU/GPU model and RAM.\\
+\textbf{Software}: Python 3.10+, PyTorch 2.2, Gymnasium 0.29, SB3 2.3, Ray 2.9.\\
+\textbf{Seeding}: all scripts accept \code{--seed}; vector envs offset seeds per worker.\\
+\textbf{Logging}: TensorBoard scalars for reward, loss, KL; JSON metrics saved alongside checkpoints.
+
+\section{Chain 1: Value-Based (DQN, Double, Dueling)}
+\subsection{Objective}
+Stabilize Q-learning with replay and target networks; reduce maximization bias (Double) and improve representation (Dueling).
+
+\subsection{Default Hyperparameters}
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+Optimizer & Adam, $\alpha=10^{-4}$ \\
+Replay buffer & $10^5$ transitions \\
+Batch size & 32 \\
+Discount $\gamma$ & 0.99 \\
+Target update & every 1000 steps \\
+Exploration & $\epsilon$-greedy, 0.1 $\to$ 0.01 \\
+Dueling & enabled by default \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Metrics}
+Mean episode return and std over 5 eval episodes (greedy). Fill Table~\ref{tab:dqnresults} after running.
+
+\begin{table}[h]
+\centering
+\caption{DQN-family results.}
+\label{tab:dqnresults}
+\begin{tabular}{lccc}
+\toprule
+Variant & Steps & Mean Return & Std Return \\
+\midrule
+DQN & & & \\
+Double DQN & & & \\
+Dueling DQN & & & \\
+QR-DQN (optional) & & & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Chain 2: Policy Gradient and Trust Region (REINFORCE, PPO, TRPO, CPO-lite)}
+\subsection{Objectives}
+\begin{itemize}[leftmargin=*]
+    \item REINFORCE: likelihood-ratio gradient with baseline.
+    \item TRPO: monotonic improvement via KL-constrained CG step.
+    \item PPO: first-order clip surrogate.
+    \item CPO-lite: Lagrangian penalty on cost with PPO backbone (requires env exposing \code{info["cost"]}).
+\end{itemize}
+
+\subsection{Hyperparameters}
+Learning rate $3\times10^{-4}$, GAE $\lambda=0.95$, clip 0.2 (PPO), target KL 0.01 (TRPO), cost limit 0.02 and penalty step 0.05 (CPO-lite).
+
+\subsection{Metrics}
+Average return and average cost (if available) over 5 eval episodes. Record in Table~\ref{tab:policyresults}.
+
+\begin{table}[h]
+\centering
+\caption{Policy-gradient results.}
+\label{tab:policyresults}
+\begin{tabular}{lcccc}
+\toprule
+Algo & Env & Steps & Mean Return & Mean Cost \\
+\midrule
+REINFORCE & & & & \\
+PPO & & & & \\
+TRPO & & & & \\
+CPO-lite & & & & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Chain 3: Actor--Critic and Maximum Entropy (A3C/A2C, SAC)}
+\subsection{Objectives}
+A3C (implemented via synchronous A2C) for on-policy parallel training; SAC for off-policy maximum entropy with temperature tuning.
+
+\subsection{Key Settings}
+A2C: $n_{\text{steps}}=5$, $\gamma=0.99$, $\lambda=0.95$. SAC: replay buffer $2\times10^5$, $\tau=0.005$, entropy coefficient auto or 0.2.
+
+\subsection{Metrics}
+Mean/Std return over 5 eval episodes (Table~\ref{tab:acresults}).
+
+\begin{table}[h]
+\centering
+\caption{Actor--critic results.}
+\label{tab:acresults}
+\begin{tabular}{lccc}
+\toprule
+Algo & Steps & Mean Return & Std Return \\
+\midrule
+A2C (A3C stand-in) & & & \\
+SAC & & & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Chain 4: Model-Based (Dyna-Q, ME-TRPO-style Ensemble)}
+\subsection{Objectives}
+Dyna-Q mixes real experience with simulated model rollouts for tabular tasks. ME-TRPO trains an ensemble dynamics model and periodically updates a TRPO policy using imagined rollouts to mitigate model bias.
+
+\subsection{Notes}
+\begin{itemize}[leftmargin=*]
+    \item Dyna-Q uses 20 planning updates per real step; $\epsilon$-greedy with $\epsilon=0.1$.
+    \item Ensemble models are two-layer MLPs; horizon for imagination defaults to 5.
+    \item The ME-TRPO code is a compact teaching stub; rewards in imagination are not synthesized—treat as a scaffold to extend.
+\end{itemize}
+
+\subsection{Metrics}
+Report average reward over last 100 episodes (Dyna-Q) and mean eval return (ME-TRPO) in Table~\ref{tab:modelresults}.
+
+\begin{table}[h]
+\centering
+\caption{Model-based results.}
+\label{tab:modelresults}
+\begin{tabular}{lccc}
+\toprule
+Algo & Environment & Metric & Value \\
+\midrule
+Dyna-Q & CliffWalking-v0 & Avg last-100 return & \\
+ME-TRPO & Pendulum-v1 & Mean eval return & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Chain 5: Multi-Agent (QMIX, MADDPG)}
+\subsection{Objectives}
+QMIX factorizes the joint value with a monotonic mixing network for cooperative tasks; MADDPG uses centralized critics and decentralized actors for mixed settings.
+
+\subsection{Settings}
+PettingZoo MPE \code{simple\_spread\_v3}, max cycles 25, Ray RLlib workers=2, envs/worker=4, $\gamma=0.99$, $\text{lr}=5\times10^{-4}$.
+
+\subsection{Metrics}
+Track episode reward mean per iteration; plot learning curves or record key iterations in Table~\ref{tab:marlresults}.
+
+\begin{table}[h]
+\centering
+\caption{Multi-agent results.}
+\label{tab:marlresults}
+\begin{tabular}{lcc}
+\toprule
+Algo & Iteration & Episode Reward Mean \\
+\midrule
+QMIX & & \\
+MADDPG & & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion Template}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Stability}: compare variance across seeds for on-policy vs off-policy.
+    \item \textbf{Sample Efficiency}: steps to reach target return; note gains from model-based rollouts.
+    \item \textbf{Safety}: cost constraint satisfaction in CPO-lite; force violations in Amasa env.
+    \item \textbf{Scalability}: wall-clock vs number of workers (A2C/A3C, QMIX).
+    \item \textbf{Failure Modes}: overestimation bias (DQN), model bias (ME-TRPO), credit assignment (QMIX).
+\end{itemize}
+
+\section{Conclusion}
+Summarize the observed trade-offs between stability, efficiency, safety, and scalability across the five chains. Highlight which algorithms suit which environment families and suggest future extensions (e.g., Rainbow, true CPO with conjugate gradient, PlaNet/MuZero for vision, SMACv2 for MARL).
+
+\end{document}

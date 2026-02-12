@@ -1,5 +1,25 @@
 # HW4: Actor-Critic Methods
 
+## Quick Run Sheet
+1) **Env**: Python 3.8–3.11 (fresh venv).  
+2) **Install deps**:  
+```bash
+pip install -r code/requirements.txt        # main notebook env (if provided)
+pip install -r base_code/requirements.txt   # starter env (optional)
+```  
+3) **Work notebooks**: see `code/` for student versions; `base_code/` for minimal scaffolding.  
+4) **Prompt**: question PDF under `reports/` (or `HW4_Complete_Solution.md` for expectations).  
+5) **Reference**: solutions in `answers/` and `HW4_Complete_Solution.md`; template in `Homework-4-Template*`.  
+6) **Deliverables**: completed notebook(s) + PDF with learning curves and hyperparameters.
+
+## Folder Legend
+- `code/` – main notebooks/scripts with TODOs.  
+- `base_code/` – starter version.  
+- `answers/` – filled solutions (view after attempt).  
+- `reports/` – questions/rubric.  
+- `HW4_Complete_Solution.md` – narrative solution walk-through.  
+- `Homework-4-Template*` – release template (folder + zip).
+
 [![Deep RL](https://img.shields.io/badge/Deep-RL-blue.svg)](https://en.wikipedia.org/wiki/Reinforcement_learning)
 [![Actor-Critic](https://img.shields.io/badge/Methods-Actor--Critic-red.svg)](https://www.deepmind.com/)
 [![Status](https://img.shields.io/badge/Status-Complete-success.svg)](.)
@@ -482,4 +502,3 @@ jupyter notebook code/HW4_P2_SAC_DDPG_Continuous.ipynb
 
 **Course:** Deep Reinforcement Learning  
 **Last Updated:** 2024
-

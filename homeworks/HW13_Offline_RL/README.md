@@ -1,5 +1,23 @@
 # HW13: Offline Reinforcement Learning
 
+## Quick Run Sheet
+1) **Env**: Python 3.8–3.11; fresh venv.  
+2) **Install deps**:  
+```bash
+pip install -r requirements.txt
+```  
+3) **Work notebooks/scripts**: `code/` for main work; `base_codes/` for starter versions.  
+4) **Prompt**: question PDFs in `reports/`.  
+5) **Reference**: `answers/` for solutions.  
+6) **Deliverables**: notebook(s)/scripts + PDF; report dataset details and offline evaluation protocol.
+
+## Folder Legend
+- `code/` – primary implementation.  
+- `base_codes/` – starter templates.  
+- `answers/` – solved versions.  
+- `reports/` – prompts/rubrics.  
+- `requirements.txt` – install before running.
+
 [![Deep RL](https://img.shields.io/badge/Deep-RL-blue.svg)](https://en.wikipedia.org/wiki/Reinforcement_learning)
 [![Offline](https://img.shields.io/badge/Type-Offline-darkgreen.svg)](.)
 [![Status](https://img.shields.io/badge/Status-Complete-success.svg)](.)

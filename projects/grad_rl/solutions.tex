@@ -1,0 +1,77 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\1}{\mathbf{1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\title{Graduate Deep RL Paper Chains\\Solution Sketches and Theoretical Notes}
+\author{DRL Course Repository}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section{Value-Based Chain}
+\subsection{Almost-Sure Convergence of Tabular Q-Learning}
+\textbf{Theorem.} Let $(S,A)$ be finite and assume every $(s,a)$ is visited infinitely often. If step sizes satisfy $\sum_t \alpha_t(s,a)=\infty$ and $\sum_t \alpha_t^2(s,a)<\infty$, then tabular Q-learning converges to $Q^*$ with probability 1.
+
+\textit{Sketch.} The update $Q_{t+1}=Q_t+\alpha_t\bigl(r+\gamma\max_{a'}Q_t(s',a')-Q_t(s,a)\bigr)$ is a stochastic approximation to the Bellman optimality operator $T$. The Action-Replay Process shows the noise term is a martingale difference with bounded variance; Robbins--Monro conditions and contraction of $T$ yield $Q_t\to Q^*$.
+
+\subsection{Maximization Bias and Double DQN}
+Let $\hat{Q}=Q^*+\epsilon$ with $\epsilon$ zero-mean noise, iid across actions. Then $\E[\max_a \hat{Q}(a)]\ge \max_a Q^*(a)$ with gap up to $\mathcal{O}(\sigma \sqrt{\log m})$. Double Q-learning decouples selection and evaluation: $Y=r+\gamma Q_{\theta^-}(s',\arg\max_a Q_{\theta}(s',a))$, reducing the positive bias; the expected overestimation shrinks roughly to second order in noise variance.
+
+\subsection{Dueling Architecture Identifiability}
+The aggregation $Q(s,a)=V(s)+A(s,a)-\frac{1}{|A|}\sum_{a'}A(s,a')$ fixes the degree of freedom $c$ where $(V+c, A-c)$ represent the same $Q$. This centers the advantage stream and preserves action rankings, enabling stable learning of state value without computing all $A(s,a)$ equally often.
+
+\section{Policy Gradient and Trust Region Chain}
+\subsection{REINFORCE Gradient Identity}
+$\nabla_\theta J(\theta)=\E_{\pi_\theta}\bigl[\nabla_\theta \log \pi_\theta(a|s)\, G_t\bigr]$. Subtracting a baseline $b(s)$ keeps the estimator unbiased because $\E[\nabla_\theta\log\pi_\theta(a|s)]=0$; choosing $b=V^{\pi}$ minimizes variance.
+
+\subsection{TRPO Monotonic Improvement Bound}
+For any new policy $\pi$ and old policy $\pi_\text{old}$,
+\begin{equation}
+J(\pi) \ge J(\pi_\text{old}) + \E_{s\sim\rho_{\pi_\text{old}},a\sim\pi}\bigl[A_{\pi_\text{old}}(s,a)\bigr] - \frac{2\gamma C}{(1-\gamma)^2} D_{\mathrm{KL}}^{\max}(\pi\,\Vert\,\pi_\text{old}),
+\end{equation}
+where $C=\max_s |A_{\pi_\text{old}}(s,a)|$. Enforcing a small KL trust region ensures the lower bound is positive, yielding monotonic improvement. The CG + line-search solver approximates the natural gradient step that respects this constraint.
+
+\subsection{PPO Clip Surrogate}
+$L^{\text{CLIP}}=\E\bigl[\min(r_t A_t, \text{clip}(r_t,1-\epsilon,1+\epsilon)A_t)\bigr]$. Clipping $r_t$ upper-bounds the importance ratio, preventing destructive updates without needing second-order information. KL is monitored but not constrained.
+
+\subsection{CPO via Lagrangian Penalty (Implemented Variant)}
+True CPO solves a constrained step using conjugate gradients on a cost-augmented fisher metric. The provided implementation approximates this with a dual variable $\lambda$ updated by PID/gradient ascent on the constraint violation: optimize $L^{\text{CLIP}} + \lambda\,\E[c_t]$; increase $\lambda$ when mean cost exceeds limit.
+
+\section{Actor--Critic and Maximum Entropy Chain}
+\subsection{Two-Time-Scale Convergence (A3C/A2C)}
+Actor updates use a slower step size than critic. Under compatible function approximation and standard SA conditions, $(\theta_t, w_t)$ converges to a locally optimal policy. Advantage estimates reduce variance relative to REINFORCE.
+
+\subsection{Soft Policy Iteration (SAC)}
+Soft Bellman backup: $Q(s,a) = r + \gamma \E_{s'}[V(s')]$, with $V(s)=\E_{a\sim\pi}[Q(s,a)-\alpha \log \pi(a|s)]$. Policy update minimizes $\mathrm{KL}(\pi(\cdot|s) \Vert \exp((1/\alpha)Q(s,\cdot))/Z(s))$. Alternating these steps converges to the maximum-entropy optimum; temperature $\alpha$ controls exploration and is tuned to target entropy.
+
+\section{Model-Based Chain}
+\subsection{Dyna-Q Error Propagation}
+Planning updates introduce model bias $\delta(s,a)=\|\hat{P}-P\|_1$. Value error after $k$ simulated steps is bounded by $\frac{\gamma^k}{1-\gamma}\max_{s,a}\delta(s,a) R_{\max}$, so short rollouts and continuous real-data refresh reduce harm.
+
+\subsection{Model Ensemble Robustness (ME-TRPO)}
+Training on an ensemble approximates expectation over plausible dynamics. With models $\{\hat{P}_i\}_{i=1}^M$, optimizing against their mean reduces variance of model error by $1/M$ (assuming independence), mitigating overfitting to any single imperfect model. Trust-region updates further limit policy drift that could exploit model artifacts.
+
+\section{Multi-Agent Chain}
+\subsection{Centralized Training, Decentralized Execution (MADDPG)}
+Each agent $i$ has critic $Q_i(o_1,a_1,\dots,o_n,a_n)$ but actor $\mu_i(o_i)$. Centralized critics remove non-stationarity during training; during execution, actors use only local observations. Deterministic policy gradient applies with joint replay buffer.
+
+\subsection{QMIX Monotonic Mixing and IGM}
+QMIX learns mixing function $Q_{\text{tot}}=f_{\text{mix}}(Q_1,\dots,Q_n,s)$ with $\partial Q_{\text{tot}}/\partial Q_i \ge 0$. This ensures $\arg\max_{\mathbf{a}} Q_{\text{tot}} = (\arg\max_{a_1} Q_1,\dots,\arg\max_{a_n} Q_n)$ (Individual-Global-Max principle), enabling decentralized greedy action selection consistent with the centralized value.
+
+\subsection{Variational Exploration (MAVEN Rationale)}
+A latent variable $z$ sampled per episode induces diverse joint behaviors. Maximizing $I(\tau; z)$ encourages temporally coherent exploration beyond $\epsilon$-greedy noise, improving coverage in sparse/structured tasks while respecting the QMIX monotonicity constraint when combined carefully.
+
+\section{Benchmarking and Statistical Validity}
+For all chains: run $\ge3$ seeds, report mean $\pm$ std; use fixed eval episodes; when comparing, use paired t-test or bootstrap CIs. Report sample efficiency (return vs steps), stability (reward variance), and, for safety tasks, constraint violation rate.
+
+\end{document}

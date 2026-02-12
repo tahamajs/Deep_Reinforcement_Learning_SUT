@@ -1,5 +1,24 @@
 # HW12: Hierarchical Reinforcement Learning
 
+## Quick Run Sheet
+1) **Env**: Python 3.8–3.11; new venv.  
+2) **Install deps**:  
+```bash
+pip install -r code/requirements.txt        # if present
+pip install -r base_code/requirements.txt   # starter env
+```  
+3) **Work notebooks/scripts**: under `code/`; `base_code/` offers minimal scaffolding.  
+4) **Prompt**: question PDFs in `reports/`.  
+5) **Reference**: `answers/`; template in `Homework-12-Template*`.  
+6) **Deliverables**: notebook(s)/scripts + PDF; include option policies/skill visualizations where applicable.
+
+## Folder Legend
+- `code/` – editable implementation.  
+- `base_code/` – starter version.  
+- `answers/` – solved notebooks.  
+- `reports/` – prompt and rubric.  
+- `Homework-12-Template*` – release template (folder + zip).
+
 [![Deep RL](https://img.shields.io/badge/Deep-RL-blue.svg)](https://en.wikipedia.org/wiki/Reinforcement_learning)
 [![Hierarchical](https://img.shields.io/badge/Type-Hierarchical-orange.svg)](.)
 [![Status](https://img.shields.io/badge/Status-Complete-success.svg)](.)

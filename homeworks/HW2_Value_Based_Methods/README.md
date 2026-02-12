@@ -1,5 +1,30 @@
 # HW2: Value-Based Methods in Reinforcement Learning
 
+## Quick Run Sheet
+1) **Env**: Python 3.8–3.11. Create a fresh venv.  
+2) **Install deps** (pick the notebook flavor you will run):
+```bash
+pip install -r code/requirements.txt        # main student notebook
+# or
+pip install -r base_code/requirements.txt   # starter template env
+```
+3) **Work notebook**: `code/HW2_P1_SARSA_and_QLearning.ipynb` then `code/HW2_P2_DQN_vs_DDQN.ipynb`.  
+4) **Prompts**: see `reports/HW2_Questions.pdf`.  
+5) **Check answers** (after finishing): `answers/` notebooks and `HW2_Solution.pdf`.  
+6) **Submission hint**: export your filled notebook to PDF if required by your course policy; keep raw `.ipynb` plus plots in the same folder.
+
+## Folder Legend
+- `code/` – main working notebooks for Parts 1–2.  
+- `base_code/` – lighter starter versions if you want minimal scaffolding.  
+- `answers/` – completed reference solutions.  
+- `reports/` – question PDF / grading rubric.  
+- `Homework-2-Template*` – packaged template copies (zip + folder) matching the release version.
+
+## Grading Expectations
+- Part 1: tabular TD control (SARSA vs Q-Learning) with learning-curve plots and discussion of on-/off-policy behavior.  
+- Part 2: DQN vs Double DQN; include training curves, hyperparameters, and comments on overestimation bias.  
+- Reproducibility: report seed, ε-schedule, replay/target update cadence.
+
 [![Deep RL](https://img.shields.io/badge/Deep-RL-blue.svg)](https://en.wikipedia.org/wiki/Reinforcement_learning)
 [![Value-Based](https://img.shields.io/badge/Methods-Value--Based-green.svg)](https://www.deepmind.com/)
 [![Status](https://img.shields.io/badge/Status-Complete-success.svg)](.)
