@@ -43,7 +43,7 @@ def main(args):
     points = []
     for ck in ckpts:
         try:
-            data = torch.load(ck, map_location=args.device)
+            data = torch.load(ck, map_location=args.device, weights_only=False)
             if isinstance(data, dict) and "actor" in data:
                 cfg = data.get("cfg", CQLConfig(obs_dim=obs_dim, act_dim=act_dim, device=args.device))
                 agent = CQLAgent(cfg)
@@ -53,7 +53,7 @@ def main(args):
                 print(f"skip non-CQL checkpoint {ck}")
                 continue
         except Exception as exc:
-            print(f\"failed to load {ck}: {exc}\")
+            print(f"failed to load {ck}: {exc}")
             continue
 
         shield = None
@@ -68,6 +68,10 @@ def main(args):
         mean_r, mean_c = res[:, 0].mean(), res[:, 1].mean()
         points.append((mean_c, mean_r, os.path.basename(ck)))
         print(f"{ck}: reward {mean_r:.1f}, cost {mean_c:.3f}")
+
+    if not points:
+        print("no valid CQL checkpoints to evaluate")
+        return
 
     points = np.array(points, dtype=object)
     costs = points[:, 0].astype(float)

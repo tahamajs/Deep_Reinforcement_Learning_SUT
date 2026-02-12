@@ -72,6 +72,11 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Editors / OS noise
+.DS_Store
+.idea/
+.vscode/
+
 # IPython
 profile_default/
 ipython_config.py
@@ -124,7 +129,27 @@ dmypy.json
 .pyre/
 __pycache__
 
-# Dreamer-FuN specific ignores
-# logs/
-# pictures/
-src/__pycache__/
+# Virtualenvs (root-level and prefixed)
+.venv*/
+.venv
+env*/
+venv*/
+
+# Project artifacts
+checkpoints/
+plots/
+data/
+logs/
+outputs/
+*/__pycache__/
+
+# LaTeX build outputs
+*.aux
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.toc
+*.pdf_tex

@@ -1,0 +1,118 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{farsi}
+\setotherlanguage{english}
+\newfontfamily\persianfont[Script=Arabic]{Times New Roman}
+\newfontfamily\latinfont{Times New Roman}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{چالش روبات بخیه‌زنی خودکار (AMASA):\\
+طراحی، پیاده‌سازی و مطالعه‌ی یادگیری تقویتی امن}
+\author{\IEEEauthorblockN{کدکس}\\
+\IEEEauthorblockA{/Users/tahamajs/Documents/uni/DRL/projects/amasa}}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+این گزارش یک بَرجِ آزمایشی آموزشی به‌نام AMASA را ارائه می‌کند که برای پوشش هم‌زمان یادگیری تقویتی برون‌خط، کنترل سلسله‌مراتبی و الزامات ایمنی/توضیح‌پذیری در روبات‌های جراحی طراحی شده است. محیط بخیه‌زنی نرم، عامل CQL بدبینانه، کنترل‌کننده‌ی سلسله‌مراتبی HIRO، ضرب‌کننده‌ی لاگرانژ PID و سپر تصمیم‌درختی در کد منبع (\texttt{/Users/tahamajs/Documents/uni/DRL/projects/amasa}) پیاده‌سازی شده‌اند. سه موج آموزشی (v1–v3) به اجرای برخط امن ۶۰۰۰‌مرحله‌ای منجر شد که مرز پارتوی مطلوبی میان پاداش و هزینه‌ی ایمنی ارائه می‌دهد. این سند جزئیات فنی، پارامترها، نمودارها و گام‌های بازتولید را در قالب IEEE فراهم می‌کند.
+\end{abstract}
+
+\section{مسئله و اهداف آموزشی}
+هدف، آموزش دانشجویان در \lr{offline-to-online RL}، انتزاع زمانی و ایمنی سخت است. عامل ۷ درجه آزادی باید چهار بخیه را بدون عبور از کران نیرو (۵ نیوتن) یا خروج از دالان مجاز انجام دهد. خروجی آموزشی: درک MDP/CMDP، بدبینی در برون‌خط، هم‌ترازسازی ارزش، کنترل سلسله‌مراتبی و سپر تبیینی.
+
+\section{محیط شبیه‌ساز}
+\textbf{مسیر فایل:} \texttt{/Users/tahamajs/Documents/uni/DRL/projects/amasa/amasa/envs/suturing\_env.py}
+\begin{itemize}[leftmargin=*]
+    \item حالت ۲۳‌بُعدی: $q,dq$ (هرکدام ۷)، موقعیت سوزن (۳)، تنش، پیشرفت، فاز یک-گرم (۴).
+    \item کنش: گشتاور ۷‌بُعدی در $[-1,1]$.
+    \item پاداش: $+1000$ در پایان چهار بخیه + پاداش شکل‌دار برای فاصله/فاز و جریمه نیرو.
+    \item هزینه: اگر نیرو $>5$N یا انحراف جانبی $>3$cm باشد برابر ۱ وگرنه ۰.
+\end{itemize}
+نیروی تصادفی و کینماتیک تقریباً مشتق‌پذیر سرعت اجرای آموزشی را بالا نگه می‌دارد.
+
+\section{یادگیری برون‌خط بدبینانه (CQL)}
+\textbf{مسیر فایل:} \texttt{offline/cql.py}؛ \textbf{اسکریپت آموزش:} \texttt{scripts/train\_offline.py}\\
+مشخصات: دو منتقد، بازیگر گاوسی تانش، $\alpha_{\text{CQL}}{=}5$، ضریب کلونینگ ۲٫۵، $\gamma{=}0.99$، $\tau{=}0.005$.
+
+\subsection{موج‌های آموزش}
+\begin{itemize}[leftmargin=*]
+    \item v2 (۲۰۰ گام): \texttt{checkpoints/amasa\_offline\_v2/cql\_final.pt}
+    \item v3 (۱۰۰۰ گام، مینی‌بچ تصادفی): \texttt{checkpoints/amasa\_offline\_v3/cql\_final.pt}
+\end{itemize}
+v3 پایه‌ی همه‌ی آزمایش‌های برخط امن است.
+
+\section{کنترل سلسله‌مراتبی (HIRO)}
+\textbf{مسیر:} \texttt{hierarchical/hiro.py}؛ اهداف سه‌بعدی روی سوزن، افق $H{=}20$، برچسب‌گذاری مجدد برون‌سیاست. لایه پایین با وزن‌های CQL پَدشده برای ورودی $(23{+}3)$ گرم می‌شود. خروجی: کاهش نوسان‌های جانبی در ابتدای آموزش.
+
+\section{لایه ایمنی}
+\subsection{لاگرانژ PID}
+به‌روزسانی $\lambda$ با ضرایب v3: $(k_p{=}0.6,k_i{=}0.08,k_d{=}0.08)$؛ نوسان کمتر و رشد پاداش بیشتر نسبت به v2.
+\subsection{سپر تصمیم‌درختی}
+سه درخت CART برای ریسک، اجازه/ممانعت کنش سبدی، و دلیل (نیرو، دالان، پایان اپیزود). پس از جمع‌آوری ۶۰۰ نمونه آموزش می‌بیند و کنش‌ها را قبل از ارسال به محیط فیلتر می‌کند.
+
+\section{آموزش امن برخط}
+\textbf{اسکریپت:} \texttt{scripts/train\_safe\_online.py}\\
+پیکربندی v3: ۶۰۰۰ گام، بافر ۱۲۰k، ۵۰۰ گام تصادفی، CQL v3 به‌عنوان مقدار اولیه، سپر فعال.
+
+\section{ارزیابی و پارتو}
+توسط \texttt{scripts/evaluate.py} با ۳ اپیزود در هر چک‌پوینت. نمودار اصلی:
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.45\textwidth]{/Users/tahamajs/Documents/uni/DRL/plots/amasa_pareto_v3.png}
+    \caption{مرز پارتوی پاداش–هزینه (v3). safe\_step2000 کم‌هزینه‌ترین، safe\_final پربازده‌ترین با هزینه‌ی متوسط است.}
+    \label{fig:pareto_v3_fa}
+\end{figure}
+
+\subsection{اعداد کلیدی v3}
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+چک‌پوینت & پاداش & هزینه \\
+\midrule
+safe\_step2000 & 136.2 & 0.091 \\
+safe\_step4000 & 107.5 & 0.422 \\
+safe\_step6000 & 718.7 & 0.618 \\
+safe\_final    & 832.3 & 0.419 \\
+\bottomrule
+\end{tabular}
+\caption{آموزش برخط امن ۶۰۰۰‌گامی (سپَر فعال).}
+\end{table}
+نتیجه: نقطه‌ی امن (step2000) برای بودجه‌های سخت ایمنی، و safe\_final برای بیشینه‌سازی پاداش با هزینه‌ی متوسط مناسب است.
+
+\section{تحلیل و حساسیت}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{PID}: کاهش $k_p$ و افزایش ملایم $k_d$ نوسان $\lambda$ را کم و پاداش را زیاد کرد.
+    \item \textbf{سپر}: جلوی پرش‌های اولیه‌ی نیرو را گرفت؛ پس از بلوغ، هزینه‌ی متوسط پایین ماند.
+    \item \textbf{سلسله‌مراتب}: انتظار می‌رود اجرای دوباره‌ی HIRO با CQL v3 مرز پارتو را کمی به چپ/بالا ببرد.
+\end{itemize}
+
+\section{گام‌های بازتولید}
+\begin{enumerate}[leftmargin=*]
+    \item نصب وابستگی‌ها: \texttt{pip install -r projects/amasa/requirements.txt}
+    \item داده برون‌خط: \texttt{python3 -m projects.amasa.scripts.generate\_dataset}
+    \item CQL (۱۰۰۰ گام): \texttt{python3 -m projects.amasa.scripts.train\_offline --steps 1000}
+    \item برخط امن (۶۰۰۰ گام): \texttt{python3 -m projects.amasa.scripts.train\_safe\_online --steps 6000 --use\_shield}
+    \item ارزیابی/نمودار: \texttt{python3 -m projects.amasa.scripts.evaluate --checkpoints checkpoints/amasa\_safe\_v3}
+\end{enumerate}
+
+\section{پیشنهادهای بعدی}
+\begin{itemize}[leftmargin=*]
+    \item اجرای HIRO با CQL v3 و افزودن نقاط آن به پارتو.
+    \item جاروب PID: $k_p\!\in\![0.4,0.7]$, $k_d\!\in\![0.05,0.12]$ از safe\_step2000.
+    \item افزایش ویژگی‌های سپر (فاز، $\lambda$, انحراف جانبی تجمعی).
+    \item چند بذر (۵–۱۰) برای میانگین/فاصله اطمینان.
+\end{itemize}
+
+\section{نتیجه‌گیری}
+AMASA اکنون یک خط لوله‌ی کامل و بازتولیدپذیر برای آموزش مفاهیم پیشرفته‌ی RL ایمن در جراحی رباتیک است. نتایج v3 نشان می‌دهد که می‌توان هم‌زمان پاداش بالا و هزینه‌ی قابل‌قبول را با سپر تبیینی و کنترل PID به دست آورد. این گزارش و کد همراه منبعی آماده برای تدریس و پژوهش فراهم می‌کنند.
+
+\end{document}

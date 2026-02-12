@@ -4,10 +4,9 @@
 1) **Env**: Python 3.8–3.11; new venv.  
 2) **Install deps**:  
 ```bash
-pip install -r code/requirements.txt        # if present
-pip install -r Homework-7-Template/requirements.txt  # template env (optional)
+pip install -r Homework-7-Template/requirements.txt  # primary env
 ```  
-3) **Work notebook**: `Homework-7-Template` (folder/zip) or any notebook under `code/` if provided.  
+3) **Work notebook**: use the notebook inside `Homework-7-Template` (folder/zip). The `code/` folder is a placeholder for any scratch work you add.  
 4) **Prompt**: see PDFs in `reports/`.  
 5) **Reference**: `answers/` and `HW7_Complete_Solutions.md`.  
 6) **Deliverables**: completed notebook + PDF export and plots/logs as requested.
@@ -48,7 +47,7 @@ This assignment focuses on theoretical foundations and fundamental concepts of d
 
 ```
 HW7_Deep_RL/
-├── code/                    # (No code for this assignment)
+├── code/                    # optional scratch space (empty by default)
 ├── answers/                 # (Submit written answers)
 ├── reports/
 │   └── HW7_Questions.pdf   # Theoretical questions

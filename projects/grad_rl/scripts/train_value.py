@@ -41,13 +41,17 @@ def main():
         policy = "CnnPolicy"
     else:
         env = make_env(env_id, seed=seed, num_envs=int(cfg.get("num_envs", 8)))
+        # force MLP for classic control even if config default is CNN
         policy = cfg.get("policy", "MlpPolicy")
+        if policy == "CnnPolicy":
+            policy = "MlpPolicy"
 
     algo_cls = QRDQN if args.qrdqn else DQN
+    lr = float(cfg.get("learning_rate", 1e-4))
     model = algo_cls(
         policy,
         env,
-        learning_rate=cfg.get("learning_rate", 1e-4),
+        learning_rate=lr,
         buffer_size=cfg.get("buffer_size", 100_000),
         batch_size=cfg.get("batch_size", 32),
         gamma=cfg.get("gamma", 0.99),
@@ -56,8 +60,7 @@ def main():
         target_update_interval=cfg.get("target_update_interval", 1000),
         train_freq=cfg.get("train_freq", 4),
         learning_starts=cfg.get("learning_starts", 50_000),
-        tensorboard_log="projects/grad_rl/outputs/tb/value",
-        policy_kwargs={"dueling": dueling},
+        tensorboard_log=None,
         verbose=1,
         seed=seed,
     )

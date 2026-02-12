@@ -25,8 +25,23 @@ def main(args):
             offline_cfg = CQLConfig(obs_dim=obs_dim, act_dim=act_dim, device=args.device)
             offline_agent = CQLAgent(offline_cfg)
             offline_agent.load(args.offline_checkpoint, map_location=args.device)
-            agent.lo_actor.load_state_dict(offline_agent.actor.state_dict())
-            print(f"Loaded offline checkpoint {args.offline_checkpoint} into low-level actor")
+
+            # copy weights, padding first layer for goal dims (obs+goal)
+            src = offline_agent.actor.trunk.net[0]  # Linear
+            dst = agent.lo_actor.trunk.net[0]
+            with torch.no_grad():
+                padded_w = torch.zeros_like(dst.weight)
+                padded_w[:, : src.weight.shape[1]] = src.weight
+                dst.weight.copy_(padded_w)
+                dst.bias.copy_(src.bias)
+                # remaining layers share shape; copy directly
+                dst_idx = 2  # after first Linear+ReLU
+                src_idx = 2
+                agent.lo_actor.trunk.net[dst_idx].weight.copy_(offline_agent.actor.trunk.net[src_idx].weight)
+                agent.lo_actor.trunk.net[dst_idx].bias.copy_(offline_agent.actor.trunk.net[src_idx].bias)
+                agent.lo_actor.trunk.net[dst_idx + 2].weight.copy_(offline_agent.actor.trunk.net[src_idx + 2].weight)
+                agent.lo_actor.trunk.net[dst_idx + 2].bias.copy_(offline_agent.actor.trunk.net[src_idx + 2].bias)
+            print(f"Loaded offline checkpoint {args.offline_checkpoint} into low-level actor (padded goals)")
         except Exception as exc:
             print(f"Warn: failed to load offline checkpoint: {exc}")
 

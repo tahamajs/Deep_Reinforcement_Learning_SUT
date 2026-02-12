@@ -24,9 +24,17 @@ def main(args):
     os.makedirs(args.out_dir, exist_ok=True)
     steps = args.steps
     batch_size = args.batch_size
+    n = buffer["obs"].shape[0]
     for step in trange(steps):
-        for batch in make_minibatches(buffer, batch_size, cfg.device):
-            metrics = agent.update(batch)
+        idx = np.random.randint(0, n, size=batch_size)
+        batch = (
+            torch.as_tensor(buffer["obs"][idx], device=cfg.device),
+            torch.as_tensor(buffer["actions"][idx], device=cfg.device),
+            torch.as_tensor(buffer["rewards"][idx], device=cfg.device).unsqueeze(-1),
+            torch.as_tensor(buffer["next_obs"][idx], device=cfg.device),
+            torch.as_tensor(buffer["dones"][idx], device=cfg.device).unsqueeze(-1),
+        )
+        metrics = agent.update(batch)
         if (step + 1) % args.log_every == 0:
             print({k: round(v, 3) for k, v in metrics.items()})
         if (step + 1) % args.save_every == 0:
