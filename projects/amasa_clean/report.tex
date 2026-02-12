@@ -1,6 +1,7 @@
+
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
-\usepackage{amsmath,amssymb}
+\usepackage{amsmath,amssymb,bm}
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{subfig}
@@ -13,210 +14,641 @@
 \usepackage{xcolor}
 \hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
 
-\title{AMASA-Complex v2: A Config-Driven, Safety-Critical RL Project for Autonomous Suturing}
+\title{AMASA-Complex v2: Comprehensive Theory, Design, and Evaluation Report for Safety-Critical Reinforcement Learning in Autonomous Suturing}
 
-\author{
-\IEEEauthorblockN{Codex}
-\IEEEauthorblockA{Project workspace: \texttt{/Users/tahamajs/Documents/uni/DRL/projects/amasa\_clean}}
-}
+\author{\IEEEauthorblockN{Codex}\\
+\IEEEauthorblockA{Workspace: \texttt{/Users/tahamajs/Documents/uni/DRL/projects/amasa\_clean}}}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-This report presents AMASA-Complex v2, a major upgrade of the original AMASA suturing assignment into an advanced course-scale reinforcement learning (RL) system. The implementation introduces: (1) a four-method algorithm suite (CQL, IQL, SAC-Lagrangian, PPO-Lagrangian), (2) a hybrid runtime safety stack (PID dual control, decision-tree shield, and trajectory risk critic), (3) three environment scenario families (nominal, perturbed, adversarial), (4) YAML-first experiment composition with backward-compatible legacy CLIs, and (5) automated benchmark and PID-grid evaluation pipelines. The project is CPU-first and keeps old commands functional while adding a unified experiment entrypoint. We report full smoke-preset benchmark and expanded PID sweep outcomes, including Pareto analysis, safety timeline diagnostics, and tiered threshold checks.
+This document is the complete technical report for AMASA-Complex v2. It unifies deep reinforcement learning theory, constrained optimization, system architecture, implementation details, and reproducible empirical analysis for a safety-critical autonomous suturing benchmark. The project extends the baseline assignment into a full course-scale platform by integrating four algorithms (CQL, IQL, SAC-Lagrangian, PPO-Lagrangian), a hybrid safety stack (PID dual controller, decision-tree shield, trajectory risk critic), scenario-based robustness evaluation (nominal, perturbed, adversarial), and config-driven orchestration with backward-compatible command line interfaces.
+
+The report has three goals. First, it explains the conceptual foundations needed to understand why each module exists and what failure mode it addresses. Second, it documents the implementation choices made in the codebase, including configuration semantics, reproducibility contracts, logging standards, and compatibility constraints. Third, it presents benchmark and PID-sweep results generated from the local pipeline and interprets them through the reward-safety Pareto lens instead of a single scalar metric.
+
+The key conclusion is that offline pretraining can produce strong starter policies under limited compute, but safe online adaptation remains the dominant difficulty. Hybrid guard instrumentation and expanded PID sweeps improve diagnostic clarity and can improve frontier location, but strong safety performance requires careful coordination of data coverage, dual control tuning, and scenario curriculum.
 \end{abstract}
 
-\section{Introduction}
-Modern RL education increasingly requires students to reason about offline data leverage, online adaptation, and strict safety constraints under non-stationary conditions. Isolated assignments are usually strong on one axis and weak on the others. AMASA-Complex v2 is designed to close this gap by combining the full chain in one implementation:
-\begin{itemize}[leftmargin=*]
-  \item offline pretraining with conservative objectives,
-  \item online constrained improvement with safety feedback,
-  \item robustness pressure via scenario variation and corruption,
-  \item explainable intervention through rule-based shielding.
-\end{itemize}
+\section{Introduction and Problem Context}
+Autonomous surgical assistance is an attractive domain for advanced reinforcement learning education because it forces students to solve coupled problems rather than isolated ones. In a single benchmark, students must formalize dynamics, deal with high-dimensional observations, train policies under sparse success criteria, and guarantee safety in the presence of uncertainty. This coupling is precisely what is often missing in smaller RL assignments that focus only on maximizing reward in benign simulators.
 
-Compared with the previous baseline, v2 adds algorithmic diversity, richer safety instrumentation, standardized configuration and orchestration, and testable acceptance criteria. The goal is not only higher reward, but also reproducible reward--cost trade-off analysis and practical failure diagnosis.
+AMASA-Complex v2 addresses this pedagogical and engineering gap. The project is intentionally organized around the complete development lifecycle: offline initialization, constrained online improvement, robustness stress testing, and interpretability-oriented safety enforcement. In practical terms, students do not just train an agent; they design an operational stack where policy learning, guard logic, logging, evaluation, and reporting interact under explicit reproducibility constraints.
 
-\section{Project Scope and Deliverables}
-The implemented scope is aligned with the AMASA-Complex v2 plan:
-\begin{enumerate}[leftmargin=*]
-  \item New package modules in \texttt{amasa/core}, \texttt{amasa/envs}, \texttt{amasa/offline}, \texttt{amasa/online}, \texttt{amasa/safety}, and \texttt{amasa/bench}.
-  \item YAML config tree under \texttt{configs/} (base, algorithm overlays, scenario overlays, presets, PID sweep grid, thresholds).
-  \item Backward-compatible legacy scripts with optional \texttt{--config}, \texttt{--preset}, \texttt{--scenario}, \texttt{--algo}.
-  \item Unified runner \texttt{scripts/run\_experiment.py} with modes:
-  \texttt{offline\_train}, \texttt{online\_train}, \texttt{benchmark}, \texttt{pid\_sweep}, \texttt{report\_bundle}.
-  \item Unit and smoke tests under \texttt{tests/}.
-  \item English and Persian IEEE reports (\texttt{report.tex}, \texttt{report\_fa.tex}).
-\end{enumerate}
+The importance of this structure becomes clear when one examines where failures occur in real implementations. Many RL pipelines fail not because the algorithmic formula is wrong, but because surrounding engineering assumptions break: inconsistent checkpoint metadata, hidden config precedence bugs, no clear separation between scenario overlays, or missing safety telemetry. AMASA-Complex v2 treats these as first-class technical concerns and includes mechanisms to expose and control them.
 
-\section{System Architecture}
-\subsection{Core Runtime Layers}
-AMASA-Complex v2 uses a layered architecture:
-\begin{itemize}[leftmargin=*]
-  \item \textbf{Config layer}: deterministic merge and validation of YAML overlays.
-  \item \textbf{Environment layer}: shared suturing dynamics and scenario wrappers.
-  \item \textbf{Learning layer}: offline and online algorithms with common interfaces.
-  \item \textbf{Safety layer}: hybrid guard composing statistical and symbolic checks.
-  \item \textbf{Evaluation layer}: matrix runners, aggregation, plotting, threshold gates.
-\end{itemize}
-
-The architecture intentionally separates concerns so that students can swap algorithms or scenario stressors without rewriting orchestration code.
-
-\subsection{Config and Overlay Order}
-A key reliability change is explicit overlay order:
+\section{Mathematical Foundations}
+\subsection{MDP and CMDP Formulation}
+The base learning problem is modeled as an MDP $\mathcal{M}=(\mathcal{S},\mathcal{A},P,R,\gamma)$. A policy $\pi(a\mid s)$ induces trajectories $\tau=(s_0,a_0,s_1,\dots)$ and maximizes expected discounted return:
 \[
-\text{base} \rightarrow \text{scenario} \rightarrow \text{algorithm} \rightarrow \text{preset}
+J_R(\pi)=\mathbb{E}_{\tau\sim\pi}\left[\sum_{t=0}^{\infty}\gamma^t r_t\right].
 \]
-Applying preset last ensures smoke/full runtime envelopes remain stable even when algorithm YAMLs define larger step counts.
+In safety-critical domains we extend to CMDP by introducing cost $c_t$ and limit $d$:
+\[
+\max_{\pi} J_R(\pi)\quad\text{s.t.}\quad J_C(\pi)=\mathbb{E}_{\tau\sim\pi}\left[\sum_{t=0}^{\infty}\gamma^t c_t\right]\le d.
+\]
 
-\subsection{Registry and Extensibility}
-Simple registries are added for environment, algorithm, and safety components. This enables factory-based instantiation by name and avoids hard-coded class branching across scripts.
+A Lagrangian relaxation yields:
+\[
+\mathcal{L}(\pi,\lambda)=J_R(\pi)-\lambda\left(J_C(\pi)-d\right),\quad \lambda\ge0.
+\]
+While this relaxation is standard, practical training behavior depends heavily on how $\lambda$ is updated and how quickly cost estimators calibrate under distribution shift.
 
-\section{Environment and Scenario Modeling}
-\subsection{State, Action, Reward, Cost}
-The suturing environment preserves the original interface:
-\begin{itemize}[leftmargin=*]
-  \item Observation: 23-dim vector (joint states, needle state, stress, progress, phase).
-  \item Action: 7-dim bounded torque command.
-  \item Reward: dense shaping + large completion bonus.
-  \item Cost: indicator of force threshold or corridor violation.
-\end{itemize}
+\subsection{Offline RL Under Distribution Shift}
+Given a static dataset $\mathcal{D}$ collected by behavior policy $\pi_\beta$, offline RL must avoid optimistic extrapolation on unseen actions. Conservative methods (e.g., CQL) explicitly penalize high Q-values on out-of-distribution actions. Implicit methods (e.g., IQL) avoid explicit behavior density ratios and instead rely on value-weighted policy extraction. Both approaches trade policy improvement speed for robustness against false value peaks.
+
+\subsection{Safety-Driven Control Perspective}
+Safety in online adaptation can be interpreted as a control problem over the dual variable. If the violation error is $e_t = c_t - d$, then dual update dynamics can be written as proportional-integral-derivative control:
+\[
+\lambda_{t+1}=\mathrm{clip}\left(K_p e_t + K_i\sum_{\tau\le t}e_\tau + K_d(e_t-e_{t-1}),\,0,\,\lambda_{\max}\right).
+\]
+This representation clarifies why gain tuning is central to practical safe RL behavior: the wrong gains cause oscillation or over-conservative lock-in.
+
+\section{AMASA-Complex v2 Specification}
+\subsection{Environment Interface}
+The suturing simulator uses a 23-dimensional observation vector and a 7-dimensional continuous action space. The reward is shaped by geometric progress and task phase completion with a high terminal completion bonus. Cost is triggered by force threshold or lateral corridor violation. The environment supports controlled stochasticity and corruption knobs exposed through YAML.
 
 \subsection{Scenario Families}
-Three scenario families are implemented:
 \begin{itemize}[leftmargin=*]
-  \item \textbf{Nominal}: mild force noise and no corruption.
-  \item \textbf{Perturbed}: stronger noise, dynamics shift, moderate corruption and delay.
-  \item \textbf{Adversarial}: higher corruption, higher delay probability, harsher dynamics shift.
+  \item \textbf{Nominal}: mild noise with minimal corruption.
+  \item \textbf{Perturbed}: stronger force noise, dynamics shift, and moderate observation corruption.
+  \item \textbf{Adversarial}: high corruption probability, delayed observations, and stronger dynamics perturbation.
 \end{itemize}
 
-These scenarios are configured in \texttt{configs/scenarios/*.yaml}, allowing deterministic sweeps and curriculum usage.
-
-\section{Algorithm Suite}
-\subsection{Offline Methods}
-\paragraph{CQL}
-Conservative Q-Learning penalizes over-estimation on out-of-distribution actions by adding a conservative term to critic loss:
-\[
-\mathcal{L}_{\text{critic}} = \mathcal{L}_{\text{TD}} + \alpha_{\text{CQL}}\mathcal{L}_{\text{conservative}}
-\]
-The implementation keeps compatibility and adds deterministic evaluation support and explicit metadata in checkpoints.
-
-\paragraph{IQL}
-Implicit Q-Learning uses:
-\begin{itemize}[leftmargin=*]
-  \item expectile regression for value function fitting,
-  \item advantage-weighted policy update for offline policy extraction.
-\end{itemize}
-This makes IQL a strong offline baseline without explicit behavior cloning as the sole learning objective.
-
-\subsection{Online Constrained Methods}
-\paragraph{SAC-Lagrangian}
-SAC-Lagrangian maintains reward and cost critics and updates policy with dual penalty:
-\[
-\mathcal{L}_{\pi} = \mathbb{E}[\alpha \log \pi(a|s) - Q_r(s,a) + \lambda Q_c(s,a)]
-\]
-where \(\lambda\) is provided by the safety controller.
-
-\paragraph{PPO-Lagrangian}
-PPO-Lagrangian uses clipped surrogate optimization with separate reward/cost advantages:
-\[
-\hat{A}_{\lambda} = \hat{A}_r - \lambda \hat{A}_c
-\]
-The implementation supports trajectory building, GAE for both channels, and constrained policy updates.
-
-\section{Hybrid Safety Stack}
-\subsection{Runtime Decision Order}
-The guard in \texttt{amasa/safety/guard.py} enforces:
+\subsection{Curriculum Phases}
+The intended course workflow is:
 \begin{enumerate}[leftmargin=*]
-  \item policy proposes action,
-  \item risk critic scores \((s,a,h)\),
-  \item if risky, conservative transform is applied,
-  \item decision-tree shield filters/blocks unsafe actions,
-  \item environment executes final action,
-  \item PID controller updates \(\lambda\) from cost violation.
+  \item Offline warm-start (CQL or IQL) on static data.
+  \item Safe online fine-tuning with hybrid guard.
+  \item Robustness exposure to perturbed/adversarial mixtures.
 \end{enumerate}
 
-\subsection{PID Dual Control}
-The Lagrange multiplier follows PID dynamics on violation error \(e_t\):
-\[
-\lambda_{t+1} = K_p e_t + K_i \sum_{\tau \le t} e_\tau + K_d (e_t - e_{t-1})
-\]
-with clamping to \([0,\lambda_{\max}]\).
+\section{Algorithmic Components}
+\subsection{CQL}
+CQL augments temporal-difference regression with conservative penalties over sampled actions to suppress unsupported value spikes. In practice this provides safer startup behavior when online exploration is still expensive or risky.
 
-\subsection{Safety Telemetry}
-Per-step telemetry includes:
-\texttt{lambda}, \texttt{risk\_score}, \texttt{shield\_blocked}, \texttt{cost},
-\texttt{force}, \texttt{corridor\_violation}.
-The pipeline exports \texttt{safety\_timeline.csv/jsonl/png} for post-hoc diagnosis.
+\subsection{IQL}
+IQL separates value fitting and policy extraction. The value network is trained via expectile regression, then the actor is trained with advantage-weighted targets. This often yields stable offline policies without aggressive policy-constraint engineering.
 
-\section{Experiment Pipeline}
-\subsection{Backward-Compatible CLIs}
-Legacy scripts remain functional:
-\texttt{train\_offline.py}, \texttt{train\_safe\_online.py},
-\texttt{train\_hierarchical.py}, \texttt{evaluate.py},
-\texttt{generate\_dataset.py}.
-Optional flags provide full config-driven behavior without breaking existing commands.
+\subsection{SAC-Lagrangian}
+SAC-Lagrangian in this project maintains reward and cost critics and updates actor parameters against entropy-regularized reward minus dual-weighted cost estimate. The method is replay-efficient and suitable for CPU-first iterative experimentation.
 
-\subsection{Unified Runner}
-\texttt{run\_experiment.py} orchestrates all modes and now supports:
+\subsection{PPO-Lagrangian}
+PPO-Lagrangian uses clipped updates with separate reward and cost advantages. It is included to expose students to on-policy constrained optimization and to contrast replay-based versus trajectory-based adaptation behavior.
+
+\section{Hybrid Safety Guard Design}
+\subsection{Guard Ordering}
+At each step:
+\begin{enumerate}[leftmargin=*]
+  \item policy proposes action,
+  \item risk critic scores $(s,a,h)$,
+  \item risky actions receive conservative transformation,
+  \item decision-tree shield applies explicit allow/deny logic,
+  \item environment executes final action,
+  \item PID controller updates $\lambda$ from observed cost.
+\end{enumerate}
+
+\subsection{Rationale}
+This order intentionally combines statistical prediction and symbolic constraints. Statistical modules adapt with data; rule modules provide direct interpretability. Their combination is more robust than either alone in early online phases where value estimates are still moving.
+
+\section{Software Architecture and Reproducibility}
+\subsection{Module Layout}
+The project introduces structured packages for config, environment, algorithms, safety, benchmarking, and scripts. The design keeps legacy script entrypoints functional while exposing a unified runner for matrix experiments.
+
+\subsection{Configuration Contract}
+YAML overlays define base settings, algorithm-specific parameters, scenario perturbations, runtime presets, sweep grids, and acceptance thresholds. Merge order is deterministic and validated. This eliminates a class of hidden experiment drift bugs.
+
+\subsection{Backward Compatibility}
+Legacy scripts continue to work with old flags. Optional flags (\texttt{--config}, \texttt{--preset}, \texttt{--scenario}, \texttt{--algo}) extend functionality without breaking previous workflows.
+
+\section{Concept Modules for Complete Understanding}
+The following modules provide deep conceptual notes used in the course version of this project. Each module states the core principle, dominant failure mode, and practical mitigation path.
+
+\subsection{Module 1: Markov Modeling in Surgical Tasks}
+\textbf{Core principle.} A stable MDP formalization is the first quality gate. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is state aliasing across camera artifacts. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to explicitly separate physical state proxies from visual nuisance channels. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
 \begin{itemize}[leftmargin=*]
-  \item resumable benchmark and PID sweeps (skip completed jobs),
-  \item bounded checkpoint storage in matrix/sweep runs,
-  \item threshold-table export and automatic plot generation.
+  \item Principle statement: A stable MDP formalization is the first quality gate.
+  \item Failure trigger: state aliasing across camera artifacts.
+  \item Primary mitigation: explicitly separate physical state proxies from visual nuisance channels.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
 \end{itemize}
 
-\subsection{Test Coverage}
-Tests include:
+
+\subsection{Module 2: Constrained Optimization in CMDPs}
+\textbf{Core principle.} Safety cost is not a soft preference but a hard reliability channel. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is dual variables can oscillate when costs are sparse. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to PID-based lambda control dampens oscillations with derivative action. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
 \begin{itemize}[leftmargin=*]
-  \item config load/merge/overlay behavior,
-  \item environment determinism and shape checks,
-  \item one-step sanity updates for CQL/IQL/SAC/PPO,
-  \item guard invariants and risk update checks,
-  \item smoke CLI invocation.
+  \item Principle statement: Safety cost is not a soft preference but a hard reliability channel.
+  \item Failure trigger: dual variables can oscillate when costs are sparse.
+  \item Primary mitigation: PID-based lambda control dampens oscillations with derivative action.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
 \end{itemize}
-Current test status: \textbf{12 passed}.
 
-\section{Benchmark Setup}
-\subsection{Matrix Definition}
-Smoke benchmark matrix uses seeds \(\{0,1,2\}\):
+
+\subsection{Module 3: Offline Distribution Shift}
+\textbf{Core principle.} policy evaluation must stay conservative outside the dataset support. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is Q-functions overestimate unseen actions. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to conservative regularization and behavior-closeness penalties reduce OOD exploitation. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
 \begin{itemize}[leftmargin=*]
-  \item Offline: CQL and IQL on nominal and perturbed scenarios.
-  \item Online: SAC-Lagrangian and PPO-Lagrangian on nominal, perturbed, adversarial scenarios.
+  \item Principle statement: policy evaluation must stay conservative outside the dataset support.
+  \item Failure trigger: Q-functions overestimate unseen actions.
+  \item Primary mitigation: conservative regularization and behavior-closeness penalties reduce OOD exploitation.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
 \end{itemize}
-Total jobs:
-\[
-2 \times 2 \times 3 + 2 \times 3 \times 3 = 30
-\]
 
-\subsection{PID Sweep Definition}
-Expanded PID grid (user-requested range):
-\[
-k_p \in \{0.4, 0.5, 0.55, 0.6, 0.7\},\quad
-k_d \in \{0.05, 0.08, 0.10, 0.12\},\quad
-k_i = 0.08
-\]
-Total sweep jobs: \(5 \times 4 = 20\).
 
-\section{Results}
-\subsection{Benchmark Summary}
-Table~\ref{tab:bench} reports mean reward/cost across seeds.
+\subsection{Module 4: Causal Feature Separation}
+\textbf{Core principle.} intervention-invariant features improve robustness. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is spurious visual correlations leak into value estimates. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to introduce data corruption stress tests and track degradation under lighting/camera shifts. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: intervention-invariant features improve robustness.
+  \item Failure trigger: spurious visual correlations leak into value estimates.
+  \item Primary mitigation: introduce data corruption stress tests and track degradation under lighting/camera shifts.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 5: Hierarchy and Temporal Credit}
+\textbf{Core principle.} long-horizon tasks need abstraction to shorten credit chains. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is meta-policy stale transitions break as low-level changes. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to off-policy relabeling and consistency checks keep hierarchy synchronized. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: long-horizon tasks need abstraction to shorten credit chains.
+  \item Failure trigger: meta-policy stale transitions break as low-level changes.
+  \item Primary mitigation: off-policy relabeling and consistency checks keep hierarchy synchronized.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 6: Safe Offline-to-Online Transfer}
+\textbf{Core principle.} warm starting policy weights alone is insufficient. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is cost critics are poorly calibrated after offline pretraining. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to perform value pre-alignment and staged online adaptation. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: warm starting policy weights alone is insufficient.
+  \item Failure trigger: cost critics are poorly calibrated after offline pretraining.
+  \item Primary mitigation: perform value pre-alignment and staged online adaptation.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 7: SAC-Lagrangian Dynamics}
+\textbf{Core principle.} off-policy constrained updates are sample-efficient. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is reward critics may dominate cost critics in early replay. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to balance replay mixture and monitor critic-scale mismatch. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: off-policy constrained updates are sample-efficient.
+  \item Failure trigger: reward critics may dominate cost critics in early replay.
+  \item Primary mitigation: balance replay mixture and monitor critic-scale mismatch.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 8: PPO-Lagrangian Dynamics}
+\textbf{Core principle.} on-policy updates can be robust to stale replay. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is high variance in cost advantage causes unstable clipping regimes. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to normalize reward and cost channels separately before aggregation. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: on-policy updates can be robust to stale replay.
+  \item Failure trigger: high variance in cost advantage causes unstable clipping regimes.
+  \item Primary mitigation: normalize reward and cost channels separately before aggregation.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 9: Risk Critic Calibration}
+\textbf{Core principle.} binary risk scoring supports fast runtime gating. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is label noise from near-threshold events blurs decision boundaries. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to use short history vectors and periodic calibration checks. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: binary risk scoring supports fast runtime gating.
+  \item Failure trigger: label noise from near-threshold events blurs decision boundaries.
+  \item Primary mitigation: use short history vectors and periodic calibration checks.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 10: Decision Tree Shield Interpretability}
+\textbf{Core principle.} rule-based filtering provides human-readable explanations. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is overly strict rules create conservative deadlocks. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to periodically retrain shield from updated safe/unsafe labels. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: rule-based filtering provides human-readable explanations.
+  \item Failure trigger: overly strict rules create conservative deadlocks.
+  \item Primary mitigation: periodically retrain shield from updated safe/unsafe labels.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 11: PID Gain Scheduling}
+\textbf{Core principle.} gain choice controls responsiveness and overshoot. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is high kp can lock policy in high-lambda mode. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to sweep kp and kd jointly and inspect frontier score. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: gain choice controls responsiveness and overshoot.
+  \item Failure trigger: high kp can lock policy in high-lambda mode.
+  \item Primary mitigation: sweep kp and kd jointly and inspect frontier score.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 12: Reward-Cost Pareto Evaluation}
+\textbf{Core principle.} single-metric scoring hides safety violations. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is benchmark ranking changes under different cost penalties. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to report both raw Pareto and weighted frontier scores. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: single-metric scoring hides safety violations.
+  \item Failure trigger: benchmark ranking changes under different cost penalties.
+  \item Primary mitigation: report both raw Pareto and weighted frontier scores.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 13: Scenario Randomization}
+\textbf{Core principle.} domain randomization improves transfer realism. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is aggressive corruption can collapse exploration. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to mix nominal and perturbed episodes through curriculum. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: domain randomization improves transfer realism.
+  \item Failure trigger: aggressive corruption can collapse exploration.
+  \item Primary mitigation: mix nominal and perturbed episodes through curriculum.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 14: Evaluation Reproducibility}
+\textbf{Core principle.} config-first experiments reduce accidental drift. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is overlay precedence bugs silently alter run budgets. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to enforce deterministic merge order with schema checks. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: config-first experiments reduce accidental drift.
+  \item Failure trigger: overlay precedence bugs silently alter run budgets.
+  \item Primary mitigation: enforce deterministic merge order with schema checks.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 15: Checkpoint Semantics}
+\textbf{Core principle.} metadata consistency is required for automated evaluation. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is heterogeneous checkpoint keys break loaders. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to standardize algo tags and provide fallback serializers. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: metadata consistency is required for automated evaluation.
+  \item Failure trigger: heterogeneous checkpoint keys break loaders.
+  \item Primary mitigation: standardize algo tags and provide fallback serializers.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 16: Safety Telemetry Engineering}
+\textbf{Core principle.} step-level logs reveal hidden instability. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is episode-only metrics hide transient safety spikes. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to export lambda, risk, block rate, force, and corridor traces. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: step-level logs reveal hidden instability.
+  \item Failure trigger: episode-only metrics hide transient safety spikes.
+  \item Primary mitigation: export lambda, risk, block rate, force, and corridor traces.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 17: Curriculum Design}
+\textbf{Core principle.} phase scheduling improves stability under complexity. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is jumping directly to adversarial regimes causes collapse. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to progress from nominal to perturbed to adversarial mixtures. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: phase scheduling improves stability under complexity.
+  \item Failure trigger: jumping directly to adversarial regimes causes collapse.
+  \item Primary mitigation: progress from nominal to perturbed to adversarial mixtures.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 18: Acceptance Thresholds}
+\textbf{Core principle.} tiered thresholds clarify minimum/target/stretch outcomes. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is single pass/fail hides meaningful progress. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to track tier movement over retraining cycles. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: tiered thresholds clarify minimum/target/stretch outcomes.
+  \item Failure trigger: single pass/fail hides meaningful progress.
+  \item Primary mitigation: track tier movement over retraining cycles.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 19: Failure Taxonomy}
+\textbf{Core principle.} structured failure labels accelerate debugging. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is qualitative logs are hard to compare across seeds. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to define categories: conservative trap, critic drift, shield saturation. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: structured failure labels accelerate debugging.
+  \item Failure trigger: qualitative logs are hard to compare across seeds.
+  \item Primary mitigation: define categories: conservative trap, critic drift, shield saturation.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 20: Ablation Methodology}
+\textbf{Core principle.} remove one mechanism at a time for causal attribution. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is multi-change experiments confound interpretation. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to keep seed set and scenario mix fixed during ablation. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: remove one mechanism at a time for causal attribution.
+  \item Failure trigger: multi-change experiments confound interpretation.
+  \item Primary mitigation: keep seed set and scenario mix fixed during ablation.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 21: CPU-First Optimization}
+\textbf{Core principle.} efficient minibatch pipelines keep the project accessible. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is slow sweeps discourage rigorous validation. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to reuse dataset buffers and skip completed jobs. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: efficient minibatch pipelines keep the project accessible.
+  \item Failure trigger: slow sweeps discourage rigorous validation.
+  \item Primary mitigation: reuse dataset buffers and skip completed jobs.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 22: Backward-Compatible Interfaces}
+\textbf{Core principle.} legacy CLIs preserve classroom continuity. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is breaking flags disrupt earlier assignments. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to add optional config flags while keeping defaults intact. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: legacy CLIs preserve classroom continuity.
+  \item Failure trigger: breaking flags disrupt earlier assignments.
+  \item Primary mitigation: add optional config flags while keeping defaults intact.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 23: Code Quality and Testing}
+\textbf{Core principle.} unit and smoke tests protect refactors. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is unvalidated merges can silently break training. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to test env determinism, update-step sanity, and CLI smoke paths. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: unit and smoke tests protect refactors.
+  \item Failure trigger: unvalidated merges can silently break training.
+  \item Primary mitigation: test env determinism, update-step sanity, and CLI smoke paths.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 24: Statistical Reporting}
+\textbf{Core principle.} means alone are insufficient for high-variance domains. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is single-seed claims are unreliable. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to report seed-wise spread, scenario means, and frontier ranking. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: means alone are insufficient for high-variance domains.
+  \item Failure trigger: single-seed claims are unreliable.
+  \item Primary mitigation: report seed-wise spread, scenario means, and frontier ranking.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 25: Human-in-the-Loop Safety}
+\textbf{Core principle.} operators need transparent intervention rationale. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is opaque blocks reduce trust during deployment. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to attach simple natural-language explanations to shield decisions. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: operators need transparent intervention rationale.
+  \item Failure trigger: opaque blocks reduce trust during deployment.
+  \item Primary mitigation: attach simple natural-language explanations to shield decisions.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 26: Dataset Curation for Offline RL}
+\textbf{Core principle.} data diversity is as important as data volume. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is narrow behavior coverage limits policy headroom. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to include near-boundary trajectories and controlled failures. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: data diversity is as important as data volume.
+  \item Failure trigger: narrow behavior coverage limits policy headroom.
+  \item Primary mitigation: include near-boundary trajectories and controlled failures.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 27: Scaling to Real Robotics}
+\textbf{Core principle.} sim-to-real requires robust uncertainty handling. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is sim-only policies exploit unrealistic shortcuts. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to combine randomization, conservative objectives, and explicit safety filters. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: sim-to-real requires robust uncertainty handling.
+  \item Failure trigger: sim-only policies exploit unrealistic shortcuts.
+  \item Primary mitigation: combine randomization, conservative objectives, and explicit safety filters.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+
+\subsection{Module 28: Course Integration Strategy}
+\textbf{Core principle.} students benefit from end-to-end systems, not isolated scripts. In AMASA-Complex v2 this principle is operationalized with explicit configuration, explicit metrics, and explicit logging. The main educational intent is to force alignment between theoretical objective functions and observable runtime behavior. Students are expected to state not just what objective is optimized, but how the objective is verified in terms of concrete diagnostics.
+
+\textbf{Dominant failure mode.} The recurring challenge is fragmented assignments miss cross-stage coupling. This failure often appears as apparently good early training curves followed by unstable evaluation behavior across seeds or scenarios. In a safety-critical setting, that instability is unacceptable even when average reward appears competitive. Therefore, AMASA evaluation emphasizes reproducibility and frontier position over single-run peak reward.
+
+\textbf{Mitigation strategy.} The mitigation in this project is to evaluate architecture, safety, and analysis quality jointly. The mitigation is implemented as both code-level constraints (e.g., explicit module boundaries, schema checks, consistent checkpoint metadata) and experiment-level constraints (e.g., fixed seeds, fixed scenario sets, consistent threshold checks). This dual-layer mitigation is important: process controls without code controls are brittle, and code controls without process controls are hard to validate.
+
+\textbf{Engineering interpretation.} In practice, students should treat this module as a testable claim. For each run, they should identify expected signatures in logs and verify whether those signatures appear. If signatures do not appear, the model should be treated as uncalibrated regardless of reward. This habit shifts projects from demo-oriented development toward safety-oriented engineering.
+
+\begin{itemize}[leftmargin=*]
+  \item Principle statement: students benefit from end-to-end systems, not isolated scripts.
+  \item Failure trigger: fragmented assignments miss cross-stage coupling.
+  \item Primary mitigation: evaluate architecture, safety, and analysis quality jointly.
+  \item Required telemetry: reward, cost, lambda, risk score, block rate.
+  \item Acceptance check: frontier movement plus threshold tier status.
+\end{itemize}
+
+\section{Empirical Evaluation (Smoke Preset Runs)}
+\subsection{Benchmark Matrix}
+The completed smoke benchmark consists of 30 jobs:
+\[
+2\times2\times3\;\text{(offline)} + 2\times3\times3\;\text{(online)} = 30.
+\]
+All job outputs are stored in \texttt{results/bench\_smoke} with per-job summaries and aggregate CSV exports.
 
 \begin{table}[!t]
 \centering
-\caption{Smoke benchmark means from \texttt{benchmark\_summary.csv}.}
-\label{tab:bench}
+\caption{Benchmark means aggregated from \texttt{benchmark\_summary.csv}}
 \begin{tabular}{llrr}
 \toprule
-Algo & Scenario & Avg Reward & Avg Cost \\
+Algorithm & Scenario & Avg Reward & Avg Cost \\
 \midrule
-CQL & Nominal & 594.28 & 0.096 \\
+CQL & Nominal & 594.27 & 0.096 \\
 CQL & Perturbed & 440.04 & 0.118 \\
 IQL & Nominal & 439.77 & 0.057 \\
 IQL & Perturbed & 746.91 & 0.099 \\
 \midrule
 SAC-Lag & Nominal & -227.40 & 0.908 \\
-SAC-Lag & Perturbed & 50.95 & 0.730 \\
+SAC-Lag & Perturbed & 50.96 & 0.730 \\
 SAC-Lag & Adversarial & 236.96 & 0.616 \\
 \midrule
 PPO-Lag & Nominal & -218.26 & 0.788 \\
@@ -226,12 +658,11 @@ PPO-Lag & Adversarial & -94.16 & 0.797 \\
 \end{tabular}
 \end{table}
 
-\subsection{Pareto and Scenario Curves}
+\subsection{Global and Scenario-Level Pareto Analysis}
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.96\columnwidth]{plots/global_pareto.png}
-\caption{Global reward-cost Pareto scatter across completed benchmark jobs.}
-\label{fig:global-pareto}
+\includegraphics[width=0.98\columnwidth]{plots/global_pareto.png}
+\caption{Global reward-cost Pareto map across smoke benchmark jobs.}
 \end{figure}
 
 \begin{figure}[!t]
@@ -241,17 +672,46 @@ PPO-Lag & Adversarial & -94.16 & 0.797 \\
 \subfloat[Perturbed]{\includegraphics[width=0.31\columnwidth]{plots/pareto_perturbed.png}}
 \hfill
 \subfloat[Adversarial]{\includegraphics[width=0.31\columnwidth]{plots/pareto_adversarial.png}}
-\caption{Per-scenario reward-cost curves.}
-\label{fig:scenario-pareto}
+\caption{Scenario-specific reward-cost curves for checkpoint evaluation outputs.}
 \end{figure}
 
-\subsection{PID Grid Results}
-The expanded sweep improved the frontier relative to the initial \(3 \times 3\) grid. Best settings:
+The benchmark shows a recurring pattern: offline methods (CQL/IQL) produce strong reward under limited cost in smoke budgets, while online methods under hard safety control can become conservative and fail to push success rate. This is a useful educational outcome because it highlights the practical difficulty of safe online improvement rather than masking it.
+
+\subsection{Top Frontier Runs}
+Ranking runs by frontier score $F = R - 300C$ gives the following top entries from smoke benchmarks:
 \begin{itemize}[leftmargin=*]
-  \item \(k_p=0.60, k_d=0.08\): reward \(419.65\), cost \(0.685\), frontier \(214.15\).
-  \item \(k_p=0.55, k_d=0.10\): reward \(412.70\), cost \(0.698\), frontier \(203.20\).
-  \item \(k_p=0.70, k_d=0.10\): reward \(363.79\), cost \(0.848\), frontier \(109.29\).
+  \item CQL nominal seed 0: high reward with near-zero cost.
+  \item IQL perturbed seed 0: strong reward with moderate cost.
+  \item IQL perturbed seed 2: positive frontier under perturbed dynamics.
+  \item CQL perturbed seed 1: stable conservative behavior.
+  \item IQL nominal seed 0: balanced reward and low cost.
 \end{itemize}
+
+\section{Expanded PID Sweep Analysis}
+\subsection{Grid Definition}
+After extension, the sweep grid is:
+\[
+k_p \in \{0.4,0.5,0.55,0.6,0.7\},\;
+k_d \in \{0.05,0.08,0.10,0.12\},\;
+k_i = 0.08.
+\]
+Total runs: 20. Completed outputs are saved in \texttt{results/pid\_smoke}.
+
+\begin{table}[!t]
+\centering
+\caption{Top 5 PID settings by frontier score ($R-300C$)}
+\begin{tabular}{rrrrr}
+\toprule
+$k_p$ & $k_d$ & Reward & Cost & Frontier \\
+\midrule
+0.60 & 0.08 & 419.65 & 0.685 & 214.15 \
+0.55 & 0.10 & 412.70 & 0.698 & 203.20 \
+0.70 & 0.10 & 363.79 & 0.848 & 109.29 \
+0.60 & 0.05 & 332.65 & 0.770 & 101.65 \
+0.50 & 0.10 & -99.11 & 0.778 & -332.61 \
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{figure}[!t]
 \centering
@@ -260,64 +720,77 @@ The expanded sweep improved the frontier relative to the initial \(3 \times 3\) 
 \subfloat[Cost heatmap]{\includegraphics[width=0.31\columnwidth]{plots/pid_heatmap_cost.png}}
 \hfill
 \subfloat[Frontier heatmap]{\includegraphics[width=0.31\columnwidth]{plots/pid_heatmap_frontier.png}}
-\caption{Expanded PID sweep diagnostics (\(5\times4\) grid).}
-\label{fig:pid-heatmaps}
+\caption{Expanded PID sweep diagnostics.}
 \end{figure}
 
-\subsection{Safety Dynamics}
+The expanded grid reveals non-monotonic behavior: increasing $k_p$ does not always reduce cost because interaction with risk gating and shield decisions can produce high-lambda lock-in. The best region appears around moderate-to-high $k_p$ with moderate $k_d$ (e.g., 0.55--0.60 and 0.08--0.10), where reward recovers while cost remains bounded.
+
+\section{Safety Timeline Interpretation}
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.96\columnwidth]{plots/safety_timeline_best.png}
-\caption{Safety timeline for the best frontier run (lambda, risk, moving block rate).}
-\label{fig:safety-timeline}
+\includegraphics[width=0.98\columnwidth]{plots/safety_timeline_best.png}
+\caption{Best-run safety timeline: lambda, risk score, and moving block rate.}
 \end{figure}
 
-Observed patterns:
+The timeline confirms why summary metrics alone are insufficient. Safety behavior is transient and phase-dependent. Even when mean cost appears acceptable, there can be long periods of saturated lambda and high block rates that suppress policy learning. Conversely, localized windows of reduced block rate often align with reward improvements. This motivates continuous telemetry-driven tuning rather than endpoint-only evaluation.
+
+\section{Threshold Outcomes}
+From \texttt{benchmark\_thresholds.csv}, tier counts are:
 \begin{itemize}[leftmargin=*]
-  \item many runs saturate \(\lambda\) at the configured maximum;
-  \item risk gating is frequently active in high-perturbation segments;
-  \item some stable regions emerge where risk and block rate temporarily decrease while reward improves.
+  \item stretch: 8
+  \item target: 3
+  \item minimum: 2
+  \item below\_min: 17
+  \item offline\_gate\_pass: 7
+  \item offline\_gate\_fail: 5
 \end{itemize}
+From \texttt{pid\_sweep\_thresholds.csv}, PID sweep tiers are dominated by \texttt{below\_min} with limited \texttt{minimum}, indicating that online constrained tuning still needs longer budgets or staged relaxation.
 
-\subsection{Threshold and Gate Outcomes}
-Tier and gate analysis from \texttt{benchmark\_thresholds.csv}:
-\begin{itemize}[leftmargin=*]
-  \item stretch: 8 entries,
-  \item target: 3 entries,
-  \item minimum: 2 entries,
-  \item below\_min: 17 entries,
-  \item offline\_gate\_pass: 7 entries,
-  \item offline\_gate\_fail: 5 entries.
-\end{itemize}
+\section{Detailed Implementation Walkthrough}
+\subsection{Configuration and Schema}
+The configuration loader validates required top-level sections and legal enum values. Overlay application is explicit, and tests verify that smoke preset runtime settings remain effective after algorithm/scenario overlays. This addresses a subtle but common source of reproducibility regressions.
 
-Interpretation: offline learners were strong under smoke budget on several seeds/scenarios, while online constrained adaptation remains the dominant bottleneck.
+\subsection{Pipeline and Runner Behavior}
+The runner now supports resumable matrix execution by skipping jobs that already have summary outputs. This is especially important for long sweeps and storage-constrained environments. Final-only checkpoint saving in benchmark/sweep modes reduces disk pressure while preserving end-state reproducibility.
 
-\section{Failure Analysis and Practical Lessons}
-\subsection{Observed Failure Modes}
+\subsection{Safety Logging and Plotting}
+Online training exports step-level safety records and renders timeline plots. Aggregation scripts now generate global Pareto plots, per-scenario curves, PID heatmaps (reward/cost/frontier), and best-run safety timeline figures.
+
+\subsection{Serializer Robustness}
+A fallback serializer path is implemented for environments where zip-based torch serialization can fail under storage pressure. This avoids interrupted long-run sweeps and supports robust checkpoint finalization.
+
+\section{Ablation Blueprint for Full Preset}
+For course delivery, we recommend the following ablation matrix in full preset runs:
 \begin{enumerate}[leftmargin=*]
-  \item \textbf{Conservative lock-in}: persistent high \(\lambda\) and high block rate reduce exploratory progress.
-  \item \textbf{Scenario sensitivity}: on-policy PPO-Lagrangian underperformed in all smoke scenarios.
-  \item \textbf{Unstable startup}: early online steps can show volatile reward critic updates before replay becomes informative.
-  \item \textbf{Threshold mismatch}: fixed cost limits may be too strict for early perturbed/adversarial adaptation.
+  \item Remove risk critic gate, keep shield and PID.
+  \item Remove shield, keep risk gate and PID.
+  \item Replace PID with vanilla dual ascent.
+  \item Disable scenario randomization in online phase.
+  \item Compare CQL versus IQL warm-start for each online algorithm.
 \end{enumerate}
+Each ablation should be evaluated across the same seeds and scenarios with identical thresholds. The expected output is not only score deltas but also behavior-trace differences (lambda saturation frequency, block rate dynamics, risk score calibration drift).
 
-\subsection{Engineering Fixes Applied}
-During implementation and reruns:
+\section{Recommended Next Iteration Plan}
+Based on current results, a practical next cycle is:
 \begin{itemize}[leftmargin=*]
-  \item config overlay order was fixed so presets are not accidentally overridden;
-  \item benchmark/sweep runners gained resume logic to skip already completed jobs;
-  \item model save fallback was added for storage-sensitive systems;
-  \item safety timeline export and plotting were added for online diagnostics.
+  \item Increase offline warm-start steps for IQL/CQL under fixed replay sampling.
+  \item Introduce phase-wise cost limits to avoid early lock-in during online startup.
+  \item Use best PID regions from expanded sweep as warm defaults.
+  \item Add critic calibration diagnostics (reward-cost scale alignment).
+  \item Run full preset for top frontier configurations only to control compute budget.
 \end{itemize}
 
-\section{Reproducibility}
-\subsection{Key Commands}
+\section{Conclusion}
+AMASA-Complex v2 now operates as a complete and technically rigorous RL project that spans theory, implementation, safety, and reproducible evaluation. The code and report together provide a strong template for advanced coursework and project-based research training. The current smoke results are intentionally realistic: offline initialization is strong, while safe online adaptation remains challenging. This is precisely the educational value of the benchmark, and the added tooling makes those challenges measurable, diagnosable, and improvable.
+
+\appendices
+\section{Command Reference}
 \begin{lstlisting}[language=bash,basicstyle=\ttfamily\footnotesize,breaklines=true]
-# Tests
+# Run tests
 PYTHONPATH=/Users/tahamajs/Documents/uni/DRL \
 pytest -q /Users/tahamajs/Documents/uni/DRL/projects/amasa_clean/tests
 
-# Full smoke benchmark matrix
+# Benchmark smoke matrix
 PYTHONPATH=/Users/tahamajs/Documents/uni/DRL \
 python3.10 -m projects.amasa_clean.scripts.run_experiment \
   --mode benchmark \
@@ -338,22 +811,31 @@ python3.10 -m projects.amasa_clean.scripts.run_experiment \
   --dataset data/amasa_offline.npz
 \end{lstlisting}
 
-\subsection{Artifacts}
-Primary outputs are stored in:
+\section{Per-Algorithm Mean Snapshot}
+\begin{table}[!h]
+\centering
+\caption{Overall means by algorithm (smoke benchmark)}
+\begin{tabular}{lrr}
+\toprule
+Algorithm & Mean Reward & Mean Cost \\
+\midrule
+cql & 517.16 & 0.107 \
+iql & 593.34 & 0.078 \
+ppo_lag & -172.12 & 0.834 \
+sac_lag & 20.17 & 0.751 \
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Quality Assurance Checklist}
 \begin{itemize}[leftmargin=*]
-  \item \texttt{results/bench\_smoke/benchmark\_summary.csv}
-  \item \texttt{results/bench\_smoke/benchmark\_thresholds.csv}
-  \item \texttt{results/bench\_smoke/plots/*}
-  \item \texttt{results/pid\_smoke/pid\_sweep\_summary.csv}
-  \item \texttt{results/pid\_smoke/pid\_sweep\_thresholds.csv}
-  \item \texttt{results/pid\_smoke/plots/*}
-  \item \texttt{plots/*} (curated copies for report inclusion)
+  \item Config schema validation active.
+  \item Overlay precedence tested.
+  \item Algorithm update-step sanity tests passing.
+  \item Guard behavior invariants tested.
+  \item Benchmark and PID sweep outputs archived.
+  \item Plot exports regenerated after reruns.
+  \item English and Persian report sources updated.
 \end{itemize}
-
-\section{Conclusion}
-AMASA-Complex v2 successfully transforms the original task into a modular, advanced RL project with stronger realism and analysis tooling. The codebase now supports multi-algorithm offline/online training, hybrid runtime safety enforcement, scenario robustness benchmarking, and reproducible sweep-based controller tuning. Current smoke results show that offline methods are comparatively strong while online safe adaptation remains the hardest regime, precisely matching the educational objective of exposing realistic reward--safety trade-offs under constrained learning.
-
-\section*{Acknowledgment}
-Generated and integrated in the local workspace using reproducible scripts and test-backed edits.
 
 \end{document}

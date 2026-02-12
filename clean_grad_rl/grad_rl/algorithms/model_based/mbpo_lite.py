@@ -41,6 +41,7 @@ class MBPOConfig:
     ensemble_size: int = 5
     model_batch_size: int = 256
     model_updates_per_step: int = 1
+    model_train_freq: int = 10
     rollout_horizon: int = 3
     rollout_batch_size: int = 128
     real_ratio: float = 0.5
@@ -97,7 +98,7 @@ def train_mbpo_lite(config: Dict, out_dir: Path, seed: int) -> Dict:
             obs, _ = env.reset()
             ep_reward = 0.0
 
-        if len(real_rb) >= max(cfg.model_batch_size, cfg.learning_starts):
+        if len(real_rb) >= max(cfg.model_batch_size, cfg.learning_starts) and step % cfg.model_train_freq == 0:
             for _ in range(cfg.model_updates_per_step):
                 batch = real_rb.sample(cfg.model_batch_size)
                 o = torch.tensor(batch["obs"], dtype=torch.float32, device=device)
@@ -119,11 +120,10 @@ def train_mbpo_lite(config: Dict, out_dir: Path, seed: int) -> Dict:
             mo = torch.tensor(seed_batch["obs"], dtype=torch.float32, device=device)
             for _ in range(cfg.rollout_horizon):
                 with torch.no_grad():
-                    ma = torch.tensor(
-                        np.stack([agent.act(x.cpu().numpy(), deterministic=False) for x in mo]),
-                        dtype=torch.float32,
-                        device=device,
-                    )
+                    mu, log_std = agent.actor(mo)
+                    z = mu + log_std.exp() * torch.randn_like(mu)
+                    tanh_action = torch.tanh(z)
+                    ma = agent.act_low + (tanh_action + 1.0) * 0.5 * (agent.act_high - agent.act_low)
                     preds = [m(mo, ma) for m in ensemble]
                     idx = np.random.randint(cfg.ensemble_size)
                     delta, rew = preds[idx]
