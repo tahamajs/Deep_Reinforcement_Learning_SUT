@@ -85,7 +85,7 @@ if __name__ == "__main__":
     parser.add_argument("--buffer_size", type=int, default=50000)
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--device", type=str, default="cpu")
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--save_every", type=int, default=50)
     parser.add_argument("--out_dir", type=str, default="checkpoints")
     parser.add_argument("--offline_checkpoint", type=str, default="")

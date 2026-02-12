@@ -19,7 +19,7 @@ if __name__ == "__main__":
     add_common_config_flags(parser)
     parser.add_argument("--episodes", type=int, default=50)
     parser.add_argument("--max_steps", type=int, default=None)
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--out", type=str, default="data/amasa_offline.npz")
     args = parser.parse_args()
     main(args)

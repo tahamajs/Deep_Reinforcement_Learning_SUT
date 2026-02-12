@@ -31,7 +31,7 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoints", type=str, default="checkpoints")
     parser.add_argument("--episodes", type=int, default=None)
     parser.add_argument("--max_steps", type=int, default=None)
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--out", type=str, default="plots/pareto.png")
     args = parser.parse_args()

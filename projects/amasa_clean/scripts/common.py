@@ -8,7 +8,7 @@ from typing import Dict, Any
 
 import numpy as np
 
-from projects.amasa_clean.amasa.core.config import load_config, apply_preset, merge_dicts
+from projects.amasa_clean.amasa.core.config import load_config, apply_named_overlays
 from projects.amasa_clean.amasa.envs import make_scenario_env, SuturingEnv
 from projects.amasa_clean.amasa.offline import CQLAgent, CQLConfig, IQLAgent, IQLConfig
 from projects.amasa_clean.amasa.online import SACLagrangianAgent, SACLagConfig, PPOLagrangianAgent, PPOLagConfig
@@ -18,35 +18,22 @@ def project_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-def _load_yaml(path: Path) -> Dict[str, Any]:
-    import yaml
-
-    with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
-
-
 def resolve_config(args: argparse.Namespace) -> Dict[str, Any]:
     root = project_root()
     base = root / "configs" / "base.yaml"
     config_path = Path(args.config) if getattr(args, "config", "") else base
     cfg = load_config(config_path, base_path=None if config_path == base else base)
 
-    preset = getattr(args, "preset", "") or cfg["experiment"].get("preset", "smoke")
-    preset_path = root / "configs" / "presets" / f"{preset}.yaml"
-    if preset_path.exists():
-        cfg = apply_preset(cfg, _load_yaml(preset_path))
-
     scenario = getattr(args, "scenario", "") or cfg["scenario"]["type"]
-    scenario_path = root / "configs" / "scenarios" / f"{scenario}.yaml"
-    if scenario_path.exists():
-        cfg = merge_dicts(cfg, _load_yaml(scenario_path))
-    cfg["scenario"]["type"] = scenario
-
     algo = getattr(args, "algo", "") or cfg["algo"]["name"]
-    algo_path = root / "configs" / "algorithms" / f"{algo}.yaml"
-    if algo_path.exists():
-        cfg = merge_dicts(cfg, _load_yaml(algo_path))
-    cfg["algo"]["name"] = algo
+    preset = getattr(args, "preset", "") or cfg["experiment"].get("preset", "smoke")
+    cfg = apply_named_overlays(
+        cfg,
+        root / "configs",
+        scenario=scenario,
+        algo=algo,
+        preset=preset,
+    )
 
     if getattr(args, "device", None):
         cfg["experiment"]["device"] = args.device

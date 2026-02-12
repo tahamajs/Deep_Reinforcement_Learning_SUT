@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 import os
+from dataclasses import asdict
 from typing import Dict, Any, List
 
 import numpy as np
 import torch
 from tqdm import trange
 
-from projects.amasa_clean.amasa.core.metrics import EpisodeRecord, save_summary_csv
+from projects.amasa_clean.amasa.core.metrics import StepRecord, save_records_jsonl, save_summary_csv
 from projects.amasa_clean.scripts.common import make_env, make_agent, load_dataset
 from projects.amasa_clean.amasa.safety import ReplayBuffer, GuardConfig, SafetyGuard
 
@@ -203,6 +204,7 @@ def train_online_pipeline(cfg: Dict[str, Any], out_dir: str, checkpoint_path: st
     replay = ReplayBuffer(cfg["train"]["buffer_size"], obs_dim, act_dim, device=cfg["experiment"]["device"])
     ppo_buf = {"obs": [], "act": [], "logp": [], "rew": [], "cost": [], "done": []}
     shield_fit = {"states": [], "actions": [], "costs": [], "term": []}
+    safety_records: List[StepRecord] = []
 
     obs, _ = env.reset()
     metrics = {}
@@ -221,6 +223,19 @@ def train_online_pipeline(cfg: Dict[str, Any], out_dir: str, checkpoint_path: st
 
         guard.update_cost(cost)
         guard.observe_for_risk(obs, action, cost)
+        s_log = guard.safety_log(info, guard_info["risk_score"], guard_info["shield_blocked"])
+        safety_records.append(
+            StepRecord(
+                step=step + 1,
+                reward=float(reward),
+                cost=float(s_log["cost"]),
+                lambda_value=float(s_log["lambda"]),
+                risk_score=float(s_log["risk_score"]),
+                shield_blocked=int(s_log["shield_blocked"]),
+                force=float(s_log["force"]),
+                corridor_violation=int(s_log["corridor_violation"]),
+            )
+        )
 
         shield_fit["states"].append(obs)
         shield_fit["actions"].append(action)
@@ -284,6 +299,9 @@ def train_online_pipeline(cfg: Dict[str, Any], out_dir: str, checkpoint_path: st
         guard.shield.save(os.path.join(out_dir, "shield_final.joblib"))
 
     avg_reward, avg_cost, success = _evaluate_agent(agent, env, cfg["eval"]["episodes"], guard)
+    block_rate = float(np.mean([r.shield_blocked for r in safety_records])) if safety_records else 0.0
+    avg_lambda = float(np.mean([r.lambda_value for r in safety_records])) if safety_records else 0.0
+    avg_risk = float(np.mean([r.risk_score for r in safety_records])) if safety_records else 0.0
     summary = {
         "algo": algo_name,
         "scenario": cfg["scenario"]["type"],
@@ -294,8 +312,15 @@ def train_online_pipeline(cfg: Dict[str, Any], out_dir: str, checkpoint_path: st
         "kp": cfg["safety"]["kp"],
         "ki": cfg["safety"]["ki"],
         "kd": cfg["safety"]["kd"],
+        "avg_lambda": avg_lambda,
+        "avg_risk": avg_risk,
+        "block_rate": block_rate,
     }
     save_summary_csv(os.path.join(out_dir, "summary.csv"), [summary])
+    if safety_records:
+        save_records_jsonl(os.path.join(out_dir, "safety_timeline.jsonl"), safety_records)
+        save_summary_csv(os.path.join(out_dir, "safety_timeline.csv"), [asdict(r) for r in safety_records])
+        _plot_safety_timeline(safety_records, os.path.join(out_dir, "safety_timeline.png"))
     return {"checkpoint": final_ckpt, **summary}
 
 
@@ -344,3 +369,34 @@ def evaluate_checkpoints_pipeline(cfg: Dict[str, Any], checkpoints_dir: str, out
         plt.savefig(out_plot)
 
     return points
+
+
+def _plot_safety_timeline(records: List[StepRecord], out_path: str):
+    import matplotlib.pyplot as plt
+
+    steps = np.array([r.step for r in records], dtype=np.int32)
+    lambdas = np.array([r.lambda_value for r in records], dtype=np.float32)
+    risks = np.array([r.risk_score for r in records], dtype=np.float32)
+    blocked = np.array([r.shield_blocked for r in records], dtype=np.float32)
+    window = min(100, max(10, len(records) // 20))
+    kernel = np.ones(window, dtype=np.float32) / float(window)
+    block_rate = np.convolve(blocked, kernel, mode="same")
+
+    os.makedirs(os.path.dirname(out_path), exist_ok=True) if os.path.dirname(out_path) else None
+    fig, axes = plt.subplots(2, 1, figsize=(8, 5), sharex=True)
+    axes[0].plot(steps, lambdas, label="lambda", color="tab:red", linewidth=1.4)
+    axes[0].plot(steps, risks, label="risk_score", color="tab:blue", linewidth=1.2)
+    axes[0].set_ylabel("Value")
+    axes[0].legend(loc="upper right")
+    axes[0].grid(alpha=0.2)
+
+    axes[1].plot(steps, block_rate, label="block_rate(ma)", color="tab:green", linewidth=1.3)
+    axes[1].set_xlabel("Step")
+    axes[1].set_ylabel("Rate")
+    axes[1].set_ylim(-0.05, 1.05)
+    axes[1].grid(alpha=0.2)
+    axes[1].legend(loc="upper right")
+
+    fig.suptitle("Safety Timeline")
+    fig.tight_layout()
+    fig.savefig(out_path)

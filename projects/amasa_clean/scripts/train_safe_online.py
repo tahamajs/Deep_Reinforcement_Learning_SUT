@@ -26,12 +26,18 @@ def main(args):
     if args.max_steps is not None:
         cfg["env"]["max_steps"] = args.max_steps
 
-    cfg["safety"]["cost_limit"] = args.cost_limit if args.cost_limit is not None else cfg["safety"]["cost_limit"]
-    cfg["safety"]["kp"] = args.kp if args.kp is not None else cfg["safety"]["kp"]
-    cfg["safety"]["ki"] = args.ki if args.ki is not None else cfg["safety"]["ki"]
-    cfg["safety"]["kd"] = args.kd if args.kd is not None else cfg["safety"]["kd"]
-    cfg["safety"]["lambda_max"] = args.lambda_max if args.lambda_max is not None else cfg["safety"]["lambda_max"]
-    cfg["safety"]["shield"]["enabled"] = bool(args.use_shield)
+    if args.cost_limit is not None:
+        cfg["safety"]["cost_limit"] = args.cost_limit
+    if args.kp is not None:
+        cfg["safety"]["kp"] = args.kp
+    if args.ki is not None:
+        cfg["safety"]["ki"] = args.ki
+    if args.kd is not None:
+        cfg["safety"]["kd"] = args.kd
+    if args.lambda_max is not None:
+        cfg["safety"]["lambda_max"] = args.lambda_max
+    if args.use_shield is not None:
+        cfg["safety"]["shield"]["enabled"] = bool(args.use_shield)
 
     if args.device:
         cfg["experiment"]["device"] = args.device
@@ -53,7 +59,7 @@ if __name__ == "__main__":
     parser.add_argument("--buffer_size", type=int, default=None)
     parser.add_argument("--batch_size", type=int, default=None)
     parser.add_argument("--random_steps", type=int, default=None)
-    parser.add_argument("--cost_limit", type=float, default=0.0)
+    parser.add_argument("--cost_limit", type=float, default=None)
     parser.add_argument("--kp", type=float, default=None)
     parser.add_argument("--ki", type=float, default=None)
     parser.add_argument("--kd", type=float, default=None)
@@ -61,10 +67,13 @@ if __name__ == "__main__":
     parser.add_argument("--cql_alpha", type=float, default=None)
     parser.add_argument("--max_steps", type=int, default=None)
     parser.add_argument("--device", type=str, default="cpu")
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--checkpoint", type=str, default="")
     parser.add_argument("--out_dir", type=str, default="checkpoints")
-    parser.add_argument("--use_shield", action="store_true")
+    shield_group = parser.add_mutually_exclusive_group()
+    shield_group.add_argument("--use_shield", dest="use_shield", action="store_true")
+    shield_group.add_argument("--no_shield", dest="use_shield", action="store_false")
+    parser.set_defaults(use_shield=None)
     parser.add_argument("--shield_train_after", type=int, default=None)
     parser.add_argument("--log_every", type=int, default=None)
     parser.add_argument("--save_every", type=int, default=None)

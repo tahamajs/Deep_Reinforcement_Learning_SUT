@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import os
 from pathlib import Path
 
 
@@ -20,6 +21,11 @@ def test_unified_runner_smoke():
         "--out_dir",
         "projects/amasa_clean/results/smoke_test",
     ]
-    # We only verify the command can start; dataset may be absent in fresh environments.
-    proc = subprocess.run(cmd, cwd=root, capture_output=True, text=True)
-    assert proc.returncode in {0, 1}
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(root) if not env.get("PYTHONPATH") else f"{root}:{env['PYTHONPATH']}"
+    proc = subprocess.run(cmd, cwd=root, env=env, capture_output=True, text=True)
+    dataset = root / "data" / "amasa_offline.npz"
+    if dataset.exists():
+        assert proc.returncode == 0, proc.stderr
+    else:
+        assert proc.returncode in {0, 1}

@@ -71,8 +71,22 @@ def _run_benchmark(cfg, args):
     jobs = build_benchmark_jobs(cfg)
     all_rows = []
     for idx, job in enumerate(jobs, start=1):
+        # Keep storage bounded during large matrix runs: save only final checkpoint.
+        job["train"]["save_every"] = int(job["train"]["steps"]) + 1
         job_name = f"job{idx}_{job['algo']['name']}_{job['scenario']['type']}_seed{job['experiment']['seed']}"
         job["experiment"]["name"] = job_name
+        run_dir = os.path.join(args.out_dir, job_name, "checkpoints")
+        summary_path = os.path.join(run_dir, "summary.csv")
+        if os.path.exists(summary_path):
+            try:
+                with open(summary_path, "r", encoding="utf-8") as f:
+                    rows = list(csv.DictReader(f))
+                if rows:
+                    all_rows.append(rows[-1])
+                    print(f"skip {job_name} (summary exists)")
+                    continue
+            except Exception:
+                pass
         result = _run_single(
             job,
             mode=job["experiment"]["mode"],
@@ -101,7 +115,21 @@ def _run_pid_sweep(cfg, args):
     jobs = build_pid_sweep_jobs(cfg, kp_vals, kd_vals, ki=ki)
     rows = []
     for job in jobs:
+        # Keep storage bounded during grid sweeps: save only final checkpoint.
+        job["train"]["save_every"] = int(job["train"]["steps"]) + 1
         mode = "online_train"
+        run_name = job["experiment"]["name"]
+        summary_path = os.path.join(args.out_dir, run_name, "checkpoints", "summary.csv")
+        if os.path.exists(summary_path):
+            try:
+                with open(summary_path, "r", encoding="utf-8") as f:
+                    prev_rows = list(csv.DictReader(f))
+                if prev_rows:
+                    rows.append(prev_rows[-1])
+                    print(f"skip {run_name} (summary exists)")
+                    continue
+            except Exception:
+                pass
         result = _run_single(job, mode=mode, dataset=args.dataset, checkpoint=args.checkpoint, out_root=args.out_dir)
         rows.append(result)
 
