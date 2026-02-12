@@ -1,97 +1,226 @@
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
 \usepackage{fontspec}
-\usepackage{polyglossia}
-\setdefaultlanguage{farsi}
-\setotherlanguage{english}
-\newfontfamily\persianfont[Script=Arabic]{Times New Roman}
-\newfontfamily\latinfont{Times New Roman}
+\usepackage{xepersian}
+\settextfont[
+  BoldFont=Times New Roman,
+  ItalicFont=Times New Roman,
+  BoldItalicFont=Times New Roman
+]{Times New Roman}
+\setlatintextfont{Times New Roman}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
-\usepackage{hyperref}
-\usepackage{enumitem}
-\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage{multirow}
+\usepackage{array}
 
-\title{AMASA-Complex v2: چارچوب پیشرفته یادگیری تقویتی امن برای بخیه‌زنی خودکار}
-\author{\IEEEauthorblockN{کدکس}\IEEEauthorblockA{/Users/tahamajs/Documents/uni/DRL}}
+\title{AMASA-Complex v2: چارچوب پیشرفته و پیکربندی‌محور برای یادگیری تقویتی امن در بخیه‌زنی خودکار}
+\author{
+\IEEEauthorblockN{Codex}
+\IEEEauthorblockA{\texttt{/Users/tahamajs/Documents/uni/DRL/projects/amasa\_clean}}
+}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-این گزارش نسخه‌ی AMASA-Complex v2 را در مسیر \texttt{/Users/tahamajs/Documents/uni/DRL/projects/amasa\_clean} توصیف می‌کند. نسبت به نسخه‌ی اولیه، این نسخه شامل چهار الگوریتم (CQL، IQL، SAC-Lagrangian، PPO-Lagrangian)، پشته‌ی ایمنی ترکیبی (PID + سپر تصمیم‌درختی + منتقد ریسک)، سناریوهای مقاومتی چندگانه، پیکربندی YAML، اجرای ماتریس بنچمارک، جاروب PID، و خروجی گزارش IEEE دوزبانه است. طراحی به‌صورت CPU-first انجام شده و سازگاری عقب‌رو با CLIهای قبلی حفظ شده است.
+این گزارش نسخه‌ی AMASA-Complex v2 را ارائه می‌کند که نسبت به نسخه‌ی اولیه، پروژه را به یک چارچوب در مقیاس درس پیشرفته تبدیل می‌کند. ارتقاهای اصلی شامل چهار الگوریتم (CQL، IQL، SAC-Lagrangian، PPO-Lagrangian)، پشته‌ی ایمنی ترکیبی (کنترل‌گر PID، سپر تصمیم‌درختی، منتقد ریسک مسیر)، سه خانواده سناریوی محیطی (عادی، اغتشاش‌یافته، خصمانه)، سامانه‌ی پیکربندی YAML با سازگاری عقب‌رو CLI، و خط لوله‌ی بنچمارک/جاروب PID است. نتایج نهایی شامل منحنی‌های پارتو، تحلیل ایمنی زمانی، و ارزیابی آستانه‌های چندسطحی است.
 \end{abstract}
 
-\section{معماری کلان}
-ساختار پروژه به ماژول‌های زیر تفکیک شده است:
-\begin{itemize}[leftmargin=*]
-  \item \texttt{amasa/core}: بارگذاری/اعتبارسنجی تنظیمات، رجیستری، ثبت متریک.
-  \item \texttt{amasa/envs}: محیط پایه و سناریوهای \lr{nominal/perturbed/adversarial}.
-  \item \texttt{amasa/offline}: پیاده‌سازی CQL و IQL.
-  \item \texttt{amasa/online}: پیاده‌سازی SAC-Lagrangian و PPO-Lagrangian.
-  \item \texttt{amasa/safety}: کنترل‌گر PID، سپر، منتقد ریسک و نگهبان ایمنی.
-  \item \texttt{amasa/bench}: تولید ماتریس آزمایش، تجمیع و رسم نتایج.
+\section{مقدمه}
+در کاربردهای ایمنی‌حساس، کیفیت یک عامل RL فقط با پاداش اندازه‌گیری نمی‌شود، بلکه باید همزمان سه پرسش پاسخ داده شود:
+\begin{enumerate}
+  \item آیا با داده‌ی آفلاین می‌توان شروع پایدار داشت؟
+  \item آیا گذار آفلاین به آنلاین بدون واگرایی ایمنی انجام می‌شود؟
+  \item آیا رفتار عامل در سناریوهای مخدوش قابل‌اعتماد باقی می‌ماند؟
+\end{enumerate}
+
+نسخه‌ی v2 برای پاسخ عملی به این سه محور طراحی شده است.
+
+\section{دامنه‌ی پیاده‌سازی}
+در مسیر \texttt{projects/amasa\_clean} موارد زیر پیاده‌سازی شده‌اند:
+\begin{itemize}
+  \item ماژول‌های جدید: \texttt{amasa/core, envs, offline, online, safety, bench}
+  \item درخت تنظیمات: \texttt{configs/base}, \texttt{algorithms}, \texttt{scenarios}, \texttt{presets}, \texttt{sweep}, \texttt{thresholds}
+  \item حفظ اسکریپت‌های قبلی با فلگ‌های جدید \texttt{--config --preset --scenario --algo}
+  \item رانر یکپارچه \texttt{run\_experiment.py}
+  \item تست واحد و اسموک
+  \item گزارش انگلیسی و فارسی در قالب IEEE
 \end{itemize}
+
+\section{معماری}
+\subsection{لایه‌های اصلی}
+\begin{itemize}
+  \item \textbf{لایه تنظیمات}: بارگذاری، ادغام و اعتبارسنجی YAML
+  \item \textbf{لایه محیط}: دینامیک پایه + سناریوهای تنش
+  \item \textbf{لایه یادگیری}: الگوریتم‌های آفلاین و آنلاین
+  \item \textbf{لایه ایمنی}: تجمیع منتقد ریسک + سپر + PID
+  \item \textbf{لایه ارزیابی}: اجرای ماتریس، تجمیع، نمودار و بررسی آستانه
+\end{itemize}
+
+\subsection{ترتیب ادغام پیکربندی}
+ترتیب ادغام برای جلوگیری از ناسازگاری زمان اجرا:
+\[
+\text{base} \rightarrow \text{scenario} \rightarrow \text{algo} \rightarrow \text{preset}
+\]
+با این ترتیب، پریست \lr{smoke/full} در پایان اعمال می‌شود و بودجه‌ی اجرا حفظ می‌گردد.
 
 \section{مدل محیط و سناریوها}
-رابط حالت/کنش همان نسخه‌ی قبلی حفظ شده اما دینامیک‌ها قابل تنظیم شده‌اند:
-\begin{itemize}[leftmargin=*]
-  \item مقیاس نویز نیرو،
-  \item جابه‌جایی دینامیکی،
-  \item احتمال خرابی/تاخیر مشاهده،
-  \item تصادفی‌سازی دامنه.
+رابط مسئله ثابت مانده است:
+\begin{itemize}
+  \item حالت ۲۳ بعدی
+  \item کنش ۷ بعدی گشتاور
+  \item پاداش ترکیبی (شکل‌دهی + تکمیل)
+  \item هزینه برای نقض محدودیت نیرو/کریدور
 \end{itemize}
-سه خانواده سناریو پیاده‌سازی شده است:
-\textbf{Nominal} (پایه)، \textbf{Perturbed} (اختلال دینامیکی)، \textbf{Adversarial} (خرابی شدید مشاهده).
 
-\section{الگوریتم‌ها}
+سناریوها:
+\begin{itemize}
+  \item \textbf{Nominal}: نویز ملایم
+  \item \textbf{Perturbed}: نویز و شیفت دینامیکی قوی‌تر
+  \item \textbf{Adversarial}: خرابی مشاهده و تاخیر شدیدتر
+\end{itemize}
+
+\section{مجموعه الگوریتم‌ها}
 \subsection{آفلاین}
-CQL به‌عنوان مبنا حفظ شده و IQL با \lr{expectile value fitting} و \lr{advantage-weighted policy update} اضافه شده است.
+\subsubsection{CQL}
+کاهش بیش‌برآورد روی کنش‌های خارج از توزیع با جمله محافظه‌کارانه:
+\[
+\mathcal{L}_{\text{critic}} = \mathcal{L}_{\text{TD}} + \alpha_{\text{CQL}}\mathcal{L}_{\text{cons}}
+\]
+
+\subsubsection{IQL}
+ترکیب \lr{expectile value fitting} و \lr{advantage-weighted policy update} برای استخراج سیاست آفلاین پایدار.
 
 \subsection{آنلاین امن}
-SAC-Lagrangian با منتقد پاداش/هزینه و PPO-Lagrangian با مزیت‌های جداگانه‌ی پاداش و هزینه اضافه شده‌اند.
+\subsubsection{SAC-Lagrangian}
+تابع هدف سیاست:
+\[
+\mathcal{L}_{\pi} = \mathbb{E}[\alpha \log\pi(a|s) - Q_r(s,a) + \lambda Q_c(s,a)]
+\]
+
+\subsubsection{PPO-Lagrangian}
+مزیت ترکیبی:
+\[
+\hat{A}_{\lambda} = \hat{A}_r - \lambda \hat{A}_c
+\]
+با \lr{clipping} و برآورد جداگانه‌ی مزیت پاداش/هزینه.
 
 \section{پشته ایمنی ترکیبی}
-ترتیب اعمال نگهبان ایمنی:
-\begin{enumerate}[leftmargin=*]
-  \item امتیازدهی ریسک کنش توسط منتقد ریسک،
-  \item اعمال تبدیل محافظه‌کارانه در ریسک بالا،
-  \item عبور از سپر تصمیم‌درختی،
-  \item به‌روزرسانی \(\lambda\) با PID بر اساس هزینه مشاهده‌شده.
+ترتیب اجرای نگهبان ایمنی:
+\begin{enumerate}
+  \item پیشنهاد کنش توسط سیاست
+  \item امتیاز ریسک توسط منتقد ریسک
+  \item تبدیل محافظه‌کارانه در ریسک بالا
+  \item عبور از سپر تصمیم‌درختی
+  \item اجرای کنش نهایی در محیط
+  \item به‌روزرسانی \(\lambda\) با کنترل‌گر PID
 \end{enumerate}
-ثبت ایمنی در هر گام شامل \texttt{lambda}، \texttt{risk\_score}، \texttt{shield\_blocked}، \texttt{cost}، \texttt{force} و \texttt{corridor\_violation} است.
 
-\section{بنچمارک و جاروب PID}
-ماتریس بنچمارک:
-\begin{itemize}[leftmargin=*]
-  \item آفلاین: CQL و IQL روی داده‌های \lr{nominal/perturbed}
+ثبت ایمنی در هر گام:
+\texttt{lambda}, \texttt{risk\_score}, \texttt{shield\_blocked},
+\texttt{cost}, \texttt{force}, \texttt{corridor\_violation}.
+
+\section{تنظیم آزمایش‌ها}
+\subsection{ماتریس بنچمارک}
+با بذرهای \(\{0,1,2\}\):
+\begin{itemize}
+  \item آفلاین: CQL و IQL روی nominal و perturbed
   \item آنلاین: SAC-Lagrangian و PPO-Lagrangian روی هر سه سناریو
 \end{itemize}
-جاروب PID:
-\(k_p \in \{0.4,0.55,0.7\}\)،
-\(k_d \in \{0.05,0.08,0.12\}\)،
-\(k_i=0.08\).
-خروجی‌ها: \texttt{global\_pareto.png}، \texttt{pid\_heatmap.png} و CSVهای آستانه.
+تعداد کل اجراها: 30.
 
-\section{معیار پذیرش}
-آستانه‌های سه‌سطحی در \texttt{configs/thresholds.yaml} تعریف شده‌اند. برای نمونه، سطح \textbf{target}:
-\begin{itemize}[leftmargin=*]
-  \item Nominal: پاداش $>300$ و هزینه $<0.35$
-  \item Perturbed: پاداش $>200$ و هزینه $<0.45$
-  \item Adversarial: پاداش $>120$ و هزینه $<0.55$
-\end{itemize}
-گیت آفلاین: همگرایی عددی (lossهای متناهی) و نسبت پاداش حداقل ۲ برابر خط‌مبنا تصادفی.
+\subsection{جاروب PID توسعه‌یافته}
+طبق بازه‌ی درخواستی:
+\[
+k_p \in \{0.4, 0.5, 0.55, 0.6, 0.7\},\quad
+k_d \in \{0.05, 0.08, 0.10, 0.12\},\quad
+k_i = 0.08
+\]
+تعداد کل اجراها: 20.
 
-\section{باز‌تولید}
-نمونه دستورات:
-\begin{itemize}[leftmargin=*]
-  \item \texttt{python3 -m projects.amasa\_clean.scripts.run\_experiment --mode offline\_train --preset smoke --algo cql}
-  \item \texttt{python3 -m projects.amasa\_clean.scripts.run\_experiment --mode online\_train --preset smoke --algo sac\_lag}
-  \item \texttt{python3 -m projects.amasa\_clean.scripts.run\_experiment --mode benchmark}
-  \item \texttt{python3 -m projects.amasa\_clean.scripts.run\_experiment --mode pid\_sweep}
+\section{نتایج}
+\subsection{خلاصه بنچمارک}
+\begin{table}[!t]
+\centering
+\caption{میانگین پاداش/هزینه در \texttt{benchmark\_summary.csv}}
+\begin{tabular}{llrr}
+\toprule
+الگوریتم & سناریو & پاداش میانگین & هزینه میانگین \\
+\midrule
+CQL & Nominal & 594.28 & 0.096 \\
+CQL & Perturbed & 440.04 & 0.118 \\
+IQL & Nominal & 439.77 & 0.057 \\
+IQL & Perturbed & 746.91 & 0.099 \\
+\midrule
+SAC-Lag & Nominal & -227.40 & 0.908 \\
+SAC-Lag & Perturbed & 50.95 & 0.730 \\
+SAC-Lag & Adversarial & 236.96 & 0.616 \\
+\midrule
+PPO-Lag & Nominal & -218.26 & 0.788 \\
+PPO-Lag & Perturbed & -203.95 & 0.918 \\
+PPO-Lag & Adversarial & -94.16 & 0.797 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{نمودارهای پارتو}
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.96\columnwidth]{plots/global_pareto.png}
+\caption{پارتوی کلی پاداش-هزینه}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\subfloat[Nominal]{\includegraphics[width=0.31\columnwidth]{plots/pareto_nominal.png}}
+\hfill
+\subfloat[Perturbed]{\includegraphics[width=0.31\columnwidth]{plots/pareto_perturbed.png}}
+\hfill
+\subfloat[Adversarial]{\includegraphics[width=0.31\columnwidth]{plots/pareto_adversarial.png}}
+\caption{منحنی پاداش-هزینه به تفکیک سناریو}
+\end{figure}
+
+\subsection{نتایج جاروب PID}
+بهترین تنظیم‌ها بر اساس امتیاز مرزی \((\text{reward} - 300\times\text{cost})\):
+\begin{itemize}
+  \item \(k_p=0.60, k_d=0.08\): پاداش 419.65، هزینه 0.685
+  \item \(k_p=0.55, k_d=0.10\): پاداش 412.70، هزینه 0.698
+  \item \(k_p=0.70, k_d=0.10\): پاداش 363.79، هزینه 0.848
 \end{itemize}
+
+\begin{figure}[!t]
+\centering
+\subfloat[Heatmap پاداش]{\includegraphics[width=0.31\columnwidth]{plots/pid_heatmap_reward.png}}
+\hfill
+\subfloat[Heatmap هزینه]{\includegraphics[width=0.31\columnwidth]{plots/pid_heatmap_cost.png}}
+\hfill
+\subfloat[Heatmap مرزی]{\includegraphics[width=0.31\columnwidth]{plots/pid_heatmap_frontier.png}}
+\caption{تحلیل جاروب PID روی شبکه‌ی توسعه‌یافته}
+\end{figure}
+
+\subsection{تحلیل زمانی ایمنی}
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.96\columnwidth]{plots/safety_timeline_best.png}
+\caption{نمودار زمانی \(\lambda\)، امتیاز ریسک و نرخ بلوکه‌شدن}
+\end{figure}
+
+\section{تحلیل آستانه‌ها}
+از خروجی \texttt{benchmark\_thresholds.csv}:
+\begin{itemize}
+  \item \texttt{stretch}: 8 مورد
+  \item \texttt{target}: 3 مورد
+  \item \texttt{minimum}: 2 مورد
+  \item \texttt{below\_min}: 17 مورد
+  \item \texttt{offline\_gate\_pass}: 7 مورد
+  \item \texttt{offline\_gate\_fail}: 5 مورد
+\end{itemize}
+
+نتیجه‌ی فنی: بخش آفلاین در پریست \lr{smoke} قابل قبول است، اما فاز آنلاین امن هنوز به تنظیم دقیق‌تر و احتمالاً بودجه‌ی آموزشی بزرگ‌تر نیاز دارد.
 
 \section{جمع‌بندی}
-نسخه‌ی AMASA-Complex v2 پروژه را از یک نمونه‌ی آموزشی سبک به یک چارچوب پیشرفته، ماژولار و قابل ارزیابی ارتقا می‌دهد؛ ضمن آن‌که سازگاری با CLI قبلی حفظ شده است. این نسخه برای تمرین عملی مباحث \lr{offline-to-online RL}، ایمنی سخت، و ارزیابی مقاومتی مناسب است.
+AMASA-Complex v2 با حفظ سازگاری CLI قبلی، پروژه را به یک چارچوب واقعی‌تر برای تمرین \lr{offline-to-online safe RL} تبدیل کرده است. مسیر کدنویسی، تست، ارزیابی و گزارش‌دهی یکپارچه شده و تحلیل‌های پارتو و PID نشان می‌دهد که کیفیت سیاست به‌شدت به تنظیم کنترل‌گر ایمنی و سناریوی محیط وابسته است. این دقیقا همان نقطه‌ی آموزشی مورد نیاز برای پروژه‌های ایمنی‌حساس است.
 
 \end{document}

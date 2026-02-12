@@ -17,7 +17,7 @@ AMASA-Complex v2 is a CPU-first, advanced course-scale reinforcement learning pr
   - base config + algorithm/scenario/preset overlays
 - **Benchmark + sweep utilities**:
   - algorithm x scenario x seed matrix
-  - PID grid (`kp`, `kd`) analysis + aggregated Pareto/heatmap
+  - expanded PID grid (`kp`, `kd`) analysis + aggregated Pareto/heatmap
 - **Backward-compatible CLI**:
   - existing scripts still work and now accept `--config`, `--preset`, `--scenario`, `--algo`
 
@@ -75,7 +75,7 @@ python3 -m projects.amasa_clean.scripts.run_experiment \
 python3 -m projects.amasa_clean.scripts.run_experiment \
   --mode benchmark --config projects/amasa_clean/configs/base.yaml --out_dir projects/amasa_clean/results/bench
 
-# PID sweep
+# PID sweep (expanded grid from configs/sweep/pid_grid.yaml)
 python3 -m projects.amasa_clean.scripts.run_experiment \
   --mode pid_sweep --config projects/amasa_clean/configs/base.yaml --algo sac_lag --out_dir projects/amasa_clean/results/pid
 

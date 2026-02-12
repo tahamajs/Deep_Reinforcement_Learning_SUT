@@ -1,0 +1,359 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{xcolor}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{AMASA-Complex v2: A Config-Driven, Safety-Critical RL Project for Autonomous Suturing}
+
+\author{
+\IEEEauthorblockN{Codex}
+\IEEEauthorblockA{Project workspace: \texttt{/Users/tahamajs/Documents/uni/DRL/projects/amasa\_clean}}
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report presents AMASA-Complex v2, a major upgrade of the original AMASA suturing assignment into an advanced course-scale reinforcement learning (RL) system. The implementation introduces: (1) a four-method algorithm suite (CQL, IQL, SAC-Lagrangian, PPO-Lagrangian), (2) a hybrid runtime safety stack (PID dual control, decision-tree shield, and trajectory risk critic), (3) three environment scenario families (nominal, perturbed, adversarial), (4) YAML-first experiment composition with backward-compatible legacy CLIs, and (5) automated benchmark and PID-grid evaluation pipelines. The project is CPU-first and keeps old commands functional while adding a unified experiment entrypoint. We report full smoke-preset benchmark and expanded PID sweep outcomes, including Pareto analysis, safety timeline diagnostics, and tiered threshold checks.
+\end{abstract}
+
+\section{Introduction}
+Modern RL education increasingly requires students to reason about offline data leverage, online adaptation, and strict safety constraints under non-stationary conditions. Isolated assignments are usually strong on one axis and weak on the others. AMASA-Complex v2 is designed to close this gap by combining the full chain in one implementation:
+\begin{itemize}[leftmargin=*]
+  \item offline pretraining with conservative objectives,
+  \item online constrained improvement with safety feedback,
+  \item robustness pressure via scenario variation and corruption,
+  \item explainable intervention through rule-based shielding.
+\end{itemize}
+
+Compared with the previous baseline, v2 adds algorithmic diversity, richer safety instrumentation, standardized configuration and orchestration, and testable acceptance criteria. The goal is not only higher reward, but also reproducible reward--cost trade-off analysis and practical failure diagnosis.
+
+\section{Project Scope and Deliverables}
+The implemented scope is aligned with the AMASA-Complex v2 plan:
+\begin{enumerate}[leftmargin=*]
+  \item New package modules in \texttt{amasa/core}, \texttt{amasa/envs}, \texttt{amasa/offline}, \texttt{amasa/online}, \texttt{amasa/safety}, and \texttt{amasa/bench}.
+  \item YAML config tree under \texttt{configs/} (base, algorithm overlays, scenario overlays, presets, PID sweep grid, thresholds).
+  \item Backward-compatible legacy scripts with optional \texttt{--config}, \texttt{--preset}, \texttt{--scenario}, \texttt{--algo}.
+  \item Unified runner \texttt{scripts/run\_experiment.py} with modes:
+  \texttt{offline\_train}, \texttt{online\_train}, \texttt{benchmark}, \texttt{pid\_sweep}, \texttt{report\_bundle}.
+  \item Unit and smoke tests under \texttt{tests/}.
+  \item English and Persian IEEE reports (\texttt{report.tex}, \texttt{report\_fa.tex}).
+\end{enumerate}
+
+\section{System Architecture}
+\subsection{Core Runtime Layers}
+AMASA-Complex v2 uses a layered architecture:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Config layer}: deterministic merge and validation of YAML overlays.
+  \item \textbf{Environment layer}: shared suturing dynamics and scenario wrappers.
+  \item \textbf{Learning layer}: offline and online algorithms with common interfaces.
+  \item \textbf{Safety layer}: hybrid guard composing statistical and symbolic checks.
+  \item \textbf{Evaluation layer}: matrix runners, aggregation, plotting, threshold gates.
+\end{itemize}
+
+The architecture intentionally separates concerns so that students can swap algorithms or scenario stressors without rewriting orchestration code.
+
+\subsection{Config and Overlay Order}
+A key reliability change is explicit overlay order:
+\[
+\text{base} \rightarrow \text{scenario} \rightarrow \text{algorithm} \rightarrow \text{preset}
+\]
+Applying preset last ensures smoke/full runtime envelopes remain stable even when algorithm YAMLs define larger step counts.
+
+\subsection{Registry and Extensibility}
+Simple registries are added for environment, algorithm, and safety components. This enables factory-based instantiation by name and avoids hard-coded class branching across scripts.
+
+\section{Environment and Scenario Modeling}
+\subsection{State, Action, Reward, Cost}
+The suturing environment preserves the original interface:
+\begin{itemize}[leftmargin=*]
+  \item Observation: 23-dim vector (joint states, needle state, stress, progress, phase).
+  \item Action: 7-dim bounded torque command.
+  \item Reward: dense shaping + large completion bonus.
+  \item Cost: indicator of force threshold or corridor violation.
+\end{itemize}
+
+\subsection{Scenario Families}
+Three scenario families are implemented:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Nominal}: mild force noise and no corruption.
+  \item \textbf{Perturbed}: stronger noise, dynamics shift, moderate corruption and delay.
+  \item \textbf{Adversarial}: higher corruption, higher delay probability, harsher dynamics shift.
+\end{itemize}
+
+These scenarios are configured in \texttt{configs/scenarios/*.yaml}, allowing deterministic sweeps and curriculum usage.
+
+\section{Algorithm Suite}
+\subsection{Offline Methods}
+\paragraph{CQL}
+Conservative Q-Learning penalizes over-estimation on out-of-distribution actions by adding a conservative term to critic loss:
+\[
+\mathcal{L}_{\text{critic}} = \mathcal{L}_{\text{TD}} + \alpha_{\text{CQL}}\mathcal{L}_{\text{conservative}}
+\]
+The implementation keeps compatibility and adds deterministic evaluation support and explicit metadata in checkpoints.
+
+\paragraph{IQL}
+Implicit Q-Learning uses:
+\begin{itemize}[leftmargin=*]
+  \item expectile regression for value function fitting,
+  \item advantage-weighted policy update for offline policy extraction.
+\end{itemize}
+This makes IQL a strong offline baseline without explicit behavior cloning as the sole learning objective.
+
+\subsection{Online Constrained Methods}
+\paragraph{SAC-Lagrangian}
+SAC-Lagrangian maintains reward and cost critics and updates policy with dual penalty:
+\[
+\mathcal{L}_{\pi} = \mathbb{E}[\alpha \log \pi(a|s) - Q_r(s,a) + \lambda Q_c(s,a)]
+\]
+where \(\lambda\) is provided by the safety controller.
+
+\paragraph{PPO-Lagrangian}
+PPO-Lagrangian uses clipped surrogate optimization with separate reward/cost advantages:
+\[
+\hat{A}_{\lambda} = \hat{A}_r - \lambda \hat{A}_c
+\]
+The implementation supports trajectory building, GAE for both channels, and constrained policy updates.
+
+\section{Hybrid Safety Stack}
+\subsection{Runtime Decision Order}
+The guard in \texttt{amasa/safety/guard.py} enforces:
+\begin{enumerate}[leftmargin=*]
+  \item policy proposes action,
+  \item risk critic scores \((s,a,h)\),
+  \item if risky, conservative transform is applied,
+  \item decision-tree shield filters/blocks unsafe actions,
+  \item environment executes final action,
+  \item PID controller updates \(\lambda\) from cost violation.
+\end{enumerate}
+
+\subsection{PID Dual Control}
+The Lagrange multiplier follows PID dynamics on violation error \(e_t\):
+\[
+\lambda_{t+1} = K_p e_t + K_i \sum_{\tau \le t} e_\tau + K_d (e_t - e_{t-1})
+\]
+with clamping to \([0,\lambda_{\max}]\).
+
+\subsection{Safety Telemetry}
+Per-step telemetry includes:
+\texttt{lambda}, \texttt{risk\_score}, \texttt{shield\_blocked}, \texttt{cost},
+\texttt{force}, \texttt{corridor\_violation}.
+The pipeline exports \texttt{safety\_timeline.csv/jsonl/png} for post-hoc diagnosis.
+
+\section{Experiment Pipeline}
+\subsection{Backward-Compatible CLIs}
+Legacy scripts remain functional:
+\texttt{train\_offline.py}, \texttt{train\_safe\_online.py},
+\texttt{train\_hierarchical.py}, \texttt{evaluate.py},
+\texttt{generate\_dataset.py}.
+Optional flags provide full config-driven behavior without breaking existing commands.
+
+\subsection{Unified Runner}
+\texttt{run\_experiment.py} orchestrates all modes and now supports:
+\begin{itemize}[leftmargin=*]
+  \item resumable benchmark and PID sweeps (skip completed jobs),
+  \item bounded checkpoint storage in matrix/sweep runs,
+  \item threshold-table export and automatic plot generation.
+\end{itemize}
+
+\subsection{Test Coverage}
+Tests include:
+\begin{itemize}[leftmargin=*]
+  \item config load/merge/overlay behavior,
+  \item environment determinism and shape checks,
+  \item one-step sanity updates for CQL/IQL/SAC/PPO,
+  \item guard invariants and risk update checks,
+  \item smoke CLI invocation.
+\end{itemize}
+Current test status: \textbf{12 passed}.
+
+\section{Benchmark Setup}
+\subsection{Matrix Definition}
+Smoke benchmark matrix uses seeds \(\{0,1,2\}\):
+\begin{itemize}[leftmargin=*]
+  \item Offline: CQL and IQL on nominal and perturbed scenarios.
+  \item Online: SAC-Lagrangian and PPO-Lagrangian on nominal, perturbed, adversarial scenarios.
+\end{itemize}
+Total jobs:
+\[
+2 \times 2 \times 3 + 2 \times 3 \times 3 = 30
+\]
+
+\subsection{PID Sweep Definition}
+Expanded PID grid (user-requested range):
+\[
+k_p \in \{0.4, 0.5, 0.55, 0.6, 0.7\},\quad
+k_d \in \{0.05, 0.08, 0.10, 0.12\},\quad
+k_i = 0.08
+\]
+Total sweep jobs: \(5 \times 4 = 20\).
+
+\section{Results}
+\subsection{Benchmark Summary}
+Table~\ref{tab:bench} reports mean reward/cost across seeds.
+
+\begin{table}[!t]
+\centering
+\caption{Smoke benchmark means from \texttt{benchmark\_summary.csv}.}
+\label{tab:bench}
+\begin{tabular}{llrr}
+\toprule
+Algo & Scenario & Avg Reward & Avg Cost \\
+\midrule
+CQL & Nominal & 594.28 & 0.096 \\
+CQL & Perturbed & 440.04 & 0.118 \\
+IQL & Nominal & 439.77 & 0.057 \\
+IQL & Perturbed & 746.91 & 0.099 \\
+\midrule
+SAC-Lag & Nominal & -227.40 & 0.908 \\
+SAC-Lag & Perturbed & 50.95 & 0.730 \\
+SAC-Lag & Adversarial & 236.96 & 0.616 \\
+\midrule
+PPO-Lag & Nominal & -218.26 & 0.788 \\
+PPO-Lag & Perturbed & -203.95 & 0.918 \\
+PPO-Lag & Adversarial & -94.16 & 0.797 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Pareto and Scenario Curves}
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.96\columnwidth]{plots/global_pareto.png}
+\caption{Global reward-cost Pareto scatter across completed benchmark jobs.}
+\label{fig:global-pareto}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\subfloat[Nominal]{\includegraphics[width=0.31\columnwidth]{plots/pareto_nominal.png}}
+\hfill
+\subfloat[Perturbed]{\includegraphics[width=0.31\columnwidth]{plots/pareto_perturbed.png}}
+\hfill
+\subfloat[Adversarial]{\includegraphics[width=0.31\columnwidth]{plots/pareto_adversarial.png}}
+\caption{Per-scenario reward-cost curves.}
+\label{fig:scenario-pareto}
+\end{figure}
+
+\subsection{PID Grid Results}
+The expanded sweep improved the frontier relative to the initial \(3 \times 3\) grid. Best settings:
+\begin{itemize}[leftmargin=*]
+  \item \(k_p=0.60, k_d=0.08\): reward \(419.65\), cost \(0.685\), frontier \(214.15\).
+  \item \(k_p=0.55, k_d=0.10\): reward \(412.70\), cost \(0.698\), frontier \(203.20\).
+  \item \(k_p=0.70, k_d=0.10\): reward \(363.79\), cost \(0.848\), frontier \(109.29\).
+\end{itemize}
+
+\begin{figure}[!t]
+\centering
+\subfloat[Reward heatmap]{\includegraphics[width=0.31\columnwidth]{plots/pid_heatmap_reward.png}}
+\hfill
+\subfloat[Cost heatmap]{\includegraphics[width=0.31\columnwidth]{plots/pid_heatmap_cost.png}}
+\hfill
+\subfloat[Frontier heatmap]{\includegraphics[width=0.31\columnwidth]{plots/pid_heatmap_frontier.png}}
+\caption{Expanded PID sweep diagnostics (\(5\times4\) grid).}
+\label{fig:pid-heatmaps}
+\end{figure}
+
+\subsection{Safety Dynamics}
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.96\columnwidth]{plots/safety_timeline_best.png}
+\caption{Safety timeline for the best frontier run (lambda, risk, moving block rate).}
+\label{fig:safety-timeline}
+\end{figure}
+
+Observed patterns:
+\begin{itemize}[leftmargin=*]
+  \item many runs saturate \(\lambda\) at the configured maximum;
+  \item risk gating is frequently active in high-perturbation segments;
+  \item some stable regions emerge where risk and block rate temporarily decrease while reward improves.
+\end{itemize}
+
+\subsection{Threshold and Gate Outcomes}
+Tier and gate analysis from \texttt{benchmark\_thresholds.csv}:
+\begin{itemize}[leftmargin=*]
+  \item stretch: 8 entries,
+  \item target: 3 entries,
+  \item minimum: 2 entries,
+  \item below\_min: 17 entries,
+  \item offline\_gate\_pass: 7 entries,
+  \item offline\_gate\_fail: 5 entries.
+\end{itemize}
+
+Interpretation: offline learners were strong under smoke budget on several seeds/scenarios, while online constrained adaptation remains the dominant bottleneck.
+
+\section{Failure Analysis and Practical Lessons}
+\subsection{Observed Failure Modes}
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Conservative lock-in}: persistent high \(\lambda\) and high block rate reduce exploratory progress.
+  \item \textbf{Scenario sensitivity}: on-policy PPO-Lagrangian underperformed in all smoke scenarios.
+  \item \textbf{Unstable startup}: early online steps can show volatile reward critic updates before replay becomes informative.
+  \item \textbf{Threshold mismatch}: fixed cost limits may be too strict for early perturbed/adversarial adaptation.
+\end{enumerate}
+
+\subsection{Engineering Fixes Applied}
+During implementation and reruns:
+\begin{itemize}[leftmargin=*]
+  \item config overlay order was fixed so presets are not accidentally overridden;
+  \item benchmark/sweep runners gained resume logic to skip already completed jobs;
+  \item model save fallback was added for storage-sensitive systems;
+  \item safety timeline export and plotting were added for online diagnostics.
+\end{itemize}
+
+\section{Reproducibility}
+\subsection{Key Commands}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\footnotesize,breaklines=true]
+# Tests
+PYTHONPATH=/Users/tahamajs/Documents/uni/DRL \
+pytest -q /Users/tahamajs/Documents/uni/DRL/projects/amasa_clean/tests
+
+# Full smoke benchmark matrix
+PYTHONPATH=/Users/tahamajs/Documents/uni/DRL \
+python3.10 -m projects.amasa_clean.scripts.run_experiment \
+  --mode benchmark \
+  --config projects/amasa_clean/configs/base.yaml \
+  --preset smoke \
+  --out_dir projects/amasa_clean/results/bench_smoke \
+  --dataset data/amasa_offline.npz
+
+# Expanded PID sweep
+PYTHONPATH=/Users/tahamajs/Documents/uni/DRL \
+python3.10 -m projects.amasa_clean.scripts.run_experiment \
+  --mode pid_sweep \
+  --config projects/amasa_clean/configs/base.yaml \
+  --preset smoke \
+  --algo sac_lag \
+  --scenario perturbed \
+  --out_dir projects/amasa_clean/results/pid_smoke \
+  --dataset data/amasa_offline.npz
+\end{lstlisting}
+
+\subsection{Artifacts}
+Primary outputs are stored in:
+\begin{itemize}[leftmargin=*]
+  \item \texttt{results/bench\_smoke/benchmark\_summary.csv}
+  \item \texttt{results/bench\_smoke/benchmark\_thresholds.csv}
+  \item \texttt{results/bench\_smoke/plots/*}
+  \item \texttt{results/pid\_smoke/pid\_sweep\_summary.csv}
+  \item \texttt{results/pid\_smoke/pid\_sweep\_thresholds.csv}
+  \item \texttt{results/pid\_smoke/plots/*}
+  \item \texttt{plots/*} (curated copies for report inclusion)
+\end{itemize}
+
+\section{Conclusion}
+AMASA-Complex v2 successfully transforms the original task into a modular, advanced RL project with stronger realism and analysis tooling. The codebase now supports multi-algorithm offline/online training, hybrid runtime safety enforcement, scenario robustness benchmarking, and reproducible sweep-based controller tuning. Current smoke results show that offline methods are comparatively strong while online safe adaptation remains the hardest regime, precisely matching the educational objective of exposing realistic reward--safety trade-offs under constrained learning.
+
+\section*{Acknowledgment}
+Generated and integrated in the local workspace using reproducible scripts and test-backed edits.
+
+\end{document}
