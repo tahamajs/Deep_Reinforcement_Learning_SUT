@@ -43,9 +43,22 @@ def set_flat_params(model, flat):
         idx += n
 
 
-def flat_grad(y, model, retain_graph=False):
-    grads = torch.autograd.grad(y, model.parameters(), retain_graph=retain_graph)
-    return torch.cat([g.contiguous().view(-1) for g in grads])
+def flat_grad(y, model, retain_graph=False, create_graph=False):
+    params = tuple(model.parameters())
+    grads = torch.autograd.grad(
+        y,
+        params,
+        retain_graph=retain_graph,
+        create_graph=create_graph,
+        allow_unused=True,
+    )
+    flat = []
+    for p, g in zip(params, grads):
+        if g is None:
+            flat.append(torch.zeros_like(p).view(-1))
+        else:
+            flat.append(g.contiguous().view(-1))
+    return torch.cat(flat)
 
 
 def conjugate_gradient(hvp_fn, b, iters=10, tol=1e-10):
@@ -160,7 +173,7 @@ def train_trpo_lite(config: Dict, out_dir: Path, seed: int) -> Dict:
         def hvp(v):
             new_dist = agent.actor(obs_t)
             kl_local = torch.distributions.kl_divergence(old_dist, new_dist).mean()
-            grad_kl = flat_grad(kl_local, agent.actor, retain_graph=True)
+            grad_kl = flat_grad(kl_local, agent.actor, retain_graph=True, create_graph=True)
             kl_v = (grad_kl * v).sum()
             h = flat_grad(kl_v, agent.actor, retain_graph=True).detach()
             return h + cfg.damping * v

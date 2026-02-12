@@ -5,6 +5,11 @@ import argparse
 import json
 from pathlib import Path
 from typing import Any, Dict
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from grad_rl.algorithms import CHAIN_REGISTRY
 from grad_rl.core import deep_update, load_yaml, set_seed

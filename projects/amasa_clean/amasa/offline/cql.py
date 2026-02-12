@@ -159,12 +159,16 @@ class CQLAgent:
         }
 
     def save(self, path: str):
-        torch.save({
+        payload = {
             "actor": self.actor.state_dict(),
             "critic": self.critic.state_dict(),
             "cfg": self.cfg,
             "algo": "cql",
-        }, path)
+        }
+        try:
+            torch.save(payload, path)
+        except RuntimeError:
+            torch.save(payload, path, _use_new_zipfile_serialization=False)
 
     def load(self, path: str, map_location=None):
         checkpoint = torch.load(path, map_location=map_location, weights_only=False)

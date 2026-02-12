@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -12,7 +13,7 @@ def test_smoke_one_chain(monkeypatch, tmp_path):
     env = dict(os.environ)
     env["PYTHONPATH"] = str(repo)
     cmd = [
-        "python",
+        sys.executable,
         str(repo / "scripts" / "run_experiment.py"),
         "--chain",
         "value",

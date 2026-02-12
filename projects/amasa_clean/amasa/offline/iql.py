@@ -123,16 +123,18 @@ class IQLAgent:
         }
 
     def save(self, path: str):
-        torch.save(
-            {
-                "policy": self.policy.state_dict(),
-                "q": self.q.state_dict(),
-                "v": self.v.state_dict(),
-                "cfg": self.cfg,
-                "algo": "iql",
-            },
-            path,
-        )
+        payload = {
+            "policy": self.policy.state_dict(),
+            "q": self.q.state_dict(),
+            "v": self.v.state_dict(),
+            "cfg": self.cfg,
+            "algo": "iql",
+        }
+        try:
+            torch.save(payload, path)
+        except RuntimeError:
+            # Fallback helps on storage-constrained systems where zip writer can fail.
+            torch.save(payload, path, _use_new_zipfile_serialization=False)
 
     def load(self, path: str, map_location=None):
         ckpt = torch.load(path, map_location=map_location, weights_only=False)

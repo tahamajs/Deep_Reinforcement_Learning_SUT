@@ -1,4 +1,4 @@
-"""YAML-first config loading with schema validation and preset application."""
+"""YAML-first config loading with schema validation and overlay application."""
 from __future__ import annotations
 
 import copy
@@ -37,6 +37,11 @@ def _load_yaml(path: str | Path) -> Dict[str, Any]:
     return data
 
 
+def load_yaml_mapping(path: str | Path) -> Dict[str, Any]:
+    """Public helper used by runners to load overlay YAML files."""
+    return _load_yaml(path)
+
+
 def load_config(path: str | Path, base_path: str | Path | None = None) -> Dict[str, Any]:
     cfg = _load_yaml(path)
     if base_path is not None:
@@ -48,6 +53,45 @@ def load_config(path: str | Path, base_path: str | Path | None = None) -> Dict[s
 
 def apply_preset(cfg: Dict[str, Any], preset_cfg: Dict[str, Any]) -> Dict[str, Any]:
     merged = merge_dicts(cfg, preset_cfg)
+    validate_config(merged)
+    return merged
+
+
+def apply_named_overlays(
+    cfg: Dict[str, Any],
+    config_root: str | Path,
+    *,
+    scenario: str | None = None,
+    algo: str | None = None,
+    preset: str | None = None,
+) -> Dict[str, Any]:
+    """
+    Apply scenario/algo/preset overlays from the config tree.
+
+    Order is scenario -> algorithm -> preset so preset controls fast/full runtime
+    without losing method-specific hyperparameters.
+    """
+    root = Path(config_root)
+    merged = copy.deepcopy(cfg)
+
+    scenario_name = scenario or merged["scenario"]["type"]
+    scenario_path = root / "scenarios" / f"{scenario_name}.yaml"
+    if scenario_path.exists():
+        merged = merge_dicts(merged, _load_yaml(scenario_path))
+    merged["scenario"]["type"] = scenario_name
+
+    algo_name = algo or merged["algo"]["name"]
+    algo_path = root / "algorithms" / f"{algo_name}.yaml"
+    if algo_path.exists():
+        merged = merge_dicts(merged, _load_yaml(algo_path))
+    merged["algo"]["name"] = algo_name
+
+    preset_name = preset or merged["experiment"].get("preset", "smoke")
+    preset_path = root / "presets" / f"{preset_name}.yaml"
+    if preset_path.exists():
+        merged = merge_dicts(merged, _load_yaml(preset_path))
+    merged["experiment"]["preset"] = preset_name
+
     validate_config(merged)
     return merged
 

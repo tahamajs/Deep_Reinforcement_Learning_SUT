@@ -2,10 +2,14 @@
 from __future__ import annotations
 
 import copy
-import os
 from typing import Dict, Any, List
+from pathlib import Path
 
-from projects.amasa_clean.amasa.core.config import merge_dicts
+from projects.amasa_clean.amasa.core.config import apply_named_overlays
+
+
+def _config_root() -> Path:
+    return Path(__file__).resolve().parents[2] / "configs"
 
 
 def build_benchmark_jobs(base_cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -17,8 +21,13 @@ def build_benchmark_jobs(base_cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
         for scenario in ["nominal", "perturbed"]:
             for seed in seeds:
                 cfg = copy.deepcopy(base_cfg)
-                cfg["algo"]["name"] = algo
-                cfg["scenario"]["type"] = scenario
+                cfg = apply_named_overlays(
+                    cfg,
+                    _config_root(),
+                    algo=algo,
+                    scenario=scenario,
+                    preset=cfg["experiment"].get("preset", "smoke"),
+                )
                 cfg["experiment"]["seed"] = int(seed)
                 cfg["experiment"]["mode"] = "offline_train"
                 jobs.append(cfg)
@@ -27,8 +36,13 @@ def build_benchmark_jobs(base_cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
         for scenario in scenarios:
             for seed in seeds:
                 cfg = copy.deepcopy(base_cfg)
-                cfg["algo"]["name"] = algo
-                cfg["scenario"]["type"] = scenario
+                cfg = apply_named_overlays(
+                    cfg,
+                    _config_root(),
+                    algo=algo,
+                    scenario=scenario,
+                    preset=cfg["experiment"].get("preset", "smoke"),
+                )
                 cfg["experiment"]["seed"] = int(seed)
                 cfg["experiment"]["mode"] = "online_train"
                 jobs.append(cfg)

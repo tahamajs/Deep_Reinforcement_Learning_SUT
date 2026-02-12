@@ -130,16 +130,17 @@ class PPOLagrangianAgent:
         }
 
     def save(self, path: str):
-        torch.save(
-            {
-                "actor": self.actor.state_dict(),
-                "vr": self.vr.state_dict(),
-                "vc": self.vc.state_dict(),
-                "cfg": self.cfg,
-                "algo": "ppo_lag",
-            },
-            path,
-        )
+        payload = {
+            "actor": self.actor.state_dict(),
+            "vr": self.vr.state_dict(),
+            "vc": self.vc.state_dict(),
+            "cfg": self.cfg,
+            "algo": "ppo_lag",
+        }
+        try:
+            torch.save(payload, path)
+        except RuntimeError:
+            torch.save(payload, path, _use_new_zipfile_serialization=False)
 
     def load(self, path: str, map_location=None):
         ckpt = torch.load(path, map_location=map_location, weights_only=False)
