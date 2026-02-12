@@ -1,0 +1,30 @@
+common:
+  env: CartPole-v1
+  total_steps: 40000
+  gamma: 0.99
+  lam: 0.95
+  learning_rate: 0.0003
+  hidden_sizes: [128, 128]
+algorithms:
+  reinforce:
+    learning_rate: 0.001
+  ppo:
+    horizon: 1024
+    epochs: 8
+    batch_size: 128
+    clip_range: 0.2
+    ent_coef: 0.01
+    vf_coef: 0.5
+  trpo_lite:
+    horizon: 1024
+    max_kl: 0.01
+    cg_iters: 10
+    damping: 0.1
+    vf_lr: 0.001
+  cpo_lite:
+    horizon: 1024
+    epochs: 6
+    batch_size: 128
+    clip_range: 0.2
+    cost_limit: 0.02
+    lambda_lr: 0.05

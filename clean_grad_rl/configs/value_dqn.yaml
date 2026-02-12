@@ -1,0 +1,18 @@
+# Default hyperparameters for value-based chain
+env: "CartPole-v1"
+policy: "MlpPolicy"
+num_envs: 1
+buffer_size: 50000
+learning_rate: 0.001
+batch_size: 64
+gamma: 0.99
+target_update_interval: 500
+train_freq: 1
+learning_starts: 1000
+total_steps: 50000
+frame_stack: 1
+exploration_fraction: 0.1
+exploration_final_eps: 0.02
+dueling: true
+prioritized_replay: false
+save_path: "projects/grad_rl/outputs/value_dqn_cartpole/model.zip"

@@ -1,0 +1,13 @@
+algo: "dyna-q" # dyna-q|me-trpo
+env: "CliffWalking-v0"
+model_rollouts: 10
+planning_steps: 20
+alpha: 0.1
+gamma: 0.99
+epsilon: 0.1
+episodes: 2000
+trpo_env: "Pendulum-v1"
+trpo_total_steps: 150000
+ensemble_size: 4
+rollout_horizon: 5
+save_path: "projects/grad_rl/outputs/model_based/checkpoint"

@@ -1,0 +1,161 @@
+% University project report for Graduate Deep RL Paper Chains
+\documentclass[12pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{enumitem}
+\usepackage{siunitx}
+\usepackage{listings}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\hypersetup{colorlinks=true,linkcolor=MidnightBlue,citecolor=ForestGreen,urlcolor=blue}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\E}{\mathbb{E}}
+
+\title{Graduate Deep Reinforcement Learning Paper Chains\\Comprehensive Project Report}
+\author{Your Name \and Partner Name\\Course: Deep Reinforcement Learning\\Institution: <University Name>}
+\date{\today}
+
+\lstset{basicstyle=\ttfamily\small,breaklines=true,frame=single,backgroundcolor=\color{gray!5},keywordstyle=\color{blue!70!black},commentstyle=\color{gray!70},stringstyle=\color{red!70!black}}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\listoftables
+\listoffigures
+
+\section{Introduction}
+This project reproduces and analyzes five canonical deep RL paper chains spanning value-based, policy-gradient/trust-region, actor--critic with maximum entropy, model-based, and multi-agent learning. The goals are: (i) implement faithful yet compact baselines, (ii) evaluate them on standardized benchmarks, (iii) compare theoretical guarantees with empirical behaviour, and (iv) provide reproducible artifacts suitable for graduate coursework.
+
+\section{Related Work}
+\begin{itemize}[leftmargin=*]
+    \item Tabular Q-learning convergence \cite{watkins1992} and stability refinements (Double DQN \cite{vanhasselt2016double}, Dueling DQN \cite{wang2016dueling}).
+    \item Trust-region methods TRPO \cite{schulman2015trpo} and PPO \cite{schulman2017ppo}; constrained policy optimization \cite{achiam2017cpo}.
+    \item Actor--critic advances including A3C \cite{mnih2016a3c} and maximum-entropy SAC \cite{haarnoja2018sac}.
+    \item Model-based rollouts from Dyna-Q \cite{sutton1990dyna} to ensemble TRPO \cite{kurutach2018metrpo}.
+    \item Multi-agent formulations: minimax Q \cite{littman1994}, centralized training with decentralized execution (MADDPG \cite{lowe2017maddpg}), and value factorization (QMIX \cite{rashid2018qmix}).
+\end{itemize}
+
+\section{Methods}
+\subsection{Codebase Overview}
+All code lives in \code{clean\_grad\_rl/}. Entry scripts implement the five chains (see \cref{tab:commands}). Shared utilities handle seeding, environment creation, reproducible logging, and evaluation.
+
+\begin{table}[h]
+    \centering
+    \caption{Entry-point commands (laptop-friendly defaults).}\label{tab:commands}
+    \begin{tabular}{ll}
+        \toprule
+        Chain & Command \\
+        \midrule
+        Single run & \code{python scripts/run\_experiment.py --chain value --algo dqn --env CartPole-v1 --steps 20000 --seed 0} \\
+        Full suite & \code{python scripts/run\_suite.py --suite configs/suites/fast\_5chain.yaml --mode full} \\
+        Smoke suite & \code{python scripts/run\_suite.py --suite configs/suites/fast\_5chain.yaml --mode smoke} \\
+        Plot build & \code{python scripts/generate\_plots.py --suite-dir outputs/suite\_reports --runs-root outputs/runs} \\
+        Table sync & \code{python scripts/build\_report\_tables.py --aggregate-csv outputs/suite\_reports/tables/aggregate\_metrics.csv --out-root .} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Chain Descriptions}
+\paragraph{Value-based.} DQN with replay and target networks; optional Double, Dueling, and QR-DQN variants.
+\paragraph{Policy-gradient / trust-region.} REINFORCE baseline; PPO clip surrogate; TRPO with CG and line search; CPO-lite using Lagrangian penalty for safety cost.
+\paragraph{Actor--critic / max-entropy.} A2C as synchronous A3C stand-in; SAC with automatic entropy tuning.
+\paragraph{Model-based.} Tabular Dyna-Q with planning updates; lightweight ME-TRPO-style ensemble dynamics with periodic TRPO updates using imagined rollouts.
+\paragraph{Multi-agent.} QMIX monotonic value factorization and MADDPG centralized critics on PettingZoo MPE simple\_spread.
+
+\section{Experimental Setup}\label{sec:experimental}
+\textbf{Hardware:} document CPU/GPU, RAM.\\
+\textbf{Software:} Python 3.10+, PyTorch 2.2.2, Gymnasium 0.29.1, PettingZoo MPE (pinned in \code{requirements.txt}).\\
+\textbf{Environments:} CartPole/LunarLander, MountainCarContinuous, Pendulum, CliffWalking, MPE simple\_spread.\\
+\textbf{Seeding:} \code{--seed} flag; vector environments offset seeds per worker.\\
+\textbf{Logging:} JSON metrics in \code{outputs/runs/.../metrics.json}, aggregate CSV in \code{outputs/suite\_reports/tables/aggregate\_metrics.csv}.
+
+\section{Experiments and Results}
+Populate the following tables after running the scripts.
+
+\subsection{Value-Based Results}
+\IfFileExists{outputs/suite_reports/figures/value_dqn_CartPole-v1.png}{
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.82\linewidth]{outputs/suite_reports/figures/value_dqn_CartPole-v1.png}
+    \caption{Value-based learning curve generated from suite runs.}
+\end{figure}
+}{\textit{No generated value figure found yet. Run suite + plot scripts.}}
+\input{report_table_dqn.tex}
+
+\subsection{Policy Gradient / Trust Region}
+\IfFileExists{outputs/suite_reports/figures/policy_ppo_CartPole-v1.png}{
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.82\linewidth]{outputs/suite_reports/figures/policy_ppo_CartPole-v1.png}
+    \caption{Policy gradient curve generated from suite runs.}
+\end{figure}
+}{\textit{No generated policy figure found yet.}}
+\input{report_table_policy.tex}
+
+\subsection{Actor--Critic / Max-Entropy}
+\IfFileExists{outputs/suite_reports/figures/actor_critic_sac_Pendulum-v1.png}{
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.82\linewidth]{outputs/suite_reports/figures/actor_critic_sac_Pendulum-v1.png}
+    \caption{Actor--critic curve generated from suite runs.}
+\end{figure}
+}{\textit{No generated actor-critic figure found yet.}}
+\input{report_table_ac.tex}
+
+\subsection{Model-Based}
+\IfFileExists{outputs/suite_reports/figures/model_based_mbpo_lite_Pendulum-v1.png}{
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.82\linewidth]{outputs/suite_reports/figures/model_based_mbpo_lite_Pendulum-v1.png}
+    \caption{Model-based curve generated from suite runs.}
+\end{figure}
+}{\textit{No generated model-based figure found yet.}}
+\input{report_table_model.tex}
+
+\subsection{Multi-Agent}
+\IfFileExists{outputs/suite_reports/figures/marl_qmix_lite_simple_spread_v3.png}{
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.82\linewidth]{outputs/suite_reports/figures/marl_qmix_lite_simple_spread_v3.png}
+    \caption{Multi-agent curve generated from suite runs.}
+\end{figure}
+}{\textit{No generated MARL figure found yet.}}
+\input{report_table_marl.tex}
+
+\section{Ablations}
+Suggested ablations: replay buffer size, Double vs. vanilla DQN; PPO clip range; SAC entropy coefficient fixed vs. auto; Dyna-Q planning steps; QMIX worker counts.
+
+\section{Discussion}
+Relate empirical findings to theoretical expectations (see \S\ref{sec:experimental} for setup): overestimation bias reduction, KL constraint stability, entropy-driven exploration, model bias vs. rollout horizon, multi-agent non-stationarity.
+
+\section{Limitations and Ethics}
+Note approximations (A2C for A3C, simplified CPO), environment realism limits, and responsible reporting of randomness and hyperparameters.
+
+\section{Reproducibility Checklist}
+\begin{itemize}[leftmargin=*]
+    \item Code and scripts: \code{clean\_grad\_rl/scripts/*.py}
+    \item Configs: YAML defaults under \code{clean\_grad\_rl/configs}
+    \item Seeds: recorded in logs; set via CLI
+    \item Dependencies: \code{requirements.txt}
+    \item Hardware/software: state in \S\ref{sec:experimental}
+    \item Data: environments auto-downloaded when required
+    \item Metrics: JSON/CSV/PNG artifacts in \code{outputs/runs} and \code{outputs/suite\_reports}
+\end{itemize}
+
+\section{Conclusion}
+Summarize which methods are most stable, sample-efficient, or safe for the tested domains, and outline future extensions (Rainbow, true CPO, PlaNet/MuZero, SMACv2).
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\appendix
+\section{Theoretical Notes}
+For detailed derivations and proofs, see \code{solutions.tex}; reuse its content here as needed.
+
+\end{document}

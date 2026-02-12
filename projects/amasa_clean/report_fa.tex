@@ -1,0 +1,97 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{farsi}
+\setotherlanguage{english}
+\newfontfamily\persianfont[Script=Arabic]{Times New Roman}
+\newfontfamily\latinfont{Times New Roman}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{AMASA-Complex v2: چارچوب پیشرفته یادگیری تقویتی امن برای بخیه‌زنی خودکار}
+\author{\IEEEauthorblockN{کدکس}\IEEEauthorblockA{/Users/tahamajs/Documents/uni/DRL}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+این گزارش نسخه‌ی AMASA-Complex v2 را در مسیر \texttt{/Users/tahamajs/Documents/uni/DRL/projects/amasa\_clean} توصیف می‌کند. نسبت به نسخه‌ی اولیه، این نسخه شامل چهار الگوریتم (CQL، IQL، SAC-Lagrangian، PPO-Lagrangian)، پشته‌ی ایمنی ترکیبی (PID + سپر تصمیم‌درختی + منتقد ریسک)، سناریوهای مقاومتی چندگانه، پیکربندی YAML، اجرای ماتریس بنچمارک، جاروب PID، و خروجی گزارش IEEE دوزبانه است. طراحی به‌صورت CPU-first انجام شده و سازگاری عقب‌رو با CLIهای قبلی حفظ شده است.
+\end{abstract}
+
+\section{معماری کلان}
+ساختار پروژه به ماژول‌های زیر تفکیک شده است:
+\begin{itemize}[leftmargin=*]
+  \item \texttt{amasa/core}: بارگذاری/اعتبارسنجی تنظیمات، رجیستری، ثبت متریک.
+  \item \texttt{amasa/envs}: محیط پایه و سناریوهای \lr{nominal/perturbed/adversarial}.
+  \item \texttt{amasa/offline}: پیاده‌سازی CQL و IQL.
+  \item \texttt{amasa/online}: پیاده‌سازی SAC-Lagrangian و PPO-Lagrangian.
+  \item \texttt{amasa/safety}: کنترل‌گر PID، سپر، منتقد ریسک و نگهبان ایمنی.
+  \item \texttt{amasa/bench}: تولید ماتریس آزمایش، تجمیع و رسم نتایج.
+\end{itemize}
+
+\section{مدل محیط و سناریوها}
+رابط حالت/کنش همان نسخه‌ی قبلی حفظ شده اما دینامیک‌ها قابل تنظیم شده‌اند:
+\begin{itemize}[leftmargin=*]
+  \item مقیاس نویز نیرو،
+  \item جابه‌جایی دینامیکی،
+  \item احتمال خرابی/تاخیر مشاهده،
+  \item تصادفی‌سازی دامنه.
+\end{itemize}
+سه خانواده سناریو پیاده‌سازی شده است:
+\textbf{Nominal} (پایه)، \textbf{Perturbed} (اختلال دینامیکی)، \textbf{Adversarial} (خرابی شدید مشاهده).
+
+\section{الگوریتم‌ها}
+\subsection{آفلاین}
+CQL به‌عنوان مبنا حفظ شده و IQL با \lr{expectile value fitting} و \lr{advantage-weighted policy update} اضافه شده است.
+
+\subsection{آنلاین امن}
+SAC-Lagrangian با منتقد پاداش/هزینه و PPO-Lagrangian با مزیت‌های جداگانه‌ی پاداش و هزینه اضافه شده‌اند.
+
+\section{پشته ایمنی ترکیبی}
+ترتیب اعمال نگهبان ایمنی:
+\begin{enumerate}[leftmargin=*]
+  \item امتیازدهی ریسک کنش توسط منتقد ریسک،
+  \item اعمال تبدیل محافظه‌کارانه در ریسک بالا،
+  \item عبور از سپر تصمیم‌درختی،
+  \item به‌روزرسانی \(\lambda\) با PID بر اساس هزینه مشاهده‌شده.
+\end{enumerate}
+ثبت ایمنی در هر گام شامل \texttt{lambda}، \texttt{risk\_score}، \texttt{shield\_blocked}، \texttt{cost}، \texttt{force} و \texttt{corridor\_violation} است.
+
+\section{بنچمارک و جاروب PID}
+ماتریس بنچمارک:
+\begin{itemize}[leftmargin=*]
+  \item آفلاین: CQL و IQL روی داده‌های \lr{nominal/perturbed}
+  \item آنلاین: SAC-Lagrangian و PPO-Lagrangian روی هر سه سناریو
+\end{itemize}
+جاروب PID:
+\(k_p \in \{0.4,0.55,0.7\}\)،
+\(k_d \in \{0.05,0.08,0.12\}\)،
+\(k_i=0.08\).
+خروجی‌ها: \texttt{global\_pareto.png}، \texttt{pid\_heatmap.png} و CSVهای آستانه.
+
+\section{معیار پذیرش}
+آستانه‌های سه‌سطحی در \texttt{configs/thresholds.yaml} تعریف شده‌اند. برای نمونه، سطح \textbf{target}:
+\begin{itemize}[leftmargin=*]
+  \item Nominal: پاداش $>300$ و هزینه $<0.35$
+  \item Perturbed: پاداش $>200$ و هزینه $<0.45$
+  \item Adversarial: پاداش $>120$ و هزینه $<0.55$
+\end{itemize}
+گیت آفلاین: همگرایی عددی (lossهای متناهی) و نسبت پاداش حداقل ۲ برابر خط‌مبنا تصادفی.
+
+\section{باز‌تولید}
+نمونه دستورات:
+\begin{itemize}[leftmargin=*]
+  \item \texttt{python3 -m projects.amasa\_clean.scripts.run\_experiment --mode offline\_train --preset smoke --algo cql}
+  \item \texttt{python3 -m projects.amasa\_clean.scripts.run\_experiment --mode online\_train --preset smoke --algo sac\_lag}
+  \item \texttt{python3 -m projects.amasa\_clean.scripts.run\_experiment --mode benchmark}
+  \item \texttt{python3 -m projects.amasa\_clean.scripts.run\_experiment --mode pid\_sweep}
+\end{itemize}
+
+\section{جمع‌بندی}
+نسخه‌ی AMASA-Complex v2 پروژه را از یک نمونه‌ی آموزشی سبک به یک چارچوب پیشرفته، ماژولار و قابل ارزیابی ارتقا می‌دهد؛ ضمن آن‌که سازگاری با CLI قبلی حفظ شده است. این نسخه برای تمرین عملی مباحث \lr{offline-to-online RL}، ایمنی سخت، و ارزیابی مقاومتی مناسب است.
+
+\end{document}

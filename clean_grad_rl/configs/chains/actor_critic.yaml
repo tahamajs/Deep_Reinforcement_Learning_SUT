@@ -1,0 +1,21 @@
+common:
+  env: Pendulum-v1
+  total_steps: 50000
+  gamma: 0.99
+  hidden_sizes: [256, 256]
+algorithms:
+  a2c:
+    n_steps: 16
+    gae_lambda: 0.95
+    learning_rate: 0.0007
+    entropy_coef: 0.01
+    value_coef: 0.5
+  sac:
+    learning_rate: 0.0003
+    tau: 0.005
+    batch_size: 256
+    buffer_size: 100000
+    learning_starts: 1000
+    train_freq: 1
+    alpha_lr: 0.0003
+    target_entropy_scale: 1.0

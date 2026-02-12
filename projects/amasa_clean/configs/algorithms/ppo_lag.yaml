@@ -1,0 +1,9 @@
+algo:
+  name: ppo_lag
+  lr: 0.0003
+  discount: 0.99
+  tau: 0.005
+train:
+  steps: 1200
+  batch_size: 256
+  random_steps: 0

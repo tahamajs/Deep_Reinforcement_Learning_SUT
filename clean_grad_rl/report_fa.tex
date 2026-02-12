@@ -1,0 +1,154 @@
+% !TEX TS-program = pdflatex
+% نسخه فارسی گزارش پروژه دکترای RL
+\documentclass[12pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\setlength{\parskip}{6pt}
+\setlength{\parindent}{0pt}
+
+\title{چارچوب‌های نظری و تجربی یادگیری تقویتی عمیق \\ نسخه فارسی گزارش جامع}
+\author{مخزن درس یادگیری تقویتی عمیق}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section{هدف گزارش}
+این سند نسخه فارسی گزارش پروژه است و تمام زنجیره‌های پنج‌گانه‌ی مقاله‌ها (مبتنی بر ارزش، گرادیان سیاست، بازیگر--ناظر، مبتنی بر مدل، و چندعامله) را پوشش می‌دهد. هر بخش شامل توضیح نظری کوتاه، تنظیمات آزمایش، و جدول نتایج قابل پرشدن است.
+
+\section{چگونه بازتولید کنیم}
+\begin{itemize}[leftmargin=*]
+    \item محیط مجازی: \verb|python3.10 -m venv .venv_runs| سپس \verb|source .venv_runs/bin/activate|.
+    \item نصب وابستگی‌ها: \verb|pip install -r requirements.txt|
+    \item اجرای یک آزمایش: \verb|python scripts/run_experiment.py --chain value --algo dqn --env CartPole-v1 --steps 20000 --seed 0|
+    \item اجرای کل سوئیت: \verb|python scripts/run_suite.py --suite configs/suites/fast_5chain.yaml --mode full|
+    \item ساخت نمودار و جدول: \verb|python scripts/generate_plots.py| سپس \verb|python scripts/build_report_tables.py|
+    \item خروجی‌ها در \verb|outputs/runs| و \verb|outputs/suite_reports| ذخیره می‌شوند.
+\end{itemize}
+
+\section{زنجیره ۱: روش‌های مبتنی بر ارزش (DQN، Double، Dueling)}
+\textbf{ایده اصلی:} بازپخش تجربه، شبکه هدف، کاهش سوگیری بیش‌برآورد با Double، و نمایش بهتر با Dueling.\\
+\textbf{تنظیمات پیشنهادی برای CartPole:} نرخ یادگیری $10^{-3}$، \texttt{train\_freq}=1، اندازه بافر 50k، اپسیلون نهایی 0.02، \texttt{total\_steps}=100k.\\
+\IfFileExists{outputs/suite_reports/figures/value_dqn_CartPole-v1.png}{
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.82\linewidth]{outputs/suite_reports/figures/value_dqn_CartPole-v1.png}
+    \caption{نمودار یادگیری زنجیره ارزش (تولید خودکار).}
+\end{figure}
+}{\textit{نمودار خودکار این بخش هنوز تولید نشده است.}}
+\textbf{جدول نتایج (پر شود):}
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lccc}
+    \toprule
+    الگوریتم & گام‌ها & بازده میانگین & انحراف معیار \\
+    \midrule
+    DQN & & & \\
+    Double DQN & & & \\
+    Dueling DQN & & & \\
+    QR-DQN (اختیاری) & & & \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{زنجیره ۲: گرادیان سیاست و ناحیه اعتماد (REINFORCE، PPO، TRPO، CPO-lite)}
+توضیح کوتاه: REINFORCE با پایه، TRPO با قید KL، PPO با برش نسبت احتمال، نسخه ساده CPO با جریمه لاگرانژی هزینه.\\
+\IfFileExists{outputs/suite_reports/figures/policy_ppo_CartPole-v1.png}{
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.82\linewidth]{outputs/suite_reports/figures/policy_ppo_CartPole-v1.png}
+    \caption{نمودار یادگیری روش‌های سیاست‌محور (تولید خودکار).}
+\end{figure}
+}{}
+\textbf{جدول نتایج:}
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lcccc}
+    \toprule
+    الگوریتم & محیط & گام‌ها & بازده میانگین & هزینه میانگین \\
+    \midrule
+    REINFORCE & & & & \\
+    PPO & & & & \\
+    TRPO & & & & \\
+    CPO-lite & & & & \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{زنجیره ۳: بازیگر--ناظر و آنتروپی بیشینه (A3C/A2C، SAC)}
+توضیح کوتاه: A2C به‌عنوان جایگزین سبک A3C؛ SAC با آنتروپی خودکار برای کنترل پیوسته.\\
+\IfFileExists{outputs/suite_reports/figures/actor_critic_sac_Pendulum-v1.png}{
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.82\linewidth]{outputs/suite_reports/figures/actor_critic_sac_Pendulum-v1.png}
+    \caption{نمودار یادگیری بازیگر--ناظر (تولید خودکار).}
+\end{figure}
+}{}
+\textbf{جدول نتایج:}
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lccc}
+    \toprule
+    الگوریتم & گام‌ها & بازده میانگین & انحراف معیار \\
+    \midrule
+    A2C (A3C proxy) & & & \\
+    SAC & & & \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{زنجیره ۴: مبتنی بر مدل (Dyna-Q، ME-TRPO)}
+توضیح کوتاه: Dyna-Q با به‌روزرسانی‌های برنامه‌ریزی؛ ME-TRPO با مدل تجمیع چندگانه برای کاهش سوگیری مدل.\\
+\IfFileExists{outputs/suite_reports/figures/model_based_mbpo_lite_Pendulum-v1.png}{
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.82\linewidth]{outputs/suite_reports/figures/model_based_mbpo_lite_Pendulum-v1.png}
+    \caption{نمودار یادگیری زنجیره مدل‌محور (تولید خودکار).}
+\end{figure}
+}{}
+\textbf{جدول نتایج:}
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lccc}
+    \toprule
+    الگوریتم & محیط & معیار & مقدار \\
+    \midrule
+    Dyna-Q & CliffWalking-v0 & میانگین 100 اپیزود آخر & \\
+    ME-TRPO & Pendulum-v1 & بازده ارزیابی & \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{زنجیره ۵: چندعامله (QMIX، MADDPG)}
+توضیح کوتاه: QMIX با تابع اختلاط یکنوا، MADDPG با منتقد متمرکز و بازیگر غیرمتمرکز.\\
+\IfFileExists{outputs/suite_reports/figures/marl_qmix_lite_simple_spread_v3.png}{
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.82\linewidth]{outputs/suite_reports/figures/marl_qmix_lite_simple_spread_v3.png}
+    \caption{نمودار یادگیری چندعامله (تولید خودکار).}
+\end{figure}
+}{}
+\textbf{جدول نتایج:}
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lcc}
+    \toprule
+    الگوریتم & تکرار & پاداش اپیزود میانگین \\
+    \midrule
+    QMIX & & \\
+    MADDPG & & \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{جمع‌بندی}
+پس از اجرای سوئیت، این فایل را با \texttt{latexmk -pdf report\_fa.tex} کامپایل کنید. برای جمع‌بندی، تفاوت پایداری، کارایی نمونه، ایمنی و مقیاس‌پذیری بین پنج زنجیره را بر اساس جدول‌ها و نمودارهای تولیدی تحلیل کنید.
+
+\end{document}

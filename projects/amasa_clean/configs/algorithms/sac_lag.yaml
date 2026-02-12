@@ -1,0 +1,11 @@
+algo:
+  name: sac_lag
+  lr: 0.0003
+  discount: 0.99
+  tau: 0.005
+  alpha: 0.2
+train:
+  steps: 1200
+  batch_size: 256
+  buffer_size: 80000
+  random_steps: 300

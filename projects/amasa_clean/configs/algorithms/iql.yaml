@@ -1,0 +1,10 @@
+algo:
+  name: iql
+  lr: 0.0003
+  discount: 0.99
+  tau: 0.005
+  expectile: 0.7
+  beta: 3.0
+train:
+  steps: 1000
+  batch_size: 256

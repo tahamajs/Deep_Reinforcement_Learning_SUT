@@ -1,0 +1,8 @@
+scenario:
+  type: adversarial
+  force_noise_scale: 0.35
+  dynamics_shift: 0.4
+  obs_corruption_prob: 0.15
+  delayed_obs_prob: 0.08
+env:
+  domain_randomization: true

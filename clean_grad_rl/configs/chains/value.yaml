@@ -1,0 +1,31 @@
+common:
+  env: CartPole-v1
+  total_steps: 30000
+  gamma: 0.99
+  learning_rate: 0.001
+  batch_size: 64
+  buffer_size: 50000
+  learning_starts: 1000
+  target_update_interval: 500
+  exploration_start: 1.0
+  exploration_final_eps: 0.02
+  exploration_fraction: 0.1
+  train_freq: 1
+  hidden_sizes: [128, 128]
+  grad_clip_norm: 10.0
+algorithms:
+  dqn:
+    double: true
+    dueling: false
+    prioritized_replay: false
+    n_step: 1
+    noisy: false
+  rainbow_lite:
+    double: true
+    dueling: true
+    prioritized_replay: true
+    per_alpha: 0.6
+    per_beta_start: 0.4
+    per_beta_frames: 30000
+    n_step: 3
+    noisy: false

@@ -1,0 +1,11 @@
+experiment:
+  preset: full
+train:
+  steps: 3000
+  batch_size: 256
+  buffer_size: 120000
+  eval_every: 500
+  save_every: 1000
+  random_steps: 500
+eval:
+  episodes: 5

@@ -1,0 +1,9 @@
+algo:
+  name: cql
+  lr: 0.0003
+  discount: 0.99
+  tau: 0.005
+  cql_alpha: 5.0
+train:
+  steps: 1000
+  batch_size: 256

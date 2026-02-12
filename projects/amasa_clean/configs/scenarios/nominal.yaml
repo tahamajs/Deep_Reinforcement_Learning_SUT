@@ -1,0 +1,6 @@
+scenario:
+  type: nominal
+  force_noise_scale: 0.1
+  dynamics_shift: 0.0
+  obs_corruption_prob: 0.0
+  delayed_obs_prob: 0.0

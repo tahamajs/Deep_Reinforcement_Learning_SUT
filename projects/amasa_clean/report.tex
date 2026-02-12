@@ -1,0 +1,123 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{AMASA-Complex v2: Config-Driven Safe RL Benchmark for Autonomous Suturing}
+
+\author{\IEEEauthorblockN{Codex}
+\IEEEauthorblockA{for /Users/tahamajs/Documents/uni/DRL}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report documents AMASA-Complex v2, a substantial upgrade of the AMASA suturing benchmark implemented in \texttt{/Users/tahamajs/Documents/uni/DRL/projects/amasa\_clean}. The system adds a four-method algorithm suite (CQL, IQL, SAC-Lagrangian, PPO-Lagrangian), a hybrid safety stack (PID dual variable, tree shield, and risk critic gate), scenario-based environment stress tests, YAML-driven experiment orchestration, benchmark and PID sweep automation, and bilingual IEEE reporting. The project is CPU-first, backward compatible with legacy scripts, and includes smoke/full presets and tiered acceptance thresholds.
+\end{abstract}
+
+\section{Introduction}
+AMASA-Complex v2 targets advanced RL pedagogy where offline pretraining, online adaptation, and safety-critical constraints must be studied in one unified framework. The v2 design goals are: (i) non-trivial algorithmic breadth, (ii) realistic robustness stressors, (iii) explicit safety layers with runtime logs, (iv) reproducible experiment configuration and evaluation.
+
+\section{System Architecture}
+The project introduces modular packages:
+\begin{itemize}[leftmargin=*]
+  \item \texttt{amasa/core}: configuration, registries, metrics exports.
+  \item \texttt{amasa/envs}: configurable base suturing dynamics and scenario wrappers.
+  \item \texttt{amasa/offline}: CQL and IQL offline learners.
+  \item \texttt{amasa/online}: SAC-Lagrangian and PPO-Lagrangian safe online learners.
+  \item \texttt{amasa/safety}: PID controller, tree shield, risk critic, unified safety guard.
+  \item \texttt{amasa/bench}: benchmark matrix builder and aggregate plotting.
+\end{itemize}
+
+\subsection{Configuration Layer}
+YAML files under \texttt{configs/} define base parameters and overlays for algorithms, scenarios, presets, and sweeps. A validation layer enforces required top-level sections and legal enum values (scenario, preset, algorithm).
+
+\subsection{Backward Compatibility}
+Legacy entrypoints remain available:
+\texttt{train\_offline.py}, \texttt{train\_safe\_online.py}, \texttt{train\_hierarchical.py}, \texttt{evaluate.py}, \texttt{generate\_dataset.py}. They now also accept \texttt{--config}, \texttt{--preset}, \texttt{--scenario}, and \texttt{--algo}.
+
+\section{Environment and Scenario Model}
+The base environment exposes the same 23-dimensional state and 7D torque action interface while making dynamics configurable:
+\begin{itemize}[leftmargin=*]
+  \item force noise scale,
+  \item dynamics shift factor,
+  \item observation corruption and delay probabilities,
+  \item domain randomization toggle and target jitter scaling.
+\end{itemize}
+Three scenario families are implemented:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Nominal}: mild stochasticity.
+  \item \textbf{Perturbed}: stronger force and dynamics perturbations.
+  \item \textbf{Adversarial}: heavier observation corruption and delays.
+\end{itemize}
+
+\section{Algorithm Suite}
+\subsection{Offline: CQL and IQL}
+CQL is retained as the conservative baseline; IQL is added with expectile value fitting and advantage-weighted policy updates. Offline outputs include quality-gate metrics: finite losses and reward ratio against a random policy baseline.
+
+\subsection{Online: SAC-Lagrangian and PPO-Lagrangian}
+SAC-Lagrangian uses twin reward/cost critics and policy penalty by current dual multiplier. PPO-Lagrangian uses separate reward and cost advantages with clipped ratio updates under a Lagrangian objective.
+
+\section{Hybrid Safety Stack}
+The runtime safety guard applies:
+\begin{enumerate}[leftmargin=*]
+  \item Risk critic scoring from state-action-history,
+  \item conservative action transformation if risk exceeds threshold,
+  \item decision-tree shield pass,
+  \item PID dual update from observed cost.
+\end{enumerate}
+Per-step safety telemetry includes \texttt{lambda}, \texttt{risk\_score}, \texttt{shield\_blocked}, \texttt{cost}, \texttt{force}, and \texttt{corridor\_violation}.
+
+\section{Benchmark and Sweeps}
+The benchmark matrix runs:
+\begin{itemize}[leftmargin=*]
+  \item Offline: CQL and IQL on nominal and perturbed datasets.
+  \item Online: SAC-Lagrangian and PPO-Lagrangian on all three scenarios.
+\end{itemize}
+PID sweep grid is fixed by config:
+$k_p \in \{0.4, 0.55, 0.7\}$,
+$k_d \in \{0.05, 0.08, 0.12\}$,
+$k_i = 0.08$.
+
+Aggregation outputs:
+\begin{itemize}[leftmargin=*]
+  \item \texttt{global\_pareto.png}
+  \item \texttt{pid\_heatmap.png}
+  \item run summaries and threshold checks in CSV.
+\end{itemize}
+
+\section{Acceptance Criteria}
+Tiered thresholds are encoded in \texttt{configs/thresholds.yaml}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Scenario & Reward threshold & Cost threshold \\
+\midrule
+Nominal (target) & $>300$ & $<0.35$ \\
+Perturbed (target) & $>200$ & $<0.45$ \\
+Adversarial (target) & $>120$ & $<0.55$ \\
+\bottomrule
+\end{tabular}
+\caption{Target-tier online thresholds (minimum/stretch also defined).}
+\end{table}
+
+Offline gates require finite optimization losses and reward ratio over random baseline of at least 2.0.
+
+\section{Reproducibility}
+Representative commands:
+\begin{itemize}[leftmargin=*]
+  \item \texttt{python3 -m projects.amasa\_clean.scripts.run\_experiment --mode offline\_train --preset smoke --algo cql}
+  \item \texttt{python3 -m projects.amasa\_clean.scripts.run\_experiment --mode online\_train --preset smoke --algo sac\_lag}
+  \item \texttt{python3 -m projects.amasa\_clean.scripts.run\_experiment --mode benchmark --out\_dir projects/amasa\_clean/results/bench}
+  \item \texttt{python3 -m projects.amasa\_clean.scripts.run\_experiment --mode pid\_sweep --out\_dir projects/amasa\_clean/results/pid}
+\end{itemize}
+
+\section{Conclusion}
+AMASA-Complex v2 provides a materially more complex and research-aligned educational RL system than the initial scaffold. It preserves usability via backward-compatible commands while enabling richer experimental depth through multi-algorithm support, scenario stress testing, hybrid safety gating, and automated benchmarking/reporting.
+
+\end{document}

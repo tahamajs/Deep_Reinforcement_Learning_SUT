@@ -1,0 +1,8 @@
+scenario:
+  type: perturbed
+  force_noise_scale: 0.2
+  dynamics_shift: 0.25
+  obs_corruption_prob: 0.05
+  delayed_obs_prob: 0.02
+env:
+  domain_randomization: true

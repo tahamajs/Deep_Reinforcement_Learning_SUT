@@ -1,0 +1,71 @@
+seeds: [0, 1, 2]
+tasks:
+  - chain: value
+    algo: dqn
+    env: CartPole-v1
+    smoke_steps: 3000
+    full_steps: 20000
+  - chain: value
+    algo: rainbow_lite
+    env: LunarLander-v2
+    smoke_steps: 4000
+    full_steps: 30000
+
+  - chain: policy
+    algo: reinforce
+    env: CartPole-v1
+    smoke_steps: 3000
+    full_steps: 20000
+  - chain: policy
+    algo: ppo
+    env: CartPole-v1
+    smoke_steps: 4000
+    full_steps: 30000
+  - chain: policy
+    algo: trpo_lite
+    env: CartPole-v1
+    smoke_steps: 3000
+    full_steps: 25000
+  - chain: policy
+    algo: cpo_lite
+    env: CartPole-v1
+    smoke_steps: 3000
+    full_steps: 25000
+  - chain: policy
+    algo: ppo
+    env: MountainCarContinuous-v0
+    smoke_steps: 4000
+    full_steps: 30000
+
+  - chain: actor_critic
+    algo: a2c
+    env: Pendulum-v1
+    smoke_steps: 4000
+    full_steps: 30000
+  - chain: actor_critic
+    algo: sac
+    env: Pendulum-v1
+    smoke_steps: 4000
+    full_steps: 35000
+
+  - chain: model_based
+    algo: dyna_q
+    env: CliffWalking-v0
+    smoke_episodes: 300
+    full_episodes: 1200
+  - chain: model_based
+    algo: mbpo_lite
+    env: Pendulum-v1
+    smoke_steps: 5000
+    full_steps: 30000
+
+  - chain: marl
+    algo: ippo
+    env: simple_spread_v3
+    smoke_steps: 2000
+    full_steps: 12000
+  - chain: marl
+    algo: qmix_lite
+    env: simple_spread_v3
+    smoke_steps: 2500
+    full_steps: 15000

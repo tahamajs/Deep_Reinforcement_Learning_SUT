@@ -1,0 +1,20 @@
+common:
+  env: CliffWalking-v0
+  episodes: 1200
+  total_steps: 40000
+algorithms:
+  dyna_q:
+    alpha: 0.1
+    gamma: 0.99
+    epsilon: 0.1
+    planning_steps: 20
+  mbpo_lite:
+    env: Pendulum-v1
+    total_steps: 40000
+    ensemble_size: 5
+    model_batch_size: 256
+    model_updates_per_step: 1
+    rollout_horizon: 3
+    rollout_batch_size: 128
+    real_ratio: 0.5
+    learning_starts: 1000

@@ -1,0 +1,11 @@
+algo: "sac" # a3c|sac
+env: "Pendulum-v1"
+policy: "MlpPolicy"
+num_envs: 8
+total_steps: 200000
+learning_rate: 3e-4
+buffer_size: 200000
+gamma: 0.99
+tau: 0.005
+entropy_coef: 0.2
+save_path: "projects/grad_rl/outputs/actor_critic/model.zip"

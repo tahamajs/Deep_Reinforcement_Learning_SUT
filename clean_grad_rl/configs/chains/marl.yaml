@@ -1,0 +1,23 @@
+common:
+  env: simple_spread_v3
+  total_steps: 20000
+  gamma: 0.99
+  hidden_sizes: [128, 128]
+algorithms:
+  ippo:
+    max_cycles: 25
+    learning_rate: 0.0003
+    entropy_coef: 0.01
+    value_coef: 0.5
+  qmix_lite:
+    max_cycles: 25
+    learning_rate: 0.0005
+    batch_size: 64
+    buffer_size: 50000
+    learning_starts: 500
+    train_freq: 1
+    target_update_interval: 400
+    exploration_start: 1.0
+    exploration_final: 0.05
+    exploration_fraction: 0.3
+    mixer_hidden: 32
