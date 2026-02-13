@@ -13,7 +13,7 @@ $(MAIN_FA).pdf: $(MAIN_FA).tex report_table_dqn.tex report_table_policy.tex repo
 	$(LATEXMK) -xelatex $(MAIN_FA).tex
 
 analytics:
-	MPLBACKEND=Agg PYTHONPATH=. python3.11 scripts/generate_plots.py --suite-dir outputs/suite_reports --runs-root outputs/runs
+	MPLBACKEND=Agg MPLCONFIGDIR=.mplconfig PYTHONPATH=. python3.11 scripts/generate_plots.py --suite-dir outputs/suite_reports --runs-root outputs/runs
 	python3.11 scripts/build_report_tables.py --aggregate-csv outputs/suite_reports/tables/aggregate_metrics.csv --out-root .
 
 clean:

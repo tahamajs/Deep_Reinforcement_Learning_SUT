@@ -73,7 +73,7 @@ PYTHONPATH=. python scripts/run_suite.py \
 ## Analytics and report sync
 
 ```bash
-PYTHONPATH=. python scripts/generate_plots.py \
+MPLBACKEND=Agg MPLCONFIGDIR=.mplconfig PYTHONPATH=. python scripts/generate_plots.py \
   --suite-dir outputs/suite_reports \
   --runs-root outputs/runs
 
@@ -99,7 +99,7 @@ latexmk -pdf university_project.tex
 Persian:
 
 ```bash
-latexmk -pdf report_fa.tex
+latexmk -xelatex report_fa.tex
 ```
 
 ## Tests
@@ -121,3 +121,4 @@ PYTHONPATH=. pytest tests/test_integration_smoke.py -m slow
 - This root (`clean_grad_rl`) is the canonical implementation target.
 - Tracking is local-only (JSON/CSV/PNG).
 - Headline results should use 3 seeds (`0,1,2`) via suite config.
+- `run_suite.py` now performs environment preflight checks and marks unavailable tasks as `skipped`.
