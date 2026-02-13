@@ -68,7 +68,8 @@ def build_tables(rows: List[Dict], out_root: Path):
     )
     write(out_root / "report_table_dqn.tex", dqn_tex)
 
-    ppo = best_match(rows, "policy", "ppo")
+    ppo_cp = best_match(rows, "policy", "ppo", "CartPole-v1")
+    ppo_mc = best_match(rows, "policy", "ppo", "MountainCarContinuous-v0")
     trpo = best_match(rows, "policy", "trpo_lite")
     reinf = best_match(rows, "policy", "reinforce")
     cpo = best_match(rows, "policy", "cpo_lite")
@@ -83,7 +84,8 @@ def build_tables(rows: List[Dict], out_root: Path):
             "Algo & Env & Seeds & Mean Return & Std Across Seeds \\\\",
             "\\midrule",
             f"REINFORCE & {get_val(reinf, 'env')} & {get_val(reinf, 'seeds')} & {fmt(get_val(reinf, 'eval_mean', 0.0)) if reinf else '-'} & {fmt(get_val(reinf, 'eval_std', 0.0)) if reinf else '-'} \\\\",
-            f"PPO & {get_val(ppo, 'env')} & {get_val(ppo, 'seeds')} & {fmt(get_val(ppo, 'eval_mean', 0.0)) if ppo else '-'} & {fmt(get_val(ppo, 'eval_std', 0.0)) if ppo else '-'} \\\\",
+            f"PPO & {get_val(ppo_cp, 'env')} & {get_val(ppo_cp, 'seeds')} & {fmt(get_val(ppo_cp, 'eval_mean', 0.0)) if ppo_cp else '-'} & {fmt(get_val(ppo_cp, 'eval_std', 0.0)) if ppo_cp else '-'} \\\\",
+            f"PPO & {get_val(ppo_mc, 'env')} & {get_val(ppo_mc, 'seeds')} & {fmt(get_val(ppo_mc, 'eval_mean', 0.0)) if ppo_mc else '-'} & {fmt(get_val(ppo_mc, 'eval_std', 0.0)) if ppo_mc else '-'} \\\\",
             f"TRPO-lite & {get_val(trpo, 'env')} & {get_val(trpo, 'seeds')} & {fmt(get_val(trpo, 'eval_mean', 0.0)) if trpo else '-'} & {fmt(get_val(trpo, 'eval_std', 0.0)) if trpo else '-'} \\\\",
             f"CPO-lite & {get_val(cpo, 'env')} & {get_val(cpo, 'seeds')} & {fmt(get_val(cpo, 'eval_mean', 0.0)) if cpo else '-'} & {fmt(get_val(cpo, 'eval_std', 0.0)) if cpo else '-'} \\\\",
             "\\bottomrule",

@@ -1,4 +1,4 @@
-% !TEX TS-program = pdflatex
+% !TEX TS-program = xelatex
 % نسخه فارسی گزارش پروژه دکترای RL
 \documentclass[12pt]{article}
 \usepackage[margin=1in]{geometry}
@@ -8,6 +8,9 @@
 \usepackage{hyperref}
 \usepackage{enumitem}
 \usepackage{xcolor}
+\usepackage{xepersian}
+\settextfont{Times New Roman}
+\setlatintextfont{Times New Roman}
 \hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
 \setlength{\parskip}{6pt}
 \setlength{\parindent}{0pt}
@@ -149,6 +152,6 @@
 \end{table}
 
 \section{جمع‌بندی}
-پس از اجرای سوئیت، این فایل را با \texttt{latexmk -pdf report\_fa.tex} کامپایل کنید. برای جمع‌بندی، تفاوت پایداری، کارایی نمونه، ایمنی و مقیاس‌پذیری بین پنج زنجیره را بر اساس جدول‌ها و نمودارهای تولیدی تحلیل کنید.
+پس از اجرای سوئیت، این فایل را با \texttt{latexmk -xelatex report\_fa.tex} کامپایل کنید. برای جمع‌بندی، تفاوت پایداری، کارایی نمونه، ایمنی و مقیاس‌پذیری بین پنج زنجیره را بر اساس جدول‌ها و نمودارهای تولیدی تحلیل کنید.
 
 \end{document}

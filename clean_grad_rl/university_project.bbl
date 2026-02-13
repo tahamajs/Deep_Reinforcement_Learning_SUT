@@ -1,0 +1,73 @@
+\begin{thebibliography}{10}
+
+\bibitem{achiam2017cpo}
+Joshua Achiam et~al.
+\newblock Constrained policy optimization.
+\newblock In {\em International Conference on Machine Learning}, 2017.
+
+\bibitem{haarnoja2018sac}
+Tuomas Haarnoja, Aurick Zhou, Pieter Abbeel, and Sergey Levine.
+\newblock Soft actor-critic: Off-policy maximum entropy deep reinforcement
+  learning with a stochastic actor.
+\newblock In {\em International Conference on Machine Learning}, 2018.
+
+\bibitem{kurutach2018metrpo}
+Thanard Kurutach, Aviv Tamar, Ge~Yang, Stuart Russell, and Pieter Abbeel.
+\newblock Model-ensemble trust-region policy optimization.
+\newblock In {\em International Conference on Learning Representations}, 2018.
+
+\bibitem{littman1994}
+Michael~L Littman.
+\newblock Markov games as a framework for multi-agent reinforcement learning.
+\newblock {\em Machine Learning}, 1994.
+
+\bibitem{lowe2017maddpg}
+Ryan Lowe et~al.
+\newblock Multi-agent actor-critic for mixed cooperative-competitive
+  environments.
+\newblock In {\em Advances in Neural Information Processing Systems}, 2017.
+
+\bibitem{mnih2016a3c}
+Volodymyr Mnih et~al.
+\newblock Asynchronous methods for deep reinforcement learning.
+\newblock In {\em International Conference on Machine Learning}, 2016.
+
+\bibitem{rashid2018qmix}
+Tabish Rashid et~al.
+\newblock Qmix: Monotonic value function factorisation for deep multi-agent
+  reinforcement learning.
+\newblock In {\em International Conference on Machine Learning}, 2018.
+
+\bibitem{schulman2015trpo}
+John Schulman et~al.
+\newblock Trust region policy optimization.
+\newblock In {\em International Conference on Machine Learning}, 2015.
+
+\bibitem{schulman2017ppo}
+John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov.
+\newblock Proximal policy optimization algorithms.
+\newblock {\em arXiv preprint arXiv:1707.06347}, 2017.
+
+\bibitem{sutton1990dyna}
+Richard~S Sutton.
+\newblock Integrated architectures for learning, planning, and reacting based
+  on approximating dynamic programming.
+\newblock {\em ICML}, 1990.
+
+\bibitem{vanhasselt2016double}
+Hado van Hasselt, Arthur Guez, and David Silver.
+\newblock Deep reinforcement learning with double q-learning.
+\newblock In {\em Proceedings of the AAAI Conference on Artificial
+  Intelligence}, 2016.
+
+\bibitem{wang2016dueling}
+Ziyu Wang et~al.
+\newblock Dueling network architectures for deep reinforcement learning.
+\newblock In {\em International Conference on Machine Learning}, 2016.
+
+\bibitem{watkins1992}
+Christopher~JCH Watkins and Peter Dayan.
+\newblock Q-learning.
+\newblock {\em Machine Learning}, 8:279--292, 1992.
+
+\end{thebibliography}

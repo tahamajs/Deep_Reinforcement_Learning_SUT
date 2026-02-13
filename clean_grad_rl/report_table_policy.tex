@@ -1,15 +1,16 @@
 \begin{table}[h]
 \centering
-\caption{Policy-gradient / trust-region results.}
+\caption{Policy-gradient / trust-region results (auto-filled).}
 \label{tab:policyresults}
 \begin{tabular}{lcccc}
 \toprule
-Algo & Env & Steps & Mean Return & Mean Cost \\
+Algo & Env & Seeds & Mean Return & Std Across Seeds \\
 \midrule
-REINFORCE & & & & \\
-PPO & & & & \\
-TRPO & & & & \\
-CPO-lite & & & & \\
+REINFORCE & CartPole-v1 & 3 & 9.53 & 0.09 \\
+PPO & CartPole-v1 & 3 & 213.33 & 69.85 \\
+PPO & MountainCarContinuous-v0 & 3 & -4.94 & 0.97 \\
+TRPO-lite & CartPole-v1 & 3 & 252.00 & 73.24 \\
+CPO-lite & CartPole-v1 & 3 & 25.33 & 17.59 \\
 \bottomrule
 \end{tabular}
 \end{table}
